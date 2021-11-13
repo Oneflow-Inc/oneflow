@@ -15,15 +15,15 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/core/primitive/include/permute.h"
+#include "oneflow/core/ep/include/primitive/permute.h"
 namespace oneflow {
 
 namespace user_op {
 
 template<typename Context>
-std::unique_ptr<primitive::Permute> NewPermutePrimitive(Context* ctx) {
+std::unique_ptr<ep::primitive::Permute> NewPermutePrimitive(Context* ctx) {
   const int64_t num_dims = ctx->TensorDesc4ArgNameAndIndex("output", 0)->shape().NumAxes();
-  return primitive::NewPrimitive<primitive::PermuteFactory>(ctx->device_type(), num_dims);
+  return ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(ctx->device_type(), num_dims);
 }
 
 class TransposeKernel final : public OpKernel, public user_op::CudaGraphSupport {

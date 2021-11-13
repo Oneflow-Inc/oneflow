@@ -17,45 +17,45 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/core/primitive/include/memcpy.h"
-#include "oneflow/core/primitive/include/matmul.h"
-#include "oneflow/core/primitive/include/batch_matmul.h"
+#include "oneflow/core/ep/include/primitive/memcpy.h"
+#include "oneflow/core/ep/include/primitive/matmul.h"
+#include "oneflow/core/ep/include/primitive/batch_matmul.h"
 
 namespace oneflow {
 
 namespace {
 
-primitive::BlasTransposeType GetBlasTransposeType(bool transpose) {
-  return transpose ? primitive::BlasTransposeType::T : primitive::BlasTransposeType::N;
+ep::primitive::BlasTransposeType GetBlasTransposeType(bool transpose) {
+  return transpose ? ep::primitive::BlasTransposeType::T : ep::primitive::BlasTransposeType::N;
 }
 
 template<typename Context>
-primitive::BlasTransposeType GetBlasTransposeType(Context* ctx, const std::string& attr) {
+ep::primitive::BlasTransposeType GetBlasTransposeType(Context* ctx, const std::string& attr) {
   return GetBlasTransposeType(ctx->template Attr<bool>(attr));
 }
 
 void InferMatmulMNK(const ShapeView& a_shape, const ShapeView& b_shape, const ShapeView& c_shape,
-                    primitive::BlasTransposeType transpose_a,
-                    primitive::BlasTransposeType transpose_b, size_t* m, size_t* n, size_t* k) {
+                    ep::primitive::BlasTransposeType transpose_a,
+                    ep::primitive::BlasTransposeType transpose_b, size_t* m, size_t* n, size_t* k) {
   const int64_t num_a_axes = a_shape.NumAxes();
   CHECK_GE(num_a_axes, 2);
   const int64_t num_b_axes = b_shape.NumAxes();
   CHECK_GE(num_b_axes, 2);
   const int64_t num_c_axes = c_shape.NumAxes();
   CHECK_GE(num_c_axes, 2);
-  if (transpose_a == primitive::BlasTransposeType::N) {
+  if (transpose_a == ep::primitive::BlasTransposeType::N) {
     *m = a_shape.At(num_a_axes - 2);
     *k = a_shape.At(num_a_axes - 1);
-  } else if (transpose_a == primitive::BlasTransposeType::T) {
+  } else if (transpose_a == ep::primitive::BlasTransposeType::T) {
     *m = a_shape.At(num_a_axes - 1);
     *k = a_shape.At(num_a_axes - 2);
   } else {
     UNIMPLEMENTED();
   }
-  if (transpose_b == primitive::BlasTransposeType::N) {
+  if (transpose_b == ep::primitive::BlasTransposeType::N) {
     CHECK_EQ(b_shape.At(num_b_axes - 2), *k);
     *n = b_shape.At(num_b_axes - 1);
-  } else if (transpose_b == primitive::BlasTransposeType::T) {
+  } else if (transpose_b == ep::primitive::BlasTransposeType::T) {
     CHECK_EQ(b_shape.At(num_b_axes - 1), *k);
     *n = b_shape.At(num_b_axes - 2);
   } else {
@@ -66,33 +66,34 @@ void InferMatmulMNK(const ShapeView& a_shape, const ShapeView& b_shape, const Sh
 }
 
 template<typename Context>
-std::unique_ptr<primitive::Memcpy> NewMemcpyPrimitive(Context* ctx) {
-  return primitive::NewPrimitive<primitive::MemcpyFactory>(ctx->device_type(),
-                                                           primitive::MemcpyKind::kDtoD);
+std::unique_ptr<ep::primitive::Memcpy> NewMemcpyPrimitive(Context* ctx) {
+  return ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(
+      ctx->device_type(), ep::primitive::MemcpyKind::kDtoD);
 }
 
-std::unique_ptr<primitive::Matmul> NewMatmulPrimitive(DeviceType device_type, DataType data_type,
-                                                      bool transpose_a, bool transpose_b) {
+std::unique_ptr<ep::primitive::Matmul> NewMatmulPrimitive(DeviceType device_type,
+                                                          DataType data_type, bool transpose_a,
+                                                          bool transpose_b) {
   const auto trans_a = GetBlasTransposeType(transpose_a);
   const auto trans_b = GetBlasTransposeType(transpose_b);
-  return primitive::NewPrimitive<primitive::MatmulFactory>(device_type, data_type, trans_a,
-                                                           trans_b);
+  return ep::primitive::NewPrimitive<ep::primitive::MatmulFactory>(device_type, data_type, trans_a,
+                                                                   trans_b);
 }
 
 template<typename Context>
-std::unique_ptr<primitive::Matmul> NewMatmulPrimitive(Context* ctx) {
+std::unique_ptr<ep::primitive::Matmul> NewMatmulPrimitive(Context* ctx) {
   const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
   return NewMatmulPrimitive(ctx->device_type(), data_type, ctx->template Attr<bool>("transpose_a"),
                             ctx->template Attr<bool>("transpose_b"));
 }
 
 template<typename Context>
-std::unique_ptr<primitive::BatchMatmul> NewBatchMatmulPrimitive(Context* ctx) {
+std::unique_ptr<ep::primitive::BatchMatmul> NewBatchMatmulPrimitive(Context* ctx) {
   const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
   const auto trans_a = GetBlasTransposeType(ctx, "transpose_a");
   const auto trans_b = GetBlasTransposeType(ctx, "transpose_b");
-  return primitive::NewPrimitive<primitive::BatchMatmulFactory>(ctx->device_type(), data_type,
-                                                                trans_a, trans_b);
+  return ep::primitive::NewPrimitive<ep::primitive::BatchMatmulFactory>(
+      ctx->device_type(), data_type, trans_a, trans_b);
 }
 
 hob::HobContextGetter<user_op::KernelRegContext, bool> MemcpyPrimitiveExists() {
@@ -291,7 +292,7 @@ REGISTER_USER_KERNEL("broadcast_matmul")
     });
 
 template<typename Context>
-std::unique_ptr<primitive::Matmul> NewMatmulPrimitiveForBroadcastMatmulGradB(Context* ctx) {
+std::unique_ptr<ep::primitive::Matmul> NewMatmulPrimitiveForBroadcastMatmulGradB(Context* ctx) {
   const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
   return NewMatmulPrimitive(ctx->device_type(), data_type, true, false);
 }

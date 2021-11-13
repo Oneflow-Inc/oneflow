@@ -20,15 +20,16 @@ limitations under the License.
 #include "oneflow/core/cuda/atomic.cuh"
 #include <cub/cub.cuh>
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/core/primitive/include/fill.h"
+#include "oneflow/core/ep/include/primitive/fill.h"
 
 namespace oneflow {
 
 namespace {
 
-std::unique_ptr<primitive::Fill> NewFillPrimitive(StreamContext* stream_ctx, DataType data_type) {
-  std::unique_ptr<primitive::Fill> fill =
-      primitive::NewPrimitive<primitive::FillFactory>(stream_ctx->device_type(), data_type);
+std::unique_ptr<ep::primitive::Fill> NewFillPrimitive(StreamContext* stream_ctx,
+                                                      DataType data_type) {
+  std::unique_ptr<ep::primitive::Fill> fill =
+      ep::primitive::NewPrimitive<ep::primitive::FillFactory>(stream_ctx->device_type(), data_type);
   CHECK(fill);
   return fill;
 }
