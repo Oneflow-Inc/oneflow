@@ -24,6 +24,10 @@ namespace oneflow {
 
 namespace maybe {
 
+// unlike std::nullopt in c++17, the NullOptType is used in both Variant and Optional,
+// so it is more like both std::nullopt and std::monostate (in c++17),
+// the advantage of this unification is a more unifed experience,
+// i.e. `return NullOpt` can be used in both Variant and Optional context
 struct NullOptType {
   explicit constexpr NullOptType() = default;
 

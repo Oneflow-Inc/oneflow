@@ -37,6 +37,14 @@ struct Variant;
 
 namespace details {
 
+// there are generally two ways to implement visit (like std::visit in c++17)
+// 1. O(N) or O(log N), to iterate for all types or do a binary search on type index recursively
+// 2. O(1), to store an static (storage duration) array of function pointers for every (Variant, F)
+// where N = Variant<T...>::Num, and normally within the range [2, 5]
+// the 2nd method is required in std::visit(f, x...) while sizeof...(x) == 1
+// but weakness of the 2nd method is that compilers usually cannot efficiently optimize these function pointers
+// (compared to trivial recursion, which is easy to do optimization, and also friendly to CPU cache)
+// here we implement visit via the first method
 template<typename R, typename T, typename F, typename V>
 R VisitImpl(F&& f, V&& v) {
   // assume v.template Is<T>() now
@@ -68,6 +76,8 @@ using VisitResult = typename VisitResultT<R, F, Ts...>::type;
 
 }  // namespace details
 
+// preconditions: template type arguments must be no less than 2 different type 
+// and without reference and cv qualifiers
 // this Variant DO NOT guarantee exception safty
 template<typename... Ts>
 struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
@@ -95,6 +105,7 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
     construct<0>();
   }
 
+  // unlike std::variant, we only accept exact types to avoid wrong construction
   template<typename T, std::enable_if_t<HasType<RemoveCVRef<T>>, int> = 0>
   Variant(T&& v) {  // NOLINT(cppcoreguidelines-pro-type-member-init, google-explicit-constructor)
     construct<RemoveCVRef<T>>(std::forward<T>(v));

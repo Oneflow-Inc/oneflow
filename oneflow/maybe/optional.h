@@ -29,11 +29,14 @@ namespace maybe {
 
 namespace details {
 
+// OptionalStorage is specialized for 2 cases:
+// 1. for scalar types, we optimize all construction, destruction and value check
+// 2. for reference types, we store a pointer to the referenced value
 template<typename T, typename = void>
 struct OptionalStorage {
  private:
   bool has;
-  alignas(T) char value[sizeof(T)];
+  alignas(T) unsigned char value[sizeof(T)];
 
   using Type = std::remove_const_t<T>;
 
@@ -185,6 +188,7 @@ struct OptionalPrivateScope {
 
 }  // namespace details
 
+// unlike Variant, type arguments can be cv qualified or lvalue referenced
 // this Optional DO NOT guarantee exception safty
 template<typename T>
 struct Optional {
@@ -199,6 +203,7 @@ struct Optional {
 
   decltype(auto) Value() const& { return storage.Value(); }
 
+  // we DO NOT export Value method, then leave these methods accessable for the JUST macro
   friend struct details::OptionalPrivateScope;
 
  public:
