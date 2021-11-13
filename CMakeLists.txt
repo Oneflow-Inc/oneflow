@@ -34,6 +34,7 @@ option(BUILD_GIT_VERSION "" ON)
 option(BUILD_PROFILER "" OFF)
 option(OF_SOFTMAX_USE_FAST_MATH "" ON)
 option(TREAT_WARNINGS_AS_ERRORS "" ON)
+option(BUILD_GRAPH_EXE "" OFF)
 # Reference:
 # https://medium.com/@alasher/colored-c-compiler-output-with-ninja-clang-gcc-10bfe7f2b949
 option(OF_FORCE_COLORED_DIAGNOSTICS "Always produce ANSI-colored diagnostics (GNU/Clang only)." ON)
