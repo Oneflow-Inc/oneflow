@@ -94,7 +94,7 @@ For a typical "lazy tensor" implementation, there is usually a "sequence of oper
 
 ### Tracking Python reference of an Tensor
 
-In exec mode, it is necessary to track the if a lazy tensor is being referenced by Python and later it will be replaced with Eager Tensor.
+In exec mode, it is necessary to track if a lazy tensor is being referenced by Python and later it will be replaced with Eager Tensor.
 
 - Use weak ptr to check if a lazy tensor is being referenced by Python.
 - Edge cases
