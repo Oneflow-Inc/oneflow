@@ -51,7 +51,7 @@ Maybe<void> JitInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inpu
 #undef APPLY_IF
 
   OF_UNIMPLEMENTED() << "The type " << op_expr.op_type_name()
-                     << " has not been supported in LazyInterpreter::Apply.";
+                     << " has not been supported in JitInterpreter::Apply.";
   return Maybe<void>::Ok();
 }
 
