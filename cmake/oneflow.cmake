@@ -341,7 +341,7 @@ target_compile_options(oneflow PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Werror=return-
 target_treat_warnings_as_errors(oneflow)
 target_compile_definitions(oneflow PRIVATE GOOGLE_LOGGING)
 
-target_link_libraries(oneflow PRIVATE of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs} -Wl,--no-whole-archive -ldl -lrt)
+target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs} -Wl,--no-whole-archive -ldl -lrt)
 
 if (WITH_MLIR)
   set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/b5e470aa2e978a0ee6276b9564f85cf170ae260d.zip" CACHE STRING "" FORCE)
@@ -354,8 +354,6 @@ if (WITH_MLIR)
   include_directories(${MLIR_INCLUDE_DIRS})
   include_directories(${ONEFLOW_MLIR_SOURCE_INCLUDE_DIRS})
   include_directories(${ONEFLOW_MLIR_BINARY_INCLUDE_DIRS})
-
-  target_link_libraries(oneflow PRIVATE ${ONEFLOW_MLIR_LIBS})
 endif()
 
 if(APPLE)
