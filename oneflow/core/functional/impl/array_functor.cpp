@@ -2053,6 +2053,7 @@ Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::st
     if (dtype == x->dtype()) {
       return (copy ? JUST(x->clone()) : x);
     } else {
+      if (x->is_eager()) { CheckMetaConsistency(x).GetOrThrow(); }
       *tensor = *JUST(Cast(x, dtype));
       return tensor;
     }
@@ -2086,17 +2087,15 @@ class ToFunctor {
                            const Optional<std::string>& device_,
                            const Optional<Symbol<DType>>& dtype_, bool copy) const {
     Symbol<DType> dtype = dtype_.value_or(input->dtype());
-    Symbol<Device> device;
 
     if (input->is_consistent()) {
-      if (device_.has_value()) {
-        CHECK_OR_RETURN(device_.value_or("") == "cpu" || device_.value_or("") == "cuda")
-            << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
-            << "for consistent tensor, but got " << device_.value_or("");
-      }
-      return JUST(ConsistentTensorTo(input, device->type(), dtype, copy));
+      std::string device_type = device_.value_or(JUST(input->parallel_desc())->device_tag());
+      CHECK_OR_RETURN(device_.value_or("") == "cpu" || device_.value_or("") == "cuda")
+          << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
+          << "for consistent tensor, but got " << device_.value_or("");
+      return JUST(ConsistentTensorTo(input, device_type, dtype, copy));
     } else {
-      device =
+      auto device =
           device_.has_value() ? JUST(Device::New(device_.value_or(""))) : JUST(input->device());
       return JUST(LocalTensorTo(input, device->type(), device->device_id(), dtype, copy));
     }
