@@ -44,7 +44,7 @@ ALWAYS_INLINE inline auto HobDataType(const std::string& tensor_name, int tensor
   std::ostringstream string_stream;
   string_stream << "data_type of tensor \'" << tensor_name << "\'";
   return hob::make_custom(
-      string_stream.str(), [tensor_name, tensor_idx](const KernelRegContext& ctx) {
+      string_stream.str(), [tensor_name, tensor_idx](const KernelRegContext& ctx) -> DataType {
         const user_op::TensorDesc* desc = ctx.TensorDesc4ArgNameAndIndex(tensor_name, tensor_idx);
         return desc->data_type();
       });
@@ -52,7 +52,7 @@ ALWAYS_INLINE inline auto HobDataType(const std::string& tensor_name, int tensor
 
 template<typename T>
 ALWAYS_INLINE inline auto HobAttr(const std::string& attr_name) {
-  return hob::make_custom(attr_name, [attr_name](const user_op::KernelRegContext& ctx) {
+  return hob::make_custom(attr_name, [attr_name](const user_op::KernelRegContext& ctx) -> const T& {
     return ctx.Attr<T>(attr_name);
   });
 }

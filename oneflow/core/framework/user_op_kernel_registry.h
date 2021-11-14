@@ -47,7 +47,7 @@ class KernelRegContext {
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
 
   template<typename T>
-  T Attr(const std::string& attr_name) const {
+  const T& Attr(const std::string& attr_name) const {
     return AttrValueCast<T>(*Attr4Name(attr_name));
   }
 
