@@ -681,6 +681,10 @@ def _format(self, format_spec):
     return object.__format__(self, format_spec)
 
 
+def _to(self, *args, **kwargs):
+    return flow._C.to(self, *args, **kwargs)
+
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)
@@ -812,6 +816,7 @@ def RegisterMethods():
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
     Tensor.permute = _permute
+    Tensor.to = _to
 
 
 def register_tensor_op(op_name):

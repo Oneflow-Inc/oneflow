@@ -144,6 +144,7 @@ from oneflow._C import unsqueeze
 from oneflow._C import permute
 from oneflow._C import concat
 from oneflow._C import concat as cat
+from oneflow._C import to
 
 
 from . import sbp
@@ -323,7 +324,6 @@ from oneflow.nn.modules.tensor_buffer import (
 from oneflow.nn.modules.as_tensor import as_tensor
 from oneflow.nn.modules.tensor_buffer import tensor_to_tensor_buffer
 from oneflow.nn.modules.tile import tile_op as tile
-from oneflow.nn.modules.to import to_op as to
 from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
 from oneflow.nn.modules.consistent_cast import to_local_op as to_local
 from oneflow.nn.modules.where import where_op as where

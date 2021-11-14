@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 #include "oneflow/core/autograd/autograd_mode.h"
-#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/optional.h"
@@ -23,12 +22,11 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/tensor_rpc_util.h"
+#include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/random_generator_impl.h"
@@ -2030,63 +2028,45 @@ class MeshgridFunctor {
 
 namespace {
 
-Maybe<bool> device_equal(const std::string& device_name, const int device_id,
-                         Symbol<Device> device) {
+inline Maybe<bool> device_equal(const std::string& device_name, const int device_id,
+                                Symbol<Device> device) {
   return (device_name == device->type() && device_id == device->device_id());
 }
 
-Maybe<Symbol<ParallelDesc>> ReplacePlacementDeviceTag(Symbol<ParallelDesc> parallel_desc,
-                                                      const std::string& device_type) {
-  static const HashMap<std::string, std::string> type2device_tag{{"cpu", "cpu"}, {"cuda", "gpu"}};
-  std::shared_ptr<cfg::ParallelConf> parallel_conf =
-      std::make_shared<cfg::ParallelConf>(*parallel_desc->cfg_parallel_conf());
-  parallel_conf->set_device_tag(JUST(MapAt(type2device_tag, device_type)));
-  std::shared_ptr<ParallelDesc> out_parallel_desc;
-  JUST(
-      LogicalRun([&out_parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-        out_parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
-        return Maybe<void>::Ok();
-      }));
-  return SymbolOf(*out_parallel_desc);
-}
-
-Maybe<void> TouchConsistentTensor(const std::shared_ptr<one::Tensor>& tensor) {
-  CHECK_OR_RETURN(tensor->is_consistent());
-  return Maybe<void>::Ok();
-}
-
-auto* CheckMetaConsistency = DECORATE(&TouchConsistentTensor, CheckConsistentTensorMeta);
-
 Maybe<Tensor> LocalTensorTo(const std::shared_ptr<Tensor>& x, const std::string& device_name,
                             const int device_id, const Symbol<DType>& dtype, const bool& copy) {
-  bool copy_happened = false;
-  std::shared_ptr<Tensor> tensor;
+  std::shared_ptr<Tensor> tensor = x;
   if (!JUST(device_equal(device_name, device_id, JUST(x->device())))) {
-    tensor = JUST(Copy(x, device_name, device_id));
-    copy_happened = true;
+    tensor = JUST(Copy(tensor, device_name, device_id));
   }
-  if (dtype != x->dtype()) {
-    tensor = JUST(Cast(tensor ? tensor : x, dtype));
-    copy_happened = true;
-  }
-  if (copy && !copy_happened) { tensor = JUST(Copy(tensor ? tensor : x, device_name, device_id)); }
-  return tensor ? tensor : x;
+  if (dtype != x->dtype()) { tensor = JUST(Cast(tensor, dtype)); }
+  if (copy && tensor == x) { tensor = JUST(Copy(tensor, device_name, device_id)); }
+  return tensor;
 }
 
 Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::string& device_type,
                                  const Symbol<DType>& dtype, const bool& copy) {
   std::shared_ptr<Tensor> tensor;
-  if ((device_type == JUST(x->parallel_desc())->device_tag()) && (dtype == x->dtype())) {
-    return (copy ? JUST(x->clone()) : x);
+  auto input_placement = JUST(x->parallel_desc());
+  std::string input_device_tag = input_placement->device_tag();
+  if ((device_type == input_device_tag) && (dtype == x->dtype())) {
+    if (dtype == x->dtype()) {
+      return (copy ? JUST(x->clone()) : x);
+    } else {
+      *tensor = *JUST(Cast(x, dtype));
+      return tensor;
+    }
   }
   if (x->is_eager()) {
     CheckMetaConsistency(x).GetOrThrow();
-    auto placement = JUST(ReplacePlacementDeviceTag(JUST(x->parallel_desc()), device_type));
+    auto old_placement = JUST(x->parallel_desc());
+    auto placement = JUST(ReplacePlacementDeviceTag(input_placement, device_type));
     auto nd_sbp = JUST(x->nd_sbp());
     std::vector<Symbol<cfg::SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
     for (int i = 0; i < sbp_tuple.size(); ++i) { sbp_tuple[i] = nd_sbp->sbp_parallel().Get(i); }
     tensor = JUST(ConsistentToLocal(x));
-    tensor = JUST(LocalTensorTo(tensor, device_type, 0, dtype, copy));
+    Symbol<Device> device = JUST(Device::New(device_type));
+    tensor = JUST(LocalTensorTo(tensor, device->type(), device->device_id(), dtype, copy));
     JUST(tensor->set_requires_grad(x->requires_grad()));
     return JUST(LocalToConsistent(tensor, placement, sbp_tuple, *(x->shape()), dtype));
   } else {
@@ -2103,11 +2083,10 @@ Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::st
 class ToFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
-                           const Optional<const std::string>& device_,
-                           const Optional<Symbol<DType>>& dtype_, const bool& copy) const {
-    Symbol<Device> device;
-    device = device_.has_value() ? JUST(Device::New(device_.value_or(""))) : JUST(input->device());
+                           const Optional<std::string>& device_,
+                           const Optional<Symbol<DType>>& dtype_, bool copy) const {
     Symbol<DType> dtype = dtype_.value_or(input->dtype());
+    Symbol<Device> device;
 
     if (input->is_consistent()) {
       if (device_.has_value()) {
@@ -2117,6 +2096,8 @@ class ToFunctor {
       }
       return JUST(ConsistentTensorTo(input, device->type(), dtype, copy));
     } else {
+      device =
+          device_.has_value() ? JUST(Device::New(device_.value_or(""))) : JUST(input->device());
       return JUST(LocalTensorTo(input, device->type(), device->device_id(), dtype, copy));
     }
   }
@@ -2126,14 +2107,27 @@ class To2Functor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<Symbol<Device>>& device_,
-                           const Optional<Symbol<DType>>& dtype_, const bool& copy) const {
-    CHECK_OR_RETURN(input->is_consistent() && device_.has_value())
+                           const Optional<Symbol<DType>>& dtype_, bool copy) const {
+    CHECK_OR_RETURN(!(input->is_consistent() && device_.has_value()))
         << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
         << "for consistent tensor, but got " << device_.value_or(Symbol<Device>())->ToRepr();
+    if (input->is_consistent()) {
+      std::string device_type = JUST(input->parallel_desc())->device_tag();
+      return JUST(ConsistentTensorTo(input, device_type, dtype_.value_or(input->dtype()), copy));
+    } else {
+      auto dtype = dtype_.value_or(input->dtype());
+      auto device =
+          device_.has_value() ? device_.value_or(Symbol<Device>()) : JUST(input->device());
+      return JUST(LocalTensorTo(input, device->type(), device->device_id(), dtype, copy));
+    }
+  }
+};
 
-    auto dtype = dtype_.value_or(input->dtype());
-    auto device = device_.has_value() ? device_.value_or(Symbol<Device>()) : JUST(input->device());
-    return JUST(LocalTensorTo(input, device->type(), device->device_id(), dtype, copy));
+class To3Functor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
+                           const Optional<Symbol<DType>>& dtype_, bool copy) const {
+    return To(input, Optional<Symbol<Device>>(NullOpt), dtype_, copy);
   }
 };
 
@@ -2228,7 +2222,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::UnsortedBatchSegmentSumFunctor>("UnsortedBatchSegmentSum");
   m.add_functor<impl::MaskedFillFunctor>("MaskedFill");
   m.add_functor<impl::MeshgridFunctor>("Meshgrid");
-  m.add_functor<impl::ToFunctor, impl::To2Functor>("To");
+  // m.add_functor<impl::ToFunctor, impl::To2Functor>("To");
+  m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor>("To");
 };
 
 }  // namespace functional

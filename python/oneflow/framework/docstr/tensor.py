@@ -144,3 +144,37 @@ add_docstr(
     See :func:`oneflow.permute`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.to,
+    """Performs Tensor dtype and/or device conversion.
+        A flow.dtype and flow.device are inferred from the arguments of `input.to(*args, **kwargs)`.
+
+    .. note::
+        If the ``input`` Tensor already
+        has the correct :class:`flow.dtype` and :class:`flow.device`, then ``input`` is returned.
+        Otherwise, the returned tensor is a copy of ``input`` with the desired.
+
+    Args:
+        input (oneflow.Tensor): An input tensor.
+        *args (oneflow.Tensor or oneflow.device or oneflow.dtype): Positional arguments
+        **kwargs (oneflow.device or oneflow.dtype) : Key-value arguments
+
+    Returns:
+        oneflow.Tensor: A Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+
+        >>> arr = np.random.randint(1, 9, size=(1, 2, 3, 4))
+        >>> input = flow.Tensor(arr)
+        >>> output = input.to(dtype=flow.float32)
+        >>> np.array_equal(arr.astype(np.float32), output.numpy())
+        True
+
+    """,
+)
