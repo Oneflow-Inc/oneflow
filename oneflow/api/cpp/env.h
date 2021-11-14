@@ -13,19 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <pybind11/pybind11.h>
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/framework/device.h"
+#ifndef ONEFLOW_API_CPP_ENV_H_
+#define ONEFLOW_API_CPP_ENV_H_
 
-namespace oneflow {
-struct DeviceExportUtil final {
-  static void CheckDeviceType(const std::string& type);
+namespace oneflow_api {
 
-  static Symbol<Device> ParseAndNew(const std::string& type_and_id);
+void initialize();
+void release();
 
-  static Symbol<Device> New(const std::string& type_and_id);
+}  // namespace oneflow_api
 
-  static Symbol<Device> New(const std::string& type, int64_t device_id);
-};
-
-}  // namespace oneflow
+#endif  // ONEFLOW_API_CPP_ENV_H_
