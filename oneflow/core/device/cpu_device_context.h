@@ -25,7 +25,11 @@ namespace oneflow {
 class CpuDeviceCtx final : public DeviceCtx, public EventRecordProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDeviceCtx);
-  CpuDeviceCtx() = default;
+  CpuDeviceCtx()
+  {
+    onednn_engine_.reset(new dnnl::engine(dnnl::engine::kind::cpu, 0));
+    onednn_stream_.reset(new dnnl::stream(*onednn_engine_));
+  }
   ~CpuDeviceCtx() = default;
 
   std::unique_ptr<DeviceCtx> Copy() const { return std::unique_ptr<DeviceCtx>(new CpuDeviceCtx()); }
@@ -37,14 +41,16 @@ class CpuDeviceCtx final : public DeviceCtx, public EventRecordProvider {
 
   DeviceType device_type() const override { return DeviceType::kCPU; }
 
-  dnnl::engine* onednn_engine() const override { UNIMPLEMENTED(); return nullptr; }
-  dnnl::stream* onednn_stream() const override { UNIMPLEMENTED(); return nullptr; }
+  dnnl::engine* onednn_engine() const override { return onednn_engine_.get();};
+  dnnl::stream* onednn_stream() const override { return onednn_stream_.get();};
 
   std::shared_ptr<EventRecord> MakeEventRecord() override {
     return std::make_shared<NaiveEventRecord>();
   }
 
  private:
+  std::unique_ptr<dnnl::engine> onednn_engine_;
+  std::unique_ptr<dnnl::stream> onednn_stream_;
 };  // namespace oneflow
 
 }  // namespace oneflow

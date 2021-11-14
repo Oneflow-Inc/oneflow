@@ -15,13 +15,14 @@ limitations under the License.
 */
 #include "oneflow/core/stream/include/stream_context_adapter.h"
 #include "oneflow/core/stream/cuda/cuda_stream_context.h"
+#include "oneflow/core/stream/cpu/cpu_stream_context.h"
 #include "oneapi/dnnl/dnnl.hpp"
 
 namespace oneflow {
 
 namespace {
 
-class DeviceCtxStreamContextAdapter : public StreamContext {
+class DeviceCtxStreamContextAdapter : public CpuStreamContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DeviceCtxStreamContextAdapter);
   explicit DeviceCtxStreamContextAdapter(DeviceCtx* device_ctx) : device_ctx_(device_ctx) {}
@@ -35,10 +36,10 @@ class DeviceCtxStreamContextAdapter : public StreamContext {
   Maybe<void> Sync() override {
     device_ctx_->SyncDevice();
     return Maybe<void>::Ok();
-  }
+  } 
 
-  // dnnl::engine* GetOnednnEngine() {};
-  // dnnl::stream* GetOnednnStream() {};
+  dnnl::engine* onednn_engine() const override { return device_ctx_->onednn_engine(); };
+  dnnl::stream* onednn_stream() const override { return device_ctx_->onednn_stream(); };
 
   DeviceType device_type() const override { return device_ctx_->device_type(); }
 
