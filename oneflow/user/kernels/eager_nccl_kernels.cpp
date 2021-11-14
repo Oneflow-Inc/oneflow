@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/primitive/include/permute.h"
+#include "oneflow/core/ep/include/primitive/permute.h"
 
 namespace oneflow {
 
@@ -283,7 +283,7 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
       FOR_RANGE(int64_t, i, 0, transpose_in_dim_vec.size()) {
         if (i != out_split_axis) { perm.push_back(i); }
       }
-      auto transpose = primitive::NewPrimitive<primitive::PermuteFactory>(
+      auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
           ctx->stream_ctx()->device_type(), transpose_in_dim_vec.size());
       CHECK(transpose);
       transpose->Launch(ctx->stream_ctx(), in->data_type(), transpose_in_dim_vec.size(),
@@ -343,7 +343,7 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
       std::vector<int32_t> perm;
       FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.push_back(i); }
       perm.insert(perm.begin() + in_split_axis, 0);
-      auto transpose = primitive::NewPrimitive<primitive::PermuteFactory>(
+      auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
           ctx->stream_ctx()->device_type(), unpack_from_dim_vec.size());
       CHECK(transpose);
       transpose->Launch(ctx->stream_ctx(), in->data_type(), unpack_from_dim_vec.size(),
