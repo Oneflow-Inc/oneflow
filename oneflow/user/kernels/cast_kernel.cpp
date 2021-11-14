@@ -50,10 +50,10 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> CastPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>(
-      "CastPrimitiveExists",
-      [](const user_op::KernelRegContext& ctx) { return NewCastPrimitive(&ctx).operator bool(); });
+auto CastPrimitiveExists() {
+  return hob::make_custom("CastPrimitiveExists", [](const user_op::KernelRegContext& ctx) -> bool {
+    return NewCastPrimitive(&ctx).operator bool();
+  });
 }
 
 REGISTER_USER_KERNEL("cast").SetCreateFn<CastKernel>().SetIsMatchedHob(CastPrimitiveExists()

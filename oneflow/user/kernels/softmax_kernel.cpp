@@ -28,11 +28,10 @@ std::unique_ptr<ep::primitive::Softmax> NewSoftmaxPrimitive(Context* ctx) {
   return ep::primitive::NewPrimitive<ep::primitive::SoftmaxFactory>(ctx->device_type(), data_type);
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> SoftmaxPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("SoftmaxPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewSoftmaxPrimitive(&ctx).operator bool();
-                                     });
+auto SoftmaxPrimitiveExists() {
+  return hob::make_custom("SoftmaxPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewSoftmaxPrimitive(&ctx).operator bool();
+  });
 }
 
 template<typename Context>
@@ -42,11 +41,11 @@ std::unique_ptr<ep::primitive::SoftmaxBackward> NewSoftmaxBackwardPrimitive(Cont
                                                                             data_type);
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> SoftmaxBackwardPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("SoftmaxBackwardPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewSoftmaxBackwardPrimitive(&ctx).operator bool();
-                                     });
+auto SoftmaxBackwardPrimitiveExists() {
+  return hob::make_custom("SoftmaxBackwardPrimitiveExists",
+                          [](const user_op::KernelRegContext& ctx) {
+                            return NewSoftmaxBackwardPrimitive(&ctx).operator bool();
+                          });
 }
 
 }  // namespace
