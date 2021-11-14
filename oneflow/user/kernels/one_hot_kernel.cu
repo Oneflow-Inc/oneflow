@@ -63,7 +63,7 @@ class GpuOneHotKernel final : public user_op::OpKernel, public user_op::CudaGrap
 
 #define REGISTER_GPU_ONE_HOT_KERNEL(dtype, itype)                                               \
   REGISTER_USER_KERNEL("one_hot").SetCreateFn<GpuOneHotKernel<dtype, itype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == "gpu")                                                        \
+      (user_op::HobDeviceType() == DeviceType::kGPU)                                            \
       & (user_op::HobDataType("indices", 0) == GetDataType<itype>::value)                       \
       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 

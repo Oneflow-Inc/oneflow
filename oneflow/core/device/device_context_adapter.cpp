@@ -97,7 +97,7 @@ DeviceCtx* NewDeviceCtxAdapter(StreamContext* ctx) {
     return new CpuDeviceCtxAdapter(CHECK_NOTNULL(dynamic_cast<CpuStreamContext*>(ctx)));
   } else if (ctx->device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
-    return new CudaDeviceCtxAdapter(CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(ctx)));
+    return new CudaDeviceCtxAdapter(ctx->As<CudaStreamContext>());
 #else
     UNIMPLEMENTED();
     return nullptr;

@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_MEM_ZONE_TYPE_DESC__H_
 
 #include "oneflow/core/vm/stream_desc.h"
-#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/vm/interpret_type.h"
 #include "oneflow/core/vm/vm_resource_desc.h"
 #include "oneflow/core/common/range.h"
