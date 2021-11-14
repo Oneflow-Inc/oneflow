@@ -30,7 +30,7 @@ target_link_libraries(MLIROneFlowExtension
   MLIROneFlow
   MLIRExecutionEngine
   of_protoobj
-  of_ccobj
+  oneflow
   PUBLIC
   ${MLIR_RUNTIME_GPU_LIBS}
 )
