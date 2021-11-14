@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_API_CPP_NN_GRAPH_H_
-#define ONEFLOW_API_CPP_NN_GRAPH_H_
+#ifndef ONEFLOW_API_CPP_GRAPH_API_H_
+#define ONEFLOW_API_CPP_GRAPH_API_H_
 
 #include <string>
 #include "oneflow/core/common/hash_container.h"
@@ -41,4 +41,4 @@ class Graph {
 
 }  // namespace oneflow_api
 
-#endif // ONEFLOW_API_CPP_NN_GRAPH_H_
+#endif // ONEFLOW_API_CPP_GRAPH_API_H_

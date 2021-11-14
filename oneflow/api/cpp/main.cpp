@@ -17,7 +17,7 @@ limitations under the License.
 #include <iostream>
 #include <string>
 #include <unordered_map>
-#include "oneflow/api/cpp/nn_graph.h"
+#include "oneflow/api/cpp/graph_api.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/util.h"

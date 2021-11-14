@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/api/cpp/nn_graph.h"
+#include "oneflow/api/cpp/graph_api.h"
 #include <cstdio>
 #include <fstream>
 #include <istream>
