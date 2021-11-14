@@ -2126,6 +2126,12 @@ class To3Functor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<Symbol<DType>>& dtype_, bool copy) const {
+    if (input->is_consistent()) {
+      return ConsistentTensorTo(input, JUST(input->parallel_desc())->device_tag(), input->dtype(), copy);
+    } else {
+      auto device = JUST(input->device());
+      return LocalTensorTo(input, device->type(), device->device_id(), input->dtype(), copy);
+    }
     return To(input, Optional<Symbol<Device>>(NullOpt), dtype_, copy);
   }
 };
