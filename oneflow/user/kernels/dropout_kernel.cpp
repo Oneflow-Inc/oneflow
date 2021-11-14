@@ -60,7 +60,7 @@ class DropoutKernelCPU final : public user_op::OpKernel {
 #define REGISTER_DROPOUT_KERNEL_CPU(dtype)                                                      \
   REGISTER_USER_KERNEL("dropout")                                                               \
       .SetCreateFn<DropoutKernelCPU<dtype>>()                                                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -92,7 +92,7 @@ class DropoutGradKernelCPU final : public user_op::OpKernel {
 #define REGISTER_DROPOUT_GRAD_KERNEL_CPU(dtype)                                                 \
   REGISTER_USER_KERNEL("dropout_grad")                                                          \
       .SetCreateFn<DropoutGradKernelCPU<dtype>>()                                               \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))          \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \

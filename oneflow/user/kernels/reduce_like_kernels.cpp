@@ -74,7 +74,7 @@ class ReduceSumLikeOpKernel final : public user_op::OpKernel, public user_op::Cu
 #define REGISTER_REDUCE_SUM_LIKE_KERNEL(device, data_type_pair)                               \
   REGISTER_USER_KERNEL("reduce_sum_like")                                                     \
       .SetCreateFn<ReduceSumLikeOpKernel<device, OF_PP_PAIR_FIRST(data_type_pair)>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
                        & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(data_type_pair))) \
       .SetInferTmpSizeFn(ReduceSumLikeInferTmpSize);
 
@@ -104,16 +104,15 @@ void GetReduceSumLayout(const std::vector<int32_t>& axis, const ShapeView& in_sh
 
 class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
-  explicit ReduceSumLikeHalfKernel(user_op::KernelCreateContext* ctx) {
-    axis_ = RegularAxis(ctx->Attr<std::vector<int32_t>>("axis"));
-  }
+  ReduceSumLikeHalfKernel() = default;
   ~ReduceSumLikeHalfKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    std::vector<int32_t> axis = RegularAxis(ctx->Attr<std::vector<int32_t>>("axis"));
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    if (axis_.empty()) {
+    if (axis.empty()) {
       CHECK_EQ(tensor_x->shape(), tensor_y->shape());
       Memcpy<DeviceType::kGPU>(
           ctx->device_ctx(), tensor_y->mut_dptr(), tensor_x->dptr(),
@@ -123,7 +122,7 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::
       const ShapeView& in_shape = tensor_x->shape();
       bool is_axis_contiguous = false;
       int64_t outer_size = 0, inner_size = 0, reduce_size = 0;
-      GetReduceSumLayout(axis_, in_shape, &is_axis_contiguous, &outer_size, &inner_size,
+      GetReduceSumLayout(axis, in_shape, &is_axis_contiguous, &outer_size, &inner_size,
                          &reduce_size);
       if (is_axis_contiguous && (outer_size == 1 || inner_size == 1)) {
         CBLAS_TRANSPOSE trans_a = (inner_size == 1) ? CblasNoTrans : CblasTrans;
@@ -141,7 +140,7 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::
                                                 tmp_buffer->dptr<float16>(), GetZeroVal<float16>(),
                                                 tensor_y->mut_dptr<float16>());
       } else {
-        const Shape& reduced_shape = CreateReducedShape(in_shape, {axis_.begin(), axis_.end()});
+        const Shape& reduced_shape = CreateReducedShape(in_shape, {axis.begin(), axis.end()});
         float* in_tmp_buffer = tmp_buffer->mut_dptr<float>();
         const size_t in_tmp_buffer_bytes = GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
         float* out_tmp_buffer =
@@ -174,14 +173,11 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-
- private:
-  std::vector<int32_t> axis_;
 };
 
 REGISTER_USER_KERNEL("reduce_sum_like")
-    .SetCreateWithCtxFn<ReduceSumLikeHalfKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
+    .SetCreateFn<ReduceSumLikeHalfKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
                      & (user_op::HobDataType("y", 0) == GetDataType<float16>::value))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
       const Shape& in_shape = ctx->InputTensorDesc("x", 0).shape();
