@@ -61,7 +61,9 @@ template<typename Fn,
 struct Custom final : public Expr<Context, ValueT, Custom<Fn>> {
   explicit Custom(Fn fn) : Custom(fn, "") {}
   Custom(std::string debug_str, Fn fn) : fn_(std::move(fn)), debug_str_(std::move(debug_str)) {}
-  ALWAYS_INLINE scalar_or_const_ref_t<ValueT> get(const Context& context) const override { return fn_(context); }
+  ALWAYS_INLINE scalar_or_const_ref_t<ValueT> get(const Context& context) const override {
+    return fn_(context);
+  }
   std::string DebugStr(const Context&, bool display_result) const override { return debug_str_; }
 
  private:
@@ -86,7 +88,9 @@ template<typename Context, typename E>
 struct NotBoolFunctor final : public BoolExpr<Context, NotBoolFunctor<Context, E>> {
   explicit NotBoolFunctor(const E& expr) : expr_(expr) {}
 
-  ALWAYS_INLINE bool get(const Context& context) const override { return !expr_.get(expr_, context); }
+  ALWAYS_INLINE bool get(const Context& context) const override {
+    return !expr_.get(expr_, context);
+  }
 
   std::string DebugStr(const Context& ctx, bool display_result) const override {
     std::ostringstream string_stream;
@@ -110,7 +114,7 @@ NotBoolFunctor<Context, E> operator~(BoolExpr<Context, E> const& lhs) {
     name##BoolFunctor(const E1& lhs, const E2& rhs) : lhs_(lhs), rhs_(rhs) {}                     \
                                                                                                   \
     ALWAYS_INLINE bool get(const Context& context) const override {                               \
-      return lhs_.get(context) op rhs_.get(context);                                          \
+      return lhs_.get(context) op rhs_.get(context);                                              \
     }                                                                                             \
                                                                                                   \
     std::string DebugStr(const Context& ctx, bool display_result) const override;                 \
