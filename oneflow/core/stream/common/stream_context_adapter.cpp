@@ -36,7 +36,7 @@ class DeviceCtxStreamContextAdapter : public CpuStreamContext {
   Maybe<void> Sync() override {
     device_ctx_->SyncDevice();
     return Maybe<void>::Ok();
-  } 
+  }
 
   dnnl::engine* onednn_engine() const override { return device_ctx_->onednn_engine(); };
   dnnl::stream* onednn_stream() const override { return device_ctx_->onednn_stream(); };

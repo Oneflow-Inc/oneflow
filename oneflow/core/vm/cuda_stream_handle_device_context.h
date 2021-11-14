@@ -55,8 +55,14 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx, public SingleThreadQueryCuda
 
   DeviceType device_type() const override { return DeviceType::kGPU; }
 
-  dnnl::engine* onednn_engine() const override { UNIMPLEMENTED(); return nullptr; }
-  dnnl::stream* onednn_stream() const override { UNIMPLEMENTED(); return nullptr; }
+  dnnl::engine* onednn_engine() const override {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+  dnnl::stream* onednn_stream() const override {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
 
  protected:
   std::unique_ptr<CudaStreamHandle> cuda_handler_;

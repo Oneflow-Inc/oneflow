@@ -34,14 +34,14 @@ class CpuStreamContextImp : public CpuStreamContext, public KernelObserverProvid
   Maybe<void> AddCallback(std::function<void()> callback) override;
   Maybe<void> Sync() override;
   KernelObserver* GetKernelObserver() override;
-  dnnl::engine* onednn_engine() const override { return onednn_engine_.get();};
-  dnnl::stream* onednn_stream() const override { return onednn_stream_.get();};
+  dnnl::engine* onednn_engine() const override { return onednn_engine_.get(); };
+  dnnl::stream* onednn_stream() const override { return onednn_stream_.get(); };
   DeviceType device_type() const override { return DeviceType::kCPU; }
 
  private:
   std::unique_ptr<dnnl::engine> onednn_engine_;
   std::unique_ptr<dnnl::stream> onednn_stream_;
-  std::unique_ptr<KernelObserver> kernel_observer_;  
+  std::unique_ptr<KernelObserver> kernel_observer_;
 };
 
 CpuStreamContextImp::CpuStreamContextImp() {
@@ -64,8 +64,6 @@ Maybe<void> CpuStreamContextImp::AddCallback(std::function<void()> callback) {
 Maybe<void> CpuStreamContextImp::Sync() { return Maybe<void>::Ok(); }
 
 KernelObserver* CpuStreamContextImp::GetKernelObserver() { return kernel_observer_.get(); }
-
-
 
 REGISTER_STREAM_CONTEXT_CREATOR_WITH_STREAM_ID(DeviceType::kCPU,
                                                ([](const StreamId& stream_id) -> StreamContext* {

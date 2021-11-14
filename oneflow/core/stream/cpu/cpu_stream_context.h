@@ -28,12 +28,11 @@ class CpuStreamContext : public StreamContext {
   OF_DISALLOW_COPY_AND_MOVE(CpuStreamContext);
   CpuStreamContext() = default;
   ~CpuStreamContext() override = default;
-  
+
   virtual dnnl::engine* onednn_engine() const = 0;
   virtual dnnl::stream* onednn_stream() const = 0;
 };
 
 }  // namespace oneflow
-
 
 #endif  // ONEFLOW_CORE_STREAM_CUDA_CPU_STREAM_CONTEXT_H_
