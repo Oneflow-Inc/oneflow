@@ -36,17 +36,16 @@ std::unique_ptr<ep::primitive::CopyNd> NewCopyNdPrimitive(Context* ctx) {
   return ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(ctx->device_type(), ndims);
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> FillPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>(
-      "FillPrimitiveExists",
-      [](const user_op::KernelRegContext& ctx) { return NewFillPrimitive(&ctx).operator bool(); });
+auto FillPrimitiveExists() {
+  return hob::make_custom("FillPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewFillPrimitive(&ctx).operator bool();
+  });
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> CopyNdPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("CopyNdPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewCopyNdPrimitive(&ctx).operator bool();
-                                     });
+auto CopyNdPrimitiveExists() {
+  return hob::make_custom("CopyNdPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewCopyNdPrimitive(&ctx).operator bool();
+  });
 }
 
 }  // namespace

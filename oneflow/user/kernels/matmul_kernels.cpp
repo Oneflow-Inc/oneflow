@@ -96,25 +96,22 @@ std::unique_ptr<ep::primitive::BatchMatmul> NewBatchMatmulPrimitive(Context* ctx
       ctx->device_type(), data_type, trans_a, trans_b);
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> MemcpyPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("MemcpyPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewMemcpyPrimitive(&ctx).operator bool();
-                                     });
+auto MemcpyPrimitiveExists() {
+  return hob::make_custom("MemcpyPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewMemcpyPrimitive(&ctx).operator bool();
+  });
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> MatmulPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("MatmulPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewMatmulPrimitive(&ctx).operator bool();
-                                     });
+auto MatmulPrimitiveExists() {
+  return hob::make_custom("MatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewMatmulPrimitive(&ctx).operator bool();
+  });
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> BatchMatmulPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("BatchMatmulPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewBatchMatmulPrimitive(&ctx).operator bool();
-                                     });
+auto BatchMatmulPrimitiveExists() {
+  return hob::make_custom("BatchMatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewBatchMatmulPrimitive(&ctx).operator bool();
+  });
 }
 
 class MatmulKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -336,11 +333,10 @@ class BroadcastMatmulGradBKernel final : public user_op::OpKernel,
   }
 };
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> PrimitiveExistsForBroadcastMatmulGradB() {
-  return user_op::HobCtxGetter<bool>(
-      "MatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
-        return NewMatmulPrimitiveForBroadcastMatmulGradB(&ctx).operator bool();
-      });
+auto PrimitiveExistsForBroadcastMatmulGradB() {
+  return hob::make_custom("MatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewMatmulPrimitiveForBroadcastMatmulGradB(&ctx).operator bool();
+  });
 }
 
 REGISTER_USER_KERNEL("broadcast_matmul_grad_b")
