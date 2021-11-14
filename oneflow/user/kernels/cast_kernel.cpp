@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/core/primitive/include/cast.h"
+#include "oneflow/core/ep/include/primitive/cast.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 
 namespace oneflow {
@@ -25,11 +25,11 @@ namespace user_op {
 namespace {
 
 template<typename Context>
-std::unique_ptr<primitive::Cast> NewCastPrimitive(Context* ctx) {
+std::unique_ptr<ep::primitive::Cast> NewCastPrimitive(Context* ctx) {
   const DataType in_data_type = ctx->TensorDesc4ArgNameAndIndex("in", 0)->data_type();
   const DataType out_data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
-  return primitive::NewPrimitive<primitive::CastFactory>(ctx->device_type(), in_data_type,
-                                                         out_data_type);
+  return ep::primitive::NewPrimitive<ep::primitive::CastFactory>(ctx->device_type(), in_data_type,
+                                                                 out_data_type);
 }
 
 class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {

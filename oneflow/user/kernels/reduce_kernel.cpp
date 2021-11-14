@@ -18,8 +18,8 @@ limitations under the License.
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/core/primitive/include/cast.h"
-#include "oneflow/core/primitive/include/fill.h"
+#include "oneflow/core/ep/include/primitive/cast.h"
+#include "oneflow/core/ep/include/primitive/fill.h"
 
 namespace oneflow {
 
@@ -135,8 +135,9 @@ class ReduceSumHalfKernel final : public user_op::OpKernel, public user_op::Cuda
       const int32_t m = (inner_size == 1) ? outer_size : inner_size;
       const int32_t n = 1;
       const int32_t k = reduce_size;
-      std::unique_ptr<primitive::Fill> fill = primitive::NewPrimitive<primitive::FillFactory>(
-          ctx->stream_ctx()->device_type(), DataType::kFloat16);
+      std::unique_ptr<ep::primitive::Fill> fill =
+          ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream_ctx()->device_type(),
+                                                                  DataType::kFloat16);
       CHECK(fill);
       fill->Launch(ctx->stream_ctx(), tmp_buffer->mut_dptr(), 1.0, reduce_size);
       NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k,
@@ -157,10 +158,10 @@ class ReduceSumHalfKernel final : public user_op::OpKernel, public user_op::Cuda
           GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
       CHECK_LE(in_tmp_buffer_bytes + out_tmp_buffer_bytes + reduce_tmp_buffer_bytes,
                tmp_buffer->shape().elem_cnt());
-      auto h2f = primitive::NewPrimitive<primitive::CastFactory>(
+      auto h2f = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
           ctx->device_type(), DataType::kFloat16, DataType::kFloat);
       CHECK(h2f);
-      auto f2h = primitive::NewPrimitive<primitive::CastFactory>(
+      auto f2h = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
           ctx->device_type(), DataType::kFloat, DataType::kFloat16);
       CHECK(f2h);
       h2f->Launch(ctx->stream_ctx(), input_tensor->dptr<float16>(), in_tmp_buffer,

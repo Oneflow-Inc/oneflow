@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/random_generator.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
-#include "oneflow/core/primitive/include/fill.h"
+#include "oneflow/core/ep/include/primitive/fill.h"
 
 namespace oneflow {
 
@@ -135,8 +135,9 @@ class TestMultiOutputOrderKernel final : public user_op::OpKernel {
     user_op::Tensor* out2_blob = ctx->Tensor4ArgNameAndIndex("out2", 0);
     Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out1_blob->mut_dptr<char>(), in_blob->dptr<char>(),
                              in_blob->shape().elem_cnt() * sizeof(float));
-    std::unique_ptr<primitive::Fill> fill = primitive::NewPrimitive<primitive::FillFactory>(
-        ctx->stream_ctx()->device_type(), out2_blob->data_type());
+    std::unique_ptr<ep::primitive::Fill> fill =
+        ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream_ctx()->device_type(),
+                                                                out2_blob->data_type());
     CHECK(fill);
     fill->Launch(ctx->stream_ctx(), out2_blob->mut_dptr(), 0.0, out2_blob->shape().elem_cnt());
   }
@@ -177,8 +178,9 @@ class TestMultiInputBwKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* x1_diff_blob = ctx->Tensor4ArgNameAndIndex("x1_diff", 0);
     user_op::Tensor* x2_diff_blob = ctx->Tensor4ArgNameAndIndex("x2_diff", 0);
-    std::unique_ptr<primitive::Fill> fill = primitive::NewPrimitive<primitive::FillFactory>(
-        ctx->stream_ctx()->device_type(), x1_diff_blob->data_type());
+    std::unique_ptr<ep::primitive::Fill> fill =
+        ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream_ctx()->device_type(),
+                                                                x1_diff_blob->data_type());
     CHECK(fill);
     fill->Launch(ctx->stream_ctx(), x1_diff_blob->mut_dptr(), 1.0,
                  x1_diff_blob->shape().elem_cnt());
