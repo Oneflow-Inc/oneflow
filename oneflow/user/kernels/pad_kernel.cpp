@@ -45,20 +45,20 @@ std::unique_ptr<ep::primitive::Memset> NewMemsetPrimitive(Context* ctx) {
   return ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
 }
 
-hob::HobContextGetter<KernelRegContext, bool> FillPrimitiveExists() {
-  return HobCtxGetter<bool>("FillPrimitiveExists", [](const KernelRegContext& ctx) {
+auto FillPrimitiveExists() {
+  return hob::make_custom("FillPrimitiveExists", [](const KernelRegContext& ctx) {
     return NewFillPrimitive(&ctx).operator bool();
   });
 }
 
-hob::HobContextGetter<KernelRegContext, bool> CopyNdPrimitiveExists() {
-  return HobCtxGetter<bool>("CopyNdPrimitiveExists", [](const KernelRegContext& ctx) {
+auto CopyNdPrimitiveExists() {
+  return hob::make_custom("CopyNdPrimitiveExists", [](const KernelRegContext& ctx) {
     return NewCopyNdPrimitive(&ctx).operator bool();
   });
 }
 
-hob::HobContextGetter<KernelRegContext, bool> MemsetPrimitiveExists() {
-  return HobCtxGetter<bool>("MemsetPrimitiveExists", [](const KernelRegContext& ctx) {
+auto MemsetPrimitiveExists() {
+  return hob::make_custom("MemsetPrimitiveExists", [](const KernelRegContext& ctx) {
     return NewMemsetPrimitive(&ctx).operator bool();
   });
 }
