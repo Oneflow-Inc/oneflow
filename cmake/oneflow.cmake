@@ -354,7 +354,7 @@ target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_impor
 if (WITH_MLIR)
   set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/f1c86b835475ea5c0dd51862ce609a18cf8192c0.zip" CACHE STRING "" FORCE)
   use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
-  set(LLVM_MONO_REPO_MD5 "5704d71096294cf21637a8bc29fb0fb8" CACHE STRING "" FORCE)
+  set(LLVM_MONO_REPO_MD5 "fc27c792cb10ead50a406c1af3ec49a1" CACHE STRING "" FORCE)
   add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
   target_link_libraries(oneflow MLIROneFlowTranslation)
   set(ONEFLOW_MLIR_LIBS -Wl,--no-as-needed MLIROneFlowExtension -Wl,--as-needed)
