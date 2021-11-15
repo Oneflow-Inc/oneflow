@@ -294,10 +294,10 @@ std::shared_ptr<user_op::OpKernelState> CreateSliceState(user_op::KernelInitCont
     BalancedSplitter bs(split_dim_size, ctx->parallel_ctx().parallel_num());
     return std::make_shared<OpKernelStateWrapper<SliceContext>>(
         split_axis, bs.At(parallel_id).begin(), bs.At(parallel_id).end(), split_dim_size);
-  } else if (in_sbp.has_broadcast_parallel()) {
+  } else if (in_sbp.has_broadcast_parallel() || in_sbp.has_partial_sum_parallel()) {
     return std::make_shared<OpKernelStateWrapper<SliceContext>>(SPLIT_AXIS_FOR_BROADCAST, 0, 0, 0);
   } else {
-    // TODO(jianhao): support partialsum
+    // do nothing
     UNIMPLEMENTED();
   }
 }
@@ -315,8 +315,11 @@ class LogicalSliceKernel final : public user_op::OpKernel {
     if (ctx->parallel_ctx().parallel_num() > 1) {
       if (x_sbp.has_split_parallel()) {
         CHECK(y_sbp.has_partial_sum_parallel());
-      } else {
+      } else if (x_sbp.has_broadcast_parallel()) {
         CHECK(y_sbp.has_broadcast_parallel());
+      } else {
+        CHECK(x_sbp.has_partial_sum_parallel());
+        CHECK(y_sbp.has_partial_sum_parallel());
       }
     }
     return CreateSliceState(ctx, "x");

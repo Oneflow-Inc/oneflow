@@ -18,20 +18,32 @@ This file is mostly referenced from PyTorch v1.8.1 torch/_tensor_str.py
 """
 import numpy as np
 import math
-from typing import Optional
+from typing import Optional, Tuple
 
 import oneflow as flow
 
 
 class __PrinterOptions(object):
     precision: int = 4
-    threshold: float = 1000
+    threshold: float = 10
     edgeitems: int = 3
     linewidth: int = 80
     sci_mode: Optional[bool] = None
 
 
 PRINT_OPTS = __PrinterOptions()
+
+
+def slice_util(tensor, slice_tup: Tuple[int, int, int]):
+    ndim = tensor.ndim
+    slice_tuple_list = [slice_tup] + [[None, None, None]] * (ndim - 1)
+    if tensor.is_consistent:
+        tensor = flow.logical_slice(tensor, slice_tuple_list)
+    else:
+        tensor = flow.slice(tensor, slice_tuple_list)
+    if tensor.shape[0] == 1 and ndim > 1:
+        tensor = tensor.reshape(list(tensor.shape[1:]))
+    return tensor
 
 
 def _try_convert_to_local_tensor(tensor):
@@ -152,10 +164,10 @@ def _vector_str(self, indent, summarize, formatter1):
 
     if summarize and self.size(0) > 2 * PRINT_OPTS.edgeitems:
         left_values = _try_convert_to_local_tensor(
-            self[: PRINT_OPTS.edgeitems]
+            slice_util(self, [0, PRINT_OPTS.edgeitems, 1])
         ).tolist()
         right_values = _try_convert_to_local_tensor(
-            self[-PRINT_OPTS.edgeitems :]
+            slice_util(self, [self.size(0) - PRINT_OPTS.edgeitems, self.size(0), 1])
         ).tolist()
         data = (
             [_val_formatter(val) for val in left_values]
@@ -185,18 +197,24 @@ def _tensor_str_with_formatter(self, indent, summarize, formatter1):
     if summarize and self.size(0) > 2 * PRINT_OPTS.edgeitems:
         slices = (
             [
-                _tensor_str_with_formatter(self[i], indent + 1, summarize, formatter1)
+                _tensor_str_with_formatter(
+                    slice_util(self, [i, i + 1, 1]), indent + 1, summarize, formatter1
+                )
                 for i in range(0, PRINT_OPTS.edgeitems)
             ]
             + ["..."]
             + [
-                _tensor_str_with_formatter(self[i], indent + 1, summarize, formatter1)
+                _tensor_str_with_formatter(
+                    slice_util(self, [i, i + 1, 1]), indent + 1, summarize, formatter1
+                )
                 for i in range(self.shape[0] - PRINT_OPTS.edgeitems, self.shape[0])
             ]
         )
     else:
         slices = [
-            _tensor_str_with_formatter(self[i], indent + 1, summarize, formatter1)
+            _tensor_str_with_formatter(
+                slice_util(self, [i, i + 1, 1]), indent + 1, summarize, formatter1
+            )
             for i in range(0, self.size(0))
         ]
 
@@ -214,8 +232,10 @@ def _tensor_str(self, indent):
         return "[...]"
 
     with flow.no_grad():
-        formatter = _Formatter(get_summarized_data(self) if summarize else self)
-        return _tensor_str_with_formatter(self, indent, summarize, formatter)
+        get_summarized_data(self)
+        # formatter = _Formatter(get_summarized_data(self) if summarize else self)
+        # return _tensor_str_with_formatter(self, indent, summarize, formatter)
+        return "...debug str.."
 
 
 def _add_suffixes(tensor_str, suffixes, indent):
@@ -238,20 +258,46 @@ def get_summarized_data(self):
     if dim == 0:
         return self
     if dim == 1:
+        print("dim = 1")
         if self.size(0) > 2 * PRINT_OPTS.edgeitems:
             return flow.cat(
-                (self[: PRINT_OPTS.edgeitems], self[-PRINT_OPTS.edgeitems :])
+                (
+                    slice_util(self, [0, PRINT_OPTS.edgeitems, 1]),
+                    slice_util(
+                        self, [self.size(0) - PRINT_OPTS.edgeitems, self.size(0), 1]
+                    ),
+                )
             )
         else:
             return self
     if self.size(0) > 2 * PRINT_OPTS.edgeitems:
-        start = [self[i] for i in range(0, PRINT_OPTS.edgeitems)]
-        end = [
-            self[i] for i in range(self.shape[0] - PRINT_OPTS.edgeitems, self.shape[0])
+        print("get summaried data!")
+        start = [
+            slice_util(self, [i, i + 1, 1]) for i in range(0, PRINT_OPTS.edgeitems)
         ]
-        return flow.stack([get_summarized_data(x) for x in (start + end)])
+        print("get summaried data start!")
+        end = [
+            slice_util(self, [i, i + 1, 1])
+            for i in range(self.shape[0] - PRINT_OPTS.edgeitems, self.shape[0])
+        ]
+        print("get summaried data end!")
+        print("start type = ", type(start), "len = ", len(start))
+        print("end type = ", type(end))
+        print("star 0 sbp signature = ", start[0].sbp)
+        get_summarized_data(start[0])
+        # merge_list = []
+        # for x in start + end:
+        #     merge_list.append(get_summarized_data(x))
+        # print("merge finish")
+        # return flow.stack([get_summarized_data(x) for x in (start + end)])
+        # return start[0]
     else:
-        return flow.stack([get_summarized_data(x) for x in self])
+        return flow.stack(
+            [
+                get_summarized_data(slice_util(self, [i, i + 1, 1]))
+                for i in range(len(self))
+            ]
+        )
 
 
 def _gen_tensor_str_template(tensor, is_meta):

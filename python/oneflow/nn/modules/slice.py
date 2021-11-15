@@ -68,6 +68,20 @@ def slice_update_op(input, update, slice_tup_list: Sequence[Tuple[int, int, int]
     return flow._C.slice_update(input, update, start, stop, step)
 
 
+def logical_slice_op(input, slice_tup_list: Sequence[Tuple[int, int, int]]):
+    """Extracts a slice from a consistent tensor.
+    The `slice_tup_list` assigns the slice indices in each dimension, the format is (start, stop, step).
+    The operator will slice the tensor according to the `slice_tup_list`.
+
+    Args:
+        input: A `Tensor`.
+        slice_tup_list: A list of slice tuple, indicate each dimension slice (start, stop, step).
+    """
+
+    (start, stop, step) = parse_slice_tuple_list(slice_tup_list, input.shape)
+    return flow._C.logical_slice(input, start, stop, step)
+
+
 def logical_slice_assign_op(
     input, update, slice_tup_list: Sequence[Tuple[int, int, int]]
 ):
