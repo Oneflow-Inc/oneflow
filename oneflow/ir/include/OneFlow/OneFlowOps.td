@@ -518,6 +518,76 @@ def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", []> {
   let output = (outs AnyType:$out);
 }
 
+def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", []> {
+  let summary = "";
+  let input = (ins
+    AnyType:$in0,
+    AnyType:$in1
+  );
+  let output = (outs AnyType:$out);
+}
+
+def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [AttrSizedOperandSegments, AttrSizedResultSegments]> {
+  let summary = "";
+  let input = (ins
+    AnyType:$x,
+    Optional<AnyType>:$moving_mean,
+    Optional<AnyType>:$moving_variance,
+    AnyType:$gamma,
+    AnyType:$beta,
+    Optional<AnyType>:$_add_to_output
+  );
+  let attrs = (ins
+    SI32Attr:$axis,
+    F32Attr:$epsilon,
+    BoolAttr:$training,
+    F32Attr:$momentum
+  );
+  let output = (outs
+    // AnyType:$y,
+    // AnyType:$mean,
+    // AnyType:$inv_variance
+    AnyType:$y,
+    Optional<AnyType>:$mean,
+    Optional<AnyType>:$inv_variance
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes,
+    I32ElementsAttr:$result_segment_sizes
+  );
+}
+
+def OneFlow_NormalizationAddReluOp : OneFlow_BaseOp<"normalization_add_relu", [AttrSizedOperandSegments, AttrSizedResultSegments]> {
+  let summary = "";
+  let input = (ins
+    AnyType:$x,
+    Optional<AnyType>:$addend,
+    Optional<AnyType>:$moving_mean,
+    Optional<AnyType>:$moving_variance,
+    AnyType:$gamma,
+    AnyType:$beta
+  );
+  let attrs = (ins
+    SI32Attr:$axis,
+    F32Attr:$epsilon,
+    BoolAttr:$training,
+    F32Attr:$momentum
+  );
+  let output = (outs
+    // AnyType:$y,
+    // AnyType:$mean,
+    // AnyType:$inv_variance
+    AnyType:$y,
+    // TODO: add reserve_space in importer
+    Optional<AnyType>:$mean,
+    Optional<AnyType>:$inv_variance
+    // AnyType:$reserve_space,
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes,
+    I32ElementsAttr:$result_segment_sizes
+  );
+}
 
 // optimizer ops
 
@@ -960,6 +1030,73 @@ def FusedBiasAddGeluPattern : Pat<
   ),
   []
 >;
+
+// def NormalizationAddReluPattern : Pat<
+//   /* match */ (
+//     OneFlow_ReluOp (
+//       OneFlow_Add2Op (
+//           OneFlow_NormalizationOp:$results
+//             $bn_x,
+//             $bn_moving_mean,
+//             $bn_moving_variance,
+//             $bn_gamma,
+//             $bn_beta,
+//             $bn__add_to_output, // TODO: check this is none
+//             $bn_op_name,
+//             $bn_trainable,
+//             $bn_device_tag,
+//             $bn_device_name,
+//             $bn_scope_symbol_id,
+//             $bn_hierarchy,
+//             $operand_segment_sizes,
+//             $result_segment_sizes,
+//             $bn_axis,
+//             $bn_epsilon,
+//             $bn_training,
+//             $bn_momentum
+//       ),
+//       $addend,
+//       $add_op_name,
+//       $add_trainable,
+//       $add_device_tag,
+//       $add_device_name,
+//       $add_scope_symbol_id,
+//       $add_hierarchy
+//     ),
+//     $relu_op_name,
+//     $relu_trainable,
+//     $relu_device_tag,
+//     $relu_device_name,
+//     $relu_scope_symbol_id,
+//     $relu_hierarchy
+//   ),
+//   /* replace */ (
+//     OneFlow_NormalizationAddReluOp
+//     (returnType $results__0),
+//     (returnType $results__1),
+//     (returnType $results__2),
+//     $bn_x,
+//     $addend,
+//     $bn_moving_mean,
+//     $bn_moving_variance,
+//     $bn_gamma,
+//     $bn_beta,
+//     $bn_op_name,
+//     $bn_trainable,
+//     $bn_device_tag,
+//     $bn_device_name,
+//     $bn_scope_symbol_id,
+//     $bn_hierarchy,
+//     // TODO: update these two
+//     $operand_segment_sizes,
+//     $result_segment_sizes,
+//     $bn_axis,
+//     $bn_epsilon,
+//     $bn_training,
+//     $bn_momentum
+//   ),
+//   []
+// >;
 
 #endif // ONEFLOW_PATTERNS
 

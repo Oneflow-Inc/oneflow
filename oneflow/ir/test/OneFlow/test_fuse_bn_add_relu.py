@@ -56,6 +56,7 @@ def _batch_norm(inputs, last=False):
 @flow.unittest.skip_unless_1n1d()
 class TestMLIROptimizations(flow.unittest.TestCase):
 
+    @unittest.skip(True)
     def test_cpu(self):
         d = OrderedDict(
             {"shape": [(2, 96, 96, 3)], "in_type": [flow.float32], "device": ["cpu"],}
