@@ -498,27 +498,6 @@ else() # build_python
 
 endif(BUILD_PYTHON)
 
-set(OF_CORE_HDRS)
-list(APPEND of_core_dir_name_list "common" "device" "framework" "kernel/util" "persistence" "stream")
-foreach(of_core_dir_name ${of_core_dir_name_list})
-  file(GLOB_RECURSE h_files "${PROJECT_SOURCE_DIR}/oneflow/core/${of_core_dir_name}/*.h")
-  list(APPEND OF_CORE_HDRS ${h_files})
-  file(GLOB_RECURSE hpp_files "${PROJECT_SOURCE_DIR}/oneflow/core/${of_core_dir_name}/*.hpp")
-  list(APPEND OF_CORE_HDRS ${hpp_files})
-endforeach()
-list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/new_kernel_util.h")
-list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_context.h")
-list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_observer.h")
-list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/stream/include/stream_context.h")
-list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_util.cuh")
-list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/sbp_signature_builder.h")
-list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/common/symbol.h")
-list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/parallel_desc.h")
-list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/autograd/autograd_meta.h")
-copy_files("${OF_CORE_HDRS}" "${PROJECT_SOURCE_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
-add_custom_target(oneflow_py ALL)
-add_dependencies(oneflow_py of_include_copy of_pyscript_copy)
-
 if (BUILD_GRAPH_EXE)
   add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/api/cpp)
   target_link_libraries(graph_exe
