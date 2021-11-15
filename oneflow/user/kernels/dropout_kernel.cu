@@ -28,7 +28,7 @@ namespace oneflow {
 namespace {
 
 constexpr int32_t kVecSize = 4;
-constexpr int32_t kBlockSize= 256;
+constexpr int32_t kBlockSize = 256;
 
 using H2PackType = typename std::aligned_storage<4 * sizeof(half), 4 * sizeof(half)>::type;
 union H2Pack {
