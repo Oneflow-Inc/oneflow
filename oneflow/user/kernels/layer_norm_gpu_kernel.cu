@@ -160,11 +160,13 @@ struct AffineStore {
       gamma_pack.storage =
           *reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(gamma + col);
     } else {
+#pragma unroll
       for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = 1; }
     }
     if (do_center) {
       beta_pack.storage = *reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(beta + col);
     } else {
+#pragma unroll
       for (int i = 0; i < N; ++i) { beta_pack.elem[i] = 0; }
     }
 #pragma unroll
