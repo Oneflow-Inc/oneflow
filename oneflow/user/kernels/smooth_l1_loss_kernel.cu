@@ -59,7 +59,7 @@ __global__ void ComputeSmoothL1Out(int64_t elem_cnt, const half* input, const ha
 }
 
 template<typename T>
-__global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, float one_div_elem_cnt, const T* input,
+__global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, float inv_elem_cnt, const T* input,
                                        const T* target, const T* dy, T* dx,
                                        const ReductionType reduction_type, const float beta) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
@@ -73,20 +73,20 @@ __global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, float one_div_elem_cnt,
     }
     const T dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
     dx_val = dx_val * dy_val;
-    if (reduction_type == ReductionType::kMean) { dx_val *= one_div_elem_cnt; };
+    if (reduction_type == ReductionType::kMean) { dx_val *= inv_elem_cnt; };
     dx[i] = dx_val;
   }
 }
 
 template<>
-__global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, float one_div_elem_cnt, const half* input,
+__global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, float inv_elem_cnt, const half* input,
                                        const half* target, const half* dy, half* dx,
                                        const ReductionType reduction_type, const float beta) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   const half half_zero = __float2half(0.0);
   const half half_one = __float2half(1.0);
   const half half_beta = __float2half(beta);
-  const half half_one_div_elem_cnt = __float2half(one_div_elem_cnt);
+  const half half_inv_elem_cnt = __float2half(inv_elem_cnt);
 
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const half diff = __hsub(input[i], target[i]);
@@ -101,7 +101,7 @@ __global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, float one_div_elem_cnt,
     }
     const half dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
     dx_val = __hmul(dx_val, dy_val);
-    if (reduction_type == ReductionType::kMean) { dx_val = __hmul(dx_val, half_one_div_elem_cnt); };
+    if (reduction_type == ReductionType::kMean) { dx_val = __hmul(dx_val, half_inv_elem_cnt); };
     dx[i] = dx_val;
   }
 #else
@@ -129,7 +129,7 @@ class SmoothL1LossGradKernel
                   const T* target, const T* dy, T* dx, const ReductionType reduction) const {
     const float beta = ctx->Attr<float>("beta");
     ComputeSmoothL1GradOut<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                             ctx->device_ctx()->cuda_stream()>>>(elem_cnt, 1.0 / elem_cnt, input,
+                             ctx->device_ctx()->cuda_stream()>>>(elem_cnt, static_cast<float>(1.0 / elem_cnt), input,
                                                                  target, dy, dx, reduction, beta);
   }
 };

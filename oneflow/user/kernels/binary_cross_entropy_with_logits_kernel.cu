@@ -63,7 +63,7 @@ __global__ void ComputeBinaryCrossEntropyWithLogitsOut(int64_t elem_cnt, const h
     const float input_val = __half2float(input[i]);
     const float target_val = __half2float(target[i]);
     const float max_val = -input_val < zero_val ? zero_val : -input_val;
-    float out_val;
+    half out_val;
     if (pos_weight_processed == nullptr) {
       out_val = __float2half((one_val - target_val) * input_val + max_val
                              + (logf(expf(-max_val) + expf(-input_val - max_val))));
@@ -95,7 +95,7 @@ __device__ __forceinline__ float CalSigmoid(const float x) {
 }
 
 template<typename T>
-__global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, float one_div_elem_cnt,
+__global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, float inv_elem_cnt,
                                                            const T* input, const T* target,
                                                            const T* dy, T* dx, const T* weight,
                                                            const T* pos_weight_processed,
@@ -115,13 +115,13 @@ __global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, flo
                   - pos_weight_processed_val);
     }
     if (weight != nullptr) { dx_val *= weight[i]; }
-    if (reduction_type == ReductionType::kMean) { dx_val *= one_div_elem_cnt; }
+    if (reduction_type == ReductionType::kMean) { dx_val *= inv_elem_cnt; }
     dx[i] = dx_val;
   }
 }
 
 template<>
-__global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, float one_div_elem_cnt,
+__global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, float inv_elem_cnt,
                                                            const half* input, const half* target,
                                                            const half* dy, half* dx,
                                                            const half* weight,
@@ -140,13 +140,13 @@ __global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, flo
       float pos_weight_processed_val = __half2float(pos_weight_processed[i]);
       dx_val = __float2half(
           dy_val
-          * ((pos_weight_processed_val + static_cast<float>(1) - target_val) * input_sigmoid
+          * ((pos_weight_processed_val + static_cast<float>(1.0) - target_val) * input_sigmoid
              - pos_weight_processed_val));
     }
 
     if (weight != nullptr) { dx_val = __hmul(dx_val, weight[i]); }
     if (reduction_type == ReductionType::kMean) {
-      dx_val = __float2half(__half2float(dx_val) * one_div_elem_cnt);
+      dx_val = __float2half(__half2float(dx_val) * inv_elem_cnt);
     }
     dx[i] = dx_val;
   }
@@ -254,7 +254,8 @@ class BinaryCrossEntropyWithLogitsGradKernel final : public user_op::OpKernel {
     ComputeBinaryCrossEntropyWithLogitsGradOut<<<BlocksNum4ThreadsNum(elem_cnt),
                                                  kCudaThreadsNumPerBlock, 0,
                                                  ctx->device_ctx()->cuda_stream()>>>(
-        elem_cnt, 1.0 / elem_cnt, input, target, dy, dx, weight, pos_weight_processed, reduction);
+        elem_cnt, static_cast<float>(1.0 / elem_cnt), input, target, dy, dx, weight,
+        pos_weight_processed, reduction);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

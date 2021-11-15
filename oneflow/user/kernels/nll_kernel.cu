@@ -209,7 +209,7 @@ class NllKernel final : public user_op::OpKernel {
     T* total_weight = total_weight_blob->mut_dptr<T>();
     const T* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), total_weight, 0, GetCudaAlignedSize(sizeof(T)));
+    Memset<DeviceType::kGPU>(ctx->device_ctx(), total_weight, 0, sizeof(T));
 
     if (reduction == ReductionType::kNone) {
       ComputeNllOutNone<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
