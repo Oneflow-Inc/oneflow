@@ -1049,7 +1049,8 @@
     # type of device must be string for consistent tensor to perform argument validation
     "Tensor (Tensor x, String device=None, DataType dtype=None, Bool copy=False) => To",
     "Tensor (Tensor x, Device device=None, DataType dtype=None, Bool copy=False) => To",
-    "Tensor (Tensor x, DataType dtype=None, Bool copy=False) => To"
+    "Tensor (Tensor x, DataType dtype=None, Bool copy=False) => To",
+    "Tensor (Tensor x, Tensor other, Bool copy=False) => To"
   ]
   bind_python: True
 
