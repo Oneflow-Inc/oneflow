@@ -13,20 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstdint>
 #include <memory>
-#include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 #include "oneflow/core/kernel/random_generator.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/cuda/atomic.cuh"
+#include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
 namespace {
+
+constexpr int32_t kVecSize = 4;
+constexpr int32_t kBlockSize= 256;
 
 using H2PackType = typename std::aligned_storage<4 * sizeof(half), 4 * sizeof(half)>::type;
 union H2Pack {
@@ -345,11 +347,9 @@ unsigned int ComputeGridSize(const int32_t block_size, const int64_t elem_cnt) {
 template<typename T>
 void MaskAndScale(DeviceCtx* ctx, uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                   const int64_t elem_cnt, float rate, float scale, const T* x, int8_t* mask, T* y) {
-  int32_t UNROLL = 4;
-  int32_t block_size = 256;
-  unsigned int grid_size = ComputeGridSize<4>(block_size, elem_cnt);
-  uint64_t counter_offset = ((elem_cnt - 1) / (block_size * grid_size * UNROLL) + 1) * UNROLL;
-  MaskAndScaleGpu<T, 4><<<grid_size, block_size, 0, ctx->cuda_stream()>>>(
+  unsigned int grid_size = ComputeGridSize<4>(kBlockSize, elem_cnt);
+  uint64_t counter_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize;
+  MaskAndScaleGpu<T, 4><<<grid_size, kBlockSize, 0, ctx->cuda_stream()>>>(
       seed, cuda_gen_state, counter_offset, elem_cnt, rate, scale, x, mask, y);
 }
 
@@ -357,11 +357,9 @@ template<typename T>
 void MaskAndScaleAdd(DeviceCtx* ctx, uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                      const int64_t elem_cnt, float rate, float scale, const T* x, int8_t* mask,
                      const T* addend, T* y) {
-  int32_t UNROLL = 4;
-  int32_t block_size = 256;
-  unsigned int grid_size = ComputeGridSize<4>(block_size, elem_cnt);
-  uint64_t counter_offset = ((elem_cnt - 1) / (block_size * grid_size * UNROLL) + 1) * UNROLL;
-  MaskAndScaleAddGpu<T, 4><<<grid_size, block_size, 0, ctx->cuda_stream()>>>(
+  unsigned int grid_size = ComputeGridSize<4>(kBlockSize, elem_cnt);
+  uint64_t counter_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize;
+  MaskAndScaleAddGpu<T, 4><<<grid_size, kBlockSize, 0, ctx->cuda_stream()>>>(
       seed, cuda_gen_state, counter_offset, elem_cnt, rate, scale, x, mask, addend, y);
 }
 
