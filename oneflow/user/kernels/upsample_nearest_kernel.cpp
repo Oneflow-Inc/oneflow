@@ -189,11 +189,11 @@ class UpsampleNearestGrad1DCPUKernel final : public user_op::OpKernel {
 #define REGISTER_UPSAMPNEAREST1D_CPU_KERNEL(dtype)                                     \
   REGISTER_USER_KERNEL("upsample_nearest_1d")                                          \
       .SetCreateFn<UpsampleNearest1DCPUKernel<dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("upsample_nearest_1d_grad")                                     \
       .SetCreateFn<UpsampleNearestGrad1DCPUKernel<dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_UPSAMPNEAREST1D_CPU_KERNEL(float)
@@ -281,11 +281,11 @@ class UpsampleNearest2DGradCPUKernel final : public user_op::OpKernel {
 #define REGISTER_UPSAMPLE_NEAREST_2D_CPU_KERNEL(dtype)                                 \
   REGISTER_USER_KERNEL("upsample_nearest_2d")                                          \
       .SetCreateFn<UpsampleNearest2DCPUKernel<dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("upsample_nearest_2d_grad")                                     \
       .SetCreateFn<UpsampleNearest2DGradCPUKernel<dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_UPSAMPLE_NEAREST_2D_CPU_KERNEL(float)
@@ -353,11 +353,11 @@ class UpsampleNearestGrad3DCPUKernel final : public user_op::OpKernel {
 #define REGISTER_UPSAMPNEAREST3D_CPU_KERNEL(dtype)                                     \
   REGISTER_USER_KERNEL("upsample_nearest_3d")                                          \
       .SetCreateFn<UpsampleNearest3DCPUKernel<dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("upsample_nearest_3d_grad")                                     \
       .SetCreateFn<UpsampleNearestGrad3DCPUKernel<dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_UPSAMPNEAREST3D_CPU_KERNEL(float)
