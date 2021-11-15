@@ -91,9 +91,9 @@ foreach(oneflow_hdr_to_be_expanded ${oneflow_all_hdr_to_be_expanded})
   set_source_files_properties(${oneflow_all_hdr_expanded} PROPERTIES GENERATED TRUE)
 endforeach()
 
-file(GLOB_RECURSE oneflow_all_src 
-  "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" 
-  "${PROJECT_SOURCE_DIR}/oneflow/user/*.*" 
+file(GLOB_RECURSE oneflow_all_src
+  "${PROJECT_SOURCE_DIR}/oneflow/core/*.*"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/*.*"
   "${PROJECT_SOURCE_DIR}/oneflow/api/*.*"
   "${PROJECT_SOURCE_DIR}/oneflow/extension/python/*.*")
 if (WITH_XLA OR WITH_TENSORRT)
@@ -169,7 +169,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
       list(APPEND of_pyext_obj_cc ${oneflow_single_file})
       set(group_this ON)
     endif()
-    
+
   else() # build_python
 
     if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/cpp/.*\\.(h|cpp)$")
@@ -352,7 +352,7 @@ target_compile_definitions(oneflow PRIVATE GOOGLE_LOGGING)
 target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs} -Wl,--no-whole-archive -ldl -lrt)
 
 if (WITH_MLIR)
-  set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/b5e470aa2e978a0ee6276b9564f85cf170ae260d.zip" CACHE STRING "" FORCE)
+  set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/f1c86b835475ea5c0dd51862ce609a18cf8192c0.zip" CACHE STRING "" FORCE)
   use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
   set(LLVM_MONO_REPO_MD5 "5704d71096294cf21637a8bc29fb0fb8" CACHE STRING "" FORCE)
   add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
@@ -505,4 +505,3 @@ else() # build_python
   copy_files("${PROJECT_SOURCE_DIR}/cmake/oneflow-config.cmake" "${PROJECT_SOURCE_DIR}/cmake" "${ONEFLOW_SHARE_DIR}" of_include_copy)
 
 endif(BUILD_PYTHON)
-
