@@ -325,12 +325,20 @@ if (USE_CLANG_TIDY)
 endif()
 
 if(BUILD_CUDA)
-  target_compile_options(oneflow PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
-    -Xcompiler -Werror=return-type;
-    -Werror cross-execution-space-call;
-    -Wno-deprecated-gpu-targets;
-    -Xcudafe --diag_suppress=declared_but_not_referenced;
-  >)
+  if ("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
+    target_compile_options(oneflow PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+      -Xcompiler -Werror=return-type;
+      -Werror cross-execution-space-call;
+      -Wno-deprecated-gpu-targets;
+      -Xcudafe --diag_suppress=declared_but_not_referenced;
+    >)
+  elseif("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "Clang")
+    target_compile_options(oneflow PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+      -Werror=return-type;
+    >)
+  else()
+    message(FATAL_ERROR "Unknown CUDA compiler ${CMAKE_CUDA_COMPILER_ID}")
+  endif()
   # remove THRUST_IGNORE_CUB_VERSION_CHECK if starting using bundled cub
   target_compile_definitions(oneflow PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
     THRUST_IGNORE_CUB_VERSION_CHECK;
