@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/vm_object.h"
 #include "oneflow/core/vm/oneflow_vm.h"
-#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {

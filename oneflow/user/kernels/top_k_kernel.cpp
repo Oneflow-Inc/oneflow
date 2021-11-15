@@ -83,6 +83,7 @@ class TopKCpuKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    if (in->shape().elem_cnt() == 0) { return; }
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
@@ -99,7 +100,7 @@ class TopKCpuKernel final : public user_op::OpKernel {
 #define REGISTER_CPU_TOP_K_KERNEL(dtype)                                                \
   REGISTER_USER_KERNEL("top_k")                                                         \
       .SetCreateFn<TopKCpuKernel<dtype>>()                                              \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                   \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))  \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                               \
         const Shape& in_shape = ctx->InputShape("in", 0);                               \
