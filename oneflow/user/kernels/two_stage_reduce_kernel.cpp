@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/user/kernels/two_stage_reduce_kernel_util.h"
-#include "oneflow/core/primitive/include/cast.h"
+#include "oneflow/core/ep/include/primitive/cast.h"
 
 namespace oneflow {
 
@@ -52,8 +52,8 @@ class ReduceDeviceStageKernel final : public OpKernel {
         XpuVarNdarray<const T>(in->shape(), in->dptr<T>()),
         XpuVarNdarray<const T>(out->shape(), out->dptr<T>()));
 
-    auto cast = primitive::NewPrimitive<primitive::CastFactory>(ctx->device_type(), DataType::kInt8,
-                                                                DataType::kInt32);
+    auto cast = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
+        ctx->device_type(), DataType::kInt8, DataType::kInt32);
     CHECK(cast);
 
     cast->Launch(ctx->stream_ctx(), mask->dptr<int8_t>(), mask_tmp_buf, mask->shape().elem_cnt());
@@ -79,7 +79,7 @@ user_op::InferTmpSizeFn GenDeviceStageInferTmpSizeFn() {
 #define REGISTER_REDUCE_DEVICE_STAGE_KERNEL(op_name, binary_func, device, dtype_pair)            \
   REGISTER_USER_KERNEL(op_name)                                                                  \
       .SetCreateFn<ReduceDeviceStageKernel<binary_func, device, OF_PP_PAIR_FIRST(dtype_pair)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
       .SetInferTmpSizeFn(GenDeviceStageInferTmpSizeFn<OF_PP_PAIR_FIRST(dtype_pair)>());
 
@@ -137,7 +137,7 @@ user_op::InferTmpSizeFn GenDeviceStageGradInferTmpSizeFn() {
 #define REGISTER_REDUCE_DEVICE_STAGE_GRAD_KERNEL(op_name, device, dtype_pair)                   \
   REGISTER_USER_KERNEL(op_name)                                                                 \
       .SetCreateFn<ReduceDeviceStageGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
                        & (user_op::HobDataType("in_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair))) \
       .SetInferTmpSizeFn(GenDeviceStageGradInferTmpSizeFn<OF_PP_PAIR_FIRST(dtype_pair)>());
 
@@ -178,7 +178,7 @@ class ReduceGlobalStageKernel final : public OpKernel {
 #define REGISTER_REDUCE_GLOBAL_STAGE_KERNEL(op_name, binary_func, device, dtype_pair)            \
   REGISTER_USER_KERNEL(op_name)                                                                  \
       .SetCreateFn<ReduceGlobalStageKernel<binary_func, device, OF_PP_PAIR_FIRST(dtype_pair)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
       .SetInferTmpSizeFn([](InferContext* ctx) {                                                 \
         const Shape& in_shape = ctx->InputShape("in", 0);                                        \
@@ -278,7 +278,7 @@ user_op::InferTmpSizeFn GenGlobalStageGradInferTmpSizeFn() {
 #define REGISTER_REDUCE_GLOBAL_STAGE_GRAD_KERNEL(op_name, device, dtype_pair)                   \
   REGISTER_USER_KERNEL(op_name)                                                                 \
       .SetCreateFn<ReduceGlobalStageGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
                        & (user_op::HobDataType("in_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair))) \
       .SetInferTmpSizeFn(GenGlobalStageGradInferTmpSizeFn<OF_PP_PAIR_FIRST(dtype_pair)>());
 

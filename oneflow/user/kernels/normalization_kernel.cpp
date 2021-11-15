@@ -26,12 +26,12 @@ static void ComputeMeanAndVar(const T* input_ptr, T* mean_ptr, T* inv_variance_p
   const int64_t jump_step = spatial_size * channel_size;
   const int64_t reduce_count = batch_size * spatial_size;
   const int64_t unbias_reduce_count = reduce_count - 1;
-  const float reduce_scale_factor = 1.0f / reduce_count;
-  const float unbias_reduce_scale_factor = 1.0f / unbias_reduce_count;
-  const float unbias_reduce_scale_factor_m2 = unbias_reduce_scale_factor * -2.0f;
-  const float unbias_reduce_scale_factor_mn = reduce_count * unbias_reduce_scale_factor;
+  const T reduce_scale_factor = static_cast<T>(1) / reduce_count;
+  const T unbias_reduce_scale_factor = static_cast<T>(1) / unbias_reduce_count;
+  const T unbias_reduce_scale_factor_m2 = unbias_reduce_scale_factor * -static_cast<T>(2);
+  const T unbias_reduce_scale_factor_mn = reduce_count * unbias_reduce_scale_factor;
 
-  const float exponential_average_factor = 1.0f - momentum;
+  const T exponential_average_factor = 1.0f - momentum;
 
   for (int64_t channel = 0; channel < channel_size; ++channel) {
     const T* temp_input_ptr = input_ptr + channel * spatial_size;
@@ -56,7 +56,7 @@ static void ComputeMeanAndVar(const T* input_ptr, T* mean_ptr, T* inv_variance_p
                                    + unbias_reduce_scale_factor_m2 * temp_mean * sum
                                    + unbias_reduce_scale_factor_mn * temp_mean_square;
 
-    inv_variance_ptr[channel] = 1.0f / std::sqrt(temp_variance + epsilon);
+    inv_variance_ptr[channel] = static_cast<T>(1) / std::sqrt(temp_variance + epsilon);
 
     if (moving_mean_ptr != nullptr && moving_variance_ptr != nullptr) {
       moving_mean_ptr[channel] =
@@ -329,7 +329,7 @@ class NormalizationInferenceCpuKernel final : public user_op::OpKernel {
 #define REGISTER_BN_INFERENCE_CPU_KERNEL(dtype)                                           \
   REGISTER_USER_KERNEL("normalization")                                                   \
       .SetCreateFn<NormalizationInferenceCpuKernel<dtype>>()                              \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                     \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)      \
                        & (user_op::HobAttr<bool>("training") == false))                   \
       .SetInplaceProposalFn(                                                              \
@@ -440,7 +440,7 @@ class NormalizationTrainCpuKernel final : public user_op::OpKernel {
 #define REGISTER_BN_TRAIN_CPU_KERNEL(dtype)                                               \
   REGISTER_USER_KERNEL("normalization")                                                   \
       .SetCreateFn<NormalizationTrainCpuKernel<dtype>>()                                  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                     \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)      \
                        & (user_op::HobAttr<bool>("training") == true))                    \
       .SetInplaceProposalFn(                                                              \
@@ -457,10 +457,10 @@ REGISTER_BN_TRAIN_CPU_KERNEL(double)
 
 #undef REGISTER_BN_TRAIN_CPU_KERNEL
 
-#define REGISTER_BN_ADD_RELU_CPU_KERNEL(dtype)            \
-  REGISTER_USER_KERNEL("normalization_add_relu")          \
-      .SetCreateFn<NormalizationTrainCpuKernel<dtype>>()  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
+#define REGISTER_BN_ADD_RELU_CPU_KERNEL(dtype)                        \
+  REGISTER_USER_KERNEL("normalization_add_relu")                      \
+      .SetCreateFn<NormalizationTrainCpuKernel<dtype>>()              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_BN_ADD_RELU_CPU_KERNEL(float)
@@ -577,10 +577,10 @@ class NormalizationGradCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_BN_GRAD_CPU_KERNEL(dtype)                \
-  REGISTER_USER_KERNEL("normalization_grad")              \
-      .SetCreateFn<NormalizationGradCpuKernel<dtype>>()   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
+#define REGISTER_BN_GRAD_CPU_KERNEL(dtype)                            \
+  REGISTER_USER_KERNEL("normalization_grad")                          \
+      .SetCreateFn<NormalizationGradCpuKernel<dtype>>()               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_BN_GRAD_CPU_KERNEL(float)
@@ -591,7 +591,7 @@ REGISTER_BN_GRAD_CPU_KERNEL(double)
 #define REGISTER_BN_ADD_RELU_GRAD_CPU_KERNEL(dtype)                                    \
   REGISTER_USER_KERNEL("normalization_add_relu_grad")                                  \
       .SetCreateFn<NormalizationGradCpuKernel<dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferGradTmpSizeForCpuKernel);
 
