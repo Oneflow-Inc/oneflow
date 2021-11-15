@@ -150,7 +150,7 @@ void SocketReadHelper::SetStatusWhenActorMsgHeadDone() {
     std::cout<<"SocketReadHelper::SetStatusWhenActorMsgHeadDone,the data:"<<std::hex << reinterpret_cast<uint64_t>(data) << std::endl;
     std::cout<<std::endl;
     Actor_done_mutex_.lock();
-    std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_16";
+    std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_16/";
     std::string path = dir + "Read_helper_SetStatusWhenActorMsgHeadDone" + std::to_string(Actor_done_);
     Actor_done_++;
     std::ofstream out;
