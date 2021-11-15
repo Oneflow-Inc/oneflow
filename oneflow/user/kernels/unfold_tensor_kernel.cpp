@@ -20,18 +20,16 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace user_op {
-
 template<typename T>
-class UnfoldTensorKernel final : public OpKernel {
+class UnfoldTensorKernel final : public user_op::OpKernel {
  public:
   UnfoldTensorKernel() = default;
   ~UnfoldTensorKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
-    const Tensor* in = ctx->Tensor4ArgNameAndIndex("x", 0);
-    Tensor* out = ctx->Tensor4ArgNameAndIndex("y", 0);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("y", 0);
 
     const ShapeView& in_shape = in->shape();
     std::vector<int32_t> out_shape;
@@ -73,7 +71,7 @@ class UnfoldTensorKernel final : public OpKernel {
 #define REGISTER_UNFOLD_TENSOR_KERNEL(dtype)              \
   REGISTER_USER_KERNEL("unfold_tensor")                   \
       .SetCreateFn<UnfoldTensorKernel<dtype>>()           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_UNFOLD_TENSOR_KERNEL(float)
@@ -82,16 +80,16 @@ REGISTER_UNFOLD_TENSOR_KERNEL(int64_t)
 REGISTER_UNFOLD_TENSOR_KERNEL(int32_t)
 
 template<typename T>
-class UnfoldTensorGradKernel final : public OpKernel {
+class UnfoldTensorGradKernel final : public user_op::OpKernel {
  public:
   UnfoldTensorGradKernel() = default;
   ~UnfoldTensorGradKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
-    const Tensor* dout = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    const Tensor* in = ctx->Tensor4ArgNameAndIndex("x", 0);
-    Tensor* din = ctx->Tensor4ArgNameAndIndex("dx", 0);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* dout = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* din = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
     const ShapeView& in_shape = in->shape();
     const int32_t in_dims = in_shape.NumAxes();
@@ -135,7 +133,7 @@ class UnfoldTensorGradKernel final : public OpKernel {
 #define REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(dtype)         \
   REGISTER_USER_KERNEL("unfold_tensor_grad")              \
       .SetCreateFn<UnfoldTensorGradKernel<dtype>>()       \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
 REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(float)
@@ -143,5 +141,4 @@ REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(double)
 REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(int64_t)
 REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(int32_t)
 
-}  // namespace user_op
 }  // namespace oneflow
