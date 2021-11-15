@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/primitive/include/add.h"
+#include "oneflow/user/kernels/dropout_kernel.h"
 
 namespace oneflow {
 
@@ -29,20 +30,41 @@ void MaskAndScale(DeviceCtx* ctx, const int64_t n, float scale, const T* x, cons
 }
 
 template<typename T>
+void FusedDropoutKernel(DeviceCtx* ctx, const int64_t elem_cnt, const std::shared_ptr<one::CPUGeneratorImpl>& cpu_gen, const float rate, float scale, const T* x, int8_t* mask,
+                  T* y) {
+  for (int64_t i = 0; i < elem_cnt; ++i) { 
+    std::uniform_real_distribution<float> random_distribution(GetZeroVal<float>(),
+                                                              GetOneVal<float>());
+    mask[i] = random_distribution(cpu_gen->engine()) > rate;
+    y[i] = x[i] * static_cast<T>(mask[i]) * scale; 
+  }
+}
+
+template<typename T>
 class DropoutKernelCPU final : public user_op::OpKernel {
  public:
   DropoutKernelCPU() = default;
   ~DropoutKernelCPU() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    // const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const float scale = ctx->Attr<float>("rate");
-    MaskAndScale<T>(ctx->device_ctx(), in->shape().elem_cnt(), scale, in->dptr<T>(),
-                    mask->dptr<int8_t>(), out->mut_dptr<T>());
+    const float rate = ctx->Attr<float>("rate");
+    float scale = 1.0;
+    if (rate != 1.0) { scale = 1.0 / (1.0 - rate); }
+
+    auto* fused_dropout_kernel_state = dynamic_cast<FusedDropoutKernelState*>(state);
+    CHECK_NOTNULL(fused_dropout_kernel_state);
+    const auto& generator = fused_dropout_kernel_state->generator();
+    CHECK_NOTNULL(generator);
+    std::shared_ptr<one::CPUGeneratorImpl> cpu_generator =
+        CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
+
+    FusedDropoutKernel<T>(ctx->device_ctx(), in->shape().elem_cnt(), cpu_generator, rate, scale, in->dptr<T>(),
+                    mask->mut_dptr<int8_t>(), out->mut_dptr<T>());
+
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), out->data_type());
