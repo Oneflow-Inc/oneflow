@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,16 +12,19 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-import oneflow._oneflow_internal
-from oneflow.compatible import single_client as flow
+*/
 
+#ifndef ONEFLOW_API_COMMON_DEVICE_H_
+#define ONEFLOW_API_COMMON_DEVICE_H_
 
-def create_generator(device=None):
-    if device is None:
-        device = "auto"
-    return oneflow._oneflow_internal.create_generator(device)
+#include "oneflow/core/framework/device.h"
 
+namespace oneflow {
+struct DeviceExportUtil final {
+  static Maybe<Symbol<Device>> ParseAndNew(const std::string& type_or_type_with_device_id);
 
-def manual_seed(seed):
-    oneflow._oneflow_internal.manual_seed(seed)
+  static Maybe<Symbol<Device>> New(const std::string& type, int64_t device_id);
+};
+}  // namespace oneflow
+
+#endif  // !ONEFLOW_API_COMMON_DEVICE_H_
