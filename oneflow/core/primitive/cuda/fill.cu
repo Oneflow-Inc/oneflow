@@ -106,8 +106,7 @@ class FillImpl : public Fill {
   ~FillImpl() override = default;
 
   void Launch(StreamContext* stream_ctx, void* dst, Scalar value, size_t count) override {
-    cudaStream_t cuda_stream =
-        CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
+    cudaStream_t cuda_stream = stream_ctx->As<CudaStreamContext>()->cuda_stream();
     LaunchFill<T>(cuda_stream, reinterpret_cast<T*>(dst), GetValue<T>(value), count);
   }
 };

@@ -93,8 +93,7 @@ class AddImpl : public Add {
   using Add::Launch;
   void Launch(StreamContext* stream_ctx, const void* const* srcs, size_t arity, void* dst,
               size_t count) override {
-    cudaStream_t cuda_stream =
-        CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx))->cuda_stream();
+    cudaStream_t cuda_stream = stream_ctx->As<CudaStreamContext>()->cuda_stream();
     DispatchLaunch(cuda_stream, reinterpret_cast<const T* const*>(srcs), arity,
                    reinterpret_cast<T*>(dst), count);
   }
