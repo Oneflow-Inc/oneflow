@@ -20,8 +20,6 @@ limitations under the License.
 
 #include <sys/eventfd.h>
 
-#include <fstream>
-
 namespace oneflow {
 
 SocketWriteHelper::~SocketWriteHelper() {
