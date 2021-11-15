@@ -32,10 +32,49 @@ namespace oneflow {
 
 namespace one {
 
+Parameter::Parameter(std::shared_ptr<Tensor> tensor, bool requires_grad) {
+  while (auto parameter = std::dynamic_pointer_cast<Parameter>(tensor)) {
+    tensor = parameter->tensor_;
+  }
+  this->tensor_ = tensor->detach().GetPtrOrThrow();
+  // this->tensor_ = std::move(tensor);
+  // TODO: in `y = flow.nn.Parameter(x)`, y should have its own "requires_grad" field
+  // (align with PyTorch) instead of sharing it with x
+  CHECK_JUST(this->tensor_->set_requires_grad(requires_grad));
+  auto blob_object = CHECK_JUST(tensor_->eager_blob_object());
+  if (auto dtr_eager_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(blob_object)) {
+    dtr_eager_blob_object->set_evict_attr(false);
+  }
+}
+
+Maybe<MirroredTensor> Parameter::AsMirroredTensor() {
+  if (const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(tensor_)) {
+    return mirrored_tensor;
+  }
+  RETURN_ERROR_WITH_BUG_PROMPT();
+}
+
+Maybe<void> Parameter::set_data(const std::shared_ptr<Tensor>& other) {
+  CHECK_OR_RETURN(is_local() == other->is_local() && is_eager() == other->is_eager())
+      << "You can't assign copy between tensors with different type";
+  bool old_requires_grad = tensor_->requires_grad();
+  this->tensor_ = JUST(other->detach());
+  JUST(this->tensor_->set_requires_grad(old_requires_grad));
+
+  auto blob_object = JUST(this->tensor_->eager_blob_object());
+  // if (auto* dtr_eager_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(blob_object.get())) {
+  //   dtr_eager_blob_object->set_evict_attr(false);
+  // }
+  if (auto dtr_eager_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(blob_object)) {
+    dtr_eager_blob_object->set_evict_attr(false);
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
   CHECK_OR_RETURN(is_local());
   return std::dynamic_pointer_cast<MirroredTensor>(
-      JUST(functional::Constant(*shape_, Scalar(0), CHECK_JUST(DType::Get(dtype_)), device_)));
+      JUST(functional::Constant(*shape_, Scalar(0), JUST(DType::Get(dtype_)), device_)));
 }
 
 /* static */ Maybe<MirroredTensor> MirroredTensor::MakeTensor(

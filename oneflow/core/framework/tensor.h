@@ -493,9 +493,7 @@ class DTRMirroredTensor final : public MirroredTensor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DTRMirroredTensor);
   DTRMirroredTensor() = default;
-  explicit DTRMirroredTensor(const std::shared_ptr<DTREagerMirroredTensorImpl>& impl) {
-    impl_ = impl;
-    inputs_ = TensorTuple();
+  explicit DTRMirroredTensor(const std::shared_ptr<DTREagerMirroredTensorImpl>& impl) : MirroredTensor(impl) {
   }
   ~DTRMirroredTensor() {}
 
@@ -555,7 +553,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) override {
     impl_->set_consumer_nd_sbp_constraint(val);
     return Maybe<void>::Ok();
-  };
+  }
 
   // Getters for autograd
   Maybe<Tensor> acc_grad() const override { return impl_->acc_grad(); }

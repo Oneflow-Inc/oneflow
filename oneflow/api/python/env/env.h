@@ -17,8 +17,6 @@ limitations under the License.
 #define ONEFLOW_API_PYTHON_ENV_ENV_H_
 
 #include <string>
-#include <cuda_runtime_api.h>
-#include <cuda.h>
 #include <google/protobuf/text_format.h>
 #include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/protobuf.h"
