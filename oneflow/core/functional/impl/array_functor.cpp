@@ -2049,13 +2049,11 @@ Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::st
   std::shared_ptr<Tensor> tensor;
   auto input_placement = JUST(x->parallel_desc());
   std::string input_device_tag = input_placement->device_tag();
-  if ((device_type == input_device_tag) && (dtype == x->dtype())) {
+  if (device_type == input_device_tag) {
     if (dtype == x->dtype()) {
       return (copy ? JUST(x->clone()) : x);
     } else {
-      if (x->is_eager()) { CheckMetaConsistency(x).GetOrThrow(); }
-      tensor = JUST(Cast(x, dtype));
-      return tensor;
+      return JUST(Cast(x, dtype));
     }
   }
   if (x->is_eager()) {
