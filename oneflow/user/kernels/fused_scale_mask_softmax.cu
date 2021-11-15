@@ -89,7 +89,7 @@ class FusedScaleMaskSoftmaxKernel final : public user_op::OpKernel {
     const int64_t cols = x_shape.At(x_shape.NumAxes() - 1);
     const int64_t rows = x_shape.Count(0, x_shape.NumAxes() - 1);
     using ComputeType = typename cuda::softmax::DefaultComputeType<T>::type;
-    ScaleMaskLoad<T, ComputeType> load(x->dptr<T>(), mask->dptr<int8_t>(), cols, 
+    ScaleMaskLoad<T, ComputeType> load(x->dptr<T>(), mask->dptr<int8_t>(), cols,
                                        ctx->Attr<float>("mask_fill_value"),
                                        ctx->Attr<float>("scale_value"));
     cuda::softmax::DirectStore<ComputeType, T> store(y->mut_dptr<T>(), cols);
@@ -99,10 +99,10 @@ class FusedScaleMaskSoftmaxKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUCED_SCALE_MASK_SOFTMAX_GPU_KERNEL(dtype)           \
-  REGISTER_USER_KERNEL("fused_scale_mask_softmax")                    \
-      .SetCreateFn<FusedScaleMaskSoftmaxKernel<dtype>>()              \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)  \
+#define REGISTER_FUCED_SCALE_MASK_SOFTMAX_GPU_KERNEL(dtype)          \
+  REGISTER_USER_KERNEL("fused_scale_mask_softmax")                   \
+      .SetCreateFn<FusedScaleMaskSoftmaxKernel<dtype>>()             \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU) \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUCED_SCALE_MASK_SOFTMAX_GPU_KERNEL(half)
@@ -130,19 +130,19 @@ class FusedScaleMaskSoftmaxGradKernel final : public user_op::OpKernel {
     using ComputeType = typename cuda::softmax::DefaultComputeType<T>::type;
     cuda::softmax::DirectLoad<T, ComputeType> load_y(y->dptr<T>(), cols);
     cuda::softmax::DirectLoad<T, ComputeType> load_dy(dy->dptr<T>(), cols);
-    ScaleMaskStore<ComputeType, T> store(dx->mut_dptr<T>(), mask->dptr<int8_t>(), cols, 
+    ScaleMaskStore<ComputeType, T> store(dx->mut_dptr<T>(), mask->dptr<int8_t>(), cols,
                                          static_cast<T>(0.0), ctx->Attr<float>("scale_value"));
     OF_CUDA_CHECK((cuda::softmax::DispatchSoftmaxGrad<decltype(load_y), decltype(load_dy),
                                                       decltype(store), ComputeType>(
         ctx->device_ctx()->cuda_stream(), load_y, load_dy, store, rows, cols)));
   }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; } 
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUCED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(dtype)            \
-  REGISTER_USER_KERNEL("fused_scale_mask_softmax_grad")                 \
-      .SetCreateFn<FusedScaleMaskSoftmaxGradKernel<dtype>>()            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)    \
+#define REGISTER_FUCED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(dtype)         \
+  REGISTER_USER_KERNEL("fused_scale_mask_softmax_grad")              \
+      .SetCreateFn<FusedScaleMaskSoftmaxGradKernel<dtype>>()         \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU) \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUCED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(half)

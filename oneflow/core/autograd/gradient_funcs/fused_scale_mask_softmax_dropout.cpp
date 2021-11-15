@@ -30,7 +30,8 @@ struct FusedScaleMaskSoftmaxDropoutInterState : public AutoGradCaptureState {
   float dropout_scale = 1.0;
 };
 
-class FusedScaleMaskSoftmaxDropout : public OpExprGradFunction<FusedScaleMaskSoftmaxDropoutInterState> {
+class FusedScaleMaskSoftmaxDropout
+    : public OpExprGradFunction<FusedScaleMaskSoftmaxDropoutInterState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(FusedScaleMaskSoftmaxDropoutInterState* ctx, const TensorTuple& inputs,
@@ -50,9 +51,10 @@ Maybe<void> FusedScaleMaskSoftmaxDropout::Init(const OpExpr& op) {
 }
 
 Maybe<void> FusedScaleMaskSoftmaxDropout::Capture(FusedScaleMaskSoftmaxDropoutInterState* ctx,
-                                                  const TensorTuple& inputs, const TensorTuple& outputs,
+                                                  const TensorTuple& inputs,
+                                                  const TensorTuple& outputs,
                                                   const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), 3); // input, mask, dropout_mask
+  CHECK_EQ_OR_RETURN(inputs.size(), 3);  // input, mask, dropout_mask
   ctx->input_requires_grad = inputs.at(0)->requires_grad();
 
   if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
@@ -60,14 +62,15 @@ Maybe<void> FusedScaleMaskSoftmaxDropout::Capture(FusedScaleMaskSoftmaxDropoutIn
   ctx->scale = JUST(composed_attrs.GetAttr<float>("scale_value"));
   ctx->dropout_scale = JUST(composed_attrs.GetAttr<float>("dropout_scale_value"));
 
-  ctx->SaveTensorForBackward(inputs.at(1));     // mask
-  ctx->SaveTensorForBackward(inputs.at(2));     // dropout_mask
-  ctx->SaveTensorForBackward(outputs.at(1));    // softmax_y
+  ctx->SaveTensorForBackward(inputs.at(1));   // mask
+  ctx->SaveTensorForBackward(inputs.at(2));   // dropout_mask
+  ctx->SaveTensorForBackward(outputs.at(1));  // softmax_y
   return Maybe<void>::Ok();
 }
 
 Maybe<void> FusedScaleMaskSoftmaxDropout::Apply(const FusedScaleMaskSoftmaxDropoutInterState* ctx,
-                                                const TensorTuple& out_grads, TensorTuple* in_grads) const {
+                                                const TensorTuple& out_grads,
+                                                TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 2);  // dy, d_softmax_y
   if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
   in_grads->resize(3);  // input, mask, dropout_mask
@@ -75,10 +78,10 @@ Maybe<void> FusedScaleMaskSoftmaxDropout::Apply(const FusedScaleMaskSoftmaxDropo
   const std::shared_ptr<oneflow::one::Tensor>& mask = ctx->SavedTensors().at(0);
   const std::shared_ptr<oneflow::one::Tensor>& dropout_mask = ctx->SavedTensors().at(1);
   const std::shared_ptr<oneflow::one::Tensor>& softmax_y = ctx->SavedTensors().at(2);
-  const std::shared_ptr<oneflow::one::Tensor>& input_grad = 
-      JUST(functional::FusedScaleMaskSoftmaxDropoutGrad(softmax_y, out_grads.at(0),
-          dropout_mask, mask, ctx->scale, ctx->dropout_scale));
-  
+  const std::shared_ptr<oneflow::one::Tensor>& input_grad =
+      JUST(functional::FusedScaleMaskSoftmaxDropoutGrad(softmax_y, out_grads.at(0), dropout_mask,
+                                                        mask, ctx->scale, ctx->dropout_scale));
+
   in_grads->at(0) = input_grad;
   return Maybe<void>::Ok();
 }

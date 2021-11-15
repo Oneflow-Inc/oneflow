@@ -1889,19 +1889,18 @@ class FusedScaleTrilFunctor {
 class FusedScaleMaskSoftmaxFunctor {
  public:
   FusedScaleMaskSoftmaxFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_scale_mask_softmax")
-                        .Input("x")
-                        .Input("mask")
-                        .Output("y")
-                        .Build());
+    op_ = CHECK_JUST(
+        one::OpBuilder("fused_scale_mask_softmax").Input("x").Input("mask").Output("y").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::shared_ptr<one::Tensor>& mask,
-                           const float& fill_value, const float& scale) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& mask, const float& fill_value,
+                           const float& scale) const {
     MutableAttrMap attrs_;
     JUST(attrs_.SetAttr<float>("scale_value", scale));
     JUST(attrs_.SetAttr<float>("mask_fill_value", fill_value));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mask}, attrs_);
   }
+
  private:
   std::shared_ptr<OpExpr> op_;
 };
@@ -1909,17 +1908,20 @@ class FusedScaleMaskSoftmaxFunctor {
 class FusedScaleMaskSoftmaxDropoutFunctor {
  public:
   FusedScaleMaskSoftmaxDropoutFunctor() {
-    random_mask_like_op_ = CHECK_JUST(one::OpBuilder("random_mask_like").Input("like").Output("out").Build());
-    fused_scale_mask_softmax_dropout_op_ = CHECK_JUST(one::OpBuilder("fused_scale_mask_softmax_dropout")
-                                                          .Input("x")
-                                                          .Input("mask")
-                                                          .Input("dropout_mask")
-                                                          .Output("y")
-                                                          .Output("softmax_y")
-                                                          .Build());
+    random_mask_like_op_ =
+        CHECK_JUST(one::OpBuilder("random_mask_like").Input("like").Output("out").Build());
+    fused_scale_mask_softmax_dropout_op_ =
+        CHECK_JUST(one::OpBuilder("fused_scale_mask_softmax_dropout")
+                       .Input("x")
+                       .Input("mask")
+                       .Input("dropout_mask")
+                       .Output("y")
+                       .Output("softmax_y")
+                       .Build());
   }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const std::shared_ptr<one::Tensor>& mask,
-                                const float& fill_value, const float& scale, const float& p, const bool& training, 
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& mask, const float& fill_value,
+                                const float& scale, const float& p, const bool& training,
                                 const Optional<one::Generator>& generator) const {
     float rate = p;
     if (!training) rate = 0.0;
@@ -1938,11 +1940,14 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
     MutableAttrMap fused_scale_mask_softmax_dropout_attrs;
     JUST(fused_scale_mask_softmax_dropout_attrs.SetAttr<float>("scale_value", scale));
     JUST(fused_scale_mask_softmax_dropout_attrs.SetAttr<float>("mask_fill_value", fill_value));
-    JUST(fused_scale_mask_softmax_dropout_attrs.SetAttr<float>("dropout_scale_value", dropout_scale));
-    
-    return OpInterpUtil::Dispatch<TensorTuple>(*fused_scale_mask_softmax_dropout_op_, 
-              {x, mask, dropout_mask}, fused_scale_mask_softmax_dropout_attrs);
+    JUST(fused_scale_mask_softmax_dropout_attrs.SetAttr<float>("dropout_scale_value",
+                                                               dropout_scale));
+
+    return OpInterpUtil::Dispatch<TensorTuple>(*fused_scale_mask_softmax_dropout_op_,
+                                               {x, mask, dropout_mask},
+                                               fused_scale_mask_softmax_dropout_attrs);
   }
+
  private:
   std::shared_ptr<OpExpr> random_mask_like_op_;
   std::shared_ptr<OpExpr> fused_scale_mask_softmax_dropout_op_;

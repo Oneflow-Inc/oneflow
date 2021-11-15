@@ -51,30 +51,31 @@ Maybe<void> FusedScaleMaskSoftmax::Init(const OpExpr& op) {
 Maybe<void> FusedScaleMaskSoftmax::Capture(FusedScaleMaskSoftmaxInterState* ctx,
                                            const TensorTuple& inputs, const TensorTuple& outputs,
                                            const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), 2); // input, mask
+  CHECK_EQ_OR_RETURN(inputs.size(), 2);  // input, mask
   ctx->input_requires_grad = inputs.at(0)->requires_grad();
 
   if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->scale = JUST(composed_attrs.GetAttr<float>("scale_value"));
 
-  ctx->SaveTensorForBackward(inputs.at(1));  // save mask
-  ctx->SaveTensorForBackward(outputs.at(0)); // save y, ie. softmax result
+  ctx->SaveTensorForBackward(inputs.at(1));   // save mask
+  ctx->SaveTensorForBackward(outputs.at(0));  // save y, ie. softmax result
   return Maybe<void>::Ok();
 }
 
 Maybe<void> FusedScaleMaskSoftmax::Apply(const FusedScaleMaskSoftmaxInterState* ctx,
-                                         const TensorTuple& out_grads, TensorTuple* in_grads) const {
+                                         const TensorTuple& out_grads,
+                                         TensorTuple* in_grads) const {
   if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
 
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // dy
-  in_grads->resize(2);  // input, mask
+  in_grads->resize(2);                      // input, mask
 
   const std::shared_ptr<oneflow::one::Tensor>& mask = ctx->SavedTensors().at(0);
   const std::shared_ptr<oneflow::one::Tensor>& y = ctx->SavedTensors().at(1);
-  const std::shared_ptr<oneflow::one::Tensor>& fused_scale_mask_softmax_grad = 
+  const std::shared_ptr<oneflow::one::Tensor>& fused_scale_mask_softmax_grad =
       JUST(functional::FusedScaleMaskSoftmaxGrad(y, out_grads.at(0), mask, ctx->scale));
-  
+
   in_grads->at(0) = fused_scale_mask_softmax_grad;
   return Maybe<void>::Ok();
 }
