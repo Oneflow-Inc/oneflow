@@ -24,9 +24,6 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include <netinet/tcp.h>
 
-#include <fstream>
-
-#define DebugEpoll false 
 namespace oneflow {
 
 namespace {
