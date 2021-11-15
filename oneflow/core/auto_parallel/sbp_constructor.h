@@ -47,7 +47,7 @@ class SbpConstructor final {
 
   Maybe<void> Init(const OpGraph& op_graph, Job* job);
   Maybe<void> FindBestSbpSignature();
-  Maybe<void> UpdateSbpSignatureForJob(const OpGraph& op_graph);
+  Maybe<void> DumpNdSbpSignatureForJob(const OpGraph& op_graph, Job* job);
   // Print the graph with SBP in order
   void PrintSBPGraphDebugInfo();
 

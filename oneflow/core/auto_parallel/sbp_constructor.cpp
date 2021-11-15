@@ -72,15 +72,19 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SbpConstructor::UpdateSbpSignatureForJob(const OpGraph& op_graph) {
-  op_graph.TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
-    SbpNode<cfg::SbpSignature>* sbp_node = op_name2sbp_node_[op_node->op().op_name()];
+Maybe<void> SbpConstructor::DumpNdSbpSignatureForJob(const OpGraph& op_graph, Job* job) {
+  op_graph.ForEachNode([&](const OpNode* node) -> void {
+    SbpNode<cfg::SbpSignature>* sbp_node = op_name2sbp_node_[node->op().op_name()];
+    // Update NdSbpSignature
     cfg::NdSbpSignature nd_sbp_signature;
     SbpSignatureToNdSbpSignature(*sbp_node->FinalSbpSignature(), &nd_sbp_signature);
-    op_node->mut_op()->FillNdSbpSignature(nd_sbp_signature);
-    op_node->InitLbi2NdSbp();
-    JUST(op_node->mut_op()->InferLogicalOutBlobDescsIf());
-    return Maybe<void>::Ok();
+    nd_sbp_signature.ToProto(
+        &(*job->mutable_job_parallel_view_conf()
+               ->mutable_op_name2nd_sbp_signature_conf())[node->op().op_name()]);
+    // Update SbpSignature
+    sbp_node->FinalSbpSignature()->ToProto(
+        &(*job->mutable_job_parallel_view_conf()
+               ->mutable_op_name2sbp_signature_conf())[node->op().op_name()]);
   });
   return Maybe<void>::Ok();
 }
