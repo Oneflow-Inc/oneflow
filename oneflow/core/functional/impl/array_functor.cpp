@@ -2091,7 +2091,7 @@ class ToFunctor {
     if (input->is_consistent()) {
       std::string device_type = device_.value_or(JUST(input->parallel_desc())->device_tag());
       if (device_type == "gpu") { device_type = "cuda"; }
-      CHECK_OR_RETURN(device_.value_or("") == "cpu" || device_.value_or("") == "cuda")
+      CHECK_OR_RETURN(device_type == "cpu" || device_type == "cuda")
           << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
           << "for consistent tensor, but got " << device_.value_or("");
       return JUST(ConsistentTensorTo(input, device_type, dtype, copy));
