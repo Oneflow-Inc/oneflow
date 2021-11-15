@@ -80,4 +80,3 @@ using CallBackList = std::list<std::function<void()>>;
 #endif  // OF_PLATFORM_POSIX
 
 #endif  // ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_MESSAGE_H_
-
