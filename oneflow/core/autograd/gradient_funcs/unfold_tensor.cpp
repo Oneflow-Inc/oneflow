@@ -47,12 +47,6 @@ Maybe<void> UnfoldTensor::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  const std::string& op_name = fw_op_expr->op_name();
-  int32_t dimension;
-  int32_t size;
-  int32_t step;
-  grad_op_ =
-      JUST(op_expr_helper::UnfoldTensorGradOp(dimension, size, step, GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 Maybe<void> UnfoldTensor::Capture(UnfoldTensorCaptureState* ctx, const TensorTuple& inputs,
