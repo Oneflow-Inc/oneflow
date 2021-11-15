@@ -55,7 +55,7 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
       uint64_t addr = reinterpret_cast<uint64_t>(&new_msg);//此时addr是new_msg的地址
 
       binary_mutex_.lock();
-      std::string dir = "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/";
+      std::string dir = "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_15/";
       std::string path = dir  + "actor_msg_bus" + std::to_string(num_file_);
       num_file_++;
       std::ofstream out;

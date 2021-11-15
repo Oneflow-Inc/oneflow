@@ -60,7 +60,7 @@ void SocketWriteHelper::AsyncWrite(const SocketMsg& msg) {
       debug_actor_msg_++;
       std::cout<<" SocketWriteHelper::AsyncWrite,the debug_actor_msg_:"<<debug_actor_msg_ << std::endl;
       std::cout<<std::endl;
-      std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/";
+      std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_15/";
 
       write_mutex_.lock();
       std::string path = dir + "write_helper_Asyncwrite" + std::to_string(write_msg_);
@@ -115,7 +115,7 @@ bool SocketWriteHelper::InitMsgWriteHandle() {
   if(cur_msg_.msg_type == SocketMsgType::kActor ) {
 
     init_msg_mutex_.lock();
-    std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/";
+    std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_15/";
     std::string path = dir + "write_helper_InitMsgWriteHandle" + std::to_string(init_msg_);
     init_msg_++;
     std::ofstream out;
@@ -159,7 +159,7 @@ bool SocketWriteHelper::DoCurWrite(void (SocketWriteHelper::*set_cur_write_done)
     std::cout << std::endl;
 
     DocurWrite_muex_.lock();
-    std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_15";
+    std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_15/";
     std::string path = dir + "write_helper_DoCurWrite" + std::to_string(DocurWrite_);
     DocurWrite_++;
     std::ofstream out;
