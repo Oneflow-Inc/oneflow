@@ -104,13 +104,18 @@ REGISTER_USER_OP("nll")
     })
     .SetDataTypeInferFn(InferDataType)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("input", 0), 0)
-          .Split(user_op::OpArg("target", 0), 0)
-          .Broadcast(user_op::OpArg("weight", 0))
-          .Split(user_op::OpArg("out", 0), 0)
-          .Broadcast(user_op::OpArg("total_weight", 0))
-          .Build();
+      const auto& out_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("out", 0).shape();
+      auto builder = ctx->NewBuilder()
+                         .Split(user_op::OpArg("input", 0), 0)
+                         .Split(user_op::OpArg("target", 0), 0)
+                         .Broadcast(user_op::OpArg("weight", 0))
+                         .Broadcast(user_op::OpArg("total_weight", 0));
+      if (out_shape.NumAxes() == 0) {
+        builder.Broadcast(user_op::OpArg("out", 0));
+      } else {
+        builder.Split(user_op::OpArg("out", 0), 0);
+      }
+      builder.Build();
       return Maybe<void>::Ok();
     });
 
@@ -126,14 +131,19 @@ REGISTER_USER_OP("nll_grad")
     .SetTensorDescInferFn(InferGradTensorDescFn)
     .SetDataTypeInferFn(InferGradDataType)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("input", 0), 0)
-          .Split(user_op::OpArg("target", 0), 0)
-          .Broadcast(user_op::OpArg("weight", 0))
-          .Broadcast(user_op::OpArg("total_weight", 0))
-          .Split(user_op::OpArg("dy", 0), 0)
-          .Split(user_op::OpArg("dx", 0), 0)
-          .Build();
+      const auto& dy_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0).shape();
+      auto builder = ctx->NewBuilder()
+                         .Split(user_op::OpArg("input", 0), 0)
+                         .Split(user_op::OpArg("target", 0), 0)
+                         .Broadcast(user_op::OpArg("weight", 0))
+                         .Broadcast(user_op::OpArg("total_weight", 0))
+                         .Split(user_op::OpArg("dx", 0), 0);
+      if (dy_shape.NumAxes() == 0) {
+        builder.Broadcast(user_op::OpArg("dy", 0));
+      } else {
+        builder.Split(user_op::OpArg("dy", 0), 0);
+      }
+      builder.Build();
       return Maybe<void>::Ok();
     });
 

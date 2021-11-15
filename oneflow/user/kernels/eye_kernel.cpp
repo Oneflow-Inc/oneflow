@@ -42,7 +42,7 @@ class EyeKernel final : public OpKernel {
 
 #define REGISTER_EYE_KERNEL(device, dtype)                                             \
   REGISTER_USER_KERNEL("eye").SetCreateFn<EyeKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device)                                              \
+      (user_op::HobDeviceType() == device)                                             \
       & (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
 #define REGISTER_EYE_KERNELS_WITH_DEVICE(device) \
