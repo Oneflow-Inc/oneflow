@@ -100,7 +100,7 @@ void EpollCommNet::SendMsg(int64_t dst_machine_id, void * data, size_t size) {
   msg.actor_msg.size = 0;
 
   binary_mutex_.lock();
-  std::string path= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/";
+  std::string path= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_15";
   std::string path1 = path  + "epoll_1_" + std::to_string(epoll_num_file_);
   std::string path2 = path + "epoll_1_" + std::to_string(epoll_num_file_);
   epoll_num_file_++;

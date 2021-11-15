@@ -159,7 +159,7 @@ bool SocketWriteHelper::DoCurWrite(void (SocketWriteHelper::*set_cur_write_done)
     std::cout << std::endl;
 
     DocurWrite_muex_.lock();
-    std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/";
+    std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_15";
     std::string path = dir + "write_helper_DoCurWrite" + std::to_string(DocurWrite_);
     DocurWrite_++;
     std::ofstream out;

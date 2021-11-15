@@ -71,7 +71,7 @@ if(cur_msg_.msg_type == SocketMsgType::kActor ) {
     std::cout<<std::endl;
 
     DoCur_num_mutex_.lock();
-    std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/";
+    std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_16";
     std::string path = dir + "Read_helper_DoCurRead" + std::to_string(DoCur_num_);
     DoCur_num_++;
     std::ofstream out;
