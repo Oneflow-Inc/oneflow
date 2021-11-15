@@ -267,7 +267,7 @@ struct ReluGradFunctor {
 
 #define REGISTER_HARDTANH_KERNEL(device, dtype)                                                 \
   REGISTER_USER_KERNEL("hardtanh")                                                              \
-      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                      \
+      .SetCreateFn([]() {                                                                       \
         return new UnaryElemwiseXpuKernel<device, HardtanhFunctor<dtype>, dtype, dtype>(        \
             [](user_op::KernelComputeContext* ctx) {                                            \
               return HardtanhFunctor<dtype>(ctx->Attr<double>("min_val"),                       \
@@ -275,7 +275,7 @@ struct ReluGradFunctor {
             },                                                                                  \
             "out", "in");                                                                       \
       })                                                                                        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))          \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -283,7 +283,7 @@ struct ReluGradFunctor {
         return Maybe<void>::Ok();                                                               \
       });                                                                                       \
   REGISTER_USER_KERNEL("hardtanh_grad")                                                         \
-      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                      \
+      .SetCreateFn([]() {                                                                       \
         return new BinaryElemwiseXpuKernel<device, HardtanhGradFunctor<dtype>, dtype, dtype,    \
                                            dtype>(                                              \
             [](user_op::KernelComputeContext* ctx) {                                            \
@@ -292,7 +292,7 @@ struct ReluGradFunctor {
             },                                                                                  \
             "dx", "y", "dy");                                                                   \
       })                                                                                        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))          \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -339,11 +339,11 @@ struct ReluGradFunctor {
 // For Relu Inplace Proposal Fn.
 #define REGISTER_RELU_FORWARD_KERNEL(device, dtype)                                                \
   REGISTER_USER_KERNEL("relu")                                                                     \
-      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                         \
+      .SetCreateFn([]() {                                                                          \
         return new UnaryElemwiseXpuKernel<device, ReluFunctor<dtype>, dtype, dtype>(               \
             [](user_op::KernelComputeContext* ctx) { return ReluFunctor<dtype>(); }, "out", "in"); \
       })                                                                                           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                        \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))            \
       .SetInplaceProposalFn(                                                                       \
           [](const user_op::InferContext&,                                                         \
@@ -354,12 +354,12 @@ struct ReluGradFunctor {
 
 #define REGISTER_RELU_BACKWARD_KERNEL(device, dtype)                                             \
   REGISTER_USER_KERNEL("relu_grad")                                                              \
-      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                       \
+      .SetCreateFn([]() {                                                                        \
         return new BinaryElemwiseXpuKernel<device, ReluGradFunctor<dtype>, dtype, dtype, dtype>( \
             [](user_op::KernelComputeContext* ctx) { return ReluGradFunctor<dtype>(); }, "dx",   \
             "y", "dy");                                                                          \
       })                                                                                         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))           \
       .SetInplaceProposalFn(                                                                     \
           [](const user_op::InferContext&,                                                       \

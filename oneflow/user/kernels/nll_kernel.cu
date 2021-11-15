@@ -267,14 +267,14 @@ class NllGradKernel final : public user_op::OpKernel {
 #define REGISTER_NLL_KERNEL(dtype_pair, ltype_pair)                                           \
   REGISTER_USER_KERNEL("nll")                                                                 \
       .SetCreateFn<NllKernel<OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(ltype_pair)>>()   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                         \
                        & (user_op::HobDataType("target", 0) == OF_PP_PAIR_SECOND(ltype_pair)) \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
 #define REGISTER_NLL_GRAD_KERNEL(dtype_pair, ltype_pair)                                        \
   REGISTER_USER_KERNEL("nll_grad")                                                              \
       .SetCreateFn<NllGradKernel<OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(ltype_pair)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
                        & (user_op::HobDataType("target", 0) == OF_PP_PAIR_SECOND(ltype_pair))   \
                        & (user_op::HobDataType("dy", 0) == OF_PP_PAIR_SECOND(dtype_pair))       \
                        & (user_op::HobDataType("dx", 0) == OF_PP_PAIR_SECOND(dtype_pair)));

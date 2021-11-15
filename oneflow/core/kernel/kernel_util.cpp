@@ -18,8 +18,8 @@ limitations under the License.
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/memory/memory_case.pb.h"
-#include "oneflow/core/primitive/include/memcpy.h"
-#include "oneflow/core/primitive/include/memset.h"
+#include "oneflow/core/ep/include/primitive/memcpy.h"
+#include "oneflow/core/ep/include/primitive/memset.h"
 #include "oneflow/core/stream/include/stream_context_adapter.h"
 
 namespace oneflow {
@@ -243,24 +243,24 @@ void AutoMemcpy(DeviceCtx* ctx, Blob* dst, const Blob* src) {
 
 void AutoMemcpy(StreamContext* stream_ctx, void* dst, const void* src, size_t sz,
                 const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case) {
-  primitive::MemcpyKind kind{};
+  ep::primitive::MemcpyKind kind{};
   if (stream_ctx->device_type() == DeviceType::kCPU) {
     CHECK(src_mem_case.has_host_mem());
     CHECK(dst_mem_case.has_host_mem());
-    kind = primitive::MemcpyKind::kDtoD;
+    kind = ep::primitive::MemcpyKind::kDtoD;
   } else {
     if (src_mem_case.has_host_mem()) {
       CHECK(!dst_mem_case.has_host_mem());
-      kind = primitive::MemcpyKind::kHtoD;
+      kind = ep::primitive::MemcpyKind::kHtoD;
     } else if (dst_mem_case.has_host_mem()) {
       CHECK(!src_mem_case.has_host_mem());
-      kind = primitive::MemcpyKind::kDtoH;
+      kind = ep::primitive::MemcpyKind::kDtoH;
     } else {
-      kind = primitive::MemcpyKind::kDtoD;
+      kind = ep::primitive::MemcpyKind::kDtoD;
     }
   }
-  std::unique_ptr<primitive::Memcpy> primitive =
-      primitive::NewPrimitive<primitive::MemcpyFactory>(stream_ctx->device_type(), kind);
+  std::unique_ptr<ep::primitive::Memcpy> primitive =
+      ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(stream_ctx->device_type(), kind);
   CHECK(primitive);
   primitive->Launch(stream_ctx, dst, src, sz);
 }
@@ -286,8 +286,8 @@ void AutoMemset(DeviceCtx* ctx, void* dst, const char value, size_t sz,
 
 void AutoMemset(StreamContext* stream_ctx, void* dst, const char value, size_t sz,
                 const MemoryCase& /*dst_mem_case*/) {
-  std::unique_ptr<primitive::Memset> primitive =
-      primitive::NewPrimitive<primitive::MemsetFactory>(stream_ctx->device_type());
+  std::unique_ptr<ep::primitive::Memset> primitive =
+      ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(stream_ctx->device_type());
   primitive->Launch(stream_ctx, dst, value, sz);
 }
 

@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/primitive/include/permute.h"
+#include "oneflow/core/ep/include/primitive/permute.h"
 
 namespace oneflow {
 
@@ -54,7 +54,7 @@ void CollectiveBoxingUnpackKernel::ForwardDataContent(KernelContext* ctx) const 
     std::vector<int32_t> perm;
     FOR_RANGE(int64_t, i, 1, transpose_in_dim_vec.size()) { perm.push_back(i); }
     perm.insert(perm.begin() + src_split_axis, 0);
-    auto transpose = primitive::NewPrimitive<primitive::PermuteFactory>(
+    auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
         ctx->stream_ctx()->device_type(), transpose_in_dim_vec.size());
     CHECK(transpose);
     transpose->Launch(ctx->stream_ctx(), in->data_type(), transpose_in_dim_vec.size(),

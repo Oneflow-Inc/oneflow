@@ -107,21 +107,6 @@ class UserKernelBaseContext {
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
 };
 
-class KernelCreateContext final : public user_op::KernelCreateContext {
- public:
-  explicit KernelCreateContext(const KernelConf& kernel_conf)
-      : user_op_conf_(kernel_conf.op_attribute().op_conf()) {}
-
- private:
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override {
-    return user_op_conf().Attr4Name(attr_name);
-  }
-
-  user_op::UserOpConfWrapper user_op_conf_;
-};
-
 class UserKernelInitContext final : public user_op::KernelInitContext {
  public:
   explicit UserKernelInitContext(DeviceCtx* device_ctx, StreamContext* stream_ctx,
@@ -607,8 +592,7 @@ void UserKernel::InitUserKernel(StreamContext* stream_ctx, DeviceCtx* device_ctx
         CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
             op_type_name, UserKernelRegContext(kernel_conf())));
     CHECK_NOTNULL(kernel_reg_val);
-    KernelCreateContext create_ctx(kernel_conf());
-    kernel_.reset(kernel_reg_val->create_fn(&create_ctx));
+    kernel_.reset(kernel_reg_val->create_fn());
   }
 }
 
@@ -734,8 +718,7 @@ void EagerKernel::InitOpKernel(const KernelConf& kernel_conf) {
   auto kernel_reg_val = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
       op_type_name, UserKernelRegContext(kernel_conf)));
   CHECK_NOTNULL(kernel_reg_val);
-  KernelCreateContext create_ctx(kernel_conf);
-  kernel_.reset(kernel_reg_val->create_fn(&create_ctx));
+  kernel_.reset(kernel_reg_val->create_fn());
 }
 
 void EagerKernel::Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) const {
