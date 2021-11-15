@@ -58,7 +58,7 @@ class UnpackKernel final : public user_op::OpKernel {
 
 #define REGISTER_UNPACK_KERNEL(device)                                                \
   REGISTER_USER_KERNEL("unpack").SetCreateFn<UnpackKernel<device>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device));
+      (user_op::HobDeviceType() == device));
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_UNPACK_KERNEL, DEVICE_TYPE_SEQ)
 

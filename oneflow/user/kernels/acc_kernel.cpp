@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/primitive/include/add.h"
+#include "oneflow/core/ep/include/primitive/add.h"
 
 namespace oneflow {
 
@@ -33,8 +33,8 @@ class AccKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt());
     CHECK_EQ(in->data_type(), out->data_type());
-    std::unique_ptr<primitive::Add> primitive =
-        primitive::NewPrimitive<primitive::AddFactory>(ctx->device_type(), in->data_type());
+    std::unique_ptr<ep::primitive::Add> primitive =
+        ep::primitive::NewPrimitive<ep::primitive::AddFactory>(ctx->device_type(), in->data_type());
     CHECK(primitive);
     primitive->Launch(ctx->stream_ctx(), in->dptr(), out->dptr(), out->mut_dptr(),
                       in->shape().elem_cnt());
@@ -46,7 +46,7 @@ class AccKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("acc")                                    \
       .SetCreateFn<AccKernel<device, OF_PP_PAIR_FIRST(dtype)>>() \
       .SetIsMatchedHob(                                          \
-          (user_op::HobDeviceTag() == device)                    \
+          (user_op::HobDeviceType() == device)                   \
           & (user_op::HobDataType("out", 0) == GetDataType<OF_PP_PAIR_FIRST(dtype)>::value));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ACC_KERNEL, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)

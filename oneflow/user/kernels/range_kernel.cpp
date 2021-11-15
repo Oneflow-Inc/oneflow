@@ -59,7 +59,7 @@ class RangeKernel final : public OpKernel {
 
 #define REGISTER_RANGE_KERNEL(device, dtype)                                               \
   REGISTER_USER_KERNEL("range").SetCreateFn<RangeKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device)                                                  \
+      (user_op::HobDeviceType() == device)                                                 \
       & (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
 #define REGISTER_RANGE_KERNELS_WITH_DEVICE(device) \
