@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/primitive/include/copy_nd.h"
-#include "oneflow/core/primitive/include/memset.h"
+#include "oneflow/core/ep/include/primitive/copy_nd.h"
+#include "oneflow/core/ep/include/primitive/memset.h"
 
 namespace oneflow {
 
@@ -24,24 +24,23 @@ namespace user_op {
 namespace {
 
 template<typename Context>
-std::unique_ptr<primitive::CopyNd> NewCopyNdPrimitive(Context* ctx) {
-  return primitive::NewPrimitive<primitive::CopyNdFactory>(ctx->device_type(), 3);
+std::unique_ptr<ep::primitive::CopyNd> NewCopyNdPrimitive(Context* ctx) {
+  return ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(ctx->device_type(), 3);
 }
 
 template<typename Context>
-std::unique_ptr<primitive::Memset> NewMemsetPrimitive(Context* ctx) {
-  return primitive::NewPrimitive<primitive::MemsetFactory>(ctx->device_type());
+std::unique_ptr<ep::primitive::Memset> NewMemsetPrimitive(Context* ctx) {
+  return ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> CopyNdPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("CopyNdPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewCopyNdPrimitive(&ctx).operator bool();
-                                     });
+auto CopyNdPrimitiveExists() {
+  return hob::make_custom("CopyNdPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewCopyNdPrimitive(&ctx).operator bool();
+  });
 }
 
-hob::HobContextGetter<KernelRegContext, bool> MemsetPrimitiveExists() {
-  return HobCtxGetter<bool>("MemsetPrimitiveExists", [](const KernelRegContext& ctx) {
+auto MemsetPrimitiveExists() {
+  return hob::make_custom("MemsetPrimitiveExists", [](const KernelRegContext& ctx) {
     return NewMemsetPrimitive(&ctx).operator bool();
   });
 }
@@ -96,8 +95,8 @@ class NarrowGradKernel final : public user_op::OpKernel {
 
     size_t dx_byte_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
     void* dst = dx->mut_dptr();
-    std::unique_ptr<primitive::Memset> memset_primitive =
-        primitive::NewPrimitive<primitive::MemsetFactory>(ctx->device_type());
+    std::unique_ptr<ep::primitive::Memset> memset_primitive =
+        ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
     CHECK(memset_primitive);
     memset_primitive->Launch(ctx->stream_ctx(), dst, 0, dx_byte_size);
 

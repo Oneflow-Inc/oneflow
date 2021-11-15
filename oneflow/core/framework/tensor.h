@@ -193,8 +193,14 @@ class StaticZerosTensor final : public Tensor {
   Maybe<Tensor> clone() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
   // Setters for autograd
-  Maybe<void> set_requires_grad(bool requires_grad) override { PRINT_BUG_PROMPT_AND_ABORT(); }
-  Maybe<void> set_retain_grad(bool retain_grad) override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<void> set_requires_grad(bool requires_grad) override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return Maybe<void>::Ok();
+  }
+  Maybe<void> set_retain_grad(bool retain_grad) override {
+    RETURN_ERROR_WITH_BUG_PROMPT();
+    return Maybe<void>::Ok();
+  }
   void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
     PRINT_BUG_PROMPT_AND_ABORT();
   }
@@ -552,7 +558,6 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   }
   Maybe<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
   Maybe<void> set_requires_grad(bool requires_grad) override {
-    // return impl_->set_requires_grad(requires_grad);
     JUST(impl_->set_requires_grad(requires_grad));
     if (!requires_grad) { set_grad_fn_node(nullptr); }
     return Maybe<void>::Ok();
