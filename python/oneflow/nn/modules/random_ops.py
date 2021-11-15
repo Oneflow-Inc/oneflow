@@ -23,26 +23,13 @@ from oneflow.nn.modules.utils import _single
 def _rand_op_common_process(
     size, device=None, generator=None, placement=None, sbp=None
 ):
-    assert size is not None, "shape must not be None!"
-    assert isinstance(
-        size, (int, tuple, list, flow.Size)
-    ), "shape should be int or tuple int!"
     if isinstance(device, str):
         device = flow.device(device)
     size = _single(size)
     processed_sbp = sbp
-    if generator is None:
-        generator = flow.Generator()
     if placement is not None:
-        assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
         if isinstance(processed_sbp, flow.sbp.sbp):
             processed_sbp = (processed_sbp,)
-        else:
-            for elem in sbp:
-                assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-        assert len(processed_sbp) == len(placement.hierarchy)
-    else:
-        assert sbp is None, "sbp: %s" % sbp
     return size, device, generator, placement, processed_sbp
 
 
@@ -139,9 +126,23 @@ def rand_op(
     """
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
-    if generator is None:
-        generator = flow.default_generator()
-    return Rand(size, generator, dtype, layout, device, placement, sbp, requires_grad)()
+    if placement is not None:
+        return flow._C.rand(
+            size=size,
+            placement=placement,
+            sbp=sbp,
+            dtype=dtype,
+            generator=generator,
+            requires_grad=requires_grad,
+        )
+    else:
+        return flow._C.rand(
+            size=size,
+            dtype=dtype,
+            device=device,
+            generator=generator,
+            requires_grad=requires_grad,
+        )
 
 
 class RandN(Module):
@@ -238,11 +239,23 @@ def randn_op(
     """
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
-    if generator is None:
-        generator = flow.default_generator()
-    return RandN(
-        size, generator, dtype, layout, device, placement, sbp, requires_grad
-    )()
+    if placement is not None:
+        return flow._C.randn(
+            size=size,
+            placement=placement,
+            sbp=sbp,
+            dtype=dtype,
+            generator=generator,
+            requires_grad=requires_grad,
+        )
+    else:
+        return flow._C.randn(
+            size=size,
+            dtype=dtype,
+            device=device,
+            generator=generator,
+            requires_grad=requires_grad,
+        )
 
 
 class RandInt(Module):
@@ -260,8 +273,6 @@ class RandInt(Module):
     ) -> None:
         super().__init__()
 
-        if generator is None:
-            generator = flow.Generator()
         assert low < high
         self.requires_grad = requires_grad
         (
@@ -348,11 +359,27 @@ def randint_op(
     """
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
-    if generator is None:
-        generator = flow.default_generator()
-    return RandInt(
-        low, high, size, generator, dtype, device, placement, sbp, requires_grad
-    )()
+    if placement is not None:
+        return flow._C.randint(
+            low,
+            high,
+            size=size,
+            generator=generator,
+            dtype=dtype,
+            placement=placement,
+            sbp_tuple=sbp,
+            requires_grad=requires_grad,
+        )
+    else:
+        return flow._C.randint(
+            low,
+            high,
+            size=size,
+            generator=generator,
+            dtype=dtype,
+            device=device,
+            requires_grad=requires_grad,
+        )
 
 
 class RandPerm(Module):
@@ -401,7 +428,7 @@ class RandPerm(Module):
 
 
 def randperm_op(
-    n: flow.int32,
+    n: flow.int64,
     generator: flow.Generator = None,
     out=None,
     dtype: Optional[flow.dtype] = None,
@@ -440,16 +467,25 @@ def randperm_op(
         >>> generator = flow.Generator()
         >>> generator.manual_seed(0)
         >>> flow.randperm(5, generator=generator)
-        tensor([2, 4, 3, 0, 1], dtype=oneflow.int32)
+        tensor([2, 4, 3, 0, 1], dtype=oneflow.int64)
     """
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
     assert pin_memory is False, "pin_memory not supported yet"
-    if generator is None:
-        generator = flow.default_generator()
-    return RandPerm(n, generator, dtype, layout, device, placement, sbp, requires_grad)(
-        out
-    )
+    if dtype is None:
+        dtype = flow.int64
+    if placement is not None:
+        return flow._C.randperm(
+            n=n,
+            placement=placement,
+            sbp=sbp,
+            generator=generator,
+            requires_grad=requires_grad,
+        ).to(dtype)
+    else:
+        return flow._C.randperm(
+            n=n, device=device, generator=generator, requires_grad=requires_grad
+        ).to(dtype)
 
 
 if __name__ == "__main__":
