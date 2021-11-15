@@ -22,10 +22,10 @@ namespace oneflow {
 namespace one {
 
 struct UnfoldTensorCaptureState : public AutoGradCaptureState {
-  int32_t dimension;
-  int32_t size;
-  int32_t step;
-  bool requires_grad;
+  int32_t dimension = -1;
+  int32_t size = -1;
+  int32_t step = -1;
+  bool requires_grad = false;
 };
 
 class UnfoldTensor : public OpExprGradFunction<UnfoldTensorCaptureState> {
