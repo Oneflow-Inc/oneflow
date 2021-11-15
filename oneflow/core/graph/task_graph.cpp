@@ -28,24 +28,24 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
-#include "oneflow/core/primitive/include/memcpy.h"
 #include "oneflow/core/graph/task_stream_index_manager.h"
+#include "oneflow/core/ep/include/primitive/memcpy.h"
 
 namespace oneflow {
 
 namespace {
 
-bool IsMemcpyPrimitiveSupported(DeviceType device_type, primitive::MemcpyKind kind) {
-  auto primitive = primitive::NewPrimitive<primitive::MemcpyFactory>(device_type, kind);
+bool IsMemcpyPrimitiveSupported(DeviceType device_type, ep::primitive::MemcpyKind kind) {
+  auto primitive = ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(device_type, kind);
   return primitive.operator bool();
 }
 
 bool IsMemcpyHtoDSupported(DeviceType device_type) {
-  return IsMemcpyPrimitiveSupported(device_type, primitive::MemcpyKind::kHtoD);
+  return IsMemcpyPrimitiveSupported(device_type, ep::primitive::MemcpyKind::kHtoD);
 }
 
 bool IsMemcpyDtoHSupported(DeviceType device_type) {
-  return IsMemcpyPrimitiveSupported(device_type, primitive::MemcpyKind::kDtoH);
+  return IsMemcpyPrimitiveSupported(device_type, ep::primitive::MemcpyKind::kDtoH);
 }
 
 bool IsConnectToTickOp(const TaskNode* node) {
