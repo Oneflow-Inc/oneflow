@@ -60,7 +60,7 @@ REGISTER_USER_OP("unfold_tensor")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const int32_t dimension = ctx->Attr<int32_t>("dimension");
       const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-      FOR_RANGE(int32_t, i, 0, x_tensor.shape().NumAxes()) {
+      FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
         if (i != dimension) {
           ctx->NewBuilder()
               .Split(user_op::OpArg("x", 0), i)
@@ -93,7 +93,7 @@ REGISTER_USER_OP("unfold_tensor_grad")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const int32_t dimension = ctx->Attr<int32_t>("dimension");
       const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dx", 0);
-      FOR_RANGE(int32_t, i, 0, x_tensor.shape().NumAxes()) {
+      FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
         if (i != dimension) {
           ctx->NewBuilder()
               .Split(user_op::OpArg("dy", 0), i)
