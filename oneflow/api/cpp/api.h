@@ -19,5 +19,6 @@ limitations under the License.
 
 #include "env.h"
 #include "device.h"
+#include "graph.h"
 
 #endif  // ONELFOW_API_H_

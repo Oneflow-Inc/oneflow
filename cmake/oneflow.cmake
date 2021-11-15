@@ -497,13 +497,3 @@ else() # build_python
   copy_files("${PROJECT_SOURCE_DIR}/cmake/oneflow-config.cmake" "${PROJECT_SOURCE_DIR}/cmake" "${ONEFLOW_SHARE_DIR}" of_include_copy)
 
 endif(BUILD_PYTHON)
-
-if (BUILD_GRAPH_EXE)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/api/cpp)
-  target_link_libraries(graph_exe
-    ${of_libs}
-    "${oneflow_exe_third_party_libs}"
-    "${oneflow_third_party_libs}"
-    "${CUDA_CUBLAS_LIBRARIES}"
-  )
-endif()

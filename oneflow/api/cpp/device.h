@@ -36,6 +36,7 @@ class Device final {
   explicit Device(const std::string& type, int64_t device_id);
   const std::string& type() const;
   int64_t device_id() const;
+  std::shared_ptr<oneflow::Symbol<oneflow::Device>> GetDeviceSymbolSharedPtr() const;
 
  private:
   std::shared_ptr<oneflow::Symbol<oneflow::Device>> device_ = nullptr;

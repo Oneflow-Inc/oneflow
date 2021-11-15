@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_API_CPP_GRAPH_API_H_
-#define ONEFLOW_API_CPP_GRAPH_API_H_
+#ifndef ONEFLOW_API_CPP_GRAPH_H_
+#define ONEFLOW_API_CPP_GRAPH_H_
 
 #include <string>
 #include "oneflow/core/common/hash_container.h"
@@ -23,22 +23,34 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/job_conf.pb.h"
+#include "oneflow/api/cpp/device.h"
 
 namespace oneflow_api {
 
 class Graph {
  public:
-  void Save();
-  void Load(const std::string& model_path, const std::string& version,
-            const std::string& saved_model_filename);
+  void Load(const std::string& model_path, const Device& device);
 
  private:
   void CreateVariableOp(oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>>&
-                            variable_op_name_to_tensor);
+                            variable_op_name_to_tensor,
+                        const Device& target_device, bool is_mirrored);
 
   oneflow::Job job_;
 };
 
+// TODO(zzk0): model_path is a single file or a directory, it depends on how parameters are stored
+inline Graph load(const std::string& model_path, const Device& device) {
+  Graph graph;
+  graph.Load(model_path, device);
+  return graph;
+}
+
+inline Graph load(const std::string& model_path) {
+  Device device = Device("cpu");
+  return load(model_path, device);
+}
+
 }  // namespace oneflow_api
 
-#endif // ONEFLOW_API_CPP_GRAPH_API_H_
+#endif  // ONEFLOW_API_CPP_GRAPH_H_

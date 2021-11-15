@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/api/cpp/graph_api.h"
+#include "oneflow/api/cpp/graph.h"
 #include <cstdio>
 #include <fstream>
 #include <istream>
@@ -29,17 +29,14 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/serving/saved_model.pb.h"
 
 namespace oneflow_api {
 
-void Graph::Save() {}
-
-void Graph::Load(const std::string& model_path, const std::string& version,
-                 const std::string& saved_model_filename) {
-  // load from local directory
-  const std::string model_prototxt = model_path + "/" + version + "/" + saved_model_filename;
-  std::ifstream input(model_prototxt.c_str());
+void Graph::Load(const std::string& model_path, const Device& target_device) {
+  // load from local directory, binary text format
+  std::ifstream input(model_path.c_str());
   std::stringstream buffer;
   buffer << input.rdbuf();
   job_.ParseFromString(buffer.str());
@@ -47,13 +44,12 @@ void Graph::Load(const std::string& model_path, const std::string& version,
 
   // create variable conf op
   oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>> variable_op_name_to_tensor;
-  CreateVariableOp(variable_op_name_to_tensor);
+  CreateVariableOp(variable_op_name_to_tensor, target_device, true);
 }
 
 void Graph::CreateVariableOp(oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>>&
-                                 variable_op_name_to_tensor) {
-  std::cout << job_.job_conf().job_name() << std::endl;
-  std::cout << job_.net().op_size() << std::endl;
+                                 variable_op_name_to_tensor,
+                             const Device& target_device, bool is_mirrored) {
   oneflow::OpGraph op_graph(job_);
   op_graph.ForEachNode([&](oneflow::OpNode* node) -> oneflow::Maybe<void> {
     std::cout << node->op().op_name() << std::endl;
@@ -62,24 +58,21 @@ void Graph::CreateVariableOp(oneflow::HashMap<std::string, std::shared_ptr<onefl
     std::shared_ptr<oneflow::Shape> shape =
         std::make_shared<oneflow::Shape>(node->op().op_conf().variable_conf().shape());
     oneflow::DataType dtype = node->op().op_conf().variable_conf().data_type();
-    oneflow::Symbol<oneflow::Device> device = CHECK_JUST(oneflow::Device::New("cpu"));
-    bool is_lazy = false;
-    bool requires_grad = false;
-    bool is_leaf = false;
+    bool is_lazy = false;        // TODO(zzk0): not very sure?
+    bool requires_grad = false;  // Inference mode
+    bool is_leaf = true;         // all parameters are leaf node
 
-    // To create a MirroredTensor: shape, dtype, device, is_lazy, requires_grad, is_leaf
-    // oneflow::one::MirroredTensor::MakeTensor(const std::shared_ptr<const Shape> &shape, DataType
-    // dtype, const Symbol<Device> &device, bool is_lazy, bool requires_grad, bool is_leaf)
-    std::shared_ptr<oneflow::one::MirroredTensor> tensor =
-        CHECK_JUST(oneflow::one::MirroredTensor::MakeTensor(shape, dtype, device, is_lazy,
-                                                            requires_grad, is_leaf));
-    variable_op_name_to_tensor[node->op().op_name()] = tensor;
-
-    // To create a ConsistentTensor: shape, dtype, sbp + parallel desc, is_lazy, requires_grad,
-    // is_leaf oneflow::one::ConsistentTensor::MakeTensor(const std::shared_ptr<const Shape> &shape,
-    // DataType dtype, Symbol<cfg::NdSbp> nd_sbp, Symbol<ParallelDesc> parallel_desc, bool is_lazy,
-    // bool requires_grad, bool is_leaf)
-
+    if (is_mirrored) {
+      // To create a MirroredTensor: shape, dtype, device, is_lazy, requires_grad, is_leaf
+      auto device = target_device.GetDeviceSymbolSharedPtr();
+      std::shared_ptr<oneflow::one::MirroredTensor> tensor =
+          CHECK_JUST(oneflow::one::MirroredTensor::MakeTensor(shape, dtype, *device, is_lazy,
+                                                              requires_grad, is_leaf));
+      variable_op_name_to_tensor[node->op().op_name()] = tensor;
+    }
+    else {
+      // To create a ConsistentTensor: shape, dtype, sbp + parallel desc, is_lazy, requires_grad,
+    }
     return oneflow::Maybe<void>::Ok();
   });
 }
