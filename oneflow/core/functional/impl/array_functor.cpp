@@ -2054,7 +2054,7 @@ Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::st
       return (copy ? JUST(x->clone()) : x);
     } else {
       if (x->is_eager()) { CheckMetaConsistency(x).GetOrThrow(); }
-      *tensor = *JUST(Cast(x, dtype));
+      tensor = JUST(Cast(x, dtype));
       return tensor;
     }
   }
@@ -2071,9 +2071,9 @@ Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::st
     JUST(tensor->set_requires_grad(x->requires_grad()));
     return JUST(LocalToConsistent(tensor, placement, sbp_tuple, *(x->shape()), dtype));
   } else {
-    if (dtype != x->dtype()) { *tensor = *JUST(Cast(x, dtype)); }
+    if (dtype != x->dtype()) { tensor = JUST(Cast(x, dtype)); }
     if (device_type != JUST(x->parallel_desc())->device_tag()) {
-      *tensor = *JUST(Copy(tensor ? tensor : x, device_type, 0));
+      tensor = JUST(Copy(tensor ? tensor : x, device_type, 0));
     }
     return tensor;
   }
@@ -2228,7 +2228,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::UnsortedBatchSegmentSumFunctor>("UnsortedBatchSegmentSum");
   m.add_functor<impl::MaskedFillFunctor>("MaskedFill");
   m.add_functor<impl::MeshgridFunctor>("Meshgrid");
-  // m.add_functor<impl::ToFunctor, impl::To2Functor>("To");
   m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor>("To");
 };
 
