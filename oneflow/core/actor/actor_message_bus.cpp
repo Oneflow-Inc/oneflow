@@ -19,9 +19,6 @@ limitations under the License.
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/comm_network/comm_network.h"
 
-#include <fstream>
-
-
 namespace oneflow {
 
 void ActorMsgBus::SendMsg(const ActorMsg& msg) {
