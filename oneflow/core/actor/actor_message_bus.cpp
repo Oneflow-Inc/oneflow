@@ -24,15 +24,11 @@ limitations under the License.
 
 namespace oneflow {
 
-#define DebugActor false 
-
 void ActorMsgBus::SendMsg(const ActorMsg& msg) {
   int64_t dst_machine_id = MachineId4ActorId(msg.dst_actor_id());
   if (dst_machine_id == GlobalProcessCtx::Rank()) {
     SendMsgWithoutCommNet(msg);
-
   } else {
-
     if (msg.IsDataRegstMsgToConsumer()) {
       int64_t comm_net_sequence;
       {
@@ -53,28 +49,6 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
       free(serial_data);
       size_t msg_size = sizeof(new_msg);
       uint64_t addr = reinterpret_cast<uint64_t>(&new_msg);//此时addr是new_msg的地址
-
-      binary_mutex_.lock();
-      std::string dir = "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_15/";
-      std::string path = dir  + "actor_msg_bus" + std::to_string(num_file_);
-      num_file_++;
-      std::ofstream out;
-      out.open(path,std::ofstream::out | std::ofstream::binary);
-      if(!out.is_open()) {
-        return ;
-      }
-      out.write(reinterpret_cast<char*>(&new_msg),msg_size);//
-      out.close();
-      binary_mutex_.unlock();
-
-      std::cout<<"ActorMsgBus::SendMsg,the token:"<< reinterpret_cast<uint64_t>( new_msg.regst()->comm_net_token()) << std::endl;
-      std::cout<<"ActorMsgBus::SendMsg,the addr:" << addr << std::endl;
-      std::cout<<std::endl;
-      if(DebugActor) {
-        std::cout<<"ActorMsgBus::SendMsg,the msg_size:"<<msg_size <<std::endl;
-        std::cout<<"ActorMsgBus::SendMsg,the addr:"<<std::hex << addr << std::endl;
-        std::cout<<std::endl;
-      }
       Global<CommNet>::Get()->SendMsg(dst_machine_id, reinterpret_cast<void*>(addr), msg_size);
     } else {
       uint64_t addr = reinterpret_cast<uint64_t>(&msg);
@@ -94,13 +68,9 @@ void ActorMsgBus::HandleRecvData(void* data, size_t size) {
   ActorMsg msg = *(reinterpret_cast<ActorMsg*>(data));
   ActorMsg new_msg = msg;
   size_t token_size = 0;
-  std::cout<<"HandleRecvData"<<std::endl;
   if (msg.IsDataRegstMsgToConsumer()) {
     void* token = Global<CommNet>::Get()->DeSerialDataToToken((char*)msg.user_data(), &token_size);
     new_msg.set_comm_net_token(token);
-    std::cout<<"ActorMsgBus::HandleRecvData,the new_msg.token:"<< reinterpret_cast<uint64_t>(new_msg.regst()->comm_net_token()) << std::endl;
-    std::cout<<"ActorMsgBus::HandleRecvData,the size:" <<size <<  std::endl;
-    std::cout <<std::endl;
   }
 
   SendMsgWithoutCommNet(new_msg);
