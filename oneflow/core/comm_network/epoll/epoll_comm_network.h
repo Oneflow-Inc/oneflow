@@ -47,9 +47,6 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
   std::vector<IOEventPoller*> pollers_;
   std::vector<int> machine_id2sockfd_;
   HashMap<int, SocketHelper*> sockfd2helper_;
-
-  std::mutex binary_mutex_;
-  size_t epoll_num_file_ = 0;
 };
 
 }  // namespace oneflow

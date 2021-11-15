@@ -98,41 +98,8 @@ EpollCommNet::~EpollCommNet() {
 void EpollCommNet::SendMsg(int64_t dst_machine_id, void * data, size_t size) {
   SocketMsg msg;
   msg.actor_msg.size = 0;
-
-  binary_mutex_.lock();
-  std::string path= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_15/";
-  std::string path1 = path  + "epoll_1_" + std::to_string(epoll_num_file_);
-  std::string path2 = path + "epoll_1_" + std::to_string(epoll_num_file_);
-  epoll_num_file_++;
-  std::ofstream out;
-  out.open(path1,std::ofstream::out | std::ofstream::binary);
-  if(!out.is_open()) {
-    return ;
-  }
-  out.write(reinterpret_cast<char*>(data),size);//
-  out.close();
-  binary_mutex_.unlock();
-  msg.msg_type = SocketMsgType::kActor;
-  std::memcpy(msg.actor_msg.data, data, size);//这里应该是将data的内容拷贝给msg.actor_msg.data 
-
-  binary_mutex_.lock();
-  std::ofstream out2;
-  out2.open(path2,std::ofstream::out | std::ofstream::binary);
-  if(!out2.is_open()) {
-    return ;
-  }
-  out2.write(msg.actor_msg.data,size);//
-  out2.close();
-  binary_mutex_.unlock();
-
+  std::memcpy(msg.actor_msg.data, data, size);
   msg.actor_msg.size = size;
-  if(msg.msg_type == SocketMsgType::kActor ) {
-    std::cout<<"EpollCommNet::SendMsg,the data's addr:" <<  reinterpret_cast<uint64_t>(data) << std::endl;  
-    std::cout<<"EpollCommNet::SendMsg,the size:"<<size << std::endl;
-    std::cout<<"EpollCommNet::SendMsg,the msg.actor_msg.size:"<<msg.actor_msg.size << std::endl;
-    std::cout<<"EpollCommNet::SendMsg,the msg:" << reinterpret_cast<uint64_t>(&msg) << std::endl;
-    std::cout<<std::endl;
-  }
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 
 }
