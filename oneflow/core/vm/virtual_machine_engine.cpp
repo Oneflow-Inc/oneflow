@@ -518,7 +518,7 @@ void VirtualMachineEngine::GetCachedInstrTypeIdAndPhyInstrStream(const std::stri
     iter = cache->emplace(instr_type_name, RtInstrTypeId(instr_type_id_val, stream_rt_desc)).first;
   }
   instr_type_id->CopyFrom(iter->second.instr_type_id());
-  *stream = (iter->second.*iter->second.GetStream)(device_id);
+  *stream = iter->second.GetStream(device_id);
 }
 
 void VirtualMachineEngine::GetInstrTypeIdAndSoleStream(const std::string& instr_type_name,
@@ -527,9 +527,7 @@ void VirtualMachineEngine::GetInstrTypeIdAndSoleStream(const std::string& instr_
   instr_type_id->CopyFrom(LookupInstrTypeId(instr_type_name));
   const auto& stream_type_id = instr_type_id->stream_type_id();
   auto* stream_rt_desc = this->mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);
-  CHECK_NOTNULL(stream_rt_desc);
-  CHECK_EQ(stream_rt_desc->device_id2stream().size(), 1);
-  *stream = stream_rt_desc->device_id2stream().at(0).get();
+  *stream = stream_rt_desc->GetSoleStream();
 }
 
 int64_t InstructionMaxRunningSeconds() { return 60 * 5; }

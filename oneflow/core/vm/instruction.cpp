@@ -77,6 +77,9 @@ void InstructionMsg::__Init__(VirtualMachineEngine* vm, const std::string& instr
                               const std::shared_ptr<const ParallelDesc>& phy_instr_parallel_desc,
                               const std::shared_ptr<PhyInstrOperand>& phy_instr_operand) {
   __Init__();
+  // There are instructions without concept of ParallelDesc, like LaunchLazyJob,
+  // ComputeGlobalFrontSeqBarrier. If phy_instr_parallel_desc is empty, Instructions are run on the
+  // sole stream within the StreamRtDesc.
   if (likely(phy_instr_parallel_desc)) {
     int device_id = phy_instr_parallel_desc->parallel_id2device_id().at(0);
     vm->GetCachedInstrTypeIdAndPhyInstrStream(instr_type_name, device_id, mut_instr_type_id(),
