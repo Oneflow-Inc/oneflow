@@ -116,6 +116,7 @@ void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
   }
   CHECK_JUST(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, &GlobalJobDesc()));
   if (op_node != nullptr && parallel_ctx->parallel_num() > 1 && nd_sbp_signature != nullptr) {
+    LOG(INFO) << "ExecNode::InferBlobDescs" << ", " << op_node->op().op_name() << ", " << nd_sbp_signature->DebugString() << ", " << parallel_ctx->DebugString();
     CHECK_JUST(CheckPhysicalBlobDesc(
         *op(), op()->output_bns(),
         std::bind(&Operator::GetLogicalBlobDesc4Obn, op().get(), std::placeholders::_1),

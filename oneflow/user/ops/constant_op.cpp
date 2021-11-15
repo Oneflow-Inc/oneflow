@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
@@ -26,7 +27,7 @@ REGISTER_NO_GRAD_USER_OP("constant")
     .Attr<DataType>("dtype")
     .Attr<Shape>("shape")
     .Attr<std::vector<std::string>>("nd_sbp")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = Shape(ctx->Attr<Shape>("shape").dim_vec());
       return Maybe<void>::Ok();
     })
