@@ -21,14 +21,14 @@ namespace one {
 
 namespace {
 
-__global__ void InitCurandStatesKernel(uint64_t seed, curandState* states, uint64_t* dev_offset,
-                                       int32_t* dev_counter) {
+__global__ void InitCurandStatesKernel(uint64_t seed, curandState* states,
+                                       CUDAGeneratorState* cuda_gen_state) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
   size_t local_seed = (static_cast<size_t>(seed) + 0x9e3779b9U + (static_cast<size_t>(id) << 6U)
                        + (static_cast<size_t>(id) >> 2U));
   curand_init(local_seed, 0, 0, &states[id]);
-  *dev_counter = static_cast<uint64_t>(0);
-  *dev_offset = static_cast<uint64_t>(0);
+  cuda_gen_state->dev_counter = static_cast<int32_t>(0);
+  cuda_gen_state->dev_offset = static_cast<uint64_t>(0);
 }
 
 }  // namespace
@@ -36,8 +36,8 @@ __global__ void InitCurandStatesKernel(uint64_t seed, curandState* states, uint6
 namespace detail {
 
 void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, curandState* states,
-                      uint64_t* dev_offset, int32_t* dev_counter) {
-  InitCurandStatesKernel<<<block_num, thread_num>>>(seed, states, dev_offset, dev_counter);
+                      CUDAGeneratorState* cuda_gen_state) {
+  InitCurandStatesKernel<<<block_num, thread_num>>>(seed, states, cuda_gen_state);
 }
 
 }  // namespace detail

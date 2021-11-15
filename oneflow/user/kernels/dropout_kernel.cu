@@ -35,12 +35,12 @@ union H2Pack {
 };
 
 template<typename T, int pack_size>
-__global__ void MaskAndScaleGpu(uint64_t seed, int32_t* counter, uint64_t* offset,
+__global__ void MaskAndScaleGpu(uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                                 uint64_t counter_offset, const int64_t elem_cnt, float rate,
                                 float scale, const T* x, int8_t* mask, T* y) {
   int32_t thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
-  curand_init(seed, thread_id, *offset, &state);
+  curand_init(seed, thread_id, cuda_gen_state->dev_offset, &state);
   using LoadT = typename std::aligned_storage<sizeof(T) * pack_size, sizeof(T) * pack_size>::type;
   using MaskT =
       typename std::aligned_storage<sizeof(int8_t) * pack_size, sizeof(int8_t) * pack_size>::type;
@@ -71,21 +71,21 @@ __global__ void MaskAndScaleGpu(uint64_t seed, int32_t* counter, uint64_t* offse
   __syncthreads();
 
   if (thread_id == 0) {
-    int32_t new_counter = cuda::atomic::Add(counter, 1) + 1;
+    int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
     if (new_counter == gridDim.x) {
-      *counter = 0;               // reset counter to zero
-      *offset += counter_offset;  // maintain the state of generator's dev_offset
+      cuda_gen_state->dev_counter = 0;               // reset counter to zero
+      cuda_gen_state->dev_offset += counter_offset;  // maintain the state of generator's dev_offset
     }
   }
 }
 
 template<typename T, int pack_size>
-__global__ void MaskAndScaleAddGpu(uint64_t seed, int32_t* counter, uint64_t* offset,
+__global__ void MaskAndScaleAddGpu(uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                                    uint64_t counter_offset, const int64_t elem_cnt, float rate,
                                    float scale, const T* x, int8_t* mask, const T* addend, T* y) {
   int32_t thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
-  curand_init(seed, thread_id, *offset, &state);
+  curand_init(seed, thread_id, cuda_gen_state->dev_offset, &state);
   using LoadT = typename std::aligned_storage<sizeof(T) * pack_size, sizeof(T) * pack_size>::type;
   using MaskT =
       typename std::aligned_storage<sizeof(int8_t) * pack_size, sizeof(int8_t) * pack_size>::type;
@@ -120,22 +120,22 @@ __global__ void MaskAndScaleAddGpu(uint64_t seed, int32_t* counter, uint64_t* of
   __syncthreads();
 
   if (thread_id == 0) {
-    int32_t new_counter = cuda::atomic::Add(counter, 1) + 1;
+    int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
     if (new_counter == gridDim.x) {
-      *counter = 0;               // reset counter to zero
-      *offset += counter_offset;  // maintain the state of generator's dev_offset
+      cuda_gen_state->dev_counter = 0;               // reset counter to zero
+      cuda_gen_state->dev_offset += counter_offset;  // maintain the state of generator's dev_offset
     }
   }
 }
 
 template<>
-__global__ void MaskAndScaleGpu<half, 4>(uint64_t seed, int32_t* counter, uint64_t* offset,
+__global__ void MaskAndScaleGpu<half, 4>(uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                                          uint64_t counter_offset, const int64_t elem_cnt,
                                          float rate, float scale, const half* x, int8_t* mask,
                                          half* y) {
   int32_t thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
-  curand_init(seed, thread_id, *offset, &state);
+  curand_init(seed, thread_id, cuda_gen_state->dev_offset, &state);
   using LoadT = typename std::aligned_storage<sizeof(half) * 4, sizeof(half) * 4>::type;
   using MaskT = typename std::aligned_storage<sizeof(int8_t) * 4, sizeof(int8_t) * 4>::type;
 
@@ -171,22 +171,22 @@ __global__ void MaskAndScaleGpu<half, 4>(uint64_t seed, int32_t* counter, uint64
   __syncthreads();
 
   if (thread_id == 0) {
-    int32_t new_counter = cuda::atomic::Add(counter, 1) + 1;
+    int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
     if (new_counter == gridDim.x) {
-      *counter = 0;               // reset counter to zero
-      *offset += counter_offset;  // maintain the state of generator's dev_offset
+      cuda_gen_state->dev_counter = 0;               // reset counter to zero
+      cuda_gen_state->dev_offset += counter_offset;  // maintain the state of generator's dev_offset
     }
   }
 }
 
 template<>
-__global__ void MaskAndScaleAddGpu<half, 4>(uint64_t seed, int32_t* counter, uint64_t* offset,
+__global__ void MaskAndScaleAddGpu<half, 4>(uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                                             uint64_t counter_offset, const int64_t elem_cnt,
                                             float rate, float scale, const half* x, int8_t* mask,
                                             const half* addend, half* y) {
   int32_t thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
-  curand_init(seed, thread_id, *offset, &state);
+  curand_init(seed, thread_id, cuda_gen_state->dev_offset, &state);
   using LoadT = typename std::aligned_storage<sizeof(half) * 4, sizeof(half) * 4>::type;
   using MaskT = typename std::aligned_storage<sizeof(int8_t) * 4, sizeof(int8_t) * 4>::type;
 
@@ -228,22 +228,22 @@ __global__ void MaskAndScaleAddGpu<half, 4>(uint64_t seed, int32_t* counter, uin
   __syncthreads();
 
   if (thread_id == 0) {
-    int32_t new_counter = cuda::atomic::Add(counter, 1) + 1;
+    int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
     if (new_counter == gridDim.x) {
-      *counter = 0;               // reset counter to zero
-      *offset += counter_offset;  // maintain the state of generator's dev_offset
+      cuda_gen_state->dev_counter = 0;               // reset counter to zero
+      cuda_gen_state->dev_offset += counter_offset;  // maintain the state of generator's dev_offset
     }
   }
 }
 
 template<>
-__global__ void MaskAndScaleGpu<double, 2>(uint64_t seed, int32_t* counter, uint64_t* offset,
+__global__ void MaskAndScaleGpu<double, 2>(uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                                            uint64_t counter_offset, const int64_t elem_cnt,
                                            float rate, float scale, const double* x, int8_t* mask,
                                            double* y) {
   int32_t thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
-  curand_init(seed, thread_id, *offset, &state);
+  curand_init(seed, thread_id, cuda_gen_state->dev_offset, &state);
   using LoadT = typename std::aligned_storage<sizeof(double) * 2, sizeof(double) * 2>::type;
   using MaskT = typename std::aligned_storage<sizeof(int8_t) * 2, sizeof(int8_t) * 2>::type;
 
@@ -274,22 +274,23 @@ __global__ void MaskAndScaleGpu<double, 2>(uint64_t seed, int32_t* counter, uint
   __syncthreads();
 
   if (thread_id == 0) {
-    int32_t new_counter = cuda::atomic::Add(counter, 1) + 1;
+    int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
     if (new_counter == gridDim.x) {
-      *counter = 0;               // reset counter to zero
-      *offset += counter_offset;  // maintain the state of generator's dev_offset
+      cuda_gen_state->dev_counter = 0;               // reset counter to zero
+      cuda_gen_state->dev_offset += counter_offset;  // maintain the state of generator's dev_offset
     }
   }
 }
 
 template<>
-__global__ void MaskAndScaleAddGpu<double, 2>(uint64_t seed, int32_t* counter, uint64_t* offset,
+__global__ void MaskAndScaleAddGpu<double, 2>(uint64_t seed,
+                                              one::CUDAGeneratorState* cuda_gen_state,
                                               uint64_t counter_offset, const int64_t elem_cnt,
                                               float rate, float scale, const double* x,
                                               int8_t* mask, const double* addend, double* y) {
   int32_t thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
-  curand_init(seed, thread_id, *offset, &state);
+  curand_init(seed, thread_id, cuda_gen_state->dev_offset, &state);
   using LoadT = typename std::aligned_storage<sizeof(double) * 2, sizeof(double) * 2>::type;
   using MaskT = typename std::aligned_storage<sizeof(int8_t) * 2, sizeof(int8_t) * 2>::type;
 
@@ -323,10 +324,10 @@ __global__ void MaskAndScaleAddGpu<double, 2>(uint64_t seed, int32_t* counter, u
   __syncthreads();
 
   if (thread_id == 0) {
-    int32_t new_counter = cuda::atomic::Add(counter, 1) + 1;
+    int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
     if (new_counter == gridDim.x) {
-      *counter = 0;               // reset counter to zero
-      *offset += counter_offset;  // maintain the state of generator's dev_offset
+      cuda_gen_state->dev_counter = 0;               // reset counter to zero
+      cuda_gen_state->dev_offset += counter_offset;  // maintain the state of generator's dev_offset
     }
   }
 }
@@ -342,18 +343,18 @@ unsigned int ComputeGridSize(const int32_t block_size, const int64_t elem_cnt) {
 }
 
 template<typename T>
-void MaskAndScale(DeviceCtx* ctx, uint64_t seed, int32_t* counter, uint64_t* offset,
+void MaskAndScale(DeviceCtx* ctx, uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                   const int64_t elem_cnt, float rate, float scale, const T* x, int8_t* mask, T* y) {
   int32_t UNROLL = 4;
   int32_t block_size = 256;
   unsigned int grid_size = ComputeGridSize<4>(block_size, elem_cnt);
   uint64_t counter_offset = ((elem_cnt - 1) / (block_size * grid_size * UNROLL) + 1) * UNROLL;
   MaskAndScaleGpu<T, 4><<<grid_size, block_size, 0, ctx->cuda_stream()>>>(
-      seed, counter, offset, counter_offset, elem_cnt, rate, scale, x, mask, y);
+      seed, cuda_gen_state, counter_offset, elem_cnt, rate, scale, x, mask, y);
 }
 
 template<typename T>
-void MaskAndScaleAdd(DeviceCtx* ctx, uint64_t seed, int32_t* counter, uint64_t* offset,
+void MaskAndScaleAdd(DeviceCtx* ctx, uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                      const int64_t elem_cnt, float rate, float scale, const T* x, int8_t* mask,
                      const T* addend, T* y) {
   int32_t UNROLL = 4;
@@ -361,7 +362,7 @@ void MaskAndScaleAdd(DeviceCtx* ctx, uint64_t seed, int32_t* counter, uint64_t* 
   unsigned int grid_size = ComputeGridSize<4>(block_size, elem_cnt);
   uint64_t counter_offset = ((elem_cnt - 1) / (block_size * grid_size * UNROLL) + 1) * UNROLL;
   MaskAndScaleAddGpu<T, 4><<<grid_size, block_size, 0, ctx->cuda_stream()>>>(
-      seed, counter, offset, counter_offset, elem_cnt, rate, scale, x, mask, addend, y);
+      seed, cuda_gen_state, counter_offset, elem_cnt, rate, scale, x, mask, addend, y);
 }
 
 template<typename T>
@@ -389,23 +390,25 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
     CHECK_NOTNULL(fused_dropout_kernel_state);
     const auto& generator = fused_dropout_kernel_state->generator();
     CHECK_NOTNULL(generator);
-    std::shared_ptr<one::CUDAGeneratorImpl> cuda_gen =
+    std::shared_ptr<one::CUDAGeneratorImpl> cuda_generator =
         CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
-    uint64_t seed = cuda_gen->current_seed();
+    uint64_t seed = cuda_generator->current_seed();
 
     const float rate = ctx->Attr<float>("rate");
     float scale = 1.0;
     if (rate != 1.0) { scale = 1.0 / (1.0 - rate); }
-    int32_t* counter = cuda_gen->dev_counter();
-    uint64_t* offset = cuda_gen->dev_offset();
+    // int32_t* counter = cuda_generator->cuda_gen_state()->dev_counter;
+    // uint64_t* offset = cuda_generator->cuda_gen_state()->dev_offset;
+
+    one::CUDAGeneratorState* cuda_gen_state = cuda_generator->cuda_gen_state();
 
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* addend = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
-      MaskAndScaleAdd<T>(ctx->device_ctx(), seed, counter, offset, in->shape().elem_cnt(), rate,
+      MaskAndScaleAdd<T>(ctx->device_ctx(), seed, cuda_gen_state, in->shape().elem_cnt(), rate,
                          scale, in->dptr<T>(), mask->mut_dptr<int8_t>(), addend->dptr<T>(),
                          out->mut_dptr<T>());
     } else {
-      MaskAndScale<T>(ctx->device_ctx(), seed, counter, offset, in->shape().elem_cnt(), rate, scale,
+      MaskAndScale<T>(ctx->device_ctx(), seed, cuda_gen_state, in->shape().elem_cnt(), rate, scale,
                       in->dptr<T>(), mask->mut_dptr<int8_t>(), out->mut_dptr<T>());
     }
   }

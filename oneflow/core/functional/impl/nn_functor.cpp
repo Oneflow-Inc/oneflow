@@ -1432,9 +1432,9 @@ class DropoutFunctor {
       return TensorTuple({x});
     } else {
       JUST(dropout_attrs.SetAttr<float>("rate", p));
+      return OpInterpUtil::Dispatch<TensorTuple>(*dropout_op_, {x},
+                                                 OpExprInterpContext(dropout_attrs, dropout_state));
     }
-    return OpInterpUtil::Dispatch<TensorTuple>(*dropout_op_, {x},
-                                               OpExprInterpContext(dropout_attrs, dropout_state));
   }
 
  private:
