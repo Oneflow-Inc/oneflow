@@ -20,13 +20,6 @@ limitations under the License.
 
 #include <sys/eventfd.h>
 
-<<<<<<< HEAD
-#include <fstream>
-
-#define DebugWrite true 
-
-=======
->>>>>>> c648f996f13faed702edd02b360d459e0665d828
 namespace oneflow {
 
 SocketWriteHelper::~SocketWriteHelper() {
@@ -55,27 +48,6 @@ SocketWriteHelper::SocketWriteHelper(int sockfd, IOEventPoller* poller) {
 void SocketWriteHelper::AsyncWrite(const SocketMsg& msg) {
   pending_msg_queue_mtx_.lock();
   bool need_send_event = pending_msg_queue_->empty();
-<<<<<<< HEAD
-  if(msg.msg_type ==  SocketMsgType::kActor) {
-      debug_actor_msg_++;
-      std::cout<<" SocketWriteHelper::AsyncWrite,the debug_actor_msg_:"<<debug_actor_msg_ << std::endl;
-      std::cout<<std::endl;
-      std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_15/";
-      write_mutex_.lock();
-      std::string path = dir + "write_helper_Asyncwrite" + std::to_string(write_msg_);
-      write_msg_++;
-      std::ofstream out;
-      out.open(path,std::ofstream::out | std::ofstream::binary);
-      if(!out.is_open()){
-          return ;
-      }
-      out.write(msg.actor_msg.data,msg.actor_msg.size);
-      out.close();
-      write_mutex_.unlock();
-
-  }
-=======
->>>>>>> c648f996f13faed702edd02b360d459e0665d828
   pending_msg_queue_->push(msg);
   pending_msg_queue_mtx_.unlock();
   if (need_send_event) { SendQueueNotEmptyEvent(); }
@@ -110,32 +82,6 @@ bool SocketWriteHelper::InitMsgWriteHandle() {
   cur_msg_queue_->pop();
   write_ptr_ = reinterpret_cast<const char*>(&cur_msg_);
   write_size_ = sizeof(cur_msg_);
-<<<<<<< HEAD
-  if(cur_msg_.msg_type == SocketMsgType::kActor ) {
-    init_msg_mutex_.lock();
-    std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_15/";
-    std::string path = dir + "write_helper_InitMsgWriteHandle" + std::to_string(init_msg_);
-    init_msg_++;
-    std::ofstream out;
-    out.open(path,std::ofstream::out | std::ofstream::binary);
-    if(!out.is_open()){
-        return false ;
-    }
-    out.write(cur_msg_.actor_msg.data,cur_msg_.actor_msg.size);
-    out.close();
-    if(debug_actor_msg_ > 0 ){
-        debug_actor_msg_--;
-    }
-    init_msg_mutex_.unlock();
-    std::cout<<" SocketWriteHelper::AsyncWrite,the debug_actor_msg_:"<<debug_actor_msg_ << std::endl;
-    std::cout<<"SocketWriteHelper::InitMsgWriteHandle,the size of cur_msg_queue_:"<<cur_msg_queue_->size() +1 << std::endl;
-    std::cout<<"SocketWriteHelper::InitMsgWriteHandle,the cur_msg_:"<< reinterpret_cast<uint64_t>(&cur_msg_) << std::endl;
-    std::cout<<"SocketWriteHelper::InitMsgWriteHandle,wrrite_ptr:"<< reinterpret_cast<uint64_t>(write_ptr_) << std::endl;
-    std::cout<<"SocketWriteHelper::InitMsgWriteHandle,the write_size_:" << write_size_ << std::endl;
-    std::cout<<std::endl;
-  }
-=======
->>>>>>> c648f996f13faed702edd02b360d459e0665d828
   cur_write_handle_ = &SocketWriteHelper::MsgHeadWriteHandle;
 
   return true;
