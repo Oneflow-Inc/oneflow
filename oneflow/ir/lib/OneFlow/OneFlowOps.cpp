@@ -187,6 +187,36 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
                                                                  obns.contains("inv_variance")})));
         }
       }
+      if (op_type_name.equals("normalization_add_relu")) {
+        {
+          llvm::StringSet<> ibns({});
+          oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
+          for (auto key : user_op_adaptor.input_lbn_segment_keys()) {
+            auto bn = key.dyn_cast<StringAttr>().getValue();
+            ibns.insert(bn);
+          }
+          attributes.push_back(
+              rewriter.getNamedAttr("operand_segment_sizes", rewriter.getI32VectorAttr({
+                                                                 1,
+                                                                 ibns.contains("addend"),
+                                                                 ibns.contains("moving_mean"),
+                                                                 ibns.contains("moving_variance"),
+                                                                 1,
+                                                                 1,
+                                                             })));
+        }
+        {
+          llvm::StringSet<> obns({});
+          oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
+          for (auto key : user_op_adaptor.input_lbn_segment_keys()) {
+            auto bn = key.dyn_cast<StringAttr>().getValue();
+            obns.insert(bn);
+          }
+          attributes.push_back(rewriter.getNamedAttr(
+              "result_segment_sizes", rewriter.getI32VectorAttr({1, obns.contains("mean"),
+                                                                 obns.contains("inv_variance")})));
+        }
+      }
       OperationState state(op->getLoc(), "oneflow." + op_type_name.str());
       state.addAttributes(attributes);
       state.addOperands(op.getODSOperands(0) /* data in */);
