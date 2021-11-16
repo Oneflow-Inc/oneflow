@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_OPS_LOSS_OP_UTIL_H_
 #define ONEFLOW_USER_OPS_LOSS_OP_UTIL_H_
 
+#include <functional>
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -25,34 +26,22 @@ inline bool LossReductionTypeIsRight(const std::string& reduction) {
   return true;
 }
 
-inline Maybe<void> CheckLossReductionAndInferOutputTenserDesc(
+Maybe<void> CheckLossReductionAndInferOutputTenserDesc(
     user_op::InferContext* ctx, const std::string& output_name, bool output_is_dynamic,
-    const Shape& output_shape_when_reduction_is_none) {
-  const std::string reduction = ctx->Attr<std::string>("reduction");
-  CHECK_OR_RETURN(LossReductionTypeIsRight(reduction));
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc(output_name, 0);
-  *out_desc->mut_is_dynamic() = output_is_dynamic;
-  if (reduction == "none") {
-    *out_desc->mut_shape() = output_shape_when_reduction_is_none;
-  } else {
-    *out_desc->mut_shape() = Shape();
-  }
-  return Maybe<void>::Ok();
-}
+    const Shape& output_shape_when_reduction_is_none);
 
-inline Maybe<void> CheckLossReductionAndCheckInputTenserDesc(
+Maybe<void> CheckLossReductionAndCheckInputTenserDesc(
     user_op::InferContext* ctx, const std::string& input_name,
-    const Shape& input_shape_when_reduction_is_none) {
-  const std::string reduction = ctx->Attr<std::string>("reduction");
-  CHECK_OR_RETURN(LossReductionTypeIsRight(reduction));
-  const auto& input_desc = ctx->InputTensorDesc(input_name, 0);
-  if (reduction == "none") {
-    CHECK_EQ_OR_RETURN(input_desc.shape(), input_shape_when_reduction_is_none);
-  } else {
-    CHECK_EQ_OR_RETURN(input_desc.shape(), Shape());
-  }
-  return Maybe<void>::Ok();
-}
+    const Shape& input_shape_when_reduction_is_none);
+
+user_op::GetSbpFn GenLossForwardDefaultGetSbpFn(
+    const std::function<void(user_op::UserOpSbpSignatureBuilder& builder)>& f =
+        [](user_op::UserOpSbpSignatureBuilder& builder) {});
+
+user_op::GetSbpFn GenLossBackwardDefaultGetSbpFn(
+    const std::function<void(user_op::UserOpSbpSignatureBuilder& builder)>& f =
+        [](user_op::UserOpSbpSignatureBuilder& builder) {});
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_USER_OPS_LOSS_OP_UTIL_H_
