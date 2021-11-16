@@ -648,7 +648,7 @@ class TestTensor(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         return x.negative()
-    
+
     @autotest()
     def test_neg_tensor_with_random_data(test_case):
         device = random_device()
