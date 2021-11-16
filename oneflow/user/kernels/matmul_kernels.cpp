@@ -144,13 +144,13 @@ class MatmulKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
       CHECK_EQ(add_to_output->shape(), out->shape());
       auto memcpy = NewMemcpyPrimitive(ctx);
       CHECK(memcpy);
-      memcpy->Launch(ctx->stream_ctx(), out->mut_dptr(), add_to_output->dptr(),
+      memcpy->Launch(ctx->stream(), out->mut_dptr(), add_to_output->dptr(),
                      add_to_output->shape().elem_cnt() * GetSizeOfDataType(data_type));
       beta = 1.0;
     }
     auto matmul = NewMatmulPrimitive(ctx);
     CHECK(matmul);
-    matmul->Launch(ctx->stream_ctx(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
+    matmul->Launch(ctx->stream(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
   }
 };
 
@@ -206,13 +206,13 @@ class BatchMatmulKernel final : public user_op::OpKernel, public user_op::CudaGr
       CHECK_EQ(add_to_output->shape(), out->shape());
       auto memcpy = NewMemcpyPrimitive(ctx);
       CHECK(memcpy);
-      memcpy->Launch(ctx->stream_ctx(), out->mut_dptr(), add_to_output->dptr(),
+      memcpy->Launch(ctx->stream(), out->mut_dptr(), add_to_output->dptr(),
                      add_to_output->shape().elem_cnt() * GetSizeOfDataType(data_type));
       beta = 1.0;
     }
     auto batch_matmul = NewBatchMatmulPrimitive(ctx);
     CHECK(batch_matmul);
-    batch_matmul->Launch(ctx->stream_ctx(), batch_size, m, n, k, alpha, a->dptr(), b->dptr(), beta,
+    batch_matmul->Launch(ctx->stream(), batch_size, m, n, k, alpha, a->dptr(), b->dptr(), beta,
                          out->mut_dptr());
   }
 };
@@ -254,7 +254,7 @@ class BroadcastMatmulKernel final : public user_op::OpKernel, public user_op::Cu
       auto memcpy = NewMemcpyPrimitive(ctx);
       CHECK(memcpy);
       memcpy->Launch(
-          ctx->stream_ctx(), out->mut_dptr(), add_to_output->dptr(),
+          ctx->stream(), out->mut_dptr(), add_to_output->dptr(),
           add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       beta = 1.0;
     }
@@ -273,7 +273,7 @@ class BroadcastMatmulKernel final : public user_op::OpKernel, public user_op::Cu
     }
     auto matmul = NewMatmulPrimitive(ctx);
     CHECK(matmul);
-    matmul->Launch(ctx->stream_ctx(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
+    matmul->Launch(ctx->stream(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
   }
 };
 
@@ -316,7 +316,7 @@ class BroadcastMatmulGradBKernel final : public user_op::OpKernel,
       auto memcpy = NewMemcpyPrimitive(ctx);
       CHECK(memcpy);
       memcpy->Launch(
-          ctx->stream_ctx(), out->mut_dptr(), add_to_output->dptr(),
+          ctx->stream(), out->mut_dptr(), add_to_output->dptr(),
           add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       beta = 1.0;
     }
@@ -329,7 +329,7 @@ class BroadcastMatmulGradBKernel final : public user_op::OpKernel,
 
     auto matmul = NewMatmulPrimitiveForBroadcastMatmulGradB(ctx);
     CHECK(matmul);
-    matmul->Launch(ctx->stream_ctx(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
+    matmul->Launch(ctx->stream(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
   }
 };
 

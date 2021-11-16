@@ -38,6 +38,8 @@ class DeviceCtxStreamContextAdapter : public StreamContext {
 
   DeviceType device_type() const override { return device_ctx_->device_type(); }
 
+  ep::Stream* stream() override { return device_ctx_->stream(); }
+
  private:
   DeviceCtx* device_ctx_;
 };
@@ -61,6 +63,8 @@ class CudaDeviceCtxStreamContextAdapter : public CudaStreamContext {
   }
 
   DeviceType device_type() const override { return device_ctx_->device_type(); }
+
+  ep::Stream* stream() override { return device_ctx_->stream(); }
 
   cudaStream_t cuda_stream() const override { return device_ctx_->cuda_stream(); }
 

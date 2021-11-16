@@ -20,25 +20,28 @@ limitations under the License.
 #include "oneflow/core/kernel/chain_kernel_observer.h"
 #include "oneflow/core/kernel/cpu_check_numerics_kernel_observer.h"
 #include "oneflow/core/graph/stream_id.h"
+#include "oneflow/core/ep/cpu/cpu_stream.h"
 
 namespace oneflow {
 
 class CpuStreamContext : public StreamContext, public KernelObserverProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuStreamContext);
-  explicit CpuStreamContext();
+  CpuStreamContext();
   virtual ~CpuStreamContext();
 
+  ep::Stream* stream() override;
   Maybe<void> AddCallback(std::function<void()> callback) override;
   Maybe<void> Sync() override;
   KernelObserver* GetKernelObserver() override;
   DeviceType device_type() const override { return DeviceType::kCPU; }
 
  private:
+  ep::CpuStream stream_;
   std::unique_ptr<KernelObserver> kernel_observer_;
 };
 
-CpuStreamContext::CpuStreamContext() {
+CpuStreamContext::CpuStreamContext() : stream_() {
   std::vector<std::shared_ptr<KernelObserver>> kernel_observers;
   if (ParseBooleanFromEnv("ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS", false)) {
     kernel_observers.emplace_back(new CpuCheckNumericsKernelObserver());
@@ -47,6 +50,8 @@ CpuStreamContext::CpuStreamContext() {
 }
 
 CpuStreamContext::~CpuStreamContext() = default;
+
+ep::Stream* CpuStreamContext::stream() { return &stream_; }
 
 Maybe<void> CpuStreamContext::AddCallback(std::function<void()> callback) {
   callback();

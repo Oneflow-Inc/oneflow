@@ -44,7 +44,7 @@ void CopyNdKernel(CopyNdKernelParams<num_dims, IndexType> params) {
 }
 
 template<size_t num_dims, size_t movement_size, typename IndexType>
-void LaunchKernel(StreamContext* stream_ctx, CopyNdKernelParams<num_dims, IndexType> params) {
+void LaunchKernel(Stream* stream, CopyNdKernelParams<num_dims, IndexType> params) {
   CopyNdKernel<num_dims, movement_size, IndexType>(params);
 }
 
@@ -54,12 +54,12 @@ class CopyNdImpl : public CopyNd {
   CopyNdImpl() = default;
   ~CopyNdImpl() = default;
 
-  void Launch(StreamContext* stream_ctx, DataType data_type, size_t num_dims, void* dst,
+  void Launch(Stream* stream, DataType data_type, size_t num_dims, void* dst,
               const int64_t* dst_dims, const int64_t* dst_pos, const void* src,
               const int64_t* src_dims, const int64_t* src_pos,
               const int64_t* extent) const override {
-    SimplifyThenLaunch(stream_ctx, data_type, num_dims, dst, dst_dims, dst_pos, src, src_dims,
-                       src_pos, extent);
+    SimplifyThenLaunch(stream, data_type, num_dims, dst, dst_dims, dst_pos, src, src_dims, src_pos,
+                       extent);
   }
 };
 

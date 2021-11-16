@@ -131,10 +131,10 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::
         const int32_t n = 1;
         const int32_t k = reduce_size;
         std::unique_ptr<ep::primitive::Fill> fill =
-            ep::primitive::NewPrimitive<ep::primitive::FillFactory>(
-                ctx->stream_ctx()->device_type(), DataType::kFloat16);
+            ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream()->device_type(),
+                                                                    DataType::kFloat16);
         CHECK(fill);
-        fill->Launch(ctx->stream_ctx(), tmp_buffer->mut_dptr(), 1.0, reduce_size);
+        fill->Launch(ctx->stream(), tmp_buffer->mut_dptr(), 1.0, reduce_size);
         NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k,
                                                 GetOneVal<float16>(), tensor_x->dptr<float16>(),
                                                 tmp_buffer->dptr<float16>(), GetZeroVal<float16>(),
@@ -159,15 +159,14 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::
         auto f2h = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
             ctx->device_type(), DataType::kFloat, DataType::kFloat16);
         CHECK(f2h);
-        h2f->Launch(ctx->stream_ctx(), tensor_x->dptr<float16>(), in_tmp_buffer,
-                    in_shape.elem_cnt());
+        h2f->Launch(ctx->stream(), tensor_x->dptr<float16>(), in_tmp_buffer, in_shape.elem_cnt());
 
         NdarrayReduce<DeviceType::kGPU, float, BinaryFuncSum>::Reduce(
             ctx->device_ctx(), XpuVarNdarray<float>(reduced_shape, out_tmp_buffer),
             XpuVarNdarray<const float>(in_shape, in_tmp_buffer),
             XpuVarNdarray<float>(in_shape, reduce_tmp_buffer));
 
-        f2h->Launch(ctx->stream_ctx(), out_tmp_buffer, tensor_y->mut_dptr<float16>(),
+        f2h->Launch(ctx->stream(), out_tmp_buffer, tensor_y->mut_dptr<float16>(),
                     tensor_y->shape().elem_cnt());
       }
     }
