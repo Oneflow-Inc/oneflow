@@ -208,7 +208,9 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
               || op_type_name.equals("scalar_mul_by_tensor") || op_type_name.equals("matmul")
               || op_type_name.equals("gather") || op_type_name.equals("gelu_grad")
               || op_type_name.equals("bias_add")
-              || op_type_name.equals("sparse_softmax_cross_entropy_grad")) {
+              || op_type_name.equals("sparse_softmax_cross_entropy_grad")
+              || op_type_name.equals("normalization")) {
+            op.dump();
             op->emitError("Fail to convert opaque user op: " + op.op_type_name());
             return failure();
           }
@@ -316,6 +318,26 @@ void SystemOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
   results.insert<ConcreteSystemOps>(context);
 }
 
+struct ConvertAddOpWithArity : public mlir::OpRewritePattern<oneflow::AddNOp> {
+  explicit ConvertAddOpWithArity(mlir::MLIRContext* context)
+      : OpRewritePattern<oneflow::AddNOp>(context, /*benefit=*/1) {}
+  mlir::LogicalResult matchAndRewrite(oneflow::AddNOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    if (op.in().size() == 2) {
+      rewriter.replaceOpWithNewOp<Add2Op>(op, op->getResultTypes(), op.getOperands(),
+                                          op->getAttrs());
+      return success();
+    } else {
+      return failure();
+    }
+  }
+};
+
+void AddNOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
+                                         ::mlir::MLIRContext* context) {
+  results.insert<ConvertAddOpWithArity>(context);
+}
+
 // TODO: merge all ctrl input and output when folding op
 bool HaveIdenticalPlacement(mlir::Operation* a, mlir::Operation* b) {
   UserOpAdaptor adaptor_a(a->getOperands(), a->getAttrDictionary());
@@ -368,7 +390,6 @@ void NormalizationAddReluOp::build(::mlir::OpBuilder& odsBuilder, ::mlir::Operat
     odsState.addAttribute(scope_symbol_idAttrName(odsState.name), scope_symbol_id);
   }
   if (hierarchy) { odsState.addAttribute(hierarchyAttrName(odsState.name), hierarchy); }
-  odsState.addAttribute(operand_segment_sizesAttrName(odsState.name), operand_segment_sizes);
   odsState.addAttribute(result_segment_sizesAttrName(odsState.name), result_segment_sizes);
   odsState.addAttribute(axisAttrName(odsState.name), axis);
   odsState.addAttribute(epsilonAttrName(odsState.name), epsilon);
@@ -376,11 +397,9 @@ void NormalizationAddReluOp::build(::mlir::OpBuilder& odsBuilder, ::mlir::Operat
   odsState.addAttribute(momentumAttrName(odsState.name), momentum);
   auto y = x.getType();
   odsState.addTypes(y);
-  auto bn_op = llvm::dyn_cast<NormalizationOp>(x.getDefiningOp());
-  auto mean = bn_op.mean();
-  auto inv_variance = bn_op.inv_variance();
-  if (mean) odsState.addTypes(mean.getType());
-  if (inv_variance) odsState.addTypes(inv_variance.getType());
+  // TODO: add real type infer, or get types from user of x and moving_mean, if it is a bn
+  odsState.addTypes(x.getType());
+  odsState.addTypes(x.getType());
 }
 
 #include "OneFlow/OneFlowEnums.cpp.inc"

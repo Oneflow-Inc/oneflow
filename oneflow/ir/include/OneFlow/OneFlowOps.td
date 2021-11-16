@@ -516,6 +516,7 @@ def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", []> {
   let summary = "OneFlow add_n operation";
   let input = (ins Variadic<AnyType>:$in);
   let output = (outs AnyType:$out);
+  let hasCanonicalizer = 1;
 }
 
 def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", []> {
@@ -1042,6 +1043,7 @@ def FusedBiasAddGeluPattern : Pat<
 
 def GetFirstValue :
   NativeCodeCall<"*$0.begin()">;
+def CreateNormalizationAddReluOp : NativeCodeCall<"OutlineMulCast($_builder, $0, $1)">;
 def NormalizationAddReluPattern : Pattern<
   /* match */ (
     OneFlow_ReluOp (
