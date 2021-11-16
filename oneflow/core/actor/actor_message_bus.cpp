@@ -24,7 +24,7 @@ limitations under the License.
 
 namespace oneflow {
 
-#define DebugActor false 
+#define DebugActor true 
 
 void ActorMsgBus::SendMsg(const ActorMsg& msg) {
   int64_t dst_machine_id = MachineId4ActorId(msg.dst_actor_id());
@@ -57,7 +57,6 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
       binary_mutex_.lock();
       std::string dir = "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_15/";
       std::string path = dir  + "actor_msg_bus" + std::to_string(num_file_);
-      num_file_++;
       std::ofstream out;
       out.open(path,std::ofstream::out | std::ofstream::binary);
       if(!out.is_open()) {
@@ -65,8 +64,16 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
       }
       out.write(reinterpret_cast<char*>(&new_msg),msg_size);//
       out.close();
+      path = dir +"actor_send_token" + std::to_string(num_file_);
+      std::ofstream out2;
+      out2.open(path,std::ofstream::out | std::ofstream::binary);
+      if(!out2.is_open()) {
+        return ;
+      }
+      out2.write(serial_data,token_size);
+      out2.close();
+      num_file_++;
       binary_mutex_.unlock();
-
       std::cout<<"ActorMsgBus::SendMsg,the token:"<< reinterpret_cast<uint64_t>( new_msg.regst()->comm_net_token()) << std::endl;
       std::cout<<"ActorMsgBus::SendMsg,the addr:" << addr << std::endl;
       std::cout<<std::endl;
@@ -101,6 +108,15 @@ void ActorMsgBus::HandleRecvData(void* data, size_t size) {
     std::cout<<"ActorMsgBus::HandleRecvData,the new_msg.token:"<< reinterpret_cast<uint64_t>(new_msg.regst()->comm_net_token()) << std::endl;
     std::cout<<"ActorMsgBus::HandleRecvData,the size:" <<size <<  std::endl;
     std::cout <<std::endl;
+    std::string dir = "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_16/";
+    std::string path =  dir +"actor_recv_token" + std::to_string(num_file_);
+    std::ofstream out;
+    out.open(path,std::ofstream::out | std::ofstream::binary);
+    if(!out.is_open()) {
+      return ;
+    }
+    out.write((char*)msg.user_data(),token_size);//
+    out.close();
   }
 
   SendMsgWithoutCommNet(new_msg);

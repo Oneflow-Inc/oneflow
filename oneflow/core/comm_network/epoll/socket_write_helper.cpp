@@ -22,7 +22,7 @@ limitations under the License.
 
 #include <fstream>
 
-#define DebugWrite false 
+#define DebugWrite true 
 
 namespace oneflow {
 
@@ -61,7 +61,6 @@ void SocketWriteHelper::AsyncWrite(const SocketMsg& msg) {
       std::cout<<" SocketWriteHelper::AsyncWrite,the debug_actor_msg_:"<<debug_actor_msg_ << std::endl;
       std::cout<<std::endl;
       std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_15/";
-
       write_mutex_.lock();
       std::string path = dir + "write_helper_Asyncwrite" + std::to_string(write_msg_);
       write_msg_++;
@@ -113,7 +112,6 @@ bool SocketWriteHelper::InitMsgWriteHandle() {
   write_ptr_ = reinterpret_cast<const char*>(&cur_msg_);
   write_size_ = sizeof(cur_msg_);
   if(cur_msg_.msg_type == SocketMsgType::kActor ) {
-
     init_msg_mutex_.lock();
     std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_15/";
     std::string path = dir + "write_helper_InitMsgWriteHandle" + std::to_string(init_msg_);
