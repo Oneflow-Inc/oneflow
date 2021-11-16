@@ -362,6 +362,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.neg,
+    """
+    See :func:`oneflow.negative`
+    """,
+)
+
+add_docstr(
     oneflow.log1p,
     r"""Returns a new tensor with the natural logarithm of (1 + input).
 

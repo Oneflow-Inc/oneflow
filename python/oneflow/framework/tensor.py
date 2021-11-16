@@ -457,6 +457,11 @@ def _minimum(self, y):
 def _maximum(self, y):
     return flow.maximum(self, y)
 
+def _negative(self):
+    return flow.negative(self)
+
+def _neg(self):
+    return flow.negative(self)
 
 def _rsqrt(self):
     return flow.rsqrt(self)
@@ -758,6 +763,8 @@ def RegisterMethods():
     Tensor.ge = _ge
     Tensor.gelu = _gelu
     Tensor.mish = _mish
+    Tensor.negative = _negative
+    Tensor.neg = _neg
     Tensor.sigmoid = _sigmoid
     Tensor.tanh = _tanh
     Tensor.silu = _silu
