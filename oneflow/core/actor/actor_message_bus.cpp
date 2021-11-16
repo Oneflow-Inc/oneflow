@@ -45,12 +45,16 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
       new_msg.AddUserData(token_size, serial_data);
       free(serial_data);
       size_t msg_size = sizeof(new_msg);
-      uint64_t addr = reinterpret_cast<uint64_t>(&new_msg);//此时addr是new_msg的地址
-      Global<CommNet>::Get()->SendMsg(dst_machine_id, reinterpret_cast<void*>(addr), msg_size);
+      void * addr =malloc(sizeof(void*));
+      char * msg_addr = reinterpret_cast<char*>(&new_msg);
+      std::memcpy(addr,&msg_addr,sizeof(void*));
+      Global<CommNet>::Get()->SendMsg(dst_machine_id, addr, msg_size);
     } else {
-      uint64_t addr = reinterpret_cast<uint64_t>(&msg);
       size_t msg_size = sizeof(msg);
-      Global<CommNet>::Get()->SendMsg(dst_machine_id,reinterpret_cast<void*>(addr), msg_size);
+      void * addr =malloc(sizeof(void*));
+      char * msg_addr = const_cast<char*>( reinterpret_cast<const char * >(&msg));
+      std::memcpy(addr,&msg_addr,sizeof(void*));
+      Global<CommNet>::Get()->SendMsg(dst_machine_id, addr, msg_size);
     }
   }
 }
