@@ -13,8 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <string>
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
 
 namespace oneflow {
 
@@ -186,6 +188,22 @@ std::string SbpParallelToString(const cfg::SbpParallel& sbp_parallel) {
     sbp_str = "P";
   } else if (sbp_parallel.has_split_parallel()) {
     sbp_str = "S(" + std::to_string(sbp_parallel.split_parallel().axis()) + ")";
+  } else {
+    UNIMPLEMENTED();
+  }
+  return sbp_str;
+}
+
+std::string NdSbpParallelToString(const cfg::NdSbp& nd_sbp_parallel) {
+  std::string sbp_str = "";
+  if (nd_sbp_parallel.sbp_parallel_size() == 1) {
+    return SbpParallelToString(nd_sbp_parallel.sbp_parallel(0));
+  } else if (nd_sbp_parallel.sbp_parallel_size() > 1) {
+    std::string sbp_str = "(" + SbpParallelToString(nd_sbp_parallel.sbp_parallel(0));
+    for (int32_t k = 1; k < nd_sbp_parallel.sbp_parallel_size(); k++) {
+      sbp_str += ", " + SbpParallelToString(nd_sbp_parallel.sbp_parallel(k));
+    }
+    sbp_str += ")";
   } else {
     UNIMPLEMENTED();
   }
