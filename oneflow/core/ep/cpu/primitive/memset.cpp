@@ -28,7 +28,7 @@ class MemsetImpl : public Memset {
   MemsetImpl() = default;
   ~MemsetImpl() = default;
 
-  void Launch(StreamContext* stream_ctx, void* ptr, int value, size_t count) {
+  void Launch(Stream* stream, void* ptr, int value, size_t count) {
     std::memset(ptr, value, count);
   }
 };

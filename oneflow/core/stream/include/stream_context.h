@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/common/device_type.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 
@@ -28,6 +29,7 @@ class StreamContext {
   StreamContext() = default;
   virtual ~StreamContext() = default;
 
+  virtual ep::Stream* stream() = 0;
   template<typename T>
   T* As() {
     return static_cast<T*>(this);

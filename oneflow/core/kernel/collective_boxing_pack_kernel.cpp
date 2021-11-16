@@ -58,7 +58,7 @@ void CollectiveBoxingPackKernel::ForwardDataContent(KernelContext* ctx) const {
     auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
         ctx->stream_ctx()->device_type(), transpose_in_dim_vec.size());
     CHECK(transpose);
-    transpose->Launch(ctx->stream_ctx(), in->data_type(), transpose_in_dim_vec.size(),
+    transpose->Launch(ctx->stream(), in->data_type(), transpose_in_dim_vec.size(),
                       transpose_in_dim_vec.data(), in->dptr(), perm.data(), out->mut_dptr());
   } else {
     AutoMemcpy(ctx->stream_ctx(), out, in);
