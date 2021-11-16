@@ -35,8 +35,4 @@ const std::string& Device::type() const { return (*device_)->type(); }
 
 int64_t Device::device_id() const { return (*device_)->device_id(); }
 
-std::shared_ptr<oneflow::Symbol<oneflow::Device>> Device::GetDeviceSymbolSharedPtr() const {
-    return device_;
-}
-
 }  // namespace oneflow_api

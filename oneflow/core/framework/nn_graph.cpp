@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -327,6 +328,50 @@ void NNGraph::CloseRuntimeBuffers() {
     buffer_mgr->Get(GetCallbackNotifierBufferName(name_))->Close();
     buffer_mgr->Get(GetSourceTickBufferName(name_))->Close();
   }
+}
+
+Maybe<void> NNGraph::CreateVariableOp(
+    HashMap<std::string, std::shared_ptr<one::Tensor>>& variable_op_name_to_tensor,
+    const Symbol<Device>& device, bool is_mirrored) {
+  OpGraph op_graph(job_);
+  op_graph.ForEachNode([&](OpNode* node) -> Maybe<void> {
+    std::cout << node->op().op_name() << std::endl;
+    if (!node->op().op_conf().has_variable_conf()) { return Maybe<void>::Ok(); }
+
+    std::shared_ptr<Shape> shape =
+        std::make_shared<Shape>(node->op().op_conf().variable_conf().shape());
+    DataType dtype = node->op().op_conf().variable_conf().data_type();
+    bool is_lazy = false;        // TODO(zzk0): not very sure?
+    bool requires_grad = false;  // Inference mode
+    bool is_leaf = true;         // all parameters are leaf node
+
+    if (is_mirrored) {
+      // To create a MirroredTensor: shape, dtype, device, is_lazy, requires_grad, is_leaf
+      std::shared_ptr<one::MirroredTensor> tensor = CHECK_JUST(
+          one::MirroredTensor::MakeTensor(shape, dtype, device, is_lazy, requires_grad, is_leaf));
+      variable_op_name_to_tensor[node->op().op_name()] = tensor;
+    } else {
+      // To create a ConsistentTensor: shape, dtype, sbp + parallel desc, is_lazy, requires_grad,
+    }
+    return Maybe<void>::Ok();
+  });
+
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> NNGraph::Load(const std::string& model_path, const Symbol<Device>& device) {
+  // load from local directory, binary text format
+  std::ifstream input(model_path.c_str());
+  std::stringstream buffer;
+  buffer << input.rdbuf();
+  job_.ParseFromString(buffer.str());
+  input.close();
+
+  // create variable conf op
+  HashMap<std::string, std::shared_ptr<one::Tensor>> variable_op_name_to_tensor;
+  JUST(CreateVariableOp(variable_op_name_to_tensor, device, true));
+
+  return Maybe<void>::Ok();
 }
 
 namespace {

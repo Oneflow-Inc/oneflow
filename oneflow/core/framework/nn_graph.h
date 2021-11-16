@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_H_
 #define ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_H_
 
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -54,9 +55,15 @@ class NNGraph final : public NNGraphIf {
   Maybe<void> CompileAndInitRuntime();
   Maybe<void> Close();
 
+  // Serving API
+  Maybe<void> Load(const std::string& model_path, const Symbol<Device>& device);
+
  private:
   Maybe<void> RegisterFreeEagerTensorsToVariableOpNames();
   Maybe<void> CreateAndRegisterNewVariableOpInJobPass();
+  Maybe<void> CreateVariableOp(
+      HashMap<std::string, std::shared_ptr<one::Tensor>>& variable_op_name_to_tensor,
+      const Symbol<Device>& device, bool is_mirrored);
 
   void NewRuntimeBuffers();
   void CloseRuntimeBuffers();
