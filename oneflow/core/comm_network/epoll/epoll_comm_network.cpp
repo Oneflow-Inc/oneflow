@@ -96,9 +96,12 @@ void EpollCommNet::SendMsg(int64_t dst_machine_id, void * data, size_t size) {
   SocketMsg msg;
   msg.actor_msg.size = 0;
   msg.msg_type = SocketMsgType::kActor;
-  std::memcpy(msg.actor_msg.data, data, size);//这里应该是将data的内容拷贝给msg.actor_msg.data 
+  //这个时候data的数据是msg的指针
+  //1)先取出这个指针，然后再从这个指针拷贝数据
+  char ** addr = reinterpret_cast<char**>(data);
+  char * msg_addr = *addr;
   msg.actor_msg.size = size;
-  std::memcpy(msg.actor_msg.data, data, size);
+  std::memcpy(msg.actor_msg.data, msg_addr, size);
   msg.actor_msg.size = size;
   msg.msg_type = SocketMsgType::kActor;
   free(data);
