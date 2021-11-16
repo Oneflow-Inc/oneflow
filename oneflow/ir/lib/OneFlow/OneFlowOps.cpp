@@ -398,8 +398,8 @@ void NormalizationAddReluOp::build(::mlir::OpBuilder& odsBuilder, ::mlir::Operat
   auto y = x.getType();
   odsState.addTypes(y);
   // TODO: add real type infer, or get types from user of x and moving_mean, if it is a bn
-  odsState.addTypes(x.getType());
-  odsState.addTypes(x.getType());
+  // odsState.addTypes(x.getType());
+  // odsState.addTypes(x.getType());
 }
 
 #include "OneFlow/OneFlowEnums.cpp.inc"

@@ -1044,6 +1044,7 @@ def FusedBiasAddGeluPattern : Pat<
 def GetFirstValue :
   NativeCodeCall<"*$0.begin()">;
 def CreateNormalizationAddReluOp : NativeCodeCall<"OutlineMulCast($_builder, $0, $1)">;
+// TODO: check mean and inv_variance are not used
 def NormalizationAddReluPattern : Pattern<
   /* match */ (
     OneFlow_ReluOp (
@@ -1106,8 +1107,6 @@ def NormalizationAddReluPattern : Pattern<
     $bn_momentum
   ),
   (replaceWithValue $fuse_results__0),
-  (replaceWithValue $fuse_results__1),
-  (replaceWithValue $fuse_results__2)
   ],
   []
 >;
