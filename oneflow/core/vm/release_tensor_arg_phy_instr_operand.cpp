@@ -21,17 +21,17 @@ namespace oneflow {
 namespace vm {
 
 void ReleaseTensorArgPhyInstrOperand::ForEachConstMirroredObject(
-    const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
+    const std::function<void(MirroredObject* compute)>& DoEach) const {
   // Do nothing
 }
 
 void ReleaseTensorArgPhyInstrOperand::ForEachMutMirroredObject(
-    const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
-  DoEach(nullptr, compute_local_dep_object_->mut_mirrored_object());
+    const std::function<void(MirroredObject* compute)>& DoEach) const {
+  DoEach(compute_local_dep_object_->mut_mirrored_object());
 }
 
 void ReleaseTensorArgPhyInstrOperand::ForEachMut2MirroredObject(
-    const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
+    const std::function<void(MirroredObject* compute)>& DoEach) const {
   // Do nothing
 }
 
