@@ -2139,13 +2139,13 @@ class To4Functor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const std::shared_ptr<Tensor>& other, bool copy) const {
-  CHECK_OR_RETURN(!input->is_consistent() && !other->is_consistent()) <<
-    ".to(other) can only be called when other is a local tensor";
-  Symbol<DType> dtype = other->dtype();
-  Symbol<Device> device = JUST(other->device());
-  std::string device_name = device->type();
-  int device_id = device->device_id();
-  return LocalTensorTo(input, device_name, device_id, dtype, copy);
+    CHECK_OR_RETURN(!input->is_consistent() && !other->is_consistent())
+        << "tensor.to(other) can only be called when tensor and other are local tensors";
+    Symbol<DType> dtype = other->dtype();
+    Symbol<Device> device = JUST(other->device());
+    std::string device_name = device->type();
+    int device_id = device->device_id();
+    return LocalTensorTo(input, device_name, device_id, dtype, copy);
   }
 };
 
