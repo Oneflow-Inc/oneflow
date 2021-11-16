@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
 import sys
 import collections
 
@@ -373,5 +374,6 @@ import oneflow.multiprocessing
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__
-    print("MLIR JIT engine will load:", oneflow_internal_path)
+    if os.getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"):
+        print("MLIR JIT engine will load:", oneflow_internal_path, file=sys.stderr)
     oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)
