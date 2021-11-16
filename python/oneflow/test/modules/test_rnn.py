@@ -233,12 +233,12 @@ def _test_gru(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestRNNModule(flow.unittest.TestCase):
-    def test_rnn(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_rnn, _test_lstm, _test_gru]
-        arg_dict["device"] = ["cuda", "cpu"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    def _test_rnn(test_case):
+         arg_dict = OrderedDict()
+         arg_dict["test_fun"] = [_test_rnn, _test_lstm, _test_gru]
+         arg_dict["device"] = ["cuda", "cpu"]
+         for arg in GenArgList(arg_dict):
+             arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":
