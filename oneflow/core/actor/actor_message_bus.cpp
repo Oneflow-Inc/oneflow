@@ -21,11 +21,6 @@ limitations under the License.
 
 namespace oneflow {
 
-<<<<<<< HEAD
-#define DebugActor true 
-
-=======
->>>>>>> c648f996f13faed702edd02b360d459e0665d828
 void ActorMsgBus::SendMsg(const ActorMsg& msg) {
   int64_t dst_machine_id = MachineId4ActorId(msg.dst_actor_id());
   if (dst_machine_id == GlobalProcessCtx::Rank()) {
