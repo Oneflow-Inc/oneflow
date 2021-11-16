@@ -17,12 +17,14 @@ limitations under the License.
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/compiler.h"
@@ -30,7 +32,11 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/plan_util.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/profiler/profiler.h"
@@ -341,17 +347,24 @@ Maybe<void> NNGraph::CreateVariableOp(
     std::shared_ptr<Shape> shape =
         std::make_shared<Shape>(node->op().op_conf().variable_conf().shape());
     DataType dtype = node->op().op_conf().variable_conf().data_type();
-    bool is_lazy = false;        // TODO(zzk0): not very sure?
+    bool is_lazy = true;        // TODO(zzk0): not very sure?
     bool requires_grad = false;  // Inference mode
     bool is_leaf = true;         // all parameters are leaf node
 
     if (is_mirrored) {
       // To create a MirroredTensor: shape, dtype, device, is_lazy, requires_grad, is_leaf
-      std::shared_ptr<one::MirroredTensor> tensor = CHECK_JUST(
+      std::shared_ptr<one::MirroredTensor> tensor = JUST(
           one::MirroredTensor::MakeTensor(shape, dtype, device, is_lazy, requires_grad, is_leaf));
       variable_op_name_to_tensor[node->op().op_name()] = tensor;
     } else {
       // To create a ConsistentTensor: shape, dtype, sbp + parallel desc, is_lazy, requires_grad,
+      const ParallelDesc& desc = node->parallel_desc();
+      cfg::NdSbp nd_sbp;
+      nd_sbp.add_sbp_parallel();
+      nd_sbp.sbp_parallel(0).broadcast_parallel();
+      std::shared_ptr<one::ConsistentTensor> tensor = JUST(
+        one::ConsistentTensor::MakeTensor(shape, dtype, nd_sbp, desc, is_lazy, requires_grad, is_leaf));
+      variable_op_name_to_tensor[node->op().op_name()] = tensor;
     }
     return Maybe<void>::Ok();
   });
@@ -369,7 +382,7 @@ Maybe<void> NNGraph::Load(const std::string& model_path, const Symbol<Device>& d
 
   // create variable conf op
   HashMap<std::string, std::shared_ptr<one::Tensor>> variable_op_name_to_tensor;
-  JUST(CreateVariableOp(variable_op_name_to_tensor, device, true));
+  JUST(CreateVariableOp(variable_op_name_to_tensor, device, /* is_mirrored */ true));
 
   return Maybe<void>::Ok();
 }

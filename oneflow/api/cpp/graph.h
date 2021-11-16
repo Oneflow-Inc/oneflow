@@ -32,9 +32,21 @@ class Device;
 
 class Graph {
  public:
+  // TODO(zzk0): ctor, copyable? movable? assign-able?
+  Graph() = default;
+  ~Graph() = default;
+
+  Graph(Graph& graph) = default;
+  Graph& operator=(Graph& graph) = default;
+
+  Graph(Graph&& graph) = default;
+  Graph& operator=(Graph&& graph) = default;
+
   void Load(const std::string& model_path, const Device& device);
 
  private:
+
+  // TODO(zzk0): unique vs. shared? Is this class copyable?
   std::shared_ptr<oneflow::NNGraph> graph_;
 };
 
