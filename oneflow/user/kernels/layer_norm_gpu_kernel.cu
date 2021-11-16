@@ -426,6 +426,44 @@ REGISTER_LAYER_NORM_GPU_KERNEL(float, float)
 REGISTER_LAYER_NORM_GPU_KERNEL(double, double)
 REGISTER_LAYER_NORM_GPU_KERNEL(float16, float)
 
+template<typename T>
+class LayerNormGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+ public:
+  LayerNormGradKernel() = default;
+  ~LayerNormGradKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
+    const user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    const int32_t rows = mean->shape().elem_cnt();
+    const int32_t cols = x->shape().elem_cnt() / rows;
+    using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
+    cuda::layer_norm::DirectLoad<T, ComputeType> load_x(x->dptr<T>(), cols);
+    cuda::layer_norm::DirectLoad<T, ComputeType> load_dy(dy->dptr<T>(), cols);
+    cuda::layer_norm::DirectStore<ComputeType, T> store(dx->mut_dptr<T>(), cols);
+    OF_CUDA_CHECK((cuda::layer_norm::DispatchLayerNormGrad<decltype(load_x), decltype(load_dy),
+                                                           decltype(store), ComputeType>(
+        ctx->device_ctx()->cuda_stream(), load_x, load_dy, store, mean->dptr<ComputeType>(),
+        inv_variance->dptr<ComputeType>(), rows, cols)));
+  };
+};
+
+#define REGISTER_LAYER_NORM_GRAD_KERNEL(dtype)                        \
+  REGISTER_USER_KERNEL("layer_norm_grad")                             \
+      .SetCreateFn<LayerNormGradKernel<dtype>>()                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+                       & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
+
+REGISTER_LAYER_NORM_GRAD_KERNEL(float)
+REGISTER_LAYER_NORM_GRAD_KERNEL(double)
+REGISTER_LAYER_NORM_GRAD_KERNEL(half)
+
 template<typename T, typename BNParamT>
 class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
@@ -496,9 +534,9 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
             return Maybe<void>::Ok();                                                      \
           });
 
-REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(float, float)
-REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(double, double)
-REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(float16, float)
+// REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(float, float)
+// REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(double, double)
+// REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(float16, float)
 
 template<typename T>
 class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
