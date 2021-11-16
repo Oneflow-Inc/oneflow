@@ -48,7 +48,8 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
 
   void ForEachMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
 
-  void ForEachMutMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
+  void ForEachMutMirroredObject(
+      const std::function<void(vm::MirroredObject* compute)>&) const;
 
   intrusive::shared_ptr<LocalDepObject> local_dep_object() const { return local_dep_object_; }
 
@@ -77,12 +78,12 @@ class InputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeg
 
   // for inputs
   void ForEachConstMirroredObject(
-      const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
     ForEachMirroredObject(DoEach);
   }
 
   // for outputs
-  void ForEachMut2MirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const {}
+  void ForEachMut2MirroredObject(
+      const std::function<void(vm::MirroredObject* compute)>&) const override {}
 
  private:
   DependenceVector input_dependences_;
@@ -108,7 +109,8 @@ class OutputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBe
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
   // for inputs
-  void ForEachConstMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const {}
+  void ForEachConstMirroredObject(
+      const std::function<void(vm::MirroredObject* compute)>&) const {}
 
   // for outputs
   void ForEachMut2MirroredObject(
@@ -132,7 +134,8 @@ class CriticalSectionEndPhyInstrOperand : public PhyInstrOperand {
 
   void ForEachMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
 
-  void ForEachMutMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
+  void ForEachMutMirroredObject(
+      const std::function<void(vm::MirroredObject* compute)>&) const override;
 
  private:
   std::shared_ptr<EagerBlobObject> eager_blob_object_;
@@ -184,7 +187,8 @@ class OutputCriticalSecondEndPhyInstrOperand final : public CriticalSectionEndPh
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
   // for inputs
-  void ForEachConstMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const {}
+  void ForEachConstMirroredObject(
+      const std::function<void(vm::MirroredObject* compute)>&) const {}
 
   // for outputs
   void ForEachMut2MirroredObject(

@@ -151,13 +151,13 @@ jobs:
           cd build-third_party
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=ON -DONEFLOW=OFF -DTHIRD_PARTY_DIR=$PWD/../third_party_install
           cmake --build . -j $(nproc)
-      - name: Build (of_ccobj)
+      - name: Build (oneflow)
         if: matrix.cmake_generator != 'Ninja'
         run: |
           mkdir -p build
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON -DTHIRD_PARTY_DIR=$PWD/../third_party_install
-          cmake --build . -j ${{ matrix.make_concurrency }} --target of_ccobj
+          cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow
       - name: Build (oneflow_internal)
         if: always() && matrix.cmake_generator != 'Ninja'
         run: |

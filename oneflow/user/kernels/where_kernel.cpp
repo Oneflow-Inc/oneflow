@@ -180,7 +180,7 @@ class WhereScalarXYKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("where")                                                                  \
       .SetCreateFn<WhereKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                      \
                                OF_PP_PAIR_FIRST(ctype_pair)>>()                                  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                               \
                        & (user_op::HobDataType("condition", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
@@ -198,7 +198,7 @@ class WhereScalarXYKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("where_scalar_x")                                                         \
       .SetCreateFn<WhereScalarXKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),               \
                                       OF_PP_PAIR_FIRST(ctype_pair)>>()                           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                               \
                        & (user_op::HobDataType("condition", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
@@ -214,7 +214,7 @@ class WhereScalarXYKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("where_scalar_y")                                                         \
       .SetCreateFn<WhereScalarYKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),               \
                                       OF_PP_PAIR_FIRST(ctype_pair)>>()                           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                               \
                        & (user_op::HobDataType("condition", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
@@ -230,7 +230,7 @@ class WhereScalarXYKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("where_scalar_xy")                                                        \
       .SetCreateFn<WhereScalarXYKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),              \
                                        OF_PP_PAIR_FIRST(ctype_pair)>>()                          \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                               \
                        & (user_op::HobDataType("condition", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 

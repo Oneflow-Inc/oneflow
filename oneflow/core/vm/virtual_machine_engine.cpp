@@ -83,8 +83,7 @@ void VirtualMachineEngine::MovePendingToReadyOrWaiting() {
   InstructionMsgList tmp_pending_msg_list;
   // MoveTo is under a lock.
   mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
-  OF_PROFILER_RANGE_PUSH("MovePendingToReadyOrWaiting:"
-                         + std::to_string(tmp_pending_msg_list.size()));
+  OF_PROFILER_RANGE_PUSH("MovePendingToReadyOrWaiting");
   InstructionList new_instruction_list;
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(instr_msg, &tmp_pending_msg_list) {
     if (unlikely(instr_msg->instr_type_id().instruction_type().ResettingIdToObjectMap())) {
@@ -93,7 +92,7 @@ void VirtualMachineEngine::MovePendingToReadyOrWaiting() {
       MakeInstructions(instr_msg, /*out*/ &new_instruction_list);
     }
   }
-  OF_PROFILER_RANGE_PUSH("ConsumeMirroredObjects:" + std::to_string(new_instruction_list.size()));
+  OF_PROFILER_RANGE_PUSH("ConsumeMirroredObjects");
   INTRUSIVE_FOR_EACH_PTR(instruction, &new_instruction_list) {
     ConsumeMirroredObjects(mut_id2logical_object(), instruction);
     if (likely(Dispatchable(instruction))) {
@@ -543,7 +542,7 @@ void VirtualMachineEngine::GetCachedInstrTypeIdAndPhyInstrStream(const std::stri
     iter = cache->emplace(instr_type_name, RtInstrTypeId(instr_type_id_val, stream_rt_desc)).first;
   }
   instr_type_id->CopyFrom(iter->second.instr_type_id());
-  *stream = (iter->second.*iter->second.GetStream)(device_id);
+  *stream = iter->second.GetStream(device_id);
 }
 
 void VirtualMachineEngine::GetInstrTypeIdAndSoleStream(const std::string& instr_type_name,
@@ -552,9 +551,7 @@ void VirtualMachineEngine::GetInstrTypeIdAndSoleStream(const std::string& instr_
   instr_type_id->CopyFrom(LookupInstrTypeId(instr_type_name));
   const auto& stream_type_id = instr_type_id->stream_type_id();
   auto* stream_rt_desc = this->mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);
-  CHECK_NOTNULL(stream_rt_desc);
-  CHECK_EQ(stream_rt_desc->device_id2stream().size(), 1);
-  *stream = stream_rt_desc->device_id2stream().at(0).get();
+  *stream = stream_rt_desc->GetSoleStream();
 }
 
 int64_t InstructionMaxRunningSeconds() { return 60 * 5; }
@@ -722,9 +719,9 @@ void VirtualMachineEngine::Schedule() {
   // pending_msg_list.list_head_.list_head_.size_ is not a fatal error because
   // VirtualMachineEngine::Schedule is always in a buzy loop. All instructions will get handled
   // eventually.
-  //  VirtualMachine::Receive may be less effiencient if the thread safe version
-  //  `pending_msg_list().size()` used here, because VirtualMachine::Schedule is more likely to get
-  //  the mutex lock.
+  //  VirtualMachineEngine::Receive may be less effiencient if the thread safe version
+  //  `pending_msg_list().size()` used here, because VirtualMachineEngine::Schedule is more likely
+  //  to get the mutex lock.
   if (unlikely(pending_msg_list().thread_unsafe_size())) { MovePendingToReadyOrWaiting(); }
   // dispatch ready instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_ready_instruction_list()->size())) { DispatchAndPrescheduleInstructions(); }

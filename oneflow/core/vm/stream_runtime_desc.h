@@ -38,6 +38,16 @@ class StreamRtDesc final : public intrusive::Base {
   const std::vector<intrusive::shared_ptr<Stream>>& device_id2stream() const {
     return device_id2stream_;
   }
+
+  // The value of `device_id` is ignored.
+  Stream* GetSoleStream(int device_id) const { return GetSoleStream(); }
+  Stream* GetSoleStream() const {
+    CHECK_EQ(device_id2stream().size(), 1);
+    return device_id2stream().at(0).get();
+  }
+
+  Stream* GetDeviceStream(int device_id) const { return device_id2stream().at(device_id).get(); }
+
   // Setters
   StreamDesc* mut_stream_desc() {
     if (!stream_desc_) { stream_desc_ = intrusive::make_shared<StreamDesc>(); }

@@ -18,9 +18,9 @@ limitations under the License.
 
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/device/device_context.h"
-#include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/device/cuda_event.h"
 #include "oneflow/core/vm/cuda_host_allocator.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 namespace vm {
@@ -36,24 +36,24 @@ class CudaCopyD2HDeviceCtx : public DeviceCtx, public SingleThreadQueryCudaEvent
   CudaCopyD2HDeviceCtx(int64_t device_id)
       : DeviceCtx(),
         SingleThreadQueryCudaEventProvider(device_id),
-        cuda_handler_(new CudaStreamHandle(nullptr)),
+        stream_(device_id),
         cuda_allocator_(std::make_unique<CudaHostAllocator>(device_id)),
         device_id_(device_id) {}
 
-  cudaStream_t cuda_stream() const override { return cuda_handler_->cuda_stream(); }
-  cublasHandle_t cublas_handle() const override { return cuda_handler_->cublas_handle(); }
-  cudnnHandle_t cudnn_handle() const override { return cuda_handler_->cudnn_handle(); }
+  cudaStream_t cuda_stream() const override { return stream_.cuda_stream(); }
+  cublasHandle_t cublas_handle() const override { return stream_.cublas_handle(); }
+  cudnnHandle_t cudnn_handle() const override { return stream_.cudnn_handle(); }
+
+  ep::Stream* stream() override { return &stream_; }
 
   void SyncDevice() override { OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream())); }
-
-  void AddCallBack(std::function<void()> callback) const override { UNIMPLEMENTED(); }
 
   vm::Allocator* mut_allocator() override { return cuda_allocator_.get(); }
 
   DeviceType device_type() const override { return DeviceType::kGPU; }
 
  protected:
-  std::unique_ptr<CudaStreamHandle> cuda_handler_;
+  ep::CudaStream stream_;
   std::unique_ptr<CudaHostAllocator> cuda_allocator_;
   int64_t device_id_;
 };
