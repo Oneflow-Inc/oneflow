@@ -402,6 +402,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
 }  // namespace
 
 LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf) {
+  if (op->isRegistered() && !llvm::dyn_cast<oneflow::UserOp>(op)) return success();
   if (auto ctrl_ins = GetCtrlIntputOperands(op)) {
     for (auto ctrl_in : ctrl_ins.getValue()) {
       op_conf.add_ctrl_in_op_name(
