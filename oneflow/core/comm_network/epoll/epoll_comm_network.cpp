@@ -97,6 +97,7 @@ void EpollCommNet::SendMsg(int64_t dst_machine_id, void * data, size_t size) {
   msg.actor_msg.size = 0;
   std::memcpy(msg.actor_msg.data, data, size);
   msg.actor_msg.size = size;
+  msg.msg_type = SocketMsgType::kActor;
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 
 }
