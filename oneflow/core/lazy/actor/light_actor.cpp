@@ -490,6 +490,8 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
 
   StreamContext* stream_ctx() const override { return stream_ctx_; }
 
+  ep::Stream* stream() const override { return stream_ctx_->stream(); }
+
   ActorContext* GetActorContext() const override { return actor_ctx_; }
 
   DeviceCtx* device_ctx() const override { return device_ctx_.get(); }

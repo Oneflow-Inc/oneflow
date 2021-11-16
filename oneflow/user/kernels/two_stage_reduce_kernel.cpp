@@ -56,7 +56,7 @@ class ReduceDeviceStageKernel final : public OpKernel {
         ctx->device_type(), DataType::kInt8, DataType::kInt32);
     CHECK(cast);
 
-    cast->Launch(ctx->stream_ctx(), mask->dptr<int8_t>(), mask_tmp_buf, mask->shape().elem_cnt());
+    cast->Launch(ctx->stream(), mask->dptr<int8_t>(), mask_tmp_buf, mask->shape().elem_cnt());
     NdarrayUtil<device_type, int32_t>::ReduceSum(
         ctx->device_ctx(), XpuVarNdarray<int32_t>(count->shape(), count->mut_dptr<int32_t>()),
         XpuVarNdarray<const int32_t>(mask->shape(), mask_tmp_buf),

@@ -176,7 +176,7 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
     auto f2h = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
         ctx->device_type(), DataType::kFloat, DataType::kFloat16);
     CHECK(f2h);
-    f2h->Launch(ctx->stream_ctx(), tmp_buf->dptr<float>(), out->mut_dptr<float16>(),
+    f2h->Launch(ctx->stream(), tmp_buf->dptr<float>(), out->mut_dptr<float16>(),
                 out->shape().elem_cnt());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
