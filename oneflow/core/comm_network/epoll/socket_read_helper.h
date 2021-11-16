@@ -54,12 +54,6 @@ class SocketReadHelper final {
   bool (SocketReadHelper::*cur_read_handle_)();
   char* read_ptr_;
   size_t read_size_;
-
-  std::mutex DoCur_num_mutex_;
-  size_t DoCur_num_;
-
-  std::mutex Actor_done_mutex_;
-  size_t Actor_done_;
 };
 
 }  // namespace oneflow

@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <ios>
 #ifdef __linux__
 
 #include "oneflow/core/comm_network/epoll/socket_read_helper.h"
@@ -22,8 +21,6 @@ limitations under the License.
 #include "oneflow/core/transport/transport.h"
 
 #include <netinet/tcp.h>
-
-#define DebugRead false  
 
 namespace oneflow {
 
@@ -42,11 +39,6 @@ void SocketReadHelper::SwitchToMsgHeadReadHandle() {
   cur_read_handle_ = &SocketReadHelper::MsgHeadReadHandle;
   read_ptr_ = reinterpret_cast<char*>(&cur_msg_);
   read_size_ = sizeof(cur_msg_);
-  if(DebugRead) {
-    std::cout<<"SocketReadHelper::SwitchToMsgHeadReadHandle,the read_ptr:"<< reinterpret_cast<uint64_t>(read_ptr_) << std::endl;
-    std::cout<<"SocketReadHelper::SwitchToMsgHeadReadHandle,the read_size:" << read_size_ << std::endl;
-    std::cout<<std::endl;
-  }
 }
 
 void SocketReadHelper::ReadUntilSocketNotReadable() {
@@ -63,28 +55,6 @@ bool SocketReadHelper::MsgBodyReadHandle() {
 
 bool SocketReadHelper::DoCurRead(void (SocketReadHelper::*set_cur_read_done)()) {
   ssize_t n = read(sockfd_, read_ptr_, read_size_);
-if(cur_msg_.msg_type == SocketMsgType::kActor ) {
-    std::cout<<"SocketReadHelper::DoCurRead,the read_ptr:" << reinterpret_cast<uint64_t>(read_ptr_) << std::endl;
-    std::cout<<"SocketReadHelper::DoCurRead,the read_size:"<< read_size_ << std::endl;
-    std::cout<<"SocketReadHelper::DoCurRead,the n:" << n << std::endl;
-    std::cout<<"SocketReadHelper::DoCurRead,the sockfd_:" << sockfd_ << std::endl;
-    std::cout<<std::endl;
-
-    DoCur_num_mutex_.lock();
-    std::string dir = "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_16";
-   // std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_16/";
-    std::string path = dir + "Read_helper_DoCurRead" + std::to_string(DoCur_num_);
-    DoCur_num_++;
-    std::ofstream out;
-    out.open(path,std::ofstream::out | std::ofstream::binary);
-    if(!out.is_open()){
-        return false ;
-    }
-    out.write(cur_msg_.actor_msg.data,cur_msg_.actor_msg.size);
-    out.close();
-    DoCur_num_mutex_.unlock();
-    
-  }
   const int val = 1;
   PCHECK(setsockopt(sockfd_, IPPROTO_TCP, TCP_QUICKACK, (char*)&val, sizeof(int)) == 0);
   if (n == read_size_) {
@@ -134,11 +104,6 @@ void SocketReadHelper::SetStatusWhenRequestReadMsgHeadDone() {
   auto mem_desc = static_cast<const SocketMemDesc*>(cur_msg_.request_read_msg.dst_token);
   read_ptr_ = reinterpret_cast<char*>(mem_desc->mem_ptr);
   read_size_ = mem_desc->byte_size;
-  if(DebugRead) {
-    std::cout<<"SocketReadHelper::SetStatusWhenRequestReadMsgHeadDone,the read_ptr:"<<std::hex << reinterpret_cast<uint64_t>(read_ptr_) << std::endl;
-    std::cout<<"SocketReadHelper::SetStatusWhenRequestReadMsgHeadDone,the read_size:"<<std::hex << read_size_ << std::endl;
-    std::cout<<std::endl;
-  }
   cur_read_handle_ = &SocketReadHelper::MsgBodyReadHandle;
 }
 
@@ -146,25 +111,6 @@ void SocketReadHelper::SetStatusWhenActorMsgHeadDone() {
   size_t size = cur_msg_.actor_msg.size;
   char* data = (char*)malloc(size);
   std::memcpy(data, cur_msg_.actor_msg.data, size);
-  if(cur_msg_.msg_type == SocketMsgType::kActor ) {
-    std::cout<<"SocketReadHelper::SetStatusWhenActorMsgHeadDone,the size:"<<std::hex <<size << std::endl;
-    std::cout<<"SocketReadHelper::SetStatusWhenActorMsgHeadDone,the data:"<<std::hex << reinterpret_cast<uint64_t>(data) << std::endl;
-    std::cout<<std::endl;
-    Actor_done_mutex_.lock();
-  std::string dir = "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_16";
-    //std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_16/";
-    std::string path = dir + "Read_helper_SetStatusWhenActorMsgHeadDone" + std::to_string(Actor_done_);
-    Actor_done_++;
-    std::ofstream out;
-    out.open(path,std::ofstream::out | std::ofstream::binary);
-    if(!out.is_open()){
-        return ;
-    }
-    out.write(cur_msg_.actor_msg.data,cur_msg_.actor_msg.size);
-    out.close();
-    Actor_done_mutex_.unlock();
-  }
-  std::cout<<"SocketReadHelper::SetStatusWhenActorMsgHeadDone"<<std::endl;
   Global<ActorMsgBus>::Get()->HandleRecvData(data, size);
   SwitchToMsgHeadReadHandle();
 }

@@ -24,10 +24,13 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include <netinet/tcp.h>
 
+<<<<<<< HEAD
 #include <fstream>
 
 #define DebugEpoll true 
 
+=======
+>>>>>>> c648f996f13faed702edd02b360d459e0665d828
 namespace oneflow {
 
 namespace {
@@ -99,6 +102,7 @@ EpollCommNet::~EpollCommNet() {
 void EpollCommNet::SendMsg(int64_t dst_machine_id, void * data, size_t size) {
   SocketMsg msg;
   msg.actor_msg.size = 0;
+<<<<<<< HEAD
   msg.msg_type = SocketMsgType::kActor;
   std::memcpy(msg.actor_msg.data, data, size);//这里应该是将data的内容拷贝给msg.actor_msg.data 
   msg.actor_msg.size = size;
@@ -129,6 +133,12 @@ void EpollCommNet::SendMsg(int64_t dst_machine_id, void * data, size_t size) {
     std::cout<<"EpollCommNet::SendMsg,the msg:" << reinterpret_cast<uint64_t>(&msg) << std::endl;
     std::cout<<std::endl;
   }
+=======
+  std::memcpy(msg.actor_msg.data, data, size);
+  msg.actor_msg.size = size;
+  msg.msg_type = SocketMsgType::kActor;
+  free(data);
+>>>>>>> c648f996f13faed702edd02b360d459e0665d828
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 
 }

@@ -20,10 +20,13 @@ limitations under the License.
 
 #include <sys/eventfd.h>
 
+<<<<<<< HEAD
 #include <fstream>
 
 #define DebugWrite true 
 
+=======
+>>>>>>> c648f996f13faed702edd02b360d459e0665d828
 namespace oneflow {
 
 SocketWriteHelper::~SocketWriteHelper() {
@@ -47,15 +50,12 @@ SocketWriteHelper::SocketWriteHelper(int sockfd, IOEventPoller* poller) {
   cur_write_handle_ = &SocketWriteHelper::InitMsgWriteHandle;
   write_ptr_ = nullptr;
   write_size_ = 0;
-  debug_actor_msg_ = 0;//todo just for debug 
-  write_msg_ = 0;
-  init_msg_ = 0;
-  DocurWrite_ = 0;
 }
 
 void SocketWriteHelper::AsyncWrite(const SocketMsg& msg) {
   pending_msg_queue_mtx_.lock();
   bool need_send_event = pending_msg_queue_->empty();
+<<<<<<< HEAD
   if(msg.msg_type ==  SocketMsgType::kActor) {
       debug_actor_msg_++;
       std::cout<<" SocketWriteHelper::AsyncWrite,the debug_actor_msg_:"<<debug_actor_msg_ << std::endl;
@@ -74,6 +74,8 @@ void SocketWriteHelper::AsyncWrite(const SocketMsg& msg) {
       write_mutex_.unlock();
 
   }
+=======
+>>>>>>> c648f996f13faed702edd02b360d459e0665d828
   pending_msg_queue_->push(msg);
   pending_msg_queue_mtx_.unlock();
   if (need_send_event) { SendQueueNotEmptyEvent(); }
@@ -104,13 +106,11 @@ bool SocketWriteHelper::InitMsgWriteHandle() {
     }
     if (cur_msg_queue_->empty()) { return false; }
   }
-  if(DebugWrite) {
-    std::cout <<"SocketWriteHelper::InitMsgWriteHandle,the cur_msg_queue_->front():" <<reinterpret_cast<uint64_t>(&cur_msg_queue_->front()) << std::endl;
-  }
   cur_msg_ = cur_msg_queue_->front();
   cur_msg_queue_->pop();
   write_ptr_ = reinterpret_cast<const char*>(&cur_msg_);
   write_size_ = sizeof(cur_msg_);
+<<<<<<< HEAD
   if(cur_msg_.msg_type == SocketMsgType::kActor ) {
     init_msg_mutex_.lock();
     std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_15/";
@@ -134,6 +134,8 @@ bool SocketWriteHelper::InitMsgWriteHandle() {
     std::cout<<"SocketWriteHelper::InitMsgWriteHandle,the write_size_:" << write_size_ << std::endl;
     std::cout<<std::endl;
   }
+=======
+>>>>>>> c648f996f13faed702edd02b360d459e0665d828
   cur_write_handle_ = &SocketWriteHelper::MsgHeadWriteHandle;
 
   return true;
@@ -149,27 +151,6 @@ bool SocketWriteHelper::MsgBodyWriteHandle() {
 
 bool SocketWriteHelper::DoCurWrite(void (SocketWriteHelper::*set_cur_write_done)()) {
   ssize_t n = write(sockfd_, write_ptr_, write_size_);
-  if(cur_msg_.msg_type == SocketMsgType::kActor ) {
-    std::cout<<"SocketWriteHelper::DoCurWrite,the sockfd_:"<< sockfd_  << std::endl;
-    std::cout<<"SocketWriteHelper::DoCurWrite,the write_size:"<< write_size_ << std::endl;
-    std::cout<<"SocketWriteHelper::DoCurWrite,the n:" << n << std::endl;
-    std::cout<<"SocketWriteHelper::DoCurWrite,the write_ptr_:"<<reinterpret_cast<uint64_t>(write_ptr_) << std::endl;
-    std::cout << std::endl;
-
-    DocurWrite_muex_.lock();
-    std::string dir= "/home/shixiaoxiang/oneflow/oneflow/core/comm_network/epoll/temp1_15/";
-    std::string path = dir + "write_helper_DoCurWrite" + std::to_string(DocurWrite_);
-    DocurWrite_++;
-    std::ofstream out;
-    out.open(path,std::ofstream::out | std::ofstream::binary);
-    if(!out.is_open()){
-        return false ;
-    }
-    out.write(cur_msg_.actor_msg.data,cur_msg_.actor_msg.size);
-    out.close();
-    DocurWrite_muex_.unlock();
-    
-  }
   if (n == write_size_) {
     (this->*set_cur_write_done)();
     return true;
@@ -208,11 +189,6 @@ void SocketWriteHelper::SetStatusWhenRequestReadMsgHeadDone() {
   auto src_mem_desc = static_cast<const SocketMemDesc*>(src_token);
   write_ptr_ = reinterpret_cast<const char*>(src_mem_desc->mem_ptr);
   write_size_ = src_mem_desc->byte_size;
-  if(DebugWrite) {
-    std::cout<<" SocketWriteHelper::SetStatusWhenRequestReadMsgHeadDone,the write_ptr:"<<reinterpret_cast<uint64_t>(write_ptr_) << std::endl;
-    std::cout<<" SocketWriteHelper::SetStatusWhenRequestReadMsgHeadDone,the write_size:"<<write_size_ << std::endl;
-    std::cout<<std::endl;
-  }
   cur_write_handle_ = &SocketWriteHelper::MsgBodyWriteHandle;
 }
 
