@@ -61,7 +61,7 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("broadcast_div_grad")                                              \
       .SetCreateFn<BroadcastDivGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()        \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
-                       & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype_pair))) \
+                       && (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype_pair))) \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                        \
         const user_op::TensorDesc& z = ctx->InputTensorDesc("z", 0);                      \
         const DataType& data_type = z.data_type();                                        \

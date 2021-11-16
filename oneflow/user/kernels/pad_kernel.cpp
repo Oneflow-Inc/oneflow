@@ -127,9 +127,9 @@ class PadKernel final : public OpKernel, public CudaGraphSupport {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("pad").SetCreateFn<PadKernel>().SetIsMatchedHob((FillPrimitiveExists() == true)
-                                                                     & (CopyNdPrimitiveExists()
-                                                                        == true));
+REGISTER_USER_KERNEL("pad").SetCreateFn<PadKernel>().SetIsMatchedHob(FillPrimitiveExists()
+                                                                     && CopyNdPrimitiveExists()
+                                                                        );
 
 class PadGradKernel final : public OpKernel, public CudaGraphSupport {
  public:
@@ -192,7 +192,7 @@ class PadGradKernel final : public OpKernel, public CudaGraphSupport {
 
 REGISTER_USER_KERNEL("pad_grad")
     .SetCreateFn<PadGradKernel>()
-    .SetIsMatchedHob((MemsetPrimitiveExists() == true) & (CopyNdPrimitiveExists() == true));
+    .SetIsMatchedHob(MemsetPrimitiveExists() && CopyNdPrimitiveExists());
 
 }  // namespace user_op
 

@@ -96,8 +96,8 @@ class FusedCastScaleGpuKernel final : public user_op::OpKernel, public user_op::
   REGISTER_USER_KERNEL("fused_cast_scale")                                            \
       .SetCreateFn<FusedCastScaleGpuKernel<y_type, x_type>>()                         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                 \
-                       & (user_op::HobDataType("y", 0) == GetDataType<y_type>::value) \
-                       & (user_op::HobDataType("x", 0) == GetDataType<x_type>::value));
+                       && (user_op::HobDataType("y", 0) == GetDataType<y_type>::value) \
+                       && (user_op::HobDataType("x", 0) == GetDataType<x_type>::value));
 
 REGISTER_FUSED_CAST_SCALE_GPU_KERNEL(half, float);
 REGISTER_FUSED_CAST_SCALE_GPU_KERNEL(half, double);

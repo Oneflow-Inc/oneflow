@@ -54,7 +54,7 @@ class MathBinaryBroadcastKernel final : public user_op::OpKernel, public user_op
           &NdarrayUtil<device, OF_PP_PAIR_FIRST(data_type_pair)>::OF_PP_CAT(          \
               Broadcast, OF_PP_PAIR_SECOND(math_type_pair))>>()                       \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                           \
-                       & (user_op::HobDataType("z", 0) == OF_PP_PAIR_SECOND(data_type_pair)));
+                       && (user_op::HobDataType("z", 0) == OF_PP_PAIR_SECOND(data_type_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,
                                  MATH_BINARY_BROADCAST_FUNC_SEQ, DEVICE_TYPE_SEQ,
@@ -73,8 +73,8 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,
           &NdarrayUtil<device, OF_PP_PAIR_FIRST(data_type_pair)>::OF_PP_CAT(                  \
               Broadcast, OF_PP_PAIR_SECOND(math_type_pair))>>()                               \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
-                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair))  \
-                       & (user_op::HobDataType("z", 0) == DataType::kInt8));
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair))  \
+                       && (user_op::HobDataType("z", 0) == DataType::kInt8));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_LOGICAL_KERNEL,
                                  MATH_BINARY_BROADCAST_LOGICAL_FUNC_SEQ, DEVICE_TYPE_SEQ,

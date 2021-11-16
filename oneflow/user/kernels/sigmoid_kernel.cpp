@@ -40,7 +40,7 @@ class SigmoidKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("sigmoid")                                                               \
       .SetCreateFn<SigmoidKernel<device, dtype>>()                                              \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
@@ -77,7 +77,7 @@ class SigmoidGradKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("sigmoid_grad")                                                          \
       .SetCreateFn<SigmoidGradKernel<device, dtype>>()                                          \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))          \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))          \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                        \

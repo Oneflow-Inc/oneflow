@@ -49,7 +49,7 @@ class BroadcastLikeKernel final : public user_op::OpKernel, public user_op::Cuda
   REGISTER_USER_KERNEL("broadcast_like")                    \
       .SetCreateFn<BroadcastLikeKernel<device, dtype>>()    \
       .SetIsMatchedHob((user_op::HobDeviceType() == device) \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 #ifdef WITH_CUDA
 #define REGISTER_BROADCAST_LIKE_KERNEL(dtype)                 \

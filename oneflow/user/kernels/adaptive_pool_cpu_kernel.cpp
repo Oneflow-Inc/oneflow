@@ -221,15 +221,15 @@ class AdaptivePool3DCpuGradKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("adaptive_avg_pool1d")                                          \
       .SetCreateFn<AdaptivePool1DCpuKernel<device, dtype>>()                           \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                            \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("adaptive_avg_pool2d")                                          \
       .SetCreateFn<AdaptivePool2DCpuKernel<device, dtype>>()                           \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                            \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("adaptive_avg_pool3d")                                          \
       .SetCreateFn<AdaptivePool3DCpuKernel<device, dtype>>()                           \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                            \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_ADAPTIVE_POOL_KERNEL_WITH_DEVICE(device) \
   REGISTER_ADAPTIVE_POOL_KERNEL(device, float)            \
@@ -242,15 +242,15 @@ REGISTER_ADAPTIVE_POOL_KERNEL_WITH_DEVICE(DeviceType::kCPU)
   REGISTER_USER_KERNEL("adaptive_avg_pool1d_grad")                                      \
       .SetCreateFn<AdaptivePool1DCpuGradKernel<device, dtype>>()                        \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)); \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("adaptive_avg_pool2d_grad")                                      \
       .SetCreateFn<AdaptivePool2DCpuGradKernel<device, dtype>>()                        \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)); \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("adaptive_avg_pool3d_grad")                                      \
       .SetCreateFn<AdaptivePool3DCpuGradKernel<device, dtype>>()                        \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL_WITH_DEVICE(device) \
   REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL(device, float)            \

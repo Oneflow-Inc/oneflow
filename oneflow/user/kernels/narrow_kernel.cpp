@@ -126,7 +126,7 @@ REGISTER_USER_KERNEL("narrow").SetCreateFn<NarrowKernel>().SetIsMatchedHob(CopyN
                                                                            == true);
 REGISTER_USER_KERNEL("narrow_grad")
     .SetCreateFn<NarrowGradKernel>()
-    .SetIsMatchedHob((MemsetPrimitiveExists() == true) & (CopyNdPrimitiveExists() == true));
+    .SetIsMatchedHob(MemsetPrimitiveExists() && CopyNdPrimitiveExists());
 
 }  // namespace user_op
 

@@ -299,7 +299,7 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("moving_average_min_max_observer")                              \
       .SetCreateFn<GpuMovingAverageMinMaxObserverKernel<dtype>>()                      \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t { return 2 * sizeof(dtype); })
 
 REGISTER_MOVING_AVERAGE_MIN_MAX_OBSERVER_KERNEL(float);

@@ -79,7 +79,7 @@ class AffineGridKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("affine_grid")                                                     \
       .SetCreateFn<AffineGridKernel<device, dtype>>()                                     \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
-                       & (user_op::HobDataType("theta", 0) == GetDataType<dtype>::value)) \
+                       && (user_op::HobDataType("theta", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                       \
         const Shape& size = ctx->Attr<Shape>("size");                                     \
         size_t tmp_buffer_size = size.Count(2) * (size.NumAxes() - 1) * sizeof(dtype);    \
@@ -149,7 +149,7 @@ class AffineGridGradKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("affine_grid_grad")                                                \
       .SetCreateFn<AffineGridGradKernel<device, dtype>>()                                 \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
-                       & (user_op::HobDataType("dgrid", 0) == GetDataType<dtype>::value)) \
+                       && (user_op::HobDataType("dgrid", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                       \
         const Shape& size = ctx->Attr<Shape>("size");                                     \
         size_t tmp_buffer_size = size.Count(2) * (size.NumAxes() - 1) * sizeof(dtype);    \

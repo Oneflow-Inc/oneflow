@@ -50,7 +50,7 @@ class TfCpuPReluKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("tf_prelu")                                                    \
       .SetCreateFn<TfCpuPReluKernel<dtype>>()                                         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                 \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
         const Shape& in_shape = ctx->InputShape("x", 0);                              \
         return GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(dtype));               \
@@ -103,7 +103,7 @@ class TfCpuPReluGradKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("tf_prelu_grad")                                                \
       .SetCreateFn<TfCpuPReluGradKernel<dtype>>()                                      \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                              \
         const Shape& in_shape = ctx->InputShape("x", 0);                               \
         return 3 * GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(dtype));            \

@@ -156,7 +156,7 @@ class MatmulKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
 
 REGISTER_USER_KERNEL("matmul")
     .SetCreateFn<MatmulKernel>()
-    .SetIsMatchedHob((MemcpyPrimitiveExists() == true) & (MatmulPrimitiveExists() == true))
+    .SetIsMatchedHob(MemcpyPrimitiveExists() && MatmulPrimitiveExists())
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.has_input("_add_to_output", 0)) {
@@ -219,7 +219,7 @@ class BatchMatmulKernel final : public user_op::OpKernel, public user_op::CudaGr
 
 REGISTER_USER_KERNEL("batch_matmul")
     .SetCreateFn<BatchMatmulKernel>()
-    .SetIsMatchedHob((MemcpyPrimitiveExists() == true) & (BatchMatmulPrimitiveExists() == true))
+    .SetIsMatchedHob(MemcpyPrimitiveExists() && BatchMatmulPrimitiveExists())
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.has_input("_add_to_output", 0)) {
@@ -279,7 +279,7 @@ class BroadcastMatmulKernel final : public user_op::OpKernel, public user_op::Cu
 
 REGISTER_USER_KERNEL("broadcast_matmul")
     .SetCreateFn<BroadcastMatmulKernel>()
-    .SetIsMatchedHob((MemcpyPrimitiveExists() == true) & (MatmulPrimitiveExists() == true))
+    .SetIsMatchedHob(MemcpyPrimitiveExists() && MatmulPrimitiveExists())
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.has_input("_add_to_output", 0)) {
@@ -341,8 +341,8 @@ auto PrimitiveExistsForBroadcastMatmulGradB() {
 
 REGISTER_USER_KERNEL("broadcast_matmul_grad_b")
     .SetCreateFn<BroadcastMatmulGradBKernel>()
-    .SetIsMatchedHob((MemcpyPrimitiveExists() == true)
-                     & (PrimitiveExistsForBroadcastMatmulGradB() == true))
+    .SetIsMatchedHob(MemcpyPrimitiveExists()
+                     && PrimitiveExistsForBroadcastMatmulGradB())
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.has_input("_add_to_output", 0)) {

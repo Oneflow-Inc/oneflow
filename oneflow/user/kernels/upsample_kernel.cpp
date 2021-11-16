@@ -160,14 +160,14 @@ class UpsampleNearestGradCPUKernel final : public user_op::OpKernel {
       .SetCreateFn<UpsampleNearestCPUKernel<dtype>>()                                    \
       .SetIsMatchedHob(                                                                  \
           (user_op::HobDeviceType() == DeviceType::kCPU)                                 \
-          & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)                  \
-          & (user_op::HobAttr<std::string>("interpolation") == std::string("nearest"))); \
+          && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)                  \
+          && (user_op::HobAttr<std::string>("interpolation") == std::string("nearest"))); \
   REGISTER_USER_KERNEL("upsample_grad")                                                  \
       .SetCreateFn<UpsampleNearestGradCPUKernel<dtype>>()                                \
       .SetIsMatchedHob(                                                                  \
           (user_op::HobDeviceType() == DeviceType::kCPU)                                 \
-          & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)                 \
-          & (user_op::HobAttr<std::string>("interpolation") == std::string("nearest")));
+          && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)                 \
+          && (user_op::HobAttr<std::string>("interpolation") == std::string("nearest")));
 
 REGISTER_UPSAMPLE_NEAREST_CPU_KERNEL(float)
 REGISTER_UPSAMPLE_NEAREST_CPU_KERNEL(double)
@@ -244,14 +244,14 @@ class UpsampleBilinearGradCPUKernel final : public user_op::OpKernel {
       .SetCreateFn<UpsampleBilinearCPUKernel<dtype>>()                                    \
       .SetIsMatchedHob(                                                                   \
           (user_op::HobDeviceType() == DeviceType::kCPU)                                  \
-          & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)                   \
-          & (user_op::HobAttr<std::string>("interpolation") == std::string("bilinear"))); \
+          && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)                   \
+          && (user_op::HobAttr<std::string>("interpolation") == std::string("bilinear"))); \
   REGISTER_USER_KERNEL("upsample_grad")                                                   \
       .SetCreateFn<UpsampleBilinearGradCPUKernel<dtype>>()                                \
       .SetIsMatchedHob(                                                                   \
           (user_op::HobDeviceType() == DeviceType::kCPU)                                  \
-          & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)                  \
-          & (user_op::HobAttr<std::string>("interpolation") == std::string("bilinear")));
+          && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)                  \
+          && (user_op::HobAttr<std::string>("interpolation") == std::string("bilinear")));
 
 REGISTER_UPSAMPLE_BILINEAR_CPU_KERNEL(float)
 REGISTER_UPSAMPLE_BILINEAR_CPU_KERNEL(double)

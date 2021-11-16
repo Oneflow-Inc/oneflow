@@ -101,7 +101,7 @@ class SamePaddingKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("same_padding")
     .SetCreateFn<SamePaddingKernel>()
-    .SetIsMatchedHob((FillPrimitiveExists() == true) & (CopyNdPrimitiveExists() == true));
+    .SetIsMatchedHob(FillPrimitiveExists() && CopyNdPrimitiveExists());
 
 class SamePaddingGradKernel final : public user_op::OpKernel {
  public:

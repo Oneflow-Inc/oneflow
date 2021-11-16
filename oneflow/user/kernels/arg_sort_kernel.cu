@@ -108,7 +108,7 @@ class GpuArgSortKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("arg_sort")                                                                 \
       .SetCreateFn<GpuArgSortKernel<dtype>>()                                                      \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))             \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))             \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
         const Shape& in_shape = ctx->InputShape("in", 0);                                          \
         const int32_t elem_cnt = in_shape.elem_cnt();                                              \

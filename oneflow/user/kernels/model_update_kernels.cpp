@@ -155,8 +155,8 @@ class SGDUpdateKernel final : public user_op::OpKernel, public user_op::CudaGrap
   REGISTER_USER_KERNEL("sgd_update")                                                     \
       .SetCreateFn<SGDUpdateKernel<device, dtype, gtype>>()                              \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                              \
-                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
+                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
 
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCPU, double, double);
@@ -236,9 +236,9 @@ class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
                                                 OF_PP_PAIR_FIRST(indices_type_pair)>>()          \
       .SetIsMatchedHob(                                                                          \
           (user_op::HobDeviceType() == device_type_v)                                            \
-          & (user_op::HobDataType("model", 0) == OF_PP_PAIR_SECOND(data_type_pair))              \
-          & (user_op::HobDataType("model_diff_values", 0) == OF_PP_PAIR_SECOND(data_type_pair))  \
-          & (user_op::HobDataType("model_diff_indices", 0)                                       \
+          && (user_op::HobDataType("model", 0) == OF_PP_PAIR_SECOND(data_type_pair))              \
+          && (user_op::HobDataType("model_diff_values", 0) == OF_PP_PAIR_SECOND(data_type_pair))  \
+          && (user_op::HobDataType("model_diff_indices", 0)                                       \
              == OF_PP_PAIR_SECOND(indices_type_pair)))                                           \
       .SetInferTmpSizeFn(GenInferTmpSizeFn<device_type_v, OF_PP_PAIR_FIRST(data_type_pair),      \
                                            OF_PP_PAIR_FIRST(indices_type_pair)>());
@@ -294,8 +294,8 @@ class MomentumUpdateKernel final : public user_op::OpKernel, public user_op::Cud
   REGISTER_USER_KERNEL("momentum_update")                                                \
       .SetCreateFn<MomentumUpdateKernel<device, dtype, gtype>>()                         \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                              \
-                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
+                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
 
 REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCPU, double, double);
@@ -366,9 +366,9 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
           device_type_v, OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(indices_type_pair)>>() \
       .SetIsMatchedHob(                                                                            \
           (user_op::HobDeviceType() == device_type_v)                                              \
-          & (user_op::HobDataType("model", 0) == OF_PP_PAIR_SECOND(data_type_pair))                \
-          & (user_op::HobDataType("model_diff_values", 0) == OF_PP_PAIR_SECOND(data_type_pair))    \
-          & (user_op::HobDataType("model_diff_indices", 0)                                         \
+          && (user_op::HobDataType("model", 0) == OF_PP_PAIR_SECOND(data_type_pair))                \
+          && (user_op::HobDataType("model_diff_values", 0) == OF_PP_PAIR_SECOND(data_type_pair))    \
+          && (user_op::HobDataType("model_diff_indices", 0)                                         \
              == OF_PP_PAIR_SECOND(indices_type_pair)))                                             \
       .SetInferTmpSizeFn(GenInferTmpSizeFn<device_type_v, OF_PP_PAIR_FIRST(data_type_pair),        \
                                            OF_PP_PAIR_FIRST(indices_type_pair)>());
@@ -452,8 +452,8 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
   REGISTER_USER_KERNEL("adam_update")                                                    \
       .SetCreateFn<AdamUpdateKernel<device, dtype, gtype>>()                             \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                              \
-                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
+                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
 
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCPU, double, double);
@@ -519,8 +519,8 @@ class AdagradUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
   REGISTER_USER_KERNEL("adagrad_update")                                                 \
       .SetCreateFn<AdagradUpdateKernel<device, dtype, gtype>>()                          \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                              \
-                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
+                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
 
 REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kCPU, double, double);
@@ -621,9 +621,9 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
                                                  OF_PP_PAIR_FIRST(indices_type_pair)>>()          \
       .SetIsMatchedHob(                                                                           \
           (user_op::HobDeviceType() == device_type_v)                                             \
-          & (user_op::HobDataType("model", 0) == OF_PP_PAIR_SECOND(data_type_pair))               \
-          & (user_op::HobDataType("model_diff_values", 0) == OF_PP_PAIR_SECOND(data_type_pair))   \
-          & (user_op::HobDataType("model_diff_indices", 0)                                        \
+          && (user_op::HobDataType("model", 0) == OF_PP_PAIR_SECOND(data_type_pair))               \
+          && (user_op::HobDataType("model_diff_values", 0) == OF_PP_PAIR_SECOND(data_type_pair))   \
+          && (user_op::HobDataType("model_diff_indices", 0)                                        \
              == OF_PP_PAIR_SECOND(indices_type_pair)))                                            \
       .SetInferTmpSizeFn(GenInferTmpSizeFn<device_type_v, OF_PP_PAIR_FIRST(data_type_pair),       \
                                            OF_PP_PAIR_FIRST(indices_type_pair)>());
@@ -724,8 +724,8 @@ user_op::InferTmpSizeFn LambGenInferTmpSizeFn() {
   REGISTER_USER_KERNEL("lamb_update")                                                          \
       .SetCreateFn<LambUpdateKernel<device, dtype, gtype>>()                                   \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                    \
-                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)       \
-                       & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value)) \
+                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)       \
+                       && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value)) \
       .SetInferTmpSizeFn(LambGenInferTmpSizeFn<device, dtype>());
 
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCPU, float, float);
@@ -818,8 +818,8 @@ class RmsPropUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
   REGISTER_USER_KERNEL("rmsprop_update")                                                 \
       .SetCreateFn<RmsPropUpdateKernel<device, dtype, gtype>>()                          \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                              \
-                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
+                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
 
 REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCPU, double, double);
@@ -920,8 +920,8 @@ user_op::InferTmpSizeFn LarsGenInferTmpSizeFn() {
   REGISTER_USER_KERNEL("lars_update")                                                          \
       .SetCreateFn<LarsUpdateKernel<device, dtype, gtype>>()                                   \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                    \
-                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)       \
-                       & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value)) \
+                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)       \
+                       && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value)) \
       .SetInferTmpSizeFn(LarsGenInferTmpSizeFn<device, dtype>());
 
 REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCPU, float, float);

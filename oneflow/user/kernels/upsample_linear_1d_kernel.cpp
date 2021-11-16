@@ -135,11 +135,11 @@ class UpsampleLinearGrad1DCPUKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("upsample_linear_1d")                                           \
       .SetCreateFn<UpsampleLinear1DCPUKernel<dtype>>()                                 \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("upsample_linear_1d_grad")                                      \
       .SetCreateFn<UpsampleLinearGrad1DCPUKernel<dtype>>()                             \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_UPSAMPLELINEAR1D_CPU_KERNEL(float)
 REGISTER_UPSAMPLELINEAR1D_CPU_KERNEL(double)

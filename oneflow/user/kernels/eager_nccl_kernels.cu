@@ -347,8 +347,8 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("eager_nccl_s2s")                                                \
       .SetCreateFn<EagerNcclS2SKernel<dtype>>()                                         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferEagerNcclS2SKernelTmpBufferSize);
 
 REGISTER_EAGER_NCCL_S2S_KERNEL(int8_t)

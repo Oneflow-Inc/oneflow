@@ -112,9 +112,9 @@ class SparseSoftmaxCrossEntropyMsKernel final : public user_op::OpKernel {
       .SetCreateFn<kernel_class<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                   \
                                 OF_PP_PAIR_FIRST(ltype_pair)>>()                               \
       .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                             \
-                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))   \
-                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair))     \
-                       & (LogSoftmaxPrimitiveExists() == true));
+                       && (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))   \
+                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair))     \
+                       && LogSoftmaxPrimitiveExists());
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
                                  (SparseSoftmaxCrossEntropyKernel),
@@ -211,8 +211,8 @@ class SparseSoftmaxCrossEntropyMsGradKernel final : public user_op::OpKernel {
                                 OF_PP_PAIR_FIRST(ltype_pair)>>()                                 \
       .SetIsMatchedHob(                                                                          \
           (user_op::HobDeviceType() == device_type_v)                                            \
-          & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))                  \
-          & (user_op::HobDataType("prediction_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair)))       \
+          && (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))                  \
+          && (user_op::HobDataType("prediction_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair)))       \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                     \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {  \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("prediction_diff", 0, "prob", 0, true));          \

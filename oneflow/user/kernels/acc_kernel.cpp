@@ -47,7 +47,7 @@ class AccKernel final : public user_op::OpKernel {
       .SetCreateFn<AccKernel<device, OF_PP_PAIR_FIRST(dtype)>>() \
       .SetIsMatchedHob(                                          \
           (user_op::HobDeviceType() == device)                   \
-          & (user_op::HobDataType("out", 0) == GetDataType<OF_PP_PAIR_FIRST(dtype)>::value));
+          && (user_op::HobDataType("out", 0) == GetDataType<OF_PP_PAIR_FIRST(dtype)>::value));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ACC_KERNEL, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)
 #ifdef WITH_CUDA

@@ -235,7 +235,7 @@ class GpuMinMaxObserverKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("min_max_observer")                                             \
       .SetCreateFn<GpuMinMaxObserverKernel<dtype>>()                                   \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                    \
         size_t tmp_buffer_size = 1;                                                    \
         if (ctx->Attr<bool>("per_layer_quantization") == false) {                      \

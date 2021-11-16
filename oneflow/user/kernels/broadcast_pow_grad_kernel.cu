@@ -73,7 +73,7 @@ class BroadcastPowYGradKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("broadcast_pow_y_grad")                                            \
       .SetCreateFn<BroadcastPowYGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()       \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
-                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair))) \
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair))) \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                        \
         const user_op::TensorDesc& z = ctx->InputTensorDesc("z", 0);                      \
         const DataType& data_type = z.data_type();                                        \

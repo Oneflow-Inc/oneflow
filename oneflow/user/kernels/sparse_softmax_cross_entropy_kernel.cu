@@ -117,8 +117,8 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel,
       .SetCreateFn<SparseSoftmaxCrossEntropyKernel<OF_PP_PAIR_FIRST(dtype_pair),             \
                                                    OF_PP_PAIR_FIRST(ltype_pair)>>()          \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                        \
-                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair)) \
-                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
+                       && (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair)) \
+                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)

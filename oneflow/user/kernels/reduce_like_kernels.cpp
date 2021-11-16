@@ -75,7 +75,7 @@ class ReduceSumLikeOpKernel final : public user_op::OpKernel, public user_op::Cu
   REGISTER_USER_KERNEL("reduce_sum_like")                                                     \
       .SetCreateFn<ReduceSumLikeOpKernel<device, OF_PP_PAIR_FIRST(data_type_pair)>>()         \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
-                       & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(data_type_pair))) \
+                       && (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(data_type_pair))) \
       .SetInferTmpSizeFn(ReduceSumLikeInferTmpSize);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_REDUCE_SUM_LIKE_KERNEL, DEVICE_TYPE_SEQ,
@@ -178,7 +178,7 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::
 REGISTER_USER_KERNEL("reduce_sum_like")
     .SetCreateFn<ReduceSumLikeHalfKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
-                     & (user_op::HobDataType("y", 0) == GetDataType<float16>::value))
+                     && (user_op::HobDataType("y", 0) == GetDataType<float16>::value))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
       const Shape& in_shape = ctx->InputTensorDesc("x", 0).shape();
       const Shape& out_shape = ctx->OutputTensorDesc("y", 0)->shape();

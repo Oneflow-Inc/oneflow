@@ -228,8 +228,8 @@ class ImageResizeKeepAspectRatioKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("image_resize_to_fixed")                                     \
       .SetCreateFn<ImageResizeToFixedSizeKernel>()                                  \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)               \
-                       & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer) \
-                       & (user_op::HobAttr<DataType>("data_type") == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("in", 0) == DataType::kTensorBuffer) \
+                       && (user_op::HobAttr<DataType>("data_type") == GetDataType<dtype>::value));
 
 REGISTER_IMAGE_RESIZE_KERNEL(float)
 REGISTER_IMAGE_RESIZE_KERNEL(uint8_t)
@@ -237,9 +237,9 @@ REGISTER_IMAGE_RESIZE_KERNEL(uint8_t)
 REGISTER_USER_KERNEL("image_resize_keep_aspect_ratio")
     .SetCreateFn<ImageResizeKeepAspectRatioKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
-                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer)
-                     & (user_op::HobDataType("size", 0) == DataType::kTensorBuffer)
-                     & (user_op::HobDataType("scale", 0) == DataType::kTensorBuffer));
+                     && (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
+                     && (user_op::HobDataType("out", 0) == DataType::kTensorBuffer)
+                     && (user_op::HobDataType("size", 0) == DataType::kTensorBuffer)
+                     && (user_op::HobDataType("scale", 0) == DataType::kTensorBuffer));
 
 }  // namespace oneflow

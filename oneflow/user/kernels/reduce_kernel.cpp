@@ -62,7 +62,7 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
   REGISTER_USER_KERNEL(op_name)                                                                   \
       .SetCreateFn<ReduceKernel<binary_func, device, dtype>>()                                    \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                       \
-                       & (user_op::HobDataType("output_tensor", 0) == GetDataType<dtype>::value)) \
+                       && (user_op::HobDataType("output_tensor", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
         const Shape& in_shape = ctx->InputShape("input_tensor", 0);                               \
         return in_shape.elem_cnt() * sizeof(dtype);                                               \
@@ -182,7 +182,7 @@ class ReduceSumHalfKernel final : public user_op::OpKernel, public user_op::Cuda
 REGISTER_USER_KERNEL("reduce_sum")
     .SetCreateFn<ReduceSumHalfKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
-                     & (user_op::HobDataType("output_tensor", 0) == GetDataType<float16>::value))
+                     && (user_op::HobDataType("output_tensor", 0) == GetDataType<float16>::value))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
       const Shape& in_shape = ctx->InputTensorDesc("input_tensor", 0).shape();
       const Shape& out_shape = ctx->OutputTensorDesc("output_tensor", 0)->shape();
