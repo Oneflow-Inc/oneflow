@@ -342,6 +342,47 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
   return {};
 }
 
+void NormalizationAddReluOp::build(::mlir::OpBuilder& odsBuilder, ::mlir::OperationState& odsState,
+                                   Value x, Value addend, Value moving_mean, Value moving_variance,
+                                   Value gamma, Value beta, StringRef op_name, BoolAttr trainable,
+                                   StringRef device_tag, ArrayAttr device_name,
+                                   IntegerAttr scope_symbol_id, ArrayAttr hierarchy,
+                                   DenseElementsAttr operand_segment_sizes,
+                                   DenseElementsAttr result_segment_sizes, IntegerAttr axis,
+                                   FloatAttr epsilon, BoolAttr training, FloatAttr momentum) {
+  odsState.addOperands(x);
+  if (addend) odsState.addOperands(addend);
+  if (moving_mean) odsState.addOperands(moving_mean);
+  if (moving_variance) odsState.addOperands(moving_variance);
+  odsState.addOperands(gamma);
+  odsState.addOperands(beta);
+  odsState.addAttribute(operand_segment_sizesAttrName(odsState.name),
+                        odsBuilder.getI32VectorAttr({1, (addend ? 1 : 0), (moving_mean ? 1 : 0),
+                                                     (moving_variance ? 1 : 0), 1, 1}));
+
+  odsState.addAttribute(op_nameAttrName(odsState.name), odsBuilder.getStringAttr(op_name));
+  if (trainable) { odsState.addAttribute(trainableAttrName(odsState.name), trainable); }
+  odsState.addAttribute(device_tagAttrName(odsState.name), odsBuilder.getStringAttr(device_tag));
+  odsState.addAttribute(device_nameAttrName(odsState.name), device_name);
+  if (scope_symbol_id) {
+    odsState.addAttribute(scope_symbol_idAttrName(odsState.name), scope_symbol_id);
+  }
+  if (hierarchy) { odsState.addAttribute(hierarchyAttrName(odsState.name), hierarchy); }
+  odsState.addAttribute(operand_segment_sizesAttrName(odsState.name), operand_segment_sizes);
+  odsState.addAttribute(result_segment_sizesAttrName(odsState.name), result_segment_sizes);
+  odsState.addAttribute(axisAttrName(odsState.name), axis);
+  odsState.addAttribute(epsilonAttrName(odsState.name), epsilon);
+  odsState.addAttribute(trainingAttrName(odsState.name), training);
+  odsState.addAttribute(momentumAttrName(odsState.name), momentum);
+  auto y = x.getType();
+  odsState.addTypes(y);
+  auto bn_op = llvm::dyn_cast<NormalizationOp>(x.getDefiningOp());
+  auto mean = bn_op.mean();
+  auto inv_variance = bn_op.inv_variance();
+  if (mean) odsState.addTypes(mean.getType());
+  if (inv_variance) odsState.addTypes(inv_variance.getType());
+}
+
 #include "OneFlow/OneFlowEnums.cpp.inc"
 
 #define GET_OP_CLASSES

@@ -236,6 +236,7 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedBiasAddDropoutPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern2>(patterns.getContext());
+  patterns.add<NormalizationAddReluPattern>(patterns.getContext());
 }
 
 }  // namespace oneflow
