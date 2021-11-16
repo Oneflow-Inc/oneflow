@@ -84,6 +84,9 @@ class TestMLIROptimizations(flow.unittest.TestCase):
             addend = flow.constant_like(x, 2)
             with flow.scope.placement(device, "0:0-0"):
                 loss = flow.nn.relu(_batch_norm(x, last=False) + addend)
+                flow.optimizer.SGD(
+                    flow.optimizer.PiecewiseConstantScheduler([], [0.0001]), momentum=0
+                ).minimize(loss)
                 return loss
 
         np_in_type = dtype_util.convert_oneflow_dtype_to_numpy_dtype(in_type)

@@ -1045,7 +1045,7 @@ def FusedBiasAddGeluPattern : Pat<
 def GetFirstValue :
   NativeCodeCall<"*$0.begin()">;
 def CreateNormalizationAddReluOp : NativeCodeCall<"OutlineMulCast($_builder, $0, $1)">;
-def IsTrue: Constraint<CPred<"!!$0.getValue()">, "">;
+def IsTrue: Constraint<CPred<"$0.getValue()">, "">;
 // TODO: check mean and inv_variance are not used
 def NormalizationAddReluPattern : Pattern<
   /* match */ (
