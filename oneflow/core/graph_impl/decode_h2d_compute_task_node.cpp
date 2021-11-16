@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/compute_task_node.h"
-#include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/graph/normal_forward_compute_task_node.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
 
 namespace oneflow {
 
@@ -58,10 +58,7 @@ void DecodeH2DCompTaskNode::BuildExecGphAndRegst() {
 
 #ifdef WITH_CUDA
 
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kDecodeH2D)
-    .SetStreamIndexGetterFn([](CudaStreamIndexGenerator* generator) -> uint32_t {
-      return generator->GenerateNamedStreamIndex("DECODE_H2D");
-    });
+REGISTER_NAMED_TASK_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kDecodeH2D, "DECODE_H2D")
 
 #endif
 

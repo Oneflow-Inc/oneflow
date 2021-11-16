@@ -85,7 +85,7 @@ void TraceKernelForwardDataContentEnd(KernelContext* kernel_ctx, const Kernel* k
         if (blob) { memory_size += blob->ByteSizeOfBlobBody(); }
       }
       const std::string op_name = kernel->op_conf().name();
-      kernel_ctx->device_ctx()->AddCallBack([start_event, end_event, memory_size, op_name]() {
+      kernel_ctx->stream_ctx()->AddCallback([start_event, end_event, memory_size, op_name]() {
         float elapsed_ms = 0;
         OF_CUDA_CHECK(cudaEventElapsedTime(&elapsed_ms, start_event, end_event));
         OF_CUDA_CHECK(cudaEventDestroy(start_event));

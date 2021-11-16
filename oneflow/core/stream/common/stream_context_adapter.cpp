@@ -27,8 +27,8 @@ class DeviceCtxStreamContextAdapter : public StreamContext {
   ~DeviceCtxStreamContextAdapter() override = default;
 
   Maybe<void> AddCallback(std::function<void()> callback) override {
-    device_ctx_->AddCallBack(std::move(callback));
-    return Maybe<void>::Ok();
+    UNIMPLEMENTED();
+    return Error::UnimplementedError();
   }
 
   Maybe<void> Sync() override {
@@ -51,8 +51,8 @@ class CudaDeviceCtxStreamContextAdapter : public CudaStreamContext {
   ~CudaDeviceCtxStreamContextAdapter() override = default;
 
   Maybe<void> AddCallback(std::function<void()> callback) override {
-    device_ctx_->AddCallBack(std::move(callback));
-    return Maybe<void>::Ok();
+    UNIMPLEMENTED();
+    return Error::UnimplementedError();
   }
 
   Maybe<void> Sync() override {
