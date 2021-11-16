@@ -482,6 +482,10 @@ def _squeeze(self, dim=None):
     return flow._C.squeeze(self, dim=dim)
 
 
+def _unfold(self, dimension, size, step):
+    return flow._C.unfold_tensor(self, dimension=dimension, size=size, step=step)
+
+
 def _narrow(self, dimension, start, length):
     return flow._C.narrow(self, dim=dimension, start=start, length=length)
 
@@ -634,7 +638,7 @@ def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
 
 def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
     if random_seed is None:
-        random_seed = flow.default_generator().seed()
+        random_seed = flow.default_generator.seed()
     shape = tuple(tensor.shape)
     initializer = initializer_util.GetInitializer(initializer_conf, random_seed, shape)
 
@@ -809,6 +813,7 @@ def RegisterMethods():
     Tensor.logical_not = _not
     Tensor.roll = _roll
     Tensor.squeeze = _squeeze
+    Tensor.unfold = _unfold
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
     Tensor.permute = _permute

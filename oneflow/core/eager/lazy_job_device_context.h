@@ -47,8 +47,6 @@ class LazyJobDeviceCtx final : public DeviceCtx {
 
   void SyncDevice() override { UNIMPLEMENTED(); }
 
-  void AddCallBack(std::function<void()> callback) const override { UNIMPLEMENTED(); }
-
   vm::Allocator* mut_allocator() override {
     UNIMPLEMENTED();
     return (vm::Allocator*)nullptr;

@@ -24,6 +24,8 @@ limitations under the License.
 
 namespace oneflow {
 
+class InstructionsBuilder;
+
 class VirtualMachine final {
  public:
   VirtualMachine(const VirtualMachine&) = delete;
@@ -36,6 +38,8 @@ class VirtualMachine final {
   const vm::VirtualMachineEngine& vm() const { return *vm_; }
 
  private:
+  friend class InstructionsBuilder;
+
   void Loop(const std::function<void()>& Initializer);
 
   vm::VirtualMachineEngine* mut_vm() { return vm_.Mutable(); }

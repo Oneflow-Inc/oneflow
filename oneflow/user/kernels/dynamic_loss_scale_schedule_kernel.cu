@@ -60,6 +60,6 @@ class DynamicLossScaleScheduleGpuKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("dynamic_loss_scale_schedule")
     .SetCreateFn<DynamicLossScaleScheduleGpuKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu"));
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU));
 
 }  // namespace oneflow

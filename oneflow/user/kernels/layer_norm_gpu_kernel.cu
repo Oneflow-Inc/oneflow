@@ -20,15 +20,16 @@ limitations under the License.
 #include "oneflow/core/cuda/atomic.cuh"
 #include <cub/cub.cuh>
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/core/primitive/include/fill.h"
+#include "oneflow/core/ep/include/primitive/fill.h"
 
 namespace oneflow {
 
 namespace {
 
-std::unique_ptr<primitive::Fill> NewFillPrimitive(StreamContext* stream_ctx, DataType data_type) {
-  std::unique_ptr<primitive::Fill> fill =
-      primitive::NewPrimitive<primitive::FillFactory>(stream_ctx->device_type(), data_type);
+std::unique_ptr<ep::primitive::Fill> NewFillPrimitive(StreamContext* stream_ctx,
+                                                      DataType data_type) {
+  std::unique_ptr<ep::primitive::Fill> fill =
+      ep::primitive::NewPrimitive<ep::primitive::FillFactory>(stream_ctx->device_type(), data_type);
   CHECK(fill);
   return fill;
 }
@@ -457,7 +458,7 @@ class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
 #define REGISTER_LAYER_NORM_GPU_KERNEL(dtype, bn_param_dtype)                         \
   REGISTER_USER_KERNEL("layer_norm")                                                  \
       .SetCreateFn<LayerNormGpuKernel<dtype, bn_param_dtype>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                 \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                    \
         user_op::TensorDesc* mean = ctx->OutputTensorDesc("mean", 0);                 \
@@ -523,7 +524,7 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
 #define REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(dtype, bn_param_dtype)                         \
   REGISTER_USER_KERNEL("layer_norm_grad")                                                  \
       .SetCreateFn<LayerNormGradGpuKernel<dtype, bn_param_dtype>>()                        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                      \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))     \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                         \
         const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);                 \
@@ -633,10 +634,10 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
   };
 };
 
-#define REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(dtype)  \
-  REGISTER_USER_KERNEL("layer_norm_param_grad")           \
-      .SetCreateFn<LayerNormParamGradGpuKernel<dtype>>()  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
+#define REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(dtype)              \
+  REGISTER_USER_KERNEL("layer_norm_param_grad")                       \
+      .SetCreateFn<LayerNormParamGradGpuKernel<dtype>>()              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
 
 REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(float)
@@ -745,7 +746,7 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
 
 REGISTER_USER_KERNEL("layer_norm_param_grad")
     .SetCreateFn<LayerNormParamGradGpuHalfKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
                      & (user_op::HobDataType("dy", 0) == DataType::kFloat16))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
       const int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
