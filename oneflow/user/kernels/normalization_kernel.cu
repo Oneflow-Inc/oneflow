@@ -110,6 +110,7 @@ class CudnnTensorDescHelper final {
   cudnnTensorDescriptor_t param_desc() const { return param_desc_; }
 
   void CheckParamTensor(const user_op::Tensor* tensor) const {
+    CHECK_NOTNULL(tensor);
     CHECK_EQ(tensor->shape().NumAxes(), 1);
     CHECK_EQ(tensor->shape().At(0), param_size_);
     CHECK_EQ(GetCudnnDataType(tensor->data_type()), param_data_type_);
