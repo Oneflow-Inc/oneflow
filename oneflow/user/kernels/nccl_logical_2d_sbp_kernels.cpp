@@ -30,10 +30,12 @@ class NcclLogical2DSameDim0KernelCommState final : public user_op::OpKernelState
  public:
   explicit NcclLogical2DSameDim0KernelCommState(user_op::KernelInitContext* ctx)
       : is_init_(false),
-        has_independent_stream_(ctx->op_conf().has_stream_index_hint()),
-        stream_index_(ctx->op_conf().stream_index_hint()),
+        has_independent_stream_(ctx->op_conf().has_stream_name_hint()),
+        stream_name_(""),
         parallel_desc_(ctx->parallel_desc()),
-        this_parallel_id_(ctx->parallel_ctx().parallel_id()) {}
+        this_parallel_id_(ctx->parallel_ctx().parallel_id()) {
+    if (has_independent_stream_) { stream_name_ = ctx->op_conf().stream_name_hint(); }
+  }
   ~NcclLogical2DSameDim0KernelCommState() = default;
 
   ncclComm_t comm() {
@@ -66,7 +68,7 @@ class NcclLogical2DSameDim0KernelCommState final : public user_op::OpKernelState
     }
     EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
     if (has_independent_stream_) {
-      comm_ = comm_mgr->GetCommForDeviceAndStreamId(device_set, stream_index_);
+      comm_ = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
     } else {
       comm_ = comm_mgr->GetCommForDevice(device_set);
     }
@@ -76,7 +78,7 @@ class NcclLogical2DSameDim0KernelCommState final : public user_op::OpKernelState
 
   bool is_init_;
   bool has_independent_stream_;
-  int32_t stream_index_;
+  std::string stream_name_;
   ParallelDesc parallel_desc_;
   int64_t this_parallel_id_;
   int64_t num_ranks_{};
@@ -182,9 +184,9 @@ class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKern
     perm.insert(perm.begin() + in_split_axis, 0);
 
     auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
-        ctx->stream_ctx()->device_type(), unpack_from_dim_vec.size());
+        ctx->stream()->device_type(), unpack_from_dim_vec.size());
     CHECK(transpose);
-    transpose->Launch(ctx->stream_ctx(), in->data_type(), unpack_from_dim_vec.size(),
+    transpose->Launch(ctx->stream(), in->data_type(), unpack_from_dim_vec.size(),
                       unpack_from_dim_vec.data(), unpack_from_ptr, perm.data(), out->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -250,9 +252,9 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
         if (i != out_split_axis) { perm.push_back(i); }
       }
       auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
-          ctx->stream_ctx()->device_type(), transpose_in_dim_vec.size());
+          ctx->stream()->device_type(), transpose_in_dim_vec.size());
       CHECK(transpose);
-      transpose->Launch(ctx->stream_ctx(), in->data_type(), transpose_in_dim_vec.size(),
+      transpose->Launch(ctx->stream(), in->data_type(), transpose_in_dim_vec.size(),
                         transpose_in_dim_vec.data(), in->dptr(), perm.data(),
                         tmp_buffer->mut_dptr());
     }
@@ -294,9 +296,9 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
       FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.push_back(i); }
       perm.insert(perm.begin() + in_split_axis, 0);
       auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
-          ctx->stream_ctx()->device_type(), unpack_from_dim_vec.size());
+          ctx->stream()->device_type(), unpack_from_dim_vec.size());
       CHECK(transpose);
-      transpose->Launch(ctx->stream_ctx(), in->data_type(), unpack_from_dim_vec.size(),
+      transpose->Launch(ctx->stream(), in->data_type(), unpack_from_dim_vec.size(),
                         unpack_from_dim_vec.data(), unpack_from_ptr, perm.data(), out->mut_dptr());
     }
   };

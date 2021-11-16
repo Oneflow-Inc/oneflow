@@ -91,9 +91,9 @@ foreach(oneflow_hdr_to_be_expanded ${oneflow_all_hdr_to_be_expanded})
   set_source_files_properties(${oneflow_all_hdr_expanded} PROPERTIES GENERATED TRUE)
 endforeach()
 
-file(GLOB_RECURSE oneflow_all_src 
-  "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" 
-  "${PROJECT_SOURCE_DIR}/oneflow/user/*.*" 
+file(GLOB_RECURSE oneflow_all_src
+  "${PROJECT_SOURCE_DIR}/oneflow/core/*.*"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/*.*"
   "${PROJECT_SOURCE_DIR}/oneflow/api/*.*"
   "${PROJECT_SOURCE_DIR}/oneflow/extension/python/*.*")
 if (WITH_XLA OR WITH_TENSORRT)
@@ -169,7 +169,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
       list(APPEND of_pyext_obj_cc ${oneflow_single_file})
       set(group_this ON)
     endif()
-    
+
   else() # build_python
 
     if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/cpp/.*\\.(h|cpp)$")
@@ -325,12 +325,20 @@ if (USE_CLANG_TIDY)
 endif()
 
 if(BUILD_CUDA)
-  target_compile_options(oneflow PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
-    -Xcompiler -Werror=return-type;
-    -Werror cross-execution-space-call;
-    -Wno-deprecated-gpu-targets;
-    -Xcudafe --diag_suppress=declared_but_not_referenced;
-  >)
+  if ("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
+    target_compile_options(oneflow PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+      -Xcompiler -Werror=return-type;
+      -Werror cross-execution-space-call;
+      -Wno-deprecated-gpu-targets;
+      -Xcudafe --diag_suppress=declared_but_not_referenced;
+    >)
+  elseif("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "Clang")
+    target_compile_options(oneflow PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+      -Werror=return-type;
+    >)
+  else()
+    message(FATAL_ERROR "Unknown CUDA compiler ${CMAKE_CUDA_COMPILER_ID}")
+  endif()
   # remove THRUST_IGNORE_CUB_VERSION_CHECK if starting using bundled cub
   target_compile_definitions(oneflow PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
     THRUST_IGNORE_CUB_VERSION_CHECK;
@@ -340,8 +348,6 @@ endif()
 target_compile_options(oneflow PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Werror=return-type>)
 target_treat_warnings_as_errors(oneflow)
 target_compile_definitions(oneflow PRIVATE GOOGLE_LOGGING)
-
-target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs} -Wl,--no-whole-archive -ldl -lrt)
 
 if (WITH_MLIR)
   set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/b5e470aa2e978a0ee6276b9564f85cf170ae260d.zip" CACHE STRING "" FORCE)
@@ -358,8 +364,10 @@ endif()
 
 if(APPLE)
   set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj ${ONEFLOW_MLIR_LIBS})
+  target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs} ${ONEFLOW_MLIR_LIBS})
 elseif(UNIX)
   set(of_libs -Wl,--whole-archive oneflow of_protoobj of_cfgobj of_functional_obj ${ONEFLOW_MLIR_LIBS} -Wl,--no-whole-archive -ldl -lrt)
+  target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs} ${ONEFLOW_MLIR_LIBS} -Wl,--no-whole-archive -ldl -lrt)
 elseif(WIN32)
   set(of_libs oneflow of_protoobj of_cfgobj of_functional_obj)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:oneflow")
@@ -464,7 +472,7 @@ if(BUILD_PYTHON)
   copy_files("${CFG_HRCS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 
   set(OF_CORE_HDRS)
-  list(APPEND of_core_dir_name_list "common" "device" "framework" "kernel/util" "persistence" "stream")
+  list(APPEND of_core_dir_name_list "common" "device" "framework" "kernel/util" "persistence" "ep/include")
   foreach(of_core_dir_name ${of_core_dir_name_list})
     file(GLOB_RECURSE h_files "${PROJECT_SOURCE_DIR}/oneflow/core/${of_core_dir_name}/*.h")
     list(APPEND OF_CORE_HDRS ${h_files})
@@ -474,7 +482,6 @@ if(BUILD_PYTHON)
   list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/new_kernel_util.h")
   list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_context.h")
   list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_observer.h")
-  list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/stream/include/stream_context.h")
   list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_util.cuh")
   list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/sbp_signature_builder.h")
   list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/common/symbol.h")
@@ -497,4 +504,3 @@ else() # build_python
   copy_files("${PROJECT_SOURCE_DIR}/cmake/oneflow-config.cmake" "${PROJECT_SOURCE_DIR}/cmake" "${ONEFLOW_SHARE_DIR}" of_include_copy)
 
 endif(BUILD_PYTHON)
-
