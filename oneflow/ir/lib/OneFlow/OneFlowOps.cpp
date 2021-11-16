@@ -213,7 +213,7 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
             obns.insert(bn);
           }
           attributes.push_back(rewriter.getNamedAttr(
-              "result_segment_sizes", rewriter.getI32VectorAttr({1, obns.contains("mean"),
+              "result_segment_sizes", rewriter.getI32VectorAttr({1, 1, obns.contains("mean"),
                                                                  obns.contains("inv_variance")})));
         }
       }
@@ -344,8 +344,9 @@ struct FillUserAttrsInNormalizationAddReluOp
         op->setAttr("input_lbn_segment_sizes", rewriter.getI32ArrayAttr(input_lbn_segment_sizes));
       }
       {
-        llvm::SmallVector<std::string, 4> output_lbn_segment_keys = {"y"};
-        llvm::SmallVector<std::string, 4> output_lbns = {op.op_name().str() + "/y_0"};
+        llvm::SmallVector<std::string, 4> output_lbn_segment_keys = {"y", "reserve_space"};
+        llvm::SmallVector<std::string, 4> output_lbns = {op.op_name().str() + "/y_0",
+                                                         op.op_name().str() + "/reserve_space_0"};
         if (op.mean()) {
           output_lbn_segment_keys.push_back("mean");
           output_lbns.push_back(op.op_name().str() + "/mean_0");
