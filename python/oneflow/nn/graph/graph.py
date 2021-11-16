@@ -1006,7 +1006,7 @@ class Graph(object):
 
     def __del__(self):
         # Call ClusterSync here to ensure LaunchLazyJob instruction was completed and released
-        # that make NNGraph deconstruction happened in main thread.
+        # that make NNGraph destruction happened in main thread.
         oneflow._oneflow_internal.eager.multi_client.Sync()
 
 
