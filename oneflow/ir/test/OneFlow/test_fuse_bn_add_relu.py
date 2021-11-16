@@ -77,7 +77,7 @@ class TestMLIROptimizations(flow.unittest.TestCase):
         flow.clear_default_session()
         func_config = flow.FunctionConfig()
 
-        @flow.global_function(function_config=func_config)
+        @flow.global_function(type="train", function_config=func_config)
         def FuseBnAddReluJob(
             x: oft.Numpy.Placeholder(shape, dtype=in_type)
         ) -> oft.Numpy:

@@ -178,7 +178,7 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
         {
           llvm::StringSet<> obns({});
           oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
-          for (auto key : user_op_adaptor.input_lbn_segment_keys()) {
+          for (auto key : user_op_adaptor.output_lbn_segment_keys()) {
             auto bn = key.dyn_cast<StringAttr>().getValue();
             obns.insert(bn);
           }
@@ -208,7 +208,7 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
         {
           llvm::StringSet<> obns({});
           oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
-          for (auto key : user_op_adaptor.input_lbn_segment_keys()) {
+          for (auto key : user_op_adaptor.output_lbn_segment_keys()) {
             auto bn = key.dyn_cast<StringAttr>().getValue();
             obns.insert(bn);
           }
