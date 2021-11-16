@@ -579,10 +579,9 @@ def OneFlow_NormalizationAddReluOp : OneFlow_BaseOp<"normalization_add_relu", [A
     // AnyType:$mean,
     // AnyType:$inv_variance
     AnyType:$y,
-    // TODO: add reserve_space in importer
+    AnyType:$reserve_space,
     Optional<AnyType>:$mean,
     Optional<AnyType>:$inv_variance
-    // AnyType:$reserve_space,
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes,

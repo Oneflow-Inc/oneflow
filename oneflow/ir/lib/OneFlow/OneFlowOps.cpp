@@ -474,7 +474,9 @@ void NormalizationAddReluOp::build(::mlir::OpBuilder& odsBuilder, ::mlir::Operat
     odsState.addAttribute(scope_symbol_idAttrName(odsState.name), scope_symbol_id);
   }
   if (hierarchy) { odsState.addAttribute(hierarchyAttrName(odsState.name), hierarchy); }
-  odsState.addAttribute(result_segment_sizesAttrName(odsState.name), result_segment_sizes);
+  // TODO: remove the workaround if normalization_add_relu supports infererence mode
+  odsState.addAttribute(result_segment_sizesAttrName(odsState.name),
+                        odsBuilder.getI32VectorAttr({1, 1, 1, 1}));
   odsState.addAttribute(axisAttrName(odsState.name), axis);
   odsState.addAttribute(epsilonAttrName(odsState.name), epsilon);
   odsState.addAttribute(trainingAttrName(odsState.name), training);
@@ -482,8 +484,9 @@ void NormalizationAddReluOp::build(::mlir::OpBuilder& odsBuilder, ::mlir::Operat
   auto y = x.getType();
   odsState.addTypes(y);
   // TODO: add real type infer, or get types from user of x and moving_mean, if it is a bn
-  odsState.addTypes(x.getType());
-  odsState.addTypes(x.getType());
+  /*reserve_space */ odsState.addTypes(x.getType());
+  /*mean */ odsState.addTypes(x.getType());
+  /*inv_variance */ odsState.addTypes(x.getType());
 }
 
 #include "OneFlow/OneFlowEnums.cpp.inc"
