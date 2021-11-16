@@ -1099,9 +1099,8 @@ def NormalizationAddReluPattern : Pattern<
     $bn_device_name,
     $bn_scope_symbol_id,
     $bn_hierarchy,
-    // TODO: update these two
-    $operand_segment_sizes,
-    $result_segment_sizes,
+    /* not used */ $operand_segment_sizes,
+    /* not used */ $result_segment_sizes,
     $bn_axis,
     $bn_epsilon,
     $bn_training,
