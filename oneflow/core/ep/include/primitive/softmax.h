@@ -29,8 +29,7 @@ class Softmax : public Primitive {
   Softmax() = default;
   ~Softmax() override = default;
 
-  virtual void Launch(StreamContext* stream_ctx, size_t rows, size_t cols, const void* x,
-                      void* y) = 0;
+  virtual void Launch(Stream* stream, size_t rows, size_t cols, const void* x, void* y) = 0;
 };
 
 class SoftmaxFactory : public Factory<Softmax> {
