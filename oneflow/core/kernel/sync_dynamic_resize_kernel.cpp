@@ -91,7 +91,7 @@ class SyncDynamicResizeGPUKernel final : public Kernel {
       OF_CUDA_CHECK(cudaStreamSynchronize(ctx->device_ctx()->cuda_stream()));
       UpdateShape();
     } else {
-      ctx->device_ctx()->AddCallBack(UpdateShape);
+      ctx->stream_ctx()->AddCallback(UpdateShape);
     }
   }
 

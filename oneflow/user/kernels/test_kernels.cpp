@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/random_generator.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
-#include "oneflow/core/primitive/include/fill.h"
+#include "oneflow/core/ep/include/primitive/fill.h"
 
 namespace oneflow {
 
@@ -120,7 +120,7 @@ class TestSourceGpuKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("TestSource")
     .SetCreateFn<TestSourceGpuKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu")
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU)
     .SetInferTmpSizeFn([](user_op::InferContext*) { return 0; });
 
 class TestMultiOutputOrderKernel final : public user_op::OpKernel {
@@ -135,17 +135,18 @@ class TestMultiOutputOrderKernel final : public user_op::OpKernel {
     user_op::Tensor* out2_blob = ctx->Tensor4ArgNameAndIndex("out2", 0);
     Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out1_blob->mut_dptr<char>(), in_blob->dptr<char>(),
                              in_blob->shape().elem_cnt() * sizeof(float));
-    std::unique_ptr<primitive::Fill> fill = primitive::NewPrimitive<primitive::FillFactory>(
-        ctx->stream_ctx()->device_type(), out2_blob->data_type());
+    std::unique_ptr<ep::primitive::Fill> fill =
+        ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream()->device_type(),
+                                                                out2_blob->data_type());
     CHECK(fill);
-    fill->Launch(ctx->stream_ctx(), out2_blob->mut_dptr(), 0.0, out2_blob->shape().elem_cnt());
+    fill->Launch(ctx->stream(), out2_blob->mut_dptr(), 0.0, out2_blob->shape().elem_cnt());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("TestMultiOutputOrder")
     .SetCreateFn<TestMultiOutputOrderKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
                      & (user_op::HobDataType("in", 0) == DataType::kFloat));
 
 class TestMultiInputFwKernel final : public user_op::OpKernel {
@@ -165,7 +166,7 @@ class TestMultiInputFwKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("TestMultiInput")
     .SetCreateFn<TestMultiInputFwKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
                      & (user_op::HobDataType("x1", 0) == DataType::kFloat));
 
 class TestMultiInputBwKernel final : public user_op::OpKernel {
@@ -177,20 +178,19 @@ class TestMultiInputBwKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* x1_diff_blob = ctx->Tensor4ArgNameAndIndex("x1_diff", 0);
     user_op::Tensor* x2_diff_blob = ctx->Tensor4ArgNameAndIndex("x2_diff", 0);
-    std::unique_ptr<primitive::Fill> fill = primitive::NewPrimitive<primitive::FillFactory>(
-        ctx->stream_ctx()->device_type(), x1_diff_blob->data_type());
+    std::unique_ptr<ep::primitive::Fill> fill =
+        ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream()->device_type(),
+                                                                x1_diff_blob->data_type());
     CHECK(fill);
-    fill->Launch(ctx->stream_ctx(), x1_diff_blob->mut_dptr(), 1.0,
-                 x1_diff_blob->shape().elem_cnt());
-    fill->Launch(ctx->stream_ctx(), x2_diff_blob->mut_dptr(), 2.0,
-                 x2_diff_blob->shape().elem_cnt());
+    fill->Launch(ctx->stream(), x1_diff_blob->mut_dptr(), 1.0, x1_diff_blob->shape().elem_cnt());
+    fill->Launch(ctx->stream(), x2_diff_blob->mut_dptr(), 2.0, x2_diff_blob->shape().elem_cnt());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("TestMultiInputGrad")
     .SetCreateFn<TestMultiInputBwKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
                      & (user_op::HobDataType("x1", 0) == DataType::kFloat));
 
 #endif
@@ -231,7 +231,7 @@ class TestSourceKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("TestSource")
     .SetCreateFn<TestSourceKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
                      & (user_op::HobDataType("out", 0) == DataType::kFloat))
     .SetInferTmpSizeFn([](user_op::InferContext*) { return 0; });
 
@@ -252,7 +252,7 @@ class TestSourceMultiGpuFixedOutNumKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("TestSourceMultiGpuFixedOutNum")
     .SetCreateFn<TestSourceMultiGpuFixedOutNumKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
                      & (user_op::HobDataType("out", 0) == DataType::kFloat));
 
 class TestDynamicSourceKernel final : public user_op::OpKernel {
@@ -271,7 +271,7 @@ class TestDynamicSourceKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("TestDynamicSource")
     .SetCreateFn<TestDynamicSourceKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
                      & (user_op::HobDataType("out", 0) == DataType::kFloat));
 
 class TestRandomSourceKernel final : public user_op::OpKernel {
@@ -299,7 +299,7 @@ class TestRandomSourceKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("TestRandomSource")
     .SetCreateFn<TestRandomSourceKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
                      & (user_op::HobDataType("out", 0) == DataType::kFloat));
 
 class TestDataTypeAttrKernel final : public user_op::OpKernel {

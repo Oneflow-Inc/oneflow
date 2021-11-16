@@ -52,6 +52,6 @@ class CpuRandPermKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("randperm")
     .SetCreateFn<CpuRandPermKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu"));
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU));
 
 }  // namespace oneflow

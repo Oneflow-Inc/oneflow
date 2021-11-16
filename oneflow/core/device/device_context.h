@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/auto_registration_factory.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 
@@ -47,8 +48,8 @@ class DeviceCtx {
   }
 #endif
 
+  virtual ep::Stream* stream() = 0;
   virtual void SyncDevice() { UNIMPLEMENTED(); }
-  virtual void AddCallBack(std::function<void()>) const { UNIMPLEMENTED(); }
 
   virtual vm::Allocator* mut_allocator() {
     UNIMPLEMENTED();
