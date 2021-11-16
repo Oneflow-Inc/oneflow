@@ -598,7 +598,7 @@ bool VirtualMachineEngine::OnSchedulerThread(const StreamType& stream_type) {
   return stream_type.OnSchedulerThread() || pthread_fork::IsForkedSubProcess();
 }
 
-// Barrier instructions wait all non-barrier instructions to be done.
+// Barrier instructions are run after all previous lively instructions.
 //
 // `instruction.lively_instruction_hook_` is linked to `vm.lively_instruction_list_` for all
 // instructions. `instruction.barrier_instruction_list_` is linked to `vm.barrier_instruction_list_`
@@ -623,10 +623,10 @@ bool VirtualMachineEngine::OnSchedulerThread(const StreamType& stream_type) {
 //                                |                               |
 //                                +-------------------------------+
 //
-// `instruction1` is a barrier instructions with barrier_instruction_hook_ linked, while
-// instruction0 is not. From the `virtual_machine`'s view, `barrier_instruction_hook_.Begin() !=
-// lively_instruction_hook_.Begin()`, so it's not the time to run barrier instruction
-// `barrier_instruction_hook_.Begin()`.
+// `instruction1` is a barrier instruction with barrier_instruction_hook_ linked, while
+// instruction0 is not. From the `virtual_machine`'s view, `barrier_instruction_list_.Begin() !=
+// lively_instruction_list_.Begin()`, so it's not the time to run barrier instruction
+// `barrier_instruction_list_.Begin()`.
 //
 //
 //  e.g. case1: run barrier instructions.
@@ -645,10 +645,10 @@ bool VirtualMachineEngine::OnSchedulerThread(const StreamType& stream_type) {
 //  |            ...            |   |            ...            |   |            ...            |
 //  +---------------------------+   +---------------------------+   +---------------------------+
 //
-// `instruction0` is a barrier instructions with barrier_instruction_hook_ linked.
-// From the `virtual_machine`'s view, `barrier_instruction_hook_.Begin() ==
-// lively_instruction_hook_.Begin()`, so it's the time to run barrier instruction
-// `barrier_instruction_hook_.Begin()`.
+// `instruction0` is a barrier instruction with barrier_instruction_hook_ linked.
+// From the `virtual_machine`'s view, `barrier_instruction_list_.Begin() ==
+// lively_instruction_list_.Begin()`, so it's the time to run barrier instruction
+// `barrier_instruction_list_.Begin()`.
 //
 //
 // With the introduction of barrier_instruction_list_/barrier_instruction_hook_, the function
@@ -656,7 +656,7 @@ bool VirtualMachineEngine::OnSchedulerThread(const StreamType& stream_type) {
 // instructions are scarcely received by vm, there is no need for vm to run
 // VirtualMachineEngine::TryRunBarrierInstruction every time VirtualMachineEngine::Schedule run. On
 // the other hand, `barrier_instruction_hook_.size() == 0` is more lightweight than
-// `lively_instruction_hook_.Begin()?->instr_msg().instr_type_id().instruction_type().IsFrontSequential()`
+// `lively_instruction_list_.Begin()?->instr_msg().instr_type_id().instruction_type().IsFrontSequential()`
 //
 void VirtualMachineEngine::TryRunBarrierInstruction() {
   auto* sequnential_instruction = mut_barrier_instruction_list()->Begin();
