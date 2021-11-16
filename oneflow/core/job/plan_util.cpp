@@ -14,17 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/constant.h"
-#include "oneflow/core/job/plan_util.h"
-#include "oneflow/core/job/env_desc.h"
-#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/job/plan_util.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/memory/chunk_manager.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
-#include "oneflow/core/graph/id_serialization.h"
 
 namespace oneflow {
 
@@ -325,7 +324,7 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     }
   }
 
-  if (CHECK_JUST(GlobalMultiClientEnv())) {
+  if (CHECK_JUST(IsMultiClient())) {
     GenChunkForMultiNNGraphMemoryReuseInMultiClient(plan, &mem_block_id2mem_block);
   } else {
     CHECK(variable_op_names.empty());
@@ -949,7 +948,7 @@ const oneflow::OpAttribute& PlanUtil::GetOpAttribute(const Plan* plan, int64_t j
   }
 }
 
-void PlanUtil::PopulateOpAttibute(
+void PlanUtil::PopulateOpAttribute(
     Plan* plan,
     const PbMap<int64_t, ::oneflow::OpAttributeRefTable>& job_id2op_attribute_ref_table) {
   for (auto& task : *plan->mutable_task()) {
@@ -974,7 +973,7 @@ void PlanUtil::PopulateOpAttibute(
 }
 
 /*static*/ StreamId PlanUtil::GetStreamId(const TaskProto& task) {
-  return DeserializeStreamIdFromInt64(task.thrd_id());
+  return DecodeStreamIdFromInt64(task.thrd_id());
 }
 
 /*static*/ int64_t PlanUtil::GetDeviceIndex(const TaskProto& task) {

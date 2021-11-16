@@ -87,7 +87,7 @@ class ReluGradNvBFloat16Kernel final : public OpKernel {
 
 REGISTER_USER_KERNEL("relu")
     .SetCreateFn<ReluNvBFloat16Kernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
                      & (user_op::HobDataType("out", 0) == DataType::kBFloat16))
     .SetInplaceProposalFn([](const user_op::InferContext&,
                              user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
@@ -97,7 +97,7 @@ REGISTER_USER_KERNEL("relu")
 
 REGISTER_USER_KERNEL("relu_grad")
     .SetCreateFn<ReluGradNvBFloat16Kernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
                      & (user_op::HobDataType("dx", 0) == DataType::kBFloat16))
     .SetInplaceProposalFn([](const user_op::InferContext&,
                              user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {

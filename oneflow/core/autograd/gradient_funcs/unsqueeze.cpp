@@ -18,12 +18,14 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 namespace one {
 
 struct UnsqueezeCaptureState : public AutoGradCaptureState {
   bool requires_grad;
+  Shape shape;
 };
 
 class Unsqueeze : public OpExprGradFunction<UnsqueezeCaptureState> {
@@ -49,8 +51,11 @@ Maybe<void> Unsqueeze::Capture(UnsqueezeCaptureState* ctx, const TensorTuple& in
                                const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-
-  ctx->SaveTensorForBackward(inputs.at(0));
+  if (LazyMode::is_enabled()) {
+    ctx->SaveTensorForBackward(inputs.at(0));
+  } else {
+    ctx->shape = *(inputs.at(0)->shape());
+  }
   return Maybe<void>::Ok();
 }
 
@@ -59,9 +64,13 @@ Maybe<void> Unsqueeze::Apply(const UnsqueezeCaptureState* ctx, const TensorTuple
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 
-  const std::shared_ptr<oneflow::one::Tensor>& like = ctx->SavedTensors().at(0);
   in_grads->resize(1);
-  in_grads->at(0) = JUST(functional::ReshapeLike(out_grads.at(0), like));
+  if (LazyMode::is_enabled()) {
+    const auto& like = ctx->SavedTensors().at(0);
+    in_grads->at(0) = JUST(functional::ReshapeLike(out_grads.at(0), like));
+  } else {
+    in_grads->at(0) = JUST(functional::Reshape(out_grads.at(0), ctx->shape));
+  }
   return Maybe<void>::Ok();
 }
 

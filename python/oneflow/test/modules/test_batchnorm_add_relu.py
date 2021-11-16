@@ -25,36 +25,36 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _test_bn_add_relu(test_case, channel, height, width):
+def _test_bn_add_relu(test_case, device, channel, height, width):
     weight_numpy = np.random.randn(channel)
     bias_numpy = np.random.randn(channel)
 
     fused_x = np.random.randn(1, channel, height, width)
-    fused_x_tensor = flow.Tensor(fused_x).to("cuda")
+    fused_x_tensor = flow.Tensor(fused_x).to(device)
     fused_x_tensor.requires_grad = True
 
     fused_addend = np.random.randn(1, channel, height, width)
-    fused_addend_tensor = flow.Tensor(fused_addend).to("cuda")
+    fused_addend_tensor = flow.Tensor(fused_addend).to(device)
     fused_addend_tensor.requires_grad = True
 
-    fused_weight_tensor = flow.nn.Parameter(flow.Tensor(weight_numpy).to("cuda"))
-    fused_bias_tensor = flow.nn.Parameter(flow.Tensor(bias_numpy).to("cuda"))
+    fused_weight_tensor = flow.nn.Parameter(flow.Tensor(weight_numpy).to(device))
+    fused_bias_tensor = flow.nn.Parameter(flow.Tensor(bias_numpy).to(device))
 
-    fused_bn = flow.nn.FusedBatchNorm2d(channel).to("cuda")
+    fused_bn = flow.nn.FusedBatchNorm2d(channel).to(device)
     fused_bn.weight = fused_weight_tensor
     fused_bn.bias = fused_bias_tensor
     fused_out = fused_bn(fused_x_tensor, fused_addend_tensor)
 
-    origin_x_tensor = flow.Tensor(fused_x).to("cuda")
+    origin_x_tensor = flow.Tensor(fused_x).to(device)
     origin_x_tensor.requires_grad = True
 
-    origin_addend_tensor = flow.Tensor(fused_addend).to("cuda")
+    origin_addend_tensor = flow.Tensor(fused_addend).to(device)
     origin_addend_tensor.requires_grad = True
 
-    origin_weight_tensor = flow.nn.Parameter(flow.Tensor(weight_numpy).to("cuda"))
-    origin_bias_tensor = flow.nn.Parameter(flow.Tensor(bias_numpy).to("cuda"))
+    origin_weight_tensor = flow.nn.Parameter(flow.Tensor(weight_numpy).to(device))
+    origin_bias_tensor = flow.nn.Parameter(flow.Tensor(bias_numpy).to(device))
 
-    origin_batch_norm = flow.nn.BatchNorm2d(channel).to("cuda")
+    origin_batch_norm = flow.nn.BatchNorm2d(channel).to(device)
     origin_batch_norm.weight = origin_weight_tensor
     origin_batch_norm.bias = origin_bias_tensor
 
@@ -123,29 +123,29 @@ def _test_bn_add_relu(test_case, channel, height, width):
     )
 
 
-def _test_bn_relu(test_case, channel, height, width):
+def _test_bn_relu(test_case, device, channel, height, width):
     weight_numpy = np.random.randn(channel)
     bias_numpy = np.random.randn(channel)
 
     fused_x = np.random.randn(1, channel, height, width)
-    fused_x_tensor = flow.Tensor(fused_x).to("cuda")
+    fused_x_tensor = flow.Tensor(fused_x).to(device)
     fused_x_tensor.requires_grad = True
 
-    fused_weight_tensor = flow.nn.Parameter(flow.Tensor(weight_numpy).to("cuda"))
-    fused_bias_tensor = flow.nn.Parameter(flow.Tensor(bias_numpy).to("cuda"))
+    fused_weight_tensor = flow.nn.Parameter(flow.Tensor(weight_numpy).to(device))
+    fused_bias_tensor = flow.nn.Parameter(flow.Tensor(bias_numpy).to(device))
 
-    fused_bn = flow.nn.FusedBatchNorm2d(channel).to("cuda")
+    fused_bn = flow.nn.FusedBatchNorm2d(channel).to(device)
     fused_bn.weight = fused_weight_tensor
     fused_bn.bias = fused_bias_tensor
     fused_out = fused_bn(fused_x_tensor, None)
 
-    origin_x_tensor = flow.Tensor(fused_x).to("cuda")
+    origin_x_tensor = flow.Tensor(fused_x).to(device)
     origin_x_tensor.requires_grad = True
 
-    origin_weight_tensor = flow.nn.Parameter(flow.Tensor(weight_numpy).to("cuda"))
-    origin_bias_tensor = flow.nn.Parameter(flow.Tensor(bias_numpy).to("cuda"))
+    origin_weight_tensor = flow.nn.Parameter(flow.Tensor(weight_numpy).to(device))
+    origin_bias_tensor = flow.nn.Parameter(flow.Tensor(bias_numpy).to(device))
 
-    origin_batch_norm = flow.nn.BatchNorm2d(channel).to("cuda")
+    origin_batch_norm = flow.nn.BatchNorm2d(channel).to(device)
     origin_batch_norm.weight = origin_weight_tensor
     origin_batch_norm.bias = origin_bias_tensor
 
@@ -207,30 +207,30 @@ def _test_bn_relu(test_case, channel, height, width):
     )
 
 
-def _test_bn_relu_track_running_states_false(test_case, channel, height, width):
+def _test_bn_relu_track_running_states_false(test_case, device, channel, height, width):
     weight_numpy = np.random.randn(channel)
     bias_numpy = np.random.randn(channel)
 
     fused_x = np.random.randn(1, channel, height, width)
-    fused_x_tensor = flow.Tensor(fused_x).to("cuda")
+    fused_x_tensor = flow.Tensor(fused_x).to(device)
     fused_x_tensor.requires_grad = True
 
-    fused_weight_tensor = flow.nn.Parameter(flow.Tensor(weight_numpy).to("cuda"))
-    fused_bias_tensor = flow.nn.Parameter(flow.Tensor(bias_numpy).to("cuda"))
+    fused_weight_tensor = flow.nn.Parameter(flow.Tensor(weight_numpy).to(device))
+    fused_bias_tensor = flow.nn.Parameter(flow.Tensor(bias_numpy).to(device))
 
-    fused_bn = flow.nn.FusedBatchNorm2d(channel, track_running_stats=False).to("cuda")
+    fused_bn = flow.nn.FusedBatchNorm2d(channel, track_running_stats=False).to(device)
     fused_bn.weight = fused_weight_tensor
     fused_bn.bias = fused_bias_tensor
     fused_out = fused_bn(fused_x_tensor, None)
 
-    origin_x_tensor = flow.Tensor(fused_x).to("cuda")
+    origin_x_tensor = flow.Tensor(fused_x).to(device)
     origin_x_tensor.requires_grad = True
 
-    origin_weight_tensor = flow.nn.Parameter(flow.Tensor(weight_numpy).to("cuda"))
-    origin_bias_tensor = flow.nn.Parameter(flow.Tensor(bias_numpy).to("cuda"))
+    origin_weight_tensor = flow.nn.Parameter(flow.Tensor(weight_numpy).to(device))
+    origin_bias_tensor = flow.nn.Parameter(flow.Tensor(bias_numpy).to(device))
 
     origin_batch_norm = flow.nn.BatchNorm2d(channel, track_running_stats=False).to(
-        "cuda"
+        device
     )
     origin_batch_norm.weight = origin_weight_tensor
     origin_batch_norm.bias = origin_bias_tensor
@@ -290,6 +290,7 @@ class TestBnAddRelu(flow.unittest.TestCase):
             _test_bn_relu,
             _test_bn_relu_track_running_states_false,
         ]
+        arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["channels"] = [4, 6, 8, 10]
         arg_dict["height"] = [6, 8, 10, 16]
         arg_dict["width"] = [12, 8, 4, 10]

@@ -116,3 +116,76 @@ add_docstr(
     See :func:`oneflow.squeeze`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.unfold,
+    """
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.Tensor.unfold.html#torch.Tensor.unfold
+
+    Returns a view of the original tensor which contains all slices of `size` size from `self`
+    tensor in the dimension `dimension`.
+
+    Step between two slices is given by `step`.
+
+    If sizedim is the size of dimension `dimension` for `self`, the size of dimension dimension in the
+    returned tensor will be (sizedim - size) / step + 1.
+
+    An additional dimension of size `size` is appended in the returned tensor.
+
+    Args:
+        dimension (int): dimension in which unfolding happens
+        size (int): the size of each slice that is unfolded
+        step (int): the step between each slice
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+
+        >>> x = flow.arange(1., 8)
+        >>> x
+        tensor([ 1.,  2.,  3.,  4.,  5.,  6.,  7.])
+        >>> x.unfold(0, 2, 1)
+        tensor([[ 1.,  2.],
+                [ 2.,  3.],
+                [ 3.,  4.],
+                [ 4.,  5.],
+                [ 5.,  6.],
+                [ 6.,  7.]])
+        >>> x.unfold(0, 2, 2)
+        tensor([[ 1.,  2.],
+                [ 3.,  4.],
+                [ 5.,  6.]])
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.matmul,
+    """
+    See :func:`oneflow.matmul`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.narrow,
+    """
+    See :func:`oneflow.narrow`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.unsqueeze,
+    """
+    See :func:`oneflow.unsqueeze`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.permute,
+    """
+    See :func:`oneflow.permute`
+    """,
+)

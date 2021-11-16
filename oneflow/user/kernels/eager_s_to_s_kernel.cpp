@@ -192,10 +192,10 @@ class EagerNaiveSToSKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EAGER_NAIVE_S_TO_S_KERNEL(device)        \
-  REGISTER_USER_KERNEL("eager_naive_s_to_s")              \
-      .SetCreateFn<EagerNaiveSToSKernel<device>>()        \
-      .SetIsMatchedHob(user_op::HobDeviceTag() == device) \
+#define REGISTER_EAGER_NAIVE_S_TO_S_KERNEL(device)         \
+  REGISTER_USER_KERNEL("eager_naive_s_to_s")               \
+      .SetCreateFn<EagerNaiveSToSKernel<device>>()         \
+      .SetIsMatchedHob(user_op::HobDeviceType() == device) \
       .SetInferTmpSizeFn(InferNaiveSToSKernelTmpBufferSize);
 
 REGISTER_EAGER_NAIVE_S_TO_S_KERNEL(DeviceType::kCPU)

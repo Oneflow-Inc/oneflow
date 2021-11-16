@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/device/device_context_adapter.h"
-#include "oneflow/core/stream/cuda_stream_context.h"
+#include "oneflow/core/stream/cuda/cuda_stream_context.h"
 #include "oneflow/core/vm/cpu_allocator.h"
 #include "oneflow/core/device/cuda_event_record.h"
 
@@ -33,7 +33,6 @@ class CpuDeviceCtxAdapter final : public DeviceCtx, public EventRecordProvider {
   }
 
   void SyncDevice() override {}
-  void AddCallBack(std::function<void()> callback) const override { callback(); }
 
   vm::Allocator* mut_allocator() override { return Global<vm::CpuAllocator>::Get(); }
 
@@ -61,10 +60,6 @@ class CudaDeviceCtxAdapter : public DeviceCtx, public EventRecordProvider {
 
   void SyncDevice() override { CHECK_JUST(stream_ctx_->Sync()); }
 
-  void AddCallBack(std::function<void()> callback) const override {
-    CHECK_JUST(stream_ctx_->AddCallback(std::move(callback)));
-  }
-
   DeviceType device_type() const override { return stream_ctx_->device_type(); }
 
   std::shared_ptr<EventRecord> MakeEventRecord() override {
@@ -84,7 +79,7 @@ DeviceCtx* NewDeviceCtxAdapter(StreamContext* ctx) {
     return new CpuDeviceCtxAdapter(ctx);
   } else if (ctx->device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
-    return new CudaDeviceCtxAdapter(CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(ctx)));
+    return new CudaDeviceCtxAdapter(ctx->As<CudaStreamContext>());
 #else
     UNIMPLEMENTED();
     return nullptr;

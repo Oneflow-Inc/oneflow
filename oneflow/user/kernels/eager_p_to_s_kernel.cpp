@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/register/tensor_slice_copier.h"
-#include "oneflow/core/primitive/include/add.h"
+#include "oneflow/core/ep/include/primitive/add.h"
 
 namespace oneflow {
 
@@ -122,7 +122,7 @@ size_t InferEagerPToSKernelTmpBufferSize(user_op::InferContext* ctx) {
 
 }  // namespace
 
-template<typename T, DeviceType device_type>
+template<DeviceType device_type>
 class EagerPToSKernel final : public user_op::OpKernel {
  public:
   EagerPToSKernel() = default;
@@ -150,8 +150,8 @@ class EagerPToSKernel final : public user_op::OpKernel {
 
     Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
                         elem_cnt_per_chunk * GetSizeOfDataType(out->data_type()));
-    std::unique_ptr<primitive::Add> add_primitive =
-        primitive::NewPrimitive<primitive::AddFactory>(ctx->device_type(), in->data_type());
+    std::unique_ptr<ep::primitive::Add> add_primitive =
+        ep::primitive::NewPrimitive<ep::primitive::AddFactory>(ctx->device_type(), in->data_type());
     CHECK(add_primitive);
     for (int64_t i = 0; i < sorted_p2p_pair.size(); ++i) {
       const auto& p2p_pair = sorted_p2p_pair.at(i);
@@ -174,20 +174,15 @@ class EagerPToSKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EAGER_P_TO_S_KERNEL(dtype, device)                                     \
-  REGISTER_USER_KERNEL("eager_p_to_s")                                                  \
-      .SetCreateFn<EagerPToSKernel<dtype, device>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_EAGER_P_TO_S_KERNEL(device)                 \
+  REGISTER_USER_KERNEL("eager_p_to_s")                       \
+      .SetCreateFn<EagerPToSKernel<device>>()                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)) \
       .SetInferTmpSizeFn(InferEagerPToSKernelTmpBufferSize);
 
-REGISTER_EAGER_P_TO_S_KERNEL(float, DeviceType::kCPU)
-REGISTER_EAGER_P_TO_S_KERNEL(double, DeviceType::kCPU)
+REGISTER_EAGER_P_TO_S_KERNEL(DeviceType::kCPU)
 #if defined(WITH_CUDA) && HAS_GPU_SEND_RECV
-REGISTER_EAGER_P_TO_S_KERNEL(float16, DeviceType::kGPU)
-REGISTER_EAGER_P_TO_S_KERNEL(float, DeviceType::kGPU)
-REGISTER_EAGER_P_TO_S_KERNEL(double, DeviceType::kGPU)
+REGISTER_EAGER_P_TO_S_KERNEL(DeviceType::kGPU)
 #endif
 
 }  // namespace oneflow

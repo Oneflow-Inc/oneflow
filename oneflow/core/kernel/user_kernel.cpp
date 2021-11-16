@@ -26,7 +26,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/stream/stream_context_adapter.h"
+#include "oneflow/core/stream/include/stream_context_adapter.h"
 
 namespace oneflow {
 
@@ -107,21 +107,6 @@ class UserKernelBaseContext {
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
 };
 
-class KernelCreateContext final : public user_op::KernelCreateContext {
- public:
-  explicit KernelCreateContext(const KernelConf& kernel_conf)
-      : user_op_conf_(kernel_conf.op_attribute().op_conf()) {}
-
- private:
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override {
-    return user_op_conf().Attr4Name(attr_name);
-  }
-
-  user_op::UserOpConfWrapper user_op_conf_;
-};
-
 class UserKernelInitContext final : public user_op::KernelInitContext {
  public:
   explicit UserKernelInitContext(DeviceCtx* device_ctx, StreamContext* stream_ctx,
@@ -131,9 +116,9 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
         stream_ctx_(stream_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf)),
         parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
-    nd_sbp_signature_ = new cfg::NdSbpSignature(kernel_conf.op_attribute().nd_sbp_signature());
+    nd_sbp_signature_ = cfg::NdSbpSignature(kernel_conf.op_attribute().nd_sbp_signature());
     if (kernel_conf.op_attribute().has_sbp_signature()) {
-      sbp_signature_ = new cfg::SbpSignature(kernel_conf.op_attribute().sbp_signature());
+      sbp_signature_ = cfg::SbpSignature(kernel_conf.op_attribute().sbp_signature());
     }
     for (const auto& pair :
          kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc()) {
@@ -164,7 +149,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
                                                       int32_t index) const override {
     CHECK_EQ(parallel_desc_.hierarchy()->NumAxes(), 1);
-    const auto& bn2sbp = sbp_signature_->bn_in_op2sbp_parallel();
+    const auto& bn2sbp = sbp_signature_.bn_in_op2sbp_parallel();
     std::string bn = GenRepeatedBn(arg_name, index);
     auto it = bn2sbp.find(bn);
     CHECK(it != bn2sbp.end());
@@ -173,7 +158,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
 
   const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name,
                                           int32_t index) const override {
-    const auto& bn2nd_sbp = nd_sbp_signature_->bn_in_op2nd_sbp();
+    const auto& bn2nd_sbp = nd_sbp_signature_.bn_in_op2nd_sbp();
     std::string bn = GenRepeatedBn(arg_name, index);
     auto it = bn2nd_sbp.find(bn);
     CHECK(it != bn2nd_sbp.end());
@@ -196,10 +181,10 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   DeviceCtx* device_ctx_;
   StreamContext* stream_ctx_;
   UserKernelBaseContext base_ctx_;
-  const cfg::SbpSignature* sbp_signature_;
+  cfg::SbpSignature sbp_signature_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2logical_tensor_desc_;
   ParallelDesc parallel_desc_;
-  const cfg::NdSbpSignature* nd_sbp_signature_;
+  cfg::NdSbpSignature nd_sbp_signature_;
 };
 
 class UserKernelOpInferContext : public user_op::InferContext {
@@ -607,8 +592,7 @@ void UserKernel::InitUserKernel(StreamContext* stream_ctx, DeviceCtx* device_ctx
         CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
             op_type_name, UserKernelRegContext(kernel_conf())));
     CHECK_NOTNULL(kernel_reg_val);
-    KernelCreateContext create_ctx(kernel_conf());
-    kernel_.reset(kernel_reg_val->create_fn(&create_ctx));
+    kernel_.reset(kernel_reg_val->create_fn());
   }
 }
 
@@ -734,8 +718,7 @@ void EagerKernel::InitOpKernel(const KernelConf& kernel_conf) {
   auto kernel_reg_val = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
       op_type_name, UserKernelRegContext(kernel_conf)));
   CHECK_NOTNULL(kernel_reg_val);
-  KernelCreateContext create_ctx(kernel_conf);
-  kernel_.reset(kernel_reg_val->create_fn(&create_ctx));
+  kernel_.reset(kernel_reg_val->create_fn());
 }
 
 void EagerKernel::Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) const {

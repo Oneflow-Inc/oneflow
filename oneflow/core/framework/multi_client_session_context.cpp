@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/job/version.h"
@@ -27,12 +29,11 @@ limitations under the License.
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/user/summary/events_writer.h"
-#include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/memory/chunk_manager.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/job/collective_boxing/scheduler.h"
-#include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif  // WITH_CUDA
@@ -55,7 +56,7 @@ int32_t GetGpuDeviceNum() {
 
 Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) {
   if (!is_inited_) {
-    CHECK_OR_RETURN(JUST(GlobalMultiClientEnv()));
+    CHECK_OR_RETURN(JUST(IsMultiClient()));
     DumpVersionInfo();
 
     Resource resource = config_proto.resource();
@@ -87,6 +88,7 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
     }
     Global<ResourceDesc, ForSession>::New(resource, GlobalProcessCtx::NumOfProcessPerNode());
     Global<IDMgr>::New();
+    Global<TaskStreamIndexManager>::New();
     // TODO(chengcheng): refactor JobBuildAndInferCtxMgr
     Global<LazyJobBuildAndInferCtxMgr>::New();
 
@@ -107,7 +109,6 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       Global<RuntimeJobDescs>::New();
       Global<summary::EventsWriter>::New();
       Global<boxing::collective::Scheduler>::New();
-      Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
     }
 
     is_inited_ = true;
@@ -132,7 +133,6 @@ Maybe<void> MultiClientSessionContext::TryClose() {
     }
     {
       // NOTE(chengcheng): delete runtime global objects
-      Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
       Global<boxing::collective::Scheduler>::Delete();
       Global<summary::EventsWriter>::Delete();
       Global<RuntimeJobDescs>::Delete();
@@ -146,6 +146,7 @@ Maybe<void> MultiClientSessionContext::TryClose() {
     }
 
     Global<LazyJobBuildAndInferCtxMgr>::Delete();
+    Global<TaskStreamIndexManager>::Delete();
     Global<IDMgr>::Delete();
 
     // TODO(chengcheng): remove template ForEnv and ForSession
