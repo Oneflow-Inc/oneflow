@@ -31,8 +31,8 @@ class Matmul : public Primitive {
   Matmul() = default;
   ~Matmul() override = default;
 
-  virtual void Launch(StreamContext* stream_ctx, size_t m, size_t n, size_t k, Scalar alpha,
-                      const void* a, const void* b, Scalar beta, void* c) = 0;
+  virtual void Launch(Stream* stream, size_t m, size_t n, size_t k, Scalar alpha, const void* a,
+                      const void* b, Scalar beta, void* c) = 0;
 };
 
 class MatmulFactory : public Factory<Matmul> {

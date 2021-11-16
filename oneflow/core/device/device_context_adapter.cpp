@@ -32,6 +32,8 @@ class CpuDeviceCtxAdapter final : public DeviceCtx, public EventRecordProvider {
     return std::unique_ptr<DeviceCtx>(new CpuDeviceCtxAdapter(stream_ctx_));
   }
 
+  ep::Stream* stream() override { return stream_ctx_->stream(); }
+
   void SyncDevice() override {}
 
   vm::Allocator* mut_allocator() override { return Global<vm::CpuAllocator>::Get(); }
@@ -61,6 +63,8 @@ class CudaDeviceCtxAdapter : public DeviceCtx, public EventRecordProvider {
   void SyncDevice() override { CHECK_JUST(stream_ctx_->Sync()); }
 
   DeviceType device_type() const override { return stream_ctx_->device_type(); }
+
+  ep::Stream* stream() override { return stream_ctx_->stream(); }
 
   std::shared_ptr<EventRecord> MakeEventRecord() override {
     return std::make_shared<CudaEventRecord>(this);

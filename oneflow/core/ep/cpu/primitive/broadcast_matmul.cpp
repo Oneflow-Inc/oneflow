@@ -66,7 +66,7 @@ void CblasMatmul(CBLAS_TRANSPOSE trans_a, CBLAS_TRANSPOSE trans_b, int m, int n,
 }
 
 template<typename T>
-void LaunchCblasBroadcastMatmul(StreamContext* /*stream_ctx*/, DataType data_type,
+void LaunchCblasBroadcastMatmul(Stream* /*stream*/, DataType data_type,
                                 BlasTransposeType transpose_a, BlasTransposeType transpose_b,
                                 int64_t num_batch_dims, const int64_t* broadcast_batch_dims,
                                 const int64_t* a_batch_dims, const int64_t* b_batch_dims,
@@ -85,20 +85,20 @@ void LaunchCblasBroadcastMatmul(StreamContext* /*stream_ctx*/, DataType data_typ
                              a_batch_dims, b_batch_dims, c_batch_dims, a, b, c, func);
 }
 
-void LaunchBroadcastMatmul(StreamContext* stream_ctx, DataType data_type,
-                           BlasTransposeType transpose_a, BlasTransposeType transpose_b,
-                           int64_t num_batch_dims, const int64_t* broadcast_batch_dims,
-                           const int64_t* a_batch_dims, const int64_t* b_batch_dims,
-                           const int64_t* c_batch_dims, int64_t m, int64_t n, int64_t k,
-                           Scalar alpha, const void* a, const void* b, Scalar beta, void* c) {
+void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType transpose_a,
+                           BlasTransposeType transpose_b, int64_t num_batch_dims,
+                           const int64_t* broadcast_batch_dims, const int64_t* a_batch_dims,
+                           const int64_t* b_batch_dims, const int64_t* c_batch_dims, int64_t m,
+                           int64_t n, int64_t k, Scalar alpha, const void* a, const void* b,
+                           Scalar beta, void* c) {
   if (data_type == DataType::kFloat) {
-    LaunchCblasBroadcastMatmul<float>(stream_ctx, data_type, transpose_a, transpose_b,
-                                      num_batch_dims, broadcast_batch_dims, a_batch_dims,
-                                      b_batch_dims, c_batch_dims, m, n, k, alpha, a, b, beta, c);
+    LaunchCblasBroadcastMatmul<float>(stream, data_type, transpose_a, transpose_b, num_batch_dims,
+                                      broadcast_batch_dims, a_batch_dims, b_batch_dims,
+                                      c_batch_dims, m, n, k, alpha, a, b, beta, c);
   } else if (data_type == DataType::kDouble) {
-    LaunchCblasBroadcastMatmul<double>(stream_ctx, data_type, transpose_a, transpose_b,
-                                       num_batch_dims, broadcast_batch_dims, a_batch_dims,
-                                       b_batch_dims, c_batch_dims, m, n, k, alpha, a, b, beta, c);
+    LaunchCblasBroadcastMatmul<double>(stream, data_type, transpose_a, transpose_b, num_batch_dims,
+                                       broadcast_batch_dims, a_batch_dims, b_batch_dims,
+                                       c_batch_dims, m, n, k, alpha, a, b, beta, c);
   } else {
     UNIMPLEMENTED();
   }
