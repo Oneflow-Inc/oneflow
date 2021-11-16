@@ -118,9 +118,6 @@ class Graph(object):
         session.TryInit()
         session.AddCGraph(self._c_nn_graph)
 
-    def __del__(self):
-        oneflow._oneflow_internal.eager.multi_client.Sync()
-
     def build(self, *args):
         r"""The ``build()`` method must be overridden to define neural network
         computaion logic.
@@ -1006,6 +1003,11 @@ class Graph(object):
         raise AttributeError(
             "'{}' object has no attribute '{}'".format(type(self).__name__, name)
         )
+
+    def __del__(self):
+        # Call ClusterSync here to ensure LaunchLazyJob instruction was completed and released
+        # that make NNGraph deconstruction happened in main thread.
+        oneflow._oneflow_internal.eager.multi_client.Sync()
 
 
 if __name__ == "__main__":
