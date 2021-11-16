@@ -62,7 +62,7 @@ class SoftmaxCrossEntropyKernel final : public user_op::OpKernel {
     const int64_t num_classes = label->shape().At(num_axes - 1);
     std::unique_ptr<ep::primitive::Softmax> primitive = NewSoftmaxPrimitive(ctx);
     CHECK(primitive);
-    primitive->Launch(ctx->stream_ctx(), num_instances, num_classes, prediction->dptr(),
+    primitive->Launch(ctx->stream(), num_instances, num_classes, prediction->dptr(),
                       prob->mut_dptr());
 
     CrossEntropyKernelUtil<device_type, T>::ComputeEntropy(ctx->device_ctx(), num_instances,

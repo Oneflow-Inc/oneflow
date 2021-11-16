@@ -262,7 +262,7 @@ void AutoMemcpy(StreamContext* stream_ctx, void* dst, const void* src, size_t sz
   std::unique_ptr<ep::primitive::Memcpy> primitive =
       ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(stream_ctx->device_type(), kind);
   CHECK(primitive);
-  primitive->Launch(stream_ctx, dst, src, sz);
+  primitive->Launch(stream_ctx->stream(), dst, src, sz);
 }
 
 void AutoMemcpy(StreamContext* stream_ctx, Blob* dst, const Blob* src) {
@@ -288,7 +288,7 @@ void AutoMemset(StreamContext* stream_ctx, void* dst, const char value, size_t s
                 const MemoryCase& /*dst_mem_case*/) {
   std::unique_ptr<ep::primitive::Memset> primitive =
       ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(stream_ctx->device_type());
-  primitive->Launch(stream_ctx, dst, value, sz);
+  primitive->Launch(stream_ctx->stream(), dst, value, sz);
 }
 
 #define KU_IF_METHOD                     \

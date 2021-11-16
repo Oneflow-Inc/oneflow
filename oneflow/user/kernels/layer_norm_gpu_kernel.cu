@@ -26,10 +26,9 @@ namespace oneflow {
 
 namespace {
 
-std::unique_ptr<ep::primitive::Fill> NewFillPrimitive(StreamContext* stream_ctx,
-                                                      DataType data_type) {
+std::unique_ptr<ep::primitive::Fill> NewFillPrimitive(ep::Stream* stream, DataType data_type) {
   std::unique_ptr<ep::primitive::Fill> fill =
-      ep::primitive::NewPrimitive<ep::primitive::FillFactory>(stream_ctx->device_type(), data_type);
+      ep::primitive::NewPrimitive<ep::primitive::FillFactory>(stream->device_type(), data_type);
   CHECK(fill);
   return fill;
 }
@@ -436,9 +435,9 @@ class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
           GetCudaAlignedSize(mean->shape().elem_cnt() * GetSizeOfDataType(mean->data_type()));
       char* cudnn_bn_scale_ones_dptr = tmp_buffer->mut_dptr<char>();
       char* cudnn_bn_bias_zeros_dptr = cudnn_bn_scale_ones_dptr + aligned_buffer_size;
-      auto fill = NewFillPrimitive(ctx->stream_ctx(), mean->data_type());
-      fill->Launch(ctx->stream_ctx(), cudnn_bn_scale_ones_dptr, 1, mean->shape().elem_cnt());
-      fill->Launch(ctx->stream_ctx(), cudnn_bn_bias_zeros_dptr, 0, mean->shape().elem_cnt());
+      auto fill = NewFillPrimitive(ctx->stream(), mean->data_type());
+      fill->Launch(ctx->stream(), cudnn_bn_scale_ones_dptr, 1, mean->shape().elem_cnt());
+      fill->Launch(ctx->stream(), cudnn_bn_bias_zeros_dptr, 0, mean->shape().elem_cnt());
       OF_CUDNN_CHECK(cudnnBatchNormalizationForwardTraining(
           ctx->device_ctx()->cudnn_handle(), bn_ctx.mode(), CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(),
           bn_ctx.data_tensor_desc(), x->dptr<T>(), bn_ctx.data_tensor_desc(),
@@ -492,8 +491,8 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
     char* cudnn_bn_scale_ones_dptr = tmp_buffer->mut_dptr<char>();
     char* cudnn_bn_scale_diff_buf_dptr = cudnn_bn_scale_ones_dptr + aligned_buffer_size;
     char* cudnn_bn_bias_diff_buf_dptr = cudnn_bn_scale_ones_dptr + aligned_buffer_size;
-    auto fill = NewFillPrimitive(ctx->stream_ctx(), mean->data_type());
-    fill->Launch(ctx->stream_ctx(), cudnn_bn_scale_ones_dptr, 1, mean->shape().elem_cnt());
+    auto fill = NewFillPrimitive(ctx->stream(), mean->data_type());
+    fill->Launch(ctx->stream(), cudnn_bn_scale_ones_dptr, 1, mean->shape().elem_cnt());
     const void* sp_alpha = CudnnSPOnePtr<T>();
     const void* sp_beta = nullptr;
     if (ctx->has_input("_add_to_output", 0)) {

@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/device/event_record.h"
 #include "oneflow/core/vm/cpu_allocator.h"
+#include "oneflow/core/ep/cpu/cpu_stream.h"
 
 namespace oneflow {
 
@@ -36,11 +37,14 @@ class CpuDeviceCtx final : public DeviceCtx, public EventRecordProvider {
 
   DeviceType device_type() const override { return DeviceType::kCPU; }
 
+  ep::Stream* stream() override { return &stream_; }
+
   std::shared_ptr<EventRecord> MakeEventRecord() override {
     return std::make_shared<NaiveEventRecord>();
   }
 
  private:
+  ep::CpuStream stream_;
 };  // namespace oneflow
 
 }  // namespace oneflow
