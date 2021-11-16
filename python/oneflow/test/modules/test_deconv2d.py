@@ -861,10 +861,10 @@ class TestDeconv2d(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_deconv_bias_false,
             _test_deconv_bias_true,
-            #_test_deconv_group_bias_false,
-            #_test_deconv_group_bias_true,
+            # _test_deconv_group_bias_false,
+            # _test_deconv_group_bias_true,
             _test_deconv_group_large_out_channel,
-            #_test_deconv_group_large_in_channel,
+            # _test_deconv_group_large_in_channel,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

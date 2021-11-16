@@ -266,7 +266,7 @@ def GetDualObject(name, pytorch, oneflow):
                         else:
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             if testing_graph:
-                                #print(oneflow.__name__)
+                                # print(oneflow.__name__)
                                 if isinstance(oneflow, flow.nn.Module):
 
                                     class TestGraphOfModule(flow.nn.Graph):
@@ -603,7 +603,10 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05, check_graph=True
                             print(f"{f.__name__} test graph passed.")
                     else:
                         if check_graph:
-                            test_case.assertTrue(False, f"{f.__name__} cannot find module to check graph.")
+                            test_case.assertTrue(
+                                False,
+                                f"{f.__name__} cannot find module to check graph.",
+                            )
                 n -= 1
                 loop += 1
 

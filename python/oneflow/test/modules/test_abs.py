@@ -20,6 +20,7 @@ import oneflow as flow
 from oneflow.test_utils.automated_test_util import *
 import oneflow.unittest
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestAbsModule(flow.unittest.TestCase):
     @autotest(check_graph=False)

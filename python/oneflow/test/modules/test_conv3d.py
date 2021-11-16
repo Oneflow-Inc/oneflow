@@ -22,7 +22,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestConv3DModule(flow.unittest.TestCase):
-    @autotest(n=10,check_graph=False)
+    @autotest(n=10, check_graph=False)
     def test_conv3d_with_random_data(test_case):
         channels = random(1, 6)
         m = torch.nn.Conv3d(

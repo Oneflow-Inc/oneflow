@@ -423,12 +423,12 @@ class TestConv1d(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_conv1d_bias_true,
-            #_test_conv1d_bias_false,
-            #_test_conv1d_dilation,
+            # _test_conv1d_bias_false,
+            # _test_conv1d_dilation,
             _test_conv1d_stride,
-            #_test_conv1d_group_bias_true,
-            #_test_conv1d_group_large_out_bias_true,
-            #_test_conv1d_group_large_in_bias_true,
+            # _test_conv1d_group_bias_true,
+            # _test_conv1d_group_large_out_bias_true,
+            # _test_conv1d_group_large_in_bias_true,
             _test_conv1d_compilcate,
         ]
         arg_dict["device"] = ["cuda", "cpu"]

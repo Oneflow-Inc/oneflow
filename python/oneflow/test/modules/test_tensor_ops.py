@@ -47,7 +47,7 @@ def _test_is_floating_point(test_case, shape, device, dtype):
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestCuda(flow.unittest.TestCase):
-    @autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-4)
+    @autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-4, check_graph=False)
     def test_cuda(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
@@ -58,7 +58,7 @@ class TestCuda(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestTensorOps(flow.unittest.TestCase):
-    @autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-4)
+    @autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-4, check_graph=False)
     def test_cpu(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
@@ -66,42 +66,42 @@ class TestTensorOps(flow.unittest.TestCase):
         y = x.sum()
         return y
 
-    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4)
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
     def test_long(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = x.long()
         return y
 
-    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4)
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
     def test_int(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = x.int()
         return y
 
-    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4)
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
     def test_float(test_case):
         device = random_device()
         x = random_pytorch_tensor(dtype=int).to(device)
         y = x.float()
         return y
 
-    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4)
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
     def test_double(test_case):
         device = random_device()
         x = random_pytorch_tensor(dtype=int).to(device)
         y = x.double()
         return y
 
-    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4)
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
     def test_item(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=1, dim0=1, dtype=int).to(device)
         y = torch.tensor(x.item())
         return y
 
-    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4)
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
     def test_tolist(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4).to(device)
