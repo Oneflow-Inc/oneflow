@@ -364,12 +364,17 @@ add_docstr(
 add_docstr(
     oneflow.negative,
     r"""This operator computes the negative value of Tensor.
+    
     Args:
         input (oneflow.Tensor): A Tensor
+    
     Returns:
         oneflow.Tensor: The result Tensor
+    
     For example:
+    
     .. code-block:: python
+
         >>> import numpy as np
         >>> import oneflow as flow
         
@@ -379,6 +384,7 @@ add_docstr(
         >>> out = flow.negative(input)
         >>> out
         tensor([-1.0000,  1.0000, -2.3000], dtype=oneflow.float32)
+    
     """,
 )
 
