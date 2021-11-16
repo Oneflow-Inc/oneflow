@@ -50,8 +50,8 @@ class DropoutKernelCPU final : public user_op::OpKernel {
           ep::primitive::NewPrimitive<ep::primitive::AddFactory>(DeviceType::kCPU,
                                                                  add_to_output->data_type());
       CHECK(primitive);
-      primitive->Launch(ctx->stream_ctx(), add_to_output->dptr<T>(), out->dptr<T>(),
-                        out->mut_dptr<T>(), add_to_output->shape().elem_cnt());
+      primitive->Launch(ctx->stream(), add_to_output->dptr<T>(), out->dptr<T>(), out->mut_dptr<T>(),
+                        add_to_output->shape().elem_cnt());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

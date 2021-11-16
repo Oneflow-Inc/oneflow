@@ -13,37 +13,32 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EP_PRIMITIVE_CAST_H_
-#define ONEFLOW_CORE_EP_PRIMITIVE_CAST_H_
+#ifndef ONEFLOW_CORE_EP_STREAM_H_
+#define ONEFLOW_CORE_EP_STREAM_H_
 
-#include "oneflow/core/ep/include/primitive/primitive.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/device_type.h"
 
 namespace oneflow {
 
 namespace ep {
-namespace primitive {
 
-class Cast : public Primitive {
+class Stream {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Cast);
-  Cast() = default;
-  ~Cast() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(Stream);
+  Stream() = default;
+  virtual ~Stream() = default;
 
-  virtual void Launch(Stream* stream, const void* from, void* to, size_t count) = 0;
+  virtual DeviceType device_type() const = 0;
+
+  template<typename T>
+  T* As() {
+    return static_cast<T*>(this);
+  }
 };
 
-class CastFactory : public Factory<Cast> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CastFactory);
-  CastFactory() = default;
-  ~CastFactory() override = default;
-
-  virtual std::unique_ptr<Cast> New(DataType from, DataType to) = 0;
-};
-
-}  // namespace primitive
 }  // namespace ep
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_EP_PRIMITIVE_CAST_H_
+#endif  // ONEFLOW_CORE_EP_STREAM_H_
