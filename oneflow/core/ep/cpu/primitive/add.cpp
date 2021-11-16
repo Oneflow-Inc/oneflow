@@ -48,7 +48,7 @@ class AddImpl;
 
 template<typename T, dnnl::memory::data_type type_onednn, CalculateType type_calculate>
 class AddImpl<T, type_onednn, type_calculate,
-              typename std::enable_if<type_calculate == CalculateType::defaule>::type>
+              typename std::enable_if<type_calculate == CalculateType::Default>::type>
     : public Add {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AddImpl);
@@ -82,7 +82,7 @@ class AddImpl<T, type_onednn, type_calculate,
 
 template<typename T, dnnl::memory::data_type type_onednn, CalculateType type_calculate>
 class AddImpl<T, type_onednn, type_calculate,
-              typename std::enable_if<type_calculate == CalculateType::onednn>::type> : public Add {
+              typename std::enable_if<type_calculate == CalculateType::oneDNN>::type> : public Add {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AddImpl);
   AddImpl() = default;
@@ -99,24 +99,25 @@ class AddImpl<T, type_onednn, type_calculate,
     dnnl::memory::dims src_dims = {(dnnl::memory::dim)count};
     std::vector<dnnl::memory::desc> src_md;
     std::vector<dnnl::memory> src_mem;
+    src_md.reserve(arity);
+    src_mem.reserve(arity);
 
     for (int i = 0; i < arity; i++) {
       auto md = dnnl::memory::desc(src_dims, type_onednn, dnnl::memory::format_tag::x);
       auto mem = dnnl::memory(md, *onednn_engine, (void*)(srcs)[i]);
-      src_md.push_back(md);
-      src_mem.push_back(mem);
+      src_md.emplace_back(md);
+      src_mem.emplace_back(mem);
     }
 
-    std::vector<float> scales(arity);
-    std::generate(scales.begin(), scales.end(), [](int n = 0) { return 1.0; });
+    std::vector<float> scales(arity, 1.0);
+
     auto sum_pd = dnnl::sum::primitive_desc(scales, src_md, *onednn_engine);
 
     auto sum_prim = dnnl::sum(sum_pd);
 
     auto dst_mem = dnnl::memory(sum_pd.dst_desc(), *onednn_engine, dst);
 
-    std::unordered_map<int, dnnl::memory> sum_args;
-    sum_args.insert({DNNL_ARG_DST, dst_mem});
+    std::unordered_map<int, dnnl::memory> sum_args{{DNNL_ARG_DST, dst_mem}};
     for (int n = 0; n < arity; ++n) { sum_args.insert({DNNL_ARG_MULTIPLE_SRC + n, src_mem[n]}); }
 
     sum_prim.execute(*onednn_stream, sum_args);
