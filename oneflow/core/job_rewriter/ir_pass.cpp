@@ -27,6 +27,22 @@ namespace oneflow {
 
 namespace {
 
+enum IRPassType : int32_t { kBeforeAD = 0, kAfterAD = 1 };
+
+template<IRPassType>
+std::string IRPassTypeName();
+
+template<>
+std::string IRPassTypeName<kBeforeAD>() {
+  return "before_ad";
+}
+
+template<>
+std::string IRPassTypeName<kAfterAD>() {
+  return "after_ad";
+}
+
+template<IRPassType ir_pass_type>
 class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterface {
  public:
   RoundTripOneFlowJobWrapper(::oneflow::Job* job)
@@ -102,7 +118,9 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
     op_graph_.TopoForEachNode([&](OpNode* op_node) { Handler(&op_node->op().op_conf()); });
   }
 
-  std::string LogDir() { return JoinPath("ir_pass", job_->job_conf().job_name()); }
+  std::string LogDir() {
+    return JoinPath("ir_pass", IRPassTypeName<ir_pass_type>(), job_->job_conf().job_name());
+  }
 
  private:
   Job* job_;
@@ -111,6 +129,7 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
   bool is_updated_;
 };
 
+template<IRPassType ir_pass_type>
 class IRRoundTrip final : public JobPass {
  public:
   IRRoundTrip() = default;
@@ -122,7 +141,7 @@ class IRRoundTrip final : public JobPass {
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
     const OpGraph op_graph(*job);
-    RoundTripOneFlowJobWrapper w(job);
+    RoundTripOneFlowJobWrapper<ir_pass_type> w(job);
     TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_before_ir_round_trip.prototxt"))
         ->Write(*job);
     mlir::RoundTripOneFlowJob(w, [](::oneflow::Job* job, std::string& reason) {
@@ -138,7 +157,8 @@ class IRRoundTrip final : public JobPass {
 
 }  // namespace
 
-REGISTER_JOB_PASS("IRRoundTrip", IRRoundTrip);
+REGISTER_JOB_PASS("IRRoundTripBeforeAD", IRRoundTrip<kBeforeAD>);
+REGISTER_JOB_PASS("IRRoundTrip", IRRoundTrip<kAfterAD>);
 
 }  // namespace oneflow
 #endif  // WITH_MLIR

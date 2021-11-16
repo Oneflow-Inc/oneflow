@@ -993,7 +993,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("AutoLearningRate"));
     JUST(DoPass("QuantAwareTraining"));
 #ifdef WITH_MLIR
-    JUST(DoPass("IRRoundTrip"));
+    JUST(DoPass("IRRoundTripBeforeAD"));
 #endif  // WITH_MLIR
     JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
     JUST(DoPass("AddSspVariableProxy"));

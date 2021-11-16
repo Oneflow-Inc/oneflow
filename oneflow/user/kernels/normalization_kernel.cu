@@ -201,9 +201,13 @@ class NormalizationInferenceKernel final : public user_op::OpKernel,
     CHECK_LT(axis, x->shape().NumAxes());
 
     const CudnnTensorDescHelper desc_helper(x->shape(), data_type, axis, CUDNN_BATCHNORM_SPATIAL);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(gamma);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(beta);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(moving_mean);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(moving_variance);
 
     const void* sp_alpha = CudnnSPOnePtr<T>();
@@ -381,9 +385,13 @@ class NormalizationTrainKernel final : public user_op::OpKernel, public user_op:
     const auto* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
     auto* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
     auto* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(gamma);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(beta);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(mean);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(inv_variance);
 
     user_op::Tensor* moving_mean = nullptr;
@@ -392,7 +400,9 @@ class NormalizationTrainKernel final : public user_op::OpKernel, public user_op:
       CHECK(ctx->has_input("moving_variance", 0));
       moving_mean = ctx->Tensor4ArgNameAndIndex("moving_mean", 0);
       moving_variance = ctx->Tensor4ArgNameAndIndex("moving_variance", 0);
+      LOG(ERROR);
       desc_helper.CheckParamTensor(moving_mean);
+      LOG(ERROR);
       desc_helper.CheckParamTensor(moving_variance);
     }
 
@@ -529,10 +539,15 @@ class NormalizationGradUserKernel final : public user_op::OpKernel,
 
     const CudnnTensorDescHelper desc_helper(x->shape(), data_type, axis,
                                             CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(gamma);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(gamma_diff);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(beta_diff);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(mean);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(inv_variance);
 
     void* bn_workspace_ptr;
@@ -712,11 +727,17 @@ class FusedNormalizationAddReluKernel final : public user_op::OpKernel,
 
     const CudnnTensorDescHelper desc_helper(x->shape(), data_type, axis,
                                             CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(gamma);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(beta);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(moving_mean);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(moving_variance);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(mean);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(inv_variance);
 
     CudnnActivationDesc activation_desc(CUDNN_ACTIVATION_RELU, CUDNN_PROPAGATE_NAN, 0);
@@ -803,11 +824,17 @@ class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel,
 
     const CudnnTensorDescHelper desc_helper(x->shape(), data_type, axis,
                                             CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(gamma);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(beta);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(gamma_diff);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(beta_diff);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(mean);
+    LOG(ERROR);
     desc_helper.CheckParamTensor(inv_variance);
 
     CudnnActivationDesc activation_desc(CUDNN_ACTIVATION_RELU, CUDNN_PROPAGATE_NAN, 0);
