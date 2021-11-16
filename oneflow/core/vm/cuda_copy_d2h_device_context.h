@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/device/device_context.h"
-#include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/device/cuda_event.h"
 #include "oneflow/core/vm/cuda_host_allocator.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
