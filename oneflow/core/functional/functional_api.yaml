@@ -1626,6 +1626,14 @@
     ]
   bind_python: True
 
+- name: "unfold_tensor"
+  signature: "Tensor (Tensor x, Int32 dimension, Int32 size, Int32 step) => UnfoldTensor"
+  bind_python: True
+
+- name: "unfold_tensor_grad"
+  signature: "Tensor (Tensor dy, Tensor x, Int32 dimension, Int32 size, Int32 step) => UnfoldTensorGrad"
+  bind_python: False
+
 - name: "unfold"
   signature:
     'Tensor (Tensor x, String data_format="channels_first", Int32List kernel_size,

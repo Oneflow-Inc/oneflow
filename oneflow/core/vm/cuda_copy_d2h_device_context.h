@@ -36,7 +36,7 @@ class CudaCopyD2HDeviceCtx : public DeviceCtx, public SingleThreadQueryCudaEvent
   CudaCopyD2HDeviceCtx(int64_t device_id)
       : DeviceCtx(),
         SingleThreadQueryCudaEventProvider(device_id),
-        cuda_handler_(new CudaStreamHandle(nullptr)),
+        cuda_handler_(new CudaStreamHandle()),
         cuda_allocator_(std::make_unique<CudaHostAllocator>(device_id)),
         device_id_(device_id) {}
 
@@ -45,8 +45,6 @@ class CudaCopyD2HDeviceCtx : public DeviceCtx, public SingleThreadQueryCudaEvent
   cudnnHandle_t cudnn_handle() const override { return cuda_handler_->cudnn_handle(); }
 
   void SyncDevice() override { OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream())); }
-
-  void AddCallBack(std::function<void()> callback) const override { UNIMPLEMENTED(); }
 
   vm::Allocator* mut_allocator() override { return cuda_allocator_.get(); }
 
