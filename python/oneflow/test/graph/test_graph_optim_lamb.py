@@ -182,7 +182,7 @@ class TestLamb(flow.unittest.TestCase):
         arg_dict["learning_rate"] = [0.1, 1e-3]
         arg_dict["train_iters"] = [10]
         arg_dict["betas"] = [(0.99, 0.9)]
-        # NOTE(xyliao): test will fail when weight_decay > 0
+        # NOTE(Lxy): test will fail when weight_decay > 0
         arg_dict["weight_decay"] = [0]
         arg_dict["eps"] = [1e-8, 1e-6]
         arg_dict["do_bias_correction"] = [False]
