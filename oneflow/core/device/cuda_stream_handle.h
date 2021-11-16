@@ -31,29 +31,17 @@ struct CudaCBEvent {
 class CudaStreamHandle final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaStreamHandle);
-  CudaStreamHandle() = delete;
-  CudaStreamHandle(Channel<CudaCBEvent>* cb_event_chan);
+  CudaStreamHandle();
+  ~CudaStreamHandle();
 
   cudaStream_t cuda_stream();
   cublasHandle_t cublas_handle();
   cudnnHandle_t cudnn_handle();
 
-  void AddCallBack(std::function<void()> callback);
-  void SyncRecycleEvent(cudaEvent_t event);
-
-  ~CudaStreamHandle();
-
  private:
-  Channel<CudaCBEvent>* cb_event_chan_;
   cudaStream_t cuda_stream_;
   cublasHandle_t cublas_handle_;
   cudnnHandle_t cudnn_handle_;
-  int cuda_event_flags_;
-  bool reuse_cuda_event_;
-  std::deque<cudaEvent_t> consumer_event_queue_;
-  std::deque<cudaEvent_t> producer_event_queue_;
-  std::deque<cudaEvent_t> global_event_queue_;
-  std::mutex global_event_queue_mutex_;
 };
 
 #endif  // WITH_CUDA

@@ -30,10 +30,12 @@ class NcclLogical2DSameDim0KernelCommState final : public user_op::OpKernelState
  public:
   explicit NcclLogical2DSameDim0KernelCommState(user_op::KernelInitContext* ctx)
       : is_init_(false),
-        has_independent_stream_(ctx->op_conf().has_stream_index_hint()),
-        stream_index_(ctx->op_conf().stream_index_hint()),
+        has_independent_stream_(ctx->op_conf().has_stream_name_hint()),
+        stream_name_(""),
         parallel_desc_(ctx->parallel_desc()),
-        this_parallel_id_(ctx->parallel_ctx().parallel_id()) {}
+        this_parallel_id_(ctx->parallel_ctx().parallel_id()) {
+    if (has_independent_stream_) { stream_name_ = ctx->op_conf().stream_name_hint(); }
+  }
   ~NcclLogical2DSameDim0KernelCommState() = default;
 
   ncclComm_t comm() {
@@ -66,7 +68,7 @@ class NcclLogical2DSameDim0KernelCommState final : public user_op::OpKernelState
     }
     EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
     if (has_independent_stream_) {
-      comm_ = comm_mgr->GetCommForDeviceAndStreamId(device_set, stream_index_);
+      comm_ = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
     } else {
       comm_ = comm_mgr->GetCommForDevice(device_set);
     }
@@ -76,7 +78,7 @@ class NcclLogical2DSameDim0KernelCommState final : public user_op::OpKernelState
 
   bool is_init_;
   bool has_independent_stream_;
-  int32_t stream_index_;
+  std::string stream_name_;
   ParallelDesc parallel_desc_;
   int64_t this_parallel_id_;
   int64_t num_ranks_{};

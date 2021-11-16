@@ -30,13 +30,13 @@ class PhyInstrOperand {
   virtual ~PhyInstrOperand() = default;
 
   virtual void ForEachConstMirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const = 0;
+      const std::function<void(MirroredObject* compute)>&) const = 0;
 
   virtual void ForEachMutMirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const = 0;
+      const std::function<void(MirroredObject* compute)>&) const = 0;
 
   virtual void ForEachMut2MirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const = 0;
+      const std::function<void(MirroredObject* compute)>&) const = 0;
 
  protected:
   PhyInstrOperand() = default;

@@ -46,12 +46,10 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
       intrusive::shared_ptr<LocalDepObject> local_dep_object)
       : eager_blob_objects_(eager_blob_objects), local_dep_object_(local_dep_object) {}
 
-  void ForEachMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&) const;
+  void ForEachMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
 
   void ForEachMutMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override;
+      const std::function<void(vm::MirroredObject* compute)>&) const override;
 
   intrusive::shared_ptr<LocalDepObject> local_dep_object() const { return local_dep_object_; }
 
@@ -68,15 +66,13 @@ class InputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeg
 
   // for inputs
   void ForEachConstMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-      const override {
+      const std::function<void(vm::MirroredObject* compute)>& DoEach) const override {
     ForEachMirroredObject(DoEach);
   }
 
   // for outputs
   void ForEachMut2MirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override {}
+      const std::function<void(vm::MirroredObject* compute)>&) const override {}
 };
 
 class OutputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeginPhyInstrOperand {
@@ -87,13 +83,11 @@ class OutputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBe
 
   // for inputs
   void ForEachConstMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override {}
+      const std::function<void(vm::MirroredObject* compute)>&) const override {}
 
   // for outputs
   void ForEachMut2MirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-      const override {
+      const std::function<void(vm::MirroredObject* compute)>& DoEach) const override {
     ForEachMirroredObject(DoEach);
   }
 };
@@ -107,12 +101,10 @@ class CriticalSectionEndPhyInstrOperand : public PhyInstrOperand {
 
   const std::shared_ptr<SharedEventRecord>& event_record() const { return event_record_; }
 
-  void ForEachMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&) const;
+  void ForEachMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
 
   void ForEachMutMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override;
+      const std::function<void(vm::MirroredObject* compute)>&) const override;
 
  private:
   std::shared_ptr<EagerBlobObject> eager_blob_object_;
@@ -125,14 +117,12 @@ class InputCriticalSecondEndPhyInstrOperand final : public CriticalSectionEndPhy
   ~InputCriticalSecondEndPhyInstrOperand() override = default;
 
   void ForEachConstMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-      const override {
+      const std::function<void(vm::MirroredObject* compute)>& DoEach) const override {
     ForEachMirroredObject(DoEach);
   }
 
   void ForEachMut2MirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override {}
+      const std::function<void(vm::MirroredObject* compute)>&) const override {}
 };
 
 class OutputCriticalSecondEndPhyInstrOperand final : public CriticalSectionEndPhyInstrOperand {
@@ -142,13 +132,11 @@ class OutputCriticalSecondEndPhyInstrOperand final : public CriticalSectionEndPh
 
   // for inputs
   void ForEachConstMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override {}
+      const std::function<void(vm::MirroredObject* compute)>&) const override {}
 
   // for outputs
   void ForEachMut2MirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-      const override {
+      const std::function<void(vm::MirroredObject* compute)>& DoEach) const override {
     ForEachMirroredObject(DoEach);
   }
 };

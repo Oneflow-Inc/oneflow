@@ -109,12 +109,13 @@ OneflowVM::OneflowVM(const Resource& resource, int64_t this_machine_id)
 
 namespace {
 
-void MakeCtrlSeqInstructions(vm::InstructionMsgList* list,
+void MakeCtrlSeqInstructions(vm::VirtualMachineEngine* vm, vm::InstructionMsgList* list,
                              const std::function<void()>& ComputeCallback) {
-  auto instruction = vm::NewInstruction("CtrlComputeRankFrontSeqCallback");
+  const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>(ComputeCallback);
+  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+      vm, "CtrlComputeRankFrontSeqCallback", std::shared_ptr<const ParallelDesc>(),
+      phy_instr_operand);
   instruction->add_int64_operand(GlobalProcessCtx::Rank());
-  *instruction->mut_phy_instr_operand() =
-      std::make_shared<vm::NoArgCbPhyInstrOperand>(ComputeCallback);
   list->EmplaceBack(std::move(instruction));
 }
 
@@ -123,7 +124,7 @@ void MakeCtrlSeqInstructions(vm::InstructionMsgList* list,
 void OneflowVM::ControlSync() {
   BlockingCounter bc(1);
   vm::InstructionMsgList list;
-  MakeCtrlSeqInstructions(&list, [&] { bc.Decrease(); });
+  MakeCtrlSeqInstructions(mut_vm(), &list, [&] { bc.Decrease(); });
   CHECK_JUST(Receive(&list));
   bc.WaitUntilCntEqualZero();
 }
@@ -139,7 +140,7 @@ Maybe<void> OneflowVM::Receive(vm::InstructionMsgList* instr_list) {
   if (unlikely(pthread_fork::IsForkedSubProcess())) {
     CHECK_OR_RETURN(JUST(IsMultiClient()));
     INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_list) {
-      const auto& parallel_desc = instr_msg->parallel_desc();
+      const auto& parallel_desc = instr_msg->phy_instr_parallel_desc();
       CHECK_OR_RETURN(!parallel_desc || parallel_desc->device_type() == DeviceType::kCPU)
           << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
     }
