@@ -948,7 +948,7 @@ typename std::enable_if<pack_size == 2, cudaError_t>::type DispatchSoftmaxGradWa
           stream, load_y, load_dy, store, rows, cols);                                          \
     } else {                                                                                    \
       return DispatchSoftmaxGradWarpImplPadding<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, \
-                                                pack_size, thread_group_width, 2, algorithm>(   \
+                                                pack_size, thread_group_width, 1, algorithm>(   \
           stream, load_y, load_dy, store, rows, cols);                                          \
     }                                                                                           \
   }
