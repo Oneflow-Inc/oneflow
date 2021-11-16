@@ -47,13 +47,13 @@ class SbpConstructor final {
 
   Maybe<void> Init(const OpGraph& op_graph, Job* job);
   Maybe<void> FindBestSbpSignature();
-  Maybe<void> UpdateSbpSignatureForJob(const OpGraph& op_graph);
+  Maybe<void> DumpNdSbpSignatureForJob(const OpGraph& op_graph, Job* job);
   // Print the graph with SBP in order
   void PrintSBPGraphDebugInfo();
 
  private:
   Maybe<void> InitSbpGraph(const OpGraph& op_graph, const Job& job);
-  Maybe<void> GenerateNodeAndEdge(const OpGraph& op_graph);
+  Maybe<void> GenerateNodeAndEdge(const OpGraph& op_graph, const Job& job);
   Maybe<void> FillSbpSignatureForOpNode(const OpGraph& op_graph, const Job& job);
   Maybe<void> InitComputationCost(const OpGraph& op_graph);
   Maybe<void> InitCopyCost(const OpGraph& op_graph);
