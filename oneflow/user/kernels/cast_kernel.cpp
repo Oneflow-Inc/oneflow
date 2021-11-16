@@ -45,7 +45,7 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
     CHECK_EQ(output_tenor->shape().elem_cnt(), elem_cnt);
     auto primitive = NewCastPrimitive(ctx);
     CHECK(primitive);
-    primitive->Launch(ctx->stream_ctx(), input_tensor->dptr(), output_tenor->mut_dptr(), elem_cnt);
+    primitive->Launch(ctx->stream(), input_tensor->dptr(), output_tenor->mut_dptr(), elem_cnt);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

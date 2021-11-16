@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/stream/include/stream_context_adapter.h"
 #include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
@@ -215,13 +214,15 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
         device_ctx_(device_ctx),
         base_ctx_(device_tag, input_arg_tuple, output_arg_tuple),
         composed_attrs_(composed_attrs) {
-    if (device_ctx != nullptr) { stream_ctx_.reset(NewStreamContextAdapter(device_ctx)); }
     base_ctx_.Update(inputs, outputs, consistent_tensor_infer_result);
   }
   ~LocalUserKernelInitContext() override = default;
 
   DeviceCtx* device_ctx() override { return device_ctx_; }
-  StreamContext* stream_ctx() override { return stream_ctx_.get(); }
+  ep::Stream* stream() override {
+    CHECK(device_ctx_);
+    return device_ctx_->stream();
+  }
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
   const ParallelContext& parallel_ctx() const override { return base_ctx_.parallel_ctx(); }
@@ -262,7 +263,6 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
 
   const user_op::UserOpConfWrapper* user_op_conf_;
   DeviceCtx* device_ctx_;
-  std::unique_ptr<StreamContext> stream_ctx_;
   LocalUserKernelBaseContext base_ctx_;
   const ComposedAttrMap* composed_attrs_;
 };
@@ -294,19 +294,12 @@ LocalUserKernelComputeContext::LocalUserKernelComputeContext(
     : user_op_conf_(user_op_conf),
       composed_attrs_(composed_attrs),
       device_ctx_(device_ctx),
-      base_ctx_(device_tag, input_arg_tuple, output_arg_tuple, tmp_buffer) {
-  if (device_ctx != nullptr) { stream_ctx_.reset(NewStreamContextAdapter(device_ctx)); }
-}
+      base_ctx_(device_tag, input_arg_tuple, output_arg_tuple, tmp_buffer) {}
 
 void LocalUserKernelComputeContext::Update(
     EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
     ConsistentTensorInferResultRawPtr consistent_tensor_infer_result, DeviceCtx* device_ctx) {
   device_ctx_ = device_ctx;
-  if (device_ctx != nullptr) {
-    stream_ctx_.reset(NewStreamContextAdapter(device_ctx));
-  } else {
-    stream_ctx_.reset();
-  }
   base_ctx_.Update(inputs, outputs, consistent_tensor_infer_result);
 }
 
