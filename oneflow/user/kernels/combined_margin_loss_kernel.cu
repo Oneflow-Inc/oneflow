@@ -153,7 +153,7 @@ class CombinedMarginLossGpuKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("combined_margin_loss")                                        \
       .SetCreateFn<CombinedMarginLossGpuKernel<OF_PP_PAIR_FIRST(in_type),             \
                                                OF_PP_PAIR_FIRST(indices_type)>>()     \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                 \
                        & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(in_type)) \
                        & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(indices_type)));
 
@@ -209,7 +209,7 @@ class CombinedMarginLossGradGpuKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("combined_margin_loss_grad")                                    \
       .SetCreateFn<CombinedMarginLossGradGpuKernel<OF_PP_PAIR_FIRST(dy_type),          \
                                                    OF_PP_PAIR_FIRST(indices_type)>>()  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
                        & (user_op::HobDataType("dy", 0) == OF_PP_PAIR_SECOND(dy_type)) \
                        & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(indices_type)));
 

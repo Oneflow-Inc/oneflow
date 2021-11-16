@@ -121,7 +121,7 @@ class EagerSymmetricSToPKernel final : public user_op::OpKernel {
 #define REGISTER_EAGER_SYMMETRIC_S_TO_P_KERNEL(device) \
   REGISTER_USER_KERNEL("eager_symmetric_s_to_p")       \
       .SetCreateFn<EagerSymmetricSToPKernel<device>>() \
-      .SetIsMatchedHob(user_op::HobDeviceTag() == device);
+      .SetIsMatchedHob(user_op::HobDeviceType() == device);
 
 REGISTER_EAGER_SYMMETRIC_S_TO_P_KERNEL(DeviceType::kCPU)
 

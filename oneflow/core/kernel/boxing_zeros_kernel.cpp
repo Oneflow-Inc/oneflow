@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/primitive/include/memset.h"
+#include "oneflow/core/ep/include/primitive/memset.h"
 
 namespace oneflow {
 
@@ -29,11 +29,12 @@ class BoxingZerosKernel final : public Kernel {
   void VirtualKernelInit(KernelContext* ctx) override;
   void ForwardDataContent(KernelContext* ctx) const override;
 
-  std::unique_ptr<primitive::Memset> primitive_;
+  std::unique_ptr<ep::primitive::Memset> primitive_;
 };
 
 void BoxingZerosKernel::VirtualKernelInit(KernelContext* ctx) {
-  primitive_ = primitive::NewPrimitive<primitive::MemsetFactory>(this->op_conf().device_tag());
+  primitive_ =
+      ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(this->op_conf().device_tag());
   CHECK(primitive_);
 }
 

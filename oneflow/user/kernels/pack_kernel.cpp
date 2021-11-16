@@ -65,7 +65,7 @@ class PackKernel final : public user_op::OpKernel {
 
 #define REGISTER_PACK_KERNEL(device)                                              \
   REGISTER_USER_KERNEL("pack").SetCreateFn<PackKernel<device>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device));
+      (user_op::HobDeviceType() == device));
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_PACK_KERNEL, DEVICE_TYPE_SEQ)
 
