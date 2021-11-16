@@ -26,11 +26,13 @@ import oneflow.unittest
 
 
 def _test_fused_scale_mask_softmax(
-    test_case, batch_size, num_heads, seq_length, seed, fill_value, scale_value,
+    test_case, batch_size, num_heads, seq_length, fill_value, scale_value,
 ):
 
     x = np.random.randn(batch_size, num_heads, seq_length, seq_length)
-    mask = np.random.randint(0, 2, size=(batch_size, num_heads, seq_length, seq_length), dtype=np.uint8)
+    mask = np.random.randint(
+        0, 2, size=(batch_size, num_heads, seq_length, seq_length), dtype=np.uint8
+    )
 
     fused_x_tensor = flow.tensor(x).to("cuda")
     fused_mask_tensor = flow.tensor(mask, dtype=flow.int8).to("cuda")
@@ -43,7 +45,9 @@ def _test_fused_scale_mask_softmax(
     origin_x_tensor = flow.tensor(x).to("cuda")
     origin_mask_tensor = flow.tensor(mask, dtype=flow.float32).to("cuda")
     origin_x_tensor.requires_grad = True
-    origin_out = flow.mul(origin_x_tensor, origin_mask_tensor) * scale_value + fill_value * (1.0 - origin_mask_tensor)
+    origin_out = flow.mul(
+        origin_x_tensor, origin_mask_tensor
+    ) * scale_value + fill_value * (1.0 - origin_mask_tensor)
     origin_out = flow.softmax(origin_out, dim=-1)
 
     total_out = fused_out.sum() + origin_out.sum()
@@ -53,8 +57,14 @@ def _test_fused_scale_mask_softmax(
         np.allclose(fused_out.numpy(), origin_out.numpy(), atol=1e-4, rtol=1e-4)
     )
     test_case.assertTrue(
-        np.allclose(fused_x_tensor.grad.numpy(), origin_x_tensor.grad.numpy(), atol=1e-4, rtol=1e-4)
+        np.allclose(
+            fused_x_tensor.grad.numpy(),
+            origin_x_tensor.grad.numpy(),
+            atol=1e-4,
+            rtol=1e-4,
+        )
     )
+
 
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
@@ -65,7 +75,6 @@ class TestFusedScaleMaskSoftmax(flow.unittest.TestCase):
         args_dict["batch_size"] = [4, 8, 16]
         args_dict["num_heads"] = [1, 4, 8]
         args_dict["seq_length"] = [16, 32, 64]
-        args_dict["seed"] = [0]
         args_dict["fill_value"] = [-10000.0]
         args_dict["scale_value"] = [1.0, 2.0, 4.0]
 

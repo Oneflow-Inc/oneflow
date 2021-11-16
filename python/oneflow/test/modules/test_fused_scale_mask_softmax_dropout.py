@@ -41,7 +41,7 @@ def _test_fused_scale_mask_softmax_dropout(
     fused_mask_tensor = flow.tensor(mask, dtype=flow.int8).to("cuda")
     fused_x_tensor.requires_grad = True
 
-#if mask is zero, fill it
+    # if mask is zero, fill it
     fused_out = flow._C.fused_scale_mask_softmax_dropout(
         fused_x_tensor,
         fused_mask_tensor,
