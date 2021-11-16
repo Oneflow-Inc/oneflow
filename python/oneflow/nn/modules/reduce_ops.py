@@ -232,6 +232,90 @@ def prod_tensor_op(input, dim=None, keepdim=False):
     return prod_op(input, dim, keepdim)
 
 
+def all_op(input, dim=None, keepdim=False):
+    """Computes if all elements in the input tensor to true.
+    
+    Args:
+        input (oneflow.Tensor): the Input Tensor
+        dim (int, optional): the dimension to reduce. Default: `None`
+        keepdim (bool, optional): whether the output tensor has dim retained or not. Default: `False`
+
+    Returns:
+        Tensor(oneflow.Tensor(dtype=int8)): If :attr:`dim` is `None`, returns 
+        the logical all value of all elements in the `input` tensor.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
+        >>> flow.all(input)
+        tensor(1, dtype=oneflow.int8)
+        >>> values = flow.all(input, dim=1)
+        >>> values
+        tensor([1, 1], dtype=oneflow.int8)
+
+    """
+
+    axis_checked = _check_axis(dim, input.shape)
+    if len(axis_checked) == 0:
+        return input
+    return flow._C.reduce_all(input, axis=axis_checked, keepdims=keepdim)
+
+
+@register_tensor_op("all")
+def all_tensor_op(input, dim=None, keepdim=False):
+    """
+    input.all(dim, index) -> Tensor
+    See :func:`oneflow.all`
+    """
+
+    return all_op(input, dim, keepdim)
+
+
+def any_op(input, dim=None, keepdim=False):
+    """Computes if any elements in the input tensor to true.
+    
+    Args:
+        input (oneflow.Tensor): the Input Tensor
+        dim (int, optional): the dimension to reduce. Default: `None`
+        keepdim (bool, optional): whether the output tensor has dim retained or not. Default: `False`
+
+    Returns:
+        Tensor(oneflow.Tensor(dtype=int8)): If :attr:`dim` is `None`, returns 
+        the logical any value of all elements in the `input` tensor.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
+        >>> flow.any(input)
+        tensor(1, dtype=oneflow.int8)
+        >>> values = flow.any(input, dim=1)
+        >>> values
+        tensor([1, 1], dtype=oneflow.int8)
+
+    """
+
+    axis_checked = _check_axis(dim, input.shape)
+    if len(axis_checked) == 0:
+        return input
+    return flow._C.reduce_any(input, axis=axis_checked, keepdims=keepdim)
+
+
+@register_tensor_op("any")
+def any_tensor_op(input, dim=None, keepdim=False):
+    """
+    input.any(dim, index) -> Tensor
+    See :func:`oneflow.any`
+    """
+
+    return any_op(input, dim, keepdim)
+
+
 if __name__ == "__main__":
     import doctest
 
