@@ -330,22 +330,22 @@ struct FillUserAttrsInNormalizationAddReluOp
     } else {
       op->setAttr("op_type_name", rewriter.getStringAttr(op->getName().stripDialect()));
       {
-        llvm::SmallVector<StringRef, 4> input_lbn_segment_keys = {"x"};
+        llvm::SmallVector<std::string, 4> input_lbn_segment_keys = {"x"};
         if (op.addend()) input_lbn_segment_keys.push_back("addend");
         if (op.moving_mean()) input_lbn_segment_keys.push_back("moving_mean");
         if (op.moving_variance()) input_lbn_segment_keys.push_back("moving_variance");
         input_lbn_segment_keys.push_back("gamma");
         input_lbn_segment_keys.push_back("beta");
         op->setAttr("input_lbn_segment_keys",
-                    rewriter.getStrArrayAttr(
-                        {input_lbn_segment_keys.begin(), input_lbn_segment_keys.end()}));
+                    rewriter.getStrArrayAttr(llvm::SmallVector<StringRef, 4>(
+                        {input_lbn_segment_keys.begin(), input_lbn_segment_keys.end()})));
         llvm::SmallVector<int32_t, 4> input_lbn_segment_sizes(input_lbn_segment_keys.size());
         std::fill_n(input_lbn_segment_sizes.begin(), input_lbn_segment_sizes.size(), 1);
         op->setAttr("input_lbn_segment_sizes", rewriter.getI32ArrayAttr(input_lbn_segment_sizes));
       }
       {
-        llvm::SmallVector<StringRef, 4> output_lbn_segment_keys = {"y"};
-        llvm::SmallVector<StringRef, 4> output_lbns = {op.op_name().str() + "/y_0"};
+        llvm::SmallVector<std::string, 4> output_lbn_segment_keys = {"y"};
+        llvm::SmallVector<std::string, 4> output_lbns = {op.op_name().str() + "/y_0"};
         if (op.mean()) {
           output_lbn_segment_keys.push_back("mean");
           output_lbns.push_back(op.op_name().str() + "/mean_0");
@@ -354,11 +354,14 @@ struct FillUserAttrsInNormalizationAddReluOp
           output_lbn_segment_keys.push_back("inv_variance");
           output_lbns.push_back(op.op_name().str() + "/inv_variance_0");
         }
-        op->setAttr("output_lbn_segment_keys", rewriter.getStrArrayAttr(output_lbn_segment_keys));
+        op->setAttr("output_lbn_segment_keys",
+                    rewriter.getStrArrayAttr(llvm::SmallVector<StringRef, 4>(
+                        {output_lbn_segment_keys.begin(), output_lbn_segment_keys.end()})));
         llvm::SmallVector<int32_t, 4> output_lbn_segment_sizes(output_lbn_segment_keys.size());
         std::fill_n(output_lbn_segment_sizes.begin(), output_lbn_segment_sizes.size(), 1);
         op->setAttr("output_lbn_segment_sizes", rewriter.getI32ArrayAttr(output_lbn_segment_sizes));
-        op->setAttr("output_lbns", rewriter.getStrArrayAttr(output_lbns));
+        op->setAttr("output_lbns", rewriter.getStrArrayAttr(llvm::SmallVector<StringRef, 4>(
+                                       {output_lbns.begin(), output_lbns.end()})));
       }
       return success();
     }
@@ -479,8 +482,8 @@ void NormalizationAddReluOp::build(::mlir::OpBuilder& odsBuilder, ::mlir::Operat
   auto y = x.getType();
   odsState.addTypes(y);
   // TODO: add real type infer, or get types from user of x and moving_mean, if it is a bn
-  // odsState.addTypes(x.getType());
-  // odsState.addTypes(x.getType());
+  odsState.addTypes(x.getType());
+  odsState.addTypes(x.getType());
 }
 
 #include "OneFlow/OneFlowEnums.cpp.inc"
