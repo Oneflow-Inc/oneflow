@@ -29,6 +29,8 @@ limitations under the License.
 #include "oneflow/core/framework/arg_tuple.h"
 #include "oneflow/core/autograd/autograd_function.h"
 
+#include "oneflow/core/framework/op_schema.h"
+
 namespace oneflow {
 namespace one {
 
@@ -142,12 +144,19 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
       const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
       const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
 
+  Maybe<void> InferPhysicalShapeAndDType(
+      const std::shared_ptr<const OpSchema>& op_schema, const std::string& device_tag,
+      const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
+      const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
+
   Maybe<void> InferLogicalShapeAndDType(
       const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc,
       const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
       const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
   Maybe<Symbol<Device>> InferDevices(const AttrMap& attrs, const TensorTuple& inputs,
                                      TensorTuple* outputs) const;
+  Maybe<Symbol<Device>> InferDevices(const std::shared_ptr<const OpSchema>& op_schema,
+                                     const TensorTuple& inputs, TensorTuple* outputs) const;
   ConsistentTensorInferCache* mut_consistent_tensor_infer_cache() const {
     return consistent_tensor_infer_cache_.get();
   }

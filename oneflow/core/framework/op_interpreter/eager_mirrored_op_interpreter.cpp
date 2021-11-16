@@ -86,7 +86,7 @@ std::vector<TensorMeta*>* ThreadLocalDefaultOutputMutTensorMetas(int64_t size) {
 Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                            const Symbol<Device>& default_device, TensorTuple* outputs,
                            const OpExprInterpContext& ctx) {
-  const auto& attrs = ctx.attrs;
+  // const auto& attrs = ctx.attrs;
   std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(inputs.size());
   for (int i = 0; i < inputs.size(); i++) {
@@ -122,13 +122,13 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
   } else {
     need_check_mem_case = false;
-    op_device = JUST(user_op_expr.InferDevices(attrs, inputs, outputs));
+    op_device = JUST(user_op_expr.InferDevices(ctx.op_schema, inputs, outputs));
   }
 
   // Infer shapes and dtypes
   const auto& device_tag = JUST(op_device->of_type());
   JUST(user_op_expr.InferPhysicalShapeAndDType(
-      attrs, device_tag,
+      ctx.op_schema, device_tag,
       [&](int32_t i) -> const TensorMeta* {
         return CHECK_JUST(TensorImpl4Tensor(inputs.at(i)))->mut_tensor_meta();
       },

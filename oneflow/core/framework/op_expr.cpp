@@ -156,6 +156,19 @@ class UserOpExprInferContext : public user_op::InferContext {
         device_tag_(device_tag),
         tensor_meta4input_index_(TensorMeta4InputIndex),
         tensor_meta4output_index_(TensorMeta4OutputIndex) {}
+
+  UserOpExprInferContext(const UserOpExpr* user_op_expr,
+                         const std::shared_ptr<const OpSchema>& op_schema,
+                         const std::string& device_tag,
+                         const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
+                         const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex)
+      : user_op_expr_(user_op_expr),
+        composed_attrs_(AttrMap{}),
+        op_schema_(op_schema),
+        device_tag_(device_tag),
+        tensor_meta4input_index_(TensorMeta4InputIndex),
+        tensor_meta4output_index_(TensorMeta4OutputIndex) {}
+
   virtual ~UserOpExprInferContext() override = default;
 
   const std::vector<std::pair<std::string, int32_t>>& inputs() const override {
@@ -267,6 +280,7 @@ class UserOpExprInferContext : public user_op::InferContext {
   }
   const UserOpExpr* user_op_expr_;
   const ComposedAttrMap composed_attrs_;
+  const std::shared_ptr<const OpSchema> op_schema_;
   const std::string& device_tag_;
   const std::function<const TensorMeta*(int32_t)>& tensor_meta4input_index_;
   const std::function<TensorMeta*(int32_t)>& tensor_meta4output_index_;
@@ -359,6 +373,15 @@ class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
         input_tensors_(&input_tensors),
         output_tensors_(output_tensors) {}
 
+  UserOpExprDeviceInferContext(const UserOpExpr* user_op_expr,
+                               const std::shared_ptr<const OpSchema>& op_schema,
+                               const TensorTuple& input_tensors, TensorTuple* output_tensors)
+      : user_op_expr_(user_op_expr),
+        composed_attrs_(AttrMap{}),
+        op_schema_(op_schema),
+        input_tensors_(&input_tensors),
+        output_tensors_(output_tensors) {}
+
   const std::vector<std::pair<std::string, int32_t>>& inputs() const override {
     return user_op_expr_->indexed_input_pairs();
   }
@@ -390,6 +413,7 @@ class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
   }
   const UserOpExpr* user_op_expr_;
   const ComposedAttrMap composed_attrs_;
+  const std::shared_ptr<const OpSchema> op_schema_;
   const TensorTuple* input_tensors_;
   TensorTuple* output_tensors_;
 };
@@ -437,6 +461,17 @@ Maybe<void> UserOpExpr::InferPhysicalShapeAndDType(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> UserOpExpr::InferPhysicalShapeAndDType(
+    const std::shared_ptr<const OpSchema>& op_schema, const std::string& device_tag,
+    const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
+    const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const {
+  UserOpExprPhysicalInferContext infer_ctx(this, op_schema, device_tag, TensorMeta4InputIndex,
+                                           TensorMeta4OutputIndex);
+  JUST(shape_infer_fn_(&infer_ctx));
+  JUST(dtype_infer_fn_(&infer_ctx));
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> UserOpExpr::InferLogicalShapeAndDType(
     const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc,
     const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
@@ -453,6 +488,14 @@ Maybe<Symbol<Device>> UserOpExpr::InferDevices(const AttrMap& attrs,
                                                TensorTuple* output_tensors) const {
   CHECK_OR_RETURN(static_cast<bool>(device_infer_fn_));
   UserOpExprDeviceInferContext device_infer_ctx(this, attrs, input_tensors, output_tensors);
+  return TRY(device_infer_fn_(&device_infer_ctx));
+}
+
+Maybe<Symbol<Device>> UserOpExpr::InferDevices(const std::shared_ptr<const OpSchema>& op_schema,
+                                               const TensorTuple& input_tensors,
+                                               TensorTuple* output_tensors) const {
+  CHECK_OR_RETURN(static_cast<bool>(device_infer_fn_));
+  UserOpExprDeviceInferContext device_infer_ctx(this, op_schema, input_tensors, output_tensors);
   return TRY(device_infer_fn_(&device_infer_ctx));
 }
 

@@ -38,6 +38,8 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/lazy_mode.h"
 
+#include "oneflow/core/framework/op_schema.h"
+
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -126,15 +128,15 @@ class ConsistentConstantFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    auto schema = std::make_shared<ConstantOpSchema>();
+    schema->shape = shape;
+    schema->dtype = dtype->data_type();
     if (IsIntegralDataType(dtype->data_type())) {
-      JUST(attrs.SetAttr<bool>("is_floating_value", false));
-      JUST(attrs.SetAttr<int64_t>("integer_value", JUST(value.As<int64_t>())));
+      schema->is_floating_value = false;
+      schema->integer_value = JUST(value.As<int64_t>());
     } else {
-      JUST(attrs.SetAttr<bool>("is_floating_value", true));
-      JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
+      schema->is_floating_value = true;
+      schema->floating_value = JUST(value.As<double>());
     }
     if (LazyMode::is_enabled()) {
       std::vector<std::string> nd_sbp(sbp_tuple.size());
@@ -143,10 +145,10 @@ class ConsistentConstantFunctor {
           nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
         }
       }
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
+      schema->nd_sbp = std::move(nd_sbp);
     }
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(schema, placement, nd_sbp));
   }
 
  private:
@@ -158,21 +160,21 @@ class ConstantFunctor {
   ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    auto schema = std::make_shared<ConstantOpSchema>();
+    schema->shape = shape;
+    schema->dtype = dtype->data_type();
     if (IsIntegralDataType(dtype->data_type())) {
-      JUST(attrs.SetAttr<bool>("is_floating_value", false));
-      JUST(attrs.SetAttr<int64_t>("integer_value", JUST(value.As<int64_t>())));
+      schema->is_floating_value = false;
+      schema->integer_value = JUST(value.As<int64_t>());
     } else {
-      JUST(attrs.SetAttr<bool>("is_floating_value", true));
-      JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
+      schema->is_floating_value = true;
+      schema->floating_value = JUST(value.As<double>());
     }
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device);
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(schema, device_symbol));
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(schema));
     }
   }
 
