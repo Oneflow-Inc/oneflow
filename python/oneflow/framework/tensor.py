@@ -458,10 +458,10 @@ def _maximum(self, y):
     return flow.maximum(self, y)
 
 def _negative(self):
-    return flow.negative(self)
+    return flow._C.negative(self)
 
 def _neg(self):
-    return flow.negative(self)
+    return flow._C.negative(self)
 
 def _rsqrt(self):
     return flow.rsqrt(self)
