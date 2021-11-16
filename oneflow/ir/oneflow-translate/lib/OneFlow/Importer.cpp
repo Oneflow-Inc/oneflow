@@ -136,9 +136,8 @@ DenseIntElementsAttr Importer::DenseIntElementsAttrFromShape(const ::oneflow::Sh
 }
 
 void WriteDenseIntElementsToShape(mlir::Attribute& attr, ::oneflow::ShapeProto* shape) {
-  for (auto int_v : attr.dyn_cast<DenseIntElementsAttr>().getIntValues()) {
-    assert(int_v.isSignedIntN(64));
-    shape->add_dim(int_v.getSExtValue());
+  for (auto int_v : attr.dyn_cast<DenseIntElementsAttr>().getValues<int64_t>()) {
+    shape->add_dim(int_v);
   }
 }
 
@@ -599,9 +598,8 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
       } else if (attr_type == ::oneflow::kAtListShape) {
         for (auto s : attr.dyn_cast<ArrayAttr>().getValue()) {
           ::oneflow::ShapeProto* shape_ptr = user_attr.mutable_at_list_shape()->add_val();
-          for (auto int_v : s.dyn_cast<DenseIntElementsAttr>().getIntValues()) {
-            assert(int_v.isSignedIntN(64));
-            shape_ptr->mutable_dim()->Add(int_v.getSExtValue());
+          for (auto int_v : s.dyn_cast<DenseIntElementsAttr>().getValues<int64_t>()) {
+            shape_ptr->mutable_dim()->Add(int_v);
           }
         }
       } else if (attr_type == ::oneflow::kAtListString) {

@@ -145,7 +145,6 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
 ::llvm::SmallVector<::mlir::Value, 4> OutlineMulCast(::mlir::PatternRewriter& rewriter,
                                                      mlir::OpResult mul_res,
                                                      mlir::OpResult cast_res) {
-  if (llvm::dyn_cast<MlirJitOp>(mul_res.getParentBlock()->getParentOp())) { return {}; }
   if (auto mul_op = llvm::dyn_cast<ScalarMulByTensorOp>(mul_res.getDefiningOp())) {
     if (auto cast_op = llvm::dyn_cast<CastOp>(cast_res.getDefiningOp())) {
       // TODO: extract a function to generate op name for jit op from ops being fused
@@ -179,9 +178,9 @@ namespace mlir {
 namespace oneflow {
 
 void AddLowerToLinalgMemRefPasses(PassManager& pm) {
-  pm.addPass(createLowerOneFlowToTosaPass());                     // lower-oneflow-to-tosa
-  pm.addPass(createCSEPass());                                    // cse
-  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgOnTensors());  // tosa-to-linalg-on-tensors
+  pm.addPass(createLowerOneFlowToTosaPass());            // lower-oneflow-to-tosa
+  pm.addPass(createCSEPass());                           // cse
+  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
   auto p = createLinalgElementwiseOpFusionPass();
   assert(p->initializeOptions("allow-folding-unit-dim-reshapes=true").succeeded());
   pm.addNestedPass<FuncOp>(std::move(p));                     // linalg-fuse-elementwise-ops

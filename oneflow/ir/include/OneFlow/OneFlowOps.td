@@ -786,29 +786,16 @@ def OneFlow_MlirJitOp : OneFlow_UserBaseOp<"mlir_jit", [
     StrAttr:$mlir_assembly
   );
   let builders = [
-    OpBuilder<(ins
-      "FuncOp":$callee,
+    OpBuilder<(ins "FuncOp":$callee,
       "NamedAttrList":$attributes,
-      CArg<"ValueRange", "{}">:$data_input
-    ), [{
+      CArg<"ValueRange", "{}">:$data_input), [{
       $_state.addOperands(data_input);
-      $_state.addAttribute("callee",$_builder.getSymbolRefAttr(callee));
+      $_state.addAttributes(attributes);
+      $_state.addAttribute("callee", SymbolRefAttr::get(callee));
       $_state.addTypes(callee.getType().getResults());
-      $_state.addAttributes(attributes);
-    }]>,
-    OpBuilder<(ins
-      "SymbolRefAttr":$callee,
-      "TypeRange":$results,
-      "NamedAttrList":$attributes,
-      CArg<"ValueRange", "{}">:$data_input
-    ), [{
-      $_state.addOperands(data_input);
-      $_state.addAttribute("callee", callee);
-      $_state.addTypes(results);
-      $_state.addAttributes(attributes);
     }]>
   ];
-    let extraClassDeclaration = [{
+  let extraClassDeclaration = [{
     operand_range getArgOperands() {
       return {arg_operand_begin(), arg_operand_end()};
     }
