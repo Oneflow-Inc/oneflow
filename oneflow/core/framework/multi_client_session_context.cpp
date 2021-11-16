@@ -128,7 +128,7 @@ Maybe<void> MultiClientSessionContext::TryClose() {
 
     // sync before NNGraph release to ensure LaunchLazyJob instruction was completed and released
     JUST(vm::ClusterSync());
-    for (auto graph : graphs_) {
+    for (const auto& graph : graphs_) {
       VLOG(2) << "Try to close graph: " << graph->job_name() << std::endl;
       JUST(graph->Close());
     }
