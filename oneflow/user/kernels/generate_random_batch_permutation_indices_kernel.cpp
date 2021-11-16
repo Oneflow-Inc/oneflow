@@ -44,6 +44,6 @@ class GenerateRandomBatchPermutationIndicesCPUKernel final : public user_op::OpK
 
 REGISTER_USER_KERNEL("generate_random_batch_permutation_indices")
     .SetCreateFn<GenerateRandomBatchPermutationIndicesCPUKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "cpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU);
 
 }  // namespace oneflow
