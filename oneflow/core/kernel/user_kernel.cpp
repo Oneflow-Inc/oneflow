@@ -129,7 +129,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   ~UserKernelInitContext() override = default;
 
   DeviceCtx* device_ctx() override { return device_ctx_; }
-  StreamContext* stream_ctx() override { return stream_ctx_; }
+  ep::Stream* stream() override { return stream_ctx_->stream(); }
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
   const ParallelContext& parallel_ctx() const override { return base_ctx_.parallel_ctx(); }
@@ -388,7 +388,7 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
   DeviceCtx* device_ctx() override { return device_ctx_; }
-  StreamContext* stream_ctx() override { return stream_ctx_; }
+  ep::Stream* stream() override { return stream_ctx_->stream(); }
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) override {
     auto it = arg2tensor_.find(std::make_pair(arg_name, arg_index));
     CHECK(it != arg2tensor_.end()) << "Arg (" << arg_name << "," << arg_index << ") is not found";
@@ -500,7 +500,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
     return it->second.tensor.get();
   }
   DeviceCtx* device_ctx() override { return device_ctx_; }
-  StreamContext* stream_ctx() override { return stream_ctx_; }
+  ep::Stream* stream() override { return stream_ctx_->stream(); }
 
   bool UpdateTensorWithCorrBlob(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
     bool updated = false;
