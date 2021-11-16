@@ -26,7 +26,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestIndexSelect(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_index_select_by_random(test_case):
         device = random_device()
 

@@ -85,8 +85,8 @@ class TestPixelShuffleModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest()
-    def test_pixel_shuffle_with_random_data(test_case):
+    @autotest(check_graph=False)
+    def _test_pixel_shuffle_with_random_data(test_case):
         upscale_factor = random().to(int)
         num_channels = upscale_factor * upscale_factor * random().to(int)
         m = torch.nn.PixelShuffle(upscale_factor=upscale_factor)
