@@ -41,7 +41,7 @@ Maybe<void> SbpConstructor::Init(const OpGraph& op_graph, Job* job /*Maybe not u
 
 Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job) {
   // TODO: process mirrored node
-  JUST(GenerateNodeAndEdge(op_graph));
+  JUST(GenerateNodeAndEdge(op_graph, job));
   JUST(FillSbpSignatureForOpNode(op_graph, job));
   JUST(InitComputationCost(op_graph));
   if (enable_mainstem_algo_) { JUST(ApplyMainstemAlgo()); }
@@ -89,9 +89,18 @@ Maybe<void> SbpConstructor::DumpNdSbpSignatureForJob(const OpGraph& op_graph, Jo
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SbpConstructor::GenerateNodeAndEdge(const OpGraph& op_graph) {
+Maybe<void> SbpConstructor::GenerateNodeAndEdge(const OpGraph& op_graph, const Job& job) {
+  JobParallelViewConf job_parallel_view_conf(job.job_parallel_view_conf());
   // Create sbp nodes
   op_graph.ForEachNode([&](OpNode* op_node) {
+    // TODO: support mirror op
+    bool is_mirrored_conf = false;
+    {
+      const auto& op_name2is_mirrored = job_parallel_view_conf.op_name2is_mirrored_parallel_view();
+      const auto& iter = op_name2is_mirrored.find(op_node->op().op_name());
+      if (iter != op_name2is_mirrored.end()) { is_mirrored_conf = iter->second; }
+    }
+    CHECK(is_mirrored_conf == false) << "Haven't deal with mirror operators.";
     // Generate sbp node in cost model and link it with corresponding op node
     SbpNode<cfg::SbpSignature>* sbp_node = sbp_graph_.GenerateNode();
     // Mapping from sbp_node to op_node
