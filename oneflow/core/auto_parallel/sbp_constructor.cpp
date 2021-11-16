@@ -259,7 +259,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
 
   // test debug
   std::cout << "Deciding order" << std::endl;
-  // Decide the order to vist the op
+  // Decide the order to visit the op
   std::vector<int32_t> order;
   auto_parallel::DecideOrder(NodeList, order, [&](OpNode* a, OpNode* b) {
     return a->op().op_name().compare(b->op().op_name()) > 0;
@@ -271,28 +271,28 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
 
   for (int32_t i = 0; i < NodeList.size(); i++) {
     OpNode* op_node = NodeList[order[i]];
+    std::cout << op_node->op().op_name() << " (^_^):" << std::endl;
     // get corresponding sbp node
     auto it = op_name2sbp_node_.find(op_node->op().op_name());
-    std::cout << op_node->op().op_name() << " (^_^):" << std::endl;
     // Print debug information for sbp graph
-    if (it != op_name2sbp_node_.end()) {
-      const auto_parallel::SbpNode<cfg::SbpSignature>* sbp_node = it->second;
-      std::cout << "Computation Cost: " << sbp_node->Cost[sbp_node->FinalSbpSignatureId];
-      std::cout << ", Min Layer: " << sbp_node->MinLayer << ", Max Layer: " << sbp_node->MaxLayer
-                << ", Tributary Layer: " << sbp_node->TributaryLayer
-                << ", in mainstem: " << sbp_node->IfMainstem
-                << ", Remain Cost: " << sbp_node->AccMainstemCost << std::endl;
-    }
+    CHECK(it != op_name2sbp_node_.end());
+    const SbpNode<cfg::SbpSignature>* sbp_node = it->second;
+    std::cout << "Computation Cost: " << sbp_node->Cost[sbp_node->FinalSbpSignatureId];
+    std::cout << ", Min Layer: " << sbp_node->MinLayer << ", Max Layer: " << sbp_node->MaxLayer
+              << ", Tributary Layer: " << sbp_node->TributaryLayer
+              << ", in mainstem: " << sbp_node->IfMainstem
+              << ", Remain Cost: " << sbp_node->AccMainstemCost << std::endl;
     // Sort before printing
     const auto& op_input_bns = op_node->op().input_bns();
     auto comp = [](const std::string& a, const std::string& b) { return a.compare(b) > 0; };
     auto_parallel::DecideOrder(op_input_bns, str_order, comp);
+    const cfg::SbpSignature& sbp_signature = *sbp_node->FinalSbpSignature();
     // Print out SBP information for input operator
     for (int32_t j : str_order) {
       const auto& ibn = op_input_bns[j];
       auto producer_node = op_node->MutSrcNode4Ibn(ibn);
       std::cout << "Pre Op:" << producer_node->op().op_name() << ": " << ibn;
-      const auto& this_sbp_parallel = op_node->SbpParallel4BnInOp(ibn);
+      const auto& this_sbp_parallel = sbp_signature.bn_in_op2sbp_parallel()[ibn];
       std::cout << ", " << SbpParallelToString(this_sbp_parallel);
       const auto input_blob_modifier_ = op_node->op().InputBlobModifier4Ibn(ibn);
       bool is_same_sbp = input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable();
@@ -308,7 +308,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
     for (int32_t j : str_order) {
       const auto& obn = op_output_bns[j];
       std::cout << "Out Op:" << obn;
-      const auto& this_sbp_parallel = op_node->SbpParallel4BnInOp(obn);
+      const auto& this_sbp_parallel = sbp_signature.bn_in_op2sbp_parallel()[obn];
       std::cout << ", " << SbpParallelToString(this_sbp_parallel);
       std::cout << ", "
                 << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(obn)).shape().elem_cnt();

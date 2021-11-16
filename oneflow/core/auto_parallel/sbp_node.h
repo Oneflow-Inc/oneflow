@@ -143,7 +143,7 @@ class SbpNode {
   void ComputeCost(
       const std::function<double(SbpNode<SbpSignature>*, SbpSignature*)>& SbpComputationCost);
   // Decide to use this SbpSignature
-  SbpSignature* FinalSbpSignature() {
+  SbpSignature* FinalSbpSignature() const {
     if (SbpSignatureList.empty()) return NULL;
     return SbpSignatureList[FinalSbpSignatureId];
   };
