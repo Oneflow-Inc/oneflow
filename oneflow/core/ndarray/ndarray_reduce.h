@@ -24,15 +24,15 @@ limitations under the License.
 namespace oneflow {
 
 template<DeviceType device_type, typename T, template<typename> class binary_func,
-         typename Enable = void, typename Enable2 = void>
+         typename Enable = void>
 struct NdarrayReduce;
 
 template<DeviceType device_type, typename T, template<typename> class binary_func>
 struct NdarrayReduce<
     device_type, T, binary_func,
-    typename std::enable_if<std::is_same<T, typename DevDType<device_type, T>::type>::value>::type,
     typename std::enable_if<
-        std::is_same<T, typename BinaryFuncTrait<binary_func, T>::return_type>::value>::type>
+        std::is_same<T, typename DevDType<device_type, T>::type>::value
+        && std::is_same<T, typename BinaryFuncTrait<binary_func, T>::return_type>::value>::type>
     final {
   using RetT = typename BinaryFuncTrait<binary_func, T>::return_type;
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<RetT>& origin_y,
@@ -88,9 +88,9 @@ struct NdarrayReduce<
 template<DeviceType device_type, typename T, template<typename> class binary_func>
 struct NdarrayReduce<
     device_type, T, binary_func,
-    typename std::enable_if<std::is_same<T, typename DevDType<device_type, T>::type>::value>::type,
     typename std::enable_if<
-        !std::is_same<T, typename BinaryFuncTrait<binary_func, T>::return_type>::value>::type>
+        std::is_same<T, typename DevDType<device_type, T>::type>::value
+        && !std::is_same<T, typename BinaryFuncTrait<binary_func, T>::return_type>::value>::type>
     final {
   using RetT = typename BinaryFuncTrait<binary_func, T>::return_type;
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<RetT>& origin_y,
