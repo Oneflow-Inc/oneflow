@@ -126,7 +126,7 @@ class CommRank final {
 
   ~CommRank() {
     if (nccl_comm_ != nullptr) {
-      CudaCurrentDeviceGuard(device_id_);
+      CudaCurrentDeviceGuard guard(device_id_);
       OF_NCCL_CHECK(ncclCommDestroy(nccl_comm_));
     }
   }
@@ -136,7 +136,7 @@ class CommRank final {
   ncclComm_t nccl_comm() const { return nccl_comm_; }
 
   void InitRank(ncclUniqueId unique_id, int32_t global_rank_count) {
-    CudaCurrentDeviceGuard(device_id_);
+    CudaCurrentDeviceGuard guard(device_id_);
     OF_NCCL_CHECK(ncclCommInitRank(&nccl_comm_, global_rank_count, unique_id, global_rank_));
   }
 
