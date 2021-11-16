@@ -587,6 +587,28 @@ def OneFlow_NormalizationAddReluOp : OneFlow_BaseOp<"normalization_add_relu", [A
     I32ElementsAttr:$operand_segment_sizes,
     I32ElementsAttr:$result_segment_sizes
   );
+  let builders = [
+    OpBuilder<(ins
+      "Value":$x,
+      "Value":$addend,
+      "Value":$moving_mean,
+      "Value":$moving_variance,
+      "Value":$gamma,
+      "Value":$beta,
+      "StringRef":$op_name,
+      "BoolAttr":$trainable,
+      "StringRef":$device_tag,
+      "ArrayAttr":$device_name,
+      "IntegerAttr":$scope_symbol_id,
+      "ArrayAttr":$hierarchy,
+      "DenseElementsAttr":$operand_segment_sizes,
+      "DenseElementsAttr":$result_segment_sizes,
+      "IntegerAttr":$axis,
+      "FloatAttr":$epsilon,
+      "BoolAttr":$training,
+      "FloatAttr":$momentum
+    )>
+  ];
 }
 
 // optimizer ops
@@ -1018,72 +1040,75 @@ def FusedBiasAddGeluPattern : Pat<
   []
 >;
 
-// def NormalizationAddReluPattern : Pat<
-//   /* match */ (
-//     OneFlow_ReluOp (
-//       OneFlow_Add2Op (
-//           OneFlow_NormalizationOp:$results
-//             $bn_x,
-//             $bn_moving_mean,
-//             $bn_moving_variance,
-//             $bn_gamma,
-//             $bn_beta,
-//             $bn__add_to_output, // TODO: check this is none
-//             $bn_op_name,
-//             $bn_trainable,
-//             $bn_device_tag,
-//             $bn_device_name,
-//             $bn_scope_symbol_id,
-//             $bn_hierarchy,
-//             $operand_segment_sizes,
-//             $result_segment_sizes,
-//             $bn_axis,
-//             $bn_epsilon,
-//             $bn_training,
-//             $bn_momentum
-//       ),
-//       $addend,
-//       $add_op_name,
-//       $add_trainable,
-//       $add_device_tag,
-//       $add_device_name,
-//       $add_scope_symbol_id,
-//       $add_hierarchy
-//     ),
-//     $relu_op_name,
-//     $relu_trainable,
-//     $relu_device_tag,
-//     $relu_device_name,
-//     $relu_scope_symbol_id,
-//     $relu_hierarchy
-//   ),
-//   /* replace */ (
-//     OneFlow_NormalizationAddReluOp
-//     (returnType $results__0),
-//     (returnType $results__1),
-//     (returnType $results__2),
-//     $bn_x,
-//     $addend,
-//     $bn_moving_mean,
-//     $bn_moving_variance,
-//     $bn_gamma,
-//     $bn_beta,
-//     $bn_op_name,
-//     $bn_trainable,
-//     $bn_device_tag,
-//     $bn_device_name,
-//     $bn_scope_symbol_id,
-//     $bn_hierarchy,
-//     // TODO: update these two
-//     $operand_segment_sizes,
-//     $result_segment_sizes,
-//     $bn_axis,
-//     $bn_epsilon,
-//     $bn_training,
-//     $bn_momentum
-//   ),
-//   []
-// >;
+def GetFirstValue :
+  NativeCodeCall<"*$0.begin()">;
+def NormalizationAddReluPattern : Pattern<
+  /* match */ (
+    OneFlow_ReluOp (
+      OneFlow_Add2Op (
+          OneFlow_NormalizationOp:$results
+            $bn_x,
+            $bn_moving_mean,
+            $bn_moving_variance,
+            $bn_gamma,
+            $bn_beta,
+            $bn__add_to_output, // TODO: check this is none
+            $bn_op_name,
+            $bn_trainable,
+            $bn_device_tag,
+            $bn_device_name,
+            $bn_scope_symbol_id,
+            $bn_hierarchy,
+            $operand_segment_sizes,
+            $result_segment_sizes,
+            $bn_axis,
+            $bn_epsilon,
+            $bn_training,
+            $bn_momentum
+      ),
+      $addend,
+      $add_op_name,
+      $add_trainable,
+      $add_device_tag,
+      $add_device_name,
+      $add_scope_symbol_id,
+      $add_hierarchy
+    ),
+    $relu_op_name,
+    $relu_trainable,
+    $relu_device_tag,
+    $relu_device_name,
+    $relu_scope_symbol_id,
+    $relu_hierarchy
+  ),
+  /* replace */ [(
+    OneFlow_NormalizationAddReluOp: $fuse_results
+    $bn_x,
+    $addend,
+    (GetFirstValue $bn_moving_mean),
+    (GetFirstValue $bn_moving_variance),
+    $bn_gamma,
+    $bn_beta,
+    $bn_op_name,
+    $bn_trainable,
+    $bn_device_tag,
+    $bn_device_name,
+    $bn_scope_symbol_id,
+    $bn_hierarchy,
+    // TODO: update these two
+    $operand_segment_sizes,
+    $result_segment_sizes,
+    $bn_axis,
+    $bn_epsilon,
+    $bn_training,
+    $bn_momentum
+  ),
+  (replaceWithValue $fuse_results__0),
+  (replaceWithValue $fuse_results__1),
+  (replaceWithValue $fuse_results__2)
+  ],
+  []
+>;
 
 #endif // ONEFLOW_PATTERNS
 
