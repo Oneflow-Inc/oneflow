@@ -520,6 +520,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
     }
     // convert op conf attributes
     else if (id.strref().equals("op_name")) {
+      // TODO: this seems to be unreachable
       if (op_name == "add_n2") { op_name = "add_n"; }
       op_conf.set_name(op_name);
     } else if (id.strref().equals("op_type_name")) {
