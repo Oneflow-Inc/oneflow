@@ -24,6 +24,7 @@ import oneflow.framework.dtype as dtype_util
 from test_util import GenArgDict
 from collections import OrderedDict
 
+
 def _get_regularizer(model_name):
     # all decay
     return flow.regularizers.l2(0.00004)
@@ -53,10 +54,10 @@ def _batch_norm(inputs, last=False):
         beta_regularizer=weight_regularizer,
     )
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestMLIROptimizations(flow.unittest.TestCase):
-
-    @unittest.skip(True)
+    @unittest.skip("")
     def test_cpu(self):
         d = OrderedDict(
             {"shape": [(2, 96, 96, 3)], "in_type": [flow.float32], "device": ["cpu"],}
@@ -82,9 +83,7 @@ class TestMLIROptimizations(flow.unittest.TestCase):
         ) -> oft.Numpy:
             addend = flow.constant_like(x, 2)
             with flow.scope.placement(device, "0:0-0"):
-                loss = flow.nn.relu(
-                    _batch_norm(x, last=False) + addend
-                )
+                loss = flow.nn.relu(_batch_norm(x, last=False) + addend)
                 return loss
 
         np_in_type = dtype_util.convert_oneflow_dtype_to_numpy_dtype(in_type)
