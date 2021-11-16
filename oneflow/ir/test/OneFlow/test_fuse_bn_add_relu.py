@@ -83,7 +83,7 @@ class TestMLIROptimizations(flow.unittest.TestCase):
         ) -> oft.Numpy:
             addend = flow.constant_like(x, 2)
             with flow.scope.placement(device, "0:0-0"):
-                loss = flow.nn.relu(_batch_norm(x, last=False) + addend)
+                loss = flow.nn.relu(_batch_norm(x, last=False) + addend) + 1
                 flow.optimizer.SGD(
                     flow.optimizer.PiecewiseConstantScheduler([], [0.0001]), momentum=0
                 ).minimize(loss)
@@ -94,7 +94,7 @@ class TestMLIROptimizations(flow.unittest.TestCase):
         FuseBnAddReluJob(x)
 
 
-# CHECK: %1 = "oneflow.normalization_add_relu"
+# CHECK: %y, %reserve_space, %mean, %inv_variance = "oneflow.normalization_add_relu"
 
 if __name__ == "__main__":
     unittest.main()
