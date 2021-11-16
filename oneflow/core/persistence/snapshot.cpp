@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/persistence/persistent_out_stream.h"
 #include "oneflow/core/register/tensor_slice_copier.h"
 #include "oneflow/core/device/cpu_device_context.h"
-#include "oneflow/core/stream/include/stream_context_adapter.h"
 
 namespace oneflow {
 
@@ -64,8 +63,7 @@ void SnapshotReader::Read(const std::string& key, const Shape& logical_blob_shap
     in_stream.ReadFully(buffer.data(), logical_blob_size);
     TensorSliceCopier copier(slice, logical_blob_slice, data_type, DeviceType::kCPU);
     CpuDeviceCtx device_ctx;
-    std::unique_ptr<StreamContext> stream_ctx(NewStreamContextAdapter(&device_ctx));
-    copier.Copy(stream_ctx.get(), dst, buffer.data());
+    copier.Copy(device_ctx.stream(), dst, buffer.data());
   }
 }
 
