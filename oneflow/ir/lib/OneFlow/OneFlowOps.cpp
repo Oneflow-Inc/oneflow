@@ -289,6 +289,52 @@ struct FillUserAttrsInFusedScaleTrilOp : public mlir::OpRewritePattern<oneflow::
   }
 };
 
+struct FillUserAttrsInNormalizationAddReluOp
+    : public mlir::OpRewritePattern<oneflow::NormalizationAddReluOp> {
+  explicit FillUserAttrsInNormalizationAddReluOp(mlir::MLIRContext* context)
+      : OpRewritePattern<oneflow::NormalizationAddReluOp>(context, /*benefit=*/1) {}
+  mlir::LogicalResult matchAndRewrite(oneflow::NormalizationAddReluOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    if (op->hasAttrOfType<StringAttr>("op_type_name")) {
+      return failure();
+    } else {
+      op->setAttr("op_type_name", rewriter.getStringAttr(op->getName().stripDialect()));
+      {
+        llvm::SmallVector<StringRef, 4> input_lbn_segment_keys = {"x"};
+        if (op.addend()) input_lbn_segment_keys.push_back("addend");
+        if (op.moving_mean()) input_lbn_segment_keys.push_back("moving_mean");
+        if (op.moving_variance()) input_lbn_segment_keys.push_back("moving_variance");
+        input_lbn_segment_keys.push_back("gamma");
+        input_lbn_segment_keys.push_back("beta");
+        op->setAttr("input_lbn_segment_keys",
+                    rewriter.getStrArrayAttr(
+                        {input_lbn_segment_keys.begin(), input_lbn_segment_keys.end()}));
+        llvm::SmallVector<int32_t, 4> input_lbn_segment_sizes(input_lbn_segment_keys.size());
+        std::fill_n(input_lbn_segment_sizes.begin(), input_lbn_segment_sizes.size(), 1);
+        op->setAttr("input_lbn_segment_sizes", rewriter.getI32ArrayAttr(input_lbn_segment_sizes));
+      }
+      {
+        llvm::SmallVector<StringRef, 4> output_lbn_segment_keys = {"y"};
+        llvm::SmallVector<StringRef, 4> output_lbns = {op.op_name().str() + "/y_0"};
+        if (op.mean()) {
+          output_lbn_segment_keys.push_back("mean");
+          output_lbns.push_back(op.op_name().str() + "/mean_0");
+        }
+        if (op.inv_variance()) {
+          output_lbn_segment_keys.push_back("inv_variance");
+          output_lbns.push_back(op.op_name().str() + "/inv_variance_0");
+        }
+        op->setAttr("output_lbn_segment_keys", rewriter.getStrArrayAttr(output_lbn_segment_keys));
+        llvm::SmallVector<int32_t, 4> output_lbn_segment_sizes(output_lbn_segment_keys.size());
+        std::fill_n(output_lbn_segment_sizes.begin(), output_lbn_segment_sizes.size(), 1);
+        op->setAttr("output_lbn_segment_sizes", rewriter.getI32ArrayAttr(output_lbn_segment_sizes));
+        op->setAttr("output_lbns", rewriter.getStrArrayAttr(output_lbns));
+      }
+      return success();
+    }
+  }
+};
+
 void FusedBiasAddGeluOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
                                                      ::mlir::MLIRContext* context) {
   results.insert<FillUserOpAttrsInFusedBiasAddGeluOp>(context);
@@ -302,6 +348,11 @@ void FusedBiasAddMaskScaleOp::getCanonicalizationPatterns(::mlir::RewritePattern
 void FusedScaleTrilOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
                                                    ::mlir::MLIRContext* context) {
   results.insert<FillUserAttrsInFusedScaleTrilOp>(context);
+}
+
+void NormalizationAddReluOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
+                                                         ::mlir::MLIRContext* context) {
+  results.insert<FillUserAttrsInNormalizationAddReluOp>(context);
 }
 
 struct ConcreteSystemOps : public mlir::OpRewritePattern<oneflow::SystemOp> {

@@ -519,7 +519,7 @@ def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", []> {
   let hasCanonicalizer = 1;
 }
 
-def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", []> {
+def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect]> {
   let summary = "";
   let input = (ins
     AnyType:$in0,
@@ -528,7 +528,7 @@ def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", []> {
   let output = (outs AnyType:$out);
 }
 
-def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [AttrSizedOperandSegments, AttrSizedResultSegments]> {
+def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [AttrSizedOperandSegments, AttrSizedResultSegments, NoSideEffect]> {
   let summary = "";
   let input = (ins
     AnyType:$x,
@@ -610,6 +610,7 @@ def OneFlow_NormalizationAddReluOp : OneFlow_BaseOp<"normalization_add_relu", [A
       "FloatAttr":$momentum
     )>
   ];
+  let hasCanonicalizer = 1;
 }
 
 // optimizer ops
