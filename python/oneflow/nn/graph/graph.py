@@ -1004,11 +1004,6 @@ class Graph(object):
             "'{}' object has no attribute '{}'".format(type(self).__name__, name)
         )
 
-    def __del__(self):
-        # Call ClusterSync here to ensure LaunchLazyJob instruction was completed and released
-        # that make NNGraph destruction happened in main thread.
-        oneflow._oneflow_internal.eager.multi_client.Sync()
-
 
 if __name__ == "__main__":
     import doctest
