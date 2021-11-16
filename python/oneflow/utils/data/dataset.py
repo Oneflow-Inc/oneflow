@@ -32,7 +32,7 @@ import oneflow as flow
 from oneflow.framework.tensor import Tensor
 
 
-default_generator = flow._oneflow_internal.default_generator("auto")
+default_generator = flow._oneflow_internal.default_generator
 
 # Taken from python 3.5 docs
 def _accumulate(iterable, fn=lambda x, y: x + y):

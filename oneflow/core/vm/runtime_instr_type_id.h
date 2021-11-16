@@ -31,27 +31,19 @@ class RtInstrTypeId final {
   RtInstrTypeId(const InstrTypeId& instr_type_id, StreamRtDesc* stream_rt_desc)
       : instr_type_id_(instr_type_id), stream_rt_desc_(stream_rt_desc) {
     if (stream_rt_desc->stream_type_id().stream_type().IsControlStreamType()) {
-      GetStream = &RtInstrTypeId::GetSoleStream;
+      get_stream_ = &StreamRtDesc::GetSoleStream;
     } else {
-      GetStream = &RtInstrTypeId::GetDeviceStream;
+      get_stream_ = &StreamRtDesc::GetDeviceStream;
     }
   }
 
   const InstrTypeId& instr_type_id() const { return instr_type_id_; }
-  Stream* (RtInstrTypeId::*GetStream)(int device_id) const;
-
-  Stream* GetSoleStream(int device_id) const {
-    CHECK_EQ(stream_rt_desc_->device_id2stream().size(), 1);
-    return stream_rt_desc_->device_id2stream().at(0).get();
-  }
-
-  Stream* GetDeviceStream(int device_id) const {
-    return stream_rt_desc_->device_id2stream().at(device_id).get();
-  }
+  Stream* GetStream(int device_id) const { return (stream_rt_desc_->*get_stream_)(device_id); }
 
  private:
   const InstrTypeId instr_type_id_;
   StreamRtDesc* stream_rt_desc_;
+  Stream* (StreamRtDesc::*get_stream_)(int device_id) const;
 };
 
 }  // namespace vm
