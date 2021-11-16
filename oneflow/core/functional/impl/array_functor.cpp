@@ -2094,7 +2094,13 @@ Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::st
       return JUST(Cast(x, dtype));
     }
   }
-  if (x->is_eager()) {
+  if (LazyMode::is_enabled()) {
+    if (dtype != x->dtype()) { tensor = JUST(Cast(x, dtype)); }
+    if (device_type != JUST(x->parallel_desc())->device_tag()) {
+      tensor = JUST(Copy(tensor ? tensor : x, device_type, 0));
+    }
+    return tensor;
+  } else {
     CheckMetaConsistency(x).GetOrThrow();
     auto old_placement = JUST(x->parallel_desc());
     auto placement = JUST(ReplacePlacementDeviceTag(input_placement, device_type));
@@ -2106,12 +2112,6 @@ Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::st
     tensor = JUST(LocalTensorTo(tensor, device->type(), device->device_id(), dtype, copy));
     JUST(tensor->set_requires_grad(x->requires_grad()));
     return JUST(LocalToConsistent(tensor, placement, sbp_tuple, *(x->shape()), dtype));
-  } else {
-    if (dtype != x->dtype()) { tensor = JUST(Cast(x, dtype)); }
-    if (device_type != JUST(x->parallel_desc())->device_tag()) {
-      tensor = JUST(Copy(tensor ? tensor : x, device_type, 0));
-    }
-    return tensor;
   }
 }
 
