@@ -64,7 +64,6 @@ config.excludes = [
     "test_fuse_cast_scale.mlir.py",
     "test_util.py",
     "test_mlir_opt.mlir.py",
-    "test_fuse_cast_scale.py",  # TODO: fix me later
     "lit.cfg.py",
 ]
 

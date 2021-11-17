@@ -42,6 +42,19 @@ std::string IRPassTypeName<kAfterAD>() {
   return "after_ad";
 }
 
+template<IRPassType>
+bool IsLastIRPassForIRPassType();
+
+template<>
+bool IsLastIRPassForIRPassType<kBeforeAD>() {
+  return false;
+}
+
+template<>
+bool IsLastIRPassForIRPassType<kAfterAD>() {
+  return true;
+}
+
 template<IRPassType ir_pass_type>
 class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterface {
  public:
@@ -49,6 +62,9 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
       : job_(job), op_graph_(*job), job_builder_(job), is_updated_(false) {}
 
   const Job* job() const { return job_; }
+
+  bool IsLastIRPass() const { return IsLastIRPassForIRPassType<ir_pass_type>(); }
+
   void UpdateJob(::oneflow::Job* new_job) {
     CHECK(is_updated_ == false);
     job_->Swap(new_job);
