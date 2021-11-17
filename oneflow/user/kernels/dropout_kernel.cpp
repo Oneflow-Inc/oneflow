@@ -53,8 +53,8 @@ class DropoutKernelCPU final : public user_op::OpKernel {
     user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const float rate = ctx->Attr<float>("rate");
-    float scale = 1.0;
-    if (rate != 1.0) { scale = 1.0 / (1.0 - rate); }
+    float scale = 1.0f;
+    if (rate != 1.0f) { scale = 1.0f / (1.0f - rate); }
 
     auto* fused_dropout_kernel_state = dynamic_cast<FusedDropoutKernelState*>(state);
     CHECK_NOTNULL(fused_dropout_kernel_state);

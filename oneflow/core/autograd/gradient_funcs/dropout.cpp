@@ -20,8 +20,8 @@ namespace oneflow {
 namespace one {
 
 struct DropoutCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  float rate;
+  bool requires_grad = true;
+  float rate = 0.0;
 };
 
 class Dropout : public OpExprGradFunction<DropoutCaptureState> {
@@ -63,7 +63,8 @@ Maybe<void> Dropout::Apply(const DropoutCaptureState* ctx, const TensorTuple& ou
 
   const std::shared_ptr<oneflow::one::Tensor>& mask = ctx->SavedTensors().at(0);
   in_grads->resize(1);
-  const float scale = 1.0 / (1.0 - ctx->rate);
+  float scale = 1.0f;
+  if (ctx->rate < 1.0f) { scale = 1.0f / (1.0f - ctx->rate); }
   in_grads->at(0) = JUST(functional::DropoutGrad(out_grads.at(0), mask, scale));
   return Maybe<void>::Ok();
 }
