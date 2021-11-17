@@ -29,7 +29,9 @@ class OneHot : public Primitive {
   OneHot() = default;
   ~OneHot() override = default;
 
-  virtual void Launch(Stream* stream, const void* in, void* out, Scalar on_value, Scalar off_value, size_t count, size_t lower_bound, size_t upper_bound) = 0;
+  virtual void Launch(Stream* stream, const void* indices, void* out, Scalar on_value,
+                      Scalar off_value, size_t indices_count, size_t lower_bound,
+                      size_t upper_bound) = 0;
 };
 
 class OneHotFactory : public Factory<OneHot> {
@@ -38,7 +40,7 @@ class OneHotFactory : public Factory<OneHot> {
   OneHotFactory() = default;
   ~OneHotFactory() override = default;
 
-  virtual std::unique_ptr<OneHot> New(DataType in_type, DataType out_type) = 0;
+  virtual std::unique_ptr<OneHot> New(DataType indices_type, DataType out_type) = 0;
 };
 
 }  // namespace primitive
