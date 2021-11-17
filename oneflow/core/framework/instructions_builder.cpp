@@ -1105,8 +1105,8 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
   const auto& phy_instr_operand = std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(
       eager_blob_object, compute_local_dep_object, callback, modifier);
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-      Global<VirtualMachine>::Get()->mut_vm(), parallel_desc->device_tag() + ".AccessBlobByCallback",
-      parallel_desc, phy_instr_operand);
+      Global<VirtualMachine>::Get()->mut_vm(),
+      parallel_desc->device_tag() + ".AccessBlobByCallback", parallel_desc, phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
