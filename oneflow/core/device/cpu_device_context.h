@@ -31,8 +31,6 @@ class CpuDeviceCtx final : public DeviceCtx, public EventRecordProvider {
 
   std::unique_ptr<DeviceCtx> Copy() const { return std::unique_ptr<DeviceCtx>(new CpuDeviceCtx()); }
 
-  void SyncDevice() override {}
-
   vm::Allocator* mut_allocator() override { return Global<vm::CpuAllocator>::Get(); }
 
   DeviceType device_type() const override { return DeviceType::kCPU; }
