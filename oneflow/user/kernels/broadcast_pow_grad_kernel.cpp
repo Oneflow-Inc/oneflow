@@ -44,13 +44,13 @@ class BroadcastPowXGradKernel final : public user_op::OpKernel {
     XpuVarNdarray<T> tmp(dz.shape(), tmp_buffer->mut_dptr<T>());
 
     NdarrayUtil<device, T>::BroadcastDiv(
-        ctx->device_ctx(), tmp,
+        ctx->stream(), tmp,
         XpuVarNdarray<const T>(z_tensor->shape(), z_tensor->dptr<T>(), num_axes),
         XpuVarNdarray<const T>(x_tensor->shape(), x_tensor->dptr<T>(), num_axes));
-    NdarrayUtil<device, T>::BroadcastMul(ctx->device_ctx(), tmp, y, const_tmp);
-    NdarrayUtil<device, T>::BroadcastMul(ctx->device_ctx(), tmp, dz, const_tmp);
+    NdarrayUtil<device, T>::BroadcastMul(ctx->stream(), tmp, y, const_tmp);
+    NdarrayUtil<device, T>::BroadcastMul(ctx->stream(), tmp, dz, const_tmp);
     NdarrayUtil<device, T>::ReduceSum(
-        ctx->device_ctx(), XpuVarNdarray<T>(dx_tensor->shape(), dx_tensor->mut_dptr<T>(), num_axes),
+        ctx->stream(), XpuVarNdarray<T>(dx_tensor->shape(), dx_tensor->mut_dptr<T>(), num_axes),
         const_tmp, tmp);
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -81,11 +81,11 @@ class BroadcastPowYGradKernel final : public user_op::OpKernel {
     XpuVarNdarray<T> tmp(dz.shape(), tmp_buffer->mut_dptr<T>());
     XpuVarNdarray<const T> x(x_tensor->shape(), x_tensor->dptr<T>(), num_axes);
     XpuVarNdarray<T> dy(dy_tensor->shape(), dy_tensor->mut_dptr<T>(), num_axes);
-    NdarrayUtil<device, T>::BroadcastAdd(ctx->device_ctx(), tmp, x, const_tmp);
+    NdarrayUtil<device, T>::BroadcastAdd(ctx->stream(), tmp, x, const_tmp);
     FOR_RANGE(int64_t, i, 0, elem_cnt) { tmp_ptr[i] = SafeLog(tmp_ptr[i]); }
-    NdarrayUtil<device, T>::BroadcastMul(ctx->device_ctx(), tmp, dz, const_tmp);
-    NdarrayUtil<device, T>::BroadcastMul(ctx->device_ctx(), tmp, z, const_tmp);
-    NdarrayUtil<device, T>::ReduceSum(ctx->device_ctx(), dy, const_tmp, tmp);
+    NdarrayUtil<device, T>::BroadcastMul(ctx->stream(), tmp, dz, const_tmp);
+    NdarrayUtil<device, T>::BroadcastMul(ctx->stream(), tmp, z, const_tmp);
+    NdarrayUtil<device, T>::ReduceSum(ctx->stream(), dy, const_tmp, tmp);
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -60,7 +60,7 @@ class ReduceSumLikeOpKernel final : public user_op::OpKernel, public user_op::Cu
       user_op::Tensor* tensor_tmp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
       T* temp_storage = static_cast<T*>(tensor_tmp->mut_dptr());
       NdarrayUtil<device_type, T>::ReduceSum(
-          ctx->device_ctx(),
+          ctx->stream(),
           XpuVarNdarray<T>(CreateReducedShape(tensor_x->shape(), {axis.begin(), axis.end()}),
                            tensor_y->mut_dptr<T>()),
           XpuVarNdarray<const T>(tensor_x->shape(), tensor_x->dptr<T>(),
@@ -115,7 +115,7 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::
     if (axis.empty()) {
       CHECK_EQ(tensor_x->shape(), tensor_y->shape());
       Memcpy<DeviceType::kGPU>(
-          ctx->device_ctx(), tensor_y->mut_dptr(), tensor_x->dptr(),
+          ctx->stream(), tensor_y->mut_dptr(), tensor_x->dptr(),
           tensor_x->shape().elem_cnt() * GetSizeOfDataType(tensor_x->data_type()));
     } else {
       user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -162,7 +162,7 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::
         h2f->Launch(ctx->stream(), tensor_x->dptr<float16>(), in_tmp_buffer, in_shape.elem_cnt());
 
         NdarrayReduce<DeviceType::kGPU, float, BinaryFuncSum>::Reduce(
-            ctx->device_ctx(), XpuVarNdarray<float>(reduced_shape, out_tmp_buffer),
+            ctx->stream(), XpuVarNdarray<float>(reduced_shape, out_tmp_buffer),
             XpuVarNdarray<const float>(in_shape, in_tmp_buffer),
             XpuVarNdarray<float>(in_shape, reduce_tmp_buffer));
 
