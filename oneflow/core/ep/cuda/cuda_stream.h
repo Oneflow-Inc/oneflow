@@ -20,11 +20,39 @@ limitations under the License.
 
 #ifdef WITH_CUDA
 
+#include <cuda.h>
+#include <cuda_runtime.h>
+
+#if CUDA_VERSION >= 11000
+#define WITH_CUDA_GRAPHS
+#endif  // CUDA_VERSION >= 11000
+
 #include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
 namespace ep {
+
+#ifdef WITH_CUDA_GRAPHS
+
+class CudaGraphExecutable {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudaGraphExecutable);
+  CudaGraphExecutable();
+  ~CudaGraphExecutable();
+
+  void Update(cudaGraph_t graph);
+  void Launch(cudaStream_t stream) const;
+  bool IsInstantiated() const;
+
+ private:
+  void Reset();
+
+  cudaGraphExec_t graph_exec_;
+  int dev_;
+};
+
+#endif  // WITH_CUDA_GRAPHS
 
 class CudaStream : public Stream {
  public:
@@ -35,9 +63,19 @@ class CudaStream : public Stream {
   DeviceType device_type() const override;
   Maybe<void> Sync() override;
 
+  Maybe<void> OnExecutionContextSetup() override;
+  Maybe<void> OnExecutionContextTeardown() override;
+
   cudaStream_t cuda_stream() const;
   cublasHandle_t cublas_handle() const;
   cudnnHandle_t cudnn_handle() const;
+
+#ifdef WITH_CUDA_GRAPHS
+  void BeginGraphCapture();
+  void EndGraphCapture(CudaGraphExecutable* executable);
+  bool IsGraphCapturing() const;
+  void LaunchGraph(const CudaGraphExecutable* executable);
+#endif
 
  private:
   cudaStream_t cuda_stream_{};
@@ -48,6 +86,9 @@ class CudaStream : public Stream {
   void* workspace_{};
   size_t workspace_size_{};
 #endif  // CUBLAS_VERSION >= 11200
+#ifdef WITH_CUDA_GRAPHS
+  bool is_graph_capturing_;
+#endif  // WITH_CUDA_GRAPHS
 };
 
 }  // namespace ep

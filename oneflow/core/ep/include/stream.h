@@ -33,6 +33,9 @@ class Stream {
   virtual DeviceType device_type() const = 0;
   virtual Maybe<void> Sync() = 0;
 
+  virtual Maybe<void> OnExecutionContextSetup() { return Maybe<void>::Ok(); }
+  virtual Maybe<void> OnExecutionContextTeardown() { return Maybe<void>::Ok(); }
+
   template<typename T>
   T* As() {
     return static_cast<T*>(this);
