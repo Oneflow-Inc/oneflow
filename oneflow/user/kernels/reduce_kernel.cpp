@@ -49,7 +49,7 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
     const Shape& reduced_shape =
         CreateReducedShape(input_tensor->shape(), {axis.begin(), axis.end()});
     NdarrayReduce<device_type, T, BinaryFunc>::Reduce(
-        ctx->device_ctx(), XpuVarNdarray<T>(reduced_shape, output_tensor->mut_dptr<T>()),
+        ctx->stream(), XpuVarNdarray<T>(reduced_shape, output_tensor->mut_dptr<T>()),
         XpuVarNdarray<const T>(input_tensor->shape(), input_tensor->dptr<T>()),
         XpuVarNdarray<T>(tmp_buffer->shape(), tmp_buffer->mut_dptr<T>()));
   }
@@ -167,7 +167,7 @@ class ReduceSumHalfKernel final : public user_op::OpKernel, public user_op::Cuda
       h2f->Launch(ctx->stream(), input_tensor->dptr<float16>(), in_tmp_buffer, in_shape.elem_cnt());
 
       NdarrayReduce<DeviceType::kGPU, float, BinaryFuncSum>::Reduce(
-          ctx->device_ctx(), XpuVarNdarray<float>(reduced_shape, out_tmp_buffer),
+          ctx->stream(), XpuVarNdarray<float>(reduced_shape, out_tmp_buffer),
           XpuVarNdarray<const float>(in_shape, in_tmp_buffer),
           XpuVarNdarray<float>(in_shape, reduce_tmp_buffer));
 
