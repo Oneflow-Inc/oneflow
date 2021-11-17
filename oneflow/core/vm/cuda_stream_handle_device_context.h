@@ -49,8 +49,6 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx, public SingleThreadQueryCuda
 
   ep::Stream* stream() override { return &stream_; }
 
-  void SyncDevice() override { OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream())); }
-
   vm::Allocator* mut_allocator() override { return cuda_allocator_.get(); }
 
   DeviceType device_type() const override { return DeviceType::kGPU; }
