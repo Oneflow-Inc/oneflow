@@ -14,23 +14,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/range_kernel_util.h"
+#include "oneflow/user/kernels/arange_kernel_util.h"
 #include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
 namespace user_op {
 template<DeviceType device_type, typename T>
-class RangeKernel final : public OpKernel {
+class ArangeKernel final : public OpKernel {
  public:
-  RangeKernel() = default;
-  ~RangeKernel() = default;
+  ArangeKernel() = default;
+  ~ArangeKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     T* output = out->mut_dptr<T>();
     const DataType dtype = ctx->Attr<DataType>("dtype");
-    int64_t range_elem_cnt = 0;
+    int64_t arange_elem_cnt = 0;
     T start = 0;
     T delta = 0;
     T limit = 0;
@@ -38,44 +38,46 @@ class RangeKernel final : public OpKernel {
       start = ctx->Attr<int64_t>("integer_start");
       delta = ctx->Attr<int64_t>("integer_delta");
       limit = ctx->Attr<int64_t>("integer_limit");
-      range_elem_cnt = ((limit - start + delta - 1) / delta);
+      // arange_elem_cnt = ((limit - start + delta - 1) / delta);
+      arange_elem_cnt = std::ceil(static_cast<double>(limit - start) / delta);
     } else {
-      // If we use static_cast<T>(start, delta, limit) and std::ceil to calculate range_elem_cnt, it
-      // will cause rounding error.
+      // If we use static_cast<T>(start, delta, limit) and std::ceil to calculate arange_elem_cnt,
+      // it will cause rounding error.
       double float_start = ctx->Attr<double>("float_start");
       double float_delta = ctx->Attr<double>("float_delta");
       double float_limit = ctx->Attr<double>("float_limit");
-      range_elem_cnt =
-          static_cast<int64_t>(((float_limit - float_start) / float_delta)
-                               + 1);  // Do the ceil division, ceil((limit-start)/delta)
+      // arange_elem_cnt =
+      //     static_cast<int64_t>(((float_limit - float_start) / float_delta)
+      //                          + 1);  // Do the ceil division, ceil((limit-start)/delta)
+      arange_elem_cnt = std::ceil(static_cast<double>(float_limit - float_start) / float_delta);
       start = static_cast<T>(float_start);
       delta = static_cast<T>(float_delta);
       limit = static_cast<T>(float_limit);
     }
-    RangeFunctor<device_type, T>()(ctx->device_ctx(), start, delta, range_elem_cnt, output);
+    ArangeFunctor<device_type, T>()(ctx->device_ctx(), start, delta, arange_elem_cnt, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_RANGE_KERNEL(device, dtype)                                               \
-  REGISTER_USER_KERNEL("range").SetCreateFn<RangeKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == device)                                                 \
+#define REGISTER_ARANGE_KERNEL(device, dtype)                                                \
+  REGISTER_USER_KERNEL("arange").SetCreateFn<ArangeKernel<device, dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == device)                                                   \
       & (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
-#define REGISTER_RANGE_KERNELS_WITH_DEVICE(device) \
-  REGISTER_RANGE_KERNEL(device, uint8_t)           \
-  REGISTER_RANGE_KERNEL(device, int8_t)            \
-  REGISTER_RANGE_KERNEL(device, int32_t)           \
-  REGISTER_RANGE_KERNEL(device, int64_t)           \
-  REGISTER_RANGE_KERNEL(device, float)             \
-  REGISTER_RANGE_KERNEL(device, double)
+#define REGISTER_ARANGE_KERNELS_WITH_DEVICE(device) \
+  REGISTER_ARANGE_KERNEL(device, uint8_t)           \
+  REGISTER_ARANGE_KERNEL(device, int8_t)            \
+  REGISTER_ARANGE_KERNEL(device, int32_t)           \
+  REGISTER_ARANGE_KERNEL(device, int64_t)           \
+  REGISTER_ARANGE_KERNEL(device, float)             \
+  REGISTER_ARANGE_KERNEL(device, double)
 
 // Register CPU version
-REGISTER_RANGE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
+REGISTER_ARANGE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 
 // Register GPU version
 #ifdef WITH_CUDA
-REGISTER_RANGE_KERNELS_WITH_DEVICE(DeviceType::kGPU);
+REGISTER_ARANGE_KERNELS_WITH_DEVICE(DeviceType::kGPU);
 #endif
 }  // namespace user_op
 }  // namespace oneflow
