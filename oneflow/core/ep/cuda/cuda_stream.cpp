@@ -72,6 +72,15 @@ CudaStream::~CudaStream() {
 
 DeviceType CudaStream::device_type() const { return DeviceType::kGPU; }
 
+Maybe<void> CudaStream::Sync() {
+  cudaError_t err = cudaStreamSynchronize(cuda_stream_);
+  if (err == cudaSuccess) {
+    return Maybe<void>::Ok();
+  } else {
+    return Error::RuntimeError() << cudaGetErrorString(err) << " (" << err << ") ";
+  }
+}
+
 cudaStream_t CudaStream::cuda_stream() const { return cuda_stream_; }
 
 cublasHandle_t CudaStream::cublas_handle() const { return cublas_handle_; }
