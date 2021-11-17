@@ -43,7 +43,7 @@ class SquareSumKernel final : public user_op::OpKernel, public user_op::CudaGrap
   REGISTER_USER_KERNEL("square_sum")                                   \
       .SetCreateFn<SquareSumKernel<device, OF_PP_PAIR_FIRST(dtype)>>() \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)            \
-                       & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype)));
+                       && (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SQUARE_SUM_KERNEL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ)
@@ -74,7 +74,7 @@ class MultiSquareSumKernel final : public user_op::OpKernel, public user_op::Cud
   REGISTER_USER_KERNEL("multi_square_sum")                                  \
       .SetCreateFn<MultiSquareSumKernel<device, OF_PP_PAIR_FIRST(dtype)>>() \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                 \
-                       & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype)));
+                       && (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MULTI_SQUARE_SUM_KERNEL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ)
