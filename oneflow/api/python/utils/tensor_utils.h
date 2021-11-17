@@ -36,13 +36,30 @@ namespace py = pybind11;
 namespace oneflow {
 namespace one {
 
+class AsyncNumpyHandler final {
+ public:
+  AsyncNumpyHandler(AsyncNumpyHandler&) = delete;
+  AsyncNumpyHandler(AsyncNumpyHandler&&) = delete;
+  AsyncNumpyHandler() : spin_counter_(std::make_shared<SpinCounter>(1)) {}
+  ~AsyncNumpyHandler() = default;
+  Maybe<bool> Ok() { return JUST(spin_counter_->CheckIfCntEqualZero()); };
+  Maybe<void> Wait() {
+    JUST(spin_counter_->WaitUntilCntEqualZero());
+    return Maybe<void>::Ok();
+  };
+  void Decrease() { spin_counter_->Decrease(); }
+
+ private:
+  std::shared_ptr<SpinCounter> spin_counter_;
+};
+
 Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t);
 
 template<typename T>
 inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
     const std::shared_ptr<Tensor>& t, PyObject* array,
     Maybe<void> (*Copy)(uint64_t, const NumPyArrayPtr&), const std::string& modifier,
-    bool block_host_until_done) {
+    std::shared_ptr<AsyncNumpyHandler> handler) {
   std::shared_ptr<MirroredTensor> tensor;
   CHECK_OR_RETURN(t->is_eager()) << "eager tensors supported only";
   if (t->is_local()) {
@@ -61,38 +78,23 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
     tensor = JUST(consistent_tensor->cur_rank_phy_tensor());
   }
 
-  if (block_host_until_done) {
-    NumPyArrayPtr array_ptr(array);
-    const auto& Callback = std::make_shared<std::function<void(uint64_t)>>(
-        [array_ptr, Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array_ptr)); });
-    bool is_printed = false;
-    JUST(SpinCounter::SpinWait(
-        1,
-        [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-          return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-            return builder->SyncAccessBlobByCallback(tensor, sc, Callback, modifier);
-          });
-        },
-        [&is_printed]() {
-          if (!is_printed) {
-            blocking::StackInfoCallback();
-            is_printed = true;
-          }
-        }));
+  Py_INCREF(array);
+  NumPyArrayPtr array_ptr(array, [array]() {
+    py::gil_scoped_acquire acquire;
+    Py_DECREF(array);
+  });
+  std::function<void(uint64_t)> Callback;
+  if (handler) {
+    Callback = [array_ptr, Copy, handler](uint64_t ofblob_ptr) {
+      CHECK_JUST(Copy(ofblob_ptr, array_ptr));
+      handler->Decrease();
+    };
   } else {
-    Py_INCREF(array);
-    NumPyArrayPtr array_ptr(array, [array]() {
-      py::gil_scoped_acquire acquire;
-      Py_DECREF(array);
-    });
-
-    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->AccessBlobByCallback(
-          tensor,
-          [array_ptr, Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array_ptr)); },
-          modifier);
-    }));
+    Callback = [array_ptr, Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array_ptr)); };
   }
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    return builder->AccessBlobByCallback(tensor, Callback, modifier);
+  }));
   return Maybe<void>::Ok();
 }
 

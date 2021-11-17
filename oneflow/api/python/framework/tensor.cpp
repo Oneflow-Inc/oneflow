@@ -53,11 +53,13 @@ void ApiEagerMirroredTensorZeros(const std::shared_ptr<Tensor>& tensor) {
 }
 
 template<typename T>
-void ApiCopyMirroredTensorToNumpy(const std::shared_ptr<Tensor>& tensor, py::array_t<T> array) {
+std::shared_ptr<AsyncNumpyHandler> ApiCopyMirroredTensorToNumpy(
+    const std::shared_ptr<Tensor>& tensor, py::array_t<T> array) {
+  std::shared_ptr<AsyncNumpyHandler> handler = std::make_shared<AsyncNumpyHandler>();
   CopyBetweenMirroredTensorAndNumpy<T>(tensor, array.ptr(), OfBlob_CopyBuffer::template To<T>,
-                                       "const",
-                                       /*block_host_until_done=*/true)
+                                       "const", /*numpy handler=*/handler)
       .GetOrThrow();
+  return handler;
 }
 
 template<typename T>
@@ -68,7 +70,7 @@ void ApiCopyMirroredTensorFromNumpy(const std::shared_ptr<Tensor>& tensor, py::a
   auto* copied_array = PyArray_NewCopy((PyArrayObject*)array.ptr(), NPY_CORDER);
   CopyBetweenMirroredTensorAndNumpy<T>(tensor, copied_array, OfBlob_CopyBuffer::template From<T>,
                                        "mut",
-                                       /*block_host_until_done=*/false)
+                                       /*numpy handler=*/nullptr)
       .GetOrThrow();
 
   Py_DECREF(copied_array);

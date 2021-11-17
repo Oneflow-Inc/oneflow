@@ -28,8 +28,7 @@ from typing import Union
 Tensor = flow._oneflow_internal.Tensor
 TensorTuple = flow._oneflow_internal.TensorTuple
 
-
-def _tensor_numpy(eager_local_tensor):
+def _tensor_numpy(eager_local_tensor, async_get=False):
     assert (
         not eager_local_tensor.is_lazy
     ), "tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor."
@@ -48,8 +47,11 @@ def _tensor_numpy(eager_local_tensor):
     )
 
     if ndarray.size != 0:
-        copy_to_numpy(ndarray)
-    return ndarray
+        handler = copy_to_numpy(ndarray)
+        if async_get == False:
+            handler.wait()
+            return ndarray
+    return ndarray, handler
 
 
 def _size(self, idx=None):

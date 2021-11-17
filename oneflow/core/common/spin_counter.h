@@ -51,6 +51,7 @@ class SpinCounter final {
   int64_t Decrease() { return --cnt_val_; }
   Maybe<void> WaitUntilCntEqualZero() const;
   Maybe<void> WaitUntilCntEqualZero(const std::function<void()>& HeartbeatCallback) const;
+  Maybe<bool> CheckIfCntEqualZero() const { return cnt_val_ == 0; }
 
  private:
   std::atomic<int64_t> cnt_val_;
