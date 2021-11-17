@@ -37,7 +37,7 @@ class TfCpuPReluKernel final : public user_op::OpKernel {
     const Shape& left_extended_shape =
         CreateLeftExtendedShape(ShapeView(alpha->shape()), x->shape().NumAxes());
     NdarrayUtil<DeviceType::kCPU, T>::BroadcastTo(
-        ctx->device_ctx(), XpuVarNdarray<T>(x->shape(), broadcasted_alpha_ptr),
+        ctx->stream(), XpuVarNdarray<T>(x->shape(), broadcasted_alpha_ptr),
         XpuVarNdarray<const T>(left_extended_shape, alpha->dptr<T>()));
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
       y_ptr[i] = x_ptr[i] > 0 ? x_ptr[i] : x_ptr[i] * broadcasted_alpha_ptr[i];
@@ -49,7 +49,7 @@ class TfCpuPReluKernel final : public user_op::OpKernel {
 #define REGISTER_TF_CPU_PRELU_KERNEL(dtype)                                           \
   REGISTER_USER_KERNEL("tf_prelu")                                                    \
       .SetCreateFn<TfCpuPReluKernel<dtype>>()                                         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                 \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
         const Shape& in_shape = ctx->InputShape("x", 0);                              \
@@ -85,14 +85,14 @@ class TfCpuPReluGradKernel final : public user_op::OpKernel {
     const Shape& left_extended_shape =
         CreateLeftExtendedShape(ShapeView(alpha->shape()), x->shape().NumAxes());
     NdarrayUtil<DeviceType::kCPU, T>::BroadcastTo(
-        ctx->device_ctx(), XpuVarNdarray<T>(x->shape(), broadcasted_alpha_ptr),
+        ctx->stream(), XpuVarNdarray<T>(x->shape(), broadcasted_alpha_ptr),
         XpuVarNdarray<const T>(left_extended_shape, alpha->dptr<T>()));
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
       dx_ptr[i] = x_ptr[i] > 0 ? dy_ptr[i] : dy_ptr[i] * broadcasted_alpha_ptr[i];
       broadcasted_alpha_diff[i] = x_ptr[i] > 0 ? 0 : dy_ptr[i] * x_ptr[i];
     }
     NdarrayUtil<DeviceType::kCPU, T>::ReduceSum(
-        ctx->device_ctx(), XpuVarNdarray<T>(left_extended_shape, alpha_diff->mut_dptr<T>()),
+        ctx->stream(), XpuVarNdarray<T>(left_extended_shape, alpha_diff->mut_dptr<T>()),
         XpuVarNdarray<const T>(x->shape(), broadcasted_alpha_diff),
         XpuVarNdarray<T>(x->shape(), reduce_sum_tmp_buf));
   }
@@ -102,7 +102,7 @@ class TfCpuPReluGradKernel final : public user_op::OpKernel {
 #define REGISTER_TF_CPU_PRELU_GRAD_KERNEL(dtype)                                       \
   REGISTER_USER_KERNEL("tf_prelu_grad")                                                \
       .SetCreateFn<TfCpuPReluGradKernel<dtype>>()                                      \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                              \
         const Shape& in_shape = ctx->InputShape("x", 0);                               \

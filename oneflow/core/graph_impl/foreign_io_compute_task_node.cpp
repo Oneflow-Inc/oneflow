@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/compute_task_node.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
 
 namespace oneflow {
 
@@ -27,8 +28,6 @@ class ForeignIOCompTaskNode : public CompTaskNode {
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
   bool IsMeaningLess() override { return false; }
-
-  bool IsIndependent() const override { return true; }
 
  private:
   void InferProducedDataRegstTimeShape() override;
@@ -88,11 +87,12 @@ class ForeignOutputCompTaskNode final : public ForeignIOCompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kForeignOutput; }
 };
 
-REGISTER_INDEPENDENT_THREAD_NUM(TaskType::kForeignInput, 1);
+REGISTER_NAMED_TASK_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kForeignInput, "FOREIGN_INPUT");
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kForeignInputConf, ForeignInputCompTaskNode);
 
-REGISTER_INDEPENDENT_THREAD_NUM(TaskType::kForeignOutput, 1);
+REGISTER_NAMED_TASK_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kForeignOutput,
+                                        "FOREIGN_OUTPUT");
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kForeignOutputConf, ForeignOutputCompTaskNode);
 

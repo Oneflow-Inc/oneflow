@@ -79,7 +79,7 @@ class DimScatterScalarKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(#op_type_name)                                                        \
       .SetCreateFn<DimScatterScalarKernel<device, OF_PP_PAIR_FIRST(dtype_pair),              \
                                           OF_PP_PAIR_FIRST(itype_pair), opt>>()              \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                  \
                        & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair)) \
                        & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
 

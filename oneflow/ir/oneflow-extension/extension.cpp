@@ -186,7 +186,7 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
 #define REGISTER_MLIR_JIT_CPU_KERNEL(dtype)                                                     \
   REGISTER_USER_KERNEL("mlir_jit")                                                              \
       .SetCreateFn<MlirJitCpuKernel<dtype>>()                                                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU)                            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -229,7 +229,7 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
 #define REGISTER_MLIR_JIT_GPU_KERNEL(dtype)                                                     \
   REGISTER_USER_KERNEL("mlir_jit")                                                              \
       .SetCreateFn<MlirJitGpuKernel<dtype>>()                                                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
