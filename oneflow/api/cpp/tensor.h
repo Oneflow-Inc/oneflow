@@ -21,6 +21,6 @@ namespace oneflow_api {
 
 class Tensor {};
 
-}  // oneflow_api
+}  // namespace oneflow_api
 
-#endif // ONEFLOW_API_CPP_TENSOR_H_
+#endif  // ONEFLOW_API_CPP_TENSOR_H_
