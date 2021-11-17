@@ -16,8 +16,8 @@ limitations under the License.
 #ifndef _ONEFLOW_USER_KERNELS_ELEMENTWISE_XPU_KERNEL_H_
 #define _ONEFLOW_USER_KERNELS_ELEMENTWISE_XPU_KERNEL_H_
 #include "oneflow/core/framework/framework.h"
-
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA>
@@ -50,7 +50,7 @@ struct BinaryElemwiseXpuLauncher<DeviceType::kCPU, FunctorT, OutputT, InputA, In
 };
 
 template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA>
-class UnaryElemwiseXpuKernel final : public user_op::OpKernel {
+class UnaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UnaryElemwiseXpuKernel);
   UnaryElemwiseXpuKernel() = default;
@@ -64,6 +64,7 @@ class UnaryElemwiseXpuKernel final : public user_op::OpKernel {
   std::function<FunctorT(user_op::KernelComputeContext* ctx)> FunctorCreateFn;  // The functor
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* input_a_tensor = ctx->Tensor4ArgNameAndIndex(input_a_name, 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex(output_name, 0);
@@ -87,7 +88,7 @@ class UnaryElemwiseXpuKernel final : public user_op::OpKernel {
 
 template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA,
          typename InputB>
-class BinaryElemwiseXpuKernel final : public user_op::OpKernel {
+class BinaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BinaryElemwiseXpuKernel);
   BinaryElemwiseXpuKernel() = default;
@@ -105,6 +106,7 @@ class BinaryElemwiseXpuKernel final : public user_op::OpKernel {
   std::function<FunctorT(user_op::KernelComputeContext* ctx)> FunctorCreateFn;  // The functor
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* input_a_tensor = ctx->Tensor4ArgNameAndIndex(input_a_name, 0);
     const user_op::Tensor* input_b_tensor = ctx->Tensor4ArgNameAndIndex(input_b_name, 0);
@@ -135,25 +137,25 @@ class BinaryElemwiseXpuKernel final : public user_op::OpKernel {
                                             input_a_dtype, create_function, out_name,            \
                                             input_a_name)                                        \
   REGISTER_USER_KERNEL(kernel_name)                                                              \
-      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                       \
+      .SetCreateFn([]() {                                                                        \
         return new UnaryElemwiseXpuKernel<device, functor<out_dtype>, out_dtype, input_a_dtype>( \
             create_function, out_name, input_a_name);                                            \
       })                                                                                         \
       .SetIsMatchedHob(                                                                          \
-          (user_op::HobDeviceTag() == device)                                                    \
+          (user_op::HobDeviceType() == device)                                                   \
           & (user_op::HobDataType(input_a_name, 0) == GetDataType<out_dtype>::value));
 
 #define REGISTER_BINARY_ELEMWISE_USER_KERNEL(device, kernel_name, functor, out_dtype,              \
                                              input_a_dtype, input_b_dtype, create_function,        \
                                              out_name, input_a_name, input_b_name)                 \
   REGISTER_USER_KERNEL(kernel_name)                                                                \
-      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                         \
+      .SetCreateFn([]() {                                                                          \
         return new BinaryElemwiseXpuKernel<device, functor<out_dtype>, out_dtype, input_a_dtype,   \
                                            input_b_dtype>(create_function, out_name, input_a_name, \
                                                           input_b_name);                           \
       })                                                                                           \
       .SetIsMatchedHob(                                                                            \
-          (user_op::HobDeviceTag() == device)                                                      \
+          (user_op::HobDeviceType() == device)                                                     \
           & (user_op::HobDataType(input_a_name, 0) == GetDataType<out_dtype>::value));
 
 }  // namespace oneflow

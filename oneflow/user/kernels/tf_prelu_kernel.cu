@@ -129,6 +129,7 @@ class TfGpuPReluKernel final : public user_op::OpKernel {
   ~TfGpuPReluKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* alpha = ctx->Tensor4ArgNameAndIndex("alpha", 0);
@@ -146,7 +147,7 @@ class TfGpuPReluKernel final : public user_op::OpKernel {
       const Shape& left_extended_shape =
           CreateLeftExtendedShape(ShapeView(alpha->shape()), x->shape().NumAxes());
       NdarrayUtil<DeviceType::kGPU, T>::BroadcastTo(
-          ctx->device_ctx(), XpuVarNdarray<T>(x->shape(), broadcasted_alpha->mut_dptr<T>()),
+          ctx->stream(), XpuVarNdarray<T>(x->shape(), broadcasted_alpha->mut_dptr<T>()),
           XpuVarNdarray<const T>(left_extended_shape, alpha->dptr<T>()));
       ElemwisePReluForwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                                    ctx->device_ctx()->cuda_stream()>>>(
@@ -159,7 +160,7 @@ class TfGpuPReluKernel final : public user_op::OpKernel {
 #define REGISTER_TF_GPU_PRELU_KERNEL(dtype)                                           \
   REGISTER_USER_KERNEL("tf_prelu")                                                    \
       .SetCreateFn<TfGpuPReluKernel<dtype>>()                                         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                 \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
         const Shape& in_shape = ctx->InputShape("x", 0);                              \
@@ -181,6 +182,7 @@ class TfGpuPReluGradKernel final : public user_op::OpKernel {
   ~TfGpuPReluGradKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* alpha = ctx->Tensor4ArgNameAndIndex("alpha", 0);
@@ -207,7 +209,7 @@ class TfGpuPReluGradKernel final : public user_op::OpKernel {
                                                   + 2 * GetCudaAlignedSize(elem_cnt * sizeof(T)));
 
       NdarrayUtil<DeviceType::kGPU, T>::BroadcastTo(
-          ctx->device_ctx(), XpuVarNdarray<T>(x->shape(), broadcasted_alpha),
+          ctx->stream(), XpuVarNdarray<T>(x->shape(), broadcasted_alpha),
           XpuVarNdarray<const T>(left_extended_shape, alpha->dptr<T>()));
 
       ElemwisePReluBackwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
@@ -216,7 +218,7 @@ class TfGpuPReluGradKernel final : public user_op::OpKernel {
           broadcasted_alpha_diff);
     }
     NdarrayUtil<DeviceType::kGPU, T>::ReduceSum(
-        ctx->device_ctx(), XpuVarNdarray<T>(left_extended_shape, alpha_diff->mut_dptr<T>()),
+        ctx->stream(), XpuVarNdarray<T>(left_extended_shape, alpha_diff->mut_dptr<T>()),
         XpuVarNdarray<const T>(x->shape(), broadcasted_alpha_diff),
         XpuVarNdarray<T>(x->shape(), reduce_sum_tmp_buf));
   }
@@ -226,7 +228,7 @@ class TfGpuPReluGradKernel final : public user_op::OpKernel {
 #define REGISTER_TF_GPU_PRELU_GRAD_KERNEL(dtype)                                       \
   REGISTER_USER_KERNEL("tf_prelu_grad")                                                \
       .SetCreateFn<TfGpuPReluGradKernel<dtype>>()                                      \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                              \
         const Shape& in_shape = ctx->InputShape("x", 0);                               \

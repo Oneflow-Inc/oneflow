@@ -19,8 +19,7 @@ limitations under the License.
 #include "oneflow/core/device/node_device_descriptor_manager.h"
 #include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
-#include "oneflow/core/job/collective_boxing_executor.h"
-#include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
+#include "oneflow/core/job/collective_boxing/scheduler.h"
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/id_manager.h"
@@ -39,6 +38,7 @@ limitations under the License.
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/user/summary/events_writer.h"
 #include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
 
 #ifdef WITH_CUDA
 #include "oneflow/core/device/cuda_device_descriptor.h"
@@ -91,7 +91,7 @@ AvailableMemDesc GetDryRunAvailableMemDesc() {
 
   AvailableMemDesc ret;
   AvailableMemDescOfMachine machine_amd_i;
-  for (int64_t i : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
+  for (int64_t i = 0; i < Global<ResourceDesc, ForSession>::Get()->process_ranks().size(); ++i) {
     *ret.add_machine_amd() = this_machine_mem_desc;
   }
   return ret;
@@ -108,6 +108,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   Global<ResourceDesc, ForSession>::New(config_proto.resource(),
                                         GlobalProcessCtx::NumOfProcessPerNode());
   Global<IDMgr>::New();
+  Global<TaskStreamIndexManager>::New();
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     Global<AvailableMemDesc>::New();
     if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
@@ -133,8 +134,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Global<ThreadMgr>::New();
     Global<RuntimeJobDescs>::New();
     Global<summary::EventsWriter>::New();
-    Global<boxing::collective::CollectiveBoxingExecutor>::New();
-    Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
+    Global<boxing::collective::Scheduler>::New();
   }
 
   return Maybe<void>::Ok();
@@ -152,8 +152,7 @@ Maybe<void> SessionGlobalObjectsScope::EagerInit(const ConfigProto& config_proto
 SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   {
     // NOTE(chengcheng): Delete Global Runtime objects.
-    Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
-    Global<boxing::collective::CollectiveBoxingExecutor>::Delete();
+    Global<boxing::collective::Scheduler>::Delete();
     Global<summary::EventsWriter>::Delete();
     Global<RuntimeJobDescs>::Delete();
     Global<ThreadMgr>::Delete();
@@ -173,6 +172,7 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
     Global<JobName2JobId>::Delete();
     Global<AvailableMemDesc>::Delete();
   }
+  Global<TaskStreamIndexManager>::Delete();
   Global<IDMgr>::Delete();
   Global<ResourceDesc, ForSession>::Delete();
   Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),

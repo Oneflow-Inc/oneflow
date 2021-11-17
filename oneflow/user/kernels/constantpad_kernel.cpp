@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/nd_index_offset_helper.h"
-#include "oneflow/core/device/memory_copier.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/user/kernels/constantpad_kernel_util.h"
@@ -187,19 +186,19 @@ class ConstantPad3dGradKernel final : public OpKernel {
 #define REGISTER_CONSTANT_PAD_KERNELS(device, dtype)                                    \
   REGISTER_USER_KERNEL("constant_pad1d")                                                \
       .SetCreateFn<ConstantPad1dKernel<device, dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));  \
   REGISTER_USER_KERNEL("constant_pad1d_grad")                                           \
       .SetCreateFn<ConstantPad1dGradKernel<device, dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("constant_pad3d")                                                \
       .SetCreateFn<ConstantPad3dKernel<device, dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));  \
   REGISTER_USER_KERNEL("constant_pad3d_grad")                                           \
       .SetCreateFn<ConstantPad3dGradKernel<device, dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_CONSTANT_PAD_WITH_DEVICE(device) \

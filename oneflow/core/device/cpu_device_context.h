@@ -17,11 +17,13 @@ limitations under the License.
 #define ONEFLOW_CORE_DEVICE_CPU_DEVICE_CONTEXT_H_
 
 #include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/device/event_record.h"
 #include "oneflow/core/vm/cpu_allocator.h"
+#include "oneflow/core/ep/cpu/cpu_stream.h"
 
 namespace oneflow {
 
-class CpuDeviceCtx final : public DeviceCtx {
+class CpuDeviceCtx final : public DeviceCtx, public EventRecordProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDeviceCtx);
   CpuDeviceCtx() = default;
@@ -29,12 +31,18 @@ class CpuDeviceCtx final : public DeviceCtx {
 
   std::unique_ptr<DeviceCtx> Copy() const { return std::unique_ptr<DeviceCtx>(new CpuDeviceCtx()); }
 
-  void SyncDevice() override {}
-  void AddCallBack(std::function<void()> callback) const override { callback(); }
-
   vm::Allocator* mut_allocator() override { return Global<vm::CpuAllocator>::Get(); }
 
+  DeviceType device_type() const override { return DeviceType::kCPU; }
+
+  ep::Stream* stream() override { return &stream_; }
+
+  std::shared_ptr<EventRecord> MakeEventRecord() override {
+    return std::make_shared<NaiveEventRecord>();
+  }
+
  private:
+  ep::CpuStream stream_;
 };  // namespace oneflow
 
 }  // namespace oneflow

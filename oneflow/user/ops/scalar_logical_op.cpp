@@ -49,5 +49,7 @@ REGISTER_SCALAR_LOGICAL_OP("scalar_logical_greater");
 REGISTER_SCALAR_LOGICAL_OP("scalar_logical_greater_equal");
 REGISTER_SCALAR_LOGICAL_OP("scalar_logical_less");
 REGISTER_SCALAR_LOGICAL_OP("scalar_logical_less_equal");
-
+REGISTER_SCALAR_LOGICAL_OP("scalar_logical_and");
+REGISTER_SCALAR_LOGICAL_OP("scalar_logical_or");
+REGISTER_SCALAR_LOGICAL_OP("scalar_logical_xor");
 }  // namespace oneflow

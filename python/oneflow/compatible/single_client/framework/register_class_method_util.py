@@ -24,7 +24,6 @@ from oneflow.compatible.single_client.framework import remote_blob as remote_blo
 
 def RegisterMethod4Class():
     op_expr_util.RegisterMethod4UserOpExpr()
-    functional.RegisterFunctionalApis()
     eager_blob_util.RegisterMethod4EagerPhysicalBlob()
     blob_trait.RegisterBlobOperatorTraitMethod(
         oneflow._oneflow_internal.EagerPhysicalBlob

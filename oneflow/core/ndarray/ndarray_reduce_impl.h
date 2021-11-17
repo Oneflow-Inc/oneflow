@@ -24,17 +24,16 @@ limitations under the License.
 
 namespace oneflow {
 
-#define DECLARE_NDARRAY_REDUCE_IMPL(struct_name)                                                   \
-  template<DeviceType device_type, typename T, template<typename> class binary_func>               \
-  struct struct_name final {                                                                       \
-    static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x);               \
-    static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x, \
-                       const XpuVarNdarray<T>& tmp_storage);                                       \
+#define DECLARE_NDARRAY_REDUCE_IMPL(struct_name)                                              \
+  template<DeviceType device_type, typename T, template<typename> class binary_func>          \
+  struct struct_name final {                                                                  \
+    static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x);          \
+    static void Reduce(ep::Stream* ctx, const XpuVarNdarray<T>& y,                            \
+                       const XpuVarNdarray<const T>& x, const XpuVarNdarray<T>& tmp_storage); \
   }
 DECLARE_NDARRAY_REDUCE_IMPL(NdarrayScalarReduce);
 DECLARE_NDARRAY_REDUCE_IMPL(NdarrayMatrixRowReduce);
 DECLARE_NDARRAY_REDUCE_IMPL(NdarrayMatrixColReduce);
-DECLARE_NDARRAY_REDUCE_IMPL(NdarrayXYZCubeYReduce);
 DECLARE_NDARRAY_REDUCE_IMPL(NdarrayXYZCubeXZReduce);
 #undef DECLARE_NDARRAY_REDUCE_IMPL
 
@@ -43,7 +42,7 @@ struct NdarrayNoReduce final {
   static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
     return x.shape() == y.shape();
   }
-  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
+  static void Reduce(ep::Stream* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
     XpuNdarrayAssign<device_type, T>::Assign(ctx, y, x);
   }
@@ -51,24 +50,24 @@ struct NdarrayNoReduce final {
 
 template<DeviceType device_type, typename T, int NDIMS, template<typename> class binary_func>
 struct NdarrayReduceCoreWrapper final {
-  static void ReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
+  static void ReduceAxis(ep::Stream* ctx, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
                          const XpuReducedNdarray<T, NDIMS>& x, int axis);
 };
 
 template<DeviceType device_type, typename T, template<typename> class binary_func>
 struct NdarrayDefaultReduce final {
-  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
+  static void Reduce(ep::Stream* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
     return SwitchReduce(SwitchCase(y.shape().NumAxes()), ctx, y, x, tmp_storage);
   }
 
  private:
 #define DEFINE_NDARRAY_REDUCE(func_name, NDIMS) func_name<NDIMS>
-  DEFINE_STATIC_SWITCH_FUNC(void, Reduce, DEFINE_NDARRAY_REDUCE, MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+  DEFINE_STATIC_SWITCH_FUNC(void, Reduce, DEFINE_NDARRAY_REDUCE, MAKE_NDIM_CTRV_SEQ(DIM_SEQ))
 #undef DEFINE_NDARRAY_REDUCE
 
   template<int NDIMS>
-  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
+  static void Reduce(ep::Stream* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
     XpuVarNdarray<T> storage(x.shape(), tmp_storage.ptr());
     XpuShape cur_shape(x.shape());
@@ -86,7 +85,7 @@ struct NdarrayDefaultReduce final {
   }
 
   template<int NDIMS>
-  static void InplaceReduceAxis(DeviceCtx* ctx, int axis, const XpuVarNdarray<T>& implace,
+  static void InplaceReduceAxis(ep::Stream* ctx, int axis, const XpuVarNdarray<T>& implace,
                                 XpuShape* cur_shape) {
     int64_t target_elem_num = cur_shape->ElemNum() / cur_shape->At(axis);
     while (cur_shape->At(axis) > 1) {
@@ -107,17 +106,17 @@ struct NdarrayReduceCore final {
                                         int axis) {
     size_t n = dst_reduced.shape().ElemNum();
     int64_t dst_dim_val = dst_reduced.shape().At(axis);
-    XPU_1D_KERNEL_LOOP(i, n) {
-      T* dst_reduced_ptr = dst_reduced.template Mut(i);
-      int64_t coord[NDIMS];
-      dst_reduced.shape().template Offset2Coordinate<NDIMS>(i, coord);
-      T reduced = UnitOfBinaryFunc<T, binary_func>::Val();
-      while (coord[axis] < x.shape().At(axis)) {
-        reduced = binary_func<T>::Invoke(reduced, x.template Get<NDIMS>(coord));
-        coord[axis] += dst_dim_val;
-      }
-      *dst_reduced_ptr = reduced;
+    XPU_1D_KERNEL_LOOP_BEGIN(i, n);
+    T* dst_reduced_ptr = dst_reduced.template Mut(i);
+    int64_t coord[NDIMS];
+    dst_reduced.shape().template Offset2Coordinate<NDIMS>(i, coord);
+    T reduced = UnitOfBinaryFunc<T, binary_func>::Val();
+    while (coord[axis] < x.shape().At(axis)) {
+      reduced = binary_func<T>::Invoke(reduced, x.template Get<NDIMS>(coord));
+      coord[axis] += dst_dim_val;
     }
+    *dst_reduced_ptr = reduced;
+    XPU_1D_KERNEL_LOOP_END();
   }
 };
 

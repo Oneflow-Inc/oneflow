@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_MEMORY_MEMORY_CASE_UTIL_H_
 #define ONEFLOW_CORE_MEMORY_MEMORY_CASE_UTIL_H_
 
-#include "oneflow/core/common/device_type.pb.h"
+#include "oneflow/core/common/device_type.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/common/util.h"
 

@@ -25,7 +25,7 @@ class OFRecordDataLoader(flow.nn.Module):
     def __init__(self):
         super().__init__()
         batch_size = 4
-        self.train_record_reader = flow.nn.OfrecordReader(
+        self.train_record_reader = flow.nn.OFRecordReader(
             "/dataset/imagenette/ofrecord",
             batch_size=batch_size,
             data_part_num=1,
@@ -36,7 +36,7 @@ class OFRecordDataLoader(flow.nn.Module):
             # sbp=[flow.sbp.broadcast]
         )
 
-        self.record_label_decoder = flow.nn.OfrecordRawDecoder(
+        self.record_label_decoder = flow.nn.OFRecordRawDecoder(
             "class/label", shape=(), dtype=flow.int32
         )
 

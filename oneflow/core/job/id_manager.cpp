@@ -14,43 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/id_manager.h"
-#include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/common/id_util.h"
-#include "oneflow/core/graph/id_serialization.h"
 
 namespace oneflow {
-
-DeviceType IDMgr::GetDeviceTypeFromThrdId(int64_t thrd_id) const {
-  return DeserializeStreamIdFromInt64(thrd_id).device_id().device_type();
-}
-
-int64_t IDMgr::GetGpuPhyIdFromThrdId(int64_t thrd_id) const {
-  StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id);
-  DeviceId device_id = stream_id.device_id();
-  CHECK_EQ(device_id.device_type(), DeviceType::kGPU);
-  return device_id.device_index();
-}
-
-DeviceType IDMgr::GetDeviceTypeFromActorId(int64_t actor_id) const {
-  return DeserializeTaskIdFromInt64(actor_id).stream_id().device_id().device_type();
-}
-
-int64_t IDMgr::MachineId4ActorId(int64_t actor_id) const {
-  // TODO: change this inferface semantics, rank does not indicate machine_id in multi-client
-  return DeserializeTaskIdFromInt64(actor_id).stream_id().device_id().rank();
-}
-
-int64_t IDMgr::ThrdId4ActorId(int64_t actor_id) const {
-  return SerializeStreamIdToInt64(DeserializeTaskIdFromInt64(actor_id).stream_id());
-}
-
-int64_t IDMgr::PickCpuThrdIdEvenly(int64_t machine_id) {
-  DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kCPU,
-                     DeviceId::kCPUDeviceIndex};
-  auto* stream_index_generator = GetStreamIndexGeneratorManager()->GetGenerator(device_id);
-  StreamId stream_id{device_id, stream_index_generator->GenerateComputeStreamIndex()};
-  return SerializeStreamIdToInt64(stream_id);
-}
 
 IDMgr::IDMgr() {
   CHECK_LT((Global<ResourceDesc, ForSession>::Get()->process_ranks().size()),

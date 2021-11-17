@@ -33,6 +33,7 @@ class AssignIfGPUKernel final : public user_op::OpKernel {
   ~AssignIfGPUKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* condition = ctx->Tensor4ArgNameAndIndex("condition", 0);
     CHECK_EQ(condition->shape().NumAxes(), 1);
@@ -57,7 +58,7 @@ class AssignIfGPUKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(op_type_name)                                                             \
       .SetCreateFn<AssignIfGPUKernel<assign_if, condition_type, value_type>>()                   \
       .SetIsMatchedHob(                                                                          \
-          (user_op::HobDeviceTag() == DeviceType::kGPU)                                          \
+          (user_op::HobDeviceType() == DeviceType::kGPU)                                         \
           & (user_op::HobDataType("condition", 0) == GetDataType<condition_type>::value)         \
           & (user_op::HobDataType("value", 0) == GetDataType<value_type>::value));
 

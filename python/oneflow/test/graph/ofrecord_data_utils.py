@@ -29,7 +29,7 @@ class OFRecordDataLoader(flow.nn.Module):
         super().__init__()
         channel_last = False
         output_layout = "NHWC" if channel_last else "NCHW"
-        self.train_record_reader = flow.nn.OfrecordReader(
+        self.train_record_reader = flow.nn.OFRecordReader(
             ofrecord_root,
             batch_size=batch_size,
             data_part_num=1,
@@ -37,7 +37,7 @@ class OFRecordDataLoader(flow.nn.Module):
             random_shuffle=True if mode == "train" else False,
             shuffle_after_epoch=True if mode == "train" else False,
         )
-        self.record_label_decoder = flow.nn.OfrecordRawDecoder(
+        self.record_label_decoder = flow.nn.OFRecordRawDecoder(
             "class/label", shape=(), dtype=flow.int32
         )
 

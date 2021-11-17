@@ -13,16 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
-#include "oneflow/core/common/data_type.h"
-#include "oneflow/core/device/device_context.h"
-#include "oneflow/core/framework/random_generator.h"
-#include "oneflow/user/kernels/range_kernel_util.h"
-#include "oneflow/user/kernels/distributions/uniform_kernel.h"
-#include "oneflow/user/kernels/radix_sort.cuh"
 #include <curand.h>
 #include <curand_kernel.h>
+
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/random_generator.h"
+#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/user/kernels/range_kernel_util.h"
+#include "oneflow/user/kernels/radix_sort.cuh"
+#include "oneflow/user/kernels/distributions/common.h"
 namespace oneflow {
 __global__ void GeneKeysAndValues(const int32_t n, int32_t* values, int32_t* keys,
                                   curandState* state) {
@@ -38,21 +39,23 @@ class GpuRandPermKernel final : public user_op::OpKernel {
   ~GpuRandPermKernel() = default;
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const auto& generator = CHECK_JUST(one::MakeAutoGenerator());
+    const auto& generator = CHECK_JUST(one::MakeGenerator(kGPU));
     generator->set_current_seed(ctx->Attr<int64_t>("seed"));
-    return std::make_shared<UniformKernelState>(generator);
+    return std::make_shared<DistributionKernelState>(generator);
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int32_t* output = out->mut_dptr<int32_t>();
     const int32_t n = ctx->Attr<int32_t>("n");
+    if (n == 0) { return; }
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    auto* randperm_kernel_state = dynamic_cast<UniformKernelState*>(state);
-    CHECK_NOTNULL(randperm_kernel_state);
-    const auto& generator = randperm_kernel_state->generator();
+    auto* distribution_state = dynamic_cast<DistributionKernelState*>(state);
+    CHECK_NOTNULL(distribution_state);
+    const auto& generator = distribution_state->generator();
     const auto& gpu_generator = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
     CHECK_NOTNULL(generator);
 
@@ -74,8 +77,8 @@ class GpuRandPermKernel final : public user_op::OpKernel {
         reinterpret_cast<void*>(reinterpret_cast<char*>(value_base) + indices_aligned_bytes);
     size_t temp_storage_bytes = InferTempStorageForSortPairsDescending<int32_t, int32_t>(1, n);
 
-    GeneKeysAndValues<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                        ctx->device_ctx()->cuda_stream()>>>(n, value_base, key_base, curand_states);
+    GeneKeysAndValues<<<block_num, kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
+        n, value_base, key_base, curand_states);
 
     auto err = cub::DeviceRadixSort::SortPairs(
         /* d_temp_storage */ tmp_base,
@@ -94,7 +97,7 @@ class GpuRandPermKernel final : public user_op::OpKernel {
 };
 REGISTER_USER_KERNEL("randperm")
     .SetCreateFn<GpuRandPermKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu")
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU)
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
       const int32_t n = ctx->Attr<int32_t>("n");
       /* Sorted In */

@@ -27,7 +27,7 @@ struct ArgWhereKernelUtil<DeviceType::kCPU, IN_T, OUT_T, NDIM> {
                        OUT_T* output_size_ptr) {
     // deal with empty blob
     if (input_shape.elem_cnt() == 0) {
-      KernelUtil<DeviceType::kCPU, OUT_T>::Set(ctx, static_cast<OUT_T>(0), output_size_ptr);
+      Memset<DeviceType::kCPU>(ctx, output_size_ptr, 0, sizeof(OUT_T));
       return;
     }
 

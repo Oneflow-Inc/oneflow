@@ -15,11 +15,11 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/ep/include/primitive/permute.h"
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-class CollectiveBoxingUnpackKernel final : public KernelIf<device_type> {
+class CollectiveBoxingUnpackKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingUnpackKernel);
   CollectiveBoxingUnpackKernel() = default;
@@ -27,15 +27,12 @@ class CollectiveBoxingUnpackKernel final : public KernelIf<device_type> {
 
  private:
   bool IsStateless() const override { return false; }
-  void ForwardDataContent(const KernelCtx&,
-                          const std::function<Blob*(const std::string&)>&) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
-template<DeviceType device_type, typename T>
-void CollectiveBoxingUnpackKernel<device_type, T>::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  const Blob* in = BnInOp2Blob("in");
-  Blob* out = BnInOp2Blob("out");
+void CollectiveBoxingUnpackKernel::ForwardDataContent(KernelContext* ctx) const {
+  const Blob* in = ctx->BnInOp2Blob("in");
+  Blob* out = ctx->BnInOp2Blob("out");
   const CollectiveBoxingUnpackOpConf& unpack_conf = this->op_conf().collective_boxing_unpack_conf();
   const int64_t num_ranks = unpack_conf.num_ranks();
   const Shape logical_shape(unpack_conf.logical_shape());
@@ -54,35 +51,19 @@ void CollectiveBoxingUnpackKernel<device_type, T>::ForwardDataContent(
       transpose_in_dim_vec[dst_split_axis] = transpose_in_dim_vec.at(dst_split_axis) / num_ranks;
     }
     transpose_in_dim_vec.insert(transpose_in_dim_vec.begin(), num_ranks);
-    const Shape transpose_in_shape(transpose_in_dim_vec);
-    DimVector transpose_out_dim_vec;
     std::vector<int32_t> perm;
-    FOR_RANGE(int64_t, i, 1, transpose_in_shape.NumAxes()) {
-      perm.push_back(i);
-      transpose_out_dim_vec.push_back(transpose_in_shape.At(i));
-    }
+    FOR_RANGE(int64_t, i, 1, transpose_in_dim_vec.size()) { perm.push_back(i); }
     perm.insert(perm.begin() + src_split_axis, 0);
-    transpose_out_dim_vec.insert(transpose_out_dim_vec.begin() + src_split_axis,
-                                 transpose_in_shape.At(0));
-    const Shape transpose_out_shape(transpose_out_dim_vec);
-    NewKernelUtil<device_type>::Transpose(
-        ctx.device_ctx, transpose_in_shape.NumAxes(), transpose_in_shape, transpose_out_shape, perm,
-        transpose_in_shape.elem_cnt(), in->dptr<T>(), out->mut_dptr<T>());
+    auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
+        ctx->stream_ctx()->device_type(), transpose_in_dim_vec.size());
+    CHECK(transpose);
+    transpose->Launch(ctx->stream(), in->data_type(), transpose_in_dim_vec.size(),
+                      transpose_in_dim_vec.data(), in->dptr(), perm.data(), out->mut_dptr());
   } else {
-    out->CopyDataContentFrom(ctx.device_ctx, in);
+    AutoMemcpy(ctx->stream_ctx(), out, in);
   }
 }
 
-#define REGISTER_COLLECTIVE_BOXING_UNPACK_KERNEL(device_type_v, dtype_pair)                   \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(                                                      \
-      OperatorConf::kCollectiveBoxingUnpackConf, device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
-      CollectiveBoxingUnpackKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>)
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_COLLECTIVE_BOXING_UNPACK_KERNEL, DEVICE_TYPE_SEQ,
-                                 ARITHMETIC_DATA_TYPE_SEQ)
-
-#if defined(WITH_CUDA)
-REGISTER_COLLECTIVE_BOXING_UNPACK_KERNEL(DeviceType::kGPU, (float16, DataType::kFloat16))
-#endif
+REGISTER_KERNEL(OperatorConf::kCollectiveBoxingUnpackConf, CollectiveBoxingUnpackKernel);
 
 }  // namespace oneflow

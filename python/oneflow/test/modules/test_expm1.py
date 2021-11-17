@@ -22,12 +22,16 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_expm1_impl(test_case, device, shape):
-    x = flow.Tensor(
-        np.random.randn(*shape), device=flow.device(device), requires_grad=True
+    x = flow.tensor(
+        np.random.randn(*shape),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
     )
     of_out = flow.expm1(x)
     np_out = np.expm1(x.numpy())

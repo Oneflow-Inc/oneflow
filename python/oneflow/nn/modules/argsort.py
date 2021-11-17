@@ -33,12 +33,12 @@ class Argsort(Module):
         dim = self.dim if self.dim >= 0 else self.dim + num_dims
         assert 0 <= dim < num_dims, "dim out of range"
         if dim == num_dims - 1:
-            return flow.F.arg_sort(input, self.direction)
+            return flow._C.arg_sort(input, self.direction)
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_dims, dim)
-            x = flow.F.transpose(input, perm=perm)
-            x = flow.F.arg_sort(x, self.direction)
-            return flow.F.transpose(x, perm=get_inversed_perm(perm))
+            x = flow._C.transpose(input, perm=perm)
+            x = flow._C.arg_sort(x, self.direction)
+            return flow._C.transpose(x, perm=get_inversed_perm(perm))
 
 
 @register_tensor_op("argsort")

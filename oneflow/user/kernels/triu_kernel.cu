@@ -82,6 +82,7 @@ class GpuTriuKernel final : public user_op::OpKernel {
   ~GpuTriuKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     const auto shape = x->shape();
@@ -108,7 +109,7 @@ class GpuTriuKernel final : public user_op::OpKernel {
 #define REGISTER_GPU_TRIU_KERNEL(dtype)                                                         \
   REGISTER_USER_KERNEL("triu")                                                                  \
       .SetCreateFn<GpuTriuKernel<dtype>>()                                                      \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -119,6 +120,7 @@ class GpuTriuKernel final : public user_op::OpKernel {
 REGISTER_GPU_TRIU_KERNEL(half)
 REGISTER_GPU_TRIU_KERNEL(float)
 REGISTER_GPU_TRIU_KERNEL(double)
+REGISTER_GPU_TRIU_KERNEL(uint8_t)
 REGISTER_GPU_TRIU_KERNEL(int8_t)
 REGISTER_GPU_TRIU_KERNEL(int32_t)
 REGISTER_GPU_TRIU_KERNEL(int64_t)

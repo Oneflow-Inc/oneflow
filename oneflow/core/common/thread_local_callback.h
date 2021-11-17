@@ -23,11 +23,8 @@ namespace oneflow {
 
 namespace blocking {
 
-using StackInfoCallbackType = std::function<std::string()>;
-
-void RegisterStackInfoCallback(const StackInfoCallbackType& Callback);
-StackInfoCallbackType GetStackInfoCallback();
-std::string GetStackInfo();
+void RegisterStackInfoCallback(const std::function<void()>& Callback);
+void StackInfoCallback();
 void ClearStackInfoCallback();
 
 }  // namespace blocking

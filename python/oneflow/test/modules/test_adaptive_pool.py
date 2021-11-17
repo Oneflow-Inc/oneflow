@@ -22,7 +22,8 @@ from packaging import version
 import torch as torch_original
 from typing import Union, Tuple
 
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 NoneType = type(None)
 # Not the same as those in PyTorch because 'output_size' cannot be NoneType (even in 'torch.nn.AdaptiveAvgPoolXd')
@@ -67,6 +68,31 @@ class TestAdaptiveAvgPool(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=5).to(device)
         y = m(x)
         return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestAdaptiveAvgPoolFunctional(flow.unittest.TestCase):
+    @autotest()
+    def test_adaptive_avgpool1d_functional(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=3).to(device)
+        return torch.nn.functional.adaptive_avg_pool1d(x, output_size=random().to(int))
+
+    @autotest()
+    def test_adaptive_avgpool2d_functional(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        return torch.nn.functional.adaptive_avg_pool2d(x, output_size=random().to(int))
+
+    @unittest.skipIf(
+        version.parse(torch_original.__version__) < version.parse("1.10.0"),
+        "GPU version 'nn.AdaptiveAvgPool3d' has a bug in PyTorch before '1.10.0'",
+    )
+    @autotest()
+    def test_adaptive_avgpool3d_functional(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=5).to(device)
+        return torch.nn.functional.adaptive_avg_pool2d(x, output_size=random().to(int))
 
 
 if __name__ == "__main__":

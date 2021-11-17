@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/gather_kernel_util.h"
+#include "oneflow/user/kernels/gather_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 
@@ -109,7 +109,7 @@ class GatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
   REGISTER_USER_KERNEL("gather")                                                             \
       .SetCreateFn<                                                                          \
           GatherKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                  \
                        & (user_op::HobDataType("in", 0) == OF_PP_PAIR_SECOND(in_type))       \
                        & (user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(indices_type)));
 

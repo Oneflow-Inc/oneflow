@@ -144,13 +144,19 @@ void TryInsertOrUseBufferOpBothSrcDst(
   const OpNode* dst_node = op_edge->dst_node();
   const ParallelDesc& src_parallel_desc = src_node->parallel_desc();
   const ParallelDesc& dst_parallel_desc = dst_node->parallel_desc();
-  CHECK(!src_parallel_desc.EqualsIgnoringHierarchy(dst_parallel_desc));
+  const std::string& src_op_name = src_node->op().op_name();
   const std::string& dst_op_name = dst_node->op().op_name();
   const int64_t src_stage_id = GetStageIdHint(src_node);
   const int64_t dst_stage_id = GetStageIdHint(dst_node);
   CHECK_NE(src_stage_id, dst_stage_id);
   CHECK_GE(src_buffer_size, 1);
   CHECK_GE(dst_buffer_size, 1);
+  CHECK(!src_parallel_desc.EqualsIgnoringHierarchy(dst_parallel_desc))
+      << " Pipeline buffer pass meet ERROR! the src_op: " << src_op_name
+      << " -> dst_op: " << dst_op_name
+      << " with same placement: " << src_parallel_desc.parallel_conf().DebugString()
+      << " , but with different stage id: src_stage_id (" << src_stage_id << ") -> dst_stage_id ("
+      << dst_stage_id << "). Please check your stage id config for modules.";
   for (const LogicalBlobId& lbi : op_edge->lbis()) {
     std::string lbn = GenLogicalBlobName(lbi);
     std::string src_buffer_op_name =
@@ -220,6 +226,7 @@ void TryInsertOrUseBufferOpBothSrcDst(
 }
 
 Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+  // Pipeline optimization depends on gradient accumulatioin.
   if (GlobalJobDesc().job_conf().num_gradient_accumulation_steps() <= 1) {
     return Maybe<void>::Ok();
   }
@@ -258,7 +265,9 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
           LOG(WARNING) << " Cross diff stage link From: [" << src_node->op().op_conf().DebugString()
                        << "](stage_id:" << std::to_string(src_stage_id) << ") -> ["
                        << this_node->op().op_conf().DebugString()
-                       << "](stage_id:" << std::to_string(dst_stage_id) << ")\n";
+                       << "](stage_id:" << std::to_string(dst_stage_id)
+                       << "). Make sure to change the tensor's placment before it enter the module "
+                          "of a next pipeline stage.\n";
         }
         const int64_t buffer_size = total_stage_num * 2; /* NOTE(chengcheng): max buffer size */
         TryInsertOrUseBufferOpToDstNode(in_edge, buffer_size, &buffer_op_name2op_conf,

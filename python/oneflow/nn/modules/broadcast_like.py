@@ -44,8 +44,31 @@ class BroadCastLike(Module):
             broadcast_axes = _calc_broadcast_axes(x, like_tensor)
         else:
             broadcast_axes = self.broadcast_axes
-        return flow.F.broadcast_like(x, like_tensor, broadcast_axes=broadcast_axes)
+        return flow._C.broadcast_like(x, like_tensor, broadcast_axes=broadcast_axes)
 
 
 def broadcast_like_op(x, like_tensor, broadcast_axes: Optional[Sequence] = None):
+    """This operator broadcast tensor `x` to `like_tensor` according to the broadcast_axes. 
+
+    Args:
+        x (Tensor): The input Tensor. 
+        like_tensor (Tensor): The like Tensor. 
+        broadcast_axes (Optional[Sequence], optional): The axes you want to broadcast. Defaults to None.
+
+    Returns:
+        [Tensor]: Broadcasted input Tensor. 
+
+    For example: 
+
+    .. code:: python
+
+        >>> import oneflow as flow 
+
+        >>> x = flow.randn(3, 1, 1)
+        >>> like_tensor = flow.randn(3, 4, 5)
+        >>> broadcast_tensor = flow.broadcast_like(x, like_tensor, broadcast_axes=[1, 2]) 
+        >>> broadcast_tensor.shape
+        oneflow.Size([3, 4, 5])
+
+    """
     return BroadCastLike(broadcast_axes=broadcast_axes)(x, like_tensor)

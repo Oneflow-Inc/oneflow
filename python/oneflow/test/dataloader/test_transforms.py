@@ -35,11 +35,11 @@ class Net(nn.Module):
         self.fc3 = nn.Linear(84, 10)
 
     def forward(self, x):
-        x = self.pool(flow.F.relu(self.conv1(x)))
-        x = self.pool(flow.F.relu(self.conv2(x)))
+        x = self.pool(flow._C.relu(self.conv1(x)))
+        x = self.pool(flow._C.relu(self.conv2(x)))
         x = flow.flatten(x, 1)  # flatten all dimensions except batch
-        x = flow.F.relu(self.fc1(x))
-        x = flow.F.relu(self.fc2(x))
+        x = flow._C.relu(self.fc1(x))
+        x = flow._C.relu(self.fc2(x))
         x = self.fc3(x)
         return x
 

@@ -25,12 +25,12 @@ import oneflow.unittest
 
 
 def _test_broadcast_like(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.ones(shape=(3, 1, 1), dtype=np.float32),
         dtype=flow.float32,
         device=flow.device(device),
     )
-    like_tensor = flow.Tensor(
+    like_tensor = flow.tensor(
         np.ones(shape=(3, 3, 3), dtype=np.float32),
         dtype=flow.float32,
         device=flow.device(device),
@@ -41,12 +41,12 @@ def _test_broadcast_like(test_case, device):
 
 
 def _test_broadcast_like_3dim(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.ones(shape=(1, 3, 2), dtype=np.float32),
         dtype=flow.float32,
         device=flow.device(device),
     )
-    like_tensor = flow.Tensor(
+    like_tensor = flow.tensor(
         np.ones(shape=(3, 3, 2), dtype=np.float32),
         dtype=flow.float32,
         device=flow.device(device),
@@ -57,12 +57,12 @@ def _test_broadcast_like_3dim(test_case, device):
 
 
 def _test_broadcast_like_4dim(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.ones(shape=(1, 3, 2, 1), dtype=np.float32),
         dtype=flow.float32,
         device=flow.device(device),
     )
-    like_tensor = flow.Tensor(
+    like_tensor = flow.tensor(
         np.ones(shape=(3, 3, 2, 3), dtype=np.float32),
         dtype=flow.float32,
         device=flow.device(device),
@@ -73,13 +73,13 @@ def _test_broadcast_like_4dim(test_case, device):
 
 
 def _test_broadcast_like_backward(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.ones(shape=(3, 1, 1), dtype=np.float32),
         dtype=flow.float32,
         device=flow.device(device),
         requires_grad=True,
     )
-    like_tensor = flow.Tensor(
+    like_tensor = flow.tensor(
         np.ones(shape=(3, 3, 3), dtype=np.float32),
         dtype=flow.float32,
         device=flow.device(device),

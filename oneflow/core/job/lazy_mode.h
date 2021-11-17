@@ -22,7 +22,7 @@ namespace oneflow {
 
 class LazyMode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LazyMode)
+  OF_DISALLOW_COPY_AND_MOVE(LazyMode);
   LazyMode() = delete;
   ~LazyMode() = delete;
 

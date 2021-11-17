@@ -17,7 +17,9 @@ from oneflow.nn.graph import Graph
 from oneflow.nn.module import Module
 from oneflow.nn.modules.activation import (
     ELU,
+    CELU,
     GELU,
+    GLU,
     Hardsigmoid,
     Hardswish,
     Hardtanh,
@@ -36,13 +38,14 @@ from oneflow.nn.modules.activation import (
     SiLU,
     Softsign,
 )
-from oneflow.nn.modules.adaptive_pool import (
-    AdaptiveAvgPool1d,
-    AdaptiveAvgPool2d,
-    AdaptiveAvgPool3d,
-)
+
 from oneflow.nn.modules.all_reduce import AllReduce
 from oneflow.nn.modules.batchnorm import BatchNorm1d, BatchNorm2d, BatchNorm3d
+from oneflow.nn.modules.batchnorm_fused import (
+    FusedBatchNorm1d,
+    FusedBatchNorm2d,
+    FusedBatchNorm3d,
+)
 from oneflow.nn.modules.container import (
     ModuleDict,
     ModuleList,
@@ -50,7 +53,14 @@ from oneflow.nn.modules.container import (
     ParameterList,
     Sequential,
 )
-from oneflow.nn.modules.conv import Conv1d, Conv2d, Conv3d
+from oneflow.nn.modules.conv import (
+    Conv1d,
+    Conv2d,
+    Conv3d,
+    ConvTranspose1d,
+    ConvTranspose2d,
+    ConvTranspose3d,
+)
 from oneflow.nn.modules.min_max_observer import MinMaxObserver
 from oneflow.nn.modules.moving_average_min_max_observer import (
     MovingAverageMinMaxObserver,
@@ -64,12 +74,15 @@ from oneflow.nn.modules.dataset import (
     CropMirrorNormalize,
     OFRecordImageDecoder,
     OFRecordImageDecoderRandomCrop,
-    OfrecordRawDecoder,
-    OfrecordReader,
+    OFRecordImageGpuDecoderRandomCropResize,
+    OFRecordRawDecoder,
+    OFRecordRawDecoder as OfrecordRawDecoder,
+    OFRecordReader,
+    OFRecordReader as OfrecordReader,
     OFRecordBytesDecoder,
     GPTIndexedBinDataReader,
 )
-from oneflow.nn.modules.deconv import ConvTranspose2d
+
 from oneflow.nn.modules.dropout import Dropout
 from oneflow.nn.modules.flatten import Flatten
 from oneflow.nn.modules.instancenorm import (
@@ -90,6 +103,7 @@ from oneflow.nn.modules.loss import (
     NLLLoss,
     SmoothL1Loss,
     CombinedMarginLoss,
+    TripletMarginLoss,
 )
 from oneflow.nn.modules.normalization import GroupNorm, LayerNorm
 from oneflow.nn.modules.padding import (
@@ -98,6 +112,7 @@ from oneflow.nn.modules.padding import (
     ConstantPad3d,
     ReflectionPad2d,
     ReplicationPad2d,
+    ZeroPad2d,
 )
 from oneflow.nn.modules.pixelshuffle import PixelShufflev2 as PixelShuffle
 from oneflow.nn.modules.pooling import (
@@ -109,6 +124,9 @@ from oneflow.nn.modules.pooling import (
     MaxPool3d,
     LegacyMaxPool2d,
     LegacyAvgPool2d
+    AdaptiveAvgPool1d,
+    AdaptiveAvgPool2d,
+    AdaptiveAvgPool3d,
 )
 from oneflow.nn.modules.sparse import Embedding
 from oneflow.nn.modules.upsampling import (
@@ -116,10 +134,13 @@ from oneflow.nn.modules.upsampling import (
     UpsamplingBilinear2d,
     UpsamplingNearest2d,
 )
-from oneflow.nn.modules.zeropad2d import ZeroPad2d
+from oneflow.nn.modules.fold import Fold, Unfold
+
 from oneflow.nn.parameter import Parameter
 from oneflow.nn import utils
 
 from . import functional
 
 from . import parallel
+
+from oneflow.nn.modules.rnn import RNN, LSTM, GRU

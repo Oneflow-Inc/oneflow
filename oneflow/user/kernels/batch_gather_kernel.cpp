@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/batch_gather_kernel_util.h"
+#include "oneflow/user/kernels/batch_gather_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
@@ -47,7 +47,7 @@ class BatchGatherKernel final : public user_op::OpKernel, public user_op::CudaGr
       .SetCreateFn<BatchGatherKernel<device, OF_PP_PAIR_FIRST(out_dtype),    \
                                      OF_PP_PAIR_FIRST(indices_dtype)>>()     \
       .SetIsMatchedHob(                                                      \
-          (user_op::HobDeviceTag() == device)                                \
+          (user_op::HobDeviceType() == device)                               \
           & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_dtype)) \
           & (user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(indices_dtype)));
 

@@ -38,8 +38,28 @@ class AutoGradCaptureState {
     return offset;
   }
 
- private:
+ protected:
   TensorTuple saved_tensors_;
+};
+
+class FunctionAutoGradCaptureState final
+    : public AutoGradCaptureState,
+      public std::enable_shared_from_this<FunctionAutoGradCaptureState> {
+ public:
+  FunctionAutoGradCaptureState() = default;
+  using AutoGradCaptureState::SavedTensors;
+  using AutoGradCaptureState::SaveTensorForBackward;
+
+  void MarkNonDifferentiable(const std::shared_ptr<Tensor>& tensor) {
+    non_differentiable_tensors_.emplace(tensor.get());
+  }
+
+  HashSet<Tensor*> NonDifferentiableTensors() const { return non_differentiable_tensors_; }
+
+  std::shared_ptr<FunctionAutoGradCaptureState> GetSharedFromThis() { return shared_from_this(); }
+
+ private:
+  HashSet<Tensor*> non_differentiable_tensors_;
 };
 
 // Stateless container base of the backward op exprs.
@@ -78,12 +98,12 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
     TensorTuple detach_inputs(inputs.size());
     for (int i = 0; i < inputs.size(); ++i) {
       detach_inputs.at(i) = JUST(inputs.at(i)->detach());
-      detach_inputs.at(i)->set_requires_grad(inputs.at(i)->requires_grad());
+      JUST(detach_inputs.at(i)->set_requires_grad(inputs.at(i)->requires_grad()));
     }
     TensorTuple detach_outputs(outputs.size());
     for (int i = 0; i < outputs.size(); ++i) {
       detach_outputs.at(i) = JUST(outputs.at(i)->detach());
-      detach_outputs.at(i)->set_requires_grad(outputs.at(i)->requires_grad());
+      JUST(detach_outputs.at(i)->set_requires_grad(outputs.at(i)->requires_grad()));
     }
     return Capture(state, detach_inputs, detach_outputs, interp_ctx);
   }
@@ -95,6 +115,7 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
     return Apply(state, out_grads, in_grads);
   }
 
+ protected:
   virtual Maybe<void> Capture(StateT* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                               const OpExprInterpContext& interp_ctx) const {
     return Capture(ctx, inputs, outputs, interp_ctx.attrs);
@@ -108,10 +129,47 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
   virtual Maybe<void> Apply(const StateT* ctx, const TensorTuple& out_grads,
                             TensorTuple* in_grads) const = 0;
 
- protected:
   std::string GradientOpName(const std::string& prefix) const {
     return prefix + std::string(kGradientOpSuffix);
   }
+};
+
+class FunctionOpExprGradFunction final : public OpExprGradFunctionIf {
+ public:
+  using FType = AutogradFunctionBase::FType;
+  explicit FunctionOpExprGradFunction(const FType& backward_fn) : backward_fn_(backward_fn) {}
+
+  std::shared_ptr<AutoGradCaptureState> MakeCustomState() const override {
+    PRINT_BUG_PROMPT_AND_ABORT()
+        << "You should not construct AutoGradCaptureState by calling this function";
+    return std::make_shared<FunctionAutoGradCaptureState>();
+  }
+
+  Maybe<void> Init(const OpExpr& op) override {
+    // do nothing
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> CaptureIf(AutoGradCaptureState* ctx, const TensorTuple& inputs,
+                        const TensorTuple& outputs,
+                        const OpExprInterpContext& interp_ctx) const override {
+    // do nothing
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> ApplyIf(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,
+                      TensorTuple* in_grads) const override {
+    const FunctionAutoGradCaptureState* func_ctx =
+        dynamic_cast<const FunctionAutoGradCaptureState*>(ctx);
+    CHECK_NOTNULL_OR_RETURN(func_ctx);
+    const std::shared_ptr<TensorTuple>& out = backward_fn_(
+        const_cast<FunctionAutoGradCaptureState*>(func_ctx)->GetSharedFromThis(), out_grads);
+    in_grads->assign(out->begin(), out->end());
+    return Maybe<void>::Ok();
+  }
+
+ protected:
+  FType backward_fn_;
 };
 
 // Stateful wrapper of the `OpExprGradFunction`.

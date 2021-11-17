@@ -139,6 +139,7 @@ class CropMirrorNormalizeGpuKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* normalize_attr = dynamic_cast<NormalizeAttr*>(state);
     const NormalizeVal& mean = normalize_attr->mean();
@@ -205,7 +206,7 @@ class CropMirrorNormalizeGpuKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("crop_mirror_normalize_from_uint8")
     .SetCreateFn<CropMirrorNormalizeGpuKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
                      & (user_op::HobDataType("in", 0) == DataType::kUInt8)
                      & (user_op::HobDataType("out", 0) == DataType::kFloat));
 

@@ -19,7 +19,7 @@ from collections import OrderedDict
 
 import numpy as np
 from test_util import GenArgList
-
+from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
 
@@ -109,7 +109,7 @@ def _np_matrix_norm_backward(x, ord="fro"):
 
 
 def _test_norm_1d(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(10), dtype=flow.float32, device=flow.device(device)
     )
     of_out_1 = flow.linalg.norm(input)
@@ -130,7 +130,7 @@ def _test_norm_1d(test_case, device):
 
 
 def _test_norm_2d(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(5, 4), dtype=flow.float32, device=flow.device(device)
     )
     of_out_1 = flow.linalg.norm(input)
@@ -151,10 +151,10 @@ def _test_norm_2d(test_case, device):
 
 
 def _test_norm_Nd(test_case, device):
-    input1 = flow.Tensor(
+    input1 = flow.tensor(
         np.random.randn(3, 4, 3), dtype=flow.float32, device=flow.device(device)
     )
-    input2 = flow.Tensor(
+    input2 = flow.tensor(
         np.random.randn(3, 4, 3, 5), dtype=flow.float32, device=flow.device(device)
     )
     of_out_1 = flow.linalg.norm(input1)
@@ -169,7 +169,7 @@ def _test_norm_Nd(test_case, device):
 
 
 def _test_fro_order_norm_backward(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(5, 4),
         dtype=flow.float32,
         device=flow.device(device),
@@ -183,7 +183,7 @@ def _test_fro_order_norm_backward(test_case, device):
 
 def _test_1d_inf_order_norm_backward(test_case, device):
     for ord in [float("inf"), -float("inf")]:
-        input = flow.Tensor(
+        input = flow.tensor(
             np.random.randn(5),
             dtype=flow.float32,
             device=flow.device(device),
@@ -197,7 +197,7 @@ def _test_1d_inf_order_norm_backward(test_case, device):
 
 def _test_2d_inf_order_norm_backward(test_case, device):
     for ord in [float("inf"), -float("inf")]:
-        input = flow.Tensor(
+        input = flow.tensor(
             np.random.randn(5, 4),
             dtype=flow.float32,
             device=flow.device(device),
@@ -211,7 +211,7 @@ def _test_2d_inf_order_norm_backward(test_case, device):
 
 def _test_1d_digits_order_norm_backward(test_case, device):
     for ord in [1, -1, 2, -2, 5]:
-        input = flow.Tensor(
+        input = flow.tensor(
             np.random.randn(5),
             dtype=flow.float32,
             device=flow.device(device),
@@ -225,7 +225,7 @@ def _test_1d_digits_order_norm_backward(test_case, device):
 
 def _test_2d_digits_order_norm_backward(test_case, device):
     for ord in [1, -1]:
-        input = flow.Tensor(
+        input = flow.tensor(
             np.random.randn(4, 5),
             dtype=flow.float32,
             device=flow.device(device),
@@ -254,6 +254,55 @@ class TestNormModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_no_dim_no_ord_norm_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        keepdim = random_bool()
+        m = torch.linalg.norm(input, keepdim=keepdim)
+        return m
+
+    @autotest()
+    def test_one_dim_norm_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=4).to(device)
+        dim = random(low=0, high=4).to(int)
+        k = random().to(float)
+        ord = oneof(float("inf"), float("-inf"), k, None)
+        keepdim = random_bool()
+        m = torch.linalg.norm(input, ord, dim, keepdim)
+        return m
+
+    @autotest()
+    def test_no_dim_one_shape_norm_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=1).to(device)
+        k = random().to(float)
+        ord = oneof(float("inf"), float("-inf"), k)
+        keepdim = random_bool()
+        m = torch.linalg.norm(input, ord=ord, keepdim=keepdim)
+        return m
+
+    @autotest()
+    def test_no_dim_two_shape_norm_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=2).to(device)
+        ord = oneof(float("inf"), float("-inf"), "fro", 1, -1)
+        keepdim = random().to(bool)
+        m = torch.linalg.norm(input, ord=ord, keepdim=keepdim)
+        return m
+
+    @autotest()
+    def test_tuple_dim_norm_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=2).to(device)
+        k = random(low=-2, high=1).to(int)
+        dim = oneof((-2, -1), (0, 1), (-1, 0))
+        ord = oneof(float("inf"), float("-inf"), "fro", 1, -1, None)
+        keepdim = random().to(bool)
+        m = torch.linalg.norm(input, ord=ord, dim=dim, keepdim=keepdim)
+        return m
 
 
 if __name__ == "__main__":

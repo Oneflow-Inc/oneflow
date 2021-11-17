@@ -22,7 +22,8 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_type_as(test_case, shape, device, src_dtype, tgt_dtype):
@@ -91,6 +92,20 @@ class TestTensorOps(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor(dtype=int).to(device)
         y = x.double()
+        return y
+
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4)
+    def test_item(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=1, dim0=1, dtype=int).to(device)
+        y = torch.tensor(x.item())
+        return y
+
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4)
+    def test_tolist(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = torch.tensor(x.tolist())
         return y
 
     def test_type_as(test_case):

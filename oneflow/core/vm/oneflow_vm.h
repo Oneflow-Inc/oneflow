@@ -16,12 +16,15 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_ONEFLOW_VM_H_
 #define ONEFLOW_CORE_VM_ONEFLOW_VM_H_
 
+#include "oneflow/core/common/notifier.h"
 #include "oneflow/core/vm/interpret_type.h"
-#include "oneflow/core/vm/vm_desc.msg.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
+#include "oneflow/core/vm/vm_desc.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/thread/thread_pool.h"
 
 namespace oneflow {
+
+class InstructionsBuilder;
 
 class OneflowVM final {
  public:
@@ -30,17 +33,23 @@ class OneflowVM final {
   OneflowVM(const Resource& resource, int64_t this_machine_id);
   ~OneflowVM();
 
-  vm::VirtualMachine* mut_vm() { return vm_.Mutable(); }
-  const vm::VirtualMachine& vm() const { return *vm_; }
+  Maybe<void> Receive(vm::InstructionMsgList* instr_list);
+
+  const vm::VirtualMachineEngine& vm() const { return *vm_; }
 
  private:
-  void Loop();
+  friend class InstructionsBuilder;
 
-  ObjectMsgPtr<vm::VirtualMachine> vm_;
+  void Loop(const std::function<void()>& Initializer);
+
+  vm::VirtualMachineEngine* mut_vm() { return vm_.Mutable(); }
+  void ControlSync();
+
+  intrusive::shared_ptr<vm::VirtualMachineEngine> vm_;
   // for asynchronized execution
   std::list<std::unique_ptr<std::thread>> worker_threads_;
   std::thread schedule_thread_;
-  std::atomic<bool> exiting_;
+  Notifier notifier_;
 };
 
 }  // namespace oneflow

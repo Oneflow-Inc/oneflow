@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_PHY_INSTR_OPERAND_H_
 
 #include <functional>
-#include "oneflow/core/object_msg/object_msg_core.h"
+#include "oneflow/core/intrusive/intrusive.h"
 
 namespace oneflow {
 namespace vm {
@@ -30,13 +30,13 @@ class PhyInstrOperand {
   virtual ~PhyInstrOperand() = default;
 
   virtual void ForEachConstMirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const = 0;
+      const std::function<void(MirroredObject* compute)>&) const = 0;
 
   virtual void ForEachMutMirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const = 0;
+      const std::function<void(MirroredObject* compute)>&) const = 0;
 
   virtual void ForEachMut2MirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const = 0;
+      const std::function<void(MirroredObject* compute)>&) const = 0;
 
  protected:
   PhyInstrOperand() = default;

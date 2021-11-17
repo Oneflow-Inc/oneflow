@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/vm/instr_type_id.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -30,11 +30,11 @@ HashMap<std::string, InstrTypeId>* InstrTypeId4InstructionName() {
 
 }  // namespace
 
-void InstructionType::Compute(VirtualMachine* vm, Instruction* instruction) const {
+void InstructionType::Compute(VirtualMachineEngine* vm, Instruction* instruction) const {
   Compute(vm, instruction->mut_instr_msg());
 }
 
-void InstructionType::Infer(VirtualMachine* vm, Instruction* instruction) const {
+void InstructionType::Infer(VirtualMachineEngine* vm, Instruction* instruction) const {
   Infer(vm, instruction->mut_instr_msg());
 }
 

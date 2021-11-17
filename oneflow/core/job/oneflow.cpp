@@ -197,7 +197,7 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   OpAttributeInfo op_attribute_info;
   Global<CtrlClient>::Get()->PullKV("op_attribute_info", &op_attribute_info);
   // populate op_attribute_info
-  PlanUtil::PopulateOpAttibute(plan, op_attribute_info.job_id2op_attribute_ref_table());
+  PlanUtil::PopulateOpAttribute(plan, op_attribute_info.job_id2op_attribute_ref_table());
 }
 
 Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) {
@@ -975,6 +975,7 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
   LinkMainPlan(&plan, std::move(main_plan), identity_tick_op_names);
   PlanUtil::CleanUselessMemBlockAndCheckValid(&plan);
   PlanUtil::DumpCtrlRegstInfoToPlan(&plan);
+  PlanUtil::PlanMemoryLog(&plan, "merged_plan");
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create("merged_plan")->Write(plan);
     PlanUtil::ToDotFile(plan, "/dot/merged_plan.dot");

@@ -189,8 +189,10 @@ class GpuHeapSelectionTopKKernel final : public user_op::OpKernel {
   ~GpuHeapSelectionTopKKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    if (in->shape().elem_cnt() == 0) { return; }
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
@@ -216,11 +218,13 @@ class GpuHeapSelectionTopKKernel final : public user_op::OpKernel {
 
 #define REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(dtype)                                           \
   REGISTER_USER_KERNEL("top_k").SetCreateFn<GpuHeapSelectionTopKKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == "gpu") & (user_op::HobAttr<int32_t>("k") <= 128)                \
+      (user_op::HobDeviceType() == DeviceType::kGPU) & (user_op::HobAttr<int32_t>("k") <= 128)    \
       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(float)
 REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(double)
+REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(uint8_t)
+REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(int8_t)
 REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(int32_t)
 REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(int64_t)
 

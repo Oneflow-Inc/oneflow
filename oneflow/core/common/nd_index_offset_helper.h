@@ -24,6 +24,7 @@ namespace oneflow {
 template<typename T, int N>
 class NdIndexOffsetHelper {
  public:
+  NdIndexOffsetHelper() {}
   template<class... Ts>
   OF_DEVICE_FUNC explicit NdIndexOffsetHelper(T d0, Ts... dims) {
     constexpr int n = 1 + sizeof...(dims);
@@ -34,9 +35,16 @@ class NdIndexOffsetHelper {
 
   OF_DEVICE_FUNC explicit NdIndexOffsetHelper(const T* dims) { InitStrides(dims, N); }
 
+  template<typename U>
+  OF_DEVICE_FUNC explicit NdIndexOffsetHelper(const U* dims) {
+    T dims_arr[N];
+    for (int i = 0; i < N; ++i) { dims_arr[i] = dims[i]; }
+    InitStrides(dims_arr, N);
+  }
+
   OF_DEVICE_FUNC explicit NdIndexOffsetHelper(const T* dims, int n) { InitStrides(dims, n); }
 
-  OF_DEVICE_FUNC ~NdIndexOffsetHelper() = default;
+  ~NdIndexOffsetHelper() = default;
 
   OF_DEVICE_FUNC T NdIndexToOffset(const T* index) const {
     T offset = 0;

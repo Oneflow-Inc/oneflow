@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/batch_gather_kernel_util.h"
+#include "oneflow/user/kernels/batch_gather_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
@@ -60,7 +60,7 @@ class UnsortedBatchSegmentSumKernel final : public user_op::OpKernel,
       .SetCreateFn<UnsortedBatchSegmentSumKernel<device, OF_PP_PAIR_FIRST(out_dtype),        \
                                                  OF_PP_PAIR_FIRST(segment_ids_dtype)>>()     \
       .SetIsMatchedHob(                                                                      \
-          (user_op::HobDeviceTag() == device)                                                \
+          (user_op::HobDeviceType() == device)                                               \
           & (user_op::HobDataType("segment_ids", 0) == OF_PP_PAIR_SECOND(segment_ids_dtype)) \
           & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_dtype)));
 

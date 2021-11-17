@@ -46,7 +46,7 @@ class CustomModule(flow.nn.Module):
 
     def forward(self, x):
         x = self.layer(x)
-        x = oneflow.F.flatten(x, 1)
+        x = oneflow._C.flatten(x, 1)
         x = self.fc1(x) + self.dummy_buff
         return x
 
@@ -249,6 +249,31 @@ class TestGraph(flow.unittest.TestCase):
         y = np.ones((16, 36))
         y = flow.tensor(y, dtype=flow.float32)
         g._compile(x, y)
+
+    def test_create_optimizer_in_graph(test_case):
+        device = "cuda"
+        linear = flow.nn.Linear(3, 8)
+        linear = linear.to(device)
+        flow.nn.init.constant_(linear.weight, 2.068758)
+        flow.nn.init.constant_(linear.bias, 0.23)
+
+        class OptCreatedInGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.linear = linear
+                # creat optimizer in nn.Graph and add parameter from ModuleBlock
+                self.add_optimizer(
+                    flow.optim.SGD(self.linear.parameters(), lr=0.001, momentum=0.9)
+                )
+
+            def build(self, x):
+                out = self.linear(x)
+                out = out.sum()
+                out.backward()
+                return out
+
+        g = OptCreatedInGraph()
+        print(g)
 
 
 if __name__ == "__main__":

@@ -17,30 +17,9 @@ limitations under the License.
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/user/kernels/two_stage_reduce_kernel_util.h"
+#include "oneflow/core/ep/include/primitive/cast.h"
 
 namespace oneflow {
-namespace {
-
-template<DeviceType device_type, typename T, typename U>
-struct CopyTensor;
-
-template<typename T, typename U>
-struct CopyTensor<DeviceType::kCPU, T, U> {
-  static void Call(DeviceCtx* ctx, const int64_t n, const T* src, U* dst) { CopyElem(src, dst, n); }
-};
-
-template<typename T, typename U>
-struct CopyTensor<DeviceType::kGPU, T, U> {
-  static void Call(DeviceCtx* ctx, const int64_t n, const T* src, U* dst) {
-#ifdef WITH_CUDA
-    CopyElemOnGpu(ctx, src, dst, n);
-#else
-    UNIMPLEMENTED();
-#endif
-  }
-};
-
-}  // namespace
 
 namespace user_op {
 
@@ -65,18 +44,21 @@ class ReduceDeviceStageKernel final : public OpKernel {
         reinterpret_cast<int32_t*>(tmp_buffer->mut_dptr<char>() + tmp_bytes);
 
     NdarrayReduce<device_type, T, BinaryFunc>::Reduce(
-        ctx->device_ctx(), XpuVarNdarray<T>(out->shape(), out->mut_dptr<T>()),
+        ctx->stream(), XpuVarNdarray<T>(out->shape(), out->mut_dptr<T>()),
         XpuVarNdarray<const T>(in->shape(), in->dptr<T>()),
         XpuVarNdarray<T>(in->shape(), reduce_tmp_buf));
     NdarrayUtil<device_type, T>::BroadcastEQ(
-        ctx->device_ctx(), XpuVarNdarray<int8_t>(mask->shape(), mask->mut_dptr<int8_t>()),
+        ctx->stream(), XpuVarNdarray<int8_t>(mask->shape(), mask->mut_dptr<int8_t>()),
         XpuVarNdarray<const T>(in->shape(), in->dptr<T>()),
         XpuVarNdarray<const T>(out->shape(), out->dptr<T>()));
 
-    CopyTensor<device_type, int8_t, int32_t>::Call(ctx->device_ctx(), mask->shape().elem_cnt(),
-                                                   mask->dptr<int8_t>(), mask_tmp_buf);
+    auto cast = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
+        ctx->device_type(), DataType::kInt8, DataType::kInt32);
+    CHECK(cast);
+
+    cast->Launch(ctx->stream(), mask->dptr<int8_t>(), mask_tmp_buf, mask->shape().elem_cnt());
     NdarrayUtil<device_type, int32_t>::ReduceSum(
-        ctx->device_ctx(), XpuVarNdarray<int32_t>(count->shape(), count->mut_dptr<int32_t>()),
+        ctx->stream(), XpuVarNdarray<int32_t>(count->shape(), count->mut_dptr<int32_t>()),
         XpuVarNdarray<const int32_t>(mask->shape(), mask_tmp_buf),
         XpuVarNdarray<int32_t>(mask->shape(), reduce_sum_tmp_buf));
   }
@@ -97,7 +79,7 @@ user_op::InferTmpSizeFn GenDeviceStageInferTmpSizeFn() {
 #define REGISTER_REDUCE_DEVICE_STAGE_KERNEL(op_name, binary_func, device, dtype_pair)            \
   REGISTER_USER_KERNEL(op_name)                                                                  \
       .SetCreateFn<ReduceDeviceStageKernel<binary_func, device, OF_PP_PAIR_FIRST(dtype_pair)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
       .SetInferTmpSizeFn(GenDeviceStageInferTmpSizeFn<OF_PP_PAIR_FIRST(dtype_pair)>());
 
@@ -130,7 +112,7 @@ class ReduceDeviceStageGradKernel final : public OpKernel {
         count->dptr<int32_t>(), tmp_buf_ptr);
 
     NdarrayUtil<device_type, T>::BroadcastTo(
-        ctx->device_ctx(), XpuVarNdarray<T>(in_diff->shape(), broadcasted_tmp_buf_ptr),
+        ctx->stream(), XpuVarNdarray<T>(in_diff->shape(), broadcasted_tmp_buf_ptr),
         XpuVarNdarray<const T>(out_diff->shape(), tmp_buf_ptr));
 
     TwoStageReduceKernelUtil<device_type, T, int8_t>::Mask(
@@ -155,7 +137,7 @@ user_op::InferTmpSizeFn GenDeviceStageGradInferTmpSizeFn() {
 #define REGISTER_REDUCE_DEVICE_STAGE_GRAD_KERNEL(op_name, device, dtype_pair)                   \
   REGISTER_USER_KERNEL(op_name)                                                                 \
       .SetCreateFn<ReduceDeviceStageGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
                        & (user_op::HobDataType("in_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair))) \
       .SetInferTmpSizeFn(GenDeviceStageGradInferTmpSizeFn<OF_PP_PAIR_FIRST(dtype_pair)>());
 
@@ -181,12 +163,12 @@ class ReduceGlobalStageKernel final : public OpKernel {
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
     const Shape& reduced_shape = CreateReducedShape(in->shape(), {axis.begin(), axis.end()});
     NdarrayReduce<device_type, T, BinaryFunc>::Reduce(
-        ctx->device_ctx(), XpuVarNdarray<T>(reduced_shape, out->mut_dptr<T>()),
+        ctx->stream(), XpuVarNdarray<T>(reduced_shape, out->mut_dptr<T>()),
         XpuVarNdarray<const T>(in->shape(), in->dptr<T>()),
         XpuVarNdarray<T>(in->shape(), tmp_buffer->mut_dptr<T>()));
 
     NdarrayUtil<device_type, T>::BroadcastEQ(
-        ctx->device_ctx(), XpuVarNdarray<int8_t>(in->shape(), mask->mut_dptr<int8_t>()),
+        ctx->stream(), XpuVarNdarray<int8_t>(in->shape(), mask->mut_dptr<int8_t>()),
         XpuVarNdarray<const T>(in->shape(), in->dptr<T>()),
         XpuVarNdarray<const T>(reduced_shape, out->dptr<T>()));
   }
@@ -196,7 +178,7 @@ class ReduceGlobalStageKernel final : public OpKernel {
 #define REGISTER_REDUCE_GLOBAL_STAGE_KERNEL(op_name, binary_func, device, dtype_pair)            \
   REGISTER_USER_KERNEL(op_name)                                                                  \
       .SetCreateFn<ReduceGlobalStageKernel<binary_func, device, OF_PP_PAIR_FIRST(dtype_pair)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
       .SetInferTmpSizeFn([](InferContext* ctx) {                                                 \
         const Shape& in_shape = ctx->InputShape("in", 0);                                        \
@@ -251,7 +233,7 @@ class ReduceGlobalStageGradKernel final : public OpKernel {
         CreateReducedShape(device_count->shape(), {axis.begin(), axis.end()});
 
     NdarrayUtil<device_type, int32_t>::ReduceSum(
-        ctx->device_ctx(), XpuVarNdarray<int32_t>(reduced_shape, global_count),
+        ctx->stream(), XpuVarNdarray<int32_t>(reduced_shape, global_count),
         XpuVarNdarray<const int32_t>(device_count->shape(), device_count_with_mask),
         XpuVarNdarray<int32_t>(device_count->shape(), reduce_sum_tmp_buf));
 
@@ -260,7 +242,7 @@ class ReduceGlobalStageGradKernel final : public OpKernel {
         divided_buf_ptr);
 
     NdarrayUtil<device_type, T>::BroadcastTo(
-        ctx->device_ctx(), XpuVarNdarray<T>(in_diff->shape(), broadcasted_divided_buf_ptr),
+        ctx->stream(), XpuVarNdarray<T>(in_diff->shape(), broadcasted_divided_buf_ptr),
         XpuVarNdarray<const T>(out_diff->shape(), divided_buf_ptr));
 
     TwoStageReduceKernelUtil<device_type, T, int32_t>::Scale(
@@ -296,7 +278,7 @@ user_op::InferTmpSizeFn GenGlobalStageGradInferTmpSizeFn() {
 #define REGISTER_REDUCE_GLOBAL_STAGE_GRAD_KERNEL(op_name, device, dtype_pair)                   \
   REGISTER_USER_KERNEL(op_name)                                                                 \
       .SetCreateFn<ReduceGlobalStageGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
                        & (user_op::HobDataType("in_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair))) \
       .SetInferTmpSizeFn(GenGlobalStageGradInferTmpSizeFn<OF_PP_PAIR_FIRST(dtype_pair)>());
 

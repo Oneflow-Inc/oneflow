@@ -13,11 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/object_msg/flat_msg_view.h"
+#include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/vm/device_helper_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
-#include "oneflow/core/vm/thread_ctx.msg.h"
+#include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/util.h"
@@ -33,7 +33,8 @@ void DeviceHelperStreamType::InitInstructionStatus(const Stream& stream,
 
 void DeviceHelperStreamType::DeleteInstructionStatus(const Stream& stream,
                                                      InstructionStatusBuffer* status_buffer) const {
-  // do nothing
+  auto* ptr = NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  ptr->~NaiveInstrStatusQuerier();
 }
 
 bool DeviceHelperStreamType::QueryInstructionStatusDone(
@@ -51,8 +52,8 @@ void DeviceHelperStreamType::Compute(Instruction* instruction) const {
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 
-ObjectMsgPtr<StreamDesc> DeviceHelperStreamType::MakeStreamDesc(const Resource& resource,
-                                                                int64_t this_machine_id) const {
+intrusive::shared_ptr<StreamDesc> DeviceHelperStreamType::MakeStreamDesc(
+    const Resource& resource, int64_t this_machine_id) const {
   std::size_t device_num = 0;
   if (resource.has_cpu_device_num()) {
     device_num = std::max<std::size_t>(device_num, resource.cpu_device_num());
@@ -60,10 +61,10 @@ ObjectMsgPtr<StreamDesc> DeviceHelperStreamType::MakeStreamDesc(const Resource& 
   if (resource.has_gpu_device_num()) {
     device_num = std::max<std::size_t>(device_num, resource.gpu_device_num());
   }
-  if (device_num == 0) { return ObjectMsgPtr<StreamDesc>(); }
+  if (device_num == 0) { return intrusive::shared_ptr<StreamDesc>(); }
   CHECK_GT(device_num, 0);
-  auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<DeviceHelperStreamType>());
+  auto ret = intrusive::make_shared<StreamDesc>();
+  ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<DeviceHelperStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(device_num);
   ret->set_num_streams_per_thread(1);

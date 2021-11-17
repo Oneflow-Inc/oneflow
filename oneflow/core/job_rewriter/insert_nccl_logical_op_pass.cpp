@@ -363,7 +363,6 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
   // NOTE(chengcheng): nccl donot support dynamic shape.
   if (logical_blob_desc.is_dynamic()) { return false; }
   CHECK_GT(logical_blob_desc.shape().elem_cnt(), 0);
-  CHECK_GT(logical_blob_desc.shape().NumAxes(), 0);
 
   if (src_hierarchy->NumAxes() == 1 && dst_hierarchy->NumAxes() == 1) {
     return TryBuildNcclBy1DHierarchy(ret, src_nd_sbp.sbp_parallel(0), dst_nd_sbp.sbp_parallel(0),
@@ -707,19 +706,17 @@ void InsertNcclLogicalOpsInSubGraph(
     }
 
     int64_t nccl_compute_stream_id = *stream_offset;
-    CudaStreamIndexGenerator stream_idx_gen;
     if (nccl_compute_stream_id >= kMaxNcclComputeStreamCount) {
       break;  // NOTE(chengcheng): ONLY support kMaxNcclComputeStreamCount insert nccl subgraphs.
     }
-    int32_t stream_index = static_cast<int32_t>(
-        stream_idx_gen.GenerateNamedStreamIndex(GetStreamIndexName(nccl_compute_stream_id)));
+    std::string stream_index_name = GetStreamIndexName(nccl_compute_stream_id);
 
     // NOTE(chengcheng): set ALL subgraph op and ALL nccl op stream index.
     for (auto& pair : subgraph_op_name2conf) {
       mut_op_names.insert(pair.first);
-      pair.second.set_stream_index_hint(stream_index);
+      pair.second.set_stream_name_hint(stream_index_name);
     }
-    for (auto& nccl_op : nccl_op_confs) { nccl_op.set_stream_index_hint(stream_index); }
+    for (auto& nccl_op : nccl_op_confs) { nccl_op.set_stream_name_hint(stream_index_name); }
     (*stream_offset)++;
   } while (false);
 
@@ -780,8 +777,9 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
   acc_conf->set_max_acc_num(time_shape_before_acc->elem_cnt() / time_shape_after_acc->elem_cnt());
 
   OperatorConf bw_sink_final_tick_conf;
-  bw_sink_final_tick_conf.set_name(std::string("System-BwSinkFinalTick-Tick_") + NewUniqueId());
-  auto* tick_conf = bw_sink_final_tick_conf.mutable_tick_conf();
+  bw_sink_final_tick_conf.set_name(std::string("System-BwSinkFinalTick-DeviceTick_")
+                                   + NewUniqueId());
+  auto* tick_conf = bw_sink_final_tick_conf.mutable_device_tick_conf();
   tick_conf->add_tick(GenLogicalBlobName(bw_sink_acc_tick_conf.name(), "acc"));
   tick_conf->set_out("out");
 

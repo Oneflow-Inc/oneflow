@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_interpreter.h"
-#include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/instruction_operand.h"
 
 namespace oneflow {
 namespace one {
@@ -79,16 +79,13 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   }
 
   void ForEachConstMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override;
+      const std::function<void(vm::MirroredObject* compute)>&) const override;
 
   void ForEachMutMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override;
+      const std::function<void(vm::MirroredObject* compute)>&) const override;
 
   void ForEachMut2MirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override;
+      const std::function<void(vm::MirroredObject* compute)>&) const override;
 
   const user_op::OpKernel* user_opkernel() const { return user_opkernel_; }
 

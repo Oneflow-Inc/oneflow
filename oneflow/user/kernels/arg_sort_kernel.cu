@@ -45,8 +45,6 @@ class TmpBufferManager final {
   int32_t* IndicesPtr() const { return indices_ptr_; }
   void* TempStoragePtr() const { return temp_storage_ptr_; }
 
-  int32_t SortedInElemCnt() const { return sorted_in_elem_cnt_; }
-  int32_t IndicesElemCnt() const { return indices_elem_cnt_; }
   int32_t TempStorageBytes() const { return temp_storage_bytes_; }
 
  private:
@@ -74,6 +72,7 @@ class GpuArgSortKernel final : public user_op::OpKernel {
   ~GpuArgSortKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -108,7 +107,7 @@ class GpuArgSortKernel final : public user_op::OpKernel {
 #define REGISTER_GPU_ARG_SORT_KERNEL(dtype)                                                        \
   REGISTER_USER_KERNEL("arg_sort")                                                                 \
       .SetCreateFn<GpuArgSortKernel<dtype>>()                                                      \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))             \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
         const Shape& in_shape = ctx->InputShape("in", 0);                                          \
@@ -138,6 +137,8 @@ class GpuArgSortKernel final : public user_op::OpKernel {
 
 REGISTER_GPU_ARG_SORT_KERNEL(float)
 REGISTER_GPU_ARG_SORT_KERNEL(double)
+REGISTER_GPU_ARG_SORT_KERNEL(int8_t)
+REGISTER_GPU_ARG_SORT_KERNEL(uint8_t)
 REGISTER_GPU_ARG_SORT_KERNEL(int32_t)
 REGISTER_GPU_ARG_SORT_KERNEL(int64_t)
 

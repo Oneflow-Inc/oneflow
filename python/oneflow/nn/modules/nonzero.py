@@ -101,11 +101,11 @@ def nonzero_op(input, as_tuple=False):
     """
     if as_tuple and not input.ndim:
         input = input.unsqueeze(0)
-    (res, size) = flow.F.argwhere(input)
+    (res, size) = flow._C.argwhere(input)
     slice_tup_list = [[0, int(size.numpy()), 1]]
     res = flow.slice(res, slice_tup_list=slice_tup_list)
     if as_tuple:
-        return tuple([flow.F.transpose(res, [1, 0])[x] for x in range(res.shape[1])])
+        return tuple([flow._C.transpose(res, [1, 0])[x] for x in range(res.shape[1])])
     else:
         return res
 

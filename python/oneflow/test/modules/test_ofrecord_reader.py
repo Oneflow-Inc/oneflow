@@ -27,7 +27,7 @@ class OFRecordDataLoader(flow.nn.Module):
         # don't shuffle, for comparing
         shuffle = False
 
-        self.ofrecord_reader = flow.nn.OfrecordReader(
+        self.ofrecord_reader = flow.nn.OFRecordReader(
             "/dataset/imagenet_227/train/32",
             batch_size=batch_size,
             data_part_num=2,
@@ -38,7 +38,7 @@ class OFRecordDataLoader(flow.nn.Module):
             sbp=sbp,
         )
 
-        self.record_label_decoder = flow.nn.OfrecordRawDecoder(
+        self.record_label_decoder = flow.nn.OFRecordRawDecoder(
             "class/label", shape=(), dtype=flow.int32
         )
 
@@ -66,10 +66,11 @@ class DataLoaderGraph(flow.nn.Graph):
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@unittest.skipUnless(os.path.exists("/dataset/imagenet_227"), "")
 @flow.unittest.skip_unless_1n2d()
 class DistributedOFRecordReaderTestCase(oneflow.unittest.TestCase):
     def test(test_case):
-        rank = flow.distributed.get_rank()
+        rank = flow.env.get_rank()
         # print(f"DistributedOFRecordReaderTestCase.test on rank {rank} {os.getpid()}")
 
         eager_ofrecord_loader = OFRecordDataLoader(

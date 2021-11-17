@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/user/data/coco_data_reader.h"
 #include "oneflow/user/data/coco_dataset.h"
 #include "oneflow/user/data/distributed_training_dataset.h"
@@ -33,9 +34,10 @@ COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COC
 
   int64_t parallel_id = 0;
   int64_t parallel_num = 0;
-  // NOTE(zwx): IsMirroredParallelContext return true indicate that COCODataReader works by DDP,
-  //     use rank and world size to init DistributedTrainingDataset
-  if (IsMirroredParallelContext(ctx->parallel_ctx())) {
+  // NOTE(zwx): COCODataReader is not consistent since attr nd_sbp is empty,
+  // we assume that it works in DDP
+  auto nd_sbp_str_vec = ctx->Attr<std::vector<std::string>>("nd_sbp");
+  if (nd_sbp_str_vec.empty() && CHECK_JUST(IsMultiClient())) {
     parallel_id = GlobalProcessCtx::Rank();
     parallel_num = GlobalProcessCtx::WorldSize();
   } else {

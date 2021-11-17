@@ -55,8 +55,8 @@ class TestConsistentAsymmetricGraph(oneflow.unittest.TestCase):
                 flow.nn.init.constant_(self.linear2.weight, 2.3)
 
             def forward(self, x, y):
-                # print("local_x in rank : ", flow.distributed.get_rank(), " is : ", x)
-                # print("local_y in rank : ", flow.distributed.get_rank(), " is : ", y)
+                # print("local_x in rank : ", flow.env.get_rank(), " is : ", x)
+                # print("local_y in rank : ", flow.env.get_rank(), " is : ", y)
                 out0 = x + y
                 out1 = self.linear1(out0)
                 out2 = self.linear2(out1)
@@ -92,11 +92,11 @@ class TestConsistentAsymmetricGraph(oneflow.unittest.TestCase):
         graph_local_out = graph_out.to_local()
         # NOTE(chengcheng): MUST call for each rank sync correct input copy
         graph_local_out_np = graph_local_out.numpy()
-        # print("graph_local_out in rank ", flow.distributed.get_rank(),  " is : ", graph_local_out)
-        if flow.distributed.get_rank() == 0:
+        # print("graph_local_out in rank ", flow.env.get_rank(),  " is : ", graph_local_out)
+        if flow.env.get_rank() == 0:
             test_case.assertTrue(graph_local_out.shape.numel() == 0)
             test_case.assertTrue(graph_local_out_np.size == np.array([]).size)
-        elif flow.distributed.get_rank() == 1:
+        elif flow.env.get_rank() == 1:
             test_case.assertTrue(
                 np.allclose(
                     graph_local_out.numpy(), local_out.numpy(), atol=1e-4, rtol=1e-4

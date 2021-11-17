@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
 #include "oneflow/core/comm_network/comm_network.h"
-#include "oneflow/core/actor/actor_message_bus.h"
+#include "oneflow/core/lazy/actor/actor_message_bus.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/platform/include/ibv.h"

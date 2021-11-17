@@ -324,6 +324,7 @@ class FusedFusedBiasAddKernel final : public user_op::OpKernel {
   ~FusedFusedBiasAddKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* a_tensor = ctx->Tensor4ArgNameAndIndex("a", 0);
     const auto* b_tensor = ctx->Tensor4ArgNameAndIndex("b", 0);
@@ -333,7 +334,7 @@ class FusedFusedBiasAddKernel final : public user_op::OpKernel {
     const int64_t bias_size = a_tensor->shape().At(bias_add_axis);
     const int64_t inner_size = a_tensor->shape().Count(bias_add_axis + 1);
     const auto n = a_tensor->shape().elem_cnt();
-    GeluFunctor<T> gelu_functor;
+    GeluFunctor<T> gelu_functor{};
     DispatchFusedBiasAddForwardImpl<decltype(gelu_functor), T>(
         ctx->device_ctx(), gelu_functor, n, outer_size, bias_size, inner_size, a_tensor->dptr<T>(),
         b_tensor->dptr<T>(), out_tensor->mut_dptr<T>());
@@ -342,10 +343,10 @@ class FusedFusedBiasAddKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_BIAS_ADD_GELU_KERNEL(dtype)        \
-  REGISTER_USER_KERNEL("fused_bias_add_gelu")             \
-      .SetCreateFn<FusedFusedBiasAddKernel<dtype>>()      \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
+#define REGISTER_FUSED_BIAS_ADD_GELU_KERNEL(dtype)                    \
+  REGISTER_USER_KERNEL("fused_bias_add_gelu")                         \
+      .SetCreateFn<FusedFusedBiasAddKernel<dtype>>()                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUSED_BIAS_ADD_GELU_KERNEL(float)
@@ -359,6 +360,7 @@ class FusedBiasAddMaskScaleKernel final : public user_op::OpKernel {
   ~FusedBiasAddMaskScaleKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* a_tensor = ctx->Tensor4ArgNameAndIndex("a", 0);
     const auto* b_tensor = ctx->Tensor4ArgNameAndIndex("b", 0);
@@ -388,10 +390,10 @@ class FusedBiasAddMaskScaleKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_BIAS_ADD_MASK_SCALE_KERNEL(dtype)  \
-  REGISTER_USER_KERNEL("fused_bias_add_mask_scale")       \
-      .SetCreateFn<FusedBiasAddMaskScaleKernel<dtype>>()  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
+#define REGISTER_FUSED_BIAS_ADD_MASK_SCALE_KERNEL(dtype)              \
+  REGISTER_USER_KERNEL("fused_bias_add_mask_scale")                   \
+      .SetCreateFn<FusedBiasAddMaskScaleKernel<dtype>>()              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUSED_BIAS_ADD_MASK_SCALE_KERNEL(float)
@@ -405,6 +407,7 @@ class FusedFusedBiasAddGradKernel final : public user_op::OpKernel {
   ~FusedFusedBiasAddGradKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* a_tensor = ctx->Tensor4ArgNameAndIndex("a", 0);
     const auto* b_tensor = ctx->Tensor4ArgNameAndIndex("b", 0);
@@ -430,10 +433,10 @@ class FusedFusedBiasAddGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_BIAS_ADD_GELU_GRAD_KERNEL(dtype)   \
-  REGISTER_USER_KERNEL("fused_bias_add_gelu_grad")        \
-      .SetCreateFn<FusedFusedBiasAddGradKernel<dtype>>()  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
+#define REGISTER_FUSED_BIAS_ADD_GELU_GRAD_KERNEL(dtype)               \
+  REGISTER_USER_KERNEL("fused_bias_add_gelu_grad")                    \
+      .SetCreateFn<FusedFusedBiasAddGradKernel<dtype>>()              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUSED_BIAS_ADD_GELU_GRAD_KERNEL(float)

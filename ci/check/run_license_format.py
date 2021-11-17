@@ -32,10 +32,14 @@ def get_txt(path: str):
 
 
 def check_file(path):
-    with open(path) as f:
+    with open(path, "r", encoding="utf-8") as f:
         content = f.read()
         txt = get_txt(path)
-        if "import doctest" in content and "raise_on_error=True" not in content:
+        if (
+            "import doctest" in content
+            and "raise_on_error=True" not in content
+            and "doctest.DebugRunner" not in content
+        ):
             return ("please add 'doctest.testmod(raise_on_error=True)'", content)
         elif content.count("The OneFlow Authors. All rights reserved.") > 1:
             return ("license_duplicated", content)

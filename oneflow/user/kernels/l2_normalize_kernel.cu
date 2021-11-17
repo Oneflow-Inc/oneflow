@@ -89,6 +89,7 @@ class GpuL2NormalizeKernel final : public user_op::OpKernel {
   ~GpuL2NormalizeKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -104,10 +105,10 @@ class GpuL2NormalizeKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_L2_NORMALIZE_KERNEL(dtype)           \
-  REGISTER_USER_KERNEL("l2_normalize")                    \
-      .SetCreateFn<GpuL2NormalizeKernel<dtype>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
+#define REGISTER_GPU_L2_NORMALIZE_KERNEL(dtype)                       \
+  REGISTER_USER_KERNEL("l2_normalize")                                \
+      .SetCreateFn<GpuL2NormalizeKernel<dtype>>()                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_L2_NORMALIZE_KERNEL(float)
@@ -119,6 +120,7 @@ class GpuL2NormalizeGradKernel final : public user_op::OpKernel {
   ~GpuL2NormalizeGradKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -136,10 +138,10 @@ class GpuL2NormalizeGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_L2_NORMALIZE_GRAD_KERNEL(dtype)      \
-  REGISTER_USER_KERNEL("l2_normalize_grad")               \
-      .SetCreateFn<GpuL2NormalizeGradKernel<dtype>>()     \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
+#define REGISTER_GPU_L2_NORMALIZE_GRAD_KERNEL(dtype)                  \
+  REGISTER_USER_KERNEL("l2_normalize_grad")                           \
+      .SetCreateFn<GpuL2NormalizeGradKernel<dtype>>()                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_L2_NORMALIZE_GRAD_KERNEL(float)

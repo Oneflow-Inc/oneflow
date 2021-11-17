@@ -41,6 +41,7 @@ class GpuOneHotKernel final : public user_op::OpKernel, public user_op::CudaGrap
   ~GpuOneHotKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -62,7 +63,7 @@ class GpuOneHotKernel final : public user_op::OpKernel, public user_op::CudaGrap
 
 #define REGISTER_GPU_ONE_HOT_KERNEL(dtype, itype)                                               \
   REGISTER_USER_KERNEL("one_hot").SetCreateFn<GpuOneHotKernel<dtype, itype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == "gpu")                                                        \
+      (user_op::HobDeviceType() == DeviceType::kGPU)                                            \
       & (user_op::HobDataType("indices", 0) == GetDataType<itype>::value)                       \
       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 

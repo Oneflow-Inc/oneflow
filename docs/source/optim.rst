@@ -5,6 +5,7 @@ Optimizers
 .. currentmodule:: oneflow.optim
 .. automodule:: oneflow.optim
     :members: Adam,
+        Adagrad, 
         AdamW,
         Optimizer,
         RMSprop,
@@ -15,4 +16,7 @@ Optimizers
     :members: CosineDecayLR,
             CosineAnnealingLR,
             LambdaLR,
-            StepLR
+            StepLR,
+            MultiStepLR,
+            ExponentialLR,
+            ReduceLROnPlateau

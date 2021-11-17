@@ -71,8 +71,7 @@ Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf) {
   return machine2device_list;
 }
 
-ParallelDesc::ParallelDesc(const ParallelConf& user_conf)
-    : symbol_id_(Error::SymbolIdUninitialized()) {
+ParallelDesc::ParallelDesc(const ParallelConf& user_conf) : symbol_id_(NullOpt) {  // NOLINT
   CHECK_JUST(MaybeInit(user_conf));
   CHECK_JUST(CheckWithResourceDesc(*(Global<ResourceDesc, ForSession>::Get())));
 }
@@ -150,7 +149,7 @@ Maybe<int64_t> ParallelDesc::ParallelId4MachineDeviceId(int64_t machine_id,
   return device_iter->second;
 }
 
-Maybe<Symbol<Device>> ParallelDesc::GetDevice4CurrentProcessCtx(
+Maybe<Symbol<Device>> ParallelDesc::GetTensorDevice4CurrentProcessCtx(
     Optional<int64_t>* parallel_id) const {
   int64_t machine_id = 0;
   int64_t device_id = 0;
@@ -166,8 +165,8 @@ Maybe<Symbol<Device>> ParallelDesc::GetDevice4CurrentProcessCtx(
   return device;
 }
 
-Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc,
-                                                  Optional<int64_t>* parallel_id) {
+Maybe<Symbol<Device>> GetTensorDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc,
+                                                        Optional<int64_t>* parallel_id) {
   static thread_local HashMap<Symbol<ParallelDesc>, Optional<int64_t>> parallel_desc2parallel_id;
   static thread_local HashMap<Symbol<ParallelDesc>, Symbol<Device>> parallel_desc2device;
   auto parallel_id_iter = parallel_desc2parallel_id.find(parallel_desc);
@@ -175,7 +174,7 @@ Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_
   if (device_iter == parallel_desc2device.end()) {
     CHECK_OR_RETURN(parallel_id_iter == parallel_desc2parallel_id.end());
     Optional<int64_t> id_val;
-    const auto& device_symbol = JUST(parallel_desc->GetDevice4CurrentProcessCtx(&id_val));
+    const auto& device_symbol = JUST(parallel_desc->GetTensorDevice4CurrentProcessCtx(&id_val));
     parallel_id_iter = parallel_desc2parallel_id.emplace(parallel_desc, id_val).first;
     device_iter = parallel_desc2device.emplace(parallel_desc, device_symbol).first;
   } else {
@@ -184,35 +183,6 @@ Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_
   *parallel_id = parallel_id_iter->second;
   return device_iter->second;
 }
-
-namespace private_details {
-
-Maybe<Optional<int64_t>> CalcParallelId4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc) {
-  int64_t machine_id = 0;
-  int64_t device_id = 0;
-  GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
-  int64_t parallel_id = -1;
-  if (parallel_desc->TryGetParallelId(machine_id, device_id, &parallel_id)) {
-    return Optional<int64_t>(parallel_id);
-  } else {
-    return Optional<int64_t>();
-  }
-}
-
-Maybe<const ParallelContext> CalcParallelContext4CurrentProcessCtx(
-    Symbol<ParallelDesc> parallel_desc) {
-  int64_t machine_id = 0;
-  int64_t device_id = 0;
-  GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
-  int64_t parallel_id_val = -1;
-  CHECK_OR_RETURN(parallel_desc->TryGetParallelId(machine_id, device_id, &parallel_id_val));
-  std::shared_ptr<ParallelContext> parallel_ctx = std::make_shared<ParallelContext>();
-  parallel_ctx->set_parallel_id(parallel_id_val);
-  parallel_ctx->set_parallel_num(parallel_desc->parallel_num());
-  return std::shared_ptr<const ParallelContext>(parallel_ctx);
-}
-
-}  // namespace private_details
 
 bool ParallelDesc::TryGetParallelId(int64_t machine_id, int64_t device_id,
                                     int64_t* parallel_id) const {
@@ -291,8 +261,10 @@ void ParallelDesc::ClearUp() {
     for (int64_t device_id : *machine_id2sorted_dev_phy_ids_->at(machine_id)) {
       parallel_conf_.add_device_name(std::string("@") + std::to_string(machine_id) + ":"
                                      + std::to_string(device_id));
-      parallel_id2machine_id_[parallel_id] = machine_id;
-      parallel_id2device_id_[parallel_id] = device_id;
+      CHECK_EQ(parallel_id, parallel_id2machine_id_.size());
+      parallel_id2machine_id_.push_back(machine_id);
+      CHECK_EQ(parallel_id, parallel_id2device_id_.size());
+      parallel_id2device_id_.push_back(device_id);
       machine_id2device_id2parallel_id_[machine_id][device_id] = parallel_id;
       parallel_id += 1;
     }
@@ -340,19 +312,17 @@ ParallelConf ParallelDesc::GetParallelIdOnlyParallelConf(int64_t parallel_id) co
 }
 
 Maybe<int64_t> ParallelDesc::MachineId4ParallelId(int64_t parallel_id) const {
-  const auto& iter = parallel_id2machine_id_.find(parallel_id);
-  CHECK_OR_RETURN(iter != parallel_id2machine_id_.end())
+  CHECK_LT_OR_RETURN(parallel_id, parallel_id2machine_id_.size())
       << "parallel_id: " << parallel_id << "\n----[ parallel_conf ]----"
       << parallel_conf().DebugString();
-  return iter->second;
+  return parallel_id2machine_id_.at(parallel_id);
 }
 
 Maybe<int64_t> ParallelDesc::DeviceId4ParallelId(int64_t parallel_id) const {
-  const auto& iter = parallel_id2device_id_.find(parallel_id);
-  CHECK_OR_RETURN(iter != parallel_id2device_id_.end())
+  CHECK_LT_OR_RETURN(parallel_id, parallel_id2device_id_.size())
       << "parallel_id: " << parallel_id << "\n----[ parallel_conf ]----"
       << parallel_conf().DebugString();
-  return iter->second;
+  return parallel_id2device_id_.at(parallel_id);
 }
 
 bool ParallelDesc::ContainingMachineId(int64_t machine_id) const {
@@ -393,15 +363,32 @@ ParallelConf GenParallelConfOfCpuZeroOnAllMachines() {
   return parallel_conf;
 }
 
-bool IsMirroredParallelContext(const ParallelContext& parallel_ctx) {
-  if (CHECK_JUST(GlobalMultiClientEnv())) {
-    return parallel_ctx.parallel_id() == 0 && parallel_ctx.parallel_num() == 1
-           && GlobalProcessCtx::WorldSize() > 1;
+namespace {
+
+Maybe<Optional<int64_t>> CalcParallelId4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc) {
+  int64_t machine_id = 0;
+  int64_t device_id = 0;
+  GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
+  int64_t parallel_id = -1;
+  if (parallel_desc->TryGetParallelId(machine_id, device_id, &parallel_id)) {
+    return Optional<int64_t>(parallel_id);
+  } else {
+    return Optional<int64_t>();
   }
-  return false;
 }
 
-namespace private_details {
+Maybe<const ParallelContext> CalcParallelContext4CurrentProcessCtx(
+    Symbol<ParallelDesc> parallel_desc) {
+  int64_t machine_id = 0;
+  int64_t device_id = 0;
+  GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
+  int64_t parallel_id_val = -1;
+  CHECK_OR_RETURN(parallel_desc->TryGetParallelId(machine_id, device_id, &parallel_id_val));
+  std::shared_ptr<ParallelContext> parallel_ctx = std::make_shared<ParallelContext>();
+  parallel_ctx->set_parallel_id(parallel_id_val);
+  parallel_ctx->set_parallel_num(parallel_desc->parallel_num());
+  return std::shared_ptr<const ParallelContext>(parallel_ctx);
+}
 
 Maybe<Symbol<ParallelDesc>> RawReplaceDeviceType(Symbol<ParallelDesc> parallel_desc,
                                                  DeviceType device_type) {
@@ -454,5 +441,30 @@ Maybe<std::string> RawPlacementToString(Symbol<ParallelDesc> placement) {
   return placement_str;
 }
 
-}  // namespace private_details
+Maybe<Symbol<Device>> RawGetTensorDevice(Symbol<ParallelDesc> parallel_desc) {
+  int64_t machine_id = 0;
+  int64_t device_id = 0;
+  GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
+  const auto& type = Device::Type4DeviceTag(parallel_desc->device_tag());
+  return JUST(Device::ThreadLocalGetOrNew(type, device_id));
+}
+
+Maybe<Symbol<ParallelDesc>> RawTxtStringToPlacement(const std::string& parallel_conf_str) {
+  ParallelConf parallel_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf));
+  return SymbolOf(ParallelDesc(parallel_conf));
+}
+
+}  // namespace
+
+decltype(GetParallelId4CurrentProcessCtx) GetParallelId4CurrentProcessCtx =
+    DECORATE(&CalcParallelId4CurrentProcessCtx, ThreadLocal);
+decltype(GetParallelContext4CurrentProcessCtx) GetParallelContext4CurrentProcessCtx =
+    DECORATE(&CalcParallelContext4CurrentProcessCtx, ThreadLocal);
+decltype(ReplaceDeviceType) ReplaceDeviceType = DECORATE(&RawReplaceDeviceType, ThreadLocal);
+decltype(PlacementToString) PlacementToString = DECORATE(&RawPlacementToString, ThreadLocal);
+decltype(GetTensorDevice) GetTensorDevice = DECORATE(&RawGetTensorDevice, ThreadLocal);
+decltype(TxtStringToPlacement) TxtStringToPlacement =
+    DECORATE(&RawTxtStringToPlacement, ThreadLocalCopiable);
+
 }  // namespace oneflow

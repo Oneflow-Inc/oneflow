@@ -13,10 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/multi_client.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job_rewriter/autotick.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/critical_section_desc.h"
-#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
@@ -92,7 +94,9 @@ Maybe<void> CreateDstSubsetTickAndSinkTicks(
   dst_subset_tick.mutable_dst_subset_tick_conf()->add_in(
       src_subset_tick.name() + "/" + src_subset_tick.src_subset_tick_conf().out());
   JUST(BuildDstSubsetTickOpAndParallelConf(tick_lbis, &dst_subset_tick, job_builder));
-  for (int64_t machine_id : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
+  const auto& process_ranks = Global<ResourceDesc, ForSession>::Get()->process_ranks();
+  HashMap<int64_t, std::string> machine_id2gather_tick_in_lbns;
+  for (int64_t machine_id : process_ranks) {
     ParallelConf parallel_conf;
     parallel_conf.set_device_tag("cpu");
     parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":0");
@@ -102,6 +106,24 @@ Maybe<void> CreateDstSubsetTickAndSinkTicks(
       auto* tick_conf = tick_op.mutable_tick_conf();
       tick_conf->add_tick(dst_subset_tick.name() + "/"
                           + dst_subset_tick.dst_subset_tick_conf().out());
+      tick_conf->set_out("out");
+      JUST(job_builder->AddOp(parallel_conf, tick_op));
+    }
+    CHECK_OR_RETURN(
+        machine_id2gather_tick_in_lbns.emplace(machine_id, tick_op.name() + "/out").second);
+  }
+  for (int64_t machine_id : process_ranks) {
+    ParallelConf parallel_conf;
+    parallel_conf.set_device_tag("cpu");
+    parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":0");
+    OperatorConf tick_op;
+    {
+      tick_op.set_name("System-SyncAllRanksSinkTick_" + NewUniqueId());
+      auto* tick_conf = tick_op.mutable_tick_conf();
+      // gather ticks from all processes.
+      for (int64_t tick_machine_id : process_ranks) {
+        tick_conf->add_tick(JUST(MapAt(machine_id2gather_tick_in_lbns, tick_machine_id)));
+      }
       tick_conf->set_out("out");
       JUST(job_builder->AddOp(parallel_conf, tick_op));
     }
@@ -541,7 +563,7 @@ Maybe<void> AutoSourceAndSinkTick(
 }
 
 Maybe<void> SingleClientAutoSourceAndSinkTick(const OpGraph& op_graph, JobBuilder* job_builder) {
-  if (JUST(*Global<Maybe<bool>, MultiClient>::Get())) { return Maybe<void>::Ok(); }
+  if (JUST(IsMultiClient())) { return Maybe<void>::Ok(); }
   auto* critical_section =
       Global<CriticalSectionDesc>::Get()->AddCriticalSection(GlobalJobDesc().job_id());
   critical_section->mutable_total_job_critical_section();
@@ -560,7 +582,7 @@ Maybe<void> SingleClientAutoSourceAndSinkTick(const OpGraph& op_graph, JobBuilde
 }
 
 Maybe<void> MultiClientAutoSourceAndSinkTick(const OpGraph& op_graph, Job* job) {
-  if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) { return Maybe<void>::Ok(); }
+  if (!JUST(IsMultiClient())) { return Maybe<void>::Ok(); }
   HashMap<int64_t, std::string> machine_id2src_op_name;
   HashMap<int64_t, std::string> machine_id2sink_op_name;
   {
@@ -589,7 +611,7 @@ Maybe<void> MultiClientAutoSourceAndSinkTick(const OpGraph& op_graph, Job* job) 
 
 Maybe<void> SingleClientAddGlobalInputCriticalSections(const OpGraph& op_graph,
                                                        JobBuilder* job_builder) {
-  if (JUST(*Global<Maybe<bool>, MultiClient>::Get())) { return Maybe<void>::Ok(); }
+  if (JUST(IsMultiClient())) { return Maybe<void>::Ok(); }
   JUST(ForEachInputCriticalSectionOpNodes(
       op_graph,
       [&](const HashSet<const OpNode*>& op_nodes,
@@ -602,7 +624,7 @@ Maybe<void> SingleClientAddGlobalInputCriticalSections(const OpGraph& op_graph,
 
 Maybe<void> SingleClientAddGlobalOutputCriticalSections(const OpGraph& op_graph,
                                                         JobBuilder* job_builder) {
-  if (JUST(*Global<Maybe<bool>, MultiClient>::Get())) { return Maybe<void>::Ok(); }
+  if (JUST(IsMultiClient())) { return Maybe<void>::Ok(); }
   JUST(ForEachOutputCriticalSectionOpNodes(
       op_graph,
       [&](const HashSet<const OpNode*>& op_nodes,

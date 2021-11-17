@@ -19,8 +19,10 @@ limitations under the License.
 #include <memory>
 #include <string>
 #include <unordered_set>
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/optional.h"
 
 namespace oneflow {
 
@@ -38,6 +40,7 @@ class Device final {
   ~Device() = default;
   Device& operator=(const Device&) = delete;
   const std::string& type() const { return type_; }
+  DeviceType enum_type() const { return enum_type_; }
   Maybe<const std::string&> of_type() const;
   int64_t device_id() const { return device_id_; }
   std::string ToString() const;
@@ -49,7 +52,6 @@ class Device final {
   bool operator!=(const Device& device) const {
     return !(type_ == device.type() && device_id_ == device.device_id());
   }
-  const std::shared_ptr<const ParallelDesc>& parallel_desc_ptr() const;
   const std::shared_ptr<MemoryCase>& mem_case() const { return mem_case_; }
 
   static Maybe<Symbol<Device>> ThreadLocalGetOrNew(const std::string& type, int64_t device_id);
@@ -60,23 +62,38 @@ class Device final {
   static const std::unordered_set<std::string> type_supported;
 
   static std::string Type4DeviceTag(const std::string& device_tag);
+  static Maybe<Symbol<ParallelDesc>> (*GetPlacement)(const Device& device);
+  Maybe<const Optional<std::string>&> GetSharedTransportDeviceType() const;
+  Maybe<const std::string&> GetSharedScheduleDeviceType() const;
 
   Maybe<const std::string&> local_call_instruction_name() const;
-  LocalDepObject* mut_compute_local_dep_object() const { return compute_local_dep_object_; }
+  const Optional<LocalDepObject*>& mut_transport_local_dep_object() const {
+    return transport_local_dep_object_;
+  }
+  LocalDepObject* mut_schedule_local_dep_object() const { return schedule_local_dep_object_; }
   Maybe<size_t> instr_local_dep_object_pool_size() const;
+
+  Maybe<bool> need_soft_sync_stream() const;
 
  private:
   Device(const std::string& type, int64_t device_id);
   Maybe<void> Init();
 
   const std::string type_;
+  DeviceType enum_type_;
   const int64_t device_id_;
   const size_t hash_value_;
   std::shared_ptr<MemoryCase> mem_case_;
-  LocalDepObject* compute_local_dep_object_;
+  Optional<LocalDepObject*> transport_local_dep_object_;
+  LocalDepObject* schedule_local_dep_object_;
 };
 
 Maybe<const std::string&> GetLocalCallInstructionName(const std::string& device_tag);
+
+extern Maybe<Symbol<ParallelDesc>> (*Placement4Device)(Symbol<Device> device);
+
+Maybe<void> ParsingDeviceTag(const std::string& device_tag, std::string* device_name,
+                             int* device_index);
 
 }  // namespace oneflow
 

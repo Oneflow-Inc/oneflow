@@ -186,6 +186,7 @@ class GpuAdaptiveAvgPool1dKernel final : public OpKernel {
   ~GpuAdaptiveAvgPool1dKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(KernelComputeContext* ctx) const override { AvgForwardCompute<T>(ctx, 1); }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -198,6 +199,7 @@ class GpuAdaptiveAvgPool2dKernel final : public OpKernel {
   ~GpuAdaptiveAvgPool2dKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(KernelComputeContext* ctx) const override { AvgForwardCompute<T>(ctx, 2); }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -210,6 +212,7 @@ class GpuAdaptiveAvgPool3dKernel final : public OpKernel {
   ~GpuAdaptiveAvgPool3dKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(KernelComputeContext* ctx) const override { AvgForwardCompute<T>(ctx, 3); }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -222,6 +225,7 @@ class GpuAdaptiveAvgPool1dGradKernel final : public OpKernel {
   ~GpuAdaptiveAvgPool1dGradKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(KernelComputeContext* ctx) const override { AvgBackwardCompute<T>(ctx, 1); }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -233,6 +237,7 @@ class GpuAdaptiveAvgPool2dGradKernel final : public OpKernel {
   ~GpuAdaptiveAvgPool2dGradKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(KernelComputeContext* ctx) const override { AvgBackwardCompute<T>(ctx, 2); }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -244,6 +249,7 @@ class GpuAdaptiveAvgPool3dGradKernel final : public OpKernel {
   ~GpuAdaptiveAvgPool3dGradKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(KernelComputeContext* ctx) const override { AvgBackwardCompute<T>(ctx, 3); }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -251,15 +257,15 @@ class GpuAdaptiveAvgPool3dGradKernel final : public OpKernel {
 #define REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(device, dtype)                   \
   REGISTER_USER_KERNEL("adaptive_avg_pool1d")                                 \
       .SetCreateFn<GpuAdaptiveAvgPool1dKernel<device, dtype>>()               \
-      .SetIsMatchedHob((HobDeviceTag() == device)                             \
+      .SetIsMatchedHob((HobDeviceType() == device)                            \
                        & (HobDataType("y", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("adaptive_avg_pool2d")                                 \
       .SetCreateFn<GpuAdaptiveAvgPool2dKernel<device, dtype>>()               \
-      .SetIsMatchedHob((HobDeviceTag() == device)                             \
+      .SetIsMatchedHob((HobDeviceType() == device)                            \
                        & (HobDataType("y", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("adaptive_avg_pool3d")                                 \
       .SetCreateFn<GpuAdaptiveAvgPool3dKernel<device, dtype>>()               \
-      .SetIsMatchedHob((HobDeviceTag() == device)                             \
+      .SetIsMatchedHob((HobDeviceType() == device)                            \
                        & (HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, float);
@@ -269,15 +275,15 @@ REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, int);
 #define REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(device, dtype)           \
   REGISTER_USER_KERNEL("adaptive_avg_pool1d_grad")                             \
       .SetCreateFn<GpuAdaptiveAvgPool1dGradKernel<device, dtype>>()            \
-      .SetIsMatchedHob((HobDeviceTag() == device)                              \
+      .SetIsMatchedHob((HobDeviceType() == device)                             \
                        & (HobDataType("dx", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("adaptive_avg_pool2d_grad")                             \
       .SetCreateFn<GpuAdaptiveAvgPool2dGradKernel<device, dtype>>()            \
-      .SetIsMatchedHob((HobDeviceTag() == device)                              \
+      .SetIsMatchedHob((HobDeviceType() == device)                             \
                        & (HobDataType("dx", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("adaptive_avg_pool3d_grad")                             \
       .SetCreateFn<GpuAdaptiveAvgPool3dGradKernel<device, dtype>>()            \
-      .SetIsMatchedHob((HobDeviceTag() == device)                              \
+      .SetIsMatchedHob((HobDeviceType() == device)                             \
                        & (HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kGPU, float);

@@ -34,7 +34,6 @@ struct CudnnConvArgsAndAlgo final {
   CudnnConvArgs args;
   PerfT algo_perf;
 
-  // TODO(hanbinbin): remove arg job_desc and set cudnn_conv config as args of CudnnConvArgsAndAlgo
   CudnnConvArgsAndAlgo(const user_op::Tensor* x, const user_op::Tensor* w, const user_op::Tensor* y,
                        user_op::Tensor* buf, const user_op::KernelComputeContext* ctx,
                        DeviceCtx* device_ctx, bool has_forced_algo, int32_t forced_algo)
@@ -194,7 +193,8 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
     }
   }
 
-  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx) const override {
+  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx,
+                            user_op::OpKernelState* state) const override {
     return Global<ResourceDesc, ForSession>::Get()
         ->resource()
         .cudnn_conf()
@@ -205,7 +205,7 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
 #define REGISTER_CONV_KERNEL(op_name, dtype, ndims)                                                \
   REGISTER_USER_KERNEL(#op_name)                                                                   \
       .SetCreateFn<ConvGpuKernel<dtype, ndims>>()                                                  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))             \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
         const auto& in = ctx->InputTensorDesc("in", 0);                                            \
@@ -271,7 +271,8 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
         args.params.max_ws_size, beta, args.xdesc.Get(), dx->mut_dptr()));
   }
 
-  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx) const override {
+  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx,
+                            user_op::OpKernelState* state) const override {
     return Global<ResourceDesc, ForSession>::Get()
         ->resource()
         .cudnn_conf()
@@ -282,7 +283,7 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
 #define REGISTER_CONV_DATA_GRAD_FLOATING_KERNEL(dtype)                                             \
   REGISTER_USER_KERNEL("conv_data_grad")                                                           \
       .SetCreateFn<ConvDataGradGpuKernel<dtype>>()                                                 \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))             \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
         const auto& dy = ctx->InputTensorDesc("dy", 0);                                            \
@@ -335,7 +336,8 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel, public user_op::
         args.params.max_ws_size, CudnnSPZeroPtr<T>(), args.wdesc.Get(), filter_diff->mut_dptr()));
   }
 
-  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx) const override {
+  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx,
+                            user_op::OpKernelState* state) const override {
     return Global<ResourceDesc, ForSession>::Get()
         ->resource()
         .cudnn_conf()
@@ -346,7 +348,7 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel, public user_op::
 #define REGISTER_CONV_FILTER_GRAD_FLOATING_KERNEL(dtype)                                           \
   REGISTER_USER_KERNEL("conv_filter_grad")                                                         \
       .SetCreateFn<ConvFilterGradGpuKernel<dtype>>()                                               \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))             \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
         const auto& dy = ctx->InputTensorDesc("dy", 0);                                            \
@@ -416,10 +418,10 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
   }
 };
 
-#define REGISTER_CONV_BIAS_GRAD_FLOATING_KERNEL(dtype)    \
-  REGISTER_USER_KERNEL("conv_bias_grad")                  \
-      .SetCreateFn<ConvBiasGradGpuKernel<dtype>>()        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
+#define REGISTER_CONV_BIAS_GRAD_FLOATING_KERNEL(dtype)                \
+  REGISTER_USER_KERNEL("conv_bias_grad")                              \
+      .SetCreateFn<ConvBiasGradGpuKernel<dtype>>()                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
 
 REGISTER_CONV_BIAS_GRAD_FLOATING_KERNEL(float);

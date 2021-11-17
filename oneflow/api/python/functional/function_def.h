@@ -22,7 +22,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 
 #include "oneflow/api/python/functional/python_arg.h"
-#include "oneflow/core/functional/value_types.h"
+#include "oneflow/api/python/functional/value_types.h"
 
 namespace py = pybind11;
 
@@ -36,19 +36,21 @@ struct ReturnDef {
 };
 
 struct ArgumentDef {
-  ArgumentDef(const std::string& arg_name, const ValueType& arg_type, bool arg_keyword_only = false,
-              bool arg_optional = false)
+  ArgumentDef(const std::string& arg_name, const ValueType& arg_type, int arg_size,
+              bool arg_keyword_only, bool arg_optional)
       : name(arg_name),
         type(arg_type),
+        size(arg_size),
         keyword_only(arg_keyword_only),
         optional(arg_optional),
         has_default_value(false) {}
 
   template<typename T>
-  ArgumentDef(const std::string& arg_name, const T& arg_val, bool arg_keyword_only = false,
-              bool arg_optional = false)
+  ArgumentDef(const std::string& arg_name, const T& arg_val, int arg_size, bool arg_keyword_only,
+              bool arg_optional)
       : name(arg_name),
         type(ValueTypeOf<T>()),
+        size(arg_size),
         keyword_only(arg_keyword_only),
         optional(arg_optional),
         has_default_value(true) {
@@ -58,6 +60,7 @@ struct ArgumentDef {
   std::string name;
   ValueType type;
 
+  int size;
   bool keyword_only;
   bool optional;
   bool has_default_value;

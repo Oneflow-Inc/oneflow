@@ -31,13 +31,17 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
   py::class_<NNGraph, std::shared_ptr<NNGraph>>(m, "CNNGraph")
       .def(py::init<const std::string&>())
       .def_property_readonly("name", &NNGraph::job_name)
-      .def("register_input_op_names",
-           [](NNGraph& graph, const std::vector<std::string>& input_op_names) {
-             return graph.RegisterInputOpNames(input_op_names).GetOrThrow();
-           })
-      .def("register_output_op_names",
-           [](NNGraph& graph, const std::vector<std::string>& output_op_names) {
-             return graph.RegisterOutputOpNames(output_op_names).GetOrThrow();
+      .def(
+          "register_input_op_names_and_tensors",
+          [](NNGraph& graph, const std::vector<std::string>& input_op_names,
+             const std::vector<std::shared_ptr<one::Tensor>>& input_tensors) {
+            return graph.RegisterInputOpNamesAndTensors(input_op_names, input_tensors).GetOrThrow();
+          })
+      .def("register_output_op_names_and_tensors",
+           [](NNGraph& graph, const std::vector<std::string>& output_op_names,
+              const std::vector<std::shared_ptr<one::Tensor>>& output_tensors) {
+             return graph.RegisterOutputOpNamesAndTensors(output_op_names, output_tensors)
+                 .GetOrThrow();
            })
       .def("register_variable_op_names_and_tensors",
            [](NNGraph& graph, const std::vector<std::string>& variable_op_names,
@@ -52,6 +56,10 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
         [](const one::TensorTuple& inputs, const one::TensorTuple& outputs,
            const one::TensorTuple& parameters, const std::shared_ptr<NNGraph>& nn_graph) {
           return RunLazyNNGraph(inputs, outputs, parameters, nn_graph).GetOrThrow();
+        });
+  m.def("SoftSyncNNGraphBuffers",
+        [](const one::TensorTuple& buffers, const std::shared_ptr<NNGraph>& nn_graph) {
+          return SoftSyncNNGraphBuffers(buffers, nn_graph).GetOrThrow();
         });
   m.def("AddTensorAsGraphLoss",
         [](const std::shared_ptr<one::Tensor>& t) { return AddTensorAsGraphLoss(t).GetOrThrow(); });

@@ -62,7 +62,7 @@ def index_select_op(input, dim, index):
     ), "Value of dim is out of range(dim should be in the range of [0, input dimensions) )"
     assert _input_args_is_int(
         index.tolist()
-    ), "input index parameter is not illegal!(index should be an 1-D int tensor)"
+    ), "input index parameter is not legal!(index should be an 1-D int tensor)"
     index_rshp = list(input.shape)
 
     for index_i in index:
@@ -77,7 +77,7 @@ def index_select_op(input, dim, index):
             x = index_i.expand(index_rshp)
             index_gather = flow.cat((index_gather, x), dim)
 
-    return flow.gather(input, index_gather, dim)
+    return flow.gather(input, dim, index_gather)
 
 
 @register_tensor_op("index_select")

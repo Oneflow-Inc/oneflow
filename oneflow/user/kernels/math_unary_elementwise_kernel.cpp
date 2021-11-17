@@ -64,7 +64,7 @@ class MathUnaryElementwiseGradCpuKernel final : public user_op::OpKernel {
       .SetCreateFn<                                                                                \
           MathUnaryElementwiseCpuKernel<OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor),     \
                                         OF_PP_PAIR_FIRST(data_type_pair)>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                              \
                        & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair))       \
                        & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(data_type_pair)));     \
                                                                                                    \
@@ -72,10 +72,16 @@ class MathUnaryElementwiseGradCpuKernel final : public user_op::OpKernel {
       .SetCreateFn<                                                                                \
           MathUnaryElementwiseGradCpuKernel<OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor), \
                                             OF_PP_PAIR_FIRST(data_type_pair)>>()                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                              \
                        & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD,
                                  MATH_UNARY_ELEMENTWISE_FUNC_SEQ, FLOATING_DATA_TYPE_SEQ)
+
+// For some special dtype kernel register.
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD,
+                                 OF_PP_MAKE_TUPLE_SEQ("abs", Abs), UNSIGNED_INT_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD,
+                                 OF_PP_MAKE_TUPLE_SEQ("abs", Abs), INT_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

@@ -19,6 +19,7 @@ from oneflow.nn.parallel import DistributedDataParallel as ddp
 import oneflow.unittest
 
 import numpy as np
+import os
 
 
 def np_allclose_with_shape(a, b, *args, **kwargs):
@@ -27,9 +28,10 @@ def np_allclose_with_shape(a, b, *args, **kwargs):
     return np.allclose(a, b, *args, **kwargs)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class TestDDP(flow.unittest.TestCase):
-    def test_ddp_basic(test_case):
+    def _test_ddp_basic(test_case, dev_type):
         class Mul(flow.nn.Module):
             def __init__(self):
                 super().__init__()
@@ -38,7 +40,7 @@ class TestDDP(flow.unittest.TestCase):
             def forward(self, x):
                 return x * self.w
 
-        rank = flow.framework.distribute.get_rank()
+        rank = flow.env.get_rank()
         if rank == 0:
             x = flow.Tensor([1, 1])
         elif rank == 1:
@@ -46,8 +48,8 @@ class TestDDP(flow.unittest.TestCase):
         else:
             raise ValueError()
 
-        x = x.to("cuda")
-        m = Mul().to("cuda")
+        x = x.to(dev_type)
+        m = Mul().to(dev_type)
         m = ddp(m)
         y = m(x)
         y.sum().backward()
@@ -56,7 +58,11 @@ class TestDDP(flow.unittest.TestCase):
             np_allclose_with_shape(m.w.grad.numpy(), np.array([1.5, 1.5]))
         )
 
-    def test_ddp_with_unused_param(test_case):
+    def test_ddp_basic(test_case):
+        for dev_type in ["cuda", "cpu"]:
+            test_case._test_ddp_basic(dev_type)
+
+    def _test_ddp_with_unused_param(test_case, dev_type):
         class Model(flow.nn.Module):
             def __init__(self):
                 super().__init__()
@@ -66,11 +72,11 @@ class TestDDP(flow.unittest.TestCase):
 
             def forward(self, x):
                 x = x * self.w
-                if flow.framework.distribute.get_rank() == 0:
+                if flow.env.get_rank() == 0:
                     x = x * self.used_only_in_rank0
                 return x
 
-        rank = flow.framework.distribute.get_rank()
+        rank = flow.env.get_rank()
         if rank == 0:
             x = flow.Tensor([1])
         elif rank == 1:
@@ -78,8 +84,8 @@ class TestDDP(flow.unittest.TestCase):
         else:
             raise ValueError()
 
-        x = x.to("cuda")
-        m = Model().to("cuda")
+        x = x.to(dev_type)
+        m = Model().to(dev_type)
         m = ddp(m)
         y = m(x)
         y.backward()
@@ -92,7 +98,11 @@ class TestDDP(flow.unittest.TestCase):
             np_allclose_with_shape(m.unused_in_all_ranks.grad.numpy(), np.array([0]))
         )
 
-    def test_out_of_order_execution(test_case):
+    def test_ddp_with_unused_param(test_case):
+        for dev_type in ["cuda", "cpu"]:
+            test_case._test_ddp_with_unused_param(dev_type)
+
+    def _test_out_of_order_execution(test_case, dev_type):
         class Model(flow.nn.Module):
             def __init__(self):
                 super().__init__()
@@ -101,7 +111,7 @@ class TestDDP(flow.unittest.TestCase):
                 self.w3 = flow.nn.Parameter(flow.Tensor([3]))
 
             def forward(self, x):
-                if flow.framework.distribute.get_rank() == 0:
+                if flow.env.get_rank() == 0:
                     x *= self.w1
                     x *= self.w2
                     x *= self.w3
@@ -111,7 +121,7 @@ class TestDDP(flow.unittest.TestCase):
                     x *= self.w1
                 return x
 
-        rank = flow.framework.distribute.get_rank()
+        rank = flow.env.get_rank()
         if rank == 0:
             x = flow.Tensor([1])
         elif rank == 1:
@@ -119,8 +129,8 @@ class TestDDP(flow.unittest.TestCase):
         else:
             raise ValueError()
 
-        x = x.to("cuda")
-        m = Model().to("cuda")
+        x = x.to(dev_type)
+        m = Model().to(dev_type)
         m = ddp(m)
         y = m(x)
         y.backward()
@@ -129,8 +139,12 @@ class TestDDP(flow.unittest.TestCase):
         test_case.assertTrue(np_allclose_with_shape(m.w2.grad.numpy(), np.array([4.5])))
         test_case.assertTrue(np_allclose_with_shape(m.w3.grad.numpy(), np.array([3])))
 
-    def test_broadcast_buffer(test_case):
-        rank = flow.framework.distribute.get_rank()
+    def test_out_of_order_execution(test_case):
+        for dev_type in ["cuda", "cpu"]:
+            test_case._test_out_of_order_execution(dev_type)
+
+    def _test_broadcast_buffer(test_case, dev_type):
+        rank = flow.env.get_rank()
 
         class CustomModule(flow.nn.Module):
             def __init__(self):
@@ -143,17 +157,17 @@ class TestDDP(flow.unittest.TestCase):
                 return res
 
         x = flow.tensor([2, 3]) * (rank + 1)
-        x = x.to("cuda")
+        x = x.to(dev_type)
 
         m = CustomModule()
-        m = m.to("cuda")
+        m = m.to(dev_type)
         m = ddp(m)
 
         y1 = m(x)
         y2 = m(x)
 
         m = CustomModule()
-        m = m.to("cuda")
+        m = m.to(dev_type)
         m = ddp(m, broadcast_buffers=False)
 
         y3 = m(x)
@@ -171,6 +185,10 @@ class TestDDP(flow.unittest.TestCase):
             test_case.assertTrue(np_allclose_with_shape(y4.numpy(), np.array([8, 12])))
         else:
             raise ValueError()
+
+    def test_broadcast_buffer(test_case):
+        for dev_type in ["cuda", "cpu"]:
+            test_case._test_broadcast_buffer(dev_type)
 
 
 if __name__ == "__main__":

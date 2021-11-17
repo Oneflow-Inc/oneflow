@@ -30,7 +30,7 @@ def test_fused_self_attention(test_case, batch_size, seq_len, num_heads, head_si
     x = np.random.randn(seq_len, batch_size, hidden_size)
     fused_input = flow.Tensor(x).to("cuda")
     fused_input.requires_grad = True
-    (fused_qmk, fused_v) = flow.F.fused_self_attention(
+    (fused_qmk, fused_v) = flow._C.fused_self_attention(
         fused_input, head_size=head_size, alpha=1.0,
     )
     fused_atten = flow.matmul(fused_qmk, fused_v)

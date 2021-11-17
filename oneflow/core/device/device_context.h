@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/auto_registration_factory.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 
@@ -37,15 +38,7 @@ class DeviceCtx {
     UNIMPLEMENTED();
     return nullptr;
   }
-  virtual cublasHandle_t cublas_pmh_handle() const {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-  virtual cublasHandle_t cublas_pmd_handle() const {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-  virtual cublasHandle_t cublas_tensor_op_math_handle() const {
+  virtual cublasHandle_t cublas_handle() const {
     UNIMPLEMENTED();
     return nullptr;
   }
@@ -55,18 +48,28 @@ class DeviceCtx {
   }
 #endif
 
-  virtual void SyncDevice() { UNIMPLEMENTED(); }
-  virtual void AddCallBack(std::function<void()>) const { UNIMPLEMENTED(); }
+  virtual ep::Stream* stream() = 0;
 
   virtual vm::Allocator* mut_allocator() {
     UNIMPLEMENTED();
     return nullptr;
   }
 
+  virtual DeviceType device_type() const = 0;
+
  protected:
   DeviceCtx() = default;
 
  private:
+};
+
+class DeviceCtxProvider {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DeviceCtxProvider);
+  DeviceCtxProvider() = default;
+  virtual ~DeviceCtxProvider() = default;
+
+  virtual std::shared_ptr<DeviceCtx> GetDeviceCtx() = 0;
 };
 
 #define REGISTER_DEVICE_CONTEXT(device, creator) \

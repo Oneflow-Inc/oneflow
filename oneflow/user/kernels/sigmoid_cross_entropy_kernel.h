@@ -61,6 +61,7 @@ class SigmoidCrossEntropyKernel final : public user_op::OpKernel {
   ~SigmoidCrossEntropyKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
@@ -77,7 +78,7 @@ class SigmoidCrossEntropyKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("sigmoid_cross_entropy")                                               \
       .SetCreateFn<                                                                           \
           SigmoidCrossEntropyKernel<device_type, SigmoidCrossEntropyFunctor, dtype, ltype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type)                               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type)                              \
                        & (user_op::HobDataType("label", 0) == GetDataType<ltype>::value)      \
                        & (user_op::HobDataType("loss", 0) == GetDataType<dtype>::value));
 
@@ -89,6 +90,7 @@ class SigmoidCrossEntropyGradKernel final : public user_op::OpKernel {
   ~SigmoidCrossEntropyGradKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     const user_op::Tensor* loss_diff = ctx->Tensor4ArgNameAndIndex("loss_diff", 0);
@@ -107,7 +109,7 @@ class SigmoidCrossEntropyGradKernel final : public user_op::OpKernel {
       .SetCreateFn<SigmoidCrossEntropyGradKernel<device_type, SigmoidCrossEntropyGradFunctor, \
                                                  dtype, ltype>>()                             \
       .SetIsMatchedHob(                                                                       \
-          (user_op::HobDeviceTag() == device_type)                                            \
+          (user_op::HobDeviceType() == device_type)                                           \
           & (user_op::HobDataType("label", 0) == GetDataType<ltype>::value)                   \
           & (user_op::HobDataType("prediction_diff", 0) == GetDataType<dtype>::value));
 

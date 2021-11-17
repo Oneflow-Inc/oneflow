@@ -215,6 +215,7 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
   ~GpuMovingAverageMinMaxObserverKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* current_train_step =
@@ -297,7 +298,7 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
 #define REGISTER_MOVING_AVERAGE_MIN_MAX_OBSERVER_KERNEL(dtype)                         \
   REGISTER_USER_KERNEL("moving_average_min_max_observer")                              \
       .SetCreateFn<GpuMovingAverageMinMaxObserverKernel<dtype>>()                      \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t { return 2 * sizeof(dtype); })
 

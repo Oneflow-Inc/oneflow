@@ -72,6 +72,7 @@ class FusedCastScaleGpuKernel final : public user_op::OpKernel, public user_op::
   ~FusedCastScaleGpuKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
@@ -94,7 +95,7 @@ class FusedCastScaleGpuKernel final : public user_op::OpKernel, public user_op::
 #define REGISTER_FUSED_CAST_SCALE_GPU_KERNEL(x_type, y_type)                          \
   REGISTER_USER_KERNEL("fused_cast_scale")                                            \
       .SetCreateFn<FusedCastScaleGpuKernel<y_type, x_type>>()                         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                 \
                        & (user_op::HobDataType("y", 0) == GetDataType<y_type>::value) \
                        & (user_op::HobDataType("x", 0) == GetDataType<x_type>::value));
 

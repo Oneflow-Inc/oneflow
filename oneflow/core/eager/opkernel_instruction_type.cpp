@@ -22,14 +22,14 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/vm/object_wrapper.h"
 #include "oneflow/core/vm/string_object.h"
-#include "oneflow/core/vm/stream.msg.h"
-#include "oneflow/core/vm/thread_ctx.msg.h"
+#include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/cuda_stream_type.h"
-#include "oneflow/core/eager/opkernel_instruction.msg.h"
+#include "oneflow/core/eager/opkernel_instruction.h"
 #include "oneflow/core/eager/opkernel_instruction_type.h"
 #include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
 #include "oneflow/core/vm/device_helper_stream_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/object.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
@@ -40,6 +40,7 @@ limitations under the License.
 #include "oneflow/core/operator/op_node_signature_desc.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace vm {
@@ -374,7 +375,8 @@ Maybe<void> OpKernelInfer(SystemOpKernelObject* opkernel_obj, vm::Instruction* i
       }));
   std::function<Blob*(const std::string&)> Blob4BnInOp;
   JUST(MakeBlob4BnInOp(instruction, args, &Blob4BnInOp));
-  opkernel_obj->kernel().SystemForwardHeader(KernelCtx(), Blob4BnInOp);
+  opkernel_obj->kernel_ctx()->UpdateBnInOp2BlobFn(Blob4BnInOp);
+  opkernel_obj->kernel().SystemForwardHeader(opkernel_obj->kernel_ctx());
   return Maybe<void>::Ok();
 }
 
@@ -411,11 +413,11 @@ Maybe<void> OpKernelCompute(SystemOpKernelObject* opkernel_obj, vm::Instruction*
         JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
         return Maybe<void>::Ok();
       }));
-  KernelCtx kernel_ctx;
-  kernel_ctx.device_ctx = device_ctx;
   std::function<Blob*(const std::string&)> Blob4BnInOp;
   JUST(MakeBlob4BnInOp(instruction, args, &Blob4BnInOp));
-  opkernel_obj->kernel().SystemForwardDataContent(kernel_ctx, Blob4BnInOp);
+  opkernel_obj->kernel_ctx()->UpdateBnInOp2BlobFn(Blob4BnInOp);
+  opkernel_obj->kernel_ctx()->set_device_ctx(device_ctx);
+  opkernel_obj->kernel().SystemForwardDataContent(opkernel_obj->kernel_ctx());
   return Maybe<void>::Ok();
 }
 
@@ -444,8 +446,9 @@ struct LocalCallOpKernelUtil final {
   static inline Maybe<void> Infer(vm::Instruction* instruction) {
     auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
     operand->mut_opkernel()->composed_attrs_for_scheduler_thread()->ResetPrior(operand->attrs());
-    operand->set_user_opkernel(JUST(operand->mut_opkernel()->ChooseOpKernel(
-        operand->inputs(), operand->outputs(), operand->consistent_tensor_infer_result())));
+    operand->set_user_opkernel(JUST(
+        operand->mut_opkernel()->ChooseOpKernel(operand->inputs().get(), operand->outputs().get(),
+                                                operand->consistent_tensor_infer_result().get())));
     JUST(CheckOutputBlobObjectsMemCase(operand, instruction->stream()));
     JUST(InitOutputBlobs(operand));
     JUST(InferTempStorageBlobDesc(operand));
@@ -466,7 +469,6 @@ struct LocalCallOpKernelUtil final {
     return Maybe<void>::Ok();
   }
 
- private:
   static inline Maybe<LocalCallOpKernelPhyInstrOperand*> GetLocalCallOpKernelPhyInstrOperand(
       vm::Instruction* instruction) {
     const auto& operand = instruction->instr_msg().phy_instr_operand();
@@ -476,6 +478,7 @@ struct LocalCallOpKernelUtil final {
     return ptr;
   }
 
+ private:
   static inline Maybe<const MemoryCase&> GetMemCase(LocalCallOpKernelPhyInstrOperand* operand) {
     const auto& mem_case = operand->opkernel().mem_case();
     CHECK_OR_RETURN(static_cast<bool>(mem_case));
@@ -524,8 +527,8 @@ struct LocalCallOpKernelUtil final {
     CHECK_OR_RETURN(temp_blob_desc->data_type() == DataType::kChar);
     one::LocalUserOpInferContext* op_infer_ctx =
         operand->opkernel().op_infer_ctx_for_scheduler_thread();
-    op_infer_ctx->Update(operand->inputs(), operand->outputs(),
-                         operand->consistent_tensor_infer_result());
+    op_infer_ctx->Update(operand->inputs().get(), operand->outputs().get(),
+                         operand->consistent_tensor_infer_result().get());
     size_t temp_size = InferTmpSizeFn(op_infer_ctx);
     temp_blob_desc->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
     temp_blob_desc->set_is_dynamic(true);
@@ -542,8 +545,8 @@ struct LocalCallOpKernelUtil final {
   static inline Maybe<void> WithComputeContext(LocalCallOpKernelPhyInstrOperand* operand,
                                                DeviceCtx* device_ctx, const CallbackT& Callback) {
     auto* opkernel = operand->mut_opkernel();
-    JUST(Callback(opkernel->UpdateComputeContext(operand->inputs(), operand->outputs(),
-                                                 operand->consistent_tensor_infer_result(),
+    JUST(Callback(opkernel->UpdateComputeContext(operand->inputs().get(), operand->outputs().get(),
+                                                 operand->consistent_tensor_infer_result().get(),
                                                  device_ctx)));
     // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
     opkernel->UpdateComputeContext(nullptr, nullptr, nullptr, nullptr);
@@ -556,9 +559,9 @@ struct LocalCallOpKernelUtil final {
       *state = operand->op_interp_ctx().state.get();
       return;
     }
-    operand->mut_opkernel()->TryInitOpKernelState(operand->user_opkernel(), device_ctx,
-                                                  operand->inputs(), operand->outputs(),
-                                                  operand->consistent_tensor_infer_result(), state);
+    operand->mut_opkernel()->TryInitOpKernelState(
+        operand->user_opkernel(), device_ctx, operand->inputs().get(), operand->outputs().get(),
+        operand->consistent_tensor_infer_result().get(), state);
   }
 
   static inline Maybe<void> AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,
@@ -600,6 +603,13 @@ void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const
 void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
   CHECK_OK(LocalCallOpKernelUtil::Infer(instruction));
   CHECK_OK(LocalCallOpKernelUtil::Compute(instruction));
+}
+
+const std::string& LocalCallOpKernelInstructionType::DebugOpTypeName(
+    vm::Instruction* instruction) const {
+  auto* operand =
+      CHECK_JUST(LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instruction));
+  return operand->opkernel().op_type_name();
 }
 
 Maybe<void> CallOpKernelInstructionType::MaybeInfer(vm::Instruction* instruction,

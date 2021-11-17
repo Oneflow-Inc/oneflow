@@ -18,44 +18,68 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_div_impl(test_case, shape, device):
-    x = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
-    y = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
+    x = flow.tensor(
+        np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
+    )
+    y = flow.tensor(
+        np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
+    )
     of_out = flow.div(x, y)
     np_out = np.divide(x.numpy(), y.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
     x = 5
-    y = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
+    y = flow.tensor(
+        np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
+    )
     of_out = flow.div(x, y)
     np_out = np.divide(x, y.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
-    x = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
+    x = flow.tensor(
+        np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
+    )
     y = 5
     of_out = flow.div(x, y)
     np_out = np.divide(x.numpy(), y)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
-    x = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
-    y = flow.Tensor(np.random.randn(1, 1), device=flow.device(device))
-    of_out = flow.div(x, y)
-    np_out = np.divide(x.numpy(), y.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
-    x = flow.Tensor(np.array([5.0]), device=flow.device(device))
-    y = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
-    of_out = flow.div(x, y)
-    np_out = np.divide(x.numpy(), y.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
-    x = flow.Tensor(
-        np.random.randn(*shape), device=flow.device(device), requires_grad=True
+    x = flow.tensor(
+        np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
     )
-    y = flow.Tensor(np.array([5.0]), device=flow.device(device), requires_grad=True)
+    y = flow.tensor(
+        np.random.randn(1, 1), dtype=flow.float32, device=flow.device(device)
+    )
+    of_out = flow.div(x, y)
+    np_out = np.divide(x.numpy(), y.numpy())
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
+    x = flow.tensor(np.array([5.0]), dtype=flow.float32, device=flow.device(device))
+    y = flow.tensor(
+        np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
+    )
+    of_out = flow.div(x, y)
+    np_out = np.divide(x.numpy(), y.numpy())
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
+    x = flow.tensor(
+        np.random.randn(*shape),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    y = flow.tensor(
+        np.array([5.0]),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
     of_out = flow.div(x, y)
     np_out = np.divide(x.numpy(), y.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
@@ -74,7 +98,7 @@ class TestDiv(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_div_impl(test_case, *arg)
 
-    def test_sub_against_pytorch(test_case):
+    def test_div_against_pytorch(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_type"] = [test_flow_against_pytorch, test_tensor_against_pytorch]
         arg_dict["device"] = ["cpu", "cuda"]

@@ -31,6 +31,13 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("__repr__", [](const Symbol<DType>& d) { return d->name(); })
       .def(py::self == py::self)
       .def(py::hash(py::self))
+      .def(py::pickle(
+          [](const Symbol<DType>& dtype) {  // __getstate__
+            return static_cast<int>(dtype->data_type());
+          },
+          [](int t) {  // __setstate__
+            return CHECK_JUST(DType::Get(DataType(t)));
+          }))
       .def_property_readonly(
           "bytes", [](const Symbol<DType>& dtype) { return dtype->bytes().GetOrThrow(); });
 
@@ -49,6 +56,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.attr("uint8") = &CHECK_JUST(DType::Get(DataType::kUInt8));
   m.attr("record") = &CHECK_JUST(DType::Get(DataType::kOFRecord));
   m.attr("tensor_buffer") = &CHECK_JUST(DType::Get(DataType::kTensorBuffer));
+  m.attr("bfloat16") = &CHECK_JUST(DType::Get(DataType::kBFloat16));
 }
 
 }  // namespace oneflow

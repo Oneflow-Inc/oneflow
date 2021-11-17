@@ -47,11 +47,12 @@ class CpuTriuKernel final : public user_op::OpKernel {
 
 #define REGISTER_CPU_TRIU_KERNEL(dtype)                                             \
   REGISTER_USER_KERNEL("triu").SetCreateFn<CpuTriuKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == "cpu")                                            \
+      (user_op::HobDeviceType() == DeviceType::kCPU)                                \
       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_TRIU_KERNEL(float)
 REGISTER_CPU_TRIU_KERNEL(double)
+REGISTER_CPU_TRIU_KERNEL(uint8_t)
 REGISTER_CPU_TRIU_KERNEL(int8_t)
 REGISTER_CPU_TRIU_KERNEL(int32_t)
 REGISTER_CPU_TRIU_KERNEL(int64_t)

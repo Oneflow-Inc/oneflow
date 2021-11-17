@@ -86,6 +86,7 @@ class UpsampleBilinear2DGPUKernel final : public user_op::OpKernel {
   ~UpsampleBilinear2DGPUKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -124,6 +125,7 @@ class UpsampleBilinear2DGradGPUKernel final : public user_op::OpKernel {
   ~UpsampleBilinear2DGradGPUKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
     Memset<DeviceType::kGPU>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0,
@@ -160,11 +162,11 @@ class UpsampleBilinear2DGradGPUKernel final : public user_op::OpKernel {
 #define REGISTER_UPSAMPLE_BILINEAR_2D_GPU_KERNEL(dtype)                                \
   REGISTER_USER_KERNEL("upsample_bilinear_2d")                                         \
       .SetCreateFn<UpsampleBilinear2DGPUKernel<dtype>>()                               \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("upsample_bilinear_2d_grad")                                    \
       .SetCreateFn<UpsampleBilinear2DGradGPUKernel<dtype>>()                           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_UPSAMPLE_BILINEAR_2D_GPU_KERNEL(float)

@@ -35,7 +35,7 @@ void CopyFromTensorBuffer(T* image_ptr, const TensorBuffer& image_buffer, const 
   FOR_RANGE(int, i, 0, h) {
     const F* from = image_buffer.data<F>() + i * w * c;
     T* to = image_ptr + i * batch_width * channels;
-    CopyElem(from, to, w * c);
+    std::transform(from, from + w * c, to, [](F v) { return static_cast<T>(v); });
   }
 }
 
@@ -100,7 +100,7 @@ class ImageBatchAlignKernel final : public user_op::OpKernel {
 #define REGISTER_IMAGE_BATCH_ALIGN_KERNEL(dtype)                                    \
   REGISTER_USER_KERNEL("image_batch_align")                                         \
       .SetCreateFn<ImageBatchAlignKernel<dtype>>()                                  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)               \
                        & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer) \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 

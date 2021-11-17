@@ -66,8 +66,8 @@ struct FlatConsistentTensorMeta final {
 
 Maybe<void> SyncSymbolConsistentTensorMeta(
     uint64_t symbol_id, Symbol<one::ConsistentTensorMeta> consistent_tensor_meta) {
-  const auto& transport_token = JUST(
-      TransportToken::AcquireCtrlTransportToken(kRankGroupCtrlCmdSyncSymbolConsistentTensorMeta));
+  const auto& transport_token =
+      JUST(TransportToken::NewTransportToken(kTransportTokenTypeSyncSymbolConsistentTensorMeta));
   const auto& recv_buffer = std::make_shared<FlatConsistentTensorMeta>();
   NaiveAsyncTransportCtx ctx(
       transport_token,

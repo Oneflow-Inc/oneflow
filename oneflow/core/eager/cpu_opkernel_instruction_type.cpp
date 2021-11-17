@@ -17,12 +17,12 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/eager/opkernel_object.h"
 #include "oneflow/core/eager/blob_object.h"
-#include "oneflow/core/eager/opkernel_instruction.msg.h"
+#include "oneflow/core/eager/opkernel_instruction.h"
 #include "oneflow/core/eager/opkernel_instruction_type.h"
 #include "oneflow/core/vm/string_object.h"
-#include "oneflow/core/vm/stream.msg.h"
-#include "oneflow/core/vm/async_cpu_stream_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/cpu_stream_type.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/object.h"
 
 namespace oneflow {
@@ -33,7 +33,7 @@ class CpuLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstru
   CpuLocalCallOpKernelInstructionType() = default;
   ~CpuLocalCallOpKernelInstructionType() override = default;
 
-  using stream_type = vm::AsyncCpuStreamType;
+  using stream_type = vm::CpuStreamType;
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
@@ -45,7 +45,7 @@ class CpuCallOpKernelInstructionType final : public CallOpKernelInstructionType 
   CpuCallOpKernelInstructionType() = default;
   ~CpuCallOpKernelInstructionType() override = default;
 
-  using stream_type = vm::AsyncCpuStreamType;
+  using stream_type = vm::CpuStreamType;
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
@@ -58,7 +58,7 @@ class CpuUserStatelessCallOpKernelInstructionType final
   CpuUserStatelessCallOpKernelInstructionType() = default;
   ~CpuUserStatelessCallOpKernelInstructionType() override = default;
 
-  using stream_type = vm::AsyncCpuStreamType;
+  using stream_type = vm::CpuStreamType;
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
@@ -72,7 +72,7 @@ class CpuSystemStatelessCallOpKernelInstructionType final
   CpuSystemStatelessCallOpKernelInstructionType() = default;
   ~CpuSystemStatelessCallOpKernelInstructionType() override = default;
 
-  using stream_type = vm::AsyncCpuStreamType;
+  using stream_type = vm::CpuStreamType;
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
@@ -85,7 +85,7 @@ class CpuFetchBlobHeaderInstructionType final : public FetchBlobHeaderInstructio
   CpuFetchBlobHeaderInstructionType() = default;
   ~CpuFetchBlobHeaderInstructionType() override = default;
 
-  using stream_type = vm::AsyncCpuStreamType;
+  using stream_type = vm::CpuStreamType;
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
@@ -97,7 +97,7 @@ class CpuFetchBlobBodyInstructionType final : public FetchBlobBodyInstructionTyp
   CpuFetchBlobBodyInstructionType() = default;
   ~CpuFetchBlobBodyInstructionType() override = default;
 
-  using stream_type = vm::AsyncCpuStreamType;
+  using stream_type = vm::CpuStreamType;
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
@@ -109,7 +109,7 @@ class CpuFeedBlobInstructionType final : public FeedBlobInstructionType {
   CpuFeedBlobInstructionType() = default;
   ~CpuFeedBlobInstructionType() override = default;
 
-  using stream_type = vm::AsyncCpuStreamType;
+  using stream_type = vm::CpuStreamType;
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }

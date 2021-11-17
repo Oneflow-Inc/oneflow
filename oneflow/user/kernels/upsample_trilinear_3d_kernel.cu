@@ -124,6 +124,7 @@ class UpsampleTrilinear3DGPUKernel final : public user_op::OpKernel {
   ~UpsampleTrilinear3DGPUKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -166,6 +167,7 @@ class UpsampleTrilinearGrad3DGPUKernel final : public user_op::OpKernel {
   ~UpsampleTrilinearGrad3DGPUKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
@@ -207,11 +209,11 @@ class UpsampleTrilinearGrad3DGPUKernel final : public user_op::OpKernel {
 #define REGISTER_UPSAMPTRILINEAR3D_GPU_KERNEL(dtype)                                   \
   REGISTER_USER_KERNEL("upsample_trilinear_3d")                                        \
       .SetCreateFn<UpsampleTrilinear3DGPUKernel<dtype>>()                              \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("upsample_trilinear_3d_grad")                                   \
       .SetCreateFn<UpsampleTrilinearGrad3DGPUKernel<dtype>>()                          \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_UPSAMPTRILINEAR3D_GPU_KERNEL(float)

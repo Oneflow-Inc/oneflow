@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_RELEASE_TENSOR_ARG_PHY_INSTR_OPERAND_H_
 
 #include <functional>
+#include <memory>
 #include "oneflow/core/vm/phy_instr_operand.h"
 
 namespace oneflow {
@@ -40,13 +41,12 @@ class ReleaseTensorArgPhyInstrOperand : public PhyInstrOperand {
   }
 
   void ForEachConstMirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
+      const std::function<void(MirroredObject* compute)>&) const override;
 
-  void ForEachMutMirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
+  void ForEachMutMirroredObject(const std::function<void(MirroredObject* compute)>&) const override;
 
   void ForEachMut2MirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
+      const std::function<void(MirroredObject* compute)>&) const override;
 
  private:
   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;

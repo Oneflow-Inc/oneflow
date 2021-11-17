@@ -16,19 +16,6 @@ limitations under the License.
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _single
-
-
-def _input_args_is_int(args):
-    return all((isinstance(x, int) for x in args))
-
-
-def _input_args_is_tuple_int(args):
-    return all((_input_args_is_int(x) for x in args))
-
-
-def _input_args_is_flow_size(args):
-    return all((isinstance(x, flow.Size) for x in args)) and len(args) == 1
 
 
 @register_tensor_op("repeat")
@@ -55,17 +42,18 @@ def repeat_op(input, *sizes):
         >>> input = flow.Tensor(x)
         >>> out = input.repeat(1, 1, 2, 2)
         >>> out.shape
-        flow.Size([1, 3, 2, 4])
+        oneflow.Size([1, 3, 2, 4])
     """
 
-    if _input_args_is_int(sizes):
-        sizes = _single(sizes)
-    elif _input_args_is_tuple_int(sizes):
-        sizes = _single(*sizes)
-    elif _input_args_is_flow_size(sizes):
-        sizes = _single(*sizes)[0]
+    if input.ndim == 0 and input.numel() == 1:
+        input = input.unsqueeze(0)
+
+    if len(sizes) == 1:
+        sizes = sizes[0]
+        if isinstance(sizes, int):
+            sizes = (sizes,)
     else:
-        raise ValueError("input sizes parameter is not illegal!")
+        sizes = sizes
 
     for repeat_v in sizes:
         assert repeat_v > 0

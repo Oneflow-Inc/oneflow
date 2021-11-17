@@ -52,6 +52,7 @@ class GpuPReluKernel final : public user_op::OpKernel {
   ~GpuPReluKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* alpha = ctx->Tensor4ArgNameAndIndex("alpha", 0);
@@ -70,7 +71,7 @@ class GpuPReluKernel final : public user_op::OpKernel {
 
 #define REGISTER_GPU_PRELU_KERNEL(dtype)                                              \
   REGISTER_USER_KERNEL("prelu").SetCreateFn<GpuPReluKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == "gpu")                                              \
+      (user_op::HobDeviceType() == DeviceType::kGPU)                                  \
       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_PRELU_KERNEL(float)
@@ -83,6 +84,7 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
   ~GpuPReluGradKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* alpha = ctx->Tensor4ArgNameAndIndex("alpha", 0);
@@ -107,10 +109,10 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_PRELU_GRAD_KERNEL(dtype)             \
-  REGISTER_USER_KERNEL("prelu_grad")                      \
-      .SetCreateFn<GpuPReluGradKernel<dtype>>()           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
+#define REGISTER_GPU_PRELU_GRAD_KERNEL(dtype)                         \
+  REGISTER_USER_KERNEL("prelu_grad")                                  \
+      .SetCreateFn<GpuPReluGradKernel<dtype>>()                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_PRELU_GRAD_KERNEL(float)
