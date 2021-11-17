@@ -73,9 +73,9 @@ class NarrowKernel final : public user_op::OpKernel {
     DimVector src_shape = {outer_dim, narrow_dim, inner_dim};
     DimVector src_pos_vec = {0, start, 0};
     DimVector extent_vec = {outer_dim, length, inner_dim};
-    copy_nd_primitive->Launch(ctx->stream_ctx(), out->data_type(), 3, out->mut_dptr(),
-                              dst_shape.data(), dst_pos_vec.data(), in->dptr(), src_shape.data(),
-                              src_pos_vec.data(), extent_vec.data());
+    copy_nd_primitive->Launch(ctx->stream(), out->data_type(), 3, out->mut_dptr(), dst_shape.data(),
+                              dst_pos_vec.data(), in->dptr(), src_shape.data(), src_pos_vec.data(),
+                              extent_vec.data());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -98,7 +98,7 @@ class NarrowGradKernel final : public user_op::OpKernel {
     std::unique_ptr<ep::primitive::Memset> memset_primitive =
         ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
     CHECK(memset_primitive);
-    memset_primitive->Launch(ctx->stream_ctx(), dst, 0, dx_byte_size);
+    memset_primitive->Launch(ctx->stream(), dst, 0, dx_byte_size);
 
     auto copy_nd_primitive = NewCopyNdPrimitive(ctx);
     CHECK(copy_nd_primitive);
@@ -115,7 +115,7 @@ class NarrowGradKernel final : public user_op::OpKernel {
     DimVector src_pos_vec = {0, 0, 0};
     DimVector extent_vec = {outer_dim, length, inner_dim};
 
-    copy_nd_primitive->Launch(ctx->stream_ctx(), dx->data_type(), 3, dst, dst_shape.data(),
+    copy_nd_primitive->Launch(ctx->stream(), dx->data_type(), 3, dst, dst_shape.data(),
                               dst_pos_vec.data(), dy->dptr(), src_shape.data(), src_pos_vec.data(),
                               extent_vec.data());
   }

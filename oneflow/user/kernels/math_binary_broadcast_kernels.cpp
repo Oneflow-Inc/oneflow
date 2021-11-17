@@ -24,7 +24,7 @@ limitations under the License.
 namespace oneflow {
 
 template<DeviceType device_type, typename T, typename K,
-         void (*binary_func)(DeviceCtx* ctx, const XpuVarNdarray<K>& z,
+         void (*binary_func)(ep::Stream* stream, const XpuVarNdarray<K>& z,
                              const XpuVarNdarray<const T>& x, const XpuVarNdarray<const T>& y)>
 class MathBinaryBroadcastKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
@@ -40,7 +40,7 @@ class MathBinaryBroadcastKernel final : public user_op::OpKernel, public user_op
     const T* dptr_y = tensor_y->dptr<T>();
     K* dptr_z = tensor_z->mut_dptr<K>();
     size_t num_axes = tensor_z->shape().NumAxes();
-    binary_func(ctx->device_ctx(), XpuVarNdarray<K>(tensor_z->shape(), dptr_z, num_axes),
+    binary_func(ctx->stream(), XpuVarNdarray<K>(tensor_z->shape(), dptr_z, num_axes),
                 XpuVarNdarray<const T>(tensor_x->shape(), dptr_x, num_axes),
                 XpuVarNdarray<const T>(tensor_y->shape(), dptr_y, num_axes));
   }

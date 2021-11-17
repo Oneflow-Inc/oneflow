@@ -76,7 +76,7 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel,
 
     std::unique_ptr<ep::primitive::LogSoftmax> primitive = NewLogSoftmaxPrimitive(ctx);
     CHECK(primitive);
-    primitive->Launch(ctx->stream_ctx(), num_instances, num_classes, prediction->dptr(),
+    primitive->Launch(ctx->stream(), num_instances, num_classes, prediction->dptr(),
                       prob->mut_dptr());
 
     const K* labels = label->dptr<K>();

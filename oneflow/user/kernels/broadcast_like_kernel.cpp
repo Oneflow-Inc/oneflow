@@ -37,7 +37,7 @@ class BroadcastLikeKernel final : public user_op::OpKernel, public user_op::Cuda
     const Shape& reduced_shape =
         CreateReducedShapeOrOnesShape(like_tensor->shape(), {axis.begin(), axis.end()});
     NdarrayUtil<device_type, T>::BroadcastTo(
-        ctx->device_ctx(), XpuVarNdarray<T>(out_tensor->shape(), out_tensor->mut_dptr<T>()),
+        ctx->stream(), XpuVarNdarray<T>(out_tensor->shape(), out_tensor->mut_dptr<T>()),
         XpuVarNdarray<const T>(reduced_shape, in_tensor->dptr<T>()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
