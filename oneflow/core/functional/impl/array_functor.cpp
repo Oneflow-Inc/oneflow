@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/device.h"
@@ -2132,9 +2133,17 @@ class ToFunctor {
           << "for consistent tensor, but got " << device_.value_or("");
       return JUST(ConsistentTensorTo(input, device_type, dtype, copy));
     } else {
-      auto device =
-          device_.has_value() ? JUST(Device::New(device_.value_or(""))) : JUST(input->device());
-      return JUST(LocalTensorTo(input, device->type(), device->device_id(), dtype, copy));
+      std::string device_name;
+      int device_id;
+      if (device_.has_value()) {
+        JUST(ParsingDeviceTag(device_.value_or(""), &device_name, &device_id));
+        if (device_id == -1) { device_id = GlobalProcessCtx::LocalRank(); }
+      } else {
+        Symbol<Device> device = JUST(input->device());
+        device_name = device->type();
+        device_id = device->device_id();
+      }
+      return JUST(LocalTensorTo(input, device_name, device_id, dtype, copy));
     }
   }
 };
