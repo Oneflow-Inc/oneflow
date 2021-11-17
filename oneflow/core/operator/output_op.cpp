@@ -69,6 +69,22 @@ Maybe<void> OutputOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) cons
   JUST(InterfaceOpUtil::GetOutputLikeOpSbpSignature(op_conf().output_conf().blob_conf(),
                                                     input_bns(), output_bns(),
                                                     sbp_sig_list->mutable_sbp_signature()->Add()));
+  cfg::SbpSignature* sbp = sbp_sig_list->mutable_sbp_signature()->Add();
+  CHECK_EQ_OR_RETURN(JUST(GetOpParallelDesc())->hierarchy()->NumAxes(), 1)
+      << "Only support 1d sbp now.";
+  // Get sbp from BlobConf
+  const InterfaceBlobConf& blob_conf = op_conf().output_conf().blob_conf();
+  // TODO: make sure blob_conf must set nd_sbp
+  CHECK_OR_RETURN(blob_conf.has_nd_sbp());
+  const cfg::SbpParallel& sbp_parallel = cfg::SbpParallel(blob_conf.nd_sbp().sbp_parallel(0));
+  if (sbp_parallel.has_broadcast_parallel()) {
+    SbpSignatureBuilder().Broadcast("in").Broadcast("out").Build(sbp);
+  } else if (sbp_parallel.has_partial_sum_parallel()) {
+    SbpSignatureBuilder().PartialSum("in").PartialSum("out").Build(sbp);
+  } else if (sbp_parallel.has_split_parallel()) {
+    int64_t split_axis = sbp_parallel.split_parallel().axis();
+    SbpSignatureBuilder().Split("in", split_axis).Split("out", split_axis).Build(sbp);
+  }
   return Maybe<void>::Ok();
 }
 
