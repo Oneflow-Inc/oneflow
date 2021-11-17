@@ -22,6 +22,8 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/register/ofblob.h"
+#include "oneflow/core/framework/instructions_builder.h"
 
 namespace oneflow {
 namespace one {
@@ -46,7 +48,18 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
 
 namespace view {
 
-Maybe<Tensor> BasicSlice(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
+Maybe<void> SyncAccessTensorWithTimeOut(
+    const std::shared_ptr<Tensor>& tensor,
+    const std::shared_ptr<std::function<void(uint64_t)>>& callback, const std::string& modifier) {
+  return SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
+    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(JUST(tensor->AsMirroredTensor()), sc, callback,
+                                               modifier);
+    });
+  });
+}
+
+Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                          const Stride& target_strides, int64_t storage_offset) {
   storage_offset += JUST(input->storage_offset());
   // TODO(): Check shape compatible.
@@ -61,10 +74,21 @@ Maybe<Tensor> BasicSlice(const std::shared_ptr<Tensor>& input, const Shape& targ
       tensor_meta, JUST(input->tensor_storage()), input->requires_grad(),
       /*is_leaf=*/!input->requires_grad());
   tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()));
+
   JUST(JUST(tensor_impl->eager_blob_object())->TryInitBlob());
   JUST(tensor_impl->eager_blob_object())->set_is_shape_synced(true);
   JUST(tensor_impl->eager_blob_object())->set_last_used_device(JUST(input->device()));
   std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
+
+  const auto& callback =
+      std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
+        auto* eager_blob = reinterpret_cast<vm::EagerBlobObject*>(of_blob_ptr);
+        if (!(eager_blob->blob().dptr())) {
+          int64_t storage_offset_bytes = storage_offset * GetSizeOfDataType(eager_blob->blob().data_type());
+          eager_blob->mut_blob()->reset_dptr(eager_blob->tensor_buffer()->blob_dptr() + storage_offset_bytes);
+        }
+      });
+  JUST(SyncAccessTensorWithTimeOut(input, callback, "mut"));
   return output;
 }
 
@@ -90,14 +114,14 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) 
   size_t x_count = input->shape()->Count(0);
   if (need_infer_axis == -1) {
     CHECK_EQ_OR_RETURN(shape.Count(0), x_count);
-    output = JUST(BasicSlice(input, shape, Stride(shape), 0));
+    output = JUST(BasicView(input, shape, Stride(shape), 0));
   } else {
     Shape infered_shape = shape;
     infered_shape.Set(need_infer_axis, x_count / count);
     CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
         << "Shape " << shape.ToString() << " is invalid for input of shape "
         << input->shape()->ToString();
-    output = JUST(BasicSlice(input, infered_shape, Stride(infered_shape), 0));
+    output = JUST(BasicView(input, infered_shape, Stride(infered_shape), 0));
   }
 
   if (input->requires_grad()) {

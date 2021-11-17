@@ -143,10 +143,20 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                                        const std::shared_ptr<SpinCounter>& spin_counter,
                                        std::shared_ptr<std::function<void(uint64_t)>> callback,
                                        const std::string& modifier);
-
+  
   template<typename T>
   Maybe<void> AccessBlobByCallback(const T tensor, const std::function<void(uint64_t)>& callback,
                                    const std::string& modifier);
+
+  template<typename T>
+  Maybe<one::Tensor> TensorView(
+    const T tensor,
+    const std::function<void(uint64_t)>& callback,
+    const std::string& modifier,
+    const Shape& target_shape,
+    const Stride& target_strides,
+    const int64_t storage_offset
+  );
 
   Maybe<void> ComputeRankFrontSeqCallback(const std::function<void()>& callback);
 

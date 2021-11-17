@@ -1111,6 +1111,44 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
   return Maybe<void>::Ok();
 }
 
+template<typename T>
+Maybe<one::Tensor> InstructionsBuilder::TensorView(const T tensor,
+                                                      const std::function<void(uint64_t)>& callback,
+                                                      const std::string& modifier,
+                                                      const Shape& target_shape,
+                                                      const Stride& target_strides,
+                                                      const int64_t storage_offset
+                                                      ) {
+  // const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
+  storage_offset += JUST(tensor->storage_offset());
+  // TODO(): Check shape compatible.
+  auto tensor_meta = std::make_shared<one::MirroredTensorMeta>(
+      std::make_shared<Shape>(target_shape), tensor->dtype()->data_type(), JUST(tensor->device()),
+      std::make_shared<Stride>(target_strides), storage_offset);
+
+  JUST(tensor->has_eager_blob_object());
+  const auto& blob_object = JUST(tensor->eager_blob_object());
+
+  auto tensor_impl = std::make_shared<one::EagerMirroredTensorImpl>(
+      tensor_meta, JUST(tensor->tensor_storage()), tensor->requires_grad(),
+      /*is_leaf=*/!tensor->requires_grad());
+  tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()));
+  JUST(JUST(tensor_impl->eager_blob_object())->TryInitBlob());
+  JUST(tensor_impl->eager_blob_object())->set_is_shape_synced(true);
+  JUST(tensor_impl->eager_blob_object())->set_last_used_device(JUST(tensor->device()));
+  std::shared_ptr<one::Tensor> output(new one::MirroredTensor(tensor_impl));
+
+  LocalDepObject* compute_local_dep_object = JUST(tensor->compute_local_dep_object());
+  const auto& parallel_desc = GetParallelDesc(tensor);
+  const auto& phy_instr_operand = std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(
+      blob_object, compute_local_dep_object, callback, modifier);
+  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+      Global<OneflowVM>::Get()->mut_vm(), parallel_desc->device_tag() + ".TensorView",
+      parallel_desc, phy_instr_operand);
+  instruction_list_->EmplaceBack(std::move(instruction));
+  return output;
+}
+
 template Maybe<void> InstructionsBuilder::AccessBlobByCallback(
     const std::shared_ptr<one::MirroredTensor> tensor,
     const std::function<void(uint64_t)>& callback, const std::string& modifier);
