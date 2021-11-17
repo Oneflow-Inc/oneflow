@@ -416,6 +416,8 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool comp
     // B->S cause cudaEventSynchronize in current implementation.
     bool is_same_sbp =
         (!compute_cost)
+        || (logical_blob_desc.data_type() == DataType::kOFRecord
+            || logical_blob_desc.data_type() == DataType::kTensorBuffer)
         || (input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable());
     int32_t consumer_sbp_size = EndNode->SbpSignatureList.size();
 
