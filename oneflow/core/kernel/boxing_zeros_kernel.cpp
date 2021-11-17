@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/primitive/include/memset.h"
+#include "oneflow/core/ep/include/primitive/memset.h"
 
 namespace oneflow {
 
@@ -29,17 +29,18 @@ class BoxingZerosKernel final : public Kernel {
   void VirtualKernelInit(KernelContext* ctx) override;
   void ForwardDataContent(KernelContext* ctx) const override;
 
-  std::unique_ptr<primitive::Memset> primitive_;
+  std::unique_ptr<ep::primitive::Memset> primitive_;
 };
 
 void BoxingZerosKernel::VirtualKernelInit(KernelContext* ctx) {
-  primitive_ = primitive::NewPrimitive<primitive::MemsetFactory>(this->op_conf().device_tag());
+  primitive_ =
+      ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(this->op_conf().device_tag());
   CHECK(primitive_);
 }
 
 void BoxingZerosKernel::ForwardDataContent(KernelContext* ctx) const {
   Blob* out = ctx->BnInOp2Blob("out");
-  primitive_->Launch(ctx->stream_ctx(), out->mut_dptr(), 0, out->ByteSizeOfBlobBody());
+  primitive_->Launch(ctx->stream(), out->mut_dptr(), 0, out->ByteSizeOfBlobBody());
 }
 
 REGISTER_KERNEL(OperatorConf::kBoxingZerosConf, BoxingZerosKernel);

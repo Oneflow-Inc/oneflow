@@ -41,13 +41,13 @@ class WhereKernel final : public user_op::OpKernel {
       CondT* cond_tmp_buf =
           reinterpret_cast<CondT*>(tmp_buffer->mut_dptr<char>() + x_bytes + y_bytes);
       NdarrayUtil<device_type, T>::BroadcastTo(
-          ctx->device_ctx(), XpuVarNdarray<T>(out->shape(), tmp_buffer->mut_dptr<T>()),
+          ctx->stream(), XpuVarNdarray<T>(out->shape(), tmp_buffer->mut_dptr<T>()),
           XpuVarNdarray<const T>(x->shape(), x->dptr<T>(), num_axes));
       NdarrayUtil<device_type, T>::BroadcastTo(
-          ctx->device_ctx(), XpuVarNdarray<T>(out->shape(), y_tmp_buf),
+          ctx->stream(), XpuVarNdarray<T>(out->shape(), y_tmp_buf),
           XpuVarNdarray<const T>(y->shape(), y->dptr<T>(), num_axes));
       NdarrayUtil<device_type, CondT>::BroadcastTo(
-          ctx->device_ctx(), XpuVarNdarray<CondT>(out->shape(), cond_tmp_buf),
+          ctx->stream(), XpuVarNdarray<CondT>(out->shape(), cond_tmp_buf),
           XpuVarNdarray<const CondT>(cond->shape(), cond->dptr<CondT>(), num_axes));
       WhereKernelUtil<device_type, T, CondT>::Where(ctx->device_ctx(), out->shape().elem_cnt(),
                                                     cond_tmp_buf, tmp_buffer->mut_dptr<T>(),
@@ -87,10 +87,10 @@ class WhereScalarXKernel final : public user_op::OpKernel {
       const size_t y_bytes = GetCudaAlignedSize(elem_cnt * sizeof(T));
       CondT* cond_tmp_buf = reinterpret_cast<CondT*>(tmp_buffer->mut_dptr<char>() + y_bytes);
       NdarrayUtil<device_type, T>::BroadcastTo(
-          ctx->device_ctx(), XpuVarNdarray<T>(out->shape(), tmp_buffer->mut_dptr<T>()),
+          ctx->stream(), XpuVarNdarray<T>(out->shape(), tmp_buffer->mut_dptr<T>()),
           XpuVarNdarray<const T>(y->shape(), y->dptr<T>(), num_axes));
       NdarrayUtil<device_type, CondT>::BroadcastTo(
-          ctx->device_ctx(), XpuVarNdarray<CondT>(out->shape(), cond_tmp_buf),
+          ctx->stream(), XpuVarNdarray<CondT>(out->shape(), cond_tmp_buf),
           XpuVarNdarray<const CondT>(cond->shape(), cond->dptr<CondT>(), num_axes));
       WhereKernelUtil<device_type, T, CondT>::WhereXScalar(
           ctx->device_ctx(), out->shape().elem_cnt(), cond_tmp_buf, scalar_operand,
@@ -130,10 +130,10 @@ class WhereScalarYKernel final : public user_op::OpKernel {
       const size_t x_bytes = GetCudaAlignedSize(elem_cnt * sizeof(T));
       CondT* cond_tmp_buf = reinterpret_cast<CondT*>(tmp_buffer->mut_dptr<char>() + x_bytes);
       NdarrayUtil<device_type, T>::BroadcastTo(
-          ctx->device_ctx(), XpuVarNdarray<T>(out->shape(), tmp_buffer->mut_dptr<T>()),
+          ctx->stream(), XpuVarNdarray<T>(out->shape(), tmp_buffer->mut_dptr<T>()),
           XpuVarNdarray<const T>(x->shape(), x->dptr<T>(), num_axes));
       NdarrayUtil<device_type, CondT>::BroadcastTo(
-          ctx->device_ctx(), XpuVarNdarray<CondT>(out->shape(), cond_tmp_buf),
+          ctx->stream(), XpuVarNdarray<CondT>(out->shape(), cond_tmp_buf),
           XpuVarNdarray<const CondT>(cond->shape(), cond->dptr<CondT>(), num_axes));
       WhereKernelUtil<device_type, T, CondT>::WhereYScalar(
           ctx->device_ctx(), out->shape().elem_cnt(), cond_tmp_buf, tmp_buffer->mut_dptr<T>(),
@@ -180,7 +180,7 @@ class WhereScalarXYKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("where")                                                                  \
       .SetCreateFn<WhereKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                      \
                                OF_PP_PAIR_FIRST(ctype_pair)>>()                                  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                               \
                        & (user_op::HobDataType("condition", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
@@ -198,7 +198,7 @@ class WhereScalarXYKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("where_scalar_x")                                                         \
       .SetCreateFn<WhereScalarXKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),               \
                                       OF_PP_PAIR_FIRST(ctype_pair)>>()                           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                               \
                        & (user_op::HobDataType("condition", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
@@ -214,7 +214,7 @@ class WhereScalarXYKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("where_scalar_y")                                                         \
       .SetCreateFn<WhereScalarYKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),               \
                                       OF_PP_PAIR_FIRST(ctype_pair)>>()                           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                               \
                        & (user_op::HobDataType("condition", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
@@ -230,7 +230,7 @@ class WhereScalarXYKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("where_scalar_xy")                                                        \
       .SetCreateFn<WhereScalarXYKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),              \
                                        OF_PP_PAIR_FIRST(ctype_pair)>>()                          \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                               \
                        & (user_op::HobDataType("condition", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 

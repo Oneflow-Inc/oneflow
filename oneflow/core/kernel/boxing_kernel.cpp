@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/common/blocking_counter.h"
-#include "oneflow/core/primitive/include/add.h"
+#include "oneflow/core/ep/include/primitive/add.h"
 
 namespace oneflow {
 
@@ -51,15 +51,16 @@ template<typename T>
 void CalcSumOfBlobs(KernelContext* ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                     const PbRpf<std::string>& src_bns, const std::string& dst_bn) {
   Blob* dst_blob = BnInOp2Blob(dst_bn);
-  std::unique_ptr<primitive::Add> primitive =
-      primitive::NewPrimitive<primitive::AddFactory>(DeviceType::kCPU, dst_blob->data_type());
+  std::unique_ptr<ep::primitive::Add> primitive =
+      ep::primitive::NewPrimitive<ep::primitive::AddFactory>(DeviceType::kCPU,
+                                                             dst_blob->data_type());
   CHECK(primitive);
   std::vector<const void*> srcs(src_bns.size());
   FOR_RANGE(size_t, i, 0, src_bns.size()) {
     Blob* src_blob_i = BnInOp2Blob(src_bns.Get(i));
     srcs[i] = src_blob_i->dptr<T>();
   }
-  primitive->Launch(ctx->stream_ctx(), srcs.data(), srcs.size(), dst_blob->mut_dptr<T>(),
+  primitive->Launch(ctx->stream(), srcs.data(), srcs.size(), dst_blob->mut_dptr<T>(),
                     dst_blob->static_shape().elem_cnt());
 }
 

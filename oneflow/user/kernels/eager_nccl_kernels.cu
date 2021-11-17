@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/primitive/include/permute.h"
+#include "oneflow/core/ep/include/primitive/permute.h"
 
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
 
@@ -93,7 +93,7 @@ class EagerNcclAllReduceKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_nccl_all_reduce")
     .SetCreateFn<EagerNcclAllReduceKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
 
 class EagerNcclBroadcastKernel final : public user_op::OpKernel {
  public:
@@ -131,7 +131,7 @@ class EagerNcclBroadcastKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_nccl_broadcast")
     .SetCreateFn<EagerNcclBroadcastKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
 
 class EagerNcclReduceKernel final : public user_op::OpKernel {
  public:
@@ -166,7 +166,7 @@ class EagerNcclReduceKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_nccl_reduce")
     .SetCreateFn<EagerNcclReduceKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
 
 class EagerNcclReduceScatterKernel final : public user_op::OpKernel {
  public:
@@ -202,7 +202,7 @@ HashMap<std::string, ncclRedOp_t> EagerNcclReduceScatterKernel::op_type2ncclRedO
 
 REGISTER_USER_KERNEL("eager_nccl_reduce_scatter")
     .SetCreateFn<EagerNcclReduceScatterKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
 
 class EagerNcclAllGatherKernel final : public user_op::OpKernel {
  public:
@@ -231,7 +231,7 @@ class EagerNcclAllGatherKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_nccl_all_gather")
     .SetCreateFn<EagerNcclAllGatherKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
 
 template<typename T>
 class EagerNcclS2SKernel final : public user_op::OpKernel {
@@ -289,10 +289,10 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
       FOR_RANGE(int64_t, i, 0, transpose_in_dim_vec.size()) {
         if (i != out_split_axis) { perm.push_back(i); }
       }
-      auto transpose = primitive::NewPrimitive<primitive::PermuteFactory>(
-          ctx->stream_ctx()->device_type(), transpose_in_dim_vec.size());
+      auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
+          ctx->stream()->device_type(), transpose_in_dim_vec.size());
       CHECK(transpose);
-      transpose->Launch(ctx->stream_ctx(), in->data_type(), transpose_in_dim_vec.size(),
+      transpose->Launch(ctx->stream(), in->data_type(), transpose_in_dim_vec.size(),
                         transpose_in_dim_vec.data(), in->dptr(), perm.data(),
                         tmp_buffer->mut_dptr());
     }
@@ -333,10 +333,10 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
       std::vector<int32_t> perm;
       FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.push_back(i); }
       perm.insert(perm.begin() + in_split_axis, 0);
-      auto transpose = primitive::NewPrimitive<primitive::PermuteFactory>(
-          ctx->stream_ctx()->device_type(), unpack_from_dim_vec.size());
+      auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
+          ctx->stream()->device_type(), unpack_from_dim_vec.size());
       CHECK(transpose);
-      transpose->Launch(ctx->stream_ctx(), in->data_type(), unpack_from_dim_vec.size(),
+      transpose->Launch(ctx->stream(), in->data_type(), unpack_from_dim_vec.size(),
                         unpack_from_dim_vec.data(), unpack_from_ptr, perm.data(), out->mut_dptr());
     }
   };
@@ -346,7 +346,7 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
 #define REGISTER_EAGER_NCCL_S2S_KERNEL(dtype)                                           \
   REGISTER_USER_KERNEL("eager_nccl_s2s")                                                \
       .SetCreateFn<EagerNcclS2SKernel<dtype>>()                                         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferEagerNcclS2SKernelTmpBufferSize);

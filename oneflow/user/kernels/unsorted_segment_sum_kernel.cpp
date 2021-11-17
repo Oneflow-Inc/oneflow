@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/user/kernels/unsorted_segment_sum_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/job/nd_sbp_util.h"
-#include "oneflow/core/primitive/include/cast.h"
+#include "oneflow/core/ep/include/primitive/cast.h"
 
 namespace oneflow {
 
@@ -118,7 +118,7 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel, public user_op:
       .SetCreateFn<UnsortedSegmentSumKernel<device, OF_PP_PAIR_FIRST(out_type),               \
                                             OF_PP_PAIR_FIRST(segment_ids_type)>>()            \
       .SetIsMatchedHob(                                                                       \
-          (user_op::HobDeviceTag() == device)                                                 \
+          (user_op::HobDeviceType() == device)                                                \
           & (user_op::HobDataType("segment_ids", 0) == OF_PP_PAIR_SECOND(segment_ids_type))   \
           & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_type)));
 
@@ -173,10 +173,10 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
         ctx->device_ctx(), segment_ids->dptr<K>(), data->dptr<float16>(), num_segment_ids,
         num_segments, outer_dim_size, inner_dim_size, offset, tmp_buf->mut_dptr<float>());
 
-    auto f2h = primitive::NewPrimitive<primitive::CastFactory>(ctx->device_type(), DataType::kFloat,
-                                                               DataType::kFloat16);
+    auto f2h = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
+        ctx->device_type(), DataType::kFloat, DataType::kFloat16);
     CHECK(f2h);
-    f2h->Launch(ctx->stream_ctx(), tmp_buf->dptr<float>(), out->mut_dptr<float16>(),
+    f2h->Launch(ctx->stream(), tmp_buf->dptr<float>(), out->mut_dptr<float16>(),
                 out->shape().elem_cnt());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
@@ -186,7 +186,7 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(kernel_type)                                                             \
       .SetCreateFn<UnsortedSegmentSumHalfKernel<OF_PP_PAIR_FIRST(segment_ids_type)>>()          \
       .SetIsMatchedHob(                                                                         \
-          (user_op::HobDeviceTag() == DeviceType::kGPU)                                         \
+          (user_op::HobDeviceType() == DeviceType::kGPU)                                        \
           & (user_op::HobDataType("segment_ids", 0) == OF_PP_PAIR_SECOND(segment_ids_type))     \
           & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_type)))                    \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
