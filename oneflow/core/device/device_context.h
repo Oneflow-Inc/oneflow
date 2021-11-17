@@ -49,7 +49,6 @@ class DeviceCtx {
 #endif
 
   virtual ep::Stream* stream() = 0;
-  virtual void SyncDevice() { UNIMPLEMENTED(); }
 
   virtual vm::Allocator* mut_allocator() {
     UNIMPLEMENTED();

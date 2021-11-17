@@ -20,7 +20,7 @@ namespace oneflow {
 
 template<typename T, int NDIMS>
 struct NdarrayAssignCoreWrapper<DeviceType::kCPU, T, NDIMS> final {
-  static void Assign(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+  static void Assign(ep::Stream* stream, const XpuVarNdarray<T>& y,
                      const XpuReducedNdarray<T, NDIMS>& reduced) {
     NdarrayAssignCore<T, NDIMS>::Assign(y, reduced);
   }
