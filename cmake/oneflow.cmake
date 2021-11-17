@@ -363,10 +363,10 @@ if (WITH_MLIR)
 endif()
 
 if(APPLE)
-  set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj ${ONEFLOW_MLIR_LIBS})
+  set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj)
   target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs})
 elseif(UNIX)
-  set(of_libs -Wl,--whole-archive oneflow of_protoobj of_cfgobj of_functional_obj ${ONEFLOW_MLIR_LIBS} -Wl,--no-whole-archive -ldl -lrt)
+  set(of_libs -Wl,--whole-archive oneflow of_protoobj of_cfgobj of_functional_obj -Wl,--no-whole-archive -ldl -lrt)
   target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs} -Wl,--no-whole-archive -ldl -lrt)
 elseif(WIN32)
   set(of_libs oneflow of_protoobj of_cfgobj of_functional_obj)
@@ -394,6 +394,7 @@ if(BUILD_PYTHON)
   target_link_libraries(oneflow_internal PRIVATE
                         ${of_libs}
                         of_functional_tensor_obj
+                        ${ONEFLOW_MLIR_LIBS}
                         ${oneflow_third_party_libs}
                         of_pyext_obj
                         ${oneflow_exe_third_party_libs})
