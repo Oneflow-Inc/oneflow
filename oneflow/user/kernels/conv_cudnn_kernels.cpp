@@ -206,7 +206,7 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
   REGISTER_USER_KERNEL(#op_name)                                                                   \
       .SetCreateFn<ConvGpuKernel<dtype, ndims>>()                                                  \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))             \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))            \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
         const auto& in = ctx->InputTensorDesc("in", 0);                                            \
         const auto& weight = ctx->InputTensorDesc("weight", 0);                                    \
@@ -284,7 +284,7 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
   REGISTER_USER_KERNEL("conv_data_grad")                                                           \
       .SetCreateFn<ConvDataGradGpuKernel<dtype>>()                                                 \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
-                       & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))             \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))            \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
         const auto& dy = ctx->InputTensorDesc("dy", 0);                                            \
         const auto& filter = ctx->InputTensorDesc("filter", 0);                                    \
@@ -349,7 +349,7 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel, public user_op::
   REGISTER_USER_KERNEL("conv_filter_grad")                                                         \
       .SetCreateFn<ConvFilterGradGpuKernel<dtype>>()                                               \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
-                       & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))             \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))            \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
         const auto& dy = ctx->InputTensorDesc("dy", 0);                                            \
         const auto& x = ctx->InputTensorDesc("x", 0);                                              \
@@ -422,7 +422,7 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
   REGISTER_USER_KERNEL("conv_bias_grad")                              \
       .SetCreateFn<ConvBiasGradGpuKernel<dtype>>()                    \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
-                       & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
 
 REGISTER_CONV_BIAS_GRAD_FLOATING_KERNEL(float);
 REGISTER_CONV_BIAS_GRAD_FLOATING_KERNEL(double);
