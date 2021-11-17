@@ -156,9 +156,7 @@ def compare_with_numpy_lamb(
 
     train_by_numpy()
 
-    if not np.allclose(of_res_list, np_res_list, rtol=1e-3, atol=1e-3):
-        print("test")
-    # test_case.assertTrue(np.allclose(of_res_list, np_res_list, rtol=1e-3, atol=1e-3))
+    test_case.assertTrue(np.allclose(of_res_list, np_res_list, rtol=1e-3, atol=1e-3))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -176,11 +174,13 @@ class TestLamb(flow.unittest.TestCase):
         arg_dict["amsgrad"] = [False]
         arg_dict["adam_w_mode"] = [True, False]
         # NOTE(Lxy): max_norm = -1 means no clip grad
+        # nn.Graph only support `clip_grad_max_norm == 1.0` and `clip_grad_norm_type == 2.0`
         arg_dict["clip_grad_max_norm"] = [-1, 1.0]
         arg_dict["clip_grad_norm_type"] = [2.0]
 
         for arg in GenArgList(arg_dict):
             compare_with_numpy_lamb(test_case, *arg)
+
 
 if __name__ == "__main__":
     unittest.main()
