@@ -33,6 +33,7 @@ class CudaStream : public Stream {
   ~CudaStream() override;
 
   DeviceType device_type() const override;
+  Maybe<void> Sync() override;
 
   cudaStream_t cuda_stream() const;
   cublasHandle_t cublas_handle() const;
