@@ -34,6 +34,7 @@ template<typename Context, typename ValueT>
 struct BaseExpr {
   ALWAYS_INLINE virtual scalar_or_const_ref_t<ValueT> get(const Context&) const = 0;
   virtual std::string DebugStr(const Context&, bool display_result = true) const = 0;  // NOLINT
+  operator bool() = delete;
 };
 
 template<typename Context, typename ValueT, typename E>
@@ -104,7 +105,7 @@ struct NotBoolFunctor final : public BoolExpr<Context, NotBoolFunctor<Context, E
 };
 
 template<typename Context, typename E>
-NotBoolFunctor<Context, E> operator~(BoolExpr<Context, E> const& lhs) {
+NotBoolFunctor<Context, E> operator!(BoolExpr<Context, E> const& lhs) {
   return NotBoolFunctor<Context, E>(*static_cast<const E*>(&lhs));
 }
 
