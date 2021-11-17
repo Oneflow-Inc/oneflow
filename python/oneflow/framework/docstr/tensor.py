@@ -118,6 +118,20 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.negative,
+    """
+    See :func:`oneflow.negative`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.neg,
+    """
+    See :func:`oneflow.neg`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.unfold,
     """
     The interface is consistent with PyTorch.

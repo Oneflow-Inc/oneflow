@@ -16,7 +16,7 @@ limitations under the License.
 #ifdef WITH_CUDA
 
 #include "oneflow/core/ep/include/primitive/memset.h"
-#include "oneflow/core/stream/cuda/cuda_stream_context.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #include <cuda_runtime.h>
 
 namespace oneflow {
@@ -32,9 +32,9 @@ class MemsetImpl : public Memset {
   MemsetImpl() = default;
   ~MemsetImpl() override = default;
 
-  void Launch(StreamContext* stream_ctx, void* ptr, int value, size_t count) override {
-    auto* cuda_stream_ctx = stream_ctx->As<CudaStreamContext>();
-    OF_CUDA_CHECK(cudaMemsetAsync(ptr, value, count, cuda_stream_ctx->cuda_stream()));
+  void Launch(Stream* stream, void* ptr, int value, size_t count) override {
+    auto* cuda_stream = stream->As<CudaStream>();
+    OF_CUDA_CHECK(cudaMemsetAsync(ptr, value, count, cuda_stream->cuda_stream()));
   }
 };
 

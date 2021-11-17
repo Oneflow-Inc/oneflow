@@ -30,6 +30,17 @@ void Memset<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const char value, size_
   memset(dst, value, sz);
 }
 
+template<>
+void Memcpy<DeviceType::kCPU>(ep::Stream* stream, void* dst, const void* src, size_t sz) {
+  if (dst == src) { return; }
+  memcpy(dst, src, sz);
+}
+
+template<>
+void Memset<DeviceType::kCPU>(ep::Stream* stream, void* dst, const char value, size_t sz) {
+  memset(dst, value, sz);
+}
+
 void WithHostBlobAndStreamSynchronizeEnv(DeviceCtx* ctx, Blob* blob,
                                          std::function<void(Blob*)> Callback) {
 #ifdef WITH_CUDA
