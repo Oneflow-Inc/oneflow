@@ -125,12 +125,14 @@ Maybe<void> MultiClientSessionContext::AddCGraph(
 Maybe<void> MultiClientSessionContext::TryClose() {
   if (is_inited_) {
     VLOG(2) << "Try to delete multi client session context." << std::endl;
-    for (auto wk_graph_ptr : graphs_) {
-      if (auto sh_graph_ptr = wk_graph_ptr.lock()) {
-        VLOG(2) << "grap name " << sh_graph_ptr->job_name() << " not closed, try to close it.";
-        JUST(sh_graph_ptr->Close());
-      }
+
+    // sync before NNGraph release to ensure LaunchLazyJob instruction was completed and released
+    JUST(vm::ClusterSync());
+    for (const auto& graph : graphs_) {
+      VLOG(2) << "Try to close graph: " << graph->job_name() << std::endl;
+      JUST(graph->Close());
     }
+    graphs_.clear();
     {
       // NOTE(chengcheng): delete runtime global objects
       Global<boxing::collective::Scheduler>::Delete();
