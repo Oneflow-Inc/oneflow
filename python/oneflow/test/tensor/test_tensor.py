@@ -649,6 +649,12 @@ class TestTensor(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         return x.negative()
 
+    @autotest(check_graph=False)
+    def test_neg_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return x.neg()
+
     @autotest(auto_backward=False, check_graph=False)
     def test_greater_tensor_with_random_data(test_case):
         device = random_device()
