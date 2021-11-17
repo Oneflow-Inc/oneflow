@@ -66,9 +66,6 @@ Maybe<void> OutputOp::InferOutBlobDescs(
 }
 
 Maybe<void> OutputOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const {
-  JUST(InterfaceOpUtil::GetOutputLikeOpSbpSignature(op_conf().output_conf().blob_conf(),
-                                                    input_bns(), output_bns(),
-                                                    sbp_sig_list->mutable_sbp_signature()->Add()));
   cfg::SbpSignature* sbp = sbp_sig_list->mutable_sbp_signature()->Add();
   CHECK_EQ_OR_RETURN(JUST(GetOpParallelDesc())->hierarchy()->NumAxes(), 1)
       << "Only support 1d sbp now.";
