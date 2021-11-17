@@ -38,7 +38,6 @@ class ArangeKernel final : public OpKernel {
       start = ctx->Attr<int64_t>("integer_start");
       delta = ctx->Attr<int64_t>("integer_delta");
       limit = ctx->Attr<int64_t>("integer_limit");
-      // arange_elem_cnt = ((limit - start + delta - 1) / delta);
       arange_elem_cnt = std::ceil(static_cast<double>(limit - start) / delta);
     } else {
       // If we use static_cast<T>(start, delta, limit) and std::ceil to calculate arange_elem_cnt,
@@ -46,9 +45,6 @@ class ArangeKernel final : public OpKernel {
       double float_start = ctx->Attr<double>("float_start");
       double float_delta = ctx->Attr<double>("float_delta");
       double float_limit = ctx->Attr<double>("float_limit");
-      // arange_elem_cnt =
-      //     static_cast<int64_t>(((float_limit - float_start) / float_delta)
-      //                          + 1);  // Do the ceil division, ceil((limit-start)/delta)
       arange_elem_cnt = std::ceil(static_cast<double>(float_limit - float_start) / float_delta);
       start = static_cast<T>(float_start);
       delta = static_cast<T>(float_delta);
