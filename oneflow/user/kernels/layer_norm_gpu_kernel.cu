@@ -601,7 +601,7 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
         CHECK_EQ(m, beta_diff->shape().elem_cnt());
         CHECK_EQ(dy->shape().elem_cnt() % m, 0);
         const int64_t n = dy->shape().elem_cnt() / m;
-        NdUtil::ReduceSum(ctx->device_ctx(), Var({1, m}, beta_diff->mut_dptr<T>()),
+        NdUtil::ReduceSum(ctx->stream(), Var({1, m}, beta_diff->mut_dptr<T>()),
                           Val({n, m}, dy->dptr<T>()), Var({n, m}, reduce_buf->mut_dptr<T>()));
       }
       if (has_gamma_diff) {
@@ -610,9 +610,9 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
         CHECK_EQ(m, gamma_diff->shape().elem_cnt());
         CHECK_EQ(dy->shape().elem_cnt() % m, 0);
         const int64_t n = dy->shape().elem_cnt() / m;
-        NdUtil::BroadcastMul(ctx->device_ctx(), Var({n, m}, reduce_buf->mut_dptr<T>()),
+        NdUtil::BroadcastMul(ctx->stream(), Var({n, m}, reduce_buf->mut_dptr<T>()),
                              Val({n, m}, normalized->dptr<T>()), Val({n, m}, dy->dptr<T>()));
-        NdUtil::ReduceSum(ctx->device_ctx(), Var({1, m}, gamma_diff->mut_dptr<T>()),
+        NdUtil::ReduceSum(ctx->stream(), Var({1, m}, gamma_diff->mut_dptr<T>()),
                           Val({n, m}, reduce_buf->dptr<T>()),
                           Var({n, m}, reduce_buf->mut_dptr<T>()));
       }
@@ -621,7 +621,7 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
           CHECK_EQ(m, gamma->shape().elem_cnt());
           CHECK_EQ(dy->shape().elem_cnt() % m, 0);
           const int64_t n = dy->shape().elem_cnt() / m;
-          NdUtil::BroadcastMul(ctx->device_ctx(), Var({n, m}, normalized_diff->mut_dptr<T>()),
+          NdUtil::BroadcastMul(ctx->stream(), Var({n, m}, normalized_diff->mut_dptr<T>()),
                                Val({n, m}, dy->dptr<T>()), Val({1, m}, gamma->dptr<T>()));
         } else {
           Memcpy<DeviceType::kGPU>(ctx->device_ctx(), normalized_diff->mut_dptr<void>(),
@@ -698,9 +698,9 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
                 reinterpret_cast<half*>(tmp_gamma_diff), reinterpret_cast<half*>(tmp_beta_diff),
                 normalized_diff->mut_dptr<half>());
       }
-      NdUtil::ReduceSum(ctx->device_ctx(), Var({1, m}, gamma_diff->mut_dptr<float16>()),
+      NdUtil::ReduceSum(ctx->stream(), Var({1, m}, gamma_diff->mut_dptr<float16>()),
                         Val({num_blocks, m}, tmp_gamma_diff), Var({num_blocks, m}, tmp_reduce_buf));
-      NdUtil::ReduceSum(ctx->device_ctx(), Var({1, m}, beta_diff->mut_dptr<float16>()),
+      NdUtil::ReduceSum(ctx->stream(), Var({1, m}, beta_diff->mut_dptr<float16>()),
                         Val({num_blocks, m}, tmp_beta_diff), Var({num_blocks, m}, tmp_reduce_buf));
     } else {
       if (has_beta_diff) {
@@ -708,7 +708,7 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
         CHECK_EQ(m, beta_diff->shape().elem_cnt());
         CHECK_EQ(dy->shape().elem_cnt() % m, 0);
         const int64_t n = dy->shape().elem_cnt() / m;
-        NdUtil::ReduceSum(ctx->device_ctx(), Var({1, m}, beta_diff->mut_dptr<float16>()),
+        NdUtil::ReduceSum(ctx->stream(), Var({1, m}, beta_diff->mut_dptr<float16>()),
                           Val({n, m}, dy->dptr<float16>()),
                           Var({n, m}, reduce_buf->mut_dptr<float16>()));
       }
@@ -718,10 +718,10 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
         CHECK_EQ(m, gamma_diff->shape().elem_cnt());
         CHECK_EQ(dy->shape().elem_cnt() % m, 0);
         const int64_t n = dy->shape().elem_cnt() / m;
-        NdUtil::BroadcastMul(ctx->device_ctx(), Var({n, m}, reduce_buf->mut_dptr<float16>()),
+        NdUtil::BroadcastMul(ctx->stream(), Var({n, m}, reduce_buf->mut_dptr<float16>()),
                              Val({n, m}, normalized->dptr<float16>()),
                              Val({n, m}, dy->dptr<float16>()));
-        NdUtil::ReduceSum(ctx->device_ctx(), Var({1, m}, gamma_diff->mut_dptr<float16>()),
+        NdUtil::ReduceSum(ctx->stream(), Var({1, m}, gamma_diff->mut_dptr<float16>()),
                           Val({n, m}, reduce_buf->dptr<float16>()),
                           Var({n, m}, reduce_buf->mut_dptr<float16>()));
       }
@@ -730,7 +730,7 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
           CHECK_EQ(m, gamma->shape().elem_cnt());
           CHECK_EQ(dy->shape().elem_cnt() % m, 0);
           const int64_t n = dy->shape().elem_cnt() / m;
-          NdUtil::BroadcastMul(ctx->device_ctx(), Var({n, m}, normalized_diff->mut_dptr<float16>()),
+          NdUtil::BroadcastMul(ctx->stream(), Var({n, m}, normalized_diff->mut_dptr<float16>()),
                                Val({n, m}, dy->dptr<float16>()),
                                Val({1, m}, gamma->dptr<float16>()));
         } else {

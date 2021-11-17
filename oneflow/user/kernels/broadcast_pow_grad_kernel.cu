@@ -57,13 +57,13 @@ class BroadcastPowYGradKernel final : public user_op::OpKernel {
     XpuVarNdarray<T> tmp(dz.shape(), tmp_buffer->mut_dptr<T>());
     XpuVarNdarray<const T> x(x_tensor->shape(), x_tensor->dptr<T>(), num_axes);
     XpuVarNdarray<T> dy(dy_tensor->shape(), dy_tensor->mut_dptr<T>(), num_axes);
-    NdarrayUtil<device, T>::BroadcastAdd(ctx->device_ctx(), tmp, x, const_tmp);
+    NdarrayUtil<device, T>::BroadcastAdd(ctx->stream(), tmp, x, const_tmp);
     ComputeLogGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                        ctx->device_ctx()->cuda_stream()>>>(elem_cnt, tmp_buffer->mut_dptr<T>(),
                                                            tmp_buffer->dptr<T>());
-    NdarrayUtil<device, T>::BroadcastMul(ctx->device_ctx(), tmp, dz, const_tmp);
-    NdarrayUtil<device, T>::BroadcastMul(ctx->device_ctx(), tmp, z, const_tmp);
-    NdarrayUtil<device, T>::ReduceSum(ctx->device_ctx(), dy, const_tmp, tmp);
+    NdarrayUtil<device, T>::BroadcastMul(ctx->stream(), tmp, dz, const_tmp);
+    NdarrayUtil<device, T>::BroadcastMul(ctx->stream(), tmp, z, const_tmp);
+    NdarrayUtil<device, T>::ReduceSum(ctx->stream(), dy, const_tmp, tmp);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
