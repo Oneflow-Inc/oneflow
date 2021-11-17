@@ -132,7 +132,7 @@ Maybe<void> DTRTensorPool::clear() {
   while (object != candidates_.end()) {
     if (object->lock().get() == nullptr) {
       if (oneflow::DTRDebugEnabled()) {
-        std::cout << "Erase nullptr candidates from tensor_pool." << std::endl;
+        // std::cout << "Erase nullptr candidates from tensor_pool." << std::endl;
       }
       candidates_.erase(object);
       num_destruction_++;
@@ -156,20 +156,20 @@ Maybe<void> DTRTensorPool::display() {
   std::cout << "===== Info of current tensor pool =====" << std::endl;
   std::cout << "Number of candidates: " << candidates_.size() << std::endl;
   size_t id = 0;
-  for (const auto& candidate : candidates_) {
-    if (auto wp = candidate.lock()) {
-      auto tmp = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(wp);
-      CHECK_NOTNULL_OR_RETURN(tmp);
-      std::cout << "id " << id << ", is_in_memory: " << tmp->is_in_memory()
-                << ", input size: " << tmp->input_size()
-                << ", is_evictable: " << tmp->is_evictable()
-                << ", number of user_ops: " << tmp->num_user_ops() << ", address: " << tmp
-                << ", nullptr? " << (tmp == nullptr) << std::endl;
-    }
-    // std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", address:
-    // " << candidate << std::endl;
-    id++;
-  }
+  // for (const auto& candidate : candidates_) {
+  //   if (auto wp = candidate.lock()) {
+  //     auto tmp = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(wp);
+  //     CHECK_NOTNULL_OR_RETURN(tmp);
+  //     std::cout << "id " << id << ", is_in_memory: " << tmp->is_in_memory()
+  //               << ", input size: " << tmp->input_size()
+  //               << ", is_evictable: " << tmp->is_evictable()
+  //               << ", number of user_ops: " << tmp->num_user_ops() << ", address: " << tmp
+  //               << ", nullptr? " << (tmp == nullptr) << std::endl;
+  //   }
+  //   // std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", address:
+  //   // " << candidate << std::endl;
+  //   id++;
+  // }
   // for (const auto& candidate : candidates_) {
   //     const auto* tmp = dynamic_cast<vm::DTREagerBlobObject*>(candidate);
   //     std::cout << "Input info--------------- " << std::endl;

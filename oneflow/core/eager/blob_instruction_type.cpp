@@ -129,9 +129,9 @@ void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) 
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
   if (auto dtr_ebo = std::dynamic_pointer_cast<DTREagerBlobObject>(ptr->eager_blob_object())) {
     CHECK_JUST(DTRUtil::recompute(dtr_ebo.get(), instruction->stream()));
-    LOG(INFO) << "access blob";
-    LOG(INFO) << dtr_ebo->is_in_memory();
-    LOG(INFO) << dtr_ebo->is_evictable();
+    // LOG(INFO) << "access blob";
+    // LOG(INFO) << dtr_ebo->is_in_memory();
+    // LOG(INFO) << dtr_ebo->is_evictable();
   }
   OfBlob ofblob(device_ctx, ptr->eager_blob_object()->mut_blob());
   ptr->callback()(reinterpret_cast<uint64_t>(&ofblob));

@@ -86,7 +86,7 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
 }
 
 DTREagerBlobObject::~DTREagerBlobObject() {
-  evict_from_pool();
+  // evict_from_pool();
   clear_invalid_object();
   non_pod_initer_.reset();
   tensor_buffer_.reset();
@@ -193,8 +193,6 @@ Maybe<double> DTREagerBlobObject::child_cost() const {
           auto c_cost = JUST(dtr_blob_object->child_cost());
           cost = cost + com_time + c_cost;
         }
-      } else {
-        CHECK_OR_RETURN(false);
       }
 
       // CHECK_OR_RETURN(static_cast<bool>(output.get()));
