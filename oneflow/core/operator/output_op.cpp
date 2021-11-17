@@ -81,6 +81,8 @@ Maybe<void> OutputOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) cons
   } else if (sbp_parallel.has_split_parallel()) {
     int64_t split_axis = sbp_parallel.split_parallel().axis();
     SbpSignatureBuilder().Split("in", split_axis).Split("out", split_axis).Build(sbp);
+  } else {
+    UNIMPLEMENTED_THEN_RETURN();
   }
   return Maybe<void>::Ok();
 }
