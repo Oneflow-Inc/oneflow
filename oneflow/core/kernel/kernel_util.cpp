@@ -275,7 +275,7 @@ void AutoMemcpy(StreamContext* stream_ctx, Blob* dst, const Blob* src) {
 void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
                     const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case) {
   AutoMemcpy(ctx, dst, src, sz, dst_mem_case, src_mem_case);
-  ctx->SyncDevice();
+  ctx->stream()->Sync();
 }
 
 void AutoMemset(DeviceCtx* ctx, void* dst, const char value, size_t sz,
