@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph.h"
+#include <cstdlib>
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/scalar.h"
@@ -347,7 +348,7 @@ Maybe<void> NNGraph::CreateVariableOp(
     std::shared_ptr<Shape> shape =
         std::make_shared<Shape>(node->op().op_conf().variable_conf().shape());
     DataType dtype = node->op().op_conf().variable_conf().data_type();
-    bool is_lazy = true;        // TODO(zzk0): not very sure?
+    bool is_lazy = true;         // TODO(zzk0): not very sure?
     bool requires_grad = false;  // Inference mode
     bool is_leaf = true;         // all parameters are leaf node
 
@@ -359,11 +360,25 @@ Maybe<void> NNGraph::CreateVariableOp(
     } else {
       // To create a ConsistentTensor: shape, dtype, sbp + parallel desc, is_lazy, requires_grad,
       const ParallelDesc& desc = node->parallel_desc();
+      auto sbp_info = node->op().op_conf().variable_conf().nd_sbp();
       cfg::NdSbp nd_sbp;
-      nd_sbp.add_sbp_parallel();
-      nd_sbp.sbp_parallel(0).broadcast_parallel();
-      std::shared_ptr<one::ConsistentTensor> tensor = JUST(
-        one::ConsistentTensor::MakeTensor(shape, dtype, nd_sbp, desc, is_lazy, requires_grad, is_leaf));
+      for (auto it = sbp_info.begin(); it != sbp_info.end(); ++it) {
+        nd_sbp.add_sbp_parallel();
+        int sbp_id = nd_sbp.sbp_parallel_size() - 1;
+        // TODO(zzk0): format may be corruptted
+        if (*it == "S") {
+          int64_t axis = std::atoi((*it).substr(2, (*it).length() - 1).c_str());
+          *(nd_sbp.mutable_sbp_parallel(sbp_id)->mutable_split_parallel()->mutable_axis()) = axis;
+        } else if (*it == "B") {
+          nd_sbp.mutable_sbp_parallel(sbp_id)->mutable_broadcast_parallel();
+        } else if (*it == "P") {
+          nd_sbp.mutable_sbp_parallel(sbp_id)->mutable_partial_sum_parallel();
+        } else {
+          // return Maybe<void>::error();
+        }
+      }
+      std::shared_ptr<one::ConsistentTensor> tensor = JUST(one::ConsistentTensor::MakeTensor(
+          shape, dtype, nd_sbp, desc, is_lazy, requires_grad, is_leaf));
       variable_op_name_to_tensor[node->op().op_name()] = tensor;
     }
     return Maybe<void>::Ok();
@@ -380,9 +395,8 @@ Maybe<void> NNGraph::Load(const std::string& model_path, const Symbol<Device>& d
   job_.ParseFromString(buffer.str());
   input.close();
 
-  // create variable conf op
   HashMap<std::string, std::shared_ptr<one::Tensor>> variable_op_name_to_tensor;
-  JUST(CreateVariableOp(variable_op_name_to_tensor, device, /* is_mirrored */ true));
+  JUST(CreateVariableOp(variable_op_name_to_tensor, device, /* is_mirrored */ false));
 
   return Maybe<void>::Ok();
 }
