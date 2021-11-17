@@ -21,6 +21,7 @@ limitations under the License.
 #include "llvm/ADT/STLExtras.h"
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
+#include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
@@ -201,6 +202,7 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   pm.addPass(createConvertLinalgToLLVMPass());                 // convert-linalg-to-llvm
   pm.addPass(createMemRefToLLVMPass());                        // convert-memref-to-llvm
   pm.addPass(createLowerToLLVMPass());                         // convert-std-to-llvm
+  pm.addPass(createReconcileUnrealizedCastsPass());
   return pm.run(module);
 }
 

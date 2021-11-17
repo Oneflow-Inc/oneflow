@@ -169,8 +169,10 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    llvm::SmallVector<llvm::StringRef, 4> ext_libs(
+        {SharedLibPaths()->begin(), SharedLibPaths()->end()});
     WithMlirContext(
-        ctx, {},
+        ctx, ext_libs,
         [&ctx](mlir::MLIRContext* mlir_ctx) {
           return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
                                                          mlir_ctx);
