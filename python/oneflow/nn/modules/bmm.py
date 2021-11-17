@@ -51,9 +51,19 @@ def bmm_op(input, mat2):
 def bmm_op_tensor(input, mat2):
     """
 
-    bmm() -> Tensor
+    Performs a batch matrix-matrix product of matrices stored in input and mat2.
 
-    See :func:`oneflow.bmm`
+    input and mat2 must be 3-D tensors each containing the same number of matrices.
+
+    Note:
+        This function does not broadcast. For broadcasting matrix products, see torch.matmul().
+
+    Args:
+        input (Tensor): the first batch of matrices to be multiplied
+        mat2 (Tensor): the second batch of matrices to be multiplied
+    
+    Keyword Arguments:
+        out (Tensor, optional): the output tensor.
 
     """
     return flow._C.batch_matmul(input, mat2)
