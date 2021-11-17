@@ -697,7 +697,10 @@ def OneFlowImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", []> {
 
 def OneFlowCropMirrorNormalizeFromUINT8Op : OneFlow_BaseOp<"crop_mirror_normalize_from_uint8", []> {
   let summary = "OneFlow crop_mirror_normalize_from_uint8 operation";
-  let input = (ins AnyType:$in);
+  let input = (ins
+    AnyType:$in,
+    Optional<AnyType>:$mirror
+  );
   let output = (outs AnyType:$out);
   let attrs = (ins
     StrAttr:$color_space,
