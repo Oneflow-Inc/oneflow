@@ -367,7 +367,7 @@ Maybe<void> NNGraph::CreateVariableOp(
         int sbp_id = nd_sbp.sbp_parallel_size() - 1;
         // TODO(zzk0): format may be corruptted
         if (*it == "S") {
-          int64_t axis = std::atoi((*it).substr(2, (*it).length() - 1).c_str());
+          int64_t axis = std::atoi((*it).substr(2, (*it).length() - 3).c_str());
           *(nd_sbp.mutable_sbp_parallel(sbp_id)->mutable_split_parallel()->mutable_axis()) = axis;
         } else if (*it == "B") {
           nd_sbp.mutable_sbp_parallel(sbp_id)->mutable_broadcast_parallel();
