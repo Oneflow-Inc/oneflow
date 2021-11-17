@@ -84,7 +84,7 @@ class DropoutKernelCPU final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("dropout")                                                               \
       .SetCreateFn<DropoutKernelCPU<dtype>>()                                                   \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                       \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
+                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)          \
                        & (user_op::HobDataType("mask", 0) == GetDataType<int8_t>::value))       \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
