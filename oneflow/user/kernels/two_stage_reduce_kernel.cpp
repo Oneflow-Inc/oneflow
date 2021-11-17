@@ -80,7 +80,7 @@ user_op::InferTmpSizeFn GenDeviceStageInferTmpSizeFn() {
   REGISTER_USER_KERNEL(op_name)                                                                  \
       .SetCreateFn<ReduceDeviceStageKernel<binary_func, device, OF_PP_PAIR_FIRST(dtype_pair)>>() \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
-                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
+                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))     \
       .SetInferTmpSizeFn(GenDeviceStageInferTmpSizeFn<OF_PP_PAIR_FIRST(dtype_pair)>());
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_REDUCE_DEVICE_STAGE_KERNEL, ("reduce_max_device_stage"),
@@ -134,11 +134,11 @@ user_op::InferTmpSizeFn GenDeviceStageGradInferTmpSizeFn() {
   };
 }
 
-#define REGISTER_REDUCE_DEVICE_STAGE_GRAD_KERNEL(op_name, device, dtype_pair)                   \
-  REGISTER_USER_KERNEL(op_name)                                                                 \
-      .SetCreateFn<ReduceDeviceStageGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
-                       & (user_op::HobDataType("in_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair))) \
+#define REGISTER_REDUCE_DEVICE_STAGE_GRAD_KERNEL(op_name, device, dtype_pair)                    \
+  REGISTER_USER_KERNEL(op_name)                                                                  \
+      .SetCreateFn<ReduceDeviceStageGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
+                       && (user_op::HobDataType("in_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair))) \
       .SetInferTmpSizeFn(GenDeviceStageGradInferTmpSizeFn<OF_PP_PAIR_FIRST(dtype_pair)>());
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_REDUCE_DEVICE_STAGE_GRAD_KERNEL,
@@ -179,7 +179,7 @@ class ReduceGlobalStageKernel final : public OpKernel {
   REGISTER_USER_KERNEL(op_name)                                                                  \
       .SetCreateFn<ReduceGlobalStageKernel<binary_func, device, OF_PP_PAIR_FIRST(dtype_pair)>>() \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
-                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
+                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))     \
       .SetInferTmpSizeFn([](InferContext* ctx) {                                                 \
         const Shape& in_shape = ctx->InputShape("in", 0);                                        \
         return in_shape.elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair));                       \
@@ -275,11 +275,11 @@ user_op::InferTmpSizeFn GenGlobalStageGradInferTmpSizeFn() {
   };
 }
 
-#define REGISTER_REDUCE_GLOBAL_STAGE_GRAD_KERNEL(op_name, device, dtype_pair)                   \
-  REGISTER_USER_KERNEL(op_name)                                                                 \
-      .SetCreateFn<ReduceGlobalStageGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
-                       & (user_op::HobDataType("in_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair))) \
+#define REGISTER_REDUCE_GLOBAL_STAGE_GRAD_KERNEL(op_name, device, dtype_pair)                    \
+  REGISTER_USER_KERNEL(op_name)                                                                  \
+      .SetCreateFn<ReduceGlobalStageGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
+                       && (user_op::HobDataType("in_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair))) \
       .SetInferTmpSizeFn(GenGlobalStageGradInferTmpSizeFn<OF_PP_PAIR_FIRST(dtype_pair)>());
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_REDUCE_GLOBAL_STAGE_GRAD_KERNEL,
