@@ -225,7 +225,7 @@ class MirroredObject final : public intrusive::Base {
   intrusive::SkipListHook<int64_t, 10> global_device_id_;
 };
 
-struct VirtualMachine;
+struct VirtualMachineEngine;
 class LogicalObject final : public intrusive::Base {
  public:
   // types

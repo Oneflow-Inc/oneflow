@@ -27,8 +27,8 @@ class DeviceCtxStreamContextAdapter : public StreamContext {
   ~DeviceCtxStreamContextAdapter() override = default;
 
   Maybe<void> AddCallback(std::function<void()> callback) override {
-    device_ctx_->AddCallBack(std::move(callback));
-    return Maybe<void>::Ok();
+    UNIMPLEMENTED();
+    return Error::UnimplementedError();
   }
 
   Maybe<void> Sync() override {
@@ -37,6 +37,8 @@ class DeviceCtxStreamContextAdapter : public StreamContext {
   }
 
   DeviceType device_type() const override { return device_ctx_->device_type(); }
+
+  ep::Stream* stream() override { return device_ctx_->stream(); }
 
  private:
   DeviceCtx* device_ctx_;
@@ -51,8 +53,8 @@ class CudaDeviceCtxStreamContextAdapter : public CudaStreamContext {
   ~CudaDeviceCtxStreamContextAdapter() override = default;
 
   Maybe<void> AddCallback(std::function<void()> callback) override {
-    device_ctx_->AddCallBack(std::move(callback));
-    return Maybe<void>::Ok();
+    UNIMPLEMENTED();
+    return Error::UnimplementedError();
   }
 
   Maybe<void> Sync() override {
@@ -61,6 +63,8 @@ class CudaDeviceCtxStreamContextAdapter : public CudaStreamContext {
   }
 
   DeviceType device_type() const override { return device_ctx_->device_type(); }
+
+  ep::Stream* stream() override { return device_ctx_->stream(); }
 
   cudaStream_t cuda_stream() const override { return device_ctx_->cuda_stream(); }
 

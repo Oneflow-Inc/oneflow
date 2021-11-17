@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
-#include "oneflow/core/primitive/include/add.h"
+#include "oneflow/core/ep/include/primitive/add.h"
 
 namespace oneflow {
 
@@ -91,8 +91,8 @@ class EagerPToBKernel final : public user_op::OpKernel {
 
     Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
                         total_elem_cnt * GetSizeOfDataType(out->data_type()));
-    std::unique_ptr<primitive::Add> add_primitive =
-        primitive::NewPrimitive<primitive::AddFactory>(ctx->device_type(), in->data_type());
+    std::unique_ptr<ep::primitive::Add> add_primitive =
+        ep::primitive::NewPrimitive<ep::primitive::AddFactory>(ctx->device_type(), in->data_type());
     CHECK(add_primitive);
     for (const auto& pair : p2p_pair) {
       int64_t src = pair.first;
@@ -105,7 +105,7 @@ class EagerPToBKernel final : public user_op::OpKernel {
       if (GlobalProcessCtx::Rank() == dst) {
         CHECK_JUST(Recv<device_type>(tmp_buffer_ptr, total_elem_cnt, out->data_type(), src,
                                      ctx->device_ctx()));
-        add_primitive->Launch(ctx->stream_ctx(), tmp_buffer_ptr, out->dptr(), out->mut_dptr(),
+        add_primitive->Launch(ctx->stream(), tmp_buffer_ptr, out->dptr(), out->mut_dptr(),
                               total_elem_cnt);
       }
     }
@@ -113,10 +113,10 @@ class EagerPToBKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EAGER_P_TO_B_KERNEL(device)                \
-  REGISTER_USER_KERNEL("eager_p_to_b")                      \
-      .SetCreateFn<EagerPToBKernel<device>>()               \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)) \
+#define REGISTER_EAGER_P_TO_B_KERNEL(device)                 \
+  REGISTER_USER_KERNEL("eager_p_to_b")                       \
+      .SetCreateFn<EagerPToBKernel<device>>()                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)) \
       .SetInferTmpSizeFn(InferEagerPToBKernelTmpBufferSize);
 
 REGISTER_EAGER_P_TO_B_KERNEL(DeviceType::kCPU)
