@@ -147,7 +147,7 @@ class TfGpuPReluKernel final : public user_op::OpKernel {
       const Shape& left_extended_shape =
           CreateLeftExtendedShape(ShapeView(alpha->shape()), x->shape().NumAxes());
       NdarrayUtil<DeviceType::kGPU, T>::BroadcastTo(
-          ctx->device_ctx(), XpuVarNdarray<T>(x->shape(), broadcasted_alpha->mut_dptr<T>()),
+          ctx->stream(), XpuVarNdarray<T>(x->shape(), broadcasted_alpha->mut_dptr<T>()),
           XpuVarNdarray<const T>(left_extended_shape, alpha->dptr<T>()));
       ElemwisePReluForwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                                    ctx->device_ctx()->cuda_stream()>>>(
@@ -209,7 +209,7 @@ class TfGpuPReluGradKernel final : public user_op::OpKernel {
                                                   + 2 * GetCudaAlignedSize(elem_cnt * sizeof(T)));
 
       NdarrayUtil<DeviceType::kGPU, T>::BroadcastTo(
-          ctx->device_ctx(), XpuVarNdarray<T>(x->shape(), broadcasted_alpha),
+          ctx->stream(), XpuVarNdarray<T>(x->shape(), broadcasted_alpha),
           XpuVarNdarray<const T>(left_extended_shape, alpha->dptr<T>()));
 
       ElemwisePReluBackwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
@@ -218,7 +218,7 @@ class TfGpuPReluGradKernel final : public user_op::OpKernel {
           broadcasted_alpha_diff);
     }
     NdarrayUtil<DeviceType::kGPU, T>::ReduceSum(
-        ctx->device_ctx(), XpuVarNdarray<T>(left_extended_shape, alpha_diff->mut_dptr<T>()),
+        ctx->stream(), XpuVarNdarray<T>(left_extended_shape, alpha_diff->mut_dptr<T>()),
         XpuVarNdarray<const T>(x->shape(), broadcasted_alpha_diff),
         XpuVarNdarray<T>(x->shape(), reduce_sum_tmp_buf));
   }
