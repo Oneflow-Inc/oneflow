@@ -31,11 +31,6 @@ class DeviceCtxStreamContextAdapter : public StreamContext {
     return Error::UnimplementedError();
   }
 
-  Maybe<void> Sync() override {
-    device_ctx_->SyncDevice();
-    return Maybe<void>::Ok();
-  }
-
   DeviceType device_type() const override { return device_ctx_->device_type(); }
 
   ep::Stream* stream() override { return device_ctx_->stream(); }
@@ -55,11 +50,6 @@ class CudaDeviceCtxStreamContextAdapter : public CudaStreamContext {
   Maybe<void> AddCallback(std::function<void()> callback) override {
     UNIMPLEMENTED();
     return Error::UnimplementedError();
-  }
-
-  Maybe<void> Sync() override {
-    device_ctx_->SyncDevice();
-    return Maybe<void>::Ok();
   }
 
   DeviceType device_type() const override { return device_ctx_->device_type(); }
