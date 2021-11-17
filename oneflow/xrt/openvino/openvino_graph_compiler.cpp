@@ -16,29 +16,18 @@ limitations under the License.
 #include "oneflow/xrt/openvino/openvino_graph_compiler.h"
 #include "oneflow/xrt/node_util.h"
 #include "oneflow/xrt/openvino/ops/op_kernel.h"
-#include <ngraph/op/constant.hpp>
 
 namespace oneflow {
 namespace xrt {
 namespace openvino {
 
 void OpenvinoGraphCompiler::PopulateEntryParams(const std::vector<Parameter>& entry_params,
-                                                ngraph::ParameterVector* inputs_nodes,
-                                                util::Map<std::string, int>& in_out_to_param_idx) {
+                                                util::Map<Argument, Parameter>& entry_params_map,
+                                                util::Map<Argument, int>& entry_params_index_map) {
   for (int i = 0; i < entry_params.size(); ++i) {
     Argument arg = ArgFromParameter(entry_params[i]);
-    NgraphShape shape(entry_params[i].shape(), entry_params[i].data_type());
-    std::shared_ptr<ngraph::Node> input_node;
-    if (entry_params[i].is_model()) {
-      input_node = std::make_shared<ngraph::op::Constant>(shape.data_type(), shape.shape(),
-                                                          entry_params[i].data());
-    } else {
-      input_node = std::make_shared<ngraph::op::Parameter>(shape.data_type(),
-                                                           ngraph::PartialShape(shape.shape()));
-      in_out_to_param_idx[input_node->get_friendly_name()] = i;
-      inputs_nodes->push_back(ngraph::as_type_ptr<ngraph::op::Parameter>(input_node));
-    }
-    operands_[arg] = input_node;
+    entry_params_map[arg] = entry_params[i];
+    entry_params_index_map[arg] = i;
   }
 }
 
@@ -50,14 +39,16 @@ void OpenvinoGraphCompiler::SetupKernelContextParam(const XrtNode* node,
                                                     OpenvinoOpContext::Param* context_param) {
   util::Map<Argument, std::shared_ptr<ngraph::Node>> input_ops;
   util::Map<std::string /* produce/consume key */, Argument> input_output_args;
+  int input_size = 0;
   for (const XrtEdge* edge : node->in_edges()) {
     if (!edge->IsControlEdge()) {
       const Argument& arg = edge->argument();
-      CHECK_GT(operands_.count(arg), 0);
+      const std::string& k = arg.meta_data().consume_key;
+      input_size++;
+      input_output_args.emplace(k, arg);
+      if (operands_.count(arg) <= 0) { continue; }
       std::shared_ptr<ngraph::Node> ngraph_node = operands_.at(arg);
       input_ops.emplace(arg, ngraph_node);
-      const std::string& k = arg.meta_data().consume_key;
-      input_output_args.emplace(k, arg);
     }
   }
   for (const XrtEdge* edge : node->out_edges()) {
@@ -71,6 +62,7 @@ void OpenvinoGraphCompiler::SetupKernelContextParam(const XrtNode* node,
   context_param->message = OpMessage(node);
   context_param->arguments = std::move(input_output_args);
   context_param->inputs = std::move(input_ops);
+  context_param->input_size = input_size;
 }
 
 std::shared_ptr<Executable> OpenvinoGraphCompiler::Compile(
@@ -79,16 +71,28 @@ std::shared_ptr<Executable> OpenvinoGraphCompiler::Compile(
   // openvino input output name to entry and return param index.
   util::Map<std::string, int> in_out_to_param_idx;
   ngraph::ParameterVector parameter_nodes;
-  PopulateEntryParams(entry_params, &parameter_nodes, in_out_to_param_idx);
+  util::Map<Argument, Parameter> entry_params_map;
+  util::Map<Argument, int> entry_params_index_map;
+  PopulateEntryParams(entry_params, entry_params_map, entry_params_index_map);
 
   algorithm::TopologyVisit(*graph, [&](const XrtNode* node) {
     OpenvinoOpContext::Param param;
     SetupKernelContextParam(node, &param);
-    OpenvinoOpContext op_context(param);
+    OpenvinoOpContext op_context(param, entry_params_map);
     // Do compile
     auto op_kernel = BuildOpKernel(node->type());
     op_kernel->Compile(&op_context);
 
+    const auto& graph_inputs = op_context.graph_inputs();
+    for (auto it = graph_inputs.begin(); it != graph_inputs.end(); ++it) {
+      operands_[it->first] = it->second;
+      in_out_to_param_idx[it->second->get_friendly_name()] = entry_params_index_map[it->first];
+      parameter_nodes.push_back(ngraph::as_type_ptr<ngraph::op::Parameter>(it->second));
+    }
+    const auto& graph_weight = op_context.graph_weight();
+    for (auto it = graph_weight.begin(); it != graph_weight.end(); ++it) {
+      operands_[it->first] = it->second;
+    }
     // Always insert the new output into `operands_`.
     const auto& outputs = op_context.outputs();
     for (auto it = outputs.begin(); it != outputs.end(); ++it) {

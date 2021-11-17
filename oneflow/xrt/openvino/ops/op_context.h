@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/xrt/parameter.h"
 #include "oneflow/xrt/argument.h"
 #include "oneflow/xrt/kernel/op_context.h"
 #include "oneflow/xrt/types.h"
@@ -42,11 +43,19 @@ class OpenvinoOpContext : public OpContext {
     const PbMessage* message;
     // Input operands
     util::Map<Argument, std::shared_ptr<ngraph::Node>> inputs;
+    int input_size;
 
     util::Map<std::string, Argument> arguments;
   };
 
-  explicit OpenvinoOpContext(const Param& param) : OpContext(*param.message), param_(param) {}
+  explicit OpenvinoOpContext(const Param& param,
+                             const util::Map<Argument, Parameter>& entry_params_map)
+      : OpContext(*param.message),
+        param_(param),
+        graph_inputs_(),
+        graph_weight_(),
+        outputs_(),
+        entry_params_map_(entry_params_map) {}
 
   virtual ~OpenvinoOpContext() = default;
 
@@ -57,18 +66,25 @@ class OpenvinoOpContext : public OpContext {
   // Return input named `name` as tensor
   std::shared_ptr<ngraph::Node> Input(const std::string& name);
   std::shared_ptr<ngraph::Node> Input(const Argument& arg);
+  std::shared_ptr<ngraph::Node> Weigth(const std::string& name);
+  std::shared_ptr<ngraph::Node> Weigth(const Argument& arg);
   // Return output named `name` as tensor
   std::shared_ptr<ngraph::Node> Output(const std::string& name);
   std::shared_ptr<ngraph::Node> Output(const Argument& arg);
 
-  int num_inputs() const { return param_.inputs.size(); }
+  int num_inputs() const { return param_.input_size; }
 
   // Return inputs as OpenvinoValues
-  const util::Map<Argument, std::shared_ptr<ngraph::Node>>& inputs() const { return param_.inputs; }
+  const util::Map<Argument, std::shared_ptr<ngraph::Node>>& graph_inputs() const {
+    return graph_inputs_;
+  }
+  const util::Map<Argument, std::shared_ptr<ngraph::Node>>& graph_weight() const {
+    return graph_weight_;
+  }
   // Return output as OpenvinoValues
   const util::Map<Argument, std::shared_ptr<ngraph::Node>>& outputs() const { return outputs_; }
 
-  void SetOutput(const std::string& name, std::shared_ptr<ngraph::Node>);
+  void SetOutput(const std::string& name, const std::shared_ptr<ngraph::Node>& ngraph_node);
 
   // Return input `name` shape as Shape
   Shape InputShape(const std::string& name) const;
@@ -86,7 +102,11 @@ class OpenvinoOpContext : public OpContext {
 
   Param param_;
   // Output operands
+  util::Map<Argument, std::shared_ptr<ngraph::Node>> graph_inputs_;
+  util::Map<Argument, std::shared_ptr<ngraph::Node>> graph_weight_;
   util::Map<Argument, std::shared_ptr<ngraph::Node>> outputs_;
+
+  const util::Map<Argument, Parameter>& entry_params_map_;
 };
 
 }  // namespace openvino

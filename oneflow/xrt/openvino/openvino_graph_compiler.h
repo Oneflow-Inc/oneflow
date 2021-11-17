@@ -39,8 +39,9 @@ class OpenvinoGraphCompiler : public GraphCompiler::Impl {
  private:
   void SetupKernelContextParam(const XrtNode* node, OpenvinoOpContext::Param* context_param);
 
-  void PopulateEntryParams(const std::vector<Parameter>& entry_params, ngraph::ParameterVector*,
-                           util::Map<std::string, int>&);
+  void PopulateEntryParams(const std::vector<Parameter>& entry_params,
+                           util::Map<Argument, Parameter>& entry_params_map,
+                           util::Map<Argument, int>& entry_params_index_map);
 
   Argument ArgFromParameter(const Parameter& param);
 
