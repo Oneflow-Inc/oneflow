@@ -136,15 +136,15 @@ class UpsampleLinearGrad1DGPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UPSAMPLELINEAR1D_GPU_KERNEL(dtype)                                    \
-  REGISTER_USER_KERNEL("upsample_linear_1d")                                           \
-      .SetCreateFn<UpsampleLinear1DGPUKernel<dtype>>()                                 \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("upsample_linear_1d_grad")                                      \
-      .SetCreateFn<UpsampleLinearGrad1DGPUKernel<dtype>>()                             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_UPSAMPLELINEAR1D_GPU_KERNEL(dtype)                                     \
+  REGISTER_USER_KERNEL("upsample_linear_1d")                                            \
+      .SetCreateFn<UpsampleLinear1DGPUKernel<dtype>>()                                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("upsample_linear_1d_grad")                                       \
+      .SetCreateFn<UpsampleLinearGrad1DGPUKernel<dtype>>()                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_UPSAMPLELINEAR1D_GPU_KERNEL(float)
 REGISTER_UPSAMPLELINEAR1D_GPU_KERNEL(double)
