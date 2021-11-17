@@ -16,6 +16,7 @@ add_subdirectory(lib)
 add_llvm_executable(oneflow-translate
   oneflow-translate.cpp
   DEPENDS
+  ${oneflow_third_party_libs}
   MLIROneFlow
   MLIROneFlowTranslation
   )
