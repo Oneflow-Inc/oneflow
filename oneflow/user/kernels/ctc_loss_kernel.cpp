@@ -62,7 +62,7 @@ class CtcLossKernel final : public user_op::OpKernel {
       .SetCreateFn<CtcLossKernel<device, OF_PP_PAIR_FIRST(dtype), OF_PP_PAIR_FIRST(idx_dtype)>>() \
       .SetIsMatchedHob(                                                                           \
           (user_op::HobDeviceType() == device)                                                    \
-          && (user_op::HobDataType("log_probs", 0) == OF_PP_PAIR_SECOND(dtype))                    \
+          && (user_op::HobDataType("log_probs", 0) == OF_PP_PAIR_SECOND(dtype))                   \
           && (user_op::HobDataType("input_lengths", 0) == OF_PP_PAIR_SECOND(idx_dtype)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CTC_LOSS_KERNEL, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ,
@@ -121,8 +121,8 @@ class CtcLossGradKernel final : public user_op::OpKernel {
           CtcLossGradKernel<device, OF_PP_PAIR_FIRST(dtype), OF_PP_PAIR_FIRST(idx_dtype)>>() \
       .SetIsMatchedHob(                                                                      \
           (user_op::HobDeviceType() == device)                                               \
-          && (user_op::HobDataType("log_probs", 0) == OF_PP_PAIR_SECOND(dtype))               \
-          && (user_op::HobDataType("input_lengths", 0) == OF_PP_PAIR_SECOND(idx_dtype)))      \
+          && (user_op::HobDataType("log_probs", 0) == OF_PP_PAIR_SECOND(dtype))              \
+          && (user_op::HobDataType("input_lengths", 0) == OF_PP_PAIR_SECOND(idx_dtype)))     \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                    \
         const Shape& log_probs_shape = ctx->InputShape("log_probs", 0);                      \
         const int64_t max_target_length = ctx->Attr<int64_t>("max_target_length");           \

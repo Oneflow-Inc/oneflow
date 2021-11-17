@@ -206,14 +206,14 @@ class UpsampleTrilinearGrad3DGPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UPSAMPTRILINEAR3D_GPU_KERNEL(dtype)                                   \
-  REGISTER_USER_KERNEL("upsample_trilinear_3d")                                        \
-      .SetCreateFn<UpsampleTrilinear3DGPUKernel<dtype>>()                              \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
+#define REGISTER_UPSAMPTRILINEAR3D_GPU_KERNEL(dtype)                                    \
+  REGISTER_USER_KERNEL("upsample_trilinear_3d")                                         \
+      .SetCreateFn<UpsampleTrilinear3DGPUKernel<dtype>>()                               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("upsample_trilinear_3d_grad")                                   \
-      .SetCreateFn<UpsampleTrilinearGrad3DGPUKernel<dtype>>()                          \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
+  REGISTER_USER_KERNEL("upsample_trilinear_3d_grad")                                    \
+      .SetCreateFn<UpsampleTrilinearGrad3DGPUKernel<dtype>>()                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_UPSAMPTRILINEAR3D_GPU_KERNEL(float)

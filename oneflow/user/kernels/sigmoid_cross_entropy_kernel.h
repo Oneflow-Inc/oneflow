@@ -79,7 +79,7 @@ class SigmoidCrossEntropyKernel final : public user_op::OpKernel {
       .SetCreateFn<                                                                           \
           SigmoidCrossEntropyKernel<device_type, SigmoidCrossEntropyFunctor, dtype, ltype>>() \
       .SetIsMatchedHob((user_op::HobDeviceType() == device_type)                              \
-                       && (user_op::HobDataType("label", 0) == GetDataType<ltype>::value)      \
+                       && (user_op::HobDataType("label", 0) == GetDataType<ltype>::value)     \
                        && (user_op::HobDataType("loss", 0) == GetDataType<dtype>::value));
 
 template<DeviceType device_type, template<typename, typename> class Opt, typename PredT,
@@ -110,7 +110,7 @@ class SigmoidCrossEntropyGradKernel final : public user_op::OpKernel {
                                                  dtype, ltype>>()                             \
       .SetIsMatchedHob(                                                                       \
           (user_op::HobDeviceType() == device_type)                                           \
-          && (user_op::HobDataType("label", 0) == GetDataType<ltype>::value)                   \
+          && (user_op::HobDataType("label", 0) == GetDataType<ltype>::value)                  \
           && (user_op::HobDataType("prediction_diff", 0) == GetDataType<dtype>::value));
 
 }  // namespace oneflow

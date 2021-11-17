@@ -201,6 +201,6 @@ REGISTER_RELU_FORWARD_KERNEL(DeviceType::kGPU, int8_t);
 REGISTER_RELU_FORWARD_KERNEL(DeviceType::kGPU, int32_t);
 REGISTER_RELU_FORWARD_KERNEL(DeviceType::kGPU, int64_t);
 
-}
+}  // namespace
 
 }  // namespace oneflow

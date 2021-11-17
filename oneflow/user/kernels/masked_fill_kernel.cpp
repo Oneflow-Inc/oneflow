@@ -45,11 +45,11 @@ class MaskedFillKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MASKED_FILL_KERNEL(device_type_v, dtype_pair, ctype_pair)                  \
-  REGISTER_USER_KERNEL("masked_fill")                                                       \
-      .SetCreateFn<MaskedFillKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),            \
-                                    OF_PP_PAIR_FIRST(ctype_pair)>>()                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                          \
+#define REGISTER_MASKED_FILL_KERNEL(device_type_v, dtype_pair, ctype_pair)                   \
+  REGISTER_USER_KERNEL("masked_fill")                                                        \
+      .SetCreateFn<MaskedFillKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),             \
+                                    OF_PP_PAIR_FIRST(ctype_pair)>>()                         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                           \
                        && (user_op::HobDataType("mask", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
                        && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 

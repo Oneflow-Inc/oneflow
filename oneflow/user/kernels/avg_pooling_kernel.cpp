@@ -280,30 +280,30 @@ class AvgPool3dGradKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_AVG_POOLING_KERNELS(device, dtype)                                    \
-  REGISTER_USER_KERNEL("avgpool_1d")                                                   \
-      .SetCreateFn<AvgPool1dKernel<device, dtype>>()                                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                            \
+#define REGISTER_AVG_POOLING_KERNELS(device, dtype)                                     \
+  REGISTER_USER_KERNEL("avgpool_1d")                                                    \
+      .SetCreateFn<AvgPool1dKernel<device, dtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("avgpool_1d_grad")                                              \
-      .SetCreateFn<AvgPool1dGradKernel<device, dtype>>()                               \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                            \
+  REGISTER_USER_KERNEL("avgpool_1d_grad")                                               \
+      .SetCreateFn<AvgPool1dGradKernel<device, dtype>>()                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("avgpool_2d")                                                   \
-      .SetCreateFn<AvgPool2dKernel<device, dtype>>()                                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                            \
+  REGISTER_USER_KERNEL("avgpool_2d")                                                    \
+      .SetCreateFn<AvgPool2dKernel<device, dtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("avgpool_2d_grad")                                              \
-      .SetCreateFn<AvgPool2dGradKernel<device, dtype>>()                               \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                            \
+  REGISTER_USER_KERNEL("avgpool_2d_grad")                                               \
+      .SetCreateFn<AvgPool2dGradKernel<device, dtype>>()                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("avgpool_3d")                                                   \
-      .SetCreateFn<AvgPool3dKernel<device, dtype>>()                                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                            \
+  REGISTER_USER_KERNEL("avgpool_3d")                                                    \
+      .SetCreateFn<AvgPool3dKernel<device, dtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("avgpool_3d_grad")                                              \
-      .SetCreateFn<AvgPool3dGradKernel<device, dtype>>()                               \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                            \
+  REGISTER_USER_KERNEL("avgpool_3d_grad")                                               \
+      .SetCreateFn<AvgPool3dGradKernel<device, dtype>>()                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_AVG_POOLING_WITH_DEVICE(device) \

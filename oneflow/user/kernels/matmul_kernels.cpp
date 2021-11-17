@@ -341,8 +341,7 @@ auto PrimitiveExistsForBroadcastMatmulGradB() {
 
 REGISTER_USER_KERNEL("broadcast_matmul_grad_b")
     .SetCreateFn<BroadcastMatmulGradBKernel>()
-    .SetIsMatchedHob(MemcpyPrimitiveExists()
-                     && PrimitiveExistsForBroadcastMatmulGradB())
+    .SetIsMatchedHob(MemcpyPrimitiveExists() && PrimitiveExistsForBroadcastMatmulGradB())
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.has_input("_add_to_output", 0)) {

@@ -454,16 +454,16 @@ class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
   };
 };
 
-#define REGISTER_LAYER_NORM_GPU_KERNEL(dtype, bn_param_dtype)                         \
-  REGISTER_USER_KERNEL("layer_norm")                                                  \
-      .SetCreateFn<LayerNormGpuKernel<dtype, bn_param_dtype>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                 \
+#define REGISTER_LAYER_NORM_GPU_KERNEL(dtype, bn_param_dtype)                          \
+  REGISTER_USER_KERNEL("layer_norm")                                                   \
+      .SetCreateFn<LayerNormGpuKernel<dtype, bn_param_dtype>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                    \
-        user_op::TensorDesc* mean = ctx->OutputTensorDesc("mean", 0);                 \
-        const DataType& data_type = mean->data_type();                                \
-        const int64_t elem_cnt = mean->shape().elem_cnt();                            \
-        return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type)) * 2;       \
+      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                     \
+        user_op::TensorDesc* mean = ctx->OutputTensorDesc("mean", 0);                  \
+        const DataType& data_type = mean->data_type();                                 \
+        const int64_t elem_cnt = mean->shape().elem_cnt();                             \
+        return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type)) * 2;        \
       });
 
 REGISTER_LAYER_NORM_GPU_KERNEL(float, float)
@@ -524,7 +524,7 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
   REGISTER_USER_KERNEL("layer_norm_grad")                                                  \
       .SetCreateFn<LayerNormGradGpuKernel<dtype, bn_param_dtype>>()                        \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                      \
-                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))     \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))    \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                         \
         const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);                 \
         const DataType& data_type = mean.data_type();                                      \

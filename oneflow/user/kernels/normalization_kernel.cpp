@@ -330,8 +330,8 @@ class NormalizationInferenceCpuKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("normalization")                                                   \
       .SetCreateFn<NormalizationInferenceCpuKernel<dtype>>()                              \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                     \
-                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)      \
-                       && (user_op::HobAttr<bool>("training") == false))                   \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)     \
+                       && (user_op::HobAttr<bool>("training") == false))                  \
       .SetInplaceProposalFn(                                                              \
           [](const user_op::InferContext& ctx,                                            \
              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {      \
@@ -441,8 +441,8 @@ class NormalizationTrainCpuKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("normalization")                                                   \
       .SetCreateFn<NormalizationTrainCpuKernel<dtype>>()                                  \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                     \
-                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)      \
-                       && (user_op::HobAttr<bool>("training") == true))                    \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)     \
+                       && (user_op::HobAttr<bool>("training") == true))                   \
       .SetInplaceProposalFn(                                                              \
           [](const user_op::InferContext& ctx,                                            \
              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {      \
@@ -588,10 +588,10 @@ REGISTER_BN_GRAD_CPU_KERNEL(double)
 
 #undef REGISTER_BN_GRAD_CPU_KERNEL
 
-#define REGISTER_BN_ADD_RELU_GRAD_CPU_KERNEL(dtype)                                    \
-  REGISTER_USER_KERNEL("normalization_add_relu_grad")                                  \
-      .SetCreateFn<NormalizationGradCpuKernel<dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
+#define REGISTER_BN_ADD_RELU_GRAD_CPU_KERNEL(dtype)                                     \
+  REGISTER_USER_KERNEL("normalization_add_relu_grad")                                   \
+      .SetCreateFn<NormalizationGradCpuKernel<dtype>>()                                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                   \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferGradTmpSizeForCpuKernel);
 

@@ -97,10 +97,10 @@ class ImageBatchAlignKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_IMAGE_BATCH_ALIGN_KERNEL(dtype)                                    \
-  REGISTER_USER_KERNEL("image_batch_align")                                         \
-      .SetCreateFn<ImageBatchAlignKernel<dtype>>()                                  \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)               \
+#define REGISTER_IMAGE_BATCH_ALIGN_KERNEL(dtype)                                     \
+  REGISTER_USER_KERNEL("image_batch_align")                                          \
+      .SetCreateFn<ImageBatchAlignKernel<dtype>>()                                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                \
                        && (user_op::HobDataType("in", 0) == DataType::kTensorBuffer) \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 

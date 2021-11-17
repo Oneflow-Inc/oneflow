@@ -155,17 +155,17 @@ class UpsampleNearestGradCPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UPSAMPLE_NEAREST_CPU_KERNEL(dtype)                                      \
-  REGISTER_USER_KERNEL("upsample")                                                       \
-      .SetCreateFn<UpsampleNearestCPUKernel<dtype>>()                                    \
-      .SetIsMatchedHob(                                                                  \
-          (user_op::HobDeviceType() == DeviceType::kCPU)                                 \
+#define REGISTER_UPSAMPLE_NEAREST_CPU_KERNEL(dtype)                                       \
+  REGISTER_USER_KERNEL("upsample")                                                        \
+      .SetCreateFn<UpsampleNearestCPUKernel<dtype>>()                                     \
+      .SetIsMatchedHob(                                                                   \
+          (user_op::HobDeviceType() == DeviceType::kCPU)                                  \
           && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)                  \
           && (user_op::HobAttr<std::string>("interpolation") == std::string("nearest"))); \
-  REGISTER_USER_KERNEL("upsample_grad")                                                  \
-      .SetCreateFn<UpsampleNearestGradCPUKernel<dtype>>()                                \
-      .SetIsMatchedHob(                                                                  \
-          (user_op::HobDeviceType() == DeviceType::kCPU)                                 \
+  REGISTER_USER_KERNEL("upsample_grad")                                                   \
+      .SetCreateFn<UpsampleNearestGradCPUKernel<dtype>>()                                 \
+      .SetIsMatchedHob(                                                                   \
+          (user_op::HobDeviceType() == DeviceType::kCPU)                                  \
           && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)                 \
           && (user_op::HobAttr<std::string>("interpolation") == std::string("nearest")));
 
@@ -239,17 +239,17 @@ class UpsampleBilinearGradCPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UPSAMPLE_BILINEAR_CPU_KERNEL(dtype)                                      \
-  REGISTER_USER_KERNEL("upsample")                                                        \
-      .SetCreateFn<UpsampleBilinearCPUKernel<dtype>>()                                    \
-      .SetIsMatchedHob(                                                                   \
-          (user_op::HobDeviceType() == DeviceType::kCPU)                                  \
+#define REGISTER_UPSAMPLE_BILINEAR_CPU_KERNEL(dtype)                                       \
+  REGISTER_USER_KERNEL("upsample")                                                         \
+      .SetCreateFn<UpsampleBilinearCPUKernel<dtype>>()                                     \
+      .SetIsMatchedHob(                                                                    \
+          (user_op::HobDeviceType() == DeviceType::kCPU)                                   \
           && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)                   \
           && (user_op::HobAttr<std::string>("interpolation") == std::string("bilinear"))); \
-  REGISTER_USER_KERNEL("upsample_grad")                                                   \
-      .SetCreateFn<UpsampleBilinearGradCPUKernel<dtype>>()                                \
-      .SetIsMatchedHob(                                                                   \
-          (user_op::HobDeviceType() == DeviceType::kCPU)                                  \
+  REGISTER_USER_KERNEL("upsample_grad")                                                    \
+      .SetCreateFn<UpsampleBilinearGradCPUKernel<dtype>>()                                 \
+      .SetIsMatchedHob(                                                                    \
+          (user_op::HobDeviceType() == DeviceType::kCPU)                                   \
           && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)                  \
           && (user_op::HobAttr<std::string>("interpolation") == std::string("bilinear")));
 

@@ -254,36 +254,36 @@ class GpuAdaptiveAvgPool3dGradKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(device, dtype)                   \
-  REGISTER_USER_KERNEL("adaptive_avg_pool1d")                                 \
-      .SetCreateFn<GpuAdaptiveAvgPool1dKernel<device, dtype>>()               \
-      .SetIsMatchedHob((HobDeviceType() == device)                            \
+#define REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(device, dtype)                    \
+  REGISTER_USER_KERNEL("adaptive_avg_pool1d")                                  \
+      .SetCreateFn<GpuAdaptiveAvgPool1dKernel<device, dtype>>()                \
+      .SetIsMatchedHob((HobDeviceType() == device)                             \
                        && (HobDataType("y", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("adaptive_avg_pool2d")                                 \
-      .SetCreateFn<GpuAdaptiveAvgPool2dKernel<device, dtype>>()               \
-      .SetIsMatchedHob((HobDeviceType() == device)                            \
+  REGISTER_USER_KERNEL("adaptive_avg_pool2d")                                  \
+      .SetCreateFn<GpuAdaptiveAvgPool2dKernel<device, dtype>>()                \
+      .SetIsMatchedHob((HobDeviceType() == device)                             \
                        && (HobDataType("y", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("adaptive_avg_pool3d")                                 \
-      .SetCreateFn<GpuAdaptiveAvgPool3dKernel<device, dtype>>()               \
-      .SetIsMatchedHob((HobDeviceType() == device)                            \
+  REGISTER_USER_KERNEL("adaptive_avg_pool3d")                                  \
+      .SetCreateFn<GpuAdaptiveAvgPool3dKernel<device, dtype>>()                \
+      .SetIsMatchedHob((HobDeviceType() == device)                             \
                        && (HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, float);
 REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, double);
 REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, int);
 
-#define REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(device, dtype)           \
-  REGISTER_USER_KERNEL("adaptive_avg_pool1d_grad")                             \
-      .SetCreateFn<GpuAdaptiveAvgPool1dGradKernel<device, dtype>>()            \
-      .SetIsMatchedHob((HobDeviceType() == device)                             \
+#define REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(device, dtype)            \
+  REGISTER_USER_KERNEL("adaptive_avg_pool1d_grad")                              \
+      .SetCreateFn<GpuAdaptiveAvgPool1dGradKernel<device, dtype>>()             \
+      .SetIsMatchedHob((HobDeviceType() == device)                              \
                        && (HobDataType("dx", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("adaptive_avg_pool2d_grad")                             \
-      .SetCreateFn<GpuAdaptiveAvgPool2dGradKernel<device, dtype>>()            \
-      .SetIsMatchedHob((HobDeviceType() == device)                             \
+  REGISTER_USER_KERNEL("adaptive_avg_pool2d_grad")                              \
+      .SetCreateFn<GpuAdaptiveAvgPool2dGradKernel<device, dtype>>()             \
+      .SetIsMatchedHob((HobDeviceType() == device)                              \
                        && (HobDataType("dx", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("adaptive_avg_pool3d_grad")                             \
-      .SetCreateFn<GpuAdaptiveAvgPool3dGradKernel<device, dtype>>()            \
-      .SetIsMatchedHob((HobDeviceType() == device)                             \
+  REGISTER_USER_KERNEL("adaptive_avg_pool3d_grad")                              \
+      .SetCreateFn<GpuAdaptiveAvgPool3dGradKernel<device, dtype>>()             \
+      .SetIsMatchedHob((HobDeviceType() == device)                              \
                        && (HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kGPU, float);

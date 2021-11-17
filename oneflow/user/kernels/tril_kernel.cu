@@ -177,7 +177,7 @@ class GpuTrilKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("tril")                                                                  \
       .SetCreateFn<GpuTrilKernel<dtype>>()                                                      \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
@@ -233,7 +233,7 @@ class GpuFusedScaleTrilKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("fused_scale_tril")                                                      \
       .SetCreateFn<GpuFusedScaleTrilKernel<dtype>>()                                            \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \

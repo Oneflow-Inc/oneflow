@@ -71,10 +71,10 @@ class ReduceSumLikeOpKernel final : public user_op::OpKernel, public user_op::Cu
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_REDUCE_SUM_LIKE_KERNEL(device, data_type_pair)                               \
-  REGISTER_USER_KERNEL("reduce_sum_like")                                                     \
-      .SetCreateFn<ReduceSumLikeOpKernel<device, OF_PP_PAIR_FIRST(data_type_pair)>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
+#define REGISTER_REDUCE_SUM_LIKE_KERNEL(device, data_type_pair)                                \
+  REGISTER_USER_KERNEL("reduce_sum_like")                                                      \
+      .SetCreateFn<ReduceSumLikeOpKernel<device, OF_PP_PAIR_FIRST(data_type_pair)>>()          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                    \
                        && (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(data_type_pair))) \
       .SetInferTmpSizeFn(ReduceSumLikeInferTmpSize);
 

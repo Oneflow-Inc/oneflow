@@ -44,7 +44,7 @@ class L1L2RegularizeGradientKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("l1_l2_regularize_gradient")                                             \
       .SetCreateFn<L1L2RegularizeGradientKernel<device, dtype>>()                               \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "model_diff", 0, true));               \

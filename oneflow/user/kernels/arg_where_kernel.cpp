@@ -84,10 +84,10 @@ size_t InferTempStorageBytesSize(user_op::InferContext* ctx) {
 
 }  // namespace
 
-#define REGISTER_ARG_WHERE_KERNEL(device, itype, otype)                                         \
-  REGISTER_USER_KERNEL("argwhere")                                                              \
-      .SetCreateFn<ArgWhereKernel<device, itype, otype>>()                                      \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
+#define REGISTER_ARG_WHERE_KERNEL(device, itype, otype)                                          \
+  REGISTER_USER_KERNEL("argwhere")                                                               \
+      .SetCreateFn<ArgWhereKernel<device, itype, otype>>()                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
                        && (user_op::HobDataType("input", 0) == GetDataType<itype>::value)        \
                        && (user_op::HobDataType("output", 0) == GetDataType<otype>::value)       \
                        && (user_op::HobDataType("output_size", 0) == GetDataType<otype>::value)) \

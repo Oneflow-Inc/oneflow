@@ -157,19 +157,19 @@ class TfGpuPReluKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_TF_GPU_PRELU_KERNEL(dtype)                                           \
-  REGISTER_USER_KERNEL("tf_prelu")                                                    \
-      .SetCreateFn<TfGpuPReluKernel<dtype>>()                                         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                 \
+#define REGISTER_TF_GPU_PRELU_KERNEL(dtype)                                            \
+  REGISTER_USER_KERNEL("tf_prelu")                                                     \
+      .SetCreateFn<TfGpuPReluKernel<dtype>>()                                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
-        const Shape& in_shape = ctx->InputShape("x", 0);                              \
-        const Shape& alpha_shape = ctx->InputShape("alpha", 0);                       \
-        const int64_t tmp_buffer_size =                                               \
-            IsAlphaShapeContiguous(alpha_shape, in_shape)                             \
-                ? 0                                                                   \
-                : GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(dtype));            \
-        return tmp_buffer_size;                                                       \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                              \
+        const Shape& in_shape = ctx->InputShape("x", 0);                               \
+        const Shape& alpha_shape = ctx->InputShape("alpha", 0);                        \
+        const int64_t tmp_buffer_size =                                                \
+            IsAlphaShapeContiguous(alpha_shape, in_shape)                              \
+                ? 0                                                                    \
+                : GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(dtype));             \
+        return tmp_buffer_size;                                                        \
       });
 
 REGISTER_TF_GPU_PRELU_KERNEL(float)
@@ -225,19 +225,19 @@ class TfGpuPReluGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_TF_GPU_PRELU_GRAD_KERNEL(dtype)                                       \
-  REGISTER_USER_KERNEL("tf_prelu_grad")                                                \
-      .SetCreateFn<TfGpuPReluGradKernel<dtype>>()                                      \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
+#define REGISTER_TF_GPU_PRELU_GRAD_KERNEL(dtype)                                        \
+  REGISTER_USER_KERNEL("tf_prelu_grad")                                                 \
+      .SetCreateFn<TfGpuPReluGradKernel<dtype>>()                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                              \
-        const Shape& in_shape = ctx->InputShape("x", 0);                               \
-        const Shape& alpha_shape = ctx->InputShape("alpha", 0);                        \
-        const int64_t tmp_buffer_size =                                                \
-            IsAlphaShapeContiguous(alpha_shape, in_shape)                              \
-                ? 2 * GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(dtype))          \
-                : 3 * GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(dtype));         \
-        return tmp_buffer_size;                                                        \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                               \
+        const Shape& in_shape = ctx->InputShape("x", 0);                                \
+        const Shape& alpha_shape = ctx->InputShape("alpha", 0);                         \
+        const int64_t tmp_buffer_size =                                                 \
+            IsAlphaShapeContiguous(alpha_shape, in_shape)                               \
+                ? 2 * GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(dtype))           \
+                : 3 * GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(dtype));          \
+        return tmp_buffer_size;                                                         \
       });
 
 REGISTER_TF_GPU_PRELU_GRAD_KERNEL(float)

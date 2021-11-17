@@ -128,8 +128,7 @@ class PadKernel final : public OpKernel, public CudaGraphSupport {
 };
 
 REGISTER_USER_KERNEL("pad").SetCreateFn<PadKernel>().SetIsMatchedHob(FillPrimitiveExists()
-                                                                     && CopyNdPrimitiveExists()
-                                                                        );
+                                                                     && CopyNdPrimitiveExists());
 
 class PadGradKernel final : public OpKernel, public CudaGraphSupport {
  public:

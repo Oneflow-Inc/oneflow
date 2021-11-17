@@ -72,7 +72,7 @@ class DimGatherKernel final : public user_op::OpKernel {
       .SetCreateFn<                                                                              \
           DimGatherKernel<device, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>>() \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
-                       && (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair))     \
+                       && (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair))    \
                        && (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIM_GATHER_KERNEL, (DeviceType::kCPU),
