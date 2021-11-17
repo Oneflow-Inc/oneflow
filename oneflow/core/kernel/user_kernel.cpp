@@ -612,13 +612,14 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
 #ifdef WITH_CUDA_GRAPHS
   bool current_scope_capturing = false;
   if (cuda_graph_exec_) {
-    if (!cuda_graph_ctx_->IsGraphCapturing()) {
+    auto* cuda_stream = dynamic_cast<ep::CudaStream*>(ctx_->stream());
+    if (!cuda_stream->IsGraphCapturing()) {
       if (cuda_graph_exec_->IsInstantiated() && (!updated)) {
-        cuda_graph_ctx_->LaunchGraph(cuda_graph_exec_.get());
+        cuda_stream->LaunchGraph(cuda_graph_exec_.get());
         return;
       }
       current_scope_capturing = true;
-      cuda_graph_ctx_->BeginGraphCapture();
+      cuda_stream->BeginGraphCapture();
     }
   }
 #endif  // WITH_CUDA_GRAPHS
@@ -627,8 +628,9 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
 
 #ifdef WITH_CUDA_GRAPHS
   if (cuda_graph_exec_ && current_scope_capturing) {
-    cuda_graph_ctx_->EndGraphCapture(cuda_graph_exec_.get());
-    cuda_graph_ctx_->LaunchGraph(cuda_graph_exec_.get());
+    auto* cuda_stream = dynamic_cast<ep::CudaStream*>(ctx_->stream());
+    cuda_stream->EndGraphCapture(cuda_graph_exec_.get());
+    cuda_stream->LaunchGraph(cuda_graph_exec_.get());
   }
 #endif  // WITH_CUDA_GRAPHS
 }
@@ -648,12 +650,12 @@ void UserKernel::VirtualKernelInit(KernelContext* ctx) {
 #ifdef WITH_CUDA_GRAPHS
   if (ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
     UserKernelInitContext init_ctx(ctx->device_ctx(), ctx->stream_ctx(), kernel_conf());
-    cuda_graph_ctx_ = dynamic_cast<CudaGraphContext*>(ctx->stream_ctx());
+    auto* cuda_stream = dynamic_cast<ep::CudaStream*>(ctx->stream());
     const auto* cuda_graph_support = dynamic_cast<const user_op::CudaGraphSupport*>(kernel_.get());
-    if (cuda_graph_ctx_ != nullptr) {
+    if (cuda_stream != nullptr) {
       if (cuda_graph_support != nullptr
           && cuda_graph_support->IsCudaGraphSupported(&init_ctx, opkernel_state_.get())) {
-        cuda_graph_exec_.reset(new CudaGraphExecutable());
+        cuda_graph_exec_.reset(new ep::CudaGraphExecutable());
         LOG(INFO) << "CUDA Graphs Kernel: " << op_conf().name() << " ("
                   << op_conf().user_conf().op_type_name() << ")";
       } else {
