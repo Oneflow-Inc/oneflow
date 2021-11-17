@@ -545,9 +545,6 @@ def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [AttrSizedOperandS
     F32Attr:$momentum
   );
   let output = (outs
-    // AnyType:$y,
-    // AnyType:$mean,
-    // AnyType:$inv_variance
     AnyType:$y,
     Optional<AnyType>:$mean,
     Optional<AnyType>:$inv_variance
@@ -575,9 +572,6 @@ def OneFlow_NormalizationAddReluOp : OneFlow_BaseOp<"normalization_add_relu", [A
     F32Attr:$momentum
   );
   let output = (outs
-    // AnyType:$y,
-    // AnyType:$mean,
-    // AnyType:$inv_variance
     AnyType:$y,
     AnyType:$reserve_space,
     Optional<AnyType>:$mean,
@@ -1046,8 +1040,7 @@ def FusedBiasAddGeluPattern : Pat<
 
 def GetFirstValue :
   NativeCodeCall<"*$0.begin()">;
-def CreateNormalizationAddReluOp : NativeCodeCall<"OutlineMulCast($_builder, $0, $1)">;
-def IsTrue: Constraint<CPred<"$0.getValue()">, "">;
+def IsTraingTrue: Constraint<CPred<"$0.getValue()">, "">;
 // TODO: check mean and inv_variance are not used
 def NormalizationAddReluPattern : Pattern<
   /* match */ (
@@ -1111,7 +1104,7 @@ def NormalizationAddReluPattern : Pattern<
   ),
   (replaceWithValue $fuse_results__0),
   ],
-  [(IsTrue $bn_training)]
+  [(IsTraingTrue $bn_training)]
 >;
 
 #endif // ONEFLOW_PATTERNS
