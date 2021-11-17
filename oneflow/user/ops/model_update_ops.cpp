@@ -664,7 +664,7 @@ REGISTER_NO_GRAD_USER_OP("indexed_slices_adam_update")
     .SetInputArgModifyFn(AdamInputArgModifyFn)
     .SetDataTypeInferFn(InferIndexedSlicesAdamUpdateDataType);
 
-// NOTE(Lxy): 注册 lamb_update 这个 userOp，op 的实际调用在
+// NOTE(Lxy): 注册 lamb_update 这个 userOp
 REGISTER_NO_GRAD_USER_OP("lamb_update")
     .Input("model")
     .Input("model_diff")

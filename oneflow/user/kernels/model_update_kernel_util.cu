@@ -322,10 +322,11 @@ __global__ void LambGradGpu(int64_t n, T scale, float l1, float l2, float beta1,
 }
 
 template<typename T>
-__global__ void LambUpdateGpu(int64_t n, float weight_decay, const float learning_rate_val,
+__global__ void LambUpdateGpu(int64_t n, float weight_decay, float learning_rate_val, const float* learning_rate_ptr,
                               const int64_t* skip_if, const T* w_norm_2, const T* g_norm_2,
                               const T* adam_diff, T* model) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
+  if (learning_rate_ptr != nullptr) { learning_rate_val = *learning_rate_ptr; }
   const float lr = LambLRFunctor<T>()(learning_rate_val, w_norm_2, g_norm_2);
   CUDA_1D_KERNEL_LOOP(i, n) { LambUpdateFunctor<T>()(lr, weight_decay, adam_diff + i, model + i); }
 }
@@ -432,7 +433,7 @@ template struct AdagradUpdateKernelUtil<DeviceType::kGPU, double, double>;
 template<typename T, typename G>
 struct LambUpdateKernelUtil<DeviceType::kGPU, T, G> {
   static void Update(DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1,
-                     float beta2, float epsilon, float weight_decay, const float learning_rate_val, const float* learning_rate_ptr,
+                     float beta2, float epsilon, float weight_decay, float learning_rate_val, const float* learning_rate_ptr,
                      const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff,
                      T* adam_diff, T* model, T* m, T* v, T* norm_buffer);
 };
@@ -440,7 +441,7 @@ struct LambUpdateKernelUtil<DeviceType::kGPU, T, G> {
 template<typename T, typename G>
 void LambUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
     DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1, float beta2,
-    float epsilon, float weight_decay, const float learning_rate_val, const float* learning_rate_ptr, const T* scale_by_ptr,
+    float epsilon, float weight_decay, float learning_rate_val, const float* learning_rate_ptr, const T* scale_by_ptr,
     const int64_t* skip_if, const G* model_diff, T* adam_diff, T* model, T* m, T* v, T* norm_buffer) {
   LambGradGpu<T, G><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, scale, l1, l2, beta1, beta2, epsilon, scale_by_ptr, skip_if, model_diff,
@@ -451,7 +452,7 @@ void LambUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
   SumSquares2<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, model, w_norm_2, adam_diff, g_norm_2);
   LambUpdateGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      n, weight_decay, learning_rate_val, skip_if, w_norm_2, g_norm_2, adam_diff,
+      n, weight_decay, learning_rate_val, learning_rate_ptr, skip_if, w_norm_2, g_norm_2, adam_diff,
       model);
 }
 

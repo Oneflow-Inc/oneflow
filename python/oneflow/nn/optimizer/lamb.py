@@ -243,14 +243,14 @@ class LAMB(Optimizer):
             optimizer_conf.mutable_lamb_conf().set_epsilon(epsilon)
             # optimizer_conf.mutable_lamb_conf().set_do_bias_correction(do_bias_correction)
 
-            if not adam_w_mode:
-                optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
-                    weight_decay
-                )
+            if adam_w_mode:
+                optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(weight_decay)
+            else:
+                optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(0.0)
 
             for param in param_group.parameters:
-                if adam_w_mode:
-                    # Set l2 penalty as weight decay if using adam_w mode
+                if not adam_w_mode:
+                    # Set l2 penalty as weight decay if **NOT** using adam_w_mode
                     vars_conf[param].l2 = weight_decay
                 if param.requires_grad:
                     optimizer_conf.add_variable_op_names(vars_conf[param].name)
