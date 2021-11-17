@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_EP_PRIMITIVE_ONE_HOT_H_
 
 #include "oneflow/core/ep/include/primitive/primitive.h"
+#include "oneflow/core/common/scalar.h"
 
 namespace oneflow {
 
@@ -30,7 +31,7 @@ class OneHot : public Primitive {
   ~OneHot() override = default;
 
   virtual void Launch(Stream* stream, const void* indices, void* out, Scalar on_value,
-                      Scalar off_value, size_t indices_count, size_t lower_bound,
+                      Scalar off_value, size_t num_indices, size_t lower_bound,
                       size_t upper_bound) = 0;
 };
 
