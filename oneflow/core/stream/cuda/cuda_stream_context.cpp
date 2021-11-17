@@ -67,7 +67,6 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
   Maybe<void> OnExecutionContextTeardown() override;
 
   Maybe<void> AddCallback(std::function<void()> callback) override;
-  Maybe<void> Sync() override;
   DeviceType device_type() const override { return DeviceType::kGPU; }
   KernelObserver* GetKernelObserver() override;
 
@@ -195,15 +194,6 @@ void CudaStreamContextImpl::SyncRecycleEvent(cudaEvent_t event) {
     }
   } else {
     OF_CUDA_CHECK(cudaEventDestroy(event));
-  }
-}
-
-Maybe<void> CudaStreamContextImpl::Sync() {
-  cudaError_t err = cudaStreamSynchronize(stream_.cuda_stream());
-  if (err == cudaSuccess) {
-    return Maybe<void>::Ok();
-  } else {
-    return Error::RuntimeError() << cudaGetErrorString(err) << " (" << err << ") ";
   }
 }
 
