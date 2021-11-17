@@ -19,6 +19,7 @@ limitations under the License.
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace oneflow {
 
@@ -29,25 +30,18 @@ class NNGraph;
 namespace oneflow_api {
 
 class Device;
+class Tensor;
 
 class Graph {
  public:
-  // TODO(zzk0): ctor, copyable? movable? assign-able?
-  Graph() = default;
-  ~Graph() = default;
+  explicit Graph(const std::string& model_path, const Device& device);
+  explicit Graph(const std::string& model_path);
 
-  Graph(Graph& graph) = default;
-  Graph& operator=(Graph& graph) = default;
-
-  Graph(Graph&& graph) = default;
-  Graph& operator=(Graph&& graph) = default;
-
-  void Load(const std::string& model_path, const Device& device);
+  void to(const Device& device);
+  std::vector<Tensor> forward(const std::vector<Tensor>& inputs);
 
  private:
-
-  // TODO(zzk0): unique vs. shared? Is this class copyable?
-  std::shared_ptr<oneflow::NNGraph> graph_;
+  std::shared_ptr<oneflow::NNGraph> graph_ = nullptr;
 };
 
 // TODO(zzk0): model_path is a single file or a directory, it depends on how parameters are stored

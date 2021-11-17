@@ -16,12 +16,14 @@ limitations under the License.
 
 #include "oneflow/api/cpp/device.h"
 #include "oneflow/api/cpp/graph.h"
+#include "oneflow/api/cpp/tensor.h"
 #include <cstdio>
 #include <fstream>
 #include <istream>
 #include <memory>
 #include <sstream>
 #include <string>
+#include <vector>
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/just.h"
@@ -36,7 +38,7 @@ limitations under the License.
 
 namespace oneflow_api {
 
-void Graph::Load(const std::string& model_path, const Device& device) {
+Graph::Graph(const std::string& model_path, const Device& device) {
   std::string graph_name = "saved_model";
   graph_ = std::make_shared<oneflow::NNGraph>(graph_name);
   oneflow::Symbol<oneflow::Device> device_symbol =
@@ -44,9 +46,16 @@ void Graph::Load(const std::string& model_path, const Device& device) {
   CHECK_JUST(graph_->Load(model_path, device_symbol));
 }
 
+Graph::Graph(const std::string& model_path) : Graph(model_path, Device("cpu")) {}
+
+void Graph::to(const Device& device) {}
+
+std::vector<Tensor> Graph::forward(const std::vector<Tensor>& inputs) {
+  return std::vector<Tensor>();
+}
+
 Graph load(const std::string& model_path, const Device& device) {
-  Graph graph;
-  graph.Load(model_path, device);
+  Graph graph(model_path, device);
   return graph;
 }
 
