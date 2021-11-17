@@ -181,6 +181,7 @@ class Conv1d(Module):
         self.padding = _single(padding)
         self.dilation = _single(dilation)
         self.groups = groups
+        self.channel_pos = "channels_first"
         assert in_channels % groups == 0
         assert out_channels % groups == 0
         self.in_channels = in_channels
@@ -232,6 +233,7 @@ class Conv1d(Module):
                         padding=self.padding,
                         dilation=self.dilation,
                         groups=1,
+                        channel_pos=self.channel_pos,
                     )
                 )
             res = flow.cat(out_list, dim=in_channel_axis)
@@ -244,6 +246,7 @@ class Conv1d(Module):
                 padding=self.padding,
                 dilation=self.dilation,
                 groups=self.groups,
+                channel_pos=self.channel_pos,
             )
         return res
 
@@ -390,6 +393,7 @@ class Conv2d(Module):
         groups: int = 1,
         bias: bool = True,
         padding_mode: str = "zeros",
+        data_format: str = "NCHW",
     ):
         super().__init__()
         assert padding_mode == "zeros"
@@ -399,13 +403,27 @@ class Conv2d(Module):
         self.padding = _pair(padding)
         self.dilation = _pair(dilation)
         self.groups = groups
+        self.data_format = data_format
+        if self.data_format == "NCHW":
+            self.channel_first = True
+            self.channel_pos = "channels_first"
+        else:
+            self.channel_first = False
+            self.channel_pos = "channels_last"
         assert in_channels % groups == 0
         assert out_channels % groups == 0
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.weight = flow.nn.Parameter(
-            flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
-        )
+        # TODO()
+        if self.channel_first:
+            self.weight = flow.nn.Parameter(
+                flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
+            )
+        else:
+            self.weight = flow.nn.Parameter(
+                flow.Tensor(out_channels, *self.kernel_size, in_channels // groups)
+            )
+
         self.out_channel_groups = out_channels // groups
         self.bias = None
         if bias:
@@ -413,20 +431,23 @@ class Conv2d(Module):
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
-        init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+        init.kaiming_uniform_(self.weight, a=math.sqrt(5), data_format=self.data_format)
         if self.bias is not None:
             (fan_in, _) = init._calculate_fan_in_and_fan_out(self.weight)
             bound = 1 / math.sqrt(fan_in)
             init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        if x.shape[1] != self.in_channels:
+        if self.channel_first:
+            in_channel_axis = 1
+        else:
+            in_channel_axis = 3
+        if x.shape[in_channel_axis] != self.in_channels:
             raise ValueError("The input channels should be equal to self.in_channels")
         # TODO(zwx): Use `tensor.device_type()` method to help checking if x is on cpu.
         # Using `if x.device == flow.device("cpu"):` will fail as consistent tensor has
         # no device, however using `x.is_cuda` is not a good choice.
         if not x.is_cuda and self.groups > 1:
-            in_channel_axis = 1
             in_split_list = ConvUtil.split(
                 x, axis=in_channel_axis, split_num=self.groups
             )
@@ -454,6 +475,7 @@ class Conv2d(Module):
                         padding=self.padding,
                         dilation=self.dilation,
                         groups=1,
+                        channel_pos=self.channel_pos,
                     )
                 )
             res = flow.cat(out_list, dim=in_channel_axis)
@@ -466,6 +488,7 @@ class Conv2d(Module):
                 padding=self.padding,
                 dilation=self.dilation,
                 groups=self.groups,
+                channel_pos=self.channel_pos,
             )
         return res
 
@@ -599,6 +622,7 @@ class Conv3d(Module):
         self.padding = _triple(padding)
         self.dilation = _triple(dilation)
         self.groups = groups
+        self.channel_pos = "channels_first"
         assert in_channels % groups == 0, "in_channels must be divisible by groups"
         assert out_channels % groups == 0, "out_channels must be divisible by groups"
         self.in_channels = in_channels
@@ -651,6 +675,7 @@ class Conv3d(Module):
                         padding=self.padding,
                         dilation=self.dilation,
                         groups=1,
+                        channel_pos=self.channel_pos,
                     )
                 )
             res = flow.cat(out_list, dim=in_channel_axis)
@@ -663,6 +688,7 @@ class Conv3d(Module):
                 padding=self.padding,
                 dilation=self.dilation,
                 groups=self.groups,
+                channel_pos=self.channel_pos,
             )
         return res
 

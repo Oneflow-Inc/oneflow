@@ -59,6 +59,7 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
 
     DimVector weight_shape(in.shape().dim_vec());
     weight_shape.at(0) = filters;
+    std::cout << "conv ====0===== " << data_format << ":" << NDims << ":" << Shape(weight_shape).DebugStr() << std::endl;
     if (data_format == "channels_first") {
       CHECK_LE_OR_RETURN(groups, weight_shape.at(1));
       CHECK_EQ_OR_RETURN(weight_shape.at(1) % groups, 0);
@@ -70,7 +71,11 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
-    for (size_t i = 0; i < NDims; ++i) { weight_shape.at(idx_offset + i) = kernel_size.at(i); }
+    std::cout << "conv ====1===== " << data_format << ":" << NDims << ":" << Shape(weight_shape).DebugStr() << std::endl;
+    for (size_t i = 0; i < NDims; ++i) { 
+      weight_shape.at(idx_offset + i) = kernel_size.at(i);
+    }
+    std::cout << "conv ====2===== " << data_format << ":" << NDims << ":" << Shape(weight_shape).DebugStr() << std::endl;
 
     const user_op::TensorDesc& weight = ctx->InputTensorDesc("weight", 0);
     CHECK_EQ_OR_RETURN(weight.shape(), Shape(weight_shape));

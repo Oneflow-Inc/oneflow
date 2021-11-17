@@ -64,11 +64,17 @@ class ConvBaseFunctor {
                            const std::shared_ptr<one::Tensor>& weight,
                            const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
                            const std::vector<int32_t>& padding,
-                           const std::vector<int32_t>& dilation, const int32_t& groups) const {
+                           const std::vector<int32_t>& dilation, const int32_t& groups,
+                           const std::string& channel_pos) const {
     MutableAttrMap conv_attrs;
     std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
+    int32_t kernel_idx_offset = 2;
+    if (channel_pos == "channels_last") {
+      kernel_idx_offset = 1;
+    }
+
     for (int i = 0; i < num_spatial_dims_; i++) {
-      kernel_size_vec.at(i) = ((weight->shape())->At(i + 2));
+      kernel_size_vec.at(i) = ((weight->shape())->At(i + kernel_idx_offset));
     }
     JUST(conv_attrs.SetAttr<int32_t>("filters", (weight->shape())->At(0)));
     JUST(conv_attrs.SetAttr<std::vector<int32_t>>("padding_before", padding));
@@ -76,7 +82,7 @@ class ConvBaseFunctor {
     JUST(conv_attrs.SetAttr<std::vector<int32_t>>("strides", stride));
     JUST(conv_attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation));
     JUST(conv_attrs.SetAttr<int32_t>("groups", groups));
-    JUST(conv_attrs.SetAttr<std::string>("data_format", std::string("channels_first")));
+    JUST(conv_attrs.SetAttr<std::string>("data_format", channel_pos));
     const std::shared_ptr<one::Tensor>& conv_out =
         JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {x, weight}, conv_attrs));
     if (bias) {
