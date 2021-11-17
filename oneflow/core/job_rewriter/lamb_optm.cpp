@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job_rewriter/optimizer.h"
 #include "oneflow/core/framework/framework.h"
 namespace oneflow {
@@ -51,33 +52,37 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
                              JobBuilder* job_builder) {
   const VariableOp* var_op = dynamic_cast<const VariableOp*>(&var_op_node.op());
   CHECK_NOTNULL(var_op);
+
   OperatorConf m_var = GenerateLAMBHelperVariableOpConf(*var_op, "m", 0.f);
   OperatorConf v_var = GenerateLAMBHelperVariableOpConf(*var_op, "v", 0.f);
+
   job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {m_var, v_var});
 
-  OperatorConf beta1_t_var;
-  OperatorConf beta2_t_var;
-  const LambModelUpdateConf& lamb_conf = optimizer_conf.lamb_conf();
-  beta1_t_var = GenerateLAMBHelperVariableOpConf(*var_op, "beta1_t", lamb_conf.beta1());
-  SetScalarShapeAndNdSbpConf(var_op_node.parallel_desc(), &beta1_t_var);
-  beta2_t_var = GenerateLAMBHelperVariableOpConf(*var_op, "beta2_t", lamb_conf.beta2());
-  SetScalarShapeAndNdSbpConf(var_op_node.parallel_desc(), &beta2_t_var);
-  job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {beta1_t_var, beta2_t_var});
-
   user_op::UserOpConfWrapperBuilder lamb_update_op_builder(var_op->op_name() + "_optimizer");
+  float beta1 = 0.9;
+  float beta2 = 0.999;
+  float epsilon = 1e-8;
+  
+  const LambModelUpdateConf& lamb_conf = optimizer_conf.lamb_conf();
+  beta1 = lamb_conf.beta1();
+  beta2 = lamb_conf.beta2();
+  epsilon = lamb_conf.epsilon();
+  
+  const std::string& train_step_lbn = job_builder->job().job_conf().train_conf().train_step_lbn();
+  const std::string& learning_rate_lbn = optimizer_conf.learning_rate_lbn();
+  
   lamb_update_op_builder.OpTypeName("lamb_update")
-      .Input("m", GenVariableOutputLbn(m_var))
-      .Input("v", GenVariableOutputLbn(v_var))
-      .Input("beta1_t", GenVariableOutputLbn(beta1_t_var))
-      .Input("beta2_t", GenVariableOutputLbn(beta2_t_var))
       .Input("model", GenLogicalBlobName(var_op->BnInOp2Lbi("out")))
       .Input("model_diff", model_diff_lbn)
-      .Input("learning_rate", optimizer_conf.learning_rate_lbn())
-      .Attr<float>("beta1", lamb_conf.beta1())
-      .Attr<float>("beta2", lamb_conf.beta2())
-      .Attr<float>("epsilon", lamb_conf.epsilon())
+      .Input("m", GenVariableOutputLbn(m_var))
+      .Input("v", GenVariableOutputLbn(v_var))
+      .Input("learning_rate", learning_rate_lbn)
+      .Attr<float>("beta1", beta1)
+      .Attr<float>("beta2", beta2)
+      .Attr<float>("epsilon", epsilon)
       .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(optimizer_conf, *var_op))
       .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
+
   SetDynamicLossScaleSkipIf(ctx, &lamb_update_op_builder);
   const auto lamb_update_op = lamb_update_op_builder.Build();
   job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {lamb_update_op.op_conf()});

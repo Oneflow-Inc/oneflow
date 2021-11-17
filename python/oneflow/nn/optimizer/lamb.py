@@ -131,9 +131,9 @@ class LAMB(Optimizer):
         betas: Tuple[float, float] = (0.9, 0.999),
         eps: float = 1e-08,
         weight_decay: float = 0,
-        amsgrad: bool = False,
         adam_w_mode: bool = True,
         do_bias_correction: bool = True,
+        amsgrad: bool = False,
     ):
         if amsgrad:
             raise RuntimeError("LAMB does not support AMSGrad variant.")
@@ -189,17 +189,19 @@ class LAMB(Optimizer):
             for param_group in self.param_groups:
                 kwargs = {
                     "learning_rate_val": param_group["lr"],
-                    "bias_correction1_val": param_group["bias_correction1"],
-                    "bias_correction2_val": param_group["bias_correction2"],
+                    # "bias_correction1_val": param_group["bias_correction1"],
+                    # "bias_correction2_val": param_group["bias_correction2"],
                     "beta1": param_group["betas"][0],
                     "beta2": param_group["betas"][1],
                     "epsilon": param_group["eps"],
-                    "do_bias_correction": param_group["do_bias_correction"],
+                    # "do_bias_correction": param_group["do_bias_correction"],
                 }
                 if param_group["adam_w_mode"]:
-                    kwargs["l2"] = param_group["weight_decay"]
-                else:
                     kwargs["weight_decay"] = param_group["weight_decay"]
+                    kwargs["l2"] = 0.
+                else:
+                    kwargs["l2"] = param_group["weight_decay"]
+                    kwargs["weight_decay"] = 0.
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
@@ -228,7 +230,7 @@ class LAMB(Optimizer):
             weight_decay = param_group["weight_decay"]
             beta1 = param_group["betas"][0]
             beta2 = param_group["betas"][1]
-            do_bias_correction = param_group["do_bias_correction"]
+            # do_bias_correction = param_group["do_bias_correction"]
 
             epsilon = param_group["eps"]
 
@@ -239,7 +241,7 @@ class LAMB(Optimizer):
             optimizer_conf.mutable_lamb_conf().set_beta1(beta1)
             optimizer_conf.mutable_lamb_conf().set_beta2(beta2)
             optimizer_conf.mutable_lamb_conf().set_epsilon(epsilon)
-            optimizer_conf.mutable_lamb_conf().set_do_bias_correction(do_bias_correction)
+            # optimizer_conf.mutable_lamb_conf().set_do_bias_correction(do_bias_correction)
 
             if not adam_w_mode:
                 optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(

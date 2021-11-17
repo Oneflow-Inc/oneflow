@@ -13,8 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdint>
+#include "oneflow/core/common/just.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/infer_util.h"
+#include "oneflow/core/framework/sbp_context.h"
+#include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/user_op_registry.h"
 
@@ -252,10 +257,6 @@ Maybe<void> InferLambUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& v = ctx->InputTensorDesc("v", 0);
   JUST(CheckShapeLike(&v, &model));
   JUST(CheckLearningRateShape(ctx));
-  const user_op::TensorDesc& beta1_t = ctx->InputTensorDesc("beta1_t", 0);
-  const user_op::TensorDesc& beta2_t = ctx->InputTensorDesc("beta2_t", 0);
-  JUST(CheckScalarShape(&beta1_t));
-  JUST(CheckScalarShape(&beta2_t));
   if (ctx->has_input("scale_by_tensor", 0)) {
     const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
     JUST(CheckScalarShape(&scale_by_tensor));
@@ -269,11 +270,6 @@ Maybe<void> InferLambUpdateDataType(user_op::InferContext* ctx) {
   JUST(CheckDataTypeLike(&m, &model));
   const user_op::TensorDesc& v = ctx->InputTensorDesc("v", 0);
   JUST(CheckDataTypeLike(&v, &model));
-  const DataType data_type = model.data_type();
-  const user_op::TensorDesc& beta1_t = ctx->InputTensorDesc("beta1_t", 0);
-  const user_op::TensorDesc& beta2_t = ctx->InputTensorDesc("beta2_t", 0);
-  JUST(CheckScalarDataType(&beta1_t, data_type));
-  JUST(CheckScalarDataType(&beta2_t, data_type));
   JUST(CheckLearningRateDataType(ctx));
   if (ctx->has_input("scale_by_tensor", 0)) {
     const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
@@ -310,8 +306,6 @@ Maybe<void> LambInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArg
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0));
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "m", 0));
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "v", 0));
-  JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "beta1_t", 0));
-  JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "beta2_t", 0));
   return Maybe<void>::Ok();
 }
 
@@ -670,28 +664,39 @@ REGISTER_NO_GRAD_USER_OP("indexed_slices_adam_update")
     .SetInputArgModifyFn(AdamInputArgModifyFn)
     .SetDataTypeInferFn(InferIndexedSlicesAdamUpdateDataType);
 
+// NOTE(Lxy): 注册 lamb_update 这个 userOp，op 的实际调用在
 REGISTER_NO_GRAD_USER_OP("lamb_update")
-    .Input("m")
-    .Input("v")
-    .Input("beta1_t")
-    .Input("beta2_t")
     .Input("model")
     .Input("model_diff")
-    .Input("learning_rate")
+    .Input("m")
+    .Input("v")
+    .OptionalInput("learning_rate")
     .OptionalInput("scale_by_tensor")
     .OptionalInput("skip_if")
-    .Attr<float>("beta1")
-    .Attr<float>("beta2")
-    .Attr<float>("epsilon")
+    .Attr<float>("learning_rate_val", 0.0)
+    .Attr<float>("beta1", 0.9)
+    .Attr<float>("beta2", 0.999)
+    .Attr<float>("epsilon", 1e-8)
     .Attr<double>("scale", 1.0)
     .Attr<float>("l1", 0.0)
     .Attr<float>("l2", 0.0)
     .Attr<float>("weight_decay", 0.0)
     .SetTensorDescInferFn(InferLambUpdateTensorDesc)
-    // every bn has sbp broadcast signature
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
+      FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
+        ctx->NewBuilder()
+            .Broadcast(ctx->inputs())
+            .Split(user_op::OpArg("model", 0), axis)
+            .Split(user_op::OpArg("model_diff", 0), axis)
+            .Split(user_op::OpArg("m", 0), axis)
+            .Split(user_op::OpArg("v", 0), axis)
+            .Build();
+      }
+      return Maybe<void>::Ok();
+    })
     .SetInputArgModifyFn(LambInputArgModifyFn)
-    .SetDataTypeInferFn(InferLambUpdateDataType)
-    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
+    .SetDataTypeInferFn(InferLambUpdateDataType);
 
 REGISTER_NO_GRAD_USER_OP("adam_bias_correction_factor")
     .Input("train_step")

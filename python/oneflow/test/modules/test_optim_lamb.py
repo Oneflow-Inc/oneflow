@@ -99,14 +99,20 @@ def compare_with_numpy_lamb(
         vt = np.zeros_like(x)
         beta1 = betas[0]
         beta2 = betas[1]
+        if adam_w_mode:
+            l2 = 0
+            wd = weight_decay
+        else:
+            l2 = weight_decay
+            wd = 0
 
         def np_train_one_iter(step, grad):
             if clip_grad_max_norm != -1:
-                total_norm, grad = clip_grad_norm_np(
+                _, grad = clip_grad_norm_np(
                     grad, clip_grad_max_norm, clip_grad_norm_type
                 )
-            if adam_w_mode:
-                grad = grad + weight_decay * x
+
+            grad = grad + l2 * x
 
             bias_correction1 = 1.0
             bias_correction2 = 1.0
@@ -121,8 +127,7 @@ def compare_with_numpy_lamb(
             denom = np.sqrt(v) / np.sqrt(bias_correction2) + eps
 
             adam_diff = m / bias_correction1 / denom
-            if not adam_w_mode:
-                adam_diff = adam_diff + weight_decay * x
+
             w_norm = np.linalg.norm(x, ord=2)
             g_norm = np.linalg.norm(adam_diff, ord=2)
             if w_norm > 0 and g_norm > 0:
@@ -130,7 +135,7 @@ def compare_with_numpy_lamb(
             else:
                 trust_ratio = 1.0
 
-            param = x - learning_rate * trust_ratio * adam_diff
+            param = x - learning_rate * trust_ratio * (adam_diff + wd * x)
             return (param, m, v)
 
         for i in range(train_iters):
@@ -157,9 +162,10 @@ class TestLamb(flow.unittest.TestCase):
         arg_dict["do_bias_correction"] = [False]
         arg_dict["amsgrad"] = [False]
         arg_dict["adam_w_mode"] = [True, False]
-        # NOTE(xyliao): max_norm == -1 means no clip grad
-        arg_dict["clip_grad_max_norm"] = [-1, 0, 0.5, 1.0]
+        # NOTE(Lxy): max_norm = -1 means no clip grad
+        arg_dict["clip_grad_max_norm"] = [-1, 0.0, 0.5, 1.0]
         arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
+        # TODO(Lxy): add save and load test
 
         for arg in GenArgList(arg_dict):
             compare_with_numpy_lamb(test_case, *arg)
