@@ -99,9 +99,9 @@ class FusedScaleMaskSoftmaxKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUCED_SCALE_MASK_SOFTMAX_GPU_KERNEL(dtype)          \
-  REGISTER_USER_KERNEL("fused_scale_mask_softmax")                   \
-      .SetCreateFn<FusedScaleMaskSoftmaxKernel<dtype>>()             \
+#define REGISTER_FUCED_SCALE_MASK_SOFTMAX_GPU_KERNEL(dtype)           \
+  REGISTER_USER_KERNEL("fused_scale_mask_softmax")                    \
+      .SetCreateFn<FusedScaleMaskSoftmaxKernel<dtype>>()              \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
@@ -139,9 +139,9 @@ class FusedScaleMaskSoftmaxGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUCED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(dtype)         \
-  REGISTER_USER_KERNEL("fused_scale_mask_softmax_grad")              \
-      .SetCreateFn<FusedScaleMaskSoftmaxGradKernel<dtype>>()         \
+#define REGISTER_FUCED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(dtype)          \
+  REGISTER_USER_KERNEL("fused_scale_mask_softmax_grad")               \
+      .SetCreateFn<FusedScaleMaskSoftmaxGradKernel<dtype>>()          \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
