@@ -376,7 +376,9 @@ def print_note_fake_program():
             f"\033[32m-----------------------------------------------------------\033[0m"
         )
     if vis_parameters:
-        print(f"\033[32m-------------------nn.Module Parameters---------------------\033[0m")
+        print(
+            f"\033[32m-------------------nn.Module Parameters---------------------\033[0m"
+        )
         for name, param in vis_parameters.items():
             print(f"\033[32m{name}: {param}\033[0m")
 
