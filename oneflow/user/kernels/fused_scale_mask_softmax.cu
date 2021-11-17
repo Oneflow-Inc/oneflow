@@ -102,7 +102,7 @@ class FusedScaleMaskSoftmaxKernel final : public user_op::OpKernel {
 #define REGISTER_FUCED_SCALE_MASK_SOFTMAX_GPU_KERNEL(dtype)          \
   REGISTER_USER_KERNEL("fused_scale_mask_softmax")                   \
       .SetCreateFn<FusedScaleMaskSoftmaxKernel<dtype>>()             \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU) \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUCED_SCALE_MASK_SOFTMAX_GPU_KERNEL(half)
@@ -142,7 +142,7 @@ class FusedScaleMaskSoftmaxGradKernel final : public user_op::OpKernel {
 #define REGISTER_FUCED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(dtype)         \
   REGISTER_USER_KERNEL("fused_scale_mask_softmax_grad")              \
       .SetCreateFn<FusedScaleMaskSoftmaxGradKernel<dtype>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU) \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUCED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(half)

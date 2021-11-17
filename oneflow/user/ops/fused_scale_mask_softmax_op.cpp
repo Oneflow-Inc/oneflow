@@ -40,7 +40,7 @@ REGISTER_USER_OP("fused_scale_mask_softmax")
       *ctx->OutputDType("y", 0) = x_desc.data_type();
       return Maybe<void>::Ok();
     })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+    .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* mask_modifier = GetInputArgModifierFn("mask", 0);
       CHECK_OR_RETURN(mask_modifier != nullptr);
@@ -103,7 +103,7 @@ REGISTER_USER_OP("fused_scale_mask_softmax_grad")
 
 REGISTER_USER_OP_GRAD("fused_scale_mask_softmax")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op = builder.Op("fused_scale_mask_softmax_grad")
