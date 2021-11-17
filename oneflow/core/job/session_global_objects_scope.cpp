@@ -41,6 +41,7 @@ limitations under the License.
 #include "oneflow/core/thread/thread_manager.h"
 
 #ifdef WITH_CUDA
+#include "oneflow/core/job/embedding.h"
 #include "oneflow/core/device/cuda_device_descriptor.h"
 #endif  // WITH_CUDA
 
@@ -135,6 +136,12 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Global<summary::EventsWriter>::New();
     Global<boxing::collective::CollectiveBoxingExecutor>::New();
     Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
+#ifdef WITH_CUDA
+    if (ParseBooleanFromEnv("ONEFLOW_TEST_EMBEDDING", false)) {
+      Global<EmbeddingMgr>::New();
+      Global<EmbeddingMgr>::Get()->AddEmbeddingTable("embedding1", "path1");
+    }
+#endif  // WITH_CUDA
   }
 
   return Maybe<void>::Ok();
@@ -151,6 +158,9 @@ Maybe<void> SessionGlobalObjectsScope::EagerInit(const ConfigProto& config_proto
 
 SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   {
+#ifdef WITH_CUDA
+    if (ParseBooleanFromEnv("ONEFLOW_TEST_EMBEDDING", false)) { Global<EmbeddingMgr>::Delete(); }
+#endif  // WITH_CUDA
     // NOTE(chengcheng): Delete Global Runtime objects.
     Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
     Global<boxing::collective::CollectiveBoxingExecutor>::Delete();

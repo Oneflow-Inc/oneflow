@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,28 +12,16 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-from oneflow.compatible.single_client.ops.optimizer import (
-    LAMB,
-    LARS,
-    SGD,
-    SGDW,
-    Adam,
-    AdamW,
-    CombinedOptimizer,
-    CosineScheduler,
-    CustomScheduler,
-    ExponentialScheduler,
-    InverseTimeScheduler,
-    LazyAdam,
-    LinearCosineScheduler,
-    NaturalExpScheduler,
-    PiecewiseConstantScheduler,
-    PiecewiseScalingScheduler,
-    PolynomialSchduler,
-    PolynomialScheduler,
-    DlrmPolynomialScheduler,
-    RMSProp,
-)
+*/
+#include "oneflow/core/embedding/embedding.cuh"
+#include "oneflow/core/embedding/hash_function.cuh"
 
-from . import grad_clipping, loss_scale, warmup
+namespace oneflow {
+
+namespace embedding {
+
+void test() { Embedding<uint64_t, float, XXH64, int32_t> embedding(30, 32, "tables", 12, 65536); }
+
+}  // namespace embedding
+
+}  // namespace oneflow

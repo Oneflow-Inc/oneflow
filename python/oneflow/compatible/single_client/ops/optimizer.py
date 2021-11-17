@@ -503,6 +503,42 @@ class PiecewiseScalingScheduler(LrScheduler):
         return learning_rate_decay_conf
 
 
+class DlrmPolynomialScheduler(LrScheduler):
+    def __init__(
+        self,
+        base_lr: float,
+        decay_start: int,
+        decay_steps: int,
+        decay_power: float,
+        end_lr: float = 0.0001,
+        warmup: Optional[WarmupConf] = None,
+    ):
+        super().__init__(base_lr=base_lr, warmup=warmup)
+        self.decay_start = decay_start
+        self.decay_steps = decay_steps
+        self.decay_power = decay_power
+        self.end_lr = end_lr
+
+    @property
+    def learning_rate_decay_conf(
+        self,
+    ) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
+        learning_rate_decay_conf = (
+            learning_rate_schedule_conf_cfg.LearningRateDecayConf()
+        )
+        learning_rate_decay_conf.mutable_dlrm_polynomial_conf().set_decay_start(
+            self.decay_start
+        )
+        learning_rate_decay_conf.mutable_dlrm_polynomial_conf().set_decay_steps(
+            self.decay_steps
+        )
+        learning_rate_decay_conf.mutable_dlrm_polynomial_conf().set_decay_power(
+            self.decay_power
+        )
+        learning_rate_decay_conf.mutable_dlrm_polynomial_conf().set_end_lr(self.end_lr)
+        return learning_rate_decay_conf
+
+
 class PolynomialScheduler(LrScheduler):
     """This operator creates a polynomial decayed learning rate scheduler.
 

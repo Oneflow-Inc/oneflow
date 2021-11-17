@@ -137,6 +137,25 @@ double PolynomialDecayedLearningRate(const PolynomialDecayConf& conf, double lr,
          + conf.end_learning_rate();
 }
 
+double DlrmPolynomialDecayedLearningRate(const DlrmPolynomialDecayConf& conf, double lr,
+                                         int64_t cur_batch_num) {
+  CHECK_GT(conf.decay_steps(), 0);
+  double cur_batch = static_cast<double>(cur_batch_num);
+  double decay_start = static_cast<double>(conf.decay_start());
+  double decay_steps = static_cast<double>(conf.decay_steps());
+  double end_lr = static_cast<double>(conf.end_lr());
+  if (cur_batch <= decay_start) {
+    return lr;
+  } else if (cur_batch <= decay_start + decay_steps) {
+    double lr_factor =
+        std::pow(((decay_start + decay_steps - cur_batch) / decay_steps), conf.decay_power());
+    LOG(ERROR) << cur_batch << " lr: " << lr * lr_factor;
+    return lr * lr_factor;
+  } else {
+    return end_lr;
+  }
+}
+
 double CosineDecayedLearningRate(const CosineDecayConf& conf, double lr, int64_t cur_batch_num) {
   CHECK_GT(conf.decay_batches(), 0);
   const double PI = std::atan(1.0) * 4.0;
@@ -185,6 +204,8 @@ double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int6
     return PiecewiseConstantLearningRate(conf.piecewise_constant_conf(), lr, cur_batch_num);
   } else if (conf.has_polynomial_conf()) {
     return PolynomialDecayedLearningRate(conf.polynomial_conf(), lr, cur_batch_num);
+  } else if (conf.has_dlrm_polynomial_conf()) {
+    return DlrmPolynomialDecayedLearningRate(conf.dlrm_polynomial_conf(), lr, cur_batch_num);
   } else if (conf.has_cosine_conf()) {
     return CosineDecayedLearningRate(conf.cosine_conf(), lr, cur_batch_num);
   } else if (conf.has_linear_cosine_conf()) {

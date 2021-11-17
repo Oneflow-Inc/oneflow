@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job_rewriter/optimizer.h"
 #include "oneflow/core/job_rewriter/dynamic_loss_scale_job_pass_state.h"
+//#include "oneflow/core/job_rewriter/adam_bias_correction_learning_rate_state.h"
 #include <re2/re2.h>
 
 namespace oneflow {
@@ -31,6 +32,56 @@ void AddOptimizerOp(JobPassCtx* ctx, const OpNode& var_op_node, const std::strin
   const auto optimizer_case = optimizer_conf.normal_mdupdt_case();
   auto* obj = NewObj<int32_t, GenerateOptimizerOpConfWrapperStruct>(optimizer_case);
   obj->Call(ctx, var_op_node, model_diff_lbn, optimizer_conf, job_builder);
+}
+
+void AddEmbeddingUpdateOp(JobPassCtx* ctx, const OpNode& embedding_lookup_op_node,
+                          const std::string& model_diff_lbn, const OptimizerConf& optimizer_conf,
+                          JobBuilder* job_builder) {
+  user_op::UserOpConfWrapper embedding_lookup_op(embedding_lookup_op_node.op().op_conf());
+  if (optimizer_conf.has_naive_conf()) {
+    auto AddIdentityOp = [&](const std::string& in_lbn, const std::string& op_name,
+                             int64_t scope_symbol_id) -> std::string {
+      user_op::UserOpConfWrapper identity_op = user_op::UserOpConfWrapperBuilder(op_name)
+                                                   .Op("identity")
+                                                   .Input("in", in_lbn)
+                                                   .Output("out")
+                                                   .ScopeSymbolId(scope_symbol_id)
+                                                   .Build();
+      job_builder->AddOps(embedding_lookup_op_node.parallel_desc().parallel_conf(),
+                          {identity_op.op_conf()});
+      return identity_op.output("out", 0);
+    };
+    const std::string& update_op_name = embedding_lookup_op.op_name() + "_update";
+    const int64_t scope_symbol_id = embedding_lookup_op.op_conf().scope_symbol_id();
+    const std::string& num_unique_indices_lbn =
+        AddIdentityOp(embedding_lookup_op.input("num_unique_indices", 0),
+                      update_op_name + "_identity_num_unique_indices", scope_symbol_id);
+    const std::string& unique_indices_lbn =
+        AddIdentityOp(embedding_lookup_op.input("unique_indices", 0),
+                      update_op_name + "_identity_unique_indices", scope_symbol_id);
+    const std::string& reverse_idx_lbn =
+        AddIdentityOp(embedding_lookup_op.input("reverse_idx", 0),
+                      update_op_name + "_identity_reverse_idx", scope_symbol_id);
+
+    user_op::UserOpConfWrapperBuilder sgd_update_op_builder(update_op_name);
+    sgd_update_op_builder.OpTypeName("sgd_embedding_update")
+        .Input("embedding_diff", model_diff_lbn)
+        .Input("num_unique_indices", num_unique_indices_lbn)
+        .Input("unique_indices", unique_indices_lbn)
+        .Input("reverse_idx", reverse_idx_lbn)
+        .Input("unique_values", embedding_lookup_op.output("unique_values", 0))
+        .Input("learning_rate", optimizer_conf.learning_rate_lbn())
+        .Attr<std::string>("name", embedding_lookup_op.attr<std::string>("name"))
+        .Attr<int64_t>("embedding_size", embedding_lookup_op.attr<int64_t>("embedding_size"))
+        .Attr<float>("weight_decay", 0)  // TODO(guoran):weight_decay
+        .ScopeSymbolId(embedding_lookup_op.op_conf().scope_symbol_id());
+    SetDynamicLossScaleSkipIf(ctx, &sgd_update_op_builder);
+    user_op::UserOpConfWrapper sgd_embedding_update_op = sgd_update_op_builder.Build();
+    job_builder->AddOps(embedding_lookup_op_node.parallel_desc().parallel_conf(),
+                        {sgd_embedding_update_op.op_conf()});
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 float GetOptimizerWeightDecayRate(const OptimizerConf& optimizer_conf, const VariableOp& op) {

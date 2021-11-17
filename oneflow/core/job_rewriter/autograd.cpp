@@ -730,6 +730,9 @@ void GetVariableOpNodesAndDescendants(const OpGraph& op_graph, HashSet<OpNode*>*
   op_graph.ForEachNode([&](OpNode* op_node) {
     const auto& op_conf = op_node->op().op_conf();
     if (op_conf.has_variable_conf()) { starts.push_back(op_node); }
+    if (op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == "embedding_lookup") {
+      starts.push_back(op_node);
+    }
   });
   auto ForEachNextNode = [&](OpNode* op_node, const std::function<void(OpNode*)>& Handler) {
     for (OpEdge* edge : op_node->out_edges()) {

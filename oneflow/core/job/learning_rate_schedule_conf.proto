@@ -31,6 +31,13 @@ message PolynomialDecayConf {
   optional bool cycle = 4 [default = false];
 }
 
+message DlrmPolynomialDecayConf {
+  required int64 decay_start = 1;
+  required int64 decay_steps = 2;
+  optional double end_lr = 3 [default = 0.0001];
+  optional double decay_power = 4 [default = 1.0];
+}
+
 message CosineDecayConf {
   required int64 decay_batches = 1;
   optional double alpha = 2 [default = 0.0];
@@ -58,6 +65,7 @@ message LearningRateDecayConf {
     CosineDecayConf cosine_conf = 2005;
     LinearCosineDecayConf linear_cosine_conf = 2006;
     PiecewiseScalingConf piecewise_scaling_conf = 2007;
+    DlrmPolynomialDecayConf dlrm_polynomial_conf = 2008;
   }
 }
 
