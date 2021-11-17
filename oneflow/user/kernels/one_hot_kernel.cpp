@@ -41,10 +41,10 @@ class CpuOneHotKernel final : public user_op::OpKernel {
     const K* indices_dptr = indices->dptr<K>();
     T* out_dptr = out->mut_dptr<T>();
     std::unique_ptr<ep::primitive::Fill> fill =
-        ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream_ctx()->device_type(),
+        ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream()->device_type(),
                                                                 out->data_type());
     CHECK(fill);
-    fill->Launch(ctx->stream_ctx(), out->mut_dptr(), off_value, out->shape().elem_cnt());
+    fill->Launch(ctx->stream(), out->mut_dptr(), off_value, out->shape().elem_cnt());
     FOR_RANGE(int64_t, i, 0, num_indices) {
       const int64_t idx = indices_dptr[i];
       CHECK_GE(idx, 0);

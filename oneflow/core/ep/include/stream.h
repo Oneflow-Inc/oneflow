@@ -13,16 +13,32 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/stream_index_getter_registry.h"
-#include "oneflow/core/graph/compute_task_node.h"
-#include "oneflow/core/graph/stream_index_getter_registry_manager.h"
+#ifndef ONEFLOW_CORE_EP_STREAM_H_
+#define ONEFLOW_CORE_EP_STREAM_H_
+
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/device_type.h"
 
 namespace oneflow {
 
-StreamIndexGetterRegistry& StreamIndexGetterRegistry::SetFn(StreamIndexGetterFn func) {
-  StreamIndexGetterRegistryManager::Get().StreamIndexGetterFuncs()[dev_task_type_] = func;
-  return *this;
-}
+namespace ep {
+
+class Stream {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(Stream);
+  Stream() = default;
+  virtual ~Stream() = default;
+
+  virtual DeviceType device_type() const = 0;
+
+  template<typename T>
+  T* As() {
+    return static_cast<T*>(this);
+  }
+};
+
+}  // namespace ep
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_EP_STREAM_H_

@@ -76,7 +76,7 @@ class ConcatKernel final : public user_op::OpKernel {
         DimVector src_shape = {rows, in_cols};
         DimVector src_pos_vec = {0, 0};
         DimVector extent_vec = {rows, in_cols};
-        primitive->Launch(ctx->stream_ctx(), out_tensor->data_type(), 2, out_tensor->mut_dptr(),
+        primitive->Launch(ctx->stream(), out_tensor->data_type(), 2, out_tensor->mut_dptr(),
                           dst_shape.data(), dst_pos_vec.data(), in_tensor->dptr(), src_shape.data(),
                           src_pos_vec.data(), extent_vec.data());
       }

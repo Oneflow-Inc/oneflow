@@ -26,10 +26,9 @@ namespace oneflow {
 
 namespace {
 
-std::unique_ptr<ep::primitive::Fill> NewFillPrimitive(StreamContext* stream_ctx,
-                                                      DataType data_type) {
+std::unique_ptr<ep::primitive::Fill> NewFillPrimitive(ep::Stream* stream, DataType data_type) {
   std::unique_ptr<ep::primitive::Fill> fill =
-      ep::primitive::NewPrimitive<ep::primitive::FillFactory>(stream_ctx->device_type(), data_type);
+      ep::primitive::NewPrimitive<ep::primitive::FillFactory>(stream->device_type(), data_type);
   CHECK(fill);
   return fill;
 }
@@ -436,9 +435,9 @@ class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
           GetCudaAlignedSize(mean->shape().elem_cnt() * GetSizeOfDataType(mean->data_type()));
       char* cudnn_bn_scale_ones_dptr = tmp_buffer->mut_dptr<char>();
       char* cudnn_bn_bias_zeros_dptr = cudnn_bn_scale_ones_dptr + aligned_buffer_size;
-      auto fill = NewFillPrimitive(ctx->stream_ctx(), mean->data_type());
-      fill->Launch(ctx->stream_ctx(), cudnn_bn_scale_ones_dptr, 1, mean->shape().elem_cnt());
-      fill->Launch(ctx->stream_ctx(), cudnn_bn_bias_zeros_dptr, 0, mean->shape().elem_cnt());
+      auto fill = NewFillPrimitive(ctx->stream(), mean->data_type());
+      fill->Launch(ctx->stream(), cudnn_bn_scale_ones_dptr, 1, mean->shape().elem_cnt());
+      fill->Launch(ctx->stream(), cudnn_bn_bias_zeros_dptr, 0, mean->shape().elem_cnt());
       OF_CUDNN_CHECK(cudnnBatchNormalizationForwardTraining(
           ctx->device_ctx()->cudnn_handle(), bn_ctx.mode(), CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(),
           bn_ctx.data_tensor_desc(), x->dptr<T>(), bn_ctx.data_tensor_desc(),
@@ -492,8 +491,8 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
     char* cudnn_bn_scale_ones_dptr = tmp_buffer->mut_dptr<char>();
     char* cudnn_bn_scale_diff_buf_dptr = cudnn_bn_scale_ones_dptr + aligned_buffer_size;
     char* cudnn_bn_bias_diff_buf_dptr = cudnn_bn_scale_ones_dptr + aligned_buffer_size;
-    auto fill = NewFillPrimitive(ctx->stream_ctx(), mean->data_type());
-    fill->Launch(ctx->stream_ctx(), cudnn_bn_scale_ones_dptr, 1, mean->shape().elem_cnt());
+    auto fill = NewFillPrimitive(ctx->stream(), mean->data_type());
+    fill->Launch(ctx->stream(), cudnn_bn_scale_ones_dptr, 1, mean->shape().elem_cnt());
     const void* sp_alpha = CudnnSPOnePtr<T>();
     const void* sp_beta = nullptr;
     if (ctx->has_input("_add_to_output", 0)) {
@@ -602,7 +601,7 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
         CHECK_EQ(m, beta_diff->shape().elem_cnt());
         CHECK_EQ(dy->shape().elem_cnt() % m, 0);
         const int64_t n = dy->shape().elem_cnt() / m;
-        NdUtil::ReduceSum(ctx->device_ctx(), Var({1, m}, beta_diff->mut_dptr<T>()),
+        NdUtil::ReduceSum(ctx->stream(), Var({1, m}, beta_diff->mut_dptr<T>()),
                           Val({n, m}, dy->dptr<T>()), Var({n, m}, reduce_buf->mut_dptr<T>()));
       }
       if (has_gamma_diff) {
@@ -611,9 +610,9 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
         CHECK_EQ(m, gamma_diff->shape().elem_cnt());
         CHECK_EQ(dy->shape().elem_cnt() % m, 0);
         const int64_t n = dy->shape().elem_cnt() / m;
-        NdUtil::BroadcastMul(ctx->device_ctx(), Var({n, m}, reduce_buf->mut_dptr<T>()),
+        NdUtil::BroadcastMul(ctx->stream(), Var({n, m}, reduce_buf->mut_dptr<T>()),
                              Val({n, m}, normalized->dptr<T>()), Val({n, m}, dy->dptr<T>()));
-        NdUtil::ReduceSum(ctx->device_ctx(), Var({1, m}, gamma_diff->mut_dptr<T>()),
+        NdUtil::ReduceSum(ctx->stream(), Var({1, m}, gamma_diff->mut_dptr<T>()),
                           Val({n, m}, reduce_buf->dptr<T>()),
                           Var({n, m}, reduce_buf->mut_dptr<T>()));
       }
@@ -622,7 +621,7 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
           CHECK_EQ(m, gamma->shape().elem_cnt());
           CHECK_EQ(dy->shape().elem_cnt() % m, 0);
           const int64_t n = dy->shape().elem_cnt() / m;
-          NdUtil::BroadcastMul(ctx->device_ctx(), Var({n, m}, normalized_diff->mut_dptr<T>()),
+          NdUtil::BroadcastMul(ctx->stream(), Var({n, m}, normalized_diff->mut_dptr<T>()),
                                Val({n, m}, dy->dptr<T>()), Val({1, m}, gamma->dptr<T>()));
         } else {
           Memcpy<DeviceType::kGPU>(ctx->device_ctx(), normalized_diff->mut_dptr<void>(),
@@ -699,9 +698,9 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
                 reinterpret_cast<half*>(tmp_gamma_diff), reinterpret_cast<half*>(tmp_beta_diff),
                 normalized_diff->mut_dptr<half>());
       }
-      NdUtil::ReduceSum(ctx->device_ctx(), Var({1, m}, gamma_diff->mut_dptr<float16>()),
+      NdUtil::ReduceSum(ctx->stream(), Var({1, m}, gamma_diff->mut_dptr<float16>()),
                         Val({num_blocks, m}, tmp_gamma_diff), Var({num_blocks, m}, tmp_reduce_buf));
-      NdUtil::ReduceSum(ctx->device_ctx(), Var({1, m}, beta_diff->mut_dptr<float16>()),
+      NdUtil::ReduceSum(ctx->stream(), Var({1, m}, beta_diff->mut_dptr<float16>()),
                         Val({num_blocks, m}, tmp_beta_diff), Var({num_blocks, m}, tmp_reduce_buf));
     } else {
       if (has_beta_diff) {
@@ -709,7 +708,7 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
         CHECK_EQ(m, beta_diff->shape().elem_cnt());
         CHECK_EQ(dy->shape().elem_cnt() % m, 0);
         const int64_t n = dy->shape().elem_cnt() / m;
-        NdUtil::ReduceSum(ctx->device_ctx(), Var({1, m}, beta_diff->mut_dptr<float16>()),
+        NdUtil::ReduceSum(ctx->stream(), Var({1, m}, beta_diff->mut_dptr<float16>()),
                           Val({n, m}, dy->dptr<float16>()),
                           Var({n, m}, reduce_buf->mut_dptr<float16>()));
       }
@@ -719,10 +718,10 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
         CHECK_EQ(m, gamma_diff->shape().elem_cnt());
         CHECK_EQ(dy->shape().elem_cnt() % m, 0);
         const int64_t n = dy->shape().elem_cnt() / m;
-        NdUtil::BroadcastMul(ctx->device_ctx(), Var({n, m}, reduce_buf->mut_dptr<float16>()),
+        NdUtil::BroadcastMul(ctx->stream(), Var({n, m}, reduce_buf->mut_dptr<float16>()),
                              Val({n, m}, normalized->dptr<float16>()),
                              Val({n, m}, dy->dptr<float16>()));
-        NdUtil::ReduceSum(ctx->device_ctx(), Var({1, m}, gamma_diff->mut_dptr<float16>()),
+        NdUtil::ReduceSum(ctx->stream(), Var({1, m}, gamma_diff->mut_dptr<float16>()),
                           Val({n, m}, reduce_buf->dptr<float16>()),
                           Var({n, m}, reduce_buf->mut_dptr<float16>()));
       }
@@ -731,7 +730,7 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
           CHECK_EQ(m, gamma->shape().elem_cnt());
           CHECK_EQ(dy->shape().elem_cnt() % m, 0);
           const int64_t n = dy->shape().elem_cnt() / m;
-          NdUtil::BroadcastMul(ctx->device_ctx(), Var({n, m}, normalized_diff->mut_dptr<float16>()),
+          NdUtil::BroadcastMul(ctx->stream(), Var({n, m}, normalized_diff->mut_dptr<float16>()),
                                Val({n, m}, dy->dptr<float16>()),
                                Val({1, m}, gamma->dptr<float16>()));
         } else {

@@ -13,11 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/graph/copy_task_node.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 
@@ -110,6 +109,8 @@ class SspVariableProxyCompTaskNode final : public CompTaskNode {
 
   void InferProducedDataRegstTimeShape() override { NaiveInferProducedDataRegstTimeShape(); }
 };
+
+REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kSspVariableProxy);
 
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("ssp_variable_proxy", SspVariableProxyCompTaskNode);
 

@@ -458,6 +458,14 @@ def _maximum(self, y):
     return flow.maximum(self, y)
 
 
+def _negative(self):
+    return flow._C.negative(self)
+
+
+def _neg(self):
+    return flow._C.negative(self)
+
+
 def _rsqrt(self):
     return flow.rsqrt(self)
 
@@ -480,6 +488,10 @@ def _std(self, dim=None, unbiased=True, keepdim=False):
 
 def _squeeze(self, dim=None):
     return flow._C.squeeze(self, dim=dim)
+
+
+def _unfold(self, dimension, size, step):
+    return flow._C.unfold_tensor(self, dimension=dimension, size=size, step=step)
 
 
 def _narrow(self, dimension, start, length):
@@ -754,6 +766,8 @@ def RegisterMethods():
     Tensor.ge = _ge
     Tensor.gelu = _gelu
     Tensor.mish = _mish
+    Tensor.negative = _negative
+    Tensor.neg = _neg
     Tensor.sigmoid = _sigmoid
     Tensor.tanh = _tanh
     Tensor.silu = _silu
@@ -809,6 +823,7 @@ def RegisterMethods():
     Tensor.logical_not = _not
     Tensor.roll = _roll
     Tensor.squeeze = _squeeze
+    Tensor.unfold = _unfold
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
     Tensor.permute = _permute
