@@ -78,12 +78,12 @@ class DimScatterKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, device, dtype, itype, opt)            \
-  REGISTER_USER_KERNEL(op_type)                                                         \
-      .SetCreateFn<DimScatterKernel<device, dtype, itype, opt>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
-                       & (user_op::HobDataType("like", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("index", 0) == GetDataType<itype>::value));
+#define REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, device, dtype, itype, opt)             \
+  REGISTER_USER_KERNEL(op_type)                                                          \
+      .SetCreateFn<DimScatterKernel<device, dtype, itype, opt>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                              \
+                       && (user_op::HobDataType("like", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("index", 0) == GetDataType<itype>::value));
 
 #define REGISTER_DIM_SCATTER_LIKE_CPU_KERNELS(op_type, opt)                           \
   REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCPU, float, int32_t, opt);   \
@@ -101,13 +101,13 @@ class DimScatterKernel final : public user_op::OpKernel {
   REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kGPU, double, int64_t, opt);  \
   REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kGPU, int32_t, int64_t, opt);
 
-#define REGISTER_DIM_SCATTER_KERNEL(op_type, device, dtype_pair, itype_pair, opt)            \
-  REGISTER_USER_KERNEL(#op_type)                                                             \
-      .SetCreateFn<DimScatterKernel<device, OF_PP_PAIR_FIRST(dtype_pair),                    \
-                                    OF_PP_PAIR_FIRST(itype_pair), opt>>()                    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                  \
-                       & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair)) \
-                       & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
+#define REGISTER_DIM_SCATTER_KERNEL(op_type, device, dtype_pair, itype_pair, opt)             \
+  REGISTER_USER_KERNEL(#op_type)                                                              \
+      .SetCreateFn<DimScatterKernel<device, OF_PP_PAIR_FIRST(dtype_pair),                     \
+                                    OF_PP_PAIR_FIRST(itype_pair), opt>>()                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
+                       && (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair)) \
+                       && (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
 
 #define REGISTER_DIM_SCATTER_CPU_KERNELS(dtype_pair, itype_pair)                            \
   REGISTER_DIM_SCATTER_KERNEL(dim_scatter_add, DeviceType::kCPU, dtype_pair, itype_pair,    \
