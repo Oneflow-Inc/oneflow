@@ -2133,8 +2133,8 @@ class ToFunctor {
           << "for consistent tensor, but got " << device_.value_or("");
       return JUST(ConsistentTensorTo(input, device_type, dtype, copy));
     } else {
-      std::string device_name;
-      int device_id;
+      std::string device_name = "";
+      int device_id = 0;
       if (device_.has_value()) {
         JUST(ParsingDeviceTag(device_.value_or(""), &device_name, &device_id));
         if (device_id == -1) { device_id = GlobalProcessCtx::LocalRank(); }
