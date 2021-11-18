@@ -30,8 +30,8 @@ std::shared_ptr<ngraph::Node> OpenvinoOpContext::Output(const std::string& name)
   return Output(ArgumentFromKey(name));
 }
 
-std::shared_ptr<ngraph::Node> OpenvinoOpContext::Weigth(const std::string& name) {
-  return Weigth(ArgumentFromKey(name));
+std::shared_ptr<ngraph::Node> OpenvinoOpContext::Weight(const std::string& name) {
+  return Weight(ArgumentFromKey(name));
 }
 
 std::shared_ptr<ngraph::Node> OpenvinoOpContext::Input(const Argument& arg) {
@@ -50,7 +50,7 @@ std::shared_ptr<ngraph::Node> OpenvinoOpContext::Output(const Argument& arg) {
   return outputs_.at(arg);
 }
 
-std::shared_ptr<ngraph::Node> OpenvinoOpContext::Weigth(const Argument& arg) {
+std::shared_ptr<ngraph::Node> OpenvinoOpContext::Weight(const Argument& arg) {
   if (param_.inputs.count(arg) > 0) { return param_.inputs.at(arg); }
   auto it = entry_params_map_.find(arg);
   CHECK(it != entry_params_map_.end());

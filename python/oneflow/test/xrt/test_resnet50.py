@@ -20,9 +20,7 @@ from random import choice
 
 import numpy as np
 
-from oneflow.test_utils.automated_test_util import *
 from oneflow.test.modules.resnet50_model import resnet50
-
 import oneflow as flow
 import oneflow.unittest
 
@@ -68,21 +66,21 @@ class TestXrtResNet50(flow.unittest.TestCase):
         out = resnet50_g(x_cpu)
 
         resnet50_g_openvino = get_cpu_graph()
-        resnet50_g_openvino.config.set_xrt_use_openvino(True)
+        resnet50_g_openvino.config.enable_xrt_use_openvino(True)
         out_openvino = resnet50_g_openvino(x_cpu)
         test_case.assertTrue(
             np.allclose(out.numpy(), out_openvino.numpy(), rtol=1e-3, atol=1e-4)
         )
 
         resnet50_g_tensorrt = get_cuda_graph()
-        resnet50_g_tensorrt.config.set_xrt_use_tensorrt(True)
+        resnet50_g_tensorrt.config.enable_xrt_use_tensorrt(True)
         out_tensorrt = resnet50_g_tensorrt(x_cuda)
         test_case.assertTrue(
             np.allclose(out.numpy(), out_tensorrt.numpy(), rtol=1e-3, atol=1e-4)
         )
 
         resnet50_g_xla = get_cuda_graph()
-        resnet50_g_xla.config.set_xrt_use_xla_jit(True)
+        resnet50_g_xla.config.enable_xrt_use_xla_jit(True)
         out_xla = resnet50_g_xla(x_cuda)
         test_case.assertTrue(
             np.allclose(out.numpy(), out_xla.numpy(), rtol=1e-3, atol=1e-4)

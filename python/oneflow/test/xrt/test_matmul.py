@@ -20,8 +20,6 @@ from random import choice
 
 import numpy as np
 
-from oneflow.test_utils.automated_test_util import *
-
 import oneflow as flow
 import oneflow.unittest
 
@@ -51,21 +49,21 @@ class TestXrtReLU(flow.unittest.TestCase):
         out = matmul_g(x_cpu, y_cpu)
 
         matmul_g_openvino = get_graph()
-        matmul_g_openvino.config.set_xrt_use_openvino(True)
+        matmul_g_openvino.config.enable_xrt_use_openvino(True)
         out_openvino = matmul_g_openvino(x_cpu, y_cpu)
         test_case.assertTrue(
             np.allclose(out.numpy(), out_openvino.numpy(), rtol=1e-3, atol=1e-4)
         )
 
         matmul_g_tensorrt = get_graph()
-        matmul_g_tensorrt.config.set_xrt_use_tensorrt(True)
+        matmul_g_tensorrt.config.enable_xrt_use_tensorrt(True)
         out_tensorrt = matmul_g_tensorrt(x_cuda, y_cuda)
         test_case.assertTrue(
             np.allclose(out.numpy(), out_tensorrt.numpy(), rtol=1e-3, atol=1e-4)
         )
 
         matmul_g_xla = get_graph()
-        matmul_g_xla.config.set_xrt_use_xla_jit(True)
+        matmul_g_xla.config.enable_xrt_use_xla_jit(True)
         out_xla = matmul_g_xla(x_cuda, y_cuda)
         test_case.assertTrue(
             np.allclose(out.numpy(), out_xla.numpy(), rtol=1e-3, atol=1e-4)

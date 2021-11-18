@@ -66,8 +66,8 @@ class OpenvinoOpContext : public OpContext {
   // Return input named `name` as tensor
   std::shared_ptr<ngraph::Node> Input(const std::string& name);
   std::shared_ptr<ngraph::Node> Input(const Argument& arg);
-  std::shared_ptr<ngraph::Node> Weigth(const std::string& name);
-  std::shared_ptr<ngraph::Node> Weigth(const Argument& arg);
+  std::shared_ptr<ngraph::Node> Weight(const std::string& name);
+  std::shared_ptr<ngraph::Node> Weight(const Argument& arg);
   // Return output named `name` as tensor
   std::shared_ptr<ngraph::Node> Output(const std::string& name);
   std::shared_ptr<ngraph::Node> Output(const Argument& arg);

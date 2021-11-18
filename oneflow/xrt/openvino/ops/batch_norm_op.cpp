@@ -27,10 +27,10 @@ class NormalizationOp : public OpenvinoOpKernel {
  public:
   void Compile(OpenvinoOpContext* ctx) override {
     std::shared_ptr<ngraph::Node> input = ctx->Input("x_0");
-    std::shared_ptr<ngraph::Node> gamma = ctx->Weigth("gamma_0");
-    std::shared_ptr<ngraph::Node> beta = ctx->Weigth("beta_0");
-    std::shared_ptr<ngraph::Node> moving_mean = ctx->Weigth("moving_mean_0");
-    std::shared_ptr<ngraph::Node> moving_variance = ctx->Weigth("moving_variance_0");
+    std::shared_ptr<ngraph::Node> gamma = ctx->Weight("gamma_0");
+    std::shared_ptr<ngraph::Node> beta = ctx->Weight("beta_0");
+    std::shared_ptr<ngraph::Node> moving_mean = ctx->Weight("moving_mean_0");
+    std::shared_ptr<ngraph::Node> moving_variance = ctx->Weight("moving_variance_0");
     float epsilon = ctx->Attr<float>("epsilon");
     std::shared_ptr<ngraph::Node> ngraph_node = std::make_shared<ngraph::op::BatchNormInference>(
         input, gamma, beta, moving_mean, moving_variance, epsilon);

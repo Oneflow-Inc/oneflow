@@ -26,7 +26,7 @@ class ConvolutionOp : public OpenvinoOpKernel {
  public:
   void Compile(OpenvinoOpContext* ctx) override {
     std::shared_ptr<ngraph::Node> input = ctx->Input("in_0");
-    std::shared_ptr<ngraph::Node> weight = ctx->Weigth("weight_0");
+    std::shared_ptr<ngraph::Node> weight = ctx->Weight("weight_0");
 
     ngraph::op::PadType pad_type = ngraph::op::PadType::EXPLICIT;
     const auto& pads = ctx->Attr<std::vector<int32_t>>("padding_before");
