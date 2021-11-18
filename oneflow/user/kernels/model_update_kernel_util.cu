@@ -457,7 +457,7 @@ void LambUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
       adam_diff, model, m, v);
   T* w_norm_2 = norm_buffer;
   T* g_norm_2 = norm_buffer + 1;
-  Memset<DeviceType::kGPU>(ctx, norm_buffer, 0, 2 * sizeof(T));
+  Memset<DeviceType::kGPU>(ctx->stream(), norm_buffer, 0, 2 * sizeof(T));
   SumSquares2<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, model, w_norm_2, adam_diff, g_norm_2);
   LambUpdateGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
@@ -670,7 +670,7 @@ void LarsUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
   T* model_norm = data_tmp;
   T* model_diff_norm = data_tmp + 1;
   T* local_learning_rate = data_tmp + 2;
-  Memset<DeviceType::kGPU>(ctx, data_tmp, 0, 2 * sizeof(T));
+  Memset<DeviceType::kGPU>(ctx->stream(), data_tmp, 0, 2 * sizeof(T));
   SumSquares2<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, model, model_norm, model_diff_tmp, model_diff_norm);
   LarsGetLocalLearningRateGpu<T><<<1, 1, 0, ctx->cuda_stream()>>>(

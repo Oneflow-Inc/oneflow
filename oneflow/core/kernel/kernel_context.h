@@ -39,7 +39,6 @@ class KernelContext : public KernelObserver {
   KernelContext() = default;
   virtual ~KernelContext() = default;
 
-  virtual StreamContext* stream_ctx() const = 0;
   virtual ep::Stream* stream() const = 0;
   virtual DeviceCtx* device_ctx() const = 0;
   virtual Blob* BnInOp2Blob(const std::string& bn) const = 0;

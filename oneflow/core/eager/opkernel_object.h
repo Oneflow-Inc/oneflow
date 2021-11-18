@@ -86,8 +86,6 @@ class SystemOpKernelContext : public KernelContext {
   explicit SystemOpKernelContext(DeviceCtx* device_ctx) : device_ctx_(device_ctx) {}
   ~SystemOpKernelContext() = default;
 
-  StreamContext* stream_ctx() const override { return stream_ctx_.get(); }
-
   ep::Stream* stream() const override { return stream_ctx_->stream(); }
 
   DeviceCtx* device_ctx() const override { return device_ctx_; }

@@ -212,7 +212,7 @@ class NormalizationInferenceKernel final : public user_op::OpKernel,
       CHECK_EQ(add_to_output->data_type(), y->data_type());
       CHECK_EQ(add_to_output->shape(), y->shape());
       Memcpy<DeviceType::kGPU>(
-          ctx->device_ctx(), y->mut_dptr<void>(), add_to_output->dptr<void>(),
+          ctx->stream(), y->mut_dptr<void>(), add_to_output->dptr<void>(),
           add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       sp_beta = CudnnSPOnePtr<T>();
     } else {
@@ -402,7 +402,7 @@ class NormalizationTrainKernel final : public user_op::OpKernel, public user_op:
       CHECK_EQ(add_to_output->data_type(), y->data_type());
       CHECK_EQ(add_to_output->shape(), y->shape());
       Memcpy<DeviceType::kGPU>(
-          ctx->device_ctx(), y->mut_dptr<void>(), add_to_output->dptr<void>(),
+          ctx->stream(), y->mut_dptr<void>(), add_to_output->dptr<void>(),
           add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       sp_beta = CudnnSPOnePtr<T>();
     } else {

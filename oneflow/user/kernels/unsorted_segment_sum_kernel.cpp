@@ -94,7 +94,7 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel, public user_op:
     int64_t num_segments = out->shape().At(axis);
     int64_t inner_dim_size = out->shape().Count(axis + 1);
     int64_t num_segment_ids = segment_ids->shape().elem_cnt();
-    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0, out->shape().elem_cnt() * sizeof(T));
+    Memset<device_type>(ctx->stream(), out->mut_dptr(), 0, out->shape().elem_cnt() * sizeof(T));
 
     int64_t offset = 0;
     if (state != nullptr) {
@@ -159,7 +159,7 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
     int64_t num_segments = out->shape().At(axis);
     int64_t inner_dim_size = out->shape().Count(axis + 1);
     int64_t num_segment_ids = segment_ids->shape().elem_cnt();
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), tmp_buf->mut_dptr(), 0,
+    Memset<DeviceType::kGPU>(ctx->stream(), tmp_buf->mut_dptr(), 0,
                              out->shape().elem_cnt() * sizeof(float));
     int64_t offset = 0;
     if (state != nullptr) {
