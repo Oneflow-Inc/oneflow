@@ -238,7 +238,7 @@ class LegacyMaxPool2d(Module):
         self.padding_after = [pad[1] for pad in pads_list]
 
     def forward(self, x):
-        return flow.F.max_pool_2d(
+        return flow._C.max_pool_2d(
             x,
             kernel_size=self.kernel_size,
             stride=self.strides,
@@ -291,6 +291,7 @@ class LegacyAvgPool2d(Module):
         count_include_pad: Optional[bool] = None,
         divisor_override: Optional[int] = None,
         name: Optional[str] = None,
+        data_format: Optional[str] = "NCHW",
     ):
         super().__init__()
         self.kernel_size = _pair(kernel_size)
@@ -300,22 +301,28 @@ class LegacyAvgPool2d(Module):
             padding, tuple
         ), "padding can only int int or tuple of 2 ints."
         padding = _pair(padding)
-        padding = [0, 0, *padding]
+        if len(padding) == 2:
+            if data_format == "NCHW":
+                padding = (0, 0, padding[0], padding[1])
+            elif data_format == "NHWC":
+                padding = (0, padding[0], padding[1], 0)
+            else:
+                raise ValueError("error padding param!")
 
         assert count_include_pad is None, "count_include_pad not supported yet"
         assert divisor_override is None, "divisor_override not supported yet"
 
-        self._channel_pos = "channels_first"
+        self.channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
         # TODO(yaochi): align with pytorch when padding is asymmetric
         self._padding_type, _pads_list = calc_pool_padding(
-            padding, get_dhw_offset(self._channel_pos), 2
+            padding, get_dhw_offset(self.channel_pos), 2
         )
         self._padding_before = [pad[0] for pad in _pads_list]
         self._padding_after = [pad[1] for pad in _pads_list]
         self.ceil_mode = ceil_mode
 
     def forward(self, x):
-        return flow.F.avg_pool_2d(
+        return flow._C.avg_pool_2d(
             x,
             kernel_size=self.kernel_size,
             stride=self.stride,
@@ -323,7 +330,7 @@ class LegacyAvgPool2d(Module):
             padding_before=self._padding_before,
             padding_after=self._padding_after,
             ceil_mode=self.ceil_mode,
-            data_format=self._channel_pos,
+            data_format=self.channel_pos,
         )
 
 
