@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <typeinfo>
-#include "oneflow/core/vm/oneflow_vm.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -91,7 +91,7 @@ void GetWorkerThreadInitializer(intrusive::shared_ptr<vm::VirtualMachineEngine> 
 
 }  // namespace
 
-OneflowVM::OneflowVM(const Resource& resource, int64_t this_machine_id)
+VirtualMachine::VirtualMachine(const Resource& resource, int64_t this_machine_id)
     : vm_(intrusive::make_shared<vm::VirtualMachineEngine>(
         vm::MakeVmDesc(resource, this_machine_id).Get())) {
   std::function<void()> SchedulerInitializer;
@@ -104,7 +104,7 @@ OneflowVM::OneflowVM(const Resource& resource, int64_t this_machine_id)
     worker_threads_.push_back(std::move(thread));
     return Maybe<void>::Ok();
   }));
-  schedule_thread_ = std::thread(&OneflowVM::Loop, this, SchedulerInitializer);
+  schedule_thread_ = std::thread(&VirtualMachine::Loop, this, SchedulerInitializer);
 }
 
 namespace {
@@ -121,7 +121,7 @@ void MakeCtrlSeqInstructions(vm::VirtualMachineEngine* vm, vm::InstructionMsgLis
 
 }  // namespace
 
-void OneflowVM::ControlSync() {
+void VirtualMachine::ControlSync() {
   BlockingCounter bc(1);
   vm::InstructionMsgList list;
   MakeCtrlSeqInstructions(mut_vm(), &list, [&] { bc.Decrease(); });
@@ -129,14 +129,14 @@ void OneflowVM::ControlSync() {
   bc.WaitUntilCntEqualZero();
 }
 
-OneflowVM::~OneflowVM() {
+VirtualMachine::~VirtualMachine() {
   ControlSync();
   notifier_.Close();
   schedule_thread_.join();
   CHECK(!vm_);
 }
 
-Maybe<void> OneflowVM::Receive(vm::InstructionMsgList* instr_list) {
+Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
   if (unlikely(pthread_fork::IsForkedSubProcess())) {
     CHECK_OR_RETURN(JUST(IsMultiClient()));
     INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_list) {
@@ -166,11 +166,11 @@ int MicrosecondsFrom(const T& start) {
 
 }  // namespace
 
-void OneflowVM::Loop(const std::function<void()>& Initializer) {
+void VirtualMachine::Loop(const std::function<void()>& Initializer) {
   Initializer();
   auto* vm = mut_vm();
   while (notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
-    OF_PROFILER_RANGE_PUSH("OneflowVM::Loop");
+    OF_PROFILER_RANGE_PUSH("VirtualMachine::Loop");
     auto start = std::chrono::steady_clock::now();
     static constexpr int kWorkingMicroseconds = 1000;
     // Every time this thread wakes up, vm is scheduled for about `kWorkingMicroseconds`.
@@ -191,9 +191,9 @@ void OneflowVM::Loop(const std::function<void()>& Initializer) {
         // vm->pending_msg_list.list_head_.list_head_.size_ occured. hence the pending
         // instructions
         // will get handled in the next iteration.
-        //  OneflowVM::Receive may be less effiencient if the thread safe version `vm->Empty()`
+        //  VirtualMachine::Receive may be less effiencient if the thread safe version `vm->Empty()`
         // used
-        //  here, because OneflowVM::Loop is more likely to get the mutex lock.
+        //  here, because VirtualMachine::Loop is more likely to get the mutex lock.
         do { vm->Schedule(); } while (!vm->ThreadUnsafeEmpty());
       } while (++i < kNumSchedulingPerTimoutTest);
     } while (MicrosecondsFrom(start) < kWorkingMicroseconds);
