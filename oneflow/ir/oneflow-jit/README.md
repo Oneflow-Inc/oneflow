@@ -77,7 +77,9 @@ There are mainly three components in the JIT system:
 ### Principle
 
 - Avoid binding a OneFlow tensor with a MLIR Tensor Value. The side effect on OneFlow Tensor should be modeled with MLIR Op.
-- Should not introduce any scope API in Python/Pybind11. JITInterpreter will check if it is in the right state when certain API is called.
+- Should not introduce any scope API in Python/Pybind11.
+  - Should allow Python to abort the trace. Introducing scope will prevent this.
+  - JITInterpreter will check if it is in the right state when certain API is called.
 
 ### ~~Sequence of operations~~
 
