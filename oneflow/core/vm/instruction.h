@@ -69,6 +69,7 @@ class InstructionMsg final : public intrusive::Base {
     return phy_instr_parallel_desc_;
   }
   const std::shared_ptr<PhyInstrOperand>& phy_instr_operand() const { return phy_instr_operand_; }
+  const std::shared_ptr<TensorViewPhyInstrOperand>& tensor_view_phy_instr_operand() const { return tensor_view_phy_instr_operand_; }
   Stream* phy_instr_stream() const { return phy_instr_stream_; }
   // Setters
   void set_parallel_desc_symbol_id(int64_t val) { parallel_desc_symbol_id_ = val; }
@@ -88,6 +89,9 @@ class InstructionMsg final : public intrusive::Base {
   void __Init__(VirtualMachineEngine* vm, const std::string& instr_type_name,
                 const std::shared_ptr<const ParallelDesc>& phy_instr_parallel_desc,
                 const std::shared_ptr<PhyInstrOperand>& phy_instr_operand);
+  void __Init__(VirtualMachineEngine* vm, const std::string& instr_type_name,
+                const std::shared_ptr<const ParallelDesc>& phy_instr_parallel_desc,
+                const std::shared_ptr<TensorViewPhyInstrOperand>& view_phy_instr_operand);
   void __Init__(const InstructionProto& proto);
   void __Init__(const cfg::InstructionProto& proto);
   void __Init__(const InstructionMsg& instr_msg);
@@ -139,6 +143,7 @@ class InstructionMsg final : public intrusive::Base {
         phy_instr_parallel_desc_(),
         operand_list_(),
         phy_instr_operand_(),
+        tensor_view_phy_instr_operand_(),
         phy_instr_stream_(),
         instr_msg_hook_() {}
   intrusive::Ref intrusive_ref_;
@@ -150,6 +155,7 @@ class InstructionMsg final : public intrusive::Base {
   std::shared_ptr<const ParallelDesc> phy_instr_parallel_desc_;
   intrusive::shared_ptr<InstructionOperandList> operand_list_;
   std::shared_ptr<PhyInstrOperand> phy_instr_operand_;
+  std::shared_ptr<TensorViewPhyInstrOperand> tensor_view_phy_instr_operand_;
   Stream* phy_instr_stream_;
 
  public:

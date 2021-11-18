@@ -60,17 +60,24 @@ Maybe<void> SyncAccessTensorWithTimeOut(
 }
 
 
+Maybe<void> SyncAccessTensorWithTimeOut2(
+    const std::shared_ptr<Tensor>& tensor,
+    const std::shared_ptr<Tensor>& view_tensor,
+    const std::function<void(uint64_t, uint64_t)>& callback, 
+    const std::string& modifier
+  ) {
+    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->TensorView(
+        JUST(tensor->AsMirroredTensor()), 
+        JUST(view_tensor->AsMirroredTensor()),
+        callback, 
+        modifier
+      );
+    });
+}
+
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                          const Stride& target_strides, int64_t storage_offset) {
-
-  // this callback get input tensor's data pointer
-  const void* input_ptr = nullptr;
-  const auto& callback =
-      std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
-        auto* eager_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-        input_ptr = eager_blob->blob().dptr();
-      });
-  JUST(SyncAccessTensorWithTimeOut(input, callback, "const"));
 
   storage_offset += JUST(input->storage_offset());
   // TODO(): Check shape compatible.
@@ -91,18 +98,38 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   JUST(tensor_impl->eager_blob_object())->set_last_used_device(JUST(input->device()));
   std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
 
-  {
-    // this callback reset output tensor's data pointer
-    const auto& callback =
-        std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
-          auto* eager_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-          if (!(eager_blob->blob().dptr())) {
-            int64_t storage_offset_bytes = storage_offset * GetSizeOfDataType(eager_blob->blob().data_type());
-            eager_blob->mut_blob()->reset_dptr((char*)input_ptr + storage_offset_bytes);
-          }
-        });
-    JUST(SyncAccessTensorWithTimeOut(output, callback, "mut")); 
-  }
+  // // this callback get input tensor's data pointer
+  // const void* input_ptr = nullptr;
+  // const auto& callback =
+  //     std::function<void(uint64_t)>([&](uint64_t of_blob_ptr) {
+  //       auto* eager_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  //       input_ptr = eager_blob->blob().dptr();
+  //     });
+  // JUST(SyncAccessTensorWithTimeOut(input, callback, "const"));
+  
+  // // this callback reset output tensor's data pointer
+  // const auto& callback2 =
+  //     std::function<void(uint64_t)>([&](uint64_t of_blob_ptr) {
+  //       auto* eager_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  //       if (!(eager_blob->blob().dptr())) {
+  //         int64_t storage_offset_bytes = storage_offset * GetSizeOfDataType(eager_blob->blob().data_type());
+  //         eager_blob->mut_blob()->reset_dptr((char*)input_ptr + storage_offset_bytes);
+  //       }
+  //     });
+  // JUST(SyncAccessTensorWithTimeOut(output, callback2, "mut")); 
+
+  const auto& callback =
+      std::function<void(uint64_t, uint64_t)>([&](uint64_t of_blob_ptr, uint64_t of_blob_ptr2) {
+        auto* eager_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+        auto* view_eager_blob = reinterpret_cast<OfBlob*>(of_blob_ptr2);
+        const void* input_ptr = eager_blob->blob().dptr();
+        if (!(view_eager_blob->blob().dptr())) {
+          int64_t storage_offset_bytes = storage_offset * GetSizeOfDataType(eager_blob->blob().data_type());
+          view_eager_blob->mut_blob()->reset_dptr((char*)input_ptr + storage_offset_bytes);
+        }
+      });
+  JUST(SyncAccessTensorWithTimeOut2(input, output, callback, "const"));
+
   return output;
 }
 
