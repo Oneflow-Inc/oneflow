@@ -142,11 +142,11 @@ void WithMlirContext(
   mlir::MLIRContext mlir_ctx(registry);
   mlir::OwningModuleRef module = parse(&mlir_ctx);
   CHECK(!!module) << "fail to parse MLIR, op: " << ctx->op_name();
-  if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
+  if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module->print(llvm::outs()); }
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
   lower(&mlir_ctx, *module);
-  if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
+  if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module->print(llvm::outs()); }
   auto jit_or_error = mlir::ExecutionEngine::create(
       /* m */ *module, /* llvmModuleBuilder */ nullptr, /* transformer */ {},
       /* jitCodeGenOptLevel */ llvm::None, /* sharedLibPaths */ ext_libs);
@@ -186,8 +186,8 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
 #define REGISTER_MLIR_JIT_CPU_KERNEL(dtype)                                                     \
   REGISTER_USER_KERNEL("mlir_jit")                                                              \
       .SetCreateFn<MlirJitCpuKernel<dtype>>()                                                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU)                            \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         return Maybe<void>::Ok();                                                               \
@@ -200,7 +200,7 @@ REGISTER_MLIR_JIT_CPU_KERNEL(int64_t)
 
 #undef REGISTER_MLIR_JIT_CPU_KERNEL
 
-#ifdef WITH_CUDA
+#ifdef WITH_MLIR_CUDA_CODEGEN
 
 template<typename T>
 class MlirJitGpuKernel final : public user_op::OpKernel {
@@ -229,8 +229,8 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
 #define REGISTER_MLIR_JIT_GPU_KERNEL(dtype)                                                     \
   REGISTER_USER_KERNEL("mlir_jit")                                                              \
       .SetCreateFn<MlirJitGpuKernel<dtype>>()                                                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                            \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         return Maybe<void>::Ok();                                                               \
@@ -243,7 +243,7 @@ REGISTER_MLIR_JIT_GPU_KERNEL(int64_t)
 
 #undef REGISTER_MLIR_JIT_GPU_KERNEL
 
-#endif  // WITH_CUDA
+#endif  // WITH_MLIR_CUDA_CODEGEN
 
 }  // namespace
 

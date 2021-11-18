@@ -95,7 +95,9 @@ from oneflow._C import add
 from oneflow._C import div
 from oneflow._C import floor_divide
 from oneflow._C import mul
-from oneflow._C import reciprocal as reciprocal
+from oneflow._C import negative
+from oneflow._C import negative as neg
+from oneflow._C import reciprocal
 from oneflow._C import sub
 from oneflow._C import sin, sin_
 from oneflow._C import asin
@@ -144,6 +146,7 @@ from oneflow._C import unsqueeze
 from oneflow._C import permute
 from oneflow._C import concat
 from oneflow._C import concat as cat
+from oneflow._C import to
 
 
 from . import sbp
@@ -237,7 +240,7 @@ from oneflow._C import tensor, batch_gather
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
 
-from oneflow.framework.check_point_v2 import Load as load
+from oneflow.framework.check_point_v2 import load
 from oneflow.framework.check_point_v2 import save
 from oneflow.framework.dtype import convert_oneflow_dtype_to_numpy_dtype, dtypes
 from oneflow.framework.env_util import (
@@ -246,7 +249,12 @@ from oneflow.framework.env_util import (
 from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.function_util import FunctionConfig as function_config
 from oneflow.framework.generator import create_generator as Generator
-from oneflow.framework.generator import default_generator, manual_seed
+from oneflow.framework.generator import (
+    default_generator,
+    manual_seed,
+    get_rng_state,
+    set_rng_state,
+)
 
 # NOTE(chengcheng) oneflow.Model is unavailable now.
 # from oneflow.framework.model import Model
@@ -287,8 +295,6 @@ from oneflow.nn.modules.comparison import less_equal_op as le
 from oneflow.nn.modules.comparison import ne_op as ne
 from oneflow.nn.modules.comparison import ne_op as not_equal
 from oneflow.nn.modules.tensor_ops import is_floating_point
-from oneflow.nn.modules.tensor_ops import negative_op as neg
-from oneflow.nn.modules.tensor_ops import negative_op as negative
 from oneflow.nn.modules.in_top_k import in_top_k_op as in_top_k
 from oneflow.nn.modules.index_select import index_select_op as index_select
 from oneflow.nn.modules.masked_fill import masked_fill_op as masked_fill
@@ -323,7 +329,6 @@ from oneflow.nn.modules.tensor_buffer import (
 from oneflow.nn.modules.as_tensor import as_tensor
 from oneflow.nn.modules.tensor_buffer import tensor_to_tensor_buffer
 from oneflow.nn.modules.tile import tile_op as tile
-from oneflow.nn.modules.to import to_op as to
 from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
 from oneflow.nn.modules.consistent_cast import to_local_op as to_local
 from oneflow.nn.modules.where import where_op as where

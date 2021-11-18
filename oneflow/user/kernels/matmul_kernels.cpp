@@ -17,45 +17,45 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/core/primitive/include/memcpy.h"
-#include "oneflow/core/primitive/include/matmul.h"
-#include "oneflow/core/primitive/include/batch_matmul.h"
+#include "oneflow/core/ep/include/primitive/memcpy.h"
+#include "oneflow/core/ep/include/primitive/matmul.h"
+#include "oneflow/core/ep/include/primitive/batch_matmul.h"
 
 namespace oneflow {
 
 namespace {
 
-primitive::BlasTransposeType GetBlasTransposeType(bool transpose) {
-  return transpose ? primitive::BlasTransposeType::T : primitive::BlasTransposeType::N;
+ep::primitive::BlasTransposeType GetBlasTransposeType(bool transpose) {
+  return transpose ? ep::primitive::BlasTransposeType::T : ep::primitive::BlasTransposeType::N;
 }
 
 template<typename Context>
-primitive::BlasTransposeType GetBlasTransposeType(Context* ctx, const std::string& attr) {
+ep::primitive::BlasTransposeType GetBlasTransposeType(Context* ctx, const std::string& attr) {
   return GetBlasTransposeType(ctx->template Attr<bool>(attr));
 }
 
 void InferMatmulMNK(const ShapeView& a_shape, const ShapeView& b_shape, const ShapeView& c_shape,
-                    primitive::BlasTransposeType transpose_a,
-                    primitive::BlasTransposeType transpose_b, size_t* m, size_t* n, size_t* k) {
+                    ep::primitive::BlasTransposeType transpose_a,
+                    ep::primitive::BlasTransposeType transpose_b, size_t* m, size_t* n, size_t* k) {
   const int64_t num_a_axes = a_shape.NumAxes();
   CHECK_GE(num_a_axes, 2);
   const int64_t num_b_axes = b_shape.NumAxes();
   CHECK_GE(num_b_axes, 2);
   const int64_t num_c_axes = c_shape.NumAxes();
   CHECK_GE(num_c_axes, 2);
-  if (transpose_a == primitive::BlasTransposeType::N) {
+  if (transpose_a == ep::primitive::BlasTransposeType::N) {
     *m = a_shape.At(num_a_axes - 2);
     *k = a_shape.At(num_a_axes - 1);
-  } else if (transpose_a == primitive::BlasTransposeType::T) {
+  } else if (transpose_a == ep::primitive::BlasTransposeType::T) {
     *m = a_shape.At(num_a_axes - 1);
     *k = a_shape.At(num_a_axes - 2);
   } else {
     UNIMPLEMENTED();
   }
-  if (transpose_b == primitive::BlasTransposeType::N) {
+  if (transpose_b == ep::primitive::BlasTransposeType::N) {
     CHECK_EQ(b_shape.At(num_b_axes - 2), *k);
     *n = b_shape.At(num_b_axes - 1);
-  } else if (transpose_b == primitive::BlasTransposeType::T) {
+  } else if (transpose_b == ep::primitive::BlasTransposeType::T) {
     CHECK_EQ(b_shape.At(num_b_axes - 1), *k);
     *n = b_shape.At(num_b_axes - 2);
   } else {
@@ -66,54 +66,52 @@ void InferMatmulMNK(const ShapeView& a_shape, const ShapeView& b_shape, const Sh
 }
 
 template<typename Context>
-std::unique_ptr<primitive::Memcpy> NewMemcpyPrimitive(Context* ctx) {
-  return primitive::NewPrimitive<primitive::MemcpyFactory>(ctx->device_type(),
-                                                           primitive::MemcpyKind::kDtoD);
+std::unique_ptr<ep::primitive::Memcpy> NewMemcpyPrimitive(Context* ctx) {
+  return ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(
+      ctx->device_type(), ep::primitive::MemcpyKind::kDtoD);
 }
 
-std::unique_ptr<primitive::Matmul> NewMatmulPrimitive(DeviceType device_type, DataType data_type,
-                                                      bool transpose_a, bool transpose_b) {
+std::unique_ptr<ep::primitive::Matmul> NewMatmulPrimitive(DeviceType device_type,
+                                                          DataType data_type, bool transpose_a,
+                                                          bool transpose_b) {
   const auto trans_a = GetBlasTransposeType(transpose_a);
   const auto trans_b = GetBlasTransposeType(transpose_b);
-  return primitive::NewPrimitive<primitive::MatmulFactory>(device_type, data_type, trans_a,
-                                                           trans_b);
+  return ep::primitive::NewPrimitive<ep::primitive::MatmulFactory>(device_type, data_type, trans_a,
+                                                                   trans_b);
 }
 
 template<typename Context>
-std::unique_ptr<primitive::Matmul> NewMatmulPrimitive(Context* ctx) {
+std::unique_ptr<ep::primitive::Matmul> NewMatmulPrimitive(Context* ctx) {
   const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
   return NewMatmulPrimitive(ctx->device_type(), data_type, ctx->template Attr<bool>("transpose_a"),
                             ctx->template Attr<bool>("transpose_b"));
 }
 
 template<typename Context>
-std::unique_ptr<primitive::BatchMatmul> NewBatchMatmulPrimitive(Context* ctx) {
+std::unique_ptr<ep::primitive::BatchMatmul> NewBatchMatmulPrimitive(Context* ctx) {
   const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
   const auto trans_a = GetBlasTransposeType(ctx, "transpose_a");
   const auto trans_b = GetBlasTransposeType(ctx, "transpose_b");
-  return primitive::NewPrimitive<primitive::BatchMatmulFactory>(ctx->device_type(), data_type,
-                                                                trans_a, trans_b);
+  return ep::primitive::NewPrimitive<ep::primitive::BatchMatmulFactory>(
+      ctx->device_type(), data_type, trans_a, trans_b);
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> MemcpyPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("MemcpyPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewMemcpyPrimitive(&ctx).operator bool();
-                                     });
+auto MemcpyPrimitiveExists() {
+  return hob::make_custom("MemcpyPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewMemcpyPrimitive(&ctx).operator bool();
+  });
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> MatmulPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("MatmulPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewMatmulPrimitive(&ctx).operator bool();
-                                     });
+auto MatmulPrimitiveExists() {
+  return hob::make_custom("MatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewMatmulPrimitive(&ctx).operator bool();
+  });
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> BatchMatmulPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("BatchMatmulPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewBatchMatmulPrimitive(&ctx).operator bool();
-                                     });
+auto BatchMatmulPrimitiveExists() {
+  return hob::make_custom("BatchMatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewBatchMatmulPrimitive(&ctx).operator bool();
+  });
 }
 
 class MatmulKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -146,19 +144,19 @@ class MatmulKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
       CHECK_EQ(add_to_output->shape(), out->shape());
       auto memcpy = NewMemcpyPrimitive(ctx);
       CHECK(memcpy);
-      memcpy->Launch(ctx->stream_ctx(), out->mut_dptr(), add_to_output->dptr(),
+      memcpy->Launch(ctx->stream(), out->mut_dptr(), add_to_output->dptr(),
                      add_to_output->shape().elem_cnt() * GetSizeOfDataType(data_type));
       beta = 1.0;
     }
     auto matmul = NewMatmulPrimitive(ctx);
     CHECK(matmul);
-    matmul->Launch(ctx->stream_ctx(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
+    matmul->Launch(ctx->stream(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
   }
 };
 
 REGISTER_USER_KERNEL("matmul")
     .SetCreateFn<MatmulKernel>()
-    .SetIsMatchedHob((MemcpyPrimitiveExists() == true) & (MatmulPrimitiveExists() == true))
+    .SetIsMatchedHob(MemcpyPrimitiveExists() && MatmulPrimitiveExists())
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.has_input("_add_to_output", 0)) {
@@ -208,20 +206,20 @@ class BatchMatmulKernel final : public user_op::OpKernel, public user_op::CudaGr
       CHECK_EQ(add_to_output->shape(), out->shape());
       auto memcpy = NewMemcpyPrimitive(ctx);
       CHECK(memcpy);
-      memcpy->Launch(ctx->stream_ctx(), out->mut_dptr(), add_to_output->dptr(),
+      memcpy->Launch(ctx->stream(), out->mut_dptr(), add_to_output->dptr(),
                      add_to_output->shape().elem_cnt() * GetSizeOfDataType(data_type));
       beta = 1.0;
     }
     auto batch_matmul = NewBatchMatmulPrimitive(ctx);
     CHECK(batch_matmul);
-    batch_matmul->Launch(ctx->stream_ctx(), batch_size, m, n, k, alpha, a->dptr(), b->dptr(), beta,
+    batch_matmul->Launch(ctx->stream(), batch_size, m, n, k, alpha, a->dptr(), b->dptr(), beta,
                          out->mut_dptr());
   }
 };
 
 REGISTER_USER_KERNEL("batch_matmul")
     .SetCreateFn<BatchMatmulKernel>()
-    .SetIsMatchedHob((MemcpyPrimitiveExists() == true) & (BatchMatmulPrimitiveExists() == true))
+    .SetIsMatchedHob(MemcpyPrimitiveExists() && BatchMatmulPrimitiveExists())
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.has_input("_add_to_output", 0)) {
@@ -256,7 +254,7 @@ class BroadcastMatmulKernel final : public user_op::OpKernel, public user_op::Cu
       auto memcpy = NewMemcpyPrimitive(ctx);
       CHECK(memcpy);
       memcpy->Launch(
-          ctx->stream_ctx(), out->mut_dptr(), add_to_output->dptr(),
+          ctx->stream(), out->mut_dptr(), add_to_output->dptr(),
           add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       beta = 1.0;
     }
@@ -275,13 +273,13 @@ class BroadcastMatmulKernel final : public user_op::OpKernel, public user_op::Cu
     }
     auto matmul = NewMatmulPrimitive(ctx);
     CHECK(matmul);
-    matmul->Launch(ctx->stream_ctx(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
+    matmul->Launch(ctx->stream(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
   }
 };
 
 REGISTER_USER_KERNEL("broadcast_matmul")
     .SetCreateFn<BroadcastMatmulKernel>()
-    .SetIsMatchedHob((MemcpyPrimitiveExists() == true) & (MatmulPrimitiveExists() == true))
+    .SetIsMatchedHob(MemcpyPrimitiveExists() && MatmulPrimitiveExists())
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.has_input("_add_to_output", 0)) {
@@ -291,7 +289,7 @@ REGISTER_USER_KERNEL("broadcast_matmul")
     });
 
 template<typename Context>
-std::unique_ptr<primitive::Matmul> NewMatmulPrimitiveForBroadcastMatmulGradB(Context* ctx) {
+std::unique_ptr<ep::primitive::Matmul> NewMatmulPrimitiveForBroadcastMatmulGradB(Context* ctx) {
   const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
   return NewMatmulPrimitive(ctx->device_type(), data_type, true, false);
 }
@@ -318,7 +316,7 @@ class BroadcastMatmulGradBKernel final : public user_op::OpKernel,
       auto memcpy = NewMemcpyPrimitive(ctx);
       CHECK(memcpy);
       memcpy->Launch(
-          ctx->stream_ctx(), out->mut_dptr(), add_to_output->dptr(),
+          ctx->stream(), out->mut_dptr(), add_to_output->dptr(),
           add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       beta = 1.0;
     }
@@ -331,21 +329,19 @@ class BroadcastMatmulGradBKernel final : public user_op::OpKernel,
 
     auto matmul = NewMatmulPrimitiveForBroadcastMatmulGradB(ctx);
     CHECK(matmul);
-    matmul->Launch(ctx->stream_ctx(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
+    matmul->Launch(ctx->stream(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
   }
 };
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> PrimitiveExistsForBroadcastMatmulGradB() {
-  return user_op::HobCtxGetter<bool>(
-      "MatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
-        return NewMatmulPrimitiveForBroadcastMatmulGradB(&ctx).operator bool();
-      });
+auto PrimitiveExistsForBroadcastMatmulGradB() {
+  return hob::make_custom("MatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewMatmulPrimitiveForBroadcastMatmulGradB(&ctx).operator bool();
+  });
 }
 
 REGISTER_USER_KERNEL("broadcast_matmul_grad_b")
     .SetCreateFn<BroadcastMatmulGradBKernel>()
-    .SetIsMatchedHob((MemcpyPrimitiveExists() == true)
-                     & (PrimitiveExistsForBroadcastMatmulGradB() == true))
+    .SetIsMatchedHob(MemcpyPrimitiveExists() && PrimitiveExistsForBroadcastMatmulGradB())
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.has_input("_add_to_output", 0)) {

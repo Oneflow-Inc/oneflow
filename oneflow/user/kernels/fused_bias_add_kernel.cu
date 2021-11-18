@@ -104,7 +104,7 @@ struct MaskAndScaleAddFunctor<half> {
 
 template<typename T>
 struct GeluGradFunctor {
-  const T coef = sqrt(static_cast<T>(2.0) / acos(static_cast<T>(-1.0)));
+  const T coef = std::sqrt(static_cast<T>(2.0) / std::acos(static_cast<T>(-1.0)));
   __device__ T Compute(T x, T dy, int64_t i) const {
     return static_cast<T>(0.5)
            * (static_cast<T>(1.0) + erf(static_cast<T>(M_SQRT1_2) * x)
@@ -343,11 +343,11 @@ class FusedFusedBiasAddKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_BIAS_ADD_GELU_KERNEL(dtype)        \
-  REGISTER_USER_KERNEL("fused_bias_add_gelu")             \
-      .SetCreateFn<FusedFusedBiasAddKernel<dtype>>()      \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+#define REGISTER_FUSED_BIAS_ADD_GELU_KERNEL(dtype)                    \
+  REGISTER_USER_KERNEL("fused_bias_add_gelu")                         \
+      .SetCreateFn<FusedFusedBiasAddKernel<dtype>>()                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUSED_BIAS_ADD_GELU_KERNEL(float)
 REGISTER_FUSED_BIAS_ADD_GELU_KERNEL(double)
@@ -390,11 +390,11 @@ class FusedBiasAddMaskScaleKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_BIAS_ADD_MASK_SCALE_KERNEL(dtype)  \
-  REGISTER_USER_KERNEL("fused_bias_add_mask_scale")       \
-      .SetCreateFn<FusedBiasAddMaskScaleKernel<dtype>>()  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+#define REGISTER_FUSED_BIAS_ADD_MASK_SCALE_KERNEL(dtype)              \
+  REGISTER_USER_KERNEL("fused_bias_add_mask_scale")                   \
+      .SetCreateFn<FusedBiasAddMaskScaleKernel<dtype>>()              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUSED_BIAS_ADD_MASK_SCALE_KERNEL(float)
 REGISTER_FUSED_BIAS_ADD_MASK_SCALE_KERNEL(double)
@@ -433,11 +433,11 @@ class FusedFusedBiasAddGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_BIAS_ADD_GELU_GRAD_KERNEL(dtype)   \
-  REGISTER_USER_KERNEL("fused_bias_add_gelu_grad")        \
-      .SetCreateFn<FusedFusedBiasAddGradKernel<dtype>>()  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_FUSED_BIAS_ADD_GELU_GRAD_KERNEL(dtype)               \
+  REGISTER_USER_KERNEL("fused_bias_add_gelu_grad")                    \
+      .SetCreateFn<FusedFusedBiasAddGradKernel<dtype>>()              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUSED_BIAS_ADD_GELU_GRAD_KERNEL(float)
 REGISTER_FUSED_BIAS_ADD_GELU_GRAD_KERNEL(double)

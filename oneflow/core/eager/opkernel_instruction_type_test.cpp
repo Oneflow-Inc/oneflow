@@ -20,7 +20,7 @@ limitations under the License.
 #define private public
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/vm/id_util.h"
-#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/test_util.h"
@@ -124,7 +124,7 @@ TEST(OpkernelInstructionType, new_opkernel) {
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(),
       {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol", "InitOpKernelObject"});
-  auto vm = intrusive::make_shared<vm::VirtualMachine>(vm_desc.Get());
+  auto vm = intrusive::make_shared<vm::VirtualMachineEngine>(vm_desc.Get());
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
@@ -153,7 +153,7 @@ TEST(OpkernelInstructionType, delete_opkernel) {
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(),
       {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol", "InitOpKernelObject"});
-  auto vm = intrusive::make_shared<vm::VirtualMachine>(vm_desc.Get());
+  auto vm = intrusive::make_shared<vm::VirtualMachineEngine>(vm_desc.Get());
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
@@ -198,7 +198,7 @@ TEST(OpkernelInstructionType, call_opkernel) {
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
                           "InitOpKernelObject", device_tag + ".CallOpKernel"});
-  auto vm = intrusive::make_shared<vm::VirtualMachine>(vm_desc.Get());
+  auto vm = intrusive::make_shared<vm::VirtualMachineEngine>(vm_desc.Get());
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
@@ -276,7 +276,7 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
                           "InitOpKernelObject", "gpu.CallOpKernel"});
-  auto vm = intrusive::make_shared<vm::VirtualMachine>(vm_desc.Get());
+  auto vm = intrusive::make_shared<vm::VirtualMachineEngine>(vm_desc.Get());
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
@@ -325,7 +325,7 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
                           "InitOpKernelObject", device_tag + ".CallOpKernel"});
-  auto vm = intrusive::make_shared<vm::VirtualMachine>(vm_desc.Get());
+  auto vm = intrusive::make_shared<vm::VirtualMachineEngine>(vm_desc.Get());
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
@@ -402,7 +402,7 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
                           "gpu.compute.UserStatelessCallOpKernel"});
-  auto vm = intrusive::make_shared<vm::VirtualMachine>(vm_desc.Get());
+  auto vm = intrusive::make_shared<vm::VirtualMachineEngine>(vm_desc.Get());
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();

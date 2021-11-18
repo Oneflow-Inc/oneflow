@@ -31,7 +31,7 @@ struct GeluFunctor {
 
 template<typename T>
 struct GeluGradFunctor {
-  const T coef = sqrt(static_cast<T>(2.0) / acos(static_cast<T>(-1.0)));
+  const T coef = std::sqrt(static_cast<T>(2.0) / std::acos(static_cast<T>(-1.0)));
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
     return static_cast<T>(0.5)
            * (static_cast<T>(1.0) + erf(static_cast<T>(M_SQRT1_2) * x)
@@ -79,8 +79,8 @@ class GpuGeluKernel final : public user_op::OpKernel, public user_op::CudaGraphS
 
 #define REGISTER_GPU_GELU_KERNEL(dtype)                                             \
   REGISTER_USER_KERNEL("gelu").SetCreateFn<GpuGeluKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == "gpu")                                            \
-      & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+      (user_op::HobDeviceType() == DeviceType::kGPU)                                \
+      && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_GELU_KERNEL(float)
 REGISTER_GPU_GELU_KERNEL(double)
@@ -107,11 +107,11 @@ class GpuGeluGradKernel final : public user_op::OpKernel, public user_op::CudaGr
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_GELU_GRAD_KERNEL(dtype)              \
-  REGISTER_USER_KERNEL("gelu_grad")                       \
-      .SetCreateFn<GpuGeluGradKernel<dtype>>()            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_GPU_GELU_GRAD_KERNEL(dtype)                          \
+  REGISTER_USER_KERNEL("gelu_grad")                                   \
+      .SetCreateFn<GpuGeluGradKernel<dtype>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_GELU_GRAD_KERNEL(float)
 REGISTER_GPU_GELU_GRAD_KERNEL(double)

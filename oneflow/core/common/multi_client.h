@@ -24,10 +24,7 @@ namespace oneflow {
 
 inline Optional<bool>* IsMultiClientPtr() { return Global<Optional<bool>, MultiClient>::Get(); }
 
-inline Maybe<bool> IsMultiClient() {
-  auto* opt = Global<Optional<bool>, MultiClient>::Get();
-  return !opt || opt->value_or(true);
-}
+inline Maybe<bool> IsMultiClient() { return JUST(*Global<Optional<bool>, MultiClient>::Get()); }
 
 inline Maybe<void> SetIsMultiClient(bool is_multi_client) {
   CHECK_NOTNULL_OR_RETURN(IsMultiClientPtr());

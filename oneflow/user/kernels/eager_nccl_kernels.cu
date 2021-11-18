@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/ep/include/primitive/permute.h"
 
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
 
@@ -29,7 +29,7 @@ namespace {
 
 class EagerNcclOpKernelState final : public user_op::OpKernelState {
  public:
-  EagerNcclOpKernelState(user_op::KernelInitContext* ctx) { Init(ctx); }
+  explicit EagerNcclOpKernelState(user_op::KernelInitContext* ctx) { Init(ctx); }
   ~EagerNcclOpKernelState() override = default;
 
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
@@ -51,7 +51,7 @@ class EagerNcclOpKernelState final : public user_op::OpKernelState {
   }
 
   Symbol<ParallelDesc> parallel_desc_;
-  ncclComm_t comm_;
+  ncclComm_t comm_{};
 };
 
 size_t InferEagerNcclS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
@@ -93,7 +93,7 @@ class EagerNcclAllReduceKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_nccl_all_reduce")
     .SetCreateFn<EagerNcclAllReduceKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
 
 class EagerNcclBroadcastKernel final : public user_op::OpKernel {
  public:
@@ -131,7 +131,7 @@ class EagerNcclBroadcastKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_nccl_broadcast")
     .SetCreateFn<EagerNcclBroadcastKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
 
 class EagerNcclReduceKernel final : public user_op::OpKernel {
  public:
@@ -166,7 +166,7 @@ class EagerNcclReduceKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_nccl_reduce")
     .SetCreateFn<EagerNcclReduceKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
 
 class EagerNcclReduceScatterKernel final : public user_op::OpKernel {
  public:
@@ -202,7 +202,7 @@ HashMap<std::string, ncclRedOp_t> EagerNcclReduceScatterKernel::op_type2ncclRedO
 
 REGISTER_USER_KERNEL("eager_nccl_reduce_scatter")
     .SetCreateFn<EagerNcclReduceScatterKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
 
 class EagerNcclAllGatherKernel final : public user_op::OpKernel {
  public:
@@ -231,7 +231,7 @@ class EagerNcclAllGatherKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_nccl_all_gather")
     .SetCreateFn<EagerNcclAllGatherKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
 
 template<typename T>
 class EagerNcclS2SKernel final : public user_op::OpKernel {
@@ -284,23 +284,17 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
       CHECK_EQ(transpose_in_dim_vec.at(out_split_axis) % num_ranks, 0);
       transpose_in_dim_vec[out_split_axis] = transpose_in_dim_vec.at(out_split_axis) / num_ranks;
       transpose_in_dim_vec.insert(transpose_in_dim_vec.begin() + out_split_axis, num_ranks);
-      const Shape transpose_in_shape(transpose_in_dim_vec);
-      DimVector pack_to_dim_vec;
       std::vector<int32_t> perm;
       perm.push_back(out_split_axis);
-      pack_to_dim_vec.push_back(transpose_in_shape.At(out_split_axis));
-      FOR_RANGE(int64_t, i, 0, transpose_in_shape.NumAxes()) {
-        if (i != out_split_axis) {
-          perm.push_back(i);
-          pack_to_dim_vec.push_back(transpose_in_shape.At(i));
-        }
+      FOR_RANGE(int64_t, i, 0, transpose_in_dim_vec.size()) {
+        if (i != out_split_axis) { perm.push_back(i); }
       }
-      CHECK_EQ(elem_cnt, transpose_in_shape.elem_cnt());
-      const Shape pack_to_shape(pack_to_dim_vec);
-      CHECK_EQ(elem_cnt, pack_to_shape.elem_cnt());
-      NewKernelUtil<DeviceType::kGPU>::Transpose(
-          ctx->device_ctx(), transpose_in_shape.NumAxes(), transpose_in_shape, pack_to_shape, perm,
-          elem_cnt, in->dptr<T>(), reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>()));
+      auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
+          ctx->stream()->device_type(), transpose_in_dim_vec.size());
+      CHECK(transpose);
+      transpose->Launch(ctx->stream(), in->data_type(), transpose_in_dim_vec.size(),
+                        transpose_in_dim_vec.data(), in->dptr(), perm.data(),
+                        tmp_buffer->mut_dptr());
     }
 
     if (in_split_axis != 0) {
@@ -336,32 +330,25 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
       CHECK_EQ(unpack_from_dim_vec.at(out_split_axis) % num_ranks, 0);
       unpack_from_dim_vec[out_split_axis] = unpack_from_dim_vec.at(out_split_axis) / num_ranks;
       unpack_from_dim_vec.insert(unpack_from_dim_vec.begin(), num_ranks);
-      const Shape unpack_from_shape(unpack_from_dim_vec);
-      DimVector transpose_out_dim_vec;
       std::vector<int32_t> perm;
-      FOR_RANGE(int64_t, i, 1, unpack_from_shape.NumAxes()) {
-        perm.push_back(i);
-        transpose_out_dim_vec.push_back(unpack_from_shape.At(i));
-      }
+      FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.push_back(i); }
       perm.insert(perm.begin() + in_split_axis, 0);
-      transpose_out_dim_vec.insert(transpose_out_dim_vec.begin() + in_split_axis,
-                                   unpack_from_shape.At(0));
-      const Shape transpose_out_shape(transpose_out_dim_vec);
-      NewKernelUtil<DeviceType::kGPU>::Transpose(
-          ctx->device_ctx(), unpack_from_shape.NumAxes(), unpack_from_shape, transpose_out_shape,
-          perm, unpack_from_shape.elem_cnt(), reinterpret_cast<const T*>(unpack_from_ptr),
-          out->mut_dptr<T>());
+      auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
+          ctx->stream()->device_type(), unpack_from_dim_vec.size());
+      CHECK(transpose);
+      transpose->Launch(ctx->stream(), in->data_type(), unpack_from_dim_vec.size(),
+                        unpack_from_dim_vec.data(), unpack_from_ptr, perm.data(), out->mut_dptr());
     }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EAGER_NCCL_S2S_KERNEL(dtype)                                           \
-  REGISTER_USER_KERNEL("eager_nccl_s2s")                                                \
-      .SetCreateFn<EagerNcclS2SKernel<dtype>>()                                         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                               \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_EAGER_NCCL_S2S_KERNEL(dtype)                                            \
+  REGISTER_USER_KERNEL("eager_nccl_s2s")                                                 \
+      .SetCreateFn<EagerNcclS2SKernel<dtype>>()                                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                    \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferEagerNcclS2SKernelTmpBufferSize);
 
 REGISTER_EAGER_NCCL_S2S_KERNEL(int8_t)
