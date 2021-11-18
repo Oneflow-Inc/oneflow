@@ -118,3 +118,8 @@ There are four level of cache
 - Op Expr -> MLIR (trace mode and exec mode)
 - Vanilla MLIR -> Optimized MLIR (trace mode and exec mode)
 - MLIR Op -> Op Expression (only for re-dispatch execution)
+
+### Ownership
+
+- In exec mode, there is only one global MLIR Module which JIT Interpreter owns
+- In trace mode, each module has its own MLIR Module
