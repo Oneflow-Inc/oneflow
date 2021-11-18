@@ -86,15 +86,15 @@ void InsertLbnSegmentIntoVec(const ::mlir::ArrayAttr& lbn_segment_keys,
   }
 }
 
-void JitInterpreter::Interrupt() {
-  CHECK(importer_.LowerToOneFlowKernel().succeeded());
-  if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module_->print(llvm::outs()); }
-  MlirTraceEnd();
+void DispatchModule(
+    ModuleOp module, llvm::SmallVector<std::shared_ptr<ir::TensorRef>, 8>& returned_lazy_tensors,
+    std::function<llvm::Optional<std::shared_ptr<one::UserOpExpr>>(Operation*)> GetExpr) {
   llvm::DenseMap<Value, std::shared_ptr<Tensor>> mapping;
   // TODO: handle the case if there are more than one function in the module.
   ReturnOp return_op;
-  SymbolTable symbol_table(*module_);
+  SymbolTable symbol_table(module);
   auto function = symbol_table.lookup(GetJitFuncName());
+  CHECK(function);
   const bool was_interrupted =
       function
           ->walk([&](mlir::Operation* op) {
@@ -145,8 +145,16 @@ void JitInterpreter::Interrupt() {
     auto value = indexed_return_value.value();
     auto found = mapping.find(value);
     CHECK(found != mapping.end()) << "tensor not found";
-    importer_.GetReturnTensors()[indexed_return_value.index()]->ResetTensor(mapping[value]);
+    returned_lazy_tensors[indexed_return_value.index()]->ResetTensor(mapping[value]);
   }
+}
+
+void JitInterpreter::Interrupt() {
+  CHECK(importer_.LowerToOneFlowKernel().succeeded());
+  if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module_->print(llvm::outs()); }
+  MlirTraceEnd();
+  DispatchModule(*module_, importer_.GetReturnTensors(),
+                 std::bind(&JitInterpreter::GetExpr, this, std::placeholders::_1));
   importer_.ResetMappings();
 }  // namespace one
 
