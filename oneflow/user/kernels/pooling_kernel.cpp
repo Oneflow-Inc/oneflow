@@ -161,7 +161,7 @@ class MaxPool1dGradKernel final : public user_op::OpKernel {
     NdIndexOffsetHelper<int64_t, 3> index_helper(dy_vector.data());
 
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
-    Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
+    Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
     PoolingKernelUtil<device_type, T>::Maxpool1dBackward(ctx->device_ctx(), index_helper, elem_num,
                                                          src, dest, indice_ptr, params_3d);
@@ -223,7 +223,7 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
     NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
 
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
-    Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
+    Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
     PoolingKernelUtil<device_type, T>::Maxpool2dBackward(ctx->device_ctx(), index_helper, elem_num,
                                                          src, dest, indice_ptr, params_3d);
@@ -286,7 +286,7 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
     NdIndexOffsetHelper<int64_t, 5> index_helper(dy_vector.data());
 
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
-    Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
+    Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
     PoolingKernelUtil<device_type, T>::Maxpool3dBackward(ctx->device_ctx(), index_helper, elem_num,
                                                          src, dest, indice_ptr, params_3d);

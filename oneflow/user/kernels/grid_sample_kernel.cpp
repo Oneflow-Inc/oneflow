@@ -106,7 +106,7 @@ class GridSampleGradKernel final : public user_op::OpKernel {
     const ShapeView& output_shape = doutput->shape();
     int64_t count = output_shape.elem_cnt() / input_shape.At(1);
 
-    Memset<device_type>(ctx->device_ctx(), dinput->mut_dptr<data_type>(), 0,
+    Memset<device_type>(ctx->stream(), dinput->mut_dptr<data_type>(), 0,
                         input_shape.elem_cnt() * sizeof(data_type));
 
     if (input_shape.NumAxes() == 4) {

@@ -52,7 +52,7 @@ Maybe<void> Recv(void* out, size_t elem_cnt, DataType dtype, int64_t src, Device
     auto** src_data_ptr = ThreadLocalSrcDataPtr();
     const void* in = *src_data_ptr;
     CHECK_OR_RETURN(*src_data_ptr != nullptr);
-    Memcpy<device_type>(ctx, out, in, buffer_size);
+    Memcpy<device_type>(ctx->stream(), out, in, buffer_size);
     *src_data_ptr = nullptr;
   } else {
     JUST(ccl::Recv<device_type>(out, elem_cnt, dtype, src, ctx));

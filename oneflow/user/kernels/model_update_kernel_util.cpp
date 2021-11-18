@@ -290,7 +290,7 @@ void LambUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
   }
   T* w_norm_2 = norm_buffer;
   T* g_norm_2 = norm_buffer + 1;
-  Memset<DeviceType::kCPU>(ctx, norm_buffer, 0, 2 * sizeof(T));
+  Memset<DeviceType::kCPU>(ctx->stream(), norm_buffer, 0, 2 * sizeof(T));
   SumSquares2(n, model, w_norm_2, adam_diff, g_norm_2);
   const float lr = LambLRFunctor<T>()(*learning_rate, w_norm_2, g_norm_2);
   FOR_RANGE(int64_t, i, 0, n) {
@@ -370,7 +370,7 @@ void LarsUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
     model_diff_tmp[i] =
         CastScaleRegularizeGradientFunctor<T, G>()(model_diff[i], model[i], scale, l1, l2);
   }
-  Memset<DeviceType::kCPU>(ctx, data_tmp, 0, 2 * sizeof(T));
+  Memset<DeviceType::kCPU>(ctx->stream(), data_tmp, 0, 2 * sizeof(T));
   SumSquares2(n, model, &model_norm, model_diff_tmp, &model_diff_norm);
   model_norm = std::sqrt(model_norm);
   model_diff_norm = std::sqrt(model_diff_norm);
