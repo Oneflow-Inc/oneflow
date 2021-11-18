@@ -29,7 +29,7 @@ class Cast : public Primitive {
   Cast() = default;
   ~Cast() override = default;
 
-  virtual void Launch(StreamContext* stream_ctx, const void* from, void* to, size_t count) = 0;
+  virtual void Launch(Stream* stream, const void* from, void* to, size_t count) = 0;
 };
 
 class CastFactory : public Factory<Cast> {

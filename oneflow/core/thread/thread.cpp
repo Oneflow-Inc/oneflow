@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/lazy/actor/actor.h"
 #include "oneflow/core/lazy/actor/light_actor.h"
 #include "oneflow/core/stream/include/stream_context.h"
-#include "oneflow/core/stream/include/execution_context_hook.h"
 
 namespace oneflow {
 
@@ -31,10 +30,9 @@ Thread::Thread(const StreamId& stream_id) : thrd_id_(EncodeStreamIdToInt64(strea
       NewObj<int, StreamContext, const StreamId&>(stream_id.device_id().device_type(), stream_id);
   stream_ctx_.reset(stream_ctx);
   actor_thread_ = std::thread([this]() {
-    auto* hook = dynamic_cast<ExecutionContextHook*>(stream_ctx_.get());
-    if (hook != nullptr) { CHECK_JUST(hook->OnExecutionContextSetup()); }
+    CHECK_JUST(stream_ctx_->stream()->OnExecutionContextSetup());
     PollMsgChannel();
-    if (hook != nullptr) { CHECK_JUST(hook->OnExecutionContextTeardown()); }
+    CHECK_JUST(stream_ctx_->stream()->OnExecutionContextTeardown());
   });
 }
 

@@ -129,7 +129,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   ~UserKernelInitContext() override = default;
 
   DeviceCtx* device_ctx() override { return device_ctx_; }
-  StreamContext* stream_ctx() override { return stream_ctx_; }
+  ep::Stream* stream() override { return stream_ctx_->stream(); }
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
   const ParallelContext& parallel_ctx() const override { return base_ctx_.parallel_ctx(); }
@@ -388,7 +388,7 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
   DeviceCtx* device_ctx() override { return device_ctx_; }
-  StreamContext* stream_ctx() override { return stream_ctx_; }
+  ep::Stream* stream() override { return stream_ctx_->stream(); }
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) override {
     auto it = arg2tensor_.find(std::make_pair(arg_name, arg_index));
     CHECK(it != arg2tensor_.end()) << "Arg (" << arg_name << "," << arg_index << ") is not found";
@@ -500,7 +500,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
     return it->second.tensor.get();
   }
   DeviceCtx* device_ctx() override { return device_ctx_; }
-  StreamContext* stream_ctx() override { return stream_ctx_; }
+  ep::Stream* stream() override { return stream_ctx_->stream(); }
 
   bool UpdateTensorWithCorrBlob(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
     bool updated = false;
@@ -612,13 +612,14 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
 #ifdef WITH_CUDA_GRAPHS
   bool current_scope_capturing = false;
   if (cuda_graph_exec_) {
-    if (!cuda_graph_ctx_->IsGraphCapturing()) {
+    auto* cuda_stream = dynamic_cast<ep::CudaStream*>(ctx_->stream());
+    if (!cuda_stream->IsGraphCapturing()) {
       if (cuda_graph_exec_->IsInstantiated() && (!updated)) {
-        cuda_graph_ctx_->LaunchGraph(cuda_graph_exec_.get());
+        cuda_stream->LaunchGraph(cuda_graph_exec_.get());
         return;
       }
       current_scope_capturing = true;
-      cuda_graph_ctx_->BeginGraphCapture();
+      cuda_stream->BeginGraphCapture();
     }
   }
 #endif  // WITH_CUDA_GRAPHS
@@ -627,8 +628,9 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
 
 #ifdef WITH_CUDA_GRAPHS
   if (cuda_graph_exec_ && current_scope_capturing) {
-    cuda_graph_ctx_->EndGraphCapture(cuda_graph_exec_.get());
-    cuda_graph_ctx_->LaunchGraph(cuda_graph_exec_.get());
+    auto* cuda_stream = dynamic_cast<ep::CudaStream*>(ctx_->stream());
+    cuda_stream->EndGraphCapture(cuda_graph_exec_.get());
+    cuda_stream->LaunchGraph(cuda_graph_exec_.get());
   }
 #endif  // WITH_CUDA_GRAPHS
 }
@@ -648,12 +650,12 @@ void UserKernel::VirtualKernelInit(KernelContext* ctx) {
 #ifdef WITH_CUDA_GRAPHS
   if (ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
     UserKernelInitContext init_ctx(ctx->device_ctx(), ctx->stream_ctx(), kernel_conf());
-    cuda_graph_ctx_ = dynamic_cast<CudaGraphContext*>(ctx->stream_ctx());
+    auto* cuda_stream = dynamic_cast<ep::CudaStream*>(ctx->stream());
     const auto* cuda_graph_support = dynamic_cast<const user_op::CudaGraphSupport*>(kernel_.get());
-    if (cuda_graph_ctx_ != nullptr) {
+    if (cuda_stream != nullptr) {
       if (cuda_graph_support != nullptr
           && cuda_graph_support->IsCudaGraphSupported(&init_ctx, opkernel_state_.get())) {
-        cuda_graph_exec_.reset(new CudaGraphExecutable());
+        cuda_graph_exec_.reset(new ep::CudaGraphExecutable());
         LOG(INFO) << "CUDA Graphs Kernel: " << op_conf().name() << " ("
                   << op_conf().user_conf().op_type_name() << ")";
       } else {

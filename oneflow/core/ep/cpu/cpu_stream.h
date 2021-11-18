@@ -13,21 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/range_kernel_util.h"
+#ifndef ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
+#define ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
+
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 
-namespace user_op {
-template<typename T>
-struct RangeFunctor<DeviceType::kCPU, T> final {
-  void operator()(DeviceCtx* ctx, const T start, const T delta, const int64_t range_elem_cnt,
-                  T* out) {
-    DoRange<T>(start, delta, range_elem_cnt, out);
-  }
+namespace ep {
+
+class CpuStream : public Stream {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CpuStream);
+  CpuStream() = default;
+  ~CpuStream() override = default;
+
+  DeviceType device_type() const override { return DeviceType::kCPU; }
+  Maybe<void> Sync() override { return Maybe<void>::Ok(); }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_RANGE_FUNCTOR, (DeviceType::kCPU),
-                                 RANGE_DATA_TYPE_SEQ);
+}  // namespace ep
 
-}  // namespace user_op
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_

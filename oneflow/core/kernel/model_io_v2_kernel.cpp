@@ -139,8 +139,7 @@ void HostSliceCopy(Blob* dst, const TensorSliceView& dst_slice, const Blob* src,
                    const TensorSliceView& src_slice) {
   TensorSliceCopier copier(dst_slice, src_slice, dst->data_type(), DeviceType::kCPU);
   CpuDeviceCtx device_ctx;
-  std::unique_ptr<StreamContext> stream_ctx(NewStreamContextAdapter(&device_ctx));
-  copier.Copy(stream_ctx.get(), dst, src);
+  copier.Copy(device_ctx.stream(), dst, src);
 }
 
 template<DeviceType device_type>

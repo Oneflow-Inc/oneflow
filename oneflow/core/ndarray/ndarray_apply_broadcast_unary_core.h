@@ -27,7 +27,7 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T, int NDIMS, template<typename> class unary_func>
 struct NdarrayApplyBroadcastUnaryCoreWrapper final {
-  static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x);
+  static void Apply(ep::Stream* stream, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x);
 };
 
 template<typename T, int NDIMS, template<typename> class unary_func>
