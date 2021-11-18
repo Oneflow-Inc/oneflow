@@ -13,37 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EP_STREAM_H_
-#define ONEFLOW_CORE_EP_STREAM_H_
+#ifndef _ONEFLOW_CORE_FRAMEWORK_PLACEMENT_UTILS_H_
+#define _ONEFLOW_CORE_FRAMEWORK_PLACEMENT_UTILS_H_
 
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/common/device_type.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/symbol.h"
+#include "oneflow/core/framework/tensor_rpc_util.h"
+#include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
 
-namespace ep {
+Maybe<Symbol<ParallelDesc>> ReplacePlacementDeviceTag(Symbol<ParallelDesc> parallel_desc,
+                                                      const std::string& device_type);
 
-class Stream {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(Stream);
-  Stream() = default;
-  virtual ~Stream() = default;
+Maybe<void> TouchConsistentTensor(const std::shared_ptr<one::Tensor>& tensor);
 
-  virtual DeviceType device_type() const = 0;
-  virtual Maybe<void> Sync() = 0;
-
-  virtual Maybe<void> OnExecutionContextSetup() { return Maybe<void>::Ok(); }
-  virtual Maybe<void> OnExecutionContextTeardown() { return Maybe<void>::Ok(); }
-
-  template<typename T>
-  T* As() {
-    return static_cast<T*>(this);
-  }
-};
-
-}  // namespace ep
+constexpr auto* CheckMetaConsistency = DECORATE(&TouchConsistentTensor, CheckConsistentTensorMeta);
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_EP_STREAM_H_
+#endif

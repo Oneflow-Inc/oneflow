@@ -98,15 +98,7 @@ REGISTER_USER_OP("binary_cross_entropy")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn(InferDataType)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("input", 0), 0)
-          .Split(user_op::OpArg("target", 0), 0)
-          .Broadcast(user_op::OpArg("weight", 0))
-          .Split(user_op::OpArg("out", 0), 0)
-          .Build();
-      return Maybe<void>::Ok();
-    });
+    .SetGetSbpFn(GenLossForwardDefaultGetSbpFn());
 
 REGISTER_USER_OP("binary_cross_entropy_grad")
     .Input("input")
@@ -117,16 +109,7 @@ REGISTER_USER_OP("binary_cross_entropy_grad")
     .Attr<std::string>("reduction")
     .SetTensorDescInferFn(InferGradTensorDescFn)
     .SetDataTypeInferFn(InferGradDataType)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("input", 0), 0)
-          .Split(user_op::OpArg("target", 0), 0)
-          .Broadcast(user_op::OpArg("weight", 0))
-          .Split(user_op::OpArg("dy", 0), 0)
-          .Split(user_op::OpArg("dx", 0), 0)
-          .Build();
-      return Maybe<void>::Ok();
-    });
+    .SetGetSbpFn(GenLossBackwardDefaultGetSbpFn());
 
 REGISTER_USER_OP_GRAD("binary_cross_entropy")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,

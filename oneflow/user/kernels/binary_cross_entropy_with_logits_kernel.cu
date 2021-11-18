@@ -283,23 +283,23 @@ user_op::InferTmpSizeFn GenBwInferTmpSizeFn() {
 
 }  // namespace
 
-#define REGISTER_BINARY_CROSS_ENTROPY_KERNEL(dtype)                                       \
-  REGISTER_USER_KERNEL("binary_cross_entropy_with_logits")                                \
-      .SetCreateFn<BinaryCrossEntropyWithLogitsKernel<dtype>>()                           \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                     \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
-                       & (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))   \
+#define REGISTER_BINARY_CROSS_ENTROPY_KERNEL(dtype)                                        \
+  REGISTER_USER_KERNEL("binary_cross_entropy_with_logits")                                 \
+      .SetCreateFn<BinaryCrossEntropyWithLogitsKernel<dtype>>()                            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                      \
+                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
+                       && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))   \
       .SetInferTmpSizeFn(GenFwInferTmpSizeFn<dtype>());
 
-#define REGISTER_BINARY_CROSS_ENTROPY_GRAD_KERNEL(dtype)                                  \
-  REGISTER_USER_KERNEL("binary_cross_entropy_with_logits_grad")                           \
-      .SetCreateFn<BinaryCrossEntropyWithLogitsGradKernel<dtype>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                     \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
-                       & (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)     \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))    \
+#define REGISTER_BINARY_CROSS_ENTROPY_GRAD_KERNEL(dtype)                                   \
+  REGISTER_USER_KERNEL("binary_cross_entropy_with_logits_grad")                            \
+      .SetCreateFn<BinaryCrossEntropyWithLogitsGradKernel<dtype>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                      \
+                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
+                       && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)     \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))    \
       .SetInferTmpSizeFn(GenBwInferTmpSizeFn<dtype>());
 
 REGISTER_BINARY_CROSS_ENTROPY_KERNEL(half)

@@ -46,7 +46,7 @@ class CategoricalOrdinalEncodeKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("CategoricalOrdinalEncode")                               \
       .SetCreateFn<CategoricalOrdinalEncodeKernel<device, cpp_type>>()           \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                      \
-                       & (user_op::HobDataType("in", 0) == proto_type));
+                       && (user_op::HobDataType("in", 0) == proto_type));
 
 REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(DeviceType::kCPU, DataType::kInt32, int32_t);
 REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(DeviceType::kCPU, DataType::kInt64, int64_t);
