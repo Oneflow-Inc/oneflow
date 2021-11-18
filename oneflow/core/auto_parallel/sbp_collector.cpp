@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "sbp_collector.h"
 #include <string>
+#include "oneflow/core/auto_parallel/sbp_util.h"
 #include "sbp_constructor.h"
 
 namespace oneflow {
@@ -135,10 +136,7 @@ void SbpCollector::InitializeCopyCostFromProxy2Consumer(
 
     // check is_mutable in consumer
     OpNode* consumer = sbp_node_consumer->op_node;
-
-    const auto input_blob_modifier_ = consumer->op().InputBlobModifier4Ibn(ibn);
-    bool is_same_sbp = input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable();
-    CHECK(!is_same_sbp) << " Create a proxy for an unmutable consumer!\n";
+    CHECK(!IsSameSBP(consumer, ibn)) << "Create a proxy for an unsuitable consumer!\n";
 
     // Connect sbp proxy and consumer
     sbp_proxy->PointTo(sbp_node_consumer);
@@ -192,21 +190,13 @@ void SbpCollector::ProxySbpCandidate(
     if (IsClassRegistered<int32_t, DisableInputBoxingGroup>(op_type_case)) { return; }
     for (const std::string& ibn : node->op().input_bns()) {
       // Skip those blobs who enforc same SBP.
-      const auto input_blob_modifier_ = node->op().InputBlobModifier4Ibn(ibn);
-      bool is_same_sbp = input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable();
-      if (is_same_sbp) {
+      if (IsSameSBP(node, ibn)) {
         // Enforcing same SBP. Can not collect sbp from this blob.
         continue;
       }
 
       const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
       const OpNode& producer = node->ProducerOpNode4Lbi(lbi);
-      const BlobDesc& logical_blob_desc = producer.LogicalBlobDesc4Lbi(lbi);
-      if (logical_blob_desc.data_type() == DataType::kOFRecord
-          || logical_blob_desc.data_type() == DataType::kTensorBuffer) {
-        // Such kind of data do not accept boxing
-        continue;
-      }
 
       // not building proxy for fixed opertors
       if (op_name2sbp_node.find(producer.op().op_name()) == op_name2sbp_node.end()) return;

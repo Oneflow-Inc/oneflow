@@ -411,14 +411,9 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool comp
     // SbpParallel. Use producer or op_node?
     const oneflow::BlobDesc& logical_blob_desc = producer->LogicalBlobDesc4Lbi(lbi);
     const std::string& obn = *CHECK_JUST(producer->op().obn4lbi(lbi));
-    const auto input_blob_modifier_ = consumer->op().InputBlobModifier4Ibn(ibn);
     // If we are deciding whether we need the wait time, then make is_same_sbp true.
     // B->S cause cudaEventSynchronize in current implementation.
-    bool is_same_sbp =
-        (!compute_cost)
-        || (logical_blob_desc.data_type() == DataType::kOFRecord
-            || logical_blob_desc.data_type() == DataType::kTensorBuffer)
-        || (input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable());
+    bool is_same_sbp = (!compute_cost) || IsSameSBP(consumer, ibn);
     int32_t consumer_sbp_size = EndNode->SbpSignatureList.size();
 
     // look through sbp signature in producer

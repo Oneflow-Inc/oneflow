@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/auto_parallel/sbp_constructor.h"
+#include "oneflow/core/auto_parallel/sbp_util.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job.pb.h"
 #include "sbp_collector.h"
@@ -306,8 +307,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
       const auto& this_sbp_parallel = sbp_signature.bn_in_op2sbp_parallel()[ibn];
       std::cout << ", " << SbpParallelToString(this_sbp_parallel);
       const auto input_blob_modifier_ = op_node->op().InputBlobModifier4Ibn(ibn);
-      bool is_same_sbp = input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable();
-      if (is_same_sbp) std::cout << ", same SBP";
+      if (IsSameSBP(op_node, ibn)) std::cout << ", same SBP";
       std::cout << ", "
                 << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn)).shape().elem_cnt();
       std::cout << std::endl;
