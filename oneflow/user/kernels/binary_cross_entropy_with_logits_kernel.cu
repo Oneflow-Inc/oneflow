@@ -28,21 +28,26 @@ template<typename T>
 __global__ void ComputeBinaryCrossEntropyWithLogitsOut(int64_t elem_cnt, const T* input,
                                                        const T* target, T* out, const T* weight,
                                                        const T* pos_weight_processed) {
+  const T zero_val = GetZeroVal<T>();
+  const T one_val = GetOneVal<T>();
+
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    T input_val = input[i];
-    T target_val = target[i];
-    T max_val = -input_val < 0 ? 0 : -input_val;
+    const T input_val = input[i];
+    const T target_val = target[i];
+    const T max_val = -input_val < zero_val ? zero_val : -input_val;
+    T out_val;
 
     if (pos_weight_processed == nullptr) {
-      out[i] =
-          (1 - target_val) * input_val + max_val + (log(exp(-max_val) + exp(-input_val - max_val)));
+      out_val = (one_val - target_val) * input_val + max_val
+                + (log(exp(-max_val) + exp(-input_val - max_val)));
     } else {
-      T pos_weight_processed_val = pos_weight_processed[i] - target_val + 1;
-      out[i] =
-          (1 - target_val) * input_val
+      T pos_weight_processed_val = pos_weight_processed[i] - target_val + one_val;
+      out_val =
+          (one_val - target_val) * input_val
           + (pos_weight_processed_val * (log(exp(-max_val) + exp(-input_val - max_val)) + max_val));
     }
-    if (weight != nullptr) { out[i] *= weight[i]; }
+    if (weight != nullptr) { out_val *= weight[i]; }
+    out[i] = out_val;
   }
 }
 
@@ -52,21 +57,24 @@ __global__ void ComputeBinaryCrossEntropyWithLogitsOut(int64_t elem_cnt, const h
                                                        const half* weight,
                                                        const half* pos_weight_processed) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  const float zero_val = 0.0;
+  const float one_val = 1.0;
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    float input_val = __half2float(input[i]);
-    float target_val = __half2float(target[i]);
-    float max_val = -input_val < 0 ? 0 : -input_val;
-
+    const float input_val = __half2float(input[i]);
+    const float target_val = __half2float(target[i]);
+    const float max_val = -input_val < zero_val ? zero_val : -input_val;
+    half out_val;
     if (pos_weight_processed == nullptr) {
-      out[i] = __float2half((1 - target_val) * input_val + max_val
-                            + (logf(expf(-max_val) + expf(-input_val - max_val))));
+      out_val = __float2half((one_val - target_val) * input_val + max_val
+                             + (logf(expf(-max_val) + expf(-input_val - max_val))));
     } else {
-      float pos_weight_processed_val = __half2float(pos_weight_processed[i]) - target_val + 1;
-      out[i] = __float2half((1 - target_val) * input_val
-                            + (pos_weight_processed_val
-                               * (logf(expf(-max_val) + expf(-input_val - max_val)) + max_val)));
+      float pos_weight_processed_val = __half2float(pos_weight_processed[i]) - target_val + one_val;
+      out_val = __float2half((one_val - target_val) * input_val
+                             + (pos_weight_processed_val
+                                * (logf(expf(-max_val) + expf(-input_val - max_val)) + max_val)));
     }
-    if (weight != nullptr) { out[i] = __hmul(out[i], weight[i]); }
+    if (weight != nullptr) { out_val = __hmul(out_val, weight[i]); }
+    out[i] = out_val;
   }
 #else
   printf("use half need nvcc arch >= 530");
@@ -87,53 +95,60 @@ __device__ __forceinline__ float CalSigmoid(const float x) {
 }
 
 template<typename T>
-__global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, const T* input,
-                                                           const T* target, const T* dy, T* dx,
-                                                           const T* weight,
+__global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, float inv_elem_cnt,
+                                                           const T* input, const T* target,
+                                                           const T* dy, T* dx, const T* weight,
                                                            const T* pos_weight_processed,
                                                            const ReductionType reduction_type) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    T input_val = input[i];
-    T target_val = target[i];
-    T dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
-    T input_sigmoid = CalSigmoid(input_val);
+    const T input_val = input[i];
+    const T target_val = target[i];
+    const T dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
+    const T input_sigmoid = CalSigmoid(input_val);
+    T dx_val;
     if (pos_weight_processed == nullptr) {
-      dx[i] = (input_sigmoid - target_val) * dy_val;
+      dx_val = (input_sigmoid - target_val) * dy_val;
     } else {
-      dx[i] =
-          dy_val
-          * ((pos_weight_processed[i] + 1 - target_val) * input_sigmoid - pos_weight_processed[i]);
+      T pos_weight_processed_val = pos_weight_processed[i];
+      dx_val = dy_val
+               * ((pos_weight_processed_val + GetOneVal<T>() - target_val) * input_sigmoid
+                  - pos_weight_processed_val);
     }
-    if (weight != nullptr) { dx[i] *= weight[i]; }
-    if (reduction_type == ReductionType::kMean) { dx[i] /= elem_cnt; }
+    if (weight != nullptr) { dx_val *= weight[i]; }
+    if (reduction_type == ReductionType::kMean) { dx_val *= inv_elem_cnt; }
+    dx[i] = dx_val;
   }
 }
 
 template<>
-__global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, const half* input,
-                                                           const half* target, const half* dy,
-                                                           half* dx, const half* weight,
+__global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, float inv_elem_cnt,
+                                                           const half* input, const half* target,
+                                                           const half* dy, half* dx,
+                                                           const half* weight,
                                                            const half* pos_weight_processed,
                                                            const ReductionType reduction_type) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    float input_val = __half2float(input[i]);
-    float target_val = __half2float(target[i]);
-    float dy_val = __half2float(reduction_type == ReductionType::kNone ? dy[i] : *dy);
-    float input_sigmoid = CalSigmoid(input_val);
+    const float input_val = __half2float(input[i]);
+    const float target_val = __half2float(target[i]);
+    const float dy_val = __half2float(reduction_type == ReductionType::kNone ? dy[i] : *dy);
+    const float input_sigmoid = CalSigmoid(input_val);
+    half dx_val;
     if (pos_weight_processed == nullptr) {
-      dx[i] = __float2half((input_sigmoid - target_val) * dy_val);
+      dx_val = __float2half((input_sigmoid - target_val) * dy_val);
     } else {
-      dx[i] =
-          __float2half(dy_val
-                       * ((__half2float(pos_weight_processed[i]) + 1 - target_val) * input_sigmoid
-                          - __half2float(pos_weight_processed[i])));
+      float pos_weight_processed_val = __half2float(pos_weight_processed[i]);
+      dx_val = __float2half(
+          dy_val
+          * ((pos_weight_processed_val + static_cast<float>(1.0) - target_val) * input_sigmoid
+             - pos_weight_processed_val));
     }
 
-    if (weight != nullptr) { dx[i] = __hmul(dx[i], weight[i]); }
+    if (weight != nullptr) { dx_val = __hmul(dx_val, weight[i]); }
     if (reduction_type == ReductionType::kMean) {
-      dx[i] = __float2half(__half2float(dx[i]) / elem_cnt);
+      dx_val = __float2half(__half2float(dx_val) * inv_elem_cnt);
     }
+    dx[i] = dx_val;
   }
 #else
   printf("use half need nvcc arch >= 530");
@@ -181,7 +196,7 @@ class BinaryCrossEntropyWithLogitsKernel final : public user_op::OpKernel {
       pos_weight_shape.Set(pos_weight_shape.NumAxes() - 1,
                            ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->shape().elem_cnt());
       NdarrayUtil<DeviceType::kGPU, T>::BroadcastMul(
-          ctx->device_ctx(), XpuVarNdarray<T>(target_blob->shape(), pos_weight_processed),
+          ctx->stream(), XpuVarNdarray<T>(target_blob->shape(), pos_weight_processed),
           XpuVarNdarray<const T>(pos_weight_shape, pos_weight),
           XpuVarNdarray<const T>(target_blob->shape(), target));
     }
@@ -232,14 +247,15 @@ class BinaryCrossEntropyWithLogitsGradKernel final : public user_op::OpKernel {
       pos_weight_shape.Set(pos_weight_shape.NumAxes() - 1,
                            ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->shape().elem_cnt());
       NdarrayUtil<DeviceType::kGPU, T>::BroadcastMul(
-          ctx->device_ctx(), XpuVarNdarray<T>(target_blob->shape(), pos_weight_processed),
+          ctx->stream(), XpuVarNdarray<T>(target_blob->shape(), pos_weight_processed),
           XpuVarNdarray<const T>(pos_weight_shape, pos_weight),
           XpuVarNdarray<const T>(target_blob->shape(), target));
     }
     ComputeBinaryCrossEntropyWithLogitsGradOut<<<BlocksNum4ThreadsNum(elem_cnt),
                                                  kCudaThreadsNumPerBlock, 0,
                                                  ctx->device_ctx()->cuda_stream()>>>(
-        elem_cnt, input, target, dy, dx, weight, pos_weight_processed, reduction);
+        elem_cnt, static_cast<float>(1.0 / elem_cnt), input, target, dy, dx, weight,
+        pos_weight_processed, reduction);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -267,23 +283,23 @@ user_op::InferTmpSizeFn GenBwInferTmpSizeFn() {
 
 }  // namespace
 
-#define REGISTER_BINARY_CROSS_ENTROPY_KERNEL(dtype)                                       \
-  REGISTER_USER_KERNEL("binary_cross_entropy_with_logits")                                \
-      .SetCreateFn<BinaryCrossEntropyWithLogitsKernel<dtype>>()                           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                      \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
-                       & (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))   \
+#define REGISTER_BINARY_CROSS_ENTROPY_KERNEL(dtype)                                        \
+  REGISTER_USER_KERNEL("binary_cross_entropy_with_logits")                                 \
+      .SetCreateFn<BinaryCrossEntropyWithLogitsKernel<dtype>>()                            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                      \
+                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
+                       && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))   \
       .SetInferTmpSizeFn(GenFwInferTmpSizeFn<dtype>());
 
-#define REGISTER_BINARY_CROSS_ENTROPY_GRAD_KERNEL(dtype)                                  \
-  REGISTER_USER_KERNEL("binary_cross_entropy_with_logits_grad")                           \
-      .SetCreateFn<BinaryCrossEntropyWithLogitsGradKernel<dtype>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                      \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
-                       & (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)     \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))    \
+#define REGISTER_BINARY_CROSS_ENTROPY_GRAD_KERNEL(dtype)                                   \
+  REGISTER_USER_KERNEL("binary_cross_entropy_with_logits_grad")                            \
+      .SetCreateFn<BinaryCrossEntropyWithLogitsGradKernel<dtype>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                      \
+                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
+                       && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)     \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))    \
       .SetInferTmpSizeFn(GenBwInferTmpSizeFn<dtype>());
 
 REGISTER_BINARY_CROSS_ENTROPY_KERNEL(half)

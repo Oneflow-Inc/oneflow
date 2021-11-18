@@ -41,8 +41,8 @@ class EmptyKernel final : public OpKernel {
 
 #define REGISTER_EMPTY_XPU_KERNEL(device, dtype)                                           \
   REGISTER_USER_KERNEL("empty").SetCreateFn<EmptyKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device)                                                  \
-      & (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
+      (user_op::HobDeviceType() == device)                                                 \
+      && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
 #define REGISTER_EMPTY_KERNEL(device, dtype_pair) \
   REGISTER_EMPTY_XPU_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))

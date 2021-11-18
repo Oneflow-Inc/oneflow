@@ -48,7 +48,7 @@ void ReturnKernel::ForwardDataContent(KernelContext* ctx) const {
     }
   } else {
     AutoMemcpy(ctx->stream_ctx(), ctx->BnInOp2Blob("out"), ctx->BnInOp2Blob("in"));
-    ctx->device_ctx()->SyncDevice();
+    CHECK_JUST(ctx->stream()->Sync());
   }
 }
 

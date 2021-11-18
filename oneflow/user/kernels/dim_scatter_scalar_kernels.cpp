@@ -75,13 +75,13 @@ class DimScatterScalarKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SCATTERSCALAR_KERNEL(op_type_name, device, dtype_pair, itype_pair, opt)     \
-  REGISTER_USER_KERNEL(#op_type_name)                                                        \
-      .SetCreateFn<DimScatterScalarKernel<device, OF_PP_PAIR_FIRST(dtype_pair),              \
-                                          OF_PP_PAIR_FIRST(itype_pair), opt>>()              \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                   \
-                       & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair)) \
-                       & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
+#define REGISTER_SCATTERSCALAR_KERNEL(op_type_name, device, dtype_pair, itype_pair, opt)      \
+  REGISTER_USER_KERNEL(#op_type_name)                                                         \
+      .SetCreateFn<DimScatterScalarKernel<device, OF_PP_PAIR_FIRST(dtype_pair),               \
+                                          OF_PP_PAIR_FIRST(itype_pair), opt>>()               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
+                       && (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair)) \
+                       && (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
 
 #define REGISTER_SCATTER_SCALAR_CPU_KERNELS(dtype_pair, itype_pair)                               \
   REGISTER_SCATTERSCALAR_KERNEL(dim_scatter_update_scalar, DeviceType::kCPU, dtype_pair,          \

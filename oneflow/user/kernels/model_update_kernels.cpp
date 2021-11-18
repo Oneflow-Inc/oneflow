@@ -151,12 +151,12 @@ class SGDUpdateKernel final : public user_op::OpKernel, public user_op::CudaGrap
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_SGD_UPDATE_KERNEL(device, dtype, gtype)                                 \
-  REGISTER_USER_KERNEL("sgd_update")                                                     \
-      .SetCreateFn<SGDUpdateKernel<device, dtype, gtype>>()                              \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
-                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
+#define REGISTER_SGD_UPDATE_KERNEL(device, dtype, gtype)                                  \
+  REGISTER_USER_KERNEL("sgd_update")                                                      \
+      .SetCreateFn<SGDUpdateKernel<device, dtype, gtype>>()                               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
+                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
 
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCPU, double, double);
@@ -235,11 +235,11 @@ class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
       .SetCreateFn<IndexedSlicesSGDUpdateKernel<device_type_v, OF_PP_PAIR_FIRST(data_type_pair), \
                                                 OF_PP_PAIR_FIRST(indices_type_pair)>>()          \
       .SetIsMatchedHob(                                                                          \
-          (user_op::HobDeviceTag() == ToString(device_type_v))                                   \
-          & (user_op::HobDataType("model", 0) == OF_PP_PAIR_SECOND(data_type_pair))              \
-          & (user_op::HobDataType("model_diff_values", 0) == OF_PP_PAIR_SECOND(data_type_pair))  \
-          & (user_op::HobDataType("model_diff_indices", 0)                                       \
-             == OF_PP_PAIR_SECOND(indices_type_pair)))                                           \
+          (user_op::HobDeviceType() == device_type_v)                                            \
+          && (user_op::HobDataType("model", 0) == OF_PP_PAIR_SECOND(data_type_pair))             \
+          && (user_op::HobDataType("model_diff_values", 0) == OF_PP_PAIR_SECOND(data_type_pair)) \
+          && (user_op::HobDataType("model_diff_indices", 0)                                      \
+              == OF_PP_PAIR_SECOND(indices_type_pair)))                                          \
       .SetInferTmpSizeFn(GenInferTmpSizeFn<device_type_v, OF_PP_PAIR_FIRST(data_type_pair),      \
                                            OF_PP_PAIR_FIRST(indices_type_pair)>());
 
@@ -249,11 +249,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_INDEXED_SLICES_SGD_UPDATE_KERNEL, DEVI
 template<DeviceType device_type, typename T, typename G>
 class MomentumUpdateKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
-  explicit MomentumUpdateKernel(user_op::KernelCreateContext* ctx) {
-    has_learning_rate_ptr_ = ctx->has_input("learning_rate", 0);
-    has_scale_by_ptr_ = ctx->has_input("scale_by_tensor", 0);
-    has_skip_if_ = ctx->has_input("skip_if", 0);
-  };
+  MomentumUpdateKernel() = default;
   ~MomentumUpdateKernel() override = default;
 
  private:
@@ -269,19 +265,19 @@ class MomentumUpdateKernel final : public user_op::OpKernel, public user_op::Cud
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* momentum = ctx->Tensor4ArgNameAndIndex("momentum", 0);
     const float* learning_rate_ptr = nullptr;
-    if (has_learning_rate_ptr_) {
+    if (ctx->has_input("learning_rate", 0)) {
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
       learning_rate_ptr = learning_rate->dptr<float>();
     }
     const T* scale_by_ptr = nullptr;
-    if (has_scale_by_ptr_) {
+    if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
       CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
     const int64_t* skip_if_ptr = nullptr;
-    if (has_skip_if_) {
+    if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
       CHECK_EQ(skip_if->shape().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
@@ -292,19 +288,14 @@ class MomentumUpdateKernel final : public user_op::OpKernel, public user_op::Cud
         model_diff->dptr<G>(), model->mut_dptr<T>(), momentum->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
-
- private:
-  bool has_learning_rate_ptr_;
-  bool has_scale_by_ptr_;
-  bool has_skip_if_;
 };
 
-#define REGISTER_MOMENTUM_UPDATE_KERNEL(device, dtype, gtype)                            \
-  REGISTER_USER_KERNEL("momentum_update")                                                \
-      .SetCreateWithCtxFn<MomentumUpdateKernel<device, dtype, gtype>>()                  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
-                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
+#define REGISTER_MOMENTUM_UPDATE_KERNEL(device, dtype, gtype)                             \
+  REGISTER_USER_KERNEL("momentum_update")                                                 \
+      .SetCreateFn<MomentumUpdateKernel<device, dtype, gtype>>()                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
+                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
 
 REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCPU, double, double);
@@ -374,11 +365,11 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
       .SetCreateFn<IndexedSlicesMomentumUpdateKernel<                                              \
           device_type_v, OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(indices_type_pair)>>() \
       .SetIsMatchedHob(                                                                            \
-          (user_op::HobDeviceTag() == ToString(device_type_v))                                     \
-          & (user_op::HobDataType("model", 0) == OF_PP_PAIR_SECOND(data_type_pair))                \
-          & (user_op::HobDataType("model_diff_values", 0) == OF_PP_PAIR_SECOND(data_type_pair))    \
-          & (user_op::HobDataType("model_diff_indices", 0)                                         \
-             == OF_PP_PAIR_SECOND(indices_type_pair)))                                             \
+          (user_op::HobDeviceType() == device_type_v)                                              \
+          && (user_op::HobDataType("model", 0) == OF_PP_PAIR_SECOND(data_type_pair))               \
+          && (user_op::HobDataType("model_diff_values", 0) == OF_PP_PAIR_SECOND(data_type_pair))   \
+          && (user_op::HobDataType("model_diff_indices", 0)                                        \
+              == OF_PP_PAIR_SECOND(indices_type_pair)))                                            \
       .SetInferTmpSizeFn(GenInferTmpSizeFn<device_type_v, OF_PP_PAIR_FIRST(data_type_pair),        \
                                            OF_PP_PAIR_FIRST(indices_type_pair)>());
 
@@ -457,12 +448,12 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_ADAM_UPDATE_KERNEL(device, dtype, gtype)                                \
-  REGISTER_USER_KERNEL("adam_update")                                                    \
-      .SetCreateFn<AdamUpdateKernel<device, dtype, gtype>>()                             \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
-                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
+#define REGISTER_ADAM_UPDATE_KERNEL(device, dtype, gtype)                                 \
+  REGISTER_USER_KERNEL("adam_update")                                                     \
+      .SetCreateFn<AdamUpdateKernel<device, dtype, gtype>>()                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
+                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
 
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCPU, double, double);
@@ -524,12 +515,12 @@ class AdagradUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_ADAGRAD_UPDATE_KERNEL(device, dtype, gtype)                             \
-  REGISTER_USER_KERNEL("adagrad_update")                                                 \
-      .SetCreateFn<AdagradUpdateKernel<device, dtype, gtype>>()                          \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
-                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
+#define REGISTER_ADAGRAD_UPDATE_KERNEL(device, dtype, gtype)                              \
+  REGISTER_USER_KERNEL("adagrad_update")                                                  \
+      .SetCreateFn<AdagradUpdateKernel<device, dtype, gtype>>()                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
+                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
 
 REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kCPU, double, double);
@@ -629,11 +620,11 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
       .SetCreateFn<IndexedSlicesAdamUpdateKernel<device_type_v, OF_PP_PAIR_FIRST(data_type_pair), \
                                                  OF_PP_PAIR_FIRST(indices_type_pair)>>()          \
       .SetIsMatchedHob(                                                                           \
-          (user_op::HobDeviceTag() == ToString(device_type_v))                                    \
-          & (user_op::HobDataType("model", 0) == OF_PP_PAIR_SECOND(data_type_pair))               \
-          & (user_op::HobDataType("model_diff_values", 0) == OF_PP_PAIR_SECOND(data_type_pair))   \
-          & (user_op::HobDataType("model_diff_indices", 0)                                        \
-             == OF_PP_PAIR_SECOND(indices_type_pair)))                                            \
+          (user_op::HobDeviceType() == device_type_v)                                             \
+          && (user_op::HobDataType("model", 0) == OF_PP_PAIR_SECOND(data_type_pair))              \
+          && (user_op::HobDataType("model_diff_values", 0) == OF_PP_PAIR_SECOND(data_type_pair))  \
+          && (user_op::HobDataType("model_diff_indices", 0)                                       \
+              == OF_PP_PAIR_SECOND(indices_type_pair)))                                           \
       .SetInferTmpSizeFn(GenInferTmpSizeFn<device_type_v, OF_PP_PAIR_FIRST(data_type_pair),       \
                                            OF_PP_PAIR_FIRST(indices_type_pair)>());
 
@@ -729,12 +720,12 @@ user_op::InferTmpSizeFn LambGenInferTmpSizeFn() {
   };
 }
 
-#define REGISTER_LAMB_UPDATE_KERNEL(device, dtype, gtype)                                      \
-  REGISTER_USER_KERNEL("lamb_update")                                                          \
-      .SetCreateFn<LambUpdateKernel<device, dtype, gtype>>()                                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                     \
-                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)       \
-                       & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value)) \
+#define REGISTER_LAMB_UPDATE_KERNEL(device, dtype, gtype)                                       \
+  REGISTER_USER_KERNEL("lamb_update")                                                           \
+      .SetCreateFn<LambUpdateKernel<device, dtype, gtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
+                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)       \
+                       && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value)) \
       .SetInferTmpSizeFn(LambGenInferTmpSizeFn<device, dtype>());
 
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCPU, float, float);
@@ -766,7 +757,7 @@ class BiasCorrectionFactorKernel final : public user_op::OpKernel,
 #define REGISTER_ADAM_BIAS_CORRECTION_FACTOR_KERNEL(device) \
   REGISTER_USER_KERNEL("adam_bias_correction_factor")       \
       .SetCreateFn<BiasCorrectionFactorKernel<device>>()    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device));
+      .SetIsMatchedHob((user_op::HobDeviceType() == device));
 REGISTER_ADAM_BIAS_CORRECTION_FACTOR_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_ADAM_BIAS_CORRECTION_FACTOR_KERNEL(DeviceType::kGPU)
@@ -823,12 +814,12 @@ class RmsPropUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_RMSPROP_UPDATE_KERNEL(device, dtype, gtype)                             \
-  REGISTER_USER_KERNEL("rmsprop_update")                                                 \
-      .SetCreateFn<RmsPropUpdateKernel<device, dtype, gtype>>()                          \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
-                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
+#define REGISTER_RMSPROP_UPDATE_KERNEL(device, dtype, gtype)                              \
+  REGISTER_USER_KERNEL("rmsprop_update")                                                  \
+      .SetCreateFn<RmsPropUpdateKernel<device, dtype, gtype>>()                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
+                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
 
 REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCPU, double, double);
@@ -925,12 +916,12 @@ user_op::InferTmpSizeFn LarsGenInferTmpSizeFn() {
   };
 }
 
-#define REGISTER_LARS_UPDATE_KERNEL(device, dtype, gtype)                                      \
-  REGISTER_USER_KERNEL("lars_update")                                                          \
-      .SetCreateFn<LarsUpdateKernel<device, dtype, gtype>>()                                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                     \
-                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)       \
-                       & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value)) \
+#define REGISTER_LARS_UPDATE_KERNEL(device, dtype, gtype)                                       \
+  REGISTER_USER_KERNEL("lars_update")                                                           \
+      .SetCreateFn<LarsUpdateKernel<device, dtype, gtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
+                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)       \
+                       && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value)) \
       .SetInferTmpSizeFn(LarsGenInferTmpSizeFn<device, dtype>());
 
 REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCPU, float, float);

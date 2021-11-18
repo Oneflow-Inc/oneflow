@@ -78,9 +78,9 @@ class SigmoidCrossEntropyKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("sigmoid_cross_entropy")                                               \
       .SetCreateFn<                                                                           \
           SigmoidCrossEntropyKernel<device_type, SigmoidCrossEntropyFunctor, dtype, ltype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type)                               \
-                       & (user_op::HobDataType("label", 0) == GetDataType<ltype>::value)      \
-                       & (user_op::HobDataType("loss", 0) == GetDataType<dtype>::value));
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type)                              \
+                       && (user_op::HobDataType("label", 0) == GetDataType<ltype>::value)     \
+                       && (user_op::HobDataType("loss", 0) == GetDataType<dtype>::value));
 
 template<DeviceType device_type, template<typename, typename> class Opt, typename PredT,
          typename LabelT>
@@ -109,9 +109,9 @@ class SigmoidCrossEntropyGradKernel final : public user_op::OpKernel {
       .SetCreateFn<SigmoidCrossEntropyGradKernel<device_type, SigmoidCrossEntropyGradFunctor, \
                                                  dtype, ltype>>()                             \
       .SetIsMatchedHob(                                                                       \
-          (user_op::HobDeviceTag() == device_type)                                            \
-          & (user_op::HobDataType("label", 0) == GetDataType<ltype>::value)                   \
-          & (user_op::HobDataType("prediction_diff", 0) == GetDataType<dtype>::value));
+          (user_op::HobDeviceType() == device_type)                                           \
+          && (user_op::HobDataType("label", 0) == GetDataType<ltype>::value)                  \
+          && (user_op::HobDataType("prediction_diff", 0) == GetDataType<dtype>::value));
 
 }  // namespace oneflow
 #endif  // ONEFLOW_USER_KERNELS_SIGMOID_CROSS_ENTROPY_KERNEL_H_
