@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/stream/include/stream_context_adapter.h"
 
 namespace oneflow {
 
