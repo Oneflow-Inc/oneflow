@@ -78,16 +78,18 @@ There are mainly three components in the JIT system:
 
 - Avoid binding a OneFlow tensor with a MLIR Tensor Value. The side effect on OneFlow Tensor should be modeled with MLIR Op.
 
-### Sequence of operations
+### ~~Sequence of operations~~
+
+(Not going to implement it because MLIR bash OpExpr)
 
 ```cpp
 struct Op {
-op_expr_seq: OpExp
+op_expr_seq: OpExpr
 tensor_types: List<DataType>
 inputs_in_the_seq: List<int_64_t>
 }
 using SeqOfOp = List<Op>
-using PyUses = List<Bool> // size of py_uses is the sum of tensor_types' sizes
+using PyUses = List<bool> // size of py_uses is the sum of tensor_types' sizes
 ```
 
 For a typical "lazy tensor" implementation, there is usually a "sequence of operations" representation. At this point, we use Op Expr to form the sequence. Every time a new Op Expr is applied in JIT interpreter, we insert new element into the sequence and combine its hash with the existing sequence's. When an evaluation is triggered, we combine the hash of the collected sequence and `PyUses` to look up the cached MLIR.
