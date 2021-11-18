@@ -231,18 +231,18 @@ class GpuMinMaxObserverKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MIN_MAX_OBSERVER_KERNEL(dtype)                                        \
-  REGISTER_USER_KERNEL("min_max_observer")                                             \
-      .SetCreateFn<GpuMinMaxObserverKernel<dtype>>()                                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                    \
-        size_t tmp_buffer_size = 1;                                                    \
-        if (ctx->Attr<bool>("per_layer_quantization") == false) {                      \
-          const Shape& in_shape = ctx->InputShape("in", 0);                            \
-          tmp_buffer_size = in_shape.At(0);                                            \
-        }                                                                              \
-        return 2 * tmp_buffer_size * sizeof(dtype);                                    \
+#define REGISTER_MIN_MAX_OBSERVER_KERNEL(dtype)                                         \
+  REGISTER_USER_KERNEL("min_max_observer")                                              \
+      .SetCreateFn<GpuMinMaxObserverKernel<dtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                     \
+        size_t tmp_buffer_size = 1;                                                     \
+        if (ctx->Attr<bool>("per_layer_quantization") == false) {                       \
+          const Shape& in_shape = ctx->InputShape("in", 0);                             \
+          tmp_buffer_size = in_shape.At(0);                                             \
+        }                                                                               \
+        return 2 * tmp_buffer_size * sizeof(dtype);                                     \
       })
 
 REGISTER_MIN_MAX_OBSERVER_KERNEL(float);
