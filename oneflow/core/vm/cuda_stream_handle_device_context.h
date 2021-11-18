@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/vm/thread_safe_allocator.h"
 #include "oneflow/core/common/single_thread_obj_pool.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/common/cpp_attribute.h"
 
 namespace oneflow {
 namespace vm {
@@ -54,7 +55,7 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx, public SingleThreadQueryCuda
 
  private:
   ep::CudaStream* GetOrCreateCudaStream() const {
-    if (!stream_) { stream_.reset(new ep::CudaStream(device_id_)); }
+    if (unlikely(!stream_)) { stream_.reset(new ep::CudaStream(device_id_)); }
     return stream_.get();
   }
 
