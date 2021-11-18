@@ -201,6 +201,12 @@ void SbpCollector::ProxySbpCandidate(
 
       const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
       const OpNode& producer = node->ProducerOpNode4Lbi(lbi);
+      const BlobDesc& logical_blob_desc = producer.LogicalBlobDesc4Lbi(lbi);
+      if (logical_blob_desc.data_type() == DataType::kOFRecord
+          || logical_blob_desc.data_type() == DataType::kTensorBuffer) {
+        // Such kind of data do not accept boxing
+        continue;
+      }
 
       // not building proxy for fixed opertors
       if (op_name2sbp_node.find(producer.op().op_name()) == op_name2sbp_node.end()) return;
