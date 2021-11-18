@@ -131,7 +131,7 @@ llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
 }
 
 void WithMlirContext(
-    user_op::KernelComputeContext* ctx, llvm::SmallVector<llvm::StringRef, 4> ext_libs,
+    user_op::KernelComputeContext* ctx, const llvm::SmallVector<llvm::StringRef, 4>& ext_libs,
     const std::function<mlir::OwningModuleRef(mlir::MLIRContext* mlir_ctx)>& parse,
     const std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)>& lower) {
   mlir::DialectRegistry registry;
@@ -169,8 +169,10 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    llvm::SmallVector<llvm::StringRef, 4> ext_libs(
+        {SharedLibPaths()->begin(), SharedLibPaths()->end()});
     WithMlirContext(
-        ctx, {},
+        ctx, ext_libs,
         [&ctx](mlir::MLIRContext* mlir_ctx) {
           return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
                                                          mlir_ctx);
