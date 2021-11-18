@@ -87,7 +87,7 @@ class CountNotFiniteGpuKernel final : public user_op::OpKernel, public user_op::
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int64_t elem_cnt = x->shape().elem_cnt();
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), y->mut_dptr<int64_t>(), 0,
+    Memset<DeviceType::kGPU>(ctx->stream(), y->mut_dptr<int64_t>(), 0,
                              y->shape().elem_cnt() * sizeof(int64_t));
     CountNotFiniteGpu<T>
         <<<GetCountNotFiniteNumBlocks(elem_cnt), kCudaThreadsNumPerBlock, 0,
@@ -117,7 +117,7 @@ class MultiCountNotFiniteGpuKernel final : public user_op::OpKernel,
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     Param<T, 128> para;
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), y->mut_dptr<int64_t>(), 0,
+    Memset<DeviceType::kGPU>(ctx->stream(), y->mut_dptr<int64_t>(), 0,
                              y->shape().elem_cnt() * sizeof(int64_t));
     para.y = y->mut_dptr<int64_t>();
 

@@ -82,7 +82,7 @@ class TestReshapeKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
+    Memcpy<DeviceType::kGPU>(ctx->stream(), out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
                              in_blob->shape().elem_cnt() * sizeof(float));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -101,7 +101,7 @@ class CopyIn2OutKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
+    Memcpy<DeviceType::kGPU>(ctx->stream(), out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
                              in_blob->shape().elem_cnt() * sizeof(float));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -133,7 +133,7 @@ class TestMultiOutputOrderKernel final : public user_op::OpKernel {
     const user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out1_blob = ctx->Tensor4ArgNameAndIndex("out1", 0);
     user_op::Tensor* out2_blob = ctx->Tensor4ArgNameAndIndex("out2", 0);
-    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out1_blob->mut_dptr<char>(), in_blob->dptr<char>(),
+    Memcpy<DeviceType::kGPU>(ctx->stream(), out1_blob->mut_dptr<char>(), in_blob->dptr<char>(),
                              in_blob->shape().elem_cnt() * sizeof(float));
     std::unique_ptr<ep::primitive::Fill> fill =
         ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream()->device_type(),
@@ -158,7 +158,7 @@ class TestMultiInputFwKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x1_blob = ctx->Tensor4ArgNameAndIndex("x1", 0);
     user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
-    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), y_blob->mut_dptr<char>(), x1_blob->dptr<char>(),
+    Memcpy<DeviceType::kGPU>(ctx->stream(), y_blob->mut_dptr<char>(), x1_blob->dptr<char>(),
                              x1_blob->shape().elem_cnt() * sizeof(float));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
