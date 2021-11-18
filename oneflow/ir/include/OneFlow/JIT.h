@@ -148,7 +148,7 @@ class ProcessOpContext {
     parallel_desc_ = parallel_desc;
   }
   std::shared_ptr<const ArgTuple> GetInputArgTuple() const { return input_arg_tuple_; }
-  TensorTuple GetInputs() const { return inputs_; }
+  const TensorTuple& GetInputs() const { return inputs_; }
   TensorTuple* GetOutputs() { return outputs_; }
   std::unordered_map<std::string, mlir::Value>& GetOperandMapping() { return operand_mapping_; }
   std::unordered_map<std::string, mlir::Type>& GetResultTypeMapping() {
