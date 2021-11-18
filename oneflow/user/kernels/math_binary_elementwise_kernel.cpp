@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/math_binary_elementwise_func.h"
-#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
 
@@ -35,7 +34,7 @@ class MathBinaryElementwiseCpuKernel final : public user_op::OpKernel {
     T* z = tensor_z->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    MultiThreadLoop(n, [&](size_t i) { z[i] = BinaryFunctor<T>::Forward(x[i], y[i]); });
+    for (int32_t i = 0; i < n; ++i) { z[i] = BinaryFunctor<T>::Forward(x[i], y[i]); }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -59,8 +58,7 @@ class MathBinaryElementwiseXGradCpuKernel final : public user_op::OpKernel {
     T* dx = tensor_dx->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    MultiThreadLoop(n,
-                    [&](size_t i) { dx[i] = BinaryFunctor<T>::BackwardXGrad(x[i], y[i], dz[i]); });
+    for (int32_t i = 0; i < n; ++i) { dx[i] = BinaryFunctor<T>::BackwardXGrad(x[i], y[i], dz[i]); }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -84,8 +82,7 @@ class MathBinaryElementwiseYGradCpuKernel final : public user_op::OpKernel {
     T* dy = tensor_dy->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    MultiThreadLoop(n,
-                    [&](size_t i) { dy[i] = BinaryFunctor<T>::BackwardYGrad(x[i], y[i], dz[i]); });
+    for (int32_t i = 0; i < n; ++i) { dy[i] = BinaryFunctor<T>::BackwardYGrad(x[i], y[i], dz[i]); }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -95,26 +92,26 @@ class MathBinaryElementwiseYGradCpuKernel final : public user_op::OpKernel {
       .SetCreateFn<                                                                             \
           MathBinaryElementwiseCpuKernel<OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor), \
                                          OF_PP_PAIR_FIRST(data_type_pair)>>()                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                       \
-                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)));  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair))); \
                                                                                                 \
   REGISTER_USER_KERNEL((std::string("") + OF_PP_PAIR_FIRST(math_type_pair) + "_x_grad"))        \
       .SetCreateFn<MathBinaryElementwiseXGradCpuKernel<                                         \
           OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor),                                \
           OF_PP_PAIR_FIRST(data_type_pair)>>()                                                  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                       \
-                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)));  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair))); \
   REGISTER_USER_KERNEL((std::string("") + OF_PP_PAIR_FIRST(math_type_pair) + "_y_grad"))        \
       .SetCreateFn<MathBinaryElementwiseYGradCpuKernel<                                         \
           OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor),                                \
           OF_PP_PAIR_FIRST(data_type_pair)>>()                                                  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                       \
-                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)));
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD,
                                  MATH_BINARY_ELEMENTWISE_FUNC_SEQ, FLOATING_DATA_TYPE_SEQ)
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD,
-                                 OF_PP_MAKE_TUPLE_SEQ("floordiv", Floordiv),
+                                 OF_PP_MAKE_TUPLE_SEQ("floordiv", FloorDiv),
                                  INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

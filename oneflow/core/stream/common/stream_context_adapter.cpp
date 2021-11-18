@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/stream/include/stream_context_adapter.h"
-#include "oneflow/core/stream/cuda/cuda_stream_context.h"
 
 namespace oneflow {
 
@@ -27,16 +26,13 @@ class DeviceCtxStreamContextAdapter : public StreamContext {
   ~DeviceCtxStreamContextAdapter() override = default;
 
   Maybe<void> AddCallback(std::function<void()> callback) override {
-    device_ctx_->AddCallBack(std::move(callback));
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> Sync() override {
-    device_ctx_->SyncDevice();
-    return Maybe<void>::Ok();
+    UNIMPLEMENTED();
+    return Error::UnimplementedError();
   }
 
   DeviceType device_type() const override { return device_ctx_->device_type(); }
+
+  ep::Stream* stream() override { return device_ctx_->stream(); }
 
  private:
   DeviceCtx* device_ctx_;
@@ -44,29 +40,20 @@ class DeviceCtxStreamContextAdapter : public StreamContext {
 
 #ifdef WITH_CUDA
 
-class CudaDeviceCtxStreamContextAdapter : public CudaStreamContext {
+class CudaDeviceCtxStreamContextAdapter : public StreamContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaDeviceCtxStreamContextAdapter);
   explicit CudaDeviceCtxStreamContextAdapter(DeviceCtx* device_ctx) : device_ctx_(device_ctx) {}
   ~CudaDeviceCtxStreamContextAdapter() override = default;
 
   Maybe<void> AddCallback(std::function<void()> callback) override {
-    device_ctx_->AddCallBack(std::move(callback));
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> Sync() override {
-    device_ctx_->SyncDevice();
-    return Maybe<void>::Ok();
+    UNIMPLEMENTED();
+    return Error::UnimplementedError();
   }
 
   DeviceType device_type() const override { return device_ctx_->device_type(); }
 
-  cudaStream_t cuda_stream() const override { return device_ctx_->cuda_stream(); }
-
-  cublasHandle_t cublas_handle() const override { return device_ctx_->cublas_handle(); }
-
-  cudnnHandle_t cudnn_handle() const override { return device_ctx_->cudnn_handle(); }
+  ep::Stream* stream() override { return device_ctx_->stream(); }
 
  private:
   DeviceCtx* device_ctx_;

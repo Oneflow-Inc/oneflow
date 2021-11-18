@@ -649,6 +649,12 @@ class TestTensor(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         return x.negative()
 
+    @autotest()
+    def test_neg_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return x.neg()
+
     @autotest(auto_backward=False)
     def test_greater_tensor_with_random_data(test_case):
         device = random_device()
@@ -1044,6 +1050,14 @@ class TestTensor(flow.unittest.TestCase):
         device = random_device()
         input = random_pytorch_tensor().to(device)
         y = input.clip(min=random().to(float), max=random().to(float) | nothing())
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest()
+    def test_ceil_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = len(input)
         return y
 
     @flow.unittest.skip_unless_1n1d()

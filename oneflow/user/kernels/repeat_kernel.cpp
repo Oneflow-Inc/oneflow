@@ -40,7 +40,7 @@ class RepeatKernel final : public user_op::OpKernel {
 
 #define REGISTER_REPEAT_KERNEL(device)                                                \
   REGISTER_USER_KERNEL("repeat").SetCreateFn<RepeatKernel<device>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device));
+      (user_op::HobDeviceType() == device));
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_REPEAT_KERNEL, DEVICE_TYPE_SEQ)
 

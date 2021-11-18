@@ -88,6 +88,8 @@ class SystemOpKernelContext : public KernelContext {
 
   StreamContext* stream_ctx() const override { return stream_ctx_.get(); }
 
+  ep::Stream* stream() const override { return stream_ctx_->stream(); }
+
   DeviceCtx* device_ctx() const override { return device_ctx_; }
 
   Blob* BnInOp2Blob(const std::string& bn) const override { return bn_in_op2blob_fn_(bn); }

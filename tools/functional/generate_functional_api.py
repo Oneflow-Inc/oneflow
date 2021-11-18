@@ -24,6 +24,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--project_source_dir", type=str, help="The project source code directory.",
 )
+parser.add_argument(
+    "--export_pybind",
+    action="store_true",
+    default=False,
+    help="Whether to export pybind related files.",
+)
 args = parser.parse_args()
 
 license = """/*
@@ -159,20 +165,20 @@ if __name__ == "__main__":
     g.generate_cpp_header_file(header_fmt, target_header_file)
     target_source_file = os.path.join(generated_api_dir, "functional_api.yaml.cpp")
     g.generate_cpp_source_file(source_fmt, target_source_file)
-
-    assert os.path.isdir(generated_pybind_dir), (
-        "Could not locate the pybind generate directory which is "
-        + generated_pybind_dir
-    )
-    target_pybind_header_file = os.path.join(
-        generated_pybind_dir, "functional_api.yaml.pybind.h"
-    )
-    target_pybind_source_file = os.path.join(
-        generated_pybind_dir, "functional_api.yaml.pybind.cpp"
-    )
-    g.generate_pybind_for_python(
-        pybind_header_fmt,
-        pybind_source_fmt,
-        target_pybind_header_file,
-        target_pybind_source_file,
-    )
+    if args.export_pybind:
+        assert os.path.isdir(generated_pybind_dir), (
+            "Could not locate the pybind generate directory which is "
+            + generated_pybind_dir
+        )
+        target_pybind_header_file = os.path.join(
+            generated_pybind_dir, "functional_api.yaml.pybind.h"
+        )
+        target_pybind_source_file = os.path.join(
+            generated_pybind_dir, "functional_api.yaml.pybind.cpp"
+        )
+        g.generate_pybind_for_python(
+            pybind_header_fmt,
+            pybind_source_fmt,
+            target_pybind_header_file,
+            target_pybind_source_file,
+        )
