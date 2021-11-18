@@ -584,6 +584,46 @@ def _trunc_normal_(
     return res
 
 
+def _kaiming_uniform(
+    self, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
+):
+    initializer_conf = flow.kaiming_initializer(
+        shape=self.shape,
+        distribution="random_uniform",
+        mode=mode,
+        nonlinearity=nonlinearity,
+        negative_slope=a,
+        data_format=data_format,
+    )
+    return _init_by_initializer_conf(self, initializer_conf)
+
+
+def _kaiming_normal(
+    self, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
+):
+    initializer_conf = flow.kaiming_initializer(
+        shape=self.shape,
+        distribution="random_normal",
+        mode=mode,
+        nonlinearity=nonlinearity,
+        negative_slope=a,
+        data_format=data_format,
+    )
+    return _init_by_initializer_conf(self, initializer_conf)
+
+
+def _xavier_normal(self, gain=1.0, *, data_format="NCHW"):
+    assert gain == 1.0, "Only gain == 1.0 is supported now"
+    initializer_conf = flow.xavier_normal_initializer(data_format=data_format)
+    return _init_by_initializer_conf(self, initializer_conf)
+
+
+def _xavier_uniform(self, gain=1.0, *, data_format="NCHW"):
+    assert gain == 1.0, "Only gain == 1.0 is supported now"
+    initializer_conf = flow.xavier_uniform_initializer(data_format=data_format)
+    return _init_by_initializer_conf(self, initializer_conf)
+
+
 def _normal(self, mean=0, std=1):
     initializer_conf = flow.random_normal_initializer(mean=mean, stddev=std)
     return _init_by_initializer_conf(self, initializer_conf)
@@ -699,6 +739,10 @@ def RegisterMethods():
     Tensor.__len__ = _len
     Tensor.uniform_ = _uniform
     Tensor.trunc_normal_ = _trunc_normal_
+    Tensor.kaiming_uniform_ = _kaiming_uniform
+    Tensor.kaiming_normal_ = _kaiming_normal
+    Tensor.xavier_normal_ = _xavier_normal
+    Tensor.xavier_uniform_ = _xavier_uniform
     Tensor.normal_ = _normal
     Tensor.fill_ = _fill
     Tensor.copy_ = _copy
