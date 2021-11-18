@@ -60,7 +60,7 @@ class TensorBufferToTensorKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("tensor_buffer_to_tensor")
     .SetCreateFn<TensorBufferToTensorKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer));
+                     && (user_op::HobDataType("in", 0) == DataType::kTensorBuffer));
 
 class TensorToTensorBufferKernel final : public user_op::OpKernel {
  public:
@@ -102,7 +102,7 @@ class TensorToTensorBufferKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("tensor_to_tensor_buffer")
     .SetCreateFn<TensorToTensorBufferKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
+                     && (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
 
 template<typename T>
 class GenTensorBuffer final : public user_op::OpKernel {
@@ -133,7 +133,7 @@ class GenTensorBuffer final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("gen_tensor_buffer")                           \
       .SetCreateFn<GenTensorBuffer<dtype>>()                          \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
-                       & (user_op::HobAttr<DataType>("data_type") == GetDataType<dtype>::value));
+                       && (user_op::HobAttr<DataType>("data_type") == GetDataType<dtype>::value));
 
 REGISTER_GEN_TENSOR_BUFFER_KERNEL(int32_t)
 REGISTER_GEN_TENSOR_BUFFER_KERNEL(int64_t)
@@ -176,7 +176,7 @@ class TensorBufferToListOfTensors final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("tensor_buffer_to_list_of_tensors")
     .SetCreateFn<TensorBufferToListOfTensors>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer));
+                     && (user_op::HobDataType("in", 0) == DataType::kTensorBuffer));
 
 class TensorBufferToListOfTensorsV2 final : public user_op::OpKernel {
  public:
@@ -212,7 +212,7 @@ class TensorBufferToListOfTensorsV2 final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("tensor_buffer_to_list_of_tensors_v2")
     .SetCreateFn<TensorBufferToListOfTensorsV2>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer));
+                     && (user_op::HobDataType("in", 0) == DataType::kTensorBuffer));
 
 }  // namespace
 

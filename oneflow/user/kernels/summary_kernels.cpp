@@ -55,7 +55,7 @@ class SummaryWriteScalar final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("summary_write_scalar")                        \
       .SetCreateFn<SummaryWriteScalar<dtype>>()                       \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
 REGISTER_SCALAR_USER_KERNEL(double)
 REGISTER_SCALAR_USER_KERNEL(float)
@@ -121,7 +121,7 @@ class SummaryWriteHistogram final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("summary_write_histogram")                     \
       .SetCreateFn<SummaryWriteHistogram<dtype>>()                    \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
 REGISTER_HISTOGRAM_USER_KERNEL(double)
 REGISTER_HISTOGRAM_USER_KERNEL(float)
@@ -153,7 +153,7 @@ class SummaryWritePb final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("summary_write_pb")
     .SetCreateFn<SummaryWritePb<int8_t>>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("in", 0) == GetDataType<int8_t>::value));
+                     && (user_op::HobDataType("in", 0) == GetDataType<int8_t>::value));
 
 template<typename T>
 class SummaryWriteImage final : public user_op::OpKernel {
@@ -180,7 +180,7 @@ class SummaryWriteImage final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("summary_write_image")
     .SetCreateFn<SummaryWriteImage<uint8_t>>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("in", 0) == GetDataType<uint8_t>::value));
+                     && (user_op::HobDataType("in", 0) == GetDataType<uint8_t>::value));
 
 }  // namespace summary
 
