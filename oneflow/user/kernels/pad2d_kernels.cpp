@@ -144,15 +144,15 @@ class ReflectionPad2dGradKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_REFLECTION_PAD2D_KERNELS(device, dtype)                               \
-  REGISTER_USER_KERNEL("reflection_pad2d")                                             \
-      .SetCreateFn<ReflectionPad2dKernel<device, dtype>>()                             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                            \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("reflection_pad2d_grad")                                        \
-      .SetCreateFn<ReflectionPad2dGradKernel<device, dtype>>()                         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                            \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_REFLECTION_PAD2D_KERNELS(device, dtype)                                \
+  REGISTER_USER_KERNEL("reflection_pad2d")                                              \
+      .SetCreateFn<ReflectionPad2dKernel<device, dtype>>()                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("reflection_pad2d_grad")                                         \
+      .SetCreateFn<ReflectionPad2dGradKernel<device, dtype>>()                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_REFLECTION_PAD2D_WITH_DEVICE(device) \
   REGISTER_REFLECTION_PAD2D_KERNELS(device, float)    \
@@ -250,15 +250,15 @@ class ReplicationPad2dGradKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_REPLICATION_PAD2D_KERNELS(device, dtype)                              \
-  REGISTER_USER_KERNEL("replication_pad2d")                                            \
-      .SetCreateFn<ReplicationPad2dKernel<device, dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                            \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("replication_pad2d_grad")                                       \
-      .SetCreateFn<ReplicationPad2dGradKernel<device, dtype>>()                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                            \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_REPLICATION_PAD2D_KERNELS(device, dtype)                               \
+  REGISTER_USER_KERNEL("replication_pad2d")                                             \
+      .SetCreateFn<ReplicationPad2dKernel<device, dtype>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("replication_pad2d_grad")                                        \
+      .SetCreateFn<ReplicationPad2dGradKernel<device, dtype>>()                         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_REPLICATION_PAD2D_WITH_DEVICE(device) \
   REGISTER_REPLICATION_PAD2D_KERNELS(device, float)    \
@@ -358,15 +358,15 @@ class ConstantPad2dGradKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CONSTANT_PAD2D_KERNELS(device, dtype)                                 \
-  REGISTER_USER_KERNEL("constant_pad2d")                                               \
-      .SetCreateFn<ConstantPad2dKernel<device, dtype>>()                               \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                            \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("constant_pad2d_grad")                                          \
-      .SetCreateFn<ConstantPad2dGradKernel<device, dtype>>()                           \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                            \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_CONSTANT_PAD2D_KERNELS(device, dtype)                                  \
+  REGISTER_USER_KERNEL("constant_pad2d")                                                \
+      .SetCreateFn<ConstantPad2dKernel<device, dtype>>()                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("constant_pad2d_grad")                                           \
+      .SetCreateFn<ConstantPad2dGradKernel<device, dtype>>()                            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_CONSTANT_PAD2D_WITH_DEVICE(device) \
   REGISTER_CONSTANT_PAD2D_KERNELS(device, float)    \

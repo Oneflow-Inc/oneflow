@@ -59,7 +59,7 @@ class CpuExpandKernel final : public user_op::OpKernel {
 #define REGISTER_EXPAND_KERNEL(dtype)                                                   \
   REGISTER_USER_KERNEL("expand").SetCreateFn<CpuExpandKernel<dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceType() == DeviceType::kCPU)                                    \
-      & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
+      && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
 
 REGISTER_EXPAND_KERNEL(float);
 REGISTER_EXPAND_KERNEL(double);
@@ -113,7 +113,7 @@ class CpuExpandGradKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("expand_grad")                                 \
       .SetCreateFn<CpuExpandGradKernel<dtype>>()                      \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
 
 REGISTER_EXPAND_GRAD_KERNEL(float);
 REGISTER_EXPAND_GRAD_KERNEL(double);

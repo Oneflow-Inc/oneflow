@@ -50,7 +50,7 @@ class CpuLogicalNotKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("logical_not")                                                           \
       .SetCreateFn<CpuLogicalNotKernel<DeviceType::kCPU, UnaryFuncLogicalNot, dtype, int8_t>>() \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
-                       & (user_op::HobDataType("x", 0) == DataType));
+                       && (user_op::HobDataType("x", 0) == DataType));
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_CPU_LOGICAL_NOT_KERNEL, ARITHMETIC_DATA_TYPE_SEQ)
 
