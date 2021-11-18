@@ -60,7 +60,7 @@ void CalcSumOfBlobs(KernelContext* ctx, const std::function<Blob*(const std::str
     Blob* src_blob_i = BnInOp2Blob(src_bns.Get(i));
     srcs[i] = src_blob_i->dptr<T>();
   }
-  primitive->Launch(ctx->stream_ctx(), srcs.data(), srcs.size(), dst_blob->mut_dptr<T>(),
+  primitive->Launch(ctx->stream(), srcs.data(), srcs.size(), dst_blob->mut_dptr<T>(),
                     dst_blob->static_shape().elem_cnt());
 }
 

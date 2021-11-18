@@ -184,9 +184,9 @@ class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKern
     perm.insert(perm.begin() + in_split_axis, 0);
 
     auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
-        ctx->stream_ctx()->device_type(), unpack_from_dim_vec.size());
+        ctx->stream()->device_type(), unpack_from_dim_vec.size());
     CHECK(transpose);
-    transpose->Launch(ctx->stream_ctx(), in->data_type(), unpack_from_dim_vec.size(),
+    transpose->Launch(ctx->stream(), in->data_type(), unpack_from_dim_vec.size(),
                       unpack_from_dim_vec.data(), unpack_from_ptr, perm.data(), out->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -252,9 +252,9 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
         if (i != out_split_axis) { perm.push_back(i); }
       }
       auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
-          ctx->stream_ctx()->device_type(), transpose_in_dim_vec.size());
+          ctx->stream()->device_type(), transpose_in_dim_vec.size());
       CHECK(transpose);
-      transpose->Launch(ctx->stream_ctx(), in->data_type(), transpose_in_dim_vec.size(),
+      transpose->Launch(ctx->stream(), in->data_type(), transpose_in_dim_vec.size(),
                         transpose_in_dim_vec.data(), in->dptr(), perm.data(),
                         tmp_buffer->mut_dptr());
     }
@@ -296,9 +296,9 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
       FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.push_back(i); }
       perm.insert(perm.begin() + in_split_axis, 0);
       auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
-          ctx->stream_ctx()->device_type(), unpack_from_dim_vec.size());
+          ctx->stream()->device_type(), unpack_from_dim_vec.size());
       CHECK(transpose);
-      transpose->Launch(ctx->stream_ctx(), in->data_type(), unpack_from_dim_vec.size(),
+      transpose->Launch(ctx->stream(), in->data_type(), unpack_from_dim_vec.size(),
                         unpack_from_dim_vec.data(), unpack_from_ptr, perm.data(), out->mut_dptr());
     }
   };
@@ -391,12 +391,12 @@ REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all_gather")
     .SetCreateFn<NcclLogical2DSameDim0AllGather>()
     .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
 
-#define REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(dtype)                     \
-  REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all_gather_noncontinuous")           \
-      .SetCreateFn<NcclLogical2DSameDim0AllGatherNoncontinuous<dtype>>()                \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(dtype)                      \
+  REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all_gather_noncontinuous")            \
+      .SetCreateFn<NcclLogical2DSameDim0AllGatherNoncontinuous<dtype>>()                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                    \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(Infer2DSameDim0AllGatherNoncontinuousKernelTmpBufferSize);
 
 REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(int8_t)
@@ -406,12 +406,12 @@ REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(float)
 REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(double)
 REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(float16)
 
-#define REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(dtype)                                     \
-  REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all2all")                            \
-      .SetCreateFn<NcclLogical2DSameDim0All2All<dtype>>()                               \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(dtype)                                      \
+  REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all2all")                             \
+      .SetCreateFn<NcclLogical2DSameDim0All2All<dtype>>()                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                    \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(Infer2DSameDim0All2AllKernelTmpBufferSize);
 
 REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(int8_t)

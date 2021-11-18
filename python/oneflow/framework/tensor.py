@@ -458,6 +458,14 @@ def _maximum(self, y):
     return flow.maximum(self, y)
 
 
+def _negative(self):
+    return flow._C.negative(self)
+
+
+def _neg(self):
+    return flow._C.negative(self)
+
+
 def _rsqrt(self):
     return flow.rsqrt(self)
 
@@ -685,6 +693,10 @@ def _format(self, format_spec):
     return object.__format__(self, format_spec)
 
 
+def _to(self, *args, **kwargs):
+    return flow._C.to(self, *args, **kwargs)
+
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)
@@ -758,6 +770,8 @@ def RegisterMethods():
     Tensor.ge = _ge
     Tensor.gelu = _gelu
     Tensor.mish = _mish
+    Tensor.negative = _negative
+    Tensor.neg = _neg
     Tensor.sigmoid = _sigmoid
     Tensor.tanh = _tanh
     Tensor.silu = _silu
@@ -817,6 +831,7 @@ def RegisterMethods():
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
     Tensor.permute = _permute
+    Tensor.to = _to
 
 
 def register_tensor_op(op_name):

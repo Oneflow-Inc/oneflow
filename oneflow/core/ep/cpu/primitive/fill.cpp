@@ -41,7 +41,7 @@ class FillImpl : public Fill {
   FillImpl() = default;
   ~FillImpl() override = default;
 
-  void Launch(StreamContext* stream_ctx, void* dst, Scalar value, size_t count) override {
+  void Launch(Stream* stream, void* dst, Scalar value, size_t count) override {
     std::fill_n(reinterpret_cast<T*>(dst), count, GetValue<T>(value));
   }
 };

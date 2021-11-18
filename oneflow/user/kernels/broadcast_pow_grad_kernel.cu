@@ -57,28 +57,28 @@ class BroadcastPowYGradKernel final : public user_op::OpKernel {
     XpuVarNdarray<T> tmp(dz.shape(), tmp_buffer->mut_dptr<T>());
     XpuVarNdarray<const T> x(x_tensor->shape(), x_tensor->dptr<T>(), num_axes);
     XpuVarNdarray<T> dy(dy_tensor->shape(), dy_tensor->mut_dptr<T>(), num_axes);
-    NdarrayUtil<device, T>::BroadcastAdd(ctx->device_ctx(), tmp, x, const_tmp);
+    NdarrayUtil<device, T>::BroadcastAdd(ctx->stream(), tmp, x, const_tmp);
     ComputeLogGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                        ctx->device_ctx()->cuda_stream()>>>(elem_cnt, tmp_buffer->mut_dptr<T>(),
                                                            tmp_buffer->dptr<T>());
-    NdarrayUtil<device, T>::BroadcastMul(ctx->device_ctx(), tmp, dz, const_tmp);
-    NdarrayUtil<device, T>::BroadcastMul(ctx->device_ctx(), tmp, z, const_tmp);
-    NdarrayUtil<device, T>::ReduceSum(ctx->device_ctx(), dy, const_tmp, tmp);
+    NdarrayUtil<device, T>::BroadcastMul(ctx->stream(), tmp, dz, const_tmp);
+    NdarrayUtil<device, T>::BroadcastMul(ctx->stream(), tmp, z, const_tmp);
+    NdarrayUtil<device, T>::ReduceSum(ctx->stream(), dy, const_tmp, tmp);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 }  // namespace
-#define REGISTER_BROADCAST_POW_Y_GRAD_KERNEL(device, dtype_pair)                          \
-  REGISTER_USER_KERNEL("broadcast_pow_y_grad")                                            \
-      .SetCreateFn<BroadcastPowYGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
-                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair))) \
-      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                        \
-        const user_op::TensorDesc& z = ctx->InputTensorDesc("z", 0);                      \
-        const DataType& data_type = z.data_type();                                        \
-        const int64_t elem_cnt = z.shape().elem_cnt();                                    \
-        return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type));               \
+#define REGISTER_BROADCAST_POW_Y_GRAD_KERNEL(device, dtype_pair)                           \
+  REGISTER_USER_KERNEL("broadcast_pow_y_grad")                                             \
+      .SetCreateFn<BroadcastPowYGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                \
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair))) \
+      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                         \
+        const user_op::TensorDesc& z = ctx->InputTensorDesc("z", 0);                       \
+        const DataType& data_type = z.data_type();                                         \
+        const int64_t elem_cnt = z.shape().elem_cnt();                                     \
+        return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type));                \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_POW_Y_GRAD_KERNEL, (DeviceType::kGPU),

@@ -123,22 +123,22 @@ class SimpleLossGradKernel : public user_op::OpKernel {
 };
 namespace {
 
-#define REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, device, dtype)                          \
-  REGISTER_USER_KERNEL(name)                                                              \
-      .SetCreateFn<kernel<dtype>>()                                                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
-                       & (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))   \
+#define REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, device, dtype)                           \
+  REGISTER_USER_KERNEL(name)                                                               \
+      .SetCreateFn<kernel<dtype>>()                                                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                \
+                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
+                       && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))   \
       .SetInferTmpSizeFn(loss::GenDefaultInferTmpSizeFn<dtype>());
 
 #define REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, device, dtype)      \
   REGISTER_USER_KERNEL(name).SetCreateFn<kernel<dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceType() == device)                                 \
-      & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)    \
-      & (user_op::HobDataType("target", 0) == GetDataType<dtype>::value)   \
-      & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)       \
-      & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+      && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)   \
+      && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value)  \
+      && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)      \
+      && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 }  // namespace
 
