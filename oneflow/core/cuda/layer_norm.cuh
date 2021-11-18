@@ -862,8 +862,8 @@ __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_DY load_dy, STORE stor
           for (int i = 0; i < pack_size; ++i) {
             const int col_id = pack_id * pack_size + i;
             sum_loss1[row_id] += row_dy_buf[col_id];
-            sum_loss2[row_id] += row_dy_buf[col_id] * (row_x_buf[col_id] - mean_val)
-                                 * inv_variance_val;
+            sum_loss2[row_id] +=
+                row_dy_buf[col_id] * (row_x_buf[col_id] - mean_val) * inv_variance_val;
           }
         }
       }
@@ -890,9 +890,10 @@ __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_DY load_dy, STORE stor
         if (!padding || col < cols) {
           for (int i = 0; i < pack_size; ++i) {
             const int col_id = pack_id * pack_size + i;
-            row_dy_buf[col_id] = (cols * row_dy_buf[col_id] - warp_sum_loss1[row_id]
-                                  - (row_x_buf[col_id] - mean_val) * inv_variance_val
-                                        * warp_sum_loss2[row_id]) * inv_variance_over_cols;
+            row_dy_buf[col_id] =
+                (cols * row_dy_buf[col_id] - warp_sum_loss1[row_id]
+                 - (row_x_buf[col_id] - mean_val) * inv_variance_val * warp_sum_loss2[row_id])
+                * inv_variance_over_cols;
           }
           store.template store<pack_size>(row_dy_buf + pack_id * pack_size, row + row_id, col);
         }
@@ -1124,7 +1125,9 @@ __global__ void LayerNormGradBlockSMemImpl(LOAD_X load_x, LOAD_DY load_dy, STORE
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
         const int col_id = pack_id * pack_size + i;
-        pack[i] = (cols * dy_buf[i * num_packs + pack_id] - row_sum_loss1 - (x_buf[i * num_packs + pack_id] - mean_val) * inv_variance_val * row_sum_loss2) * inv_variance_over_cols;
+        pack[i] = (cols * dy_buf[i * num_packs + pack_id] - row_sum_loss1
+                   - (x_buf[i * num_packs + pack_id] - mean_val) * inv_variance_val * row_sum_loss2)
+                  * inv_variance_over_cols;
       }
       store.template store<pack_size>(pack, row, pack_id * pack_size);
     }
@@ -1285,7 +1288,9 @@ __global__ void LayerNormGradBlockUncachedImpl(LOAD_X load_x, LOAD_DY load_dy, S
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
         const int col_id = pack_id * pack_size + i;
-        dy_pack[i] = (cols * dy_pack[i] - row_sum_loss1 - (x_pack[i] - mean_val) * inv_variance_val * row_sum_loss2) * inv_variance_over_cols;
+        dy_pack[i] = (cols * dy_pack[i] - row_sum_loss1
+                      - (x_pack[i] - mean_val) * inv_variance_val * row_sum_loss2)
+                     * inv_variance_over_cols;
       }
       store.template store<pack_size>(dy_pack, row, pack_id * pack_size);
     }

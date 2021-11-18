@@ -422,9 +422,9 @@ class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
         return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type)) * 2;       \
       });
 
-REGISTER_LAYER_NORM_GPU_KERNEL(float, float)
-REGISTER_LAYER_NORM_GPU_KERNEL(double, double)
-REGISTER_LAYER_NORM_GPU_KERNEL(float16, float)
+// REGISTER_LAYER_NORM_GPU_KERNEL(float, float)
+// REGISTER_LAYER_NORM_GPU_KERNEL(double, double)
+// REGISTER_LAYER_NORM_GPU_KERNEL(float16, float)
 
 template<typename T>
 class LayerNormGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -460,9 +460,9 @@ class LayerNormGradKernel final : public user_op::OpKernel, public user_op::Cuda
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
 
-REGISTER_LAYER_NORM_GRAD_KERNEL(float)
-REGISTER_LAYER_NORM_GRAD_KERNEL(double)
-REGISTER_LAYER_NORM_GRAD_KERNEL(half)
+// REGISTER_LAYER_NORM_GRAD_KERNEL(float)
+// REGISTER_LAYER_NORM_GRAD_KERNEL(double)
+// REGISTER_LAYER_NORM_GRAD_KERNEL(half)
 
 template<typename T, typename BNParamT>
 class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -633,8 +633,8 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
 
-REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(float)
-REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(double)
+// REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(float)
+// REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(double)
 
 class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
                                               public user_op::CudaGraphSupport {
@@ -736,7 +736,7 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
     }
   }
 };
-
+/*
 REGISTER_USER_KERNEL("layer_norm_param_grad")
     .SetCreateFn<LayerNormParamGradGpuHalfKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
@@ -761,4 +761,5 @@ REGISTER_USER_KERNEL("layer_norm_param_grad")
       }
       return tmp_buffer_size;
     });
+*/
 }  // namespace oneflow

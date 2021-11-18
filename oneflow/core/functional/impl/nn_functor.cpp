@@ -265,10 +265,7 @@ class LayerNormFunctor {
                            const int64_t& begin_params_axis, const double& epsilon) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("begin_norm_axis", begin_norm_axis));
-    JUST(attrs.SetAttr<int64_t>("begin_params_axis", begin_params_axis));
     JUST(attrs.SetAttr<double>("epsilon", epsilon));
-    JUST(attrs.SetAttr<bool>("center", false));
-    JUST(attrs.SetAttr<bool>("scale", false));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -295,10 +292,7 @@ class LayerNormAffineFunctor {
                            const int64_t& begin_params_axis, const double& epsilon) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("begin_norm_axis", begin_norm_axis));
-    JUST(attrs.SetAttr<int64_t>("begin_params_axis", begin_params_axis));
     JUST(attrs.SetAttr<double>("epsilon", epsilon));
-    JUST(attrs.SetAttr<bool>("center", true));
-    JUST(attrs.SetAttr<bool>("scale", true));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, gamma, beta}, attrs);
   }
 
