@@ -179,6 +179,7 @@ TEST(Optional, Reference) {
   ASSERT_TRUE(f);
   ASSERT_TRUE(!g);
   ASSERT_TRUE(h);
+  ASSERT_NE(NullOpt, h);
 
   ASSERT_EQ(Private::Value(f), 234);
   ASSERT_EQ(Private::Value(h), 234);
@@ -187,10 +188,13 @@ TEST(Optional, Reference) {
 
   e = x;
   ASSERT_TRUE(e);
+  ASSERT_EQ(e, x);
+  ASSERT_EQ(e, 234);
   ASSERT_EQ(Private::Value(e), 234);
 
   e = NullOpt;
   ASSERT_TRUE(!e);
+  ASSERT_EQ(e, NullOpt);
 }
 
 TEST(Optional, Hash) {

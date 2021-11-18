@@ -174,4 +174,7 @@ TEST(Variant, BinarySearchVisit) {
 
   a = c;
   ASSERT_EQ(a, 1.2f);
+  ASSERT_EQ(1.2f, a);
+  ASSERT_EQ(a, c);
+  ASSERT_NE(a, b);
 }

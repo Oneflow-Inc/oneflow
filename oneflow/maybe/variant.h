@@ -267,6 +267,28 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
 
   bool operator!=(const Variant& v) const { return !operator==(v); }
 
+  template<typename T, std::enable_if_t<HasType<T>, int> = 0>
+  friend bool operator==(const Variant& v, const T& x) {
+    if (v.index != IndexOfType<T>) return false;
+
+    return v.Get<T>() == x;
+  }
+
+  template<typename T, std::enable_if_t<HasType<T>, int> = 0>
+  friend bool operator!=(const Variant& v, const T& x) {
+    return !(v == x);
+  }
+
+  template<typename T, std::enable_if_t<HasType<T>, int> = 0>
+  friend bool operator==(const T& x, const Variant& v) {
+    return v == x;
+  }
+
+  template<typename T, std::enable_if_t<HasType<T>, int> = 0>
+  friend bool operator!=(const T& x, const Variant& v) {
+    return !(v == x);
+  }
+
   template<typename T, typename... Args>
   T& Emplace(Args&&... args) {
     if (Is<T>()) {
