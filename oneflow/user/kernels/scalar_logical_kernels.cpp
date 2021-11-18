@@ -63,7 +63,7 @@ class ScalarLogicalKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(kernel_name)                                                              \
       .SetCreateFn<ScalarLogicalKernel<device, binary_op, OF_PP_PAIR_FIRST(input_dtype_pair)>>() \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
-                       & (user_op::HobDataType("in", 0) == OF_PP_PAIR_SECOND(input_dtype_pair)));
+                       && (user_op::HobDataType("in", 0) == OF_PP_PAIR_SECOND(input_dtype_pair)));
 
 #define REGISTER_SCALAR_LOGICAL_KERNEL(device, dtype_pair)                                         \
   REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_logical_equal", BinaryFuncEQ, \
