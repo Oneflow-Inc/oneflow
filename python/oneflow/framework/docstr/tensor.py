@@ -269,8 +269,6 @@ add_docstr(
         retain_graph (bool, optional): If False, the graph used to compute the grads will be freed. Note that in nearly all cases setting this option to True is not needed and often can be worked around in a much more efficient way. Defaults to the value of create_graph.
 
         create_graph (bool, optional): If True, graph of the derivative will be constructed, allowing to compute higher order derivative products. Defaults to False.
-
-        inputs (sequence of Tensor): Inputs w.r.t. which the gradient will be accumulated into .grad. All other Tensors will be ignored. If not provided, the gradient is accumulated into all the leaf Tensors that were used to compute the attr::tensors.   
     """,
 )
 
@@ -328,27 +326,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.ge,
     """
-    Computes  
-
-    .. math::
-        \t { input } \geq \t { other }
-    
-    element-wise.
-
-    The second argument can be a number or a tensor whose shape is broadcastable with the first argument.
-
-    Args:
-        input (Tensor): the tensor to compare
-
-        other (Tensor or float): the tensor or value to compare
-
-    Keyword Arguments:
-        out (Tensor, optional): the output tensor.
-    
-    Returns:
-        A boolean tensor that is True where input is greater than or equal to other and False elsewhere
-    
-   
+    See :func:`oneflow.ge`
     """,
 )
 
@@ -503,7 +481,7 @@ add_docstr(
     Returns the size of the self tensor. If dim is not specified, the returned value is a torch.Size, a subclass of tuple. If dim is specified, returns an int holding the size of that dimension.
 
     Args:
-        dim (int, optional): The dimension for which to retrieve the size.
+        idx (int, optional): The dimension for which to retrieve the size.
 
   
     """,
@@ -554,25 +532,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.triu,
     """
-    The interface is consistent with PyTorch.
-
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.triu.html#torch.triu.
-
-    Returns the upper triangular part of a matrix (2-D tensor) or batch of matrices input, the other elements of the result tensor out are set to 0.
-
-    The upper triangular part of the matrix is defined as the elements on and above the diagonal.
-
-    The argument diagonal controls which diagonal to consider. If diagonal = 0, all elements on and above the main diagonal are retained. A positive value excludes just as many diagonals above the main diagonal, and similarly a negative value includes just as many diagonals below the main diagonal.
-    
-    Args:
-        input (Tensor): the input tensor.
-
-        diagonal (int, optional): the diagonal to consider
-
-    Keyword Arguments:
-        out (Tensor, optional): the output tensor.
-
-
+    See :func:`oneflow.triu`
     """,
 )
 
@@ -590,67 +550,11 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.Tensor.xavier_uniform_,
-    """
-    Args:
-
-
-        gain: an optional scaling factor
-
-
-    
-    """,
-)
-
-add_docstr(
-    oneflow.Tensor.xavier_normal_,
-    """
-    Args:
-
-
-        gain: an optional scaling factor
-
-
-    """,
-)
-
-add_docstr(
-    oneflow.Tensor.kaiming_normal_,
-    """
-    Args:
-
-        a: the negative slope of the rectifier used after this layer (only used with 'leaky_relu')
-
-        mode: either 'fan_in' (default) or 'fan_out'. Choosing 'fan_in' preserves the magnitude of the variance of the weights in the forward pass. Choosing 'fan_out' preserves the magnitudes in the backwards pass.
-
-        nonlinearity: the non-linear function (nn.functional name), recommended to use only with 'relu' or 'leaky_relu' (default).
-
-
-    """,
-)
-
-add_docstr(
-    oneflow.Tensor.kaiming_uniform_,
-    """
-    Args:
-
-
-
-        a: the negative slope of the rectifier used after this layer (only used with 'leaky_relu')
-
-        mode: either 'fan_in' (default) or 'fan_out'. Choosing 'fan_in' preserves the magnitude of the variance of the weights in the forward pass. Choosing 'fan_out' preserves the magnitudes in the backwards pass.
-
-        nonlinearity: the non-linear function (nn.functional name), recommended to use only with 'relu' or 'leaky_relu' (default).
-
-    """,
-)
-
-add_docstr(
     oneflow.Tensor.copy_,
     """
     The interface is consistent with PyTorch.
 
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.Tensor.copy_.html#torch.Tensor.copy_.
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.Tensor.copy_.html.
 
     Tensor.copy_(src, non_blocking=False) → Tensor
 
