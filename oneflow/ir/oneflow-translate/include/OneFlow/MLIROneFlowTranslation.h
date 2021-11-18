@@ -19,12 +19,16 @@ limitations under the License.
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/MLIRContext.h"
+
 #include "OneFlow/OneFlowOps.h"
+
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+
 #include <functional>
 #include <string>
+
 namespace mlir {
 
 // TODO: wrap in a helper namespace
@@ -38,6 +42,7 @@ LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_o
                                    ::oneflow::UserOpConf* user_conf);
 LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf);
 OperandRange GetDataInputOperands(Operation* op);
+
 class Importer {
  public:
   Importer(MLIRContext* context, ModuleOp module)
@@ -134,7 +139,10 @@ class RoundTripOneFlowJobWrapperInterface {
 void RoundTripOneFlowJob(
     RoundTripOneFlowJobWrapperInterface& job_wrapper,
     const std::function<bool(::oneflow::Job* job, std::string& reason)>& is_legit_job);
+
 void registerFromOneFlowJobTranslation();
+
+void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::string& path);
 
 }  // namespace mlir
 

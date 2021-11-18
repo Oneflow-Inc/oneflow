@@ -22,10 +22,15 @@ limitations under the License.
 #include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/job/runtime.h"
 #include "oneflow/core/register/blob.h"
+#include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/job/job_ir.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
+
+namespace {}  // namespace
+
 ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
   using namespace oneflow;
   py::class_<NNGraph, std::shared_ptr<NNGraph>>(m, "CNNGraph")
@@ -63,5 +68,12 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
         });
   m.def("AddTensorAsGraphLoss",
         [](const std::shared_ptr<one::Tensor>& t) { return AddTensorAsGraphLoss(t).GetOrThrow(); });
+  m.def("SaveJobToIR",
+        [](const std::string& serialized_job, const std::string& path) -> Maybe<void> {
+          Job job;
+          CHECK_OR_RETURN(TxtString2PbMessage(serialized_job, &job));
+          return SaveJobToIR(&job, path);
+        });
 }
+
 }  // namespace oneflow

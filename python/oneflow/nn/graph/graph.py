@@ -16,6 +16,7 @@ limitations under the License.
 from collections import OrderedDict
 from functools import partial
 from typing import Dict, Optional, Union, List
+from google.protobuf import text_format
 
 import oneflow
 import oneflow._oneflow_internal
@@ -317,6 +318,16 @@ class Graph(object):
             for name, block in self._blocks.items():
                 assert block.type == BlockType.MODULE
                 block.debug(v_level, ranks, mode)
+
+    def save(self, path):
+        r"""
+        """
+        if not self._is_compiled:
+            raise RuntimeError("graph must be compiled first.")
+
+        serialized_job = str(text_format.MessageToString(self._forward_job_proto))
+        oneflow.nn.graph.SaveJobToIR(serialized_job, path)
+
 
     def __repr__(self):
         r"""For printing the graph structure.

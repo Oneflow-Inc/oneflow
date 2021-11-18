@@ -49,6 +49,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <google/protobuf/text_format.h>
@@ -367,7 +368,36 @@ void RoundTripOneFlowJob(
                    << job->job_conf().job_name() << "\n";
       exit(EXIT_FAILURE);
     }
+  } else {
+    llvm::errs() << "fail to convert job to IR, job_name: " << job->job_conf().job_name();
+    exit(EXIT_FAILURE);
+  }
+}
 
+void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::string& path) {
+  const ::oneflow::Job* job = job_wrapper.job();
+  mlir::MLIRContext context;
+  context.getOrLoadDialect<oneflow::OneFlowDialect>();
+  context.loadDialect<StandardOpsDialect>();
+
+  OwningModuleRef module(
+      ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
+  JobImporter imp(job_wrapper, &context, module.get());
+  if (succeeded(imp.ProcessJob())) {
+    mlir::PassManager pm(&context);
+    pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
+    if (mlir::failed(pm.run(*module))) {
+      module->emitError("Failed to run canonicalizer pass");
+      exit(EXIT_FAILURE);
+    }
+
+    std::string mlir;
+    llvm::raw_string_ostream os_mlir(mlir);
+    module->print(os_mlir);
+    const auto& job_name = job->job_conf().job_name();
+    llvm::SmallString<256> dir(path);
+    dir.append(job_name + ".mlir");
+    job_wrapper.DumpLog(dir.str().str(), mlir);
   } else {
     llvm::errs() << "fail to convert job to IR, job_name: " << job->job_conf().job_name();
     exit(EXIT_FAILURE);

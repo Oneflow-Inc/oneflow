@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_def.h"
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/core/job/job_ir.h"
 
 namespace oneflow {
 
@@ -140,5 +141,13 @@ class IRRoundTrip final : public JobPass {
 
 REGISTER_JOB_PASS("IRRoundTrip", IRRoundTrip);
 
+Maybe<void> SaveJobToIR(Job* job, const std::string& path) {
+  // TODO: check path is valid dir
+  RoundTripOneFlowJobWrapper job_wrapper(job);
+  mlir::SaveJobToIR(job_wrapper, path);
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow
+
 #endif  // WITH_MLIR
