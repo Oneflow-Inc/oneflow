@@ -58,7 +58,7 @@ class ParallelDesc final {
   Maybe<void> MaybeInit(const ParallelConf& user_conf);
 
   // Getters
-  const Maybe<int64_t>& symbol_id() const { return symbol_id_; }
+  const Optional<int64_t>& symbol_id() const { return symbol_id_; }
   bool containing_current_rank() const { return containing_current_rank_; }
   DeviceType device_type() const { return device_type_; }
   const std::string& device_tag() const { return parallel_conf_.device_tag(); }
@@ -94,6 +94,8 @@ class ParallelDesc final {
   bool operator==(const ParallelDesc& rhs) const { return Equals(rhs); }
   bool operator!=(const ParallelDesc& rhs) const { return !(*this == rhs); }
   bool Equals(const ParallelDesc* rhs) const { return Equals(*rhs); }
+  const std::vector<int64_t>& parallel_id2machine_id() const { return parallel_id2machine_id_; }
+  const std::vector<int64_t>& parallel_id2device_id() const { return parallel_id2device_id_; }
   Maybe<int64_t> MachineId4ParallelId(int64_t parallel_id) const;
   Maybe<int64_t> DeviceId4ParallelId(int64_t parallel_id) const;
   Maybe<int64_t> ParallelId4MachineDeviceId(int64_t machine_id, int64_t device_id) const;
@@ -108,7 +110,7 @@ class ParallelDesc final {
 
  private:
   friend Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
-  ParallelDesc() : symbol_id_(Error::SymbolIdUninitializedError()) {}
+  ParallelDesc() : symbol_id_(NullOpt) {}
   ParallelDesc(int64_t symbol_id) : symbol_id_(symbol_id) {}
   void ClearUp();
   Maybe<void> SetMachineIdAndDeviceIdsByParsingDeviceName(const std::string& device_name,
@@ -117,7 +119,7 @@ class ParallelDesc final {
   Maybe<void> CheckWithResourceDesc(const ResourceDesc& resource_desc);
   bool EqualsMachineId2SortedDevPhyIds(const ParallelDesc& rhs) const;
 
-  Maybe<int64_t> symbol_id_;
+  Optional<int64_t> symbol_id_;
   DeviceType device_type_;
   ParallelConf parallel_conf_;
   std::shared_ptr<Shape> hierarchy_;
@@ -126,8 +128,8 @@ class ParallelDesc final {
       machine_id2sorted_dev_phy_ids_;
   int64_t parallel_num_;
   int64_t device_num_of_each_machine_;
-  HashMap<int64_t, int64_t> parallel_id2machine_id_;
-  HashMap<int64_t, int64_t> parallel_id2device_id_;
+  std::vector<int64_t> parallel_id2machine_id_;
+  std::vector<int64_t> parallel_id2device_id_;
   HashMap<int64_t, HashMap<int64_t, int64_t>> machine_id2device_id2parallel_id_;
   // TODO(lixinqi): merge cfg_parallel_conf_ and parallel_conf_ after cfg::ParallelConf taken as the
   // constructor argument

@@ -152,7 +152,10 @@ class DistributedPartialFcSampleOpKernelState final : public user_op::OpKernelSt
     SetupKernel<<<BlocksNum4ThreadsNum(num_classes), kCudaThreadsNumPerBlock, 0,
                   ctx->cuda_stream()>>>(seed, curand_states_);
   }
-  ~DistributedPartialFcSampleOpKernelState() { OF_CUDA_CHECK(cudaFree(curand_states_)); };
+  ~DistributedPartialFcSampleOpKernelState() {
+    cudaError_t ret = cudaFree(curand_states_);
+    if (ret != cudaErrorCudartUnloading) { OF_CUDA_CHECK(ret); }
+  };
 
   int64_t lower() const { return lower_; }
   int64_t upper() const { return upper_; }
@@ -367,9 +370,9 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("distributed_partial_fc_sample")                                          \
       .SetCreateFn<DistributedPartialFcSampleGpuKernel<OF_PP_PAIR_FIRST(dtype_pair),             \
                                                        OF_PP_PAIR_FIRST(ltype_pair)>>()          \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                        \
-                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))     \
-                       & (user_op::HobDataType("weight", 0) == OF_PP_PAIR_SECOND(dtype_pair)))   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                            \
+                       && (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))    \
+                       && (user_op::HobDataType("weight", 0) == OF_PP_PAIR_SECOND(dtype_pair)))  \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                               \
         const int64_t num_classes = ctx->InputTensorDesc("weight", 0).shape().At(0);             \
         const int64_t batch_size = ctx->InputTensorDesc("label", 0).shape().At(0);               \
@@ -416,9 +419,9 @@ class DistributedPartialFcSampleDisableBoxingGpuKernel final : public user_op::O
       .SetCreateFn<DistributedPartialFcSampleDisableBoxingGpuKernel<                             \
           OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(ltype_pair)>>()                         \
       .SetIsMatchedHob(                                                                          \
-          (user_op::HobDeviceTag() == "gpu")                                                     \
-          & (user_op::HobDataType("sampled_label", 0) == OF_PP_PAIR_SECOND(ltype_pair))          \
-          & (user_op::HobDataType("sampled_weight_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
+          (user_op::HobDeviceType() == DeviceType::kGPU)                                         \
+          && (user_op::HobDataType("sampled_label", 0) == OF_PP_PAIR_SECOND(ltype_pair))         \
+          && (user_op::HobDataType("sampled_weight_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DISTRIBUTED_PARTIAL_FC_SAMPLE_DISABLE_BOXING_GPU_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 

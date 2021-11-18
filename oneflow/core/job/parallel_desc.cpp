@@ -71,8 +71,7 @@ Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf) {
   return machine2device_list;
 }
 
-ParallelDesc::ParallelDesc(const ParallelConf& user_conf)
-    : symbol_id_(Error::SymbolIdUninitializedError()) {
+ParallelDesc::ParallelDesc(const ParallelConf& user_conf) : symbol_id_(NullOpt) {  // NOLINT
   CHECK_JUST(MaybeInit(user_conf));
   CHECK_JUST(CheckWithResourceDesc(*(Global<ResourceDesc, ForSession>::Get())));
 }
@@ -262,8 +261,10 @@ void ParallelDesc::ClearUp() {
     for (int64_t device_id : *machine_id2sorted_dev_phy_ids_->at(machine_id)) {
       parallel_conf_.add_device_name(std::string("@") + std::to_string(machine_id) + ":"
                                      + std::to_string(device_id));
-      parallel_id2machine_id_[parallel_id] = machine_id;
-      parallel_id2device_id_[parallel_id] = device_id;
+      CHECK_EQ(parallel_id, parallel_id2machine_id_.size());
+      parallel_id2machine_id_.push_back(machine_id);
+      CHECK_EQ(parallel_id, parallel_id2device_id_.size());
+      parallel_id2device_id_.push_back(device_id);
       machine_id2device_id2parallel_id_[machine_id][device_id] = parallel_id;
       parallel_id += 1;
     }
@@ -311,19 +312,17 @@ ParallelConf ParallelDesc::GetParallelIdOnlyParallelConf(int64_t parallel_id) co
 }
 
 Maybe<int64_t> ParallelDesc::MachineId4ParallelId(int64_t parallel_id) const {
-  const auto& iter = parallel_id2machine_id_.find(parallel_id);
-  CHECK_OR_RETURN(iter != parallel_id2machine_id_.end())
+  CHECK_LT_OR_RETURN(parallel_id, parallel_id2machine_id_.size())
       << "parallel_id: " << parallel_id << "\n----[ parallel_conf ]----"
       << parallel_conf().DebugString();
-  return iter->second;
+  return parallel_id2machine_id_.at(parallel_id);
 }
 
 Maybe<int64_t> ParallelDesc::DeviceId4ParallelId(int64_t parallel_id) const {
-  const auto& iter = parallel_id2device_id_.find(parallel_id);
-  CHECK_OR_RETURN(iter != parallel_id2device_id_.end())
+  CHECK_LT_OR_RETURN(parallel_id, parallel_id2device_id_.size())
       << "parallel_id: " << parallel_id << "\n----[ parallel_conf ]----"
       << parallel_conf().DebugString();
-  return iter->second;
+  return parallel_id2device_id_.at(parallel_id);
 }
 
 bool ParallelDesc::ContainingMachineId(int64_t machine_id) const {

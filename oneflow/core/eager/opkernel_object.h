@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/eager/blob_object.h"
 #include "oneflow/core/operator/op_node_signature_desc.h"
-#include "oneflow/core/stream/stream_context_adapter.h"
+#include "oneflow/core/stream/include/stream_context_adapter.h"
 
 namespace oneflow {
 
@@ -87,6 +87,8 @@ class SystemOpKernelContext : public KernelContext {
   ~SystemOpKernelContext() = default;
 
   StreamContext* stream_ctx() const override { return stream_ctx_.get(); }
+
+  ep::Stream* stream() const override { return stream_ctx_->stream(); }
 
   DeviceCtx* device_ctx() const override { return device_ctx_; }
 

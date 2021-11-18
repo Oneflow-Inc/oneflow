@@ -14,9 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 
@@ -49,15 +46,6 @@ Maybe<void> Upsample::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  const std::string& op_name = fw_op_expr->op_name();
-  const float height_scale = 1.0;
-  const float width_scale = 1.0;
-  const bool align_corners = false;
-  const std::string data_format = "NCHW";
-  const std::string interpolation = "nearest";
-  grad_op_ =
-      JUST(op_expr_helper::UpsampleGradOp(height_scale, width_scale, align_corners, data_format,
-                                          interpolation, GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
@@ -80,15 +68,11 @@ Maybe<void> Upsample::Apply(const UpsampleCaptureState* ctx, const TensorTuple& 
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<float>("height_scale", ctx->height_scale));
-  JUST(attrs.SetAttr<float>("width_scale", ctx->width_scale));
-  JUST(attrs.SetAttr<bool>("align_corners", ctx->align_corners));
-  JUST(attrs.SetAttr<std::string>("data_format", ctx->data_format));
-  JUST(attrs.SetAttr<std::string>("interpolation", ctx->interpolation));
   const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
   in_grads->resize(1);
-  in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0), x}, attrs));
+  in_grads->at(0) =
+      JUST(functional::UpsampleGrad(out_grads.at(0), x, ctx->height_scale, ctx->width_scale,
+                                    ctx->align_corners, ctx->data_format, ctx->interpolation));
   return Maybe<void>::Ok();
 }
 

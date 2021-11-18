@@ -362,6 +362,33 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.negative,
+    r"""This operator computes the negative value of Tensor.
+    
+    Args:
+        input (oneflow.Tensor): A Tensor
+    
+    Returns:
+        oneflow.Tensor: The result Tensor
+    
+    For example:
+    
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        
+        >>> input = flow.tensor(
+        ...    np.array([1.0, -1.0, 2.3]).astype(np.float32), dtype=flow.float32
+        ... )
+        >>> out = flow.negative(input)
+        >>> out
+        tensor([-1.0000,  1.0000, -2.3000], dtype=oneflow.float32)
+    
+    """,
+)
+
+add_docstr(
     oneflow.log1p,
     r"""Returns a new tensor with the natural logarithm of (1 + input).
 
@@ -1069,7 +1096,10 @@ add_docstr(
 
 add_docstr(
     oneflow.matmul,
-    r"""This operator applies matrix multiplication to two Tensor.
+    r"""
+    matmul(input, other) -> Tensor
+
+    This operator applies matrix multiplication to two Tensor.
 
     Args:
         a (oneflow.Tensor): A Tensor

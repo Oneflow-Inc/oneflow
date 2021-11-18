@@ -484,11 +484,12 @@ class TransposeFunctor {
   TransposeFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("transpose").Input("input").Output("output").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::vector<int32_t>& permute) const {
     MutableAttrMap attrs;
+    CHECK_EQ_OR_RETURN(input->ndim(), permute.size()) << "number of dims don't match in permute";
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
-    int32_t ndims = x->shape()->NumAxes();
+    int32_t ndims = input->shape()->NumAxes();
     for (int i = 0; i < permute.size(); i++) {
       int32_t dim = permute.at(i);
       if (dim < 0) { dim += ndims; }
@@ -499,7 +500,7 @@ class TransposeFunctor {
           << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
           << ndims << " ] but got " << ndims;
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
  private:
@@ -586,7 +587,7 @@ class Transpose2dimFunctor {
 
 class ArangeFunctor {
  public:
-  ArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
+  ArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
@@ -621,7 +622,7 @@ class Arange2Functor {
 
 class ConsistentArangeFunctor {
  public:
-  ConsistentArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
+  ConsistentArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Symbol<DType>& dtype, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
@@ -1169,7 +1170,17 @@ class SelectTopNFunctor {
   Maybe<TensorTuple> operator()(const TensorTuple& inputs, int32_t n) const {
     MutableAttrMap attr;
     JUST(attr.SetAttr<int32_t>("top_n", n));
+    std::vector<bool> require_grad(n);
+    std::vector<bool> is_leaf(n);
+    for (int i = 0; i < n; ++i) {
+      is_leaf.at(i) = (inputs.at(i)->is_leaf());
+      require_grad.at(i) = (inputs.at(i)->requires_grad());
+    }
     const auto& output = JUST(OpInterpUtil::Dispatch<one::TensorTuple>(*op_, inputs, attr));
+    for (int i = 0; i < n; ++i) {
+      inputs.at(i)->set_is_leaf(is_leaf.at(i));
+      JUST(inputs.at(i)->set_requires_grad(require_grad.at(i)));
+    }
     return output;
   }
 
@@ -1517,6 +1528,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceMinGlobalStageGradFunctor>("ReduceMinGlobalStageGrad");
   m.add_functor<ReduceMaxGlobalStageGradFunctor>("ReduceMaxGlobalStageGrad");
   m.add_functor<TransposeFunctor>("Transpose");
+  m.add_functor<TransposeFunctor>("Permute");
   m.add_functor<EyeFunctor>("Eye");
   m.add_functor<ConsistentEyeFunctor>("ConsistentEye");
   m.add_functor<Transpose2dimFunctor>("Transpose2dim");

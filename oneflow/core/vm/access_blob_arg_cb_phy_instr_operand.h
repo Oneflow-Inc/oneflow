@@ -52,13 +52,12 @@ class AccessBlobArgCbPhyInstrOperand : public PhyInstrOperand {
   }
 
   void ForEachConstMirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
+      const std::function<void(MirroredObject* compute)>&) const override;
 
-  void ForEachMutMirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
+  void ForEachMutMirroredObject(const std::function<void(MirroredObject* compute)>&) const override;
 
   void ForEachMut2MirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
+      const std::function<void(MirroredObject* compute)>&) const override;
 
  private:
   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;

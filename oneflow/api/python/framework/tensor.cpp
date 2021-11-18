@@ -19,6 +19,7 @@ limitations under the License.
 #include <pybind11/numpy.h>
 
 #include "oneflow/api/python/framework/throw.h"
+#include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/api/python/utils/tensor_utils.h"
@@ -32,6 +33,7 @@ limitations under the License.
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/common/decorator.h"
 
@@ -95,13 +97,6 @@ std::tuple<std::vector<Shape>, std::vector<Symbol<DType>>> GetTensorBufferShapes
 void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMeta::Hook& hook) {
   return RegisterTensorHook(self, hook).GetOrThrow();
 }
-
-Maybe<void> TouchConsistentTensor(const std::shared_ptr<one::Tensor>& tensor) {
-  CHECK_OR_RETURN(tensor->is_consistent());
-  return Maybe<void>::Ok();
-}
-
-auto* CheckMetaConsistency = DECORATE(&TouchConsistentTensor, CheckConsistentTensorMeta);
 
 bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
   return IsContiguous(tensor).GetOrThrow();

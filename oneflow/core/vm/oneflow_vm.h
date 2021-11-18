@@ -19,10 +19,12 @@ limitations under the License.
 #include "oneflow/core/common/notifier.h"
 #include "oneflow/core/vm/interpret_type.h"
 #include "oneflow/core/vm/vm_desc.h"
-#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/thread/thread_pool.h"
 
 namespace oneflow {
+
+class InstructionsBuilder;
 
 class OneflowVM final {
  public:
@@ -33,15 +35,17 @@ class OneflowVM final {
 
   Maybe<void> Receive(vm::InstructionMsgList* instr_list);
 
-  const vm::VirtualMachine& vm() const { return *vm_; }
+  const vm::VirtualMachineEngine& vm() const { return *vm_; }
 
  private:
+  friend class InstructionsBuilder;
+
   void Loop(const std::function<void()>& Initializer);
 
-  vm::VirtualMachine* mut_vm() { return vm_.Mutable(); }
+  vm::VirtualMachineEngine* mut_vm() { return vm_.Mutable(); }
   void ControlSync();
 
-  intrusive::shared_ptr<vm::VirtualMachine> vm_;
+  intrusive::shared_ptr<vm::VirtualMachineEngine> vm_;
   // for asynchronized execution
   std::list<std::unique_ptr<std::thread>> worker_threads_;
   std::thread schedule_thread_;

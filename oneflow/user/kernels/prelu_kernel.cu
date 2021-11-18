@@ -71,8 +71,8 @@ class GpuPReluKernel final : public user_op::OpKernel {
 
 #define REGISTER_GPU_PRELU_KERNEL(dtype)                                              \
   REGISTER_USER_KERNEL("prelu").SetCreateFn<GpuPReluKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == "gpu")                                              \
-      & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+      (user_op::HobDeviceType() == DeviceType::kGPU)                                  \
+      && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_PRELU_KERNEL(float)
 REGISTER_GPU_PRELU_KERNEL(double)
@@ -109,11 +109,11 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_PRELU_GRAD_KERNEL(dtype)             \
-  REGISTER_USER_KERNEL("prelu_grad")                      \
-      .SetCreateFn<GpuPReluGradKernel<dtype>>()           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_GPU_PRELU_GRAD_KERNEL(dtype)                         \
+  REGISTER_USER_KERNEL("prelu_grad")                                  \
+      .SetCreateFn<GpuPReluGradKernel<dtype>>()                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_PRELU_GRAD_KERNEL(float)
 REGISTER_GPU_PRELU_GRAD_KERNEL(double)

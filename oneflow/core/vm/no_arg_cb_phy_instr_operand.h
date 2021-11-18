@@ -31,17 +31,17 @@ class NoArgCbPhyInstrOperand : public PhyInstrOperand {
   const std::function<void()>& callback() const { return callback_; }
 
   void ForEachConstMirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override {
+      const std::function<void(MirroredObject* compute)>&) const override {
     // Do nothing
   }
 
   void ForEachMutMirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override {
+      const std::function<void(MirroredObject* compute)>&) const override {
     // Do nothing
   }
 
   void ForEachMut2MirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override {
+      const std::function<void(MirroredObject* compute)>&) const override {
     // Do nothing
   }
 

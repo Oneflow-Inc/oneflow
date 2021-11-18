@@ -21,6 +21,7 @@ limitations under the License.
 #include "llvm/ADT/STLExtras.h"
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
+#include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
@@ -42,13 +43,13 @@ limitations under the License.
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
-#ifdef WITH_CUDA
+#ifdef WITH_MLIR_CUDA_CODEGEN
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
-#endif  // WITH_CUDA
+#endif  // WITH_MLIR_CUDA_CODEGEN
 
 using namespace mlir;
 using namespace mlir::oneflow;
@@ -145,7 +146,6 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
 ::llvm::SmallVector<::mlir::Value, 4> OutlineMulCast(::mlir::PatternRewriter& rewriter,
                                                      mlir::OpResult mul_res,
                                                      mlir::OpResult cast_res) {
-  if (llvm::dyn_cast<MlirJitOp>(mul_res.getParentBlock()->getParentOp())) { return {}; }
   if (auto mul_op = llvm::dyn_cast<ScalarMulByTensorOp>(mul_res.getDefiningOp())) {
     if (auto cast_op = llvm::dyn_cast<CastOp>(cast_res.getDefiningOp())) {
       // TODO: extract a function to generate op name for jit op from ops being fused
@@ -179,9 +179,9 @@ namespace mlir {
 namespace oneflow {
 
 void AddLowerToLinalgMemRefPasses(PassManager& pm) {
-  pm.addPass(createLowerOneFlowToTosaPass());                     // lower-oneflow-to-tosa
-  pm.addPass(createCSEPass());                                    // cse
-  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgOnTensors());  // tosa-to-linalg-on-tensors
+  pm.addPass(createLowerOneFlowToTosaPass());            // lower-oneflow-to-tosa
+  pm.addPass(createCSEPass());                           // cse
+  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
   auto p = createLinalgElementwiseOpFusionPass();
   assert(p->initializeOptions("allow-folding-unit-dim-reshapes=true").succeeded());
   pm.addNestedPass<FuncOp>(std::move(p));                     // linalg-fuse-elementwise-ops
@@ -202,10 +202,11 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   pm.addPass(createConvertLinalgToLLVMPass());                 // convert-linalg-to-llvm
   pm.addPass(createMemRefToLLVMPass());                        // convert-memref-to-llvm
   pm.addPass(createLowerToLLVMPass());                         // convert-std-to-llvm
+  pm.addPass(createReconcileUnrealizedCastsPass());
   return pm.run(module);
 }
 
-#ifdef WITH_CUDA
+#ifdef WITH_MLIR_CUDA_CODEGEN
 
 LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module) {
   InitializeLLVMNVPTXBackend();
@@ -226,10 +227,18 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   return pm.run(module);
 }
 
-#endif  // WITH_CUDA
+#endif  // WITH_MLIR_CUDA_CODEGEN
 
 void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<MulCastPattern>(patterns.getContext());
+}
+
+void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
+  patterns.add<FusedBiasAddGeluPattern>(patterns.getContext());
+  patterns.add<FusedBiasAddDropoutPattern>(patterns.getContext());
+  patterns.add<FusedScaleTrilPattern>(patterns.getContext());
+  patterns.add<FusedScaleTrilPattern2>(patterns.getContext());
+  patterns.add<NormalizationAddReluPattern>(patterns.getContext());
 }
 
 }  // namespace oneflow

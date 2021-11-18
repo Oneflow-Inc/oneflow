@@ -46,7 +46,7 @@ class shared_ptr final {
     return ret;
   }
 
-  operator bool() const { return ptr_ != nullptr; }
+  explicit operator bool() const { return ptr_ != nullptr; }
   value_type* get() const { return ptr_; }
   const value_type& Get() const { return *ptr_; }
   const value_type* operator->() const { return ptr_; }
