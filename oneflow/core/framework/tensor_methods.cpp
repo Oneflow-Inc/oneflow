@@ -51,10 +51,8 @@ namespace view {
 Maybe<void> SyncAccessTensorWithTimeOut(
     const std::shared_ptr<Tensor>& tensor,
     const std::shared_ptr<std::function<void(uint64_t)>>& callback, const std::string& modifier) {
-  return SpinCounter::SpinWait(3, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-    printf("\n SyncAccessTensorWithTimeOut >>>> SpinCounter");
+  return SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
     return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      printf("\n SyncAccessTensorWithTimeOut >>>> PhysicalRun");
       return builder->SyncAccessBlobByCallback(JUST(tensor->AsMirroredTensor()), sc, callback,
                                                modifier);
     });
@@ -65,15 +63,14 @@ Maybe<void> SyncAccessTensorWithTimeOut(
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                          const Stride& target_strides, int64_t storage_offset) {
 
+  // this callback get input tensor's data pointer
   const void* input_ptr = nullptr;
   const auto& callback =
       std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
-        printf("\n BasicView >>>>> SyncAccessTensorWithTimeOut >>>> callback input");
-        // auto* eager_blob = reinterpret_cast<vm::EagerBlobObject*>(of_blob_ptr);
         auto* eager_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
         input_ptr = eager_blob->blob().dptr();
       });
-  JUST(SyncAccessTensorWithTimeOut(input, callback, "const")); // const or mut ? 
+  JUST(SyncAccessTensorWithTimeOut(input, callback, "const"));
 
   storage_offset += JUST(input->storage_offset());
   // TODO(): Check shape compatible.
@@ -89,30 +86,22 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
       /*is_leaf=*/!input->requires_grad());
   tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()));
 
-  // const auto& dep_object = JUST(GetLocalDepObjectFromDevicePool(JUST(Device::New("cpu"))));
-  // tensor_impl->InitEagerBlobObject(dep_object);
-
   JUST(JUST(tensor_impl->eager_blob_object())->TryInitBlob());
   JUST(tensor_impl->eager_blob_object())->set_is_shape_synced(true);
   JUST(tensor_impl->eager_blob_object())->set_last_used_device(JUST(input->device()));
   std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
-  printf("\n callback 1 finish");
 
   {
+    // this callback reset output tensor's data pointer
     const auto& callback =
         std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
-          printf("\n BasicView >>>>> SyncAccessTensorWithTimeOut >>>> callback output");
-          // auto* eager_blob = reinterpret_cast<vm::EagerBlobObject*>(of_blob_ptr);
           auto* eager_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
           if (!(eager_blob->blob().dptr())) {
-            printf("\n eager_blob->blob().dptr() >>>> not exist");
             int64_t storage_offset_bytes = storage_offset * GetSizeOfDataType(eager_blob->blob().data_type());
             eager_blob->mut_blob()->reset_dptr((char*)input_ptr + storage_offset_bytes);
-          }else{
-            printf("\n eager_blob->blob().dptr() >>>> exist");
           }
         });
-    JUST(SyncAccessTensorWithTimeOut(output, callback, "mut")); // const or mut ? 
+    JUST(SyncAccessTensorWithTimeOut(output, callback, "mut")); 
   }
   return output;
 }

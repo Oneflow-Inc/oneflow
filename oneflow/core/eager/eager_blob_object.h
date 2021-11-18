@@ -73,17 +73,14 @@ class EagerBlobObject final : public BlobObject {
   BlobDesc* mut_blob_desc() override { return &blob_desc_; }
 
   const Blob& blob() const override {
-    // TryResetBlobData();
     return *blob_;
   }
   Blob* mut_blob() override {
-    // TryResetBlobData();
     return blob_.get();
   }
 
   Maybe<void> TryInitBlob() override;
   Maybe<void> InitBlob();
-  void TryResetBlobData() const;
 
   Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
   Maybe<void> DeallocateBlobDataPtr() override {

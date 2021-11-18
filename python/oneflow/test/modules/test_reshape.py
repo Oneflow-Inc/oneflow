@@ -33,10 +33,7 @@ def _test_reshape(test_case, device):
         [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
     ).astype(np.float32)
     input = flow.tensor(x, dtype=flow.float32, device=flow.device(device))
-    print("input.numpy() >>>>>>>> \n", input.numpy())
-    y = flow.reshape(input, shape=[2, 2, 2, -1])
-    print("output.numpy() >>>>>>>> \n", y.numpy())
-    of_shape = y.shape
+    of_shape = flow.reshape(input, shape=[2, 2, 2, -1]).shape
     np_shape = (2, 2, 2, 2)
     test_case.assertTrue(np.array_equal(of_shape, np_shape))
 
@@ -90,30 +87,29 @@ class TestModule(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_reshape,
-            # _test_reshape_tuple,
-            # _test_reshape_backward,
-            # _test_reshape_scalar,
+            _test_reshape_tuple,
+            _test_reshape_backward,
+            _test_reshape_scalar,
         ]
-        # arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["device"] = ["cpu"]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    # @autotest()
-    # def test_reshape_flow_with_random_data(test_case):
-    #     device = random_device()
-    #     x = random_pytorch_tensor(ndim=4).to(device)
-    #     y = torch.reshape(x, shape=(-1,))
-    #     return y
+    @autotest()
+    def test_reshape_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = torch.reshape(x, shape=(-1,))
+        return y
 
-    # @autotest(auto_backward=False)
-    # def test_reshape_with_0shape_data(test_case):
-    #     device = random_device()
-    #     x = random_pytorch_tensor(4, 2, 0, 3).to(device)
-    #     y = torch.reshape(
-    #         x, shape=(random(0, 5).to(int).value(), 0, random(0, 5).to(int).value())
-    #     )
-    #     return y
+    @autotest(auto_backward=False)
+    def test_reshape_with_0shape_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 2, 0, 3).to(device)
+        y = torch.reshape(
+            x, shape=(random(0, 5).to(int).value(), 0, random(0, 5).to(int).value())
+        )
+        return y
 
 
 if __name__ == "__main__":
