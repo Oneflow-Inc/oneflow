@@ -147,7 +147,7 @@ class TestMultiOutputOrderKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("TestMultiOutputOrder")
     .SetCreateFn<TestMultiOutputOrderKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
-                     & (user_op::HobDataType("in", 0) == DataType::kFloat));
+                     && (user_op::HobDataType("in", 0) == DataType::kFloat));
 
 class TestMultiInputFwKernel final : public user_op::OpKernel {
  public:
@@ -167,7 +167,7 @@ class TestMultiInputFwKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("TestMultiInput")
     .SetCreateFn<TestMultiInputFwKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
-                     & (user_op::HobDataType("x1", 0) == DataType::kFloat));
+                     && (user_op::HobDataType("x1", 0) == DataType::kFloat));
 
 class TestMultiInputBwKernel final : public user_op::OpKernel {
  public:
@@ -191,7 +191,7 @@ class TestMultiInputBwKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("TestMultiInputGrad")
     .SetCreateFn<TestMultiInputBwKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
-                     & (user_op::HobDataType("x1", 0) == DataType::kFloat));
+                     && (user_op::HobDataType("x1", 0) == DataType::kFloat));
 
 #endif
 
@@ -214,7 +214,7 @@ class ReluCpuKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("cpu_only_relu_test")
     .SetCreateFn<ReluCpuKernel<float>>()
     .SetIsMatchedHob((user_op::HobDataType("in", 0) == DataType::kFloat)
-                     & (user_op::HobDataType("out", 0) == DataType::kFloat));
+                     && (user_op::HobDataType("out", 0) == DataType::kFloat));
 
 class TestSourceKernel final : public user_op::OpKernel {
  public:
@@ -232,7 +232,7 @@ class TestSourceKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("TestSource")
     .SetCreateFn<TestSourceKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("out", 0) == DataType::kFloat))
+                     && (user_op::HobDataType("out", 0) == DataType::kFloat))
     .SetInferTmpSizeFn([](user_op::InferContext*) { return 0; });
 
 class TestSourceMultiGpuFixedOutNumKernel final : public user_op::OpKernel {
@@ -253,7 +253,7 @@ class TestSourceMultiGpuFixedOutNumKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("TestSourceMultiGpuFixedOutNum")
     .SetCreateFn<TestSourceMultiGpuFixedOutNumKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("out", 0) == DataType::kFloat));
+                     && (user_op::HobDataType("out", 0) == DataType::kFloat));
 
 class TestDynamicSourceKernel final : public user_op::OpKernel {
  public:
@@ -272,7 +272,7 @@ class TestDynamicSourceKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("TestDynamicSource")
     .SetCreateFn<TestDynamicSourceKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("out", 0) == DataType::kFloat));
+                     && (user_op::HobDataType("out", 0) == DataType::kFloat));
 
 class TestRandomSourceKernel final : public user_op::OpKernel {
  public:
@@ -300,7 +300,7 @@ class TestRandomSourceKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("TestRandomSource")
     .SetCreateFn<TestRandomSourceKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("out", 0) == DataType::kFloat));
+                     && (user_op::HobDataType("out", 0) == DataType::kFloat));
 
 class TestDataTypeAttrKernel final : public user_op::OpKernel {
  public:
