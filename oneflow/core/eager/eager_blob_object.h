@@ -73,11 +73,11 @@ class EagerBlobObject final : public BlobObject {
   BlobDesc* mut_blob_desc() override { return &blob_desc_; }
 
   const Blob& blob() const override {
-    TryResetBlobData();
+    // TryResetBlobData();
     return *blob_;
   }
   Blob* mut_blob() override {
-    TryResetBlobData();
+    // TryResetBlobData();
     return blob_.get();
   }
 
