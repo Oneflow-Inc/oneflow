@@ -191,7 +191,6 @@ add_docstr(
 )
 
 add_docstr(
-
     oneflow.Tensor.abs,
     """
     See :func:`oneflow.abs`
@@ -396,9 +395,9 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.normal_,
     """
-    Tensor.normal_(mean=0, std=1, *, generator=None) → Tensor
+    normal_(mean=0, std=1, *, generator=None) -> Tensor
 
-    Fills self tensor with elements samples from the normal distribution parameterized by mean and std.
+    Fills :attr:`self` tensor with elements samples from the normal distribution parameterized by :attr:`mean` and :attr:`std`.
     """,
 )
 
@@ -555,8 +554,6 @@ add_docstr(
     """
     The interface is consistent with PyTorch.
 
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.Tensor.copy_.html.
-
     Tensor.copy_(src, non_blocking=False) → Tensor
 
     Copies the elements from src into self tensor and returns self.
@@ -571,9 +568,7 @@ add_docstr(
     """,
 )
 
-
-
-
+add_docstr(
     oneflow.Tensor.to,
     """Performs Tensor dtype and/or device conversion.
         A flow.dtype and flow.device are inferred from the arguments of `input.to(*args, **kwargs)`.
@@ -606,4 +601,3 @@ add_docstr(
 
     """,
 )
-
