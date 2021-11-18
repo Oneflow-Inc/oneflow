@@ -13,21 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/range_kernel_util.h"
+#include "oneflow/user/kernels/arange_kernel_util.h"
 
 namespace oneflow {
 
 namespace user_op {
 template<typename T>
-struct RangeFunctor<DeviceType::kCPU, T> final {
-  void operator()(DeviceCtx* ctx, const T start, const T delta, const int64_t range_elem_cnt,
+struct ArangeFunctor<DeviceType::kCPU, T> final {
+  void operator()(DeviceCtx* ctx, const T start, const T delta, const int64_t arange_elem_cnt,
                   T* out) {
-    DoRange<T>(start, delta, range_elem_cnt, out);
+    DoArange<T>(start, delta, arange_elem_cnt, out);
   }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_RANGE_FUNCTOR, (DeviceType::kCPU),
-                                 RANGE_DATA_TYPE_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_ARANGE_FUNCTOR, (DeviceType::kCPU),
+                                 ARANGE_DATA_TYPE_SEQ);
 
 }  // namespace user_op
 }  // namespace oneflow
