@@ -101,7 +101,7 @@ In exec mode, it is necessary to track if a lazy tensor is being referenced by P
 - Use weak ptr to check if a lazy tensor is being referenced by Python.
 - Edge cases
 
-  - Intermediate tensor optimized away used after evaluation
+  - Intermediate tensor optimized away gets used after evaluation
     ```python3
     x = SomeOp(..)
     y = x + 1
