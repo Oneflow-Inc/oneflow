@@ -80,7 +80,7 @@ There are mainly three components in the JIT system:
 
 ### ~~Sequence of operations~~
 
-(Not going to implement it because MLIR bash OpExpr)
+(Not going to implement it because MLIR bash OpExpr is going to land)
 
 ```cpp
 struct Op {
