@@ -32,12 +32,6 @@ struct NewKernelUtil : public DnnIf<deivce_type>,
                        public ArithemeticIf<deivce_type> {};
 
 template<DeviceType device_type>
-void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz);
-
-template<DeviceType device_type>
-void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
-
-template<DeviceType device_type>
 void Memcpy(ep::Stream* stream, void* dst, const void* src, size_t sz);
 
 template<DeviceType device_type>

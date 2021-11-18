@@ -341,7 +341,7 @@ class DeconvCpuKernel final : public user_op::OpKernel {
     user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
     conv_state->Update(in->shape(), out->shape());
-    Memset<DeviceType::kCPU>(ctx->device_ctx(), out->mut_dptr<T>(), 0,
+    Memset<DeviceType::kCPU>(ctx->stream(), out->mut_dptr<T>(), 0,
                              out->shape().elem_cnt() * sizeof(T));
 
     FOR_RANGE(int64_t, i, 0, in->shape().At(0)) {

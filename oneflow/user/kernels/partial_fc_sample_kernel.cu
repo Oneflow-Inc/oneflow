@@ -401,14 +401,12 @@ class DistributedPartialFcSampleDisableBoxingGpuKernel final : public user_op::O
         ctx->Tensor4ArgNameAndIndex("boxing_disabled_sampled_weight_diff", 0);
     user_op::Tensor* boxing_disabled_sampled_label =
         ctx->Tensor4ArgNameAndIndex("boxing_disabled_sampled_label", 0);
-    Memcpy<DeviceType::kGPU>(ctx->device_ctx(),
-                             boxing_disabled_sampled_weight_diff->mut_dptr<void>(),
+    Memcpy<DeviceType::kGPU>(ctx->stream(), boxing_disabled_sampled_weight_diff->mut_dptr<void>(),
                              sampled_weight_diff->dptr<void>(),
                              sampled_weight_diff->shape().elem_cnt()
                                  * GetSizeOfDataType(sampled_weight_diff->data_type()));
     Memcpy<DeviceType::kGPU>(
-        ctx->device_ctx(), boxing_disabled_sampled_label->mut_dptr<void>(),
-        sampled_label->dptr<void>(),
+        ctx->stream(), boxing_disabled_sampled_label->mut_dptr<void>(), sampled_label->dptr<void>(),
         sampled_label->shape().elem_cnt() * GetSizeOfDataType(sampled_label->data_type()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
