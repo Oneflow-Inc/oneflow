@@ -53,7 +53,7 @@ struct Module {
     *one::MutJitEnabled() = false;
     jit_interpreter->Interrupt();
     jit_interpreter->End();
-    LOG(ERROR) << "MLIR trace overhead: " << jit_interpreter->MlirTraceOverhead();
+    LOG(ERROR) << "JIT trace overhead: " << jit_interpreter->TraceOverhead();
     nth_call_ += 1;
     return ret;
   }
@@ -77,7 +77,7 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
     if (one::IsJitEnabled() == false) {
       jit_interpreter->Interrupt();
       jit_interpreter->End();
-      LOG(ERROR) << "MLIR trace overhead: " << jit_interpreter->MlirTraceOverhead();
+      LOG(ERROR) << "JIT trace overhead: " << jit_interpreter->TraceOverhead();
     }
     return *one::MutJitEnabled();
   });
