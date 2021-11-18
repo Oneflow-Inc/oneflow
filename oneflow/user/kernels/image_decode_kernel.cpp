@@ -86,8 +86,8 @@ class ImageDecodeKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("image_decode")
     .SetCreateFn<ImageDecodeKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
-                     & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
-                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     && (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
+                     && (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
 ;
 }  // namespace oneflow

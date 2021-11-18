@@ -475,8 +475,8 @@ struct LocalCallOpKernelUtil final {
     CHECK(temp_blob_desc->data_type() == DataType::kChar);
     one::LocalUserOpInferContext* op_infer_ctx =
         operand->opkernel().op_infer_ctx_for_scheduler_thread();
-    op_infer_ctx->Update(operand->inputs(), operand->outputs(),
-                         operand->consistent_tensor_infer_result());
+    op_infer_ctx->Update(operand->inputs().get(), operand->outputs().get(),
+                         operand->consistent_tensor_infer_result().get());
     size_t temp_size = InferTmpSizeFn(op_infer_ctx);
     temp_blob_desc->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
     temp_blob_desc->set_is_dynamic(true);
@@ -493,9 +493,9 @@ struct LocalCallOpKernelUtil final {
       *state = operand->op_interp_ctx().state.get();
       return;
     }
-    operand->mut_opkernel()->TryInitOpKernelState(operand->user_opkernel(), device_ctx,
-                                                  operand->inputs(), operand->outputs(),
-                                                  operand->consistent_tensor_infer_result(), state);
+    operand->mut_opkernel()->TryInitOpKernelState(
+        operand->user_opkernel(), device_ctx, operand->inputs().get(), operand->outputs().get(),
+        operand->consistent_tensor_infer_result().get(), state);
   }
 
   static inline void AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,
@@ -515,8 +515,8 @@ struct LocalCallOpKernelUtil final {
                                      DeviceCtx* device_ctx, user_op::OpKernelState* state) {
     auto* opkernel = operand->mut_opkernel();
     auto* compute_ctx =
-        opkernel->UpdateComputeContext(operand->inputs(), operand->outputs(),
-                                       operand->consistent_tensor_infer_result(), device_ctx);
+        opkernel->UpdateComputeContext(operand->inputs().get(), operand->outputs().get(),
+                                       operand->consistent_tensor_infer_result().get(), device_ctx);
     operand->user_opkernel()->Compute(compute_ctx, state);
     // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
     opkernel->UpdateComputeContext(nullptr, nullptr, nullptr, nullptr);

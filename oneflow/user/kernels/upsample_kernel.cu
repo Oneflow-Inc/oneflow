@@ -165,19 +165,19 @@ class UpsampleNearestGradGPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UPSAMPLE_NEAREST_GPU_KERNEL(dtype)                                      \
-  REGISTER_USER_KERNEL("upsample")                                                       \
-      .SetCreateFn<UpsampleNearestGPUKernel<dtype>>()                                    \
-      .SetIsMatchedHob(                                                                  \
-          (user_op::HobDeviceTag() == "gpu")                                             \
-          & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)                  \
-          & (user_op::HobAttr<std::string>("interpolation") == std::string("nearest"))); \
-  REGISTER_USER_KERNEL("upsample_grad")                                                  \
-      .SetCreateFn<UpsampleNearestGradGPUKernel<dtype>>()                                \
-      .SetIsMatchedHob(                                                                  \
-          (user_op::HobDeviceTag() == "gpu")                                             \
-          & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)                 \
-          & (user_op::HobAttr<std::string>("interpolation") == std::string("nearest")));
+#define REGISTER_UPSAMPLE_NEAREST_GPU_KERNEL(dtype)                                       \
+  REGISTER_USER_KERNEL("upsample")                                                        \
+      .SetCreateFn<UpsampleNearestGPUKernel<dtype>>()                                     \
+      .SetIsMatchedHob(                                                                   \
+          (user_op::HobDeviceType() == DeviceType::kGPU)                                  \
+          && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)                  \
+          && (user_op::HobAttr<std::string>("interpolation") == std::string("nearest"))); \
+  REGISTER_USER_KERNEL("upsample_grad")                                                   \
+      .SetCreateFn<UpsampleNearestGradGPUKernel<dtype>>()                                 \
+      .SetIsMatchedHob(                                                                   \
+          (user_op::HobDeviceType() == DeviceType::kGPU)                                  \
+          && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)                 \
+          && (user_op::HobAttr<std::string>("interpolation") == std::string("nearest")));
 
 REGISTER_UPSAMPLE_NEAREST_GPU_KERNEL(float)
 REGISTER_UPSAMPLE_NEAREST_GPU_KERNEL(double)
@@ -251,19 +251,19 @@ class UpsampleBilinearGradGPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UPSAMPLE_BILINEAR_GPU_KERNEL(dtype)                                      \
-  REGISTER_USER_KERNEL("upsample")                                                        \
-      .SetCreateFn<UpsampleBilinearGPUKernel<dtype>>()                                    \
-      .SetIsMatchedHob(                                                                   \
-          (user_op::HobDeviceTag() == "gpu")                                              \
-          & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)                   \
-          & (user_op::HobAttr<std::string>("interpolation") == std::string("bilinear"))); \
-  REGISTER_USER_KERNEL("upsample_grad")                                                   \
-      .SetCreateFn<UpsampleBilinearGradGPUKernel<dtype>>()                                \
-      .SetIsMatchedHob(                                                                   \
-          (user_op::HobDeviceTag() == "gpu")                                              \
-          & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)                  \
-          & (user_op::HobAttr<std::string>("interpolation") == std::string("bilinear")));
+#define REGISTER_UPSAMPLE_BILINEAR_GPU_KERNEL(dtype)                                       \
+  REGISTER_USER_KERNEL("upsample")                                                         \
+      .SetCreateFn<UpsampleBilinearGPUKernel<dtype>>()                                     \
+      .SetIsMatchedHob(                                                                    \
+          (user_op::HobDeviceType() == DeviceType::kGPU)                                   \
+          && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)                   \
+          && (user_op::HobAttr<std::string>("interpolation") == std::string("bilinear"))); \
+  REGISTER_USER_KERNEL("upsample_grad")                                                    \
+      .SetCreateFn<UpsampleBilinearGradGPUKernel<dtype>>()                                 \
+      .SetIsMatchedHob(                                                                    \
+          (user_op::HobDeviceType() == DeviceType::kGPU)                                   \
+          && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)                  \
+          && (user_op::HobAttr<std::string>("interpolation") == std::string("bilinear")));
 
 REGISTER_UPSAMPLE_BILINEAR_GPU_KERNEL(float)
 REGISTER_UPSAMPLE_BILINEAR_GPU_KERNEL(double)

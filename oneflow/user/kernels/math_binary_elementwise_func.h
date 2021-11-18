@@ -71,7 +71,7 @@ struct Atan2Functor {
 };
 
 template<typename T>
-struct FloordivFunctor {
+struct FloorDivFunctor {
   static OF_DEVICE_FUNC const T Forward(const T x, const T y) {
 #if defined(__CUDACC__)
     return floor(fdividef(x, y));
@@ -170,7 +170,7 @@ struct Atan2Functor<half> {
 };
 
 template<>
-struct FloordivFunctor<half> {
+struct FloorDivFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x, const half y) {
     return hfloor(__hdiv(x, y));
   }

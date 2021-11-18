@@ -29,11 +29,6 @@ OpKernelRegistry& OpKernelRegistry::SetCreateFn(OpKernelCreateFn fn) {
   return *this;
 }
 
-OpKernelRegistry& OpKernelRegistry::SetIsMatchedHob(IsMatchedHob hob) {
-  result_.is_matched_hob = hob;
-  return *this;
-}
-
 OpKernelRegistry& OpKernelRegistry::SetInferTmpSizeFn(InferTmpSizeFn fn) {
   result_.infer_tmp_size_fn = std::move(fn);
   return *this;

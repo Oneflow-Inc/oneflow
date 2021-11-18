@@ -47,7 +47,7 @@ class TupleIdentityKernel final : public user_op::OpKernel {
 #define REGISTER_TUPLE_IDENTITY_KERNEL(device)    \
   REGISTER_USER_KERNEL("tuple_identity")          \
       .SetCreateFn<TupleIdentityKernel<device>>() \
-      .SetIsMatchedHob(user_op::HobDeviceTag() == device);
+      .SetIsMatchedHob(user_op::HobDeviceType() == device);
 
 REGISTER_TUPLE_IDENTITY_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
