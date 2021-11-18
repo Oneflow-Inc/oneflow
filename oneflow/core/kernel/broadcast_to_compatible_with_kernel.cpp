@@ -44,7 +44,7 @@ void BroadcastToCompatibleWithKernel<device_type, T>::ForwardDataContent(KernelC
       CHECK_EQ(x_extend_shape.At(i), 1);
     }
   }
-  NdarrayUtil<device_type, T>::BroadcastTo(ctx->device_ctx(), XpuVarNdarray<T>(y, num_axes),
+  NdarrayUtil<device_type, T>::BroadcastTo(ctx->stream(), XpuVarNdarray<T>(y, num_axes),
                                            XpuVarNdarray<const T>(x, num_axes));
 }
 

@@ -283,18 +283,18 @@ size_t InferGradTmpBufferSize(user_op::InferContext* ctx) {
 
 }  // namespace
 
-#define REGISTER_FUSED_SELF_ATTENTION_QUERY_MUL_KEY_AND_VALUE_GPU_KERNEL(dtype)                   \
-  REGISTER_USER_KERNEL("fused_self_attention_query_mul_key_and_value")                            \
-      .SetCreateFn<FusedSelfAttentionQueryMulKeyAndValueGpuKernel<dtype>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                             \
-                       & (user_op::HobDataType("hidden_states", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_FUSED_SELF_ATTENTION_QUERY_MUL_KEY_AND_VALUE_GPU_KERNEL(dtype)                    \
+  REGISTER_USER_KERNEL("fused_self_attention_query_mul_key_and_value")                             \
+      .SetCreateFn<FusedSelfAttentionQueryMulKeyAndValueGpuKernel<dtype>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
+                       && (user_op::HobDataType("hidden_states", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferTmpBufferSize);
 
-#define REGISTER_FUSED_SELF_ATTENTION_QUERY_MUL_KEY_AND_VALUE_GRAD_GPU_KERNEL(dtype)              \
-  REGISTER_USER_KERNEL("fused_self_attention_query_mul_key_and_value_grad")                       \
-      .SetCreateFn<FusedSelfAttentionQueryMulKeyAndValueGradGpuKernel<dtype>>()                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                             \
-                       & (user_op::HobDataType("hidden_states", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_FUSED_SELF_ATTENTION_QUERY_MUL_KEY_AND_VALUE_GRAD_GPU_KERNEL(dtype)               \
+  REGISTER_USER_KERNEL("fused_self_attention_query_mul_key_and_value_grad")                        \
+      .SetCreateFn<FusedSelfAttentionQueryMulKeyAndValueGradGpuKernel<dtype>>()                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
+                       && (user_op::HobDataType("hidden_states", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferGradTmpBufferSize);
 
 REGISTER_FUSED_SELF_ATTENTION_QUERY_MUL_KEY_AND_VALUE_GPU_KERNEL(float)

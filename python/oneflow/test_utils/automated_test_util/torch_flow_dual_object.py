@@ -45,6 +45,7 @@ note_pytorch_method_names = []
 note_pytorch_args = []
 note_pytorch_kwargs = []
 vis_tensor = []
+vis_parameters = {}
 call_tensor_id = []
 flow_res_id_eager2_graph = dict()
 
@@ -400,6 +401,12 @@ def print_note_fake_program():
         print(
             f"\033[32m-----------------------------------------------------------\033[0m"
         )
+    if vis_parameters:
+        print(
+            f"\033[32m-------------------nn.Module Parameters---------------------\033[0m"
+        )
+        for name, param in vis_parameters.items():
+            print(f"\033[32m{name}: {param}\033[0m")
 
 
 def clear_note_fake_program():
@@ -409,6 +416,7 @@ def clear_note_fake_program():
     call_tensor_id.clear()
     vis_tensor.clear()
     flow_res_id_eager2_graph.clear()
+    vis_parameters.clear()
 
 
 class DualObject:
@@ -558,6 +566,7 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05, check_graph=True
                         if key not in x.oneflow.state_dict().keys():
                             warnings.warn(f"oneflow module don't have `{key}`")
                             continue
+                        vis_parameters[key] = x.pytorch.state_dict()[key]
                         dual_objects_to_test.append(
                             GetDualObject(
                                 "unused",
