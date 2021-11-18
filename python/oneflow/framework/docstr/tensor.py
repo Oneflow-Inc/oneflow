@@ -272,6 +272,7 @@ add_docstr(
     """,
 )
 
+
 add_docstr(
     oneflow.Tensor.cast,
     """
