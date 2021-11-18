@@ -79,7 +79,6 @@ class TestGridSample(flow.unittest.TestCase):
         )
         return output
 
-
     # This test may fail due to using ::floor in backward
     # floor(1.99999988) = 1 和 floor(2.000000) = 2, then select differente images pixel
     @autotest(auto_backward=False, rtol=1e-03, atol=1e-04, check_graph=False)
@@ -109,7 +108,6 @@ class TestGridSample(flow.unittest.TestCase):
             align_corners=align_corners,
         )
         return output
-
 
     @autotest(auto_backward=False, rtol=1e-03, atol=1e-03, check_graph=False)
     def test_flow_grid_sample_5d_with_random_data(test_case):
