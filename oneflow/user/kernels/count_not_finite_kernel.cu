@@ -100,7 +100,7 @@ class CountNotFiniteGpuKernel final : public user_op::OpKernel, public user_op::
   REGISTER_USER_KERNEL("count_not_finite")                            \
       .SetCreateFn<CountNotFiniteGpuKernel<dtype>>()                  \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
 REGISTER_COUNT_NOT_FINITE_GPU_KERNEL(float)
 REGISTER_COUNT_NOT_FINITE_GPU_KERNEL(double)
@@ -151,7 +151,7 @@ class MultiCountNotFiniteGpuKernel final : public user_op::OpKernel,
   REGISTER_USER_KERNEL("multi_count_not_finite")                      \
       .SetCreateFn<MultiCountNotFiniteGpuKernel<dtype>>()             \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
 REGISTER_MULTI_COUNT_NOT_FINITE_GPU_KERNEL(float)
 REGISTER_MULTI_COUNT_NOT_FINITE_GPU_KERNEL(double)

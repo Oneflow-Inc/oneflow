@@ -65,7 +65,7 @@ class SoftmaxBackwardImpl : public SoftmaxBackwardBase {
   SoftmaxBackwardImpl() = default;
   ~SoftmaxBackwardImpl() override = default;
 
-  void Launch(StreamContext* stream_ctx, size_t rows, size_t cols, const void* y, const void* dy,
+  void Launch(Stream* stream, size_t rows, size_t cols, const void* y, const void* dy,
               void* dx) override {
     SoftmaxBackwardCpu<algorithm, T>(rows, cols, reinterpret_cast<const T*>(y),
                                      reinterpret_cast<const T*>(dy), reinterpret_cast<T*>(dx));

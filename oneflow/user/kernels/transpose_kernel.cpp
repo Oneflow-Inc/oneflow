@@ -47,8 +47,8 @@ class TransposeKernel final : public OpKernel, public user_op::CudaGraphSupport 
 
     int64_t elem_cnt = tensor_out->shape().elem_cnt();
     if (elem_cnt != 0) {
-      primitive->Launch(ctx->stream_ctx(), dtype, num_dims, src_dims, tensor_in->dptr(),
-                        perm.data(), tensor_out->mut_dptr());
+      primitive->Launch(ctx->stream(), dtype, num_dims, src_dims, tensor_in->dptr(), perm.data(),
+                        tensor_out->mut_dptr());
     } else {
       // For 0-d Tensor
       return;

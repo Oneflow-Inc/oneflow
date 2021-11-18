@@ -30,7 +30,7 @@ class Fill : public Primitive {
   Fill() = default;
   ~Fill() override = default;
 
-  virtual void Launch(StreamContext* stream_ctx, void* dst, Scalar value, size_t count) = 0;
+  virtual void Launch(Stream* stream, void* dst, Scalar value, size_t count) = 0;
 };
 
 class FillFactory : public Factory<Fill> {
