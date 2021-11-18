@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf.pb.h"
 #include <functional>
 #include <string>
+
 namespace mlir {
 
 // TODO: wrap in a helper namespace
@@ -129,6 +130,7 @@ class RoundTripOneFlowJobWrapperInterface {
                                   cb) const = 0;
   virtual void TopoForEachOpConf(
       std::function<void(const ::oneflow::OperatorConf*)> Handler) const = 0;
+  virtual bool IsLastIRPass() const = 0;
 };
 
 void RoundTripOneFlowJob(

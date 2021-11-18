@@ -67,8 +67,8 @@ user_op::InferTmpSizeFn GenInferTmpSizeFn() {
                                                 OF_PP_PAIR_FIRST(indices_type_pair)>>()          \
       .SetIsMatchedHob(                                                                          \
           (user_op::HobDeviceType() == device_type_v)                                            \
-          & (user_op::HobDataType("x_values", 0) == OF_PP_PAIR_SECOND(data_type_pair))           \
-          & (user_op::HobDataType("x_indices", 0) == OF_PP_PAIR_SECOND(indices_type_pair)))      \
+          && (user_op::HobDataType("x_values", 0) == OF_PP_PAIR_SECOND(data_type_pair))          \
+          && (user_op::HobDataType("x_indices", 0) == OF_PP_PAIR_SECOND(indices_type_pair)))     \
       .SetInferTmpSizeFn(GenInferTmpSizeFn<device_type_v, OF_PP_PAIR_FIRST(data_type_pair),      \
                                            OF_PP_PAIR_FIRST(indices_type_pair)>());
 
