@@ -350,9 +350,9 @@ target_treat_warnings_as_errors(oneflow)
 target_compile_definitions(oneflow PRIVATE GOOGLE_LOGGING)
 
 if (WITH_MLIR)
-  set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/b5e470aa2e978a0ee6276b9564f85cf170ae260d.zip" CACHE STRING "" FORCE)
+  set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/649d95371680cbf7f740c990c0357372c2bd4058.zip" CACHE STRING "" FORCE)
   use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
-  set(LLVM_MONO_REPO_MD5 "5704d71096294cf21637a8bc29fb0fb8" CACHE STRING "" FORCE)
+  set(LLVM_MONO_REPO_MD5 "9bda804e5cc61899085fb0f0dce1089f" CACHE STRING "" FORCE)
   add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
   target_link_libraries(oneflow MLIROneFlowTranslation)
   set(ONEFLOW_MLIR_LIBS -Wl,--no-as-needed MLIROneFlowExtension -Wl,--as-needed)
@@ -363,11 +363,11 @@ if (WITH_MLIR)
 endif()
 
 if(APPLE)
-  set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj ${ONEFLOW_MLIR_LIBS})
-  target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs} ${ONEFLOW_MLIR_LIBS})
+  set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj)
+  target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs})
 elseif(UNIX)
-  set(of_libs -Wl,--whole-archive oneflow of_protoobj of_cfgobj of_functional_obj ${ONEFLOW_MLIR_LIBS} -Wl,--no-whole-archive -ldl -lrt)
-  target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs} ${ONEFLOW_MLIR_LIBS} -Wl,--no-whole-archive -ldl -lrt)
+  set(of_libs -Wl,--whole-archive oneflow of_protoobj of_cfgobj of_functional_obj -Wl,--no-whole-archive -ldl -lrt)
+  target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs} -Wl,--no-whole-archive -ldl -lrt)
 elseif(WIN32)
   set(of_libs oneflow of_protoobj of_cfgobj of_functional_obj)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:oneflow")
@@ -394,6 +394,7 @@ if(BUILD_PYTHON)
   target_link_libraries(oneflow_internal PRIVATE
                         ${of_libs}
                         of_functional_tensor_obj
+                        ${ONEFLOW_MLIR_LIBS}
                         ${oneflow_third_party_libs}
                         of_pyext_obj
                         ${oneflow_exe_third_party_libs})
