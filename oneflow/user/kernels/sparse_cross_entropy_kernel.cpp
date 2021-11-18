@@ -115,8 +115,8 @@ class SparseCrossEntropyMsKernel final : public user_op::OpKernel {
       .SetCreateFn<kernel_class<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                       \
                                 OF_PP_PAIR_FIRST(ltype_pair)>>()                                   \
       .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                                 \
-                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))       \
-                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
+                       && (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))      \
+                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_KERNEL, (SparseCrossEntropyKernel),
                                  ("sparse_cross_entropy"), OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU),
@@ -223,8 +223,8 @@ class SparseCrossEntropyMsGradKernel final : public user_op::OpKernel {
                                 OF_PP_PAIR_FIRST(ltype_pair)>>()                            \
       .SetIsMatchedHob(                                                                     \
           (user_op::HobDeviceType() == device_type_v)                                       \
-          & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))             \
-          & (user_op::HobDataType("prediction_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
+          && (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))            \
+          && (user_op::HobDataType("prediction_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_GRAD_KERNEL,
                                  (SparseCrossEntropyGradKernel), ("sparse_cross_entropy_grad"),

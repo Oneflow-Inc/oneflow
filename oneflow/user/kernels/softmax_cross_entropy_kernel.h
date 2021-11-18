@@ -72,13 +72,13 @@ class SoftmaxCrossEntropyKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SOFTMAX_CROSS_ENTROPY_KERNEL(device_type_v, dtype_pair)                     \
-  REGISTER_USER_KERNEL("softmax_cross_entropy")                                              \
-      .SetCreateFn<SoftmaxCrossEntropyKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                           \
-                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(dtype_pair)) \
-                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair))   \
-                       & (SoftmaxPrimitiveExists() == true));
+#define REGISTER_SOFTMAX_CROSS_ENTROPY_KERNEL(device_type_v, dtype_pair)                      \
+  REGISTER_USER_KERNEL("softmax_cross_entropy")                                               \
+      .SetCreateFn<SoftmaxCrossEntropyKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>>()  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                            \
+                       && (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(dtype_pair)) \
+                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair))   \
+                       && SoftmaxPrimitiveExists());
 
 template<DeviceType device_type, typename T>
 class SoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
@@ -109,8 +109,8 @@ class SoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
       .SetCreateFn<SoftmaxCrossEntropyGradKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>>() \
       .SetIsMatchedHob(                                                                          \
           (user_op::HobDeviceType() == device_type_v)                                            \
-          & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(dtype_pair))                  \
-          & (user_op::HobDataType("prediction_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair)))       \
+          && (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(dtype_pair))                 \
+          && (user_op::HobDataType("prediction_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                     \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {  \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("prediction_diff", 0, "prob", 0, true));          \

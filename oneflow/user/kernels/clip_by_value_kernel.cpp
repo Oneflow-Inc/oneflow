@@ -191,7 +191,7 @@ class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(#op_type_name)                                                           \
       .SetCreateFn<kernel_name##Kernel<device_type_v, dtype>>()                                 \
       .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                              \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value))           \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value))          \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));                          \
@@ -202,7 +202,7 @@ class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(#op_type_name)                                                           \
       .SetCreateFn<kernel_name##GradKernel<device_type_v, dtype>>()                             \
       .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                              \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))          \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                        \
