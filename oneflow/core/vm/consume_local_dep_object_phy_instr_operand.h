@@ -33,13 +33,12 @@ class ConsumeLocalDepObjectPhyInstrOperand : public PhyInstrOperand {
   ~ConsumeLocalDepObjectPhyInstrOperand() = default;
 
   void ForEachConstMirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
+      const std::function<void(MirroredObject* compute)>&) const override;
 
-  void ForEachMutMirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
+  void ForEachMutMirroredObject(const std::function<void(MirroredObject* compute)>&) const override;
 
   void ForEachMut2MirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
+      const std::function<void(MirroredObject* compute)>&) const override;
 
  private:
   LocalDepObject* compute_local_dep_object_;

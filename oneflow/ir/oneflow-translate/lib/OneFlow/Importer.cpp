@@ -64,6 +64,10 @@ namespace mlir {
 
 using PbMessage = google::protobuf::Message;
 
+bool IsOpaqueOp(Operation* op) {
+  return llvm::dyn_cast<oneflow::UserOp>(op) || llvm::dyn_cast<oneflow::SystemOp>(op);
+}
+
 LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorConf& op,
                                                      std::vector<NamedAttribute>& attr_vec) {
   using LBNVec = SmallVector<StringRef, 8>;
@@ -136,9 +140,8 @@ DenseIntElementsAttr Importer::DenseIntElementsAttrFromShape(const ::oneflow::Sh
 }
 
 void WriteDenseIntElementsToShape(mlir::Attribute& attr, ::oneflow::ShapeProto* shape) {
-  for (auto int_v : attr.dyn_cast<DenseIntElementsAttr>().getIntValues()) {
-    assert(int_v.isSignedIntN(64));
-    shape->add_dim(int_v.getSExtValue());
+  for (auto int_v : attr.dyn_cast<DenseIntElementsAttr>().getValues<int64_t>()) {
+    shape->add_dim(int_v);
   }
 }
 
@@ -270,7 +273,7 @@ std::pair<unsigned, unsigned> getODSOperandIndexAndLength(Operation* op, unsigne
 }
 
 OperandRange GetDataInputOperands(Operation* op) {
-  if (op->hasAttrOfType<::mlir::DenseIntElementsAttr>("operand_segment_sizes")) {
+  if (IsOpaqueOp(op)) {
     return getODSOperands(op, 0);
   } else {
     return op->getOperands();
@@ -278,7 +281,7 @@ OperandRange GetDataInputOperands(Operation* op) {
 }
 
 llvm::Optional<OperandRange> GetCtrlIntputOperands(Operation* op) {
-  if (op->hasAttrOfType<::mlir::DenseIntElementsAttr>("operand_segment_sizes")) {
+  if (IsOpaqueOp(op)) {
     return getODSOperands(op, 1);
   } else {
     return llvm::None;
@@ -403,6 +406,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
 }  // namespace
 
 LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf) {
+  if (op->isRegistered() && !llvm::dyn_cast<oneflow::UserOp>(op)) return success();
   if (auto ctrl_ins = GetCtrlIntputOperands(op)) {
     for (auto ctrl_in : ctrl_ins.getValue()) {
       op_conf.add_ctrl_in_op_name(
@@ -510,7 +514,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
                                                 oneflow::UserOpAdaptor& user_op_adaptor,
                                                 ::oneflow::OperatorConf& op_conf) {
   auto user_conf = op_conf.mutable_user_conf();
-  const std::string op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
+  std::string op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
   for (auto id_attr : op->getAttrDictionary()) {
     auto id = id_attr.first;
     // mlir only attrs
@@ -524,6 +528,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
     }
     // convert op conf attributes
     else if (id.strref().equals("op_name")) {
+      if (op_name == "add_n2") { op_name = "add_n"; }
       op_conf.set_name(op_name);
     } else if (id.strref().equals("op_type_name")) {
       user_conf->set_op_type_name(user_op_adaptor.op_type_name().getValue().str());
@@ -601,9 +606,8 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
       } else if (attr_type == ::oneflow::kAtListShape) {
         for (auto s : attr.dyn_cast<ArrayAttr>().getValue()) {
           ::oneflow::ShapeProto* shape_ptr = user_attr.mutable_at_list_shape()->add_val();
-          for (auto int_v : s.dyn_cast<DenseIntElementsAttr>().getIntValues()) {
-            assert(int_v.isSignedIntN(64));
-            shape_ptr->mutable_dim()->Add(int_v.getSExtValue());
+          for (auto int_v : s.dyn_cast<DenseIntElementsAttr>().getValues<int64_t>()) {
+            shape_ptr->mutable_dim()->Add(int_v);
           }
         }
       } else if (attr_type == ::oneflow::kAtListString) {
@@ -638,7 +642,7 @@ std::pair<unsigned, unsigned> getODSResultIndexAndLength(Operation* op, unsigned
 }
 
 llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op) {
-  if (op->hasAttrOfType<::mlir::DenseIntElementsAttr>("result_segment_sizes")) {
+  if (IsOpaqueOp(op)) {
     auto ctrl_output_result = getODSResults(op, 1);
     if (ctrl_output_result.empty()) {
       return llvm::None;
@@ -652,7 +656,7 @@ llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op) {
 }
 
 ResultRange GetDataOutputResults(Operation* op) {
-  if (op->hasAttrOfType<::mlir::DenseIntElementsAttr>("result_segment_sizes")) {
+  if (IsOpaqueOp(op)) {
     return getODSResults(op, 0);
   } else {
     return op->getOpResults();

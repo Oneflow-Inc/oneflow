@@ -79,16 +79,13 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   }
 
   void ForEachConstMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override;
+      const std::function<void(vm::MirroredObject* compute)>&) const override;
 
   void ForEachMutMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override;
+      const std::function<void(vm::MirroredObject* compute)>&) const override;
 
   void ForEachMut2MirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override;
+      const std::function<void(vm::MirroredObject* compute)>&) const override;
 
   const user_op::OpKernel* user_opkernel() const { return user_opkernel_; }
 

@@ -50,6 +50,14 @@ inline std::string PrintAvailableDevices() {
   return str;
 }
 
+#if defined(WITH_CUDA)
+#define DEVICE_TYPE_SEQ                  \
+  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU) \
+  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU)
+#else
+#define DEVICE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)
+#endif
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_DEVICE_TYPE_H_

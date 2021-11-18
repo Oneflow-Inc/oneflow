@@ -147,11 +147,11 @@ class GpuFakeQuantizationKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FAKE_QUANTIZATION_KERNEL(dtype)                     \
-  REGISTER_USER_KERNEL("fake_quantization")                          \
-      .SetCreateFn<GpuFakeQuantizationKernel<dtype>>()               \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU) \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
+#define REGISTER_FAKE_QUANTIZATION_KERNEL(dtype)                      \
+  REGISTER_USER_KERNEL("fake_quantization")                           \
+      .SetCreateFn<GpuFakeQuantizationKernel<dtype>>()                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
 
 REGISTER_FAKE_QUANTIZATION_KERNEL(float);
 REGISTER_FAKE_QUANTIZATION_KERNEL(double);

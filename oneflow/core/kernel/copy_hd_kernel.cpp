@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/primitive/include/memcpy.h"
+#include "oneflow/core/ep/include/primitive/memcpy.h"
 
 namespace oneflow {
 
@@ -29,22 +29,22 @@ class CopyHdKernel final : public Kernel {
   void ForwardDataContent(KernelContext* ctx) const override;
   void ForwardHeader(KernelContext* ctx) const override;
 
-  std::unique_ptr<primitive::Memcpy> primitive_;
+  std::unique_ptr<ep::primitive::Memcpy> primitive_;
 };
 
 void CopyHdKernel::VirtualKernelInit(KernelContext* ctx) {
   CHECK(this->op_conf().has_copy_hd_conf());
   const CopyHdOpConf& copy_hd_conf = this->op_conf().copy_hd_conf();
-  primitive::MemcpyKind kind{};
+  ep::primitive::MemcpyKind kind{};
   if (copy_hd_conf.type() == CopyHdOpConf::H2D) {
-    kind = primitive::MemcpyKind::kHtoD;
+    kind = ep::primitive::MemcpyKind::kHtoD;
   } else if (copy_hd_conf.type() == CopyHdOpConf::D2H) {
-    kind = primitive::MemcpyKind::kDtoH;
+    kind = ep::primitive::MemcpyKind::kDtoH;
   } else {
     UNIMPLEMENTED();
   }
   primitive_ =
-      primitive::NewPrimitive<primitive::MemcpyFactory>(this->op_conf().device_tag(), kind);
+      ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(this->op_conf().device_tag(), kind);
   CHECK(primitive_);
 }
 
@@ -53,7 +53,7 @@ void CopyHdKernel::ForwardDataContent(KernelContext* ctx) const {
   Blob* out_blob = ctx->BnInOp2Blob(op_attribute().output_bns(0));
   const size_t body_byte_size = in_blob->ByteSizeOfBlobBody();
   CHECK_EQ(out_blob->ByteSizeOfBlobBody(), body_byte_size);
-  primitive_->Launch(ctx->stream_ctx(), out_blob->mut_dptr(), in_blob->dptr(), body_byte_size);
+  primitive_->Launch(ctx->stream(), out_blob->mut_dptr(), in_blob->dptr(), body_byte_size);
 }
 
 void CopyHdKernel::ForwardHeader(KernelContext* ctx) const {

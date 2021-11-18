@@ -65,8 +65,8 @@ class CTCGreedyDecoderKernel final : public user_op::OpKernel {
 #define REGISTER_CTC_GREEDY_DECODER_KERNELS(device, dtype)  \
   REGISTER_USER_KERNEL("ctc_greedy_decoder")                \
       .SetCreateFn<CTCGreedyDecoderKernel<device, dtype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)  \
-                       & (user_op::HobDataType("log_probs", 0) == GetDataType<dtype>::value));
+      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
+                       && (user_op::HobDataType("log_probs", 0) == GetDataType<dtype>::value));
 
 }  // namespace oneflow
 

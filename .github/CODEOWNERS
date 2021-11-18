@@ -1,4 +1,4 @@
-*.cu @liujuncheng
+*.cu @liujuncheng @guo-ran @MARD1NO
 *.py @daquexian @jackalcooper
 /oneflow/core/cuda @liujuncheng
 /oneflow/core/eager @lixinqi @daquexian
@@ -8,7 +8,7 @@
 /oneflow/core/ndarray @lixinqi
 /oneflow/core/object_msg @lixinqi
 /oneflow/core/platform @jackalcooper
-/oneflow/core/primitive @liujuncheng
+/oneflow/core/ep @liujuncheng
 /oneflow/core/rpc @jackalcooper
 /oneflow/core/stream @liujuncheng
 /oneflow/core/transport @chengtbf

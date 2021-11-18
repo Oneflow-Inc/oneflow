@@ -1044,6 +1044,16 @@
   signature: "Tensor (Tensor x, String device_type, Int64 device_id) => Copy"
   bind_python: True
 
+- name: "to"
+  signature: [
+    # type of device must be string for consistent tensor to perform argument validation
+    "Tensor (Tensor x, String device=None, DataType dtype=None, Bool copy=False) => To",
+    "Tensor (Tensor x, Device device=None, DataType dtype=None, Bool copy=False) => To",
+    "Tensor (Tensor x, DataType dtype=None, Bool copy=False) => To",
+    "Tensor (Tensor x, Tensor other, Bool copy=False) => To"
+  ]
+  bind_python: True
+
 - name: "flip"
   signature: "Tensor (Tensor x, Int32List dims) => Flip"
   bind_python: True
@@ -1625,6 +1635,14 @@
       "Tensor (Int32 n, *, Placement placement, SbpList sbp, Generator generator=None, DataType dtype=kInt64, Bool requires_grad=False) => ConsistentRandPerm",
     ]
   bind_python: True
+
+- name: "unfold_tensor"
+  signature: "Tensor (Tensor x, Int32 dimension, Int32 size, Int32 step) => UnfoldTensor"
+  bind_python: True
+
+- name: "unfold_tensor_grad"
+  signature: "Tensor (Tensor dy, Tensor x, Int32 dimension, Int32 size, Int32 step) => UnfoldTensorGrad"
+  bind_python: False
 
 - name: "unfold"
   signature:

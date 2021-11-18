@@ -118,6 +118,65 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.negative,
+    """
+    See :func:`oneflow.negative`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.neg,
+    """
+    See :func:`oneflow.neg`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.unfold,
+    """
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.Tensor.unfold.html#torch.Tensor.unfold
+
+    Returns a view of the original tensor which contains all slices of `size` size from `self`
+    tensor in the dimension `dimension`.
+
+    Step between two slices is given by `step`.
+
+    If sizedim is the size of dimension `dimension` for `self`, the size of dimension dimension in the
+    returned tensor will be (sizedim - size) / step + 1.
+
+    An additional dimension of size `size` is appended in the returned tensor.
+
+    Args:
+        dimension (int): dimension in which unfolding happens
+        size (int): the size of each slice that is unfolded
+        step (int): the step between each slice
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+
+        >>> x = flow.arange(1., 8)
+        >>> x
+        tensor([ 1.,  2.,  3.,  4.,  5.,  6.,  7.])
+        >>> x.unfold(0, 2, 1)
+        tensor([[ 1.,  2.],
+                [ 2.,  3.],
+                [ 3.,  4.],
+                [ 4.,  5.],
+                [ 5.,  6.],
+                [ 6.,  7.]])
+        >>> x.unfold(0, 2, 2)
+        tensor([[ 1.,  2.],
+                [ 3.,  4.],
+                [ 5.,  6.]])
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.matmul,
     """
     See :func:`oneflow.matmul`
@@ -142,5 +201,39 @@ add_docstr(
     oneflow.Tensor.permute,
     """
     See :func:`oneflow.permute`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.to,
+    """Performs Tensor dtype and/or device conversion.
+        A flow.dtype and flow.device are inferred from the arguments of `input.to(*args, **kwargs)`.
+
+    .. note::
+        If the ``input`` Tensor already
+        has the correct :class:`flow.dtype` and :class:`flow.device`, then ``input`` is returned.
+        Otherwise, the returned tensor is a copy of ``input`` with the desired.
+
+    Args:
+        input (oneflow.Tensor): An input tensor.
+        *args (oneflow.Tensor or oneflow.device or oneflow.dtype): Positional arguments
+        **kwargs (oneflow.device or oneflow.dtype) : Key-value arguments
+
+    Returns:
+        oneflow.Tensor: A Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+
+        >>> arr = np.random.randint(1, 9, size=(1, 2, 3, 4))
+        >>> input = flow.Tensor(arr)
+        >>> output = input.to(dtype=flow.float32)
+        >>> np.array_equal(arr.astype(np.float32), output.numpy())
+        True
+
     """,
 )

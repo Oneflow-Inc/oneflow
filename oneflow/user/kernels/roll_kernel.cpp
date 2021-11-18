@@ -58,8 +58,8 @@ class CpuRollKernel final : public user_op::OpKernel {
 
 #define REGISTER_ROLL_KERNEL(dtype)                                                 \
   REGISTER_USER_KERNEL("roll").SetCreateFn<CpuRollKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == DeviceType::kCPU)                                 \
-      & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
+      (user_op::HobDeviceType() == DeviceType::kCPU)                                \
+      && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
 
 REGISTER_ROLL_KERNEL(float);
 REGISTER_ROLL_KERNEL(double);
