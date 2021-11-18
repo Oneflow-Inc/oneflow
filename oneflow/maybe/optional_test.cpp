@@ -23,7 +23,7 @@ using namespace oneflow::maybe;
 using Private = details::OptionalPrivateScope;
 
 TEST(Optional, Scalar) {
-  Optional<int> a, b(1), c(a), d(b), e(NullOpt);
+  Optional<int> a, b(1), c(a), d(b), e(NullOpt), bb(InPlace, 1);
 
   static_assert(std::is_same<decltype(Private::Value(a)), int&>::value, "");
 
@@ -77,7 +77,7 @@ TEST(Optional, NonScalar) {
   auto x = std::make_shared<int>(233);
   ASSERT_EQ(x.use_count(), 1);
 
-  Optional<std::shared_ptr<int>> a, b(x), aa(a);
+  Optional<std::shared_ptr<int>> a, b(x), aa(a), aaa(InPlace, x);
   ASSERT_EQ(x.use_count(), 2);
   ASSERT_EQ(*Private::Value(b), 233);
   static_assert(std::is_same<decltype(Private::Value(b)), std::shared_ptr<int>&>::value, "");
@@ -142,6 +142,20 @@ TEST(Optional, NonScalar) {
 
   i.Emplace(std::move(x));
   ASSERT_EQ(Private::Value(i).use_count(), 3);
+
+  struct A {
+    int id;
+    std::string name;
+  };
+
+  Optional<A> a1, a2{InPlace, 233, "oneflow"};
+
+  ASSERT_FALSE(a1);
+  ASSERT_TRUE(a2);
+
+  ASSERT_EQ(a1, NullOpt);
+  ASSERT_EQ(Private::Value(a2).id, 233);
+  ASSERT_EQ(Private::Value(a2).name, "oneflow");
 }
 
 TEST(Optional, Reference) {

@@ -313,14 +313,13 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
 
   template<typename T, typename... Args, std::enable_if_t<HasType<T>, int> = 0>
   void construct(Args&&... args) {
-    new (storage) T(std::forward<Args>(args)...);
+    new (storage) T{std::forward<Args>(args)...};
     index = IndexOfType<T>;
   }
 
   template<std::size_t I, typename... Args, std::enable_if_t<(I < Num), int> = 0>
   void construct(Args&&... args) {
-    new (storage) TypeByIndex<I>(std::forward<Args>(args)...);
-    index = I;
+    construct<TypeByIndex<I>>(std::forward<Args>(args)...);
   }
 
   template<typename V>

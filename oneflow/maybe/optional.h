@@ -64,7 +64,7 @@ struct OptionalStorage {
 
   template<typename... Args>
   void Construct(Args&&... args) {
-    new (value) Type(std::forward<Args>(args)...);
+    new (value) Type{std::forward<Args>(args)...};
     has = true;
   }
 
