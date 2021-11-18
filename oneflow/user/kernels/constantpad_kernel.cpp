@@ -113,7 +113,7 @@ class ConstantPad1dGradKernel final : public OpKernel {
     NdIndexOffsetHelper<int64_t, 3> index_helper(dy_vector.data());
 
     size_t out_bytes_size = dx->shape().Count(0) * GetSizeOfDataType(dx->data_type());
-    Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
+    Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
     ConstantPad1dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
                                                   dy_shape, dx_shape, padding);
@@ -175,7 +175,7 @@ class ConstantPad3dGradKernel final : public OpKernel {
     NdIndexOffsetHelper<int64_t, 5> index_helper(dy_vector.data());
 
     size_t out_bytes_size = dx->shape().Count(0) * GetSizeOfDataType(dx->data_type());
-    Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
+    Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
     ConstantPad3dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
                                                   dy_shape, dx_shape, padding);

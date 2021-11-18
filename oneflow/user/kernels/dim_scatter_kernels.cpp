@@ -43,9 +43,9 @@ class DimScatterKernel final : public user_op::OpKernel {
     const IN_T* src = src_tensor->dptr<IN_T>();
 
     if (input_tensor) {
-      Memcpy<device_type>(ctx->device_ctx(), output, input_tensor->dptr<IN_T>(), out_bytes_size);
+      Memcpy<device_type>(ctx->stream(), output, input_tensor->dptr<IN_T>(), out_bytes_size);
     } else if (like_tensor) {
-      Memset<device_type>(ctx->device_ctx(), output, 0, out_bytes_size);
+      Memset<device_type>(ctx->stream(), output, 0, out_bytes_size);
     } else {
       std::cerr << "Unimplemented Error" << std::endl;
       throw Error::UnimplementedError();  // TODO: Remove throw Error.

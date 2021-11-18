@@ -41,7 +41,7 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
     if (input_tensor->shape().elem_cnt() == 0) {
       if (output_tensor->shape().elem_cnt() != 0) {
         Memset<device_type>(
-            ctx->device_ctx(), output_tensor->mut_dptr<T>(), 0,
+            ctx->stream(), output_tensor->mut_dptr<T>(), 0,
             output_tensor->shape().elem_cnt() * GetSizeOfDataType(output_tensor->data_type()));
       }
       return;
