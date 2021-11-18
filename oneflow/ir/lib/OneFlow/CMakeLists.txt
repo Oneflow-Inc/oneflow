@@ -26,6 +26,7 @@ add_mlir_dialect_library(MLIROneFlow
   MLIRSCFToStandard
   MLIRMemRefToLLVM
   MLIRLinalgToLLVM
+  MLIRReconcileUnrealizedCasts
   ${MLIR_GPU_LIBS}
   MLIRIR
 )
