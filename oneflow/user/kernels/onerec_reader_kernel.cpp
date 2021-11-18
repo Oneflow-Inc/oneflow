@@ -55,6 +55,6 @@ class OneRecReaderKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("OneRecReader")
     .SetCreateFn<OneRecReaderKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
+                     && (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
 
 }  // namespace oneflow

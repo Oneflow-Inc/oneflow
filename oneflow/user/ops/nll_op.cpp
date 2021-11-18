@@ -103,16 +103,9 @@ REGISTER_USER_OP("nll")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn(InferDataType)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("input", 0), 0)
-          .Split(user_op::OpArg("target", 0), 0)
-          .Broadcast(user_op::OpArg("weight", 0))
-          .Split(user_op::OpArg("out", 0), 0)
-          .Broadcast(user_op::OpArg("total_weight", 0))
-          .Build();
-      return Maybe<void>::Ok();
-    });
+    .SetGetSbpFn(GenLossForwardDefaultGetSbpFn([](user_op::UserOpSbpSignatureBuilder& builder) {
+      builder.Broadcast(user_op::OpArg("total_weight", 0));
+    }));
 
 REGISTER_USER_OP("nll_grad")
     .Input("input")
@@ -125,17 +118,9 @@ REGISTER_USER_OP("nll_grad")
     .Attr<std::string>("reduction")
     .SetTensorDescInferFn(InferGradTensorDescFn)
     .SetDataTypeInferFn(InferGradDataType)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("input", 0), 0)
-          .Split(user_op::OpArg("target", 0), 0)
-          .Broadcast(user_op::OpArg("weight", 0))
-          .Broadcast(user_op::OpArg("total_weight", 0))
-          .Split(user_op::OpArg("dy", 0), 0)
-          .Split(user_op::OpArg("dx", 0), 0)
-          .Build();
-      return Maybe<void>::Ok();
-    });
+    .SetGetSbpFn(GenLossBackwardDefaultGetSbpFn([](user_op::UserOpSbpSignatureBuilder& builder) {
+      builder.Broadcast(user_op::OpArg("total_weight", 0));
+    }));
 
 REGISTER_USER_OP_GRAD("nll").SetGenBackwardOpConfFn(
     [](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {

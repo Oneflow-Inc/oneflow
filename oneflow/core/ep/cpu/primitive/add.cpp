@@ -56,7 +56,7 @@ class AddImpl<T, type_onednn, type_calculate,
   ~AddImpl() override = default;
 
   using Add::Launch;
-  void Launch(StreamContext* stream_ctx, const void* const* srcs, size_t arity, void* dst,
+  void Launch(Stream* stream, const void* const* srcs, size_t arity, void* dst,
               size_t count) override {
 #define ONE_IF(a)                                                                            \
   if (arity == a) {                                                                          \

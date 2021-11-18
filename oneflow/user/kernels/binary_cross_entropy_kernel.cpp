@@ -72,8 +72,7 @@ class BinaryCrossEntropyKernel final : public user_op::OpKernel {
     const T* input = input_blob->dptr<T>();
     const T* target = target_blob->dptr<T>();
     T* out = out_blob->mut_dptr<T>();
-    T* tmp_buffer = tmp_buffer_blob->mut_dptr<T>();
-    T* tmp_out = tmp_buffer;
+    T* tmp_out = reduction == ReductionType::kNone ? nullptr : tmp_buffer_blob->mut_dptr<T>();
     const T* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
 
@@ -116,23 +115,23 @@ class BinaryCrossEntropyGradKernel final : public user_op::OpKernel {
 
 }  // namespace
 
-#define REGISTER_BINARY_CROSS_ENTROPY_KERNEL(dtype)                                       \
-  REGISTER_USER_KERNEL("binary_cross_entropy")                                            \
-      .SetCreateFn<BinaryCrossEntropyKernel<dtype>>()                                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                     \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
-                       & (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))   \
+#define REGISTER_BINARY_CROSS_ENTROPY_KERNEL(dtype)                                        \
+  REGISTER_USER_KERNEL("binary_cross_entropy")                                             \
+      .SetCreateFn<BinaryCrossEntropyKernel<dtype>>()                                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                      \
+                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
+                       && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))   \
       .SetInferTmpSizeFn(loss::GenDefaultInferTmpSizeFn<dtype>());
 
-#define REGISTER_BINARY_CROSS_ENTROPY_GRAD_KERNEL(dtype)                                  \
-  REGISTER_USER_KERNEL("binary_cross_entropy_grad")                                       \
-      .SetCreateFn<BinaryCrossEntropyGradKernel<dtype>>()                                 \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                     \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
-                       & (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)     \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_BINARY_CROSS_ENTROPY_GRAD_KERNEL(dtype)                                   \
+  REGISTER_USER_KERNEL("binary_cross_entropy_grad")                                        \
+      .SetCreateFn<BinaryCrossEntropyGradKernel<dtype>>()                                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                      \
+                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
+                       && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)     \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_BINARY_CROSS_ENTROPY_KERNEL(float)
 REGISTER_BINARY_CROSS_ENTROPY_KERNEL(double)

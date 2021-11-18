@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_ONEFLOW_VM_H_
-#define ONEFLOW_CORE_VM_ONEFLOW_VM_H_
+#ifndef ONEFLOW_CORE_VM_VIRTUAL_MACHINE_H_
+#define ONEFLOW_CORE_VM_VIRTUAL_MACHINE_H_
 
 #include "oneflow/core/common/notifier.h"
 #include "oneflow/core/vm/interpret_type.h"
@@ -24,18 +24,22 @@ limitations under the License.
 
 namespace oneflow {
 
-class OneflowVM final {
+class InstructionsBuilder;
+
+class VirtualMachine final {
  public:
-  OneflowVM(const OneflowVM&) = delete;
-  OneflowVM(OneflowVM&&) = delete;
-  OneflowVM(const Resource& resource, int64_t this_machine_id);
-  ~OneflowVM();
+  VirtualMachine(const VirtualMachine&) = delete;
+  VirtualMachine(VirtualMachine&&) = delete;
+  VirtualMachine(const Resource& resource, int64_t this_machine_id);
+  ~VirtualMachine();
 
   Maybe<void> Receive(vm::InstructionMsgList* instr_list);
 
   const vm::VirtualMachineEngine& vm() const { return *vm_; }
 
  private:
+  friend class InstructionsBuilder;
+
   void Loop(const std::function<void()>& Initializer);
 
   vm::VirtualMachineEngine* mut_vm() { return vm_.Mutable(); }
@@ -50,4 +54,4 @@ class OneflowVM final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_ONEFLOW_VM_H_
+#endif  // ONEFLOW_CORE_VM_VIRTUAL_MACHINE_H_

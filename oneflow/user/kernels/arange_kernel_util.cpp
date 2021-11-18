@@ -13,16 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/stream_index_getter_registry.h"
-#include "oneflow/core/graph/compute_task_node.h"
-#include "oneflow/core/graph/stream_index_getter_registry_manager.h"
-#include "oneflow/core/common/util.h"
+#include "oneflow/user/kernels/arange_kernel_util.h"
 
 namespace oneflow {
 
-StreamIndexGetterRegistry& StreamIndexGetterRegistry::SetFn(StreamIndexGetterFn func) {
-  StreamIndexGetterRegistryManager::Get().StreamIndexGetterFuncs()[dev_task_type_] = func;
-  return *this;
-}
+namespace user_op {
+template<typename T>
+struct ArangeFunctor<DeviceType::kCPU, T> final {
+  void operator()(DeviceCtx* ctx, const T start, const T delta, const int64_t arange_elem_cnt,
+                  T* out) {
+    DoArange<T>(start, delta, arange_elem_cnt, out);
+  }
+};
 
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_ARANGE_FUNCTOR, (DeviceType::kCPU),
+                                 ARANGE_DATA_TYPE_SEQ);
+
+}  // namespace user_op
 }  // namespace oneflow
