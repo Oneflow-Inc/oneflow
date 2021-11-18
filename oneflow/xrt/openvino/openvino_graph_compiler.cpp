@@ -46,8 +46,9 @@ void OpenvinoGraphCompiler::SetupKernelContextParam(const XrtNode* node,
       const std::string& k = arg.meta_data().consume_key;
       input_size++;
       input_output_args.emplace(k, arg);
+      // When arg is graph input, operands_ not hold it.
       if (operands_.count(arg) <= 0) { continue; }
-      std::shared_ptr<ngraph::Node> ngraph_node = operands_.at(arg);
+      const auto& ngraph_node = operands_.at(arg);
       input_ops.emplace(arg, ngraph_node);
     }
   }

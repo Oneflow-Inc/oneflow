@@ -84,10 +84,6 @@ Shape OpenvinoOpContext::OutputShape(const std::string& name) const {
 }
 
 Argument OpenvinoOpContext::ArgumentFromKey(const std::string& key) const {
-  if (param_.arguments.count(key) == 0) {
-    std::cout << key << std::endl;
-    for (auto it : param_.arguments) { std::cout << it.first << std::endl; }
-  }
   CHECK_GT(param_.arguments.count(key), 0);
   return param_.arguments.at(key);
 }
