@@ -123,7 +123,8 @@ LogicalResult JobImporter::InsertOpResults(const ::oneflow::OperatorConf& op,
                                            Operation* created_op) {
   for (auto data_out : llvm::enumerate(GetDataOutputResults(created_op))) {
     auto output_lbns = created_op->getAttrOfType<ArrayAttr>("output_lbns");
-    lbn2result_.insert({output_lbns[data_out.index()].dyn_cast<StringAttr>().getValue().str(),
+    auto data_out_index = data_out.index();
+    lbn2result_.insert({output_lbns[data_out_index].dyn_cast<StringAttr>().getValue().str(),
                         data_out.value().dyn_cast<OpResult>()});
   }
   if (auto ctrl_out = GetCtrlOutputResult(created_op)) {
@@ -316,7 +317,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   mlir::PassManager pm(context);
   pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
   std::string graphviz;
-  if (std::getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS") != nullptr) {
+  if (job_wrapper.IsLastIRPass() && std::getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS") != nullptr) {
     pm.addPass(oneflow::createOutlineJitFunctionPass());
   }
   pm.addNestedPass<mlir::FuncOp>(oneflow::createFuseIntoExistingOpPass());
