@@ -352,7 +352,7 @@ double SbpEdge<SbpSignature>::GetMaxCost() {
   double max_cost = -1.0;
   for (int32_t i = 0; i < Cost.size(); i++) {
     for (int32_t j = 0; j < Cost[i].size(); j++) {
-      if (Cost[i][j] < 1e38 && Cost[i][j] > max_cost) max_cost = Cost[i][j];
+      if (Cost[i][j] < cut_cost && Cost[i][j] > max_cost) max_cost = Cost[i][j];
     }
   }
   return max_cost;
@@ -385,7 +385,7 @@ void SbpEdge<SbpSignature>::AdjustOverlapCost() {
   if (overlap_ratio < 0.0) overlap_ratio = 0.0;
   for (int32_t i = 0; i < Cost.size(); i++) {
     for (int32_t j = 0; j < Cost[i].size(); j++) {
-      if (Cost[i][j] > 0.0 && Cost[i][j] < 1e38) { Cost[i][j] = overlap_ratio * Cost[i][j]; }
+      if (Cost[i][j] > 0.0 && Cost[i][j] < cut_cost) { Cost[i][j] = overlap_ratio * Cost[i][j]; }
     }
   }
 }

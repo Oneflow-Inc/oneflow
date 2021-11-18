@@ -167,10 +167,12 @@ Maybe<void> SbpConstructor::InitComputationCost(const OpGraph& op_graph) {
       return op_node->LogicalBlobDesc4Lbi(lbi);
     };
     for (int32_t sbp_id = 0; sbp_id < sbp_node->SbpSignatureList.size(); sbp_id++) {
-      sbp_node->Cost[sbp_id] =
-          cost_ratio_
-          * JUST(op_node->op().GetComputeComplexity(sbp_node->SbpSignatureList[sbp_id],
-                                                    logical_blob_desc4bn, parallel_desc));
+      double comp_cost = JUST(op_node->op().GetComputeComplexity(
+          sbp_node->SbpSignatureList[sbp_id], logical_blob_desc4bn, parallel_desc));
+      if (comp_cost > cut_cost)
+        sbp_node->Cost[sbp_id] = comp_cost;
+      else
+        sbp_node->Cost[sbp_id] = cost_ratio_ * comp_cost;
     }
     return Maybe<void>::Ok();
   });
