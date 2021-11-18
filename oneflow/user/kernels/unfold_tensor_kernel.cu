@@ -141,7 +141,7 @@ class GpuUnfoldTensorKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("unfold_tensor")                               \
       .SetCreateFn<GpuUnfoldTensorKernel<dtype>>()                    \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value))
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value))
 
 REGISTER_UNFOLD_TENSOR_KERNEL(float);
 REGISTER_UNFOLD_TENSOR_KERNEL(double);
@@ -207,7 +207,7 @@ class GpuUnfoldTensorGradKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("unfold_tensor_grad")                          \
       .SetCreateFn<GpuUnfoldTensorGradKernel<dtype>>()                \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value))
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value))
 
 REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(float);
 REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(double);

@@ -176,63 +176,63 @@ class WhereScalarXYKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_WHERE_KERNEL(device_type_v, dtype_pair, ctype_pair)                             \
-  REGISTER_USER_KERNEL("where")                                                                  \
-      .SetCreateFn<WhereKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                      \
-                               OF_PP_PAIR_FIRST(ctype_pair)>>()                                  \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                               \
-                       & (user_op::HobDataType("condition", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
-                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
-        Shape* out_shape = ctx->OutputShape("out", 0);                                           \
-        const size_t x_bytes =                                                                   \
-            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair)));    \
-        const size_t y_bytes =                                                                   \
-            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair)));    \
-        const size_t cond_bytes =                                                                \
-            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(ctype_pair)));    \
-        return x_bytes + y_bytes + cond_bytes;                                                   \
+#define REGISTER_WHERE_KERNEL(device_type_v, dtype_pair, ctype_pair)                              \
+  REGISTER_USER_KERNEL("where")                                                                   \
+      .SetCreateFn<WhereKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                       \
+                               OF_PP_PAIR_FIRST(ctype_pair)>>()                                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                                \
+                       && (user_op::HobDataType("condition", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
+                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
+        Shape* out_shape = ctx->OutputShape("out", 0);                                            \
+        const size_t x_bytes =                                                                    \
+            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair)));     \
+        const size_t y_bytes =                                                                    \
+            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair)));     \
+        const size_t cond_bytes =                                                                 \
+            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(ctype_pair)));     \
+        return x_bytes + y_bytes + cond_bytes;                                                    \
       });
 
-#define REGISTER_WHERE_SCALAR_X_KERNEL(device_type_v, dtype_pair, ctype_pair)                    \
-  REGISTER_USER_KERNEL("where_scalar_x")                                                         \
-      .SetCreateFn<WhereScalarXKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),               \
-                                      OF_PP_PAIR_FIRST(ctype_pair)>>()                           \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                               \
-                       & (user_op::HobDataType("condition", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
-                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
-        Shape* out_shape = ctx->OutputShape("out", 0);                                           \
-        const size_t y_bytes =                                                                   \
-            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair)));    \
-        const size_t cond_bytes =                                                                \
-            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(ctype_pair)));    \
-        return y_bytes + cond_bytes;                                                             \
+#define REGISTER_WHERE_SCALAR_X_KERNEL(device_type_v, dtype_pair, ctype_pair)                     \
+  REGISTER_USER_KERNEL("where_scalar_x")                                                          \
+      .SetCreateFn<WhereScalarXKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                \
+                                      OF_PP_PAIR_FIRST(ctype_pair)>>()                            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                                \
+                       && (user_op::HobDataType("condition", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
+                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
+        Shape* out_shape = ctx->OutputShape("out", 0);                                            \
+        const size_t y_bytes =                                                                    \
+            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair)));     \
+        const size_t cond_bytes =                                                                 \
+            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(ctype_pair)));     \
+        return y_bytes + cond_bytes;                                                              \
       });
 
-#define REGISTER_WHERE_SCALAR_Y_KERNEL(device_type_v, dtype_pair, ctype_pair)                    \
-  REGISTER_USER_KERNEL("where_scalar_y")                                                         \
-      .SetCreateFn<WhereScalarYKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),               \
-                                      OF_PP_PAIR_FIRST(ctype_pair)>>()                           \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                               \
-                       & (user_op::HobDataType("condition", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
-                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
-        Shape* out_shape = ctx->OutputShape("out", 0);                                           \
-        const size_t x_bytes =                                                                   \
-            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair)));    \
-        const size_t cond_bytes =                                                                \
-            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(ctype_pair)));    \
-        return x_bytes + cond_bytes;                                                             \
+#define REGISTER_WHERE_SCALAR_Y_KERNEL(device_type_v, dtype_pair, ctype_pair)                     \
+  REGISTER_USER_KERNEL("where_scalar_y")                                                          \
+      .SetCreateFn<WhereScalarYKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                \
+                                      OF_PP_PAIR_FIRST(ctype_pair)>>()                            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                                \
+                       && (user_op::HobDataType("condition", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
+                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
+        Shape* out_shape = ctx->OutputShape("out", 0);                                            \
+        const size_t x_bytes =                                                                    \
+            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair)));     \
+        const size_t cond_bytes =                                                                 \
+            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(ctype_pair)));     \
+        return x_bytes + cond_bytes;                                                              \
       });
 
-#define REGISTER_WHERE_SCALAR_XY_KERNEL(device_type_v, dtype_pair, ctype_pair)                   \
-  REGISTER_USER_KERNEL("where_scalar_xy")                                                        \
-      .SetCreateFn<WhereScalarXYKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),              \
-                                       OF_PP_PAIR_FIRST(ctype_pair)>>()                          \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                               \
-                       & (user_op::HobDataType("condition", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
-                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
+#define REGISTER_WHERE_SCALAR_XY_KERNEL(device_type_v, dtype_pair, ctype_pair)                    \
+  REGISTER_USER_KERNEL("where_scalar_xy")                                                         \
+      .SetCreateFn<WhereScalarXYKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),               \
+                                       OF_PP_PAIR_FIRST(ctype_pair)>>()                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                                \
+                       && (user_op::HobDataType("condition", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
+                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_WHERE_KERNEL, DEVICE_TYPE_SEQ, ARITHMETIC_DATA_TYPE_SEQ,
                                  INT_DATA_TYPE_SEQ)
