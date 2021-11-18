@@ -543,7 +543,7 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
 #define REGISTER_DROPOUT_KERNEL_GPU(dtype)                                                \
   REGISTER_USER_KERNEL("dropout").SetCreateFn<DropoutKernelGPU<dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceTag() == "gpu")                                                  \
-      && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)                     \
+      && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)                    \
       && (user_op::HobDataType("mask", 0) == GetDataType<int8_t>::value));
 
 REGISTER_DROPOUT_KERNEL_GPU(half)

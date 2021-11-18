@@ -16,12 +16,8 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 #include "oneflow/core/kernel/kernel_util.h"
-<<<<<<< HEAD
-#include "oneflow/core/primitive/include/add.h"
 #include "oneflow/user/kernels/dropout_kernel.h"
-=======
 #include "oneflow/core/ep/include/primitive/add.h"
->>>>>>> master
 
 namespace oneflow {
 
@@ -89,8 +85,8 @@ class DropoutKernelCPU final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("dropout")                                                               \
       .SetCreateFn<DropoutKernelCPU<dtype>>()                                                   \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                       \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)          \
-                       && (user_op::HobDataType("mask", 0) == GetDataType<int8_t>::value))       \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)         \
+                       && (user_op::HobDataType("mask", 0) == GetDataType<int8_t>::value))      \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
