@@ -35,4 +35,7 @@ const std::string& Device::type() const { return (*device_)->type(); }
 
 int64_t Device::device_id() const { return (*device_)->device_id(); }
 
+bool Device::operator==(const Device& rhs) const { return *device_ == *rhs.device_; }
+bool Device::operator!=(const Device& rhs) const { return *device_ != *rhs.device_; }
+
 }  // namespace oneflow_api

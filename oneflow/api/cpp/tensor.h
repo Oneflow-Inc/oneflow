@@ -13,39 +13,42 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_API_CPP_DEVICE_H_
-#define ONEFLOW_API_CPP_DEVICE_H_
+#ifndef ONEFLOW_API_CPP_TENSOR_H_
+#define ONEFLOW_API_CPP_TENSOR_H_
 
-#include <string>
 #include <memory>
+#include "device.h"
+#include "shape.h"
 
 namespace oneflow {
-
-class Device;
-
-template<typename T>
-class Symbol;
+namespace one {
+class Tensor;
+}
 
 }  // namespace oneflow
 
 namespace oneflow_api {
 
-class Device final {
-  friend class Tensor;
-
+class Tensor final {
  public:
-  explicit Device(const std::string& type_or_type_with_device_id);
-  explicit Device(const std::string& type, int64_t device_id);
-  const std::string& type() const;
-  int64_t device_id() const;
+  explicit Tensor();
+  explicit Tensor(const Device& device);
+  Tensor(const Shape& shape, const Device& device);
+  const Shape shape() const;
+  const Device device() const;
 
-  bool operator==(const Device& rhs) const;
-  bool operator!=(const Device& rhs) const;
+  void zeros_();
+
+  template<typename T>
+  static Tensor from_blob(const T* blob, const Shape& shape, const Device& device);
+
+  template<typename T>
+  static void to_blob(const Tensor& tensor, T* blob);
 
  private:
-  std::shared_ptr<oneflow::Symbol<oneflow::Device>> device_ = nullptr;
+  std::shared_ptr<oneflow::one::Tensor> tensor_ = nullptr;
 };
 
 }  // namespace oneflow_api
 
-#endif  // !ONEFLOW_API_CPP_DEVICE_H_
+#endif  // ONEFLOW_API_CPP_TENSOR_H_
