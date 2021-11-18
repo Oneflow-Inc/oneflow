@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_JIT_H_
 #define ONEFLOW_IR_INCLUDE_ONEFLOW_JIT_H_
 
+#include <utility>
+
 #include "mlir/IR/Value.h"
 #include "oneflow/core/framework/arg_tuple.h"
 #include "oneflow/core/framework/tensor.h"
@@ -128,6 +130,40 @@ class TensorRef final : public TensorIf<TensorRef> {
   std::shared_ptr<Tensor> tensor_;
 };
 
+class ProcessOpContext {
+ public:
+  ProcessOpContext() = default;
+  ProcessOpContext(const std::shared_ptr<const ArgTuple>& input_arg_tuple,
+                   const TensorTuple& inputs, TensorTuple* outputs,
+                   std::shared_ptr<const ParallelDesc> parallel_desc)
+      : input_arg_tuple_(input_arg_tuple),
+        inputs_(inputs),
+        outputs_(outputs),
+        parallel_desc_(std::move(parallel_desc)) {}
+  std::shared_ptr<const ParallelDesc> GetParallelDesc() const {
+    CHECK(parallel_desc_);
+    return parallel_desc_;
+  }
+  void SetParallelDesc(const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+    parallel_desc_ = parallel_desc;
+  }
+  std::shared_ptr<const ArgTuple> GetInputArgTuple() const { return input_arg_tuple_; }
+  TensorTuple GetInputs() const { return inputs_; }
+  TensorTuple* GetOutputs() { return outputs_; }
+  std::unordered_map<std::string, mlir::Value>& GetOperandMapping() { return operand_mapping_; }
+  std::unordered_map<std::string, mlir::Type>& GetResultTypeMapping() {
+    return result_type_mapping_;
+  }
+
+ private:
+  std::shared_ptr<const ArgTuple> input_arg_tuple_;
+  TensorTuple inputs_;
+  TensorTuple* outputs_{};
+  std::unordered_map<std::string, mlir::Value> operand_mapping_;     // "a0" => %result
+  std::unordered_map<std::string, mlir::Type> result_type_mapping_;  // "a0" => tensor<2x2xf32>
+  std::shared_ptr<const ParallelDesc> parallel_desc_;
+};
+
 class JitImporter : public Importer {
  public:
   using Importer::Importer;
@@ -151,12 +187,11 @@ class JitImporter : public Importer {
   // 2. if input tensor absent in tensor=>value mapping, udpate function arg
   // 3. add input to tensor=>value mapping
   // 4. insert to PlaceholderBn => value mapping (only for one op)
-  mlir::FuncOp GetOrInsertFunc(const std::string& func_name, const TensorTuple& inputs,
-                               TensorTuple* outputs);
+  mlir::FuncOp GetOrInsertFunc(const std::string& func_name);
   void CreateOperandMapping(const ::oneflow::OperatorConf& op,
                             const std::shared_ptr<const ParallelDesc>,
                             const std::shared_ptr<const ArgTuple>& input_arg_tuple,
-                            const TensorTuple& inputs);
+                            const TensorTuple& inputs, TensorTuple* outputs);
   // get blob decs from inferred op
 
   llvm::Optional<mlir::Value> GetResultByBnAndIndex(const std::string& bn, const int32_t index);
@@ -165,7 +200,7 @@ class JitImporter : public Importer {
       const std::shared_ptr<const ParallelDesc>& parallel_desc);
   llvm::Optional<TensorType> GetMlirTensorTypeFromBlobDesc(const BlobDesc& blob_desc);
   void SetParallelDesc(const std::shared_ptr<const ParallelDesc>& parallel_desc) {
-    parallel_desc_ = parallel_desc;
+    GetProcessOpContext().SetParallelDesc(parallel_desc);
   }
   LogicalResult LowerToOneFlowKernel();
   llvm::SmallVector<std::shared_ptr<TensorRef>, 8>& GetReturnTensors() { return return_tensors_; }
@@ -175,6 +210,7 @@ class JitImporter : public Importer {
     return_tensors_.clear();
     py_tensors_.clear();
   };
+  ProcessOpContext& GetProcessOpContext() { return process_op_context_; }
 
  private:
   // JIT interpreter owns the intermediate tensors
@@ -187,12 +223,7 @@ class JitImporter : public Importer {
   llvm::DenseMap<Value, std::shared_ptr<TensorRef>> py_tensors_;
   llvm::SmallVector<std::shared_ptr<TensorRef>, 8> return_tensors_;
   // reset every op
-  std::unordered_map<std::string, mlir::Value> operand_mapping_;     // "a0" => %result
-  std::unordered_map<std::string, mlir::Type> result_type_mapping_;  // "a0" => tensor<2x2xf32>
-  std::shared_ptr<const ArgTuple> input_arg_tuple_;
-  TensorTuple inputs_;
-  TensorTuple* outputs_;
-  std::shared_ptr<const ParallelDesc> parallel_desc_;
+  ProcessOpContext process_op_context_;
 };
 
 OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context);

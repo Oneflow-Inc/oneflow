@@ -101,7 +101,7 @@ void JitInterpreter::Interrupt() {
             if (llvm::dyn_cast<mlir::oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
               if (auto expr = GetExpr(op)) {
                 TensorTuple inputs(op->getOperands().size());
-                for (auto indexed_operand : llvm::enumerate(op->getOperands())) {
+                for (const auto& indexed_operand : llvm::enumerate(op->getOperands())) {
                   auto index = indexed_operand.index();
                   auto operand = indexed_operand.value();
                   if (auto arg = operand.dyn_cast<mlir::BlockArgument>()) {
@@ -141,7 +141,7 @@ void JitInterpreter::Interrupt() {
           })
           .wasInterrupted();
   CHECK(!was_interrupted) << "JIT dispatch failure";
-  for (auto indexed_return_value : llvm::enumerate(return_op->getOperands())) {
+  for (const auto& indexed_return_value : llvm::enumerate(return_op->getOperands())) {
     auto value = indexed_return_value.value();
     auto found = mapping.find(value);
     CHECK(found != mapping.end()) << "tensor not found";
@@ -156,7 +156,6 @@ Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTup
   const std::string device_tag = GetDeviceTag(inputs.at(0));
   const bool is_local = inputs.at(0)->is_local();
   const std::shared_ptr<const ParallelDesc> parallel_desc = JUST(GetParallelDesc(inputs.at(0)));
-  importer_.SetParallelDesc(parallel_desc);
   op_conf->set_device_tag(device_tag);
 
   for (int i = 0; i < inputs.size(); ++i) {
@@ -168,8 +167,9 @@ Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTup
   CHECK_EQ_OR_RETURN(outputs->size(), op_expr.output_size());
   auto indexed_arg_name_and_index = op_expr.input_arg_tuple()->indexed_arg_name_and_index();
   CHECK_EQ_OR_RETURN(indexed_arg_name_and_index.size(), inputs.size());
-  importer_.GetOrInsertFunc(GetJitFuncName(), inputs, outputs);
-  importer_.CreateOperandMapping(*op_conf, parallel_desc, op_expr.input_arg_tuple(), inputs);
+  importer_.GetOrInsertFunc(GetJitFuncName());
+  importer_.CreateOperandMapping(*op_conf, parallel_desc, op_expr.input_arg_tuple(), inputs,
+                                 outputs);
   CHECK_OR_RETURN(importer_.ProcessUserOp(*op_conf).succeeded());
   return Maybe<void>::Ok();
 }

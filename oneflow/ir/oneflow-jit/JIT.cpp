@@ -191,7 +191,7 @@ LogicalResult JitImporter::AppendDataInOperand(const std::string& key, const int
 }
 LogicalResult JitImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
                                          std::vector<NamedAttribute>& attr_vec) {
-  const ::oneflow::ParallelConf& pc = parallel_desc_->parallel_conf();
+  const ::oneflow::ParallelConf& pc = GetProcessOpContext().GetParallelDesc()->parallel_conf();
   std::vector<llvm::StringRef> device_vec = {pc.device_name().begin(), pc.device_name().end()};
   attr_vec.push_back(
       GetBuilder().getNamedAttr("device_name", GetBuilder().getStrArrayAttr(device_vec)));
@@ -204,7 +204,7 @@ LogicalResult JitImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
 }
 Type JitImporter::GetTensorTypeOfLbn(const std::string& lbn) {
   LogicalBlobId lbi = GenLogicalBlobId(lbn);
-  return result_type_mapping_.at(lbi.blob_name());
+  return GetProcessOpContext().GetResultTypeMapping().at(lbi.blob_name());
 }
 
 std::shared_ptr<Tensor> UnWrapTensorRefOrReturnSelf(const std::shared_ptr<Tensor>& tensor) {
@@ -255,11 +255,12 @@ std::shared_ptr<Tensor> JitImporter::MakeIntermediateTensor(
 LogicalResult JitImporter::InsertOpResults(const ::oneflow::OperatorConf& op_conf,
                                            Operation* created_op) {
   auto output_lbns = created_op->getAttrOfType<ArrayAttr>("output_lbns");
-  CHECK_EQ(output_lbns.size(), outputs_->size());
-  for (auto data_out : llvm::enumerate(GetDataOutputResults(created_op))) {
+  CHECK_EQ(output_lbns.size(), process_op_context_.GetOutputs()->size());
+  for (const auto& data_out : llvm::enumerate(GetDataOutputResults(created_op))) {
     auto lbn = output_lbns[data_out.index()].dyn_cast<StringAttr>().getValue().str();
-    auto tensor = MakeIntermediateTensor(lbn, data_out.value(), parallel_desc_);
-    (*outputs_)[data_out.index()] = tensor;
+    auto tensor =
+        MakeIntermediateTensor(lbn, data_out.value(), process_op_context_.GetParallelDesc());
+    (*process_op_context_.GetOutputs())[data_out.index()] = tensor;
   }
   return success();
 }
@@ -273,10 +274,7 @@ LogicalResult JitImporter::InsertOpResults(const ::oneflow::OperatorConf& op_con
   return op_def.GetAttrType(attr_name);
 }
 
-mlir::FuncOp JitImporter::GetOrInsertFunc(const std::string& func_name, const TensorTuple& inputs,
-                                          TensorTuple* outputs) {
-  // convert data types from oneflow
-  outputs_ = outputs;
+mlir::FuncOp JitImporter::GetOrInsertFunc(const std::string& func_name) {
   auto result_types = llvm::SmallVector<Type, 8>();
   SymbolTable symbol_table(GetModule());
   FuncOp found_func = symbol_table.lookup<FuncOp>(func_name);
@@ -320,11 +318,8 @@ llvm::Optional<TensorType> JitImporter::GetMlirTensorTypeFromBlobDesc(const Blob
 void JitImporter::CreateOperandMapping(const ::oneflow::OperatorConf& op_conf,
                                        const std::shared_ptr<const ParallelDesc> parallel_desc,
                                        const std::shared_ptr<const ArgTuple>& input_arg_tuple,
-                                       const TensorTuple& inputs) {
-  result_type_mapping_.clear();
-  operand_mapping_.clear();
-  input_arg_tuple_ = input_arg_tuple;
-  inputs_ = inputs;
+                                       const TensorTuple& inputs, TensorTuple* outputs) {
+  process_op_context_ = ProcessOpContext(input_arg_tuple, inputs, outputs, parallel_desc);
   HashMap<std::string, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
   auto op = CHECK_JUST(ConstructOp(op_conf));
   for (auto pair : llvm::zip(input_arg_tuple->indexed_bns(),
@@ -334,7 +329,8 @@ void JitImporter::CreateOperandMapping(const ::oneflow::OperatorConf& op_conf,
     const auto& tensor = std::get<2>(pair);
     if (auto result = GetResultByBnAndIndex(indexed_arg_name_and_index.first,
                                             indexed_arg_name_and_index.second)) {
-      CHECK(operand_mapping_.emplace(indexed_bn, result.getValue()).second);
+      CHECK(
+          GetProcessOpContext().GetOperandMapping().emplace(indexed_bn, result.getValue()).second);
     } else {
       GetModule().dump();
       LOG(FATAL) << "result not found, indexed_bn: " << indexed_bn << ", tensor: " << tensor.get()
@@ -346,8 +342,8 @@ void JitImporter::CreateOperandMapping(const ::oneflow::OperatorConf& op_conf,
   // TODO: refine here
   auto GetLogicalBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
     if (lbi2logical_blob_desc_.find(bn) == lbi2logical_blob_desc_.end()) {
-      auto operand_it = operand_mapping_.find(bn);
-      if (operand_it == operand_mapping_.end()) {
+      auto operand_it = GetProcessOpContext().GetOperandMapping().find(bn);
+      if (operand_it == GetProcessOpContext().GetOperandMapping().end()) {
         auto blob_desc = std::make_unique<BlobDesc>(DataType::kInvalidDataType);
         CHECK(lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc)).second);
       } else {
@@ -360,16 +356,17 @@ void JitImporter::CreateOperandMapping(const ::oneflow::OperatorConf& op_conf,
   CHECK_JUST(op->InferLogicalOutBlobDescs(GetLogicalBlobDesc4BnInOp, *parallel_desc));
   static ParallelContext parallel_ctx = GetSingleDeviceParallelContext();
   for (auto& kv : lbi2logical_blob_desc_) {
-    CHECK(
-        result_type_mapping_.emplace(kv.first, GetMlirTensorTypeFromBlobDesc(*kv.second).getValue())
-            .second);
+    CHECK(GetProcessOpContext()
+              .GetResultTypeMapping()
+              .emplace(kv.first, GetMlirTensorTypeFromBlobDesc(*kv.second).getValue())
+              .second);
   }
 }
 
 llvm::Optional<mlir::Value> JitImporter::GetResultByBnAndIndex(const std::string& bn,
                                                                const int32_t index) {
-  auto idx = input_arg_tuple_->TensorTupleIndex4ArgNameAndIndex(bn, index);
-  auto tensor = inputs_[idx];
+  auto idx = GetProcessOpContext().GetInputArgTuple()->TensorTupleIndex4ArgNameAndIndex(bn, index);
+  auto tensor = GetProcessOpContext().GetInputs()[idx];
   auto result_it = result_mapping_.find(UnWrapTensorRefOrReturnSelf(tensor).get());
   if (result_it == result_mapping_.end()) {
     return llvm::None;
