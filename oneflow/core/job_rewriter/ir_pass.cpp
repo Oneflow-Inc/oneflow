@@ -28,12 +28,44 @@ namespace oneflow {
 
 namespace {
 
+enum IRPassType : int32_t { kBeforeAD = 0, kAfterAD = 1 };
+
+template<IRPassType>
+std::string IRPassTypeName();
+
+template<>
+std::string IRPassTypeName<kBeforeAD>() {
+  return "before_ad";
+}
+
+template<>
+std::string IRPassTypeName<kAfterAD>() {
+  return "after_ad";
+}
+
+template<IRPassType>
+bool IsLastIRPassForIRPassType();
+
+template<>
+bool IsLastIRPassForIRPassType<kBeforeAD>() {
+  return false;
+}
+
+template<>
+bool IsLastIRPassForIRPassType<kAfterAD>() {
+  return true;
+}
+
+template<IRPassType ir_pass_type>
 class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterface {
  public:
   RoundTripOneFlowJobWrapper(::oneflow::Job* job)
       : job_(job), op_graph_(*job), job_builder_(job), is_updated_(false) {}
 
   const Job* job() const { return job_; }
+
+  bool IsLastIRPass() const { return IsLastIRPassForIRPassType<ir_pass_type>(); }
+
   void UpdateJob(::oneflow::Job* new_job) {
     CHECK(is_updated_ == false);
     job_->Swap(new_job);
@@ -103,7 +135,9 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
     op_graph_.TopoForEachNode([&](OpNode* op_node) { Handler(&op_node->op().op_conf()); });
   }
 
-  std::string LogDir() { return JoinPath("ir_pass", job_->job_conf().job_name()); }
+  std::string LogDir() {
+    return JoinPath("ir_pass", IRPassTypeName<ir_pass_type>(), job_->job_conf().job_name());
+  }
 
  private:
   Job* job_;
@@ -112,6 +146,7 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
   bool is_updated_;
 };
 
+template<IRPassType ir_pass_type>
 class IRRoundTrip final : public JobPass {
  public:
   IRRoundTrip() = default;
@@ -123,7 +158,7 @@ class IRRoundTrip final : public JobPass {
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
     const OpGraph op_graph(*job);
-    RoundTripOneFlowJobWrapper w(job);
+    RoundTripOneFlowJobWrapper<ir_pass_type> w(job);
     TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_before_ir_round_trip.prototxt"))
         ->Write(*job);
     mlir::RoundTripOneFlowJob(w, [](::oneflow::Job* job, std::string& reason) {
@@ -139,7 +174,8 @@ class IRRoundTrip final : public JobPass {
 
 }  // namespace
 
-REGISTER_JOB_PASS("IRRoundTrip", IRRoundTrip);
+REGISTER_JOB_PASS("IRRoundTripBeforeAD", IRRoundTrip<kBeforeAD>);
+REGISTER_JOB_PASS("IRRoundTrip", IRRoundTrip<kAfterAD>);
 
 Maybe<void> SaveJobToIR(Job* job, const std::string& path) {
   // TODO: check path is valid dir

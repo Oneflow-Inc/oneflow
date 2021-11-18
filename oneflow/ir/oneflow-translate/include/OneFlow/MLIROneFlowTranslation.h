@@ -134,6 +134,7 @@ class RoundTripOneFlowJobWrapperInterface {
                                   cb) const = 0;
   virtual void TopoForEachOpConf(
       std::function<void(const ::oneflow::OperatorConf*)> Handler) const = 0;
+  virtual bool IsLastIRPass() const = 0;
 };
 
 void RoundTripOneFlowJob(
