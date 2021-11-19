@@ -60,7 +60,7 @@ class Importer {
   }
   virtual LogicalResult AppendCtrlInOperand(const ::oneflow::OperatorConf& op,
                                             std::vector<::mlir::Value>& operand_vec) = 0;
-  LogicalResult AppendCtrlOutType(llvm::SmallVector<Type, 8>& out_types);
+  virtual LogicalResult AppendCtrlOutType(llvm::SmallVector<Type, 8>& out_types);
   LogicalResult AddOpConf(const ::oneflow::OperatorConf& op, std::vector<NamedAttribute>& attr_vec);
   LogicalResult AddUserOpInputOutputSegments(const ::oneflow::OperatorConf& op,
                                              std::vector<NamedAttribute>& attr_vec);
@@ -69,7 +69,7 @@ class Importer {
   LogicalResult AddOperandSegmentSizes(int32_t input_lbns_size, int32_t ctrl_in_size,
                                        std::vector<NamedAttribute>& attr_vec);
   LogicalResult AddResultSegmentSizes(int32_t output_lbns_size,
-                                      std::vector<NamedAttribute>& attr_vec);
+                                      std::vector<NamedAttribute>& attr_vec, bool has_ctrl_out);
   virtual LogicalResult InsertOpResults(const ::oneflow::OperatorConf& op, Operation*) = 0;
   LogicalResult ProcessUserOp(const ::oneflow::OperatorConf& op);
   virtual LogicalResult ProcessSystemOp(const ::oneflow::OperatorConf& op) = 0;

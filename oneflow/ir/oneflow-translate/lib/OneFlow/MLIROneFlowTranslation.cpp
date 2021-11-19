@@ -121,7 +121,7 @@ LogicalResult JobImporter::AppendDataInOperand(const std::string& lbn,
 
 LogicalResult JobImporter::InsertOpResults(const ::oneflow::OperatorConf& op,
                                            Operation* created_op) {
-  for (auto data_out : llvm::enumerate(GetDataOutputResults(created_op))) {
+  for (const auto& data_out : llvm::enumerate(GetDataOutputResults(created_op))) {
     auto output_lbns = created_op->getAttrOfType<ArrayAttr>("output_lbns");
     auto data_out_index = data_out.index();
     lbn2result_.insert({output_lbns[data_out_index].dyn_cast<StringAttr>().getValue().str(),
@@ -186,7 +186,7 @@ LogicalResult JobImporter::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
                                     attr_vec))) {
     return failure();
   }
-  if (failed(AddResultSegmentSizes(output_lbns.size(), attr_vec))) { return failure(); }
+  if (failed(AddResultSegmentSizes(output_lbns.size(), attr_vec, true))) { return failure(); }
   state.addAttributes(attr_vec);
   std::vector<::mlir::Value> operand_vec;
   for (const auto& input_lbn : input_lbns) {
@@ -276,7 +276,7 @@ LogicalResult JobImporter::TryToUpdateJob() {
       UpdatePlacement(op, system_op_adaptor, new_job);
       auto op_name = system_op_adaptor.op_name().getValue().str();
       ::oneflow::OperatorConf op_conf = job_wrapper_.OpConf4OpName(op_name);
-      for (auto ibn : llvm::enumerate(op->getAttrOfType<ArrayAttr>("input_bns"))) {
+      for (const auto& ibn : llvm::enumerate(op->getAttrOfType<ArrayAttr>("input_bns"))) {
         auto result = GetDataInputOperands(op)[ibn.index()].dyn_cast<OpResult>();
         std::string new_val =
             result.getDefiningOp()

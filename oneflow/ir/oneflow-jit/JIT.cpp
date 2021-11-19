@@ -398,9 +398,14 @@ LogicalResult JitImporter::LowerToOneFlowKernel() {
             if (result.use_empty() && !is_ctrl_edge) {
               auto found = intermediate_tensors_.find(result);
               if (found == intermediate_tensors_.end()) {
+                for (auto& kv : intermediate_tensors_) {
+                  kv.first.dump();
+                  llvm::errs() << ": " << reinterpret_cast<uintptr_t>(kv.second.get()) << "\n";
+                }
                 result.dump();
                 result.getType().dump();
                 llvm::errs() << "\n";
+                LOG(ERROR) << "importer: " << reinterpret_cast<uintptr_t>(this);
                 LOG(FATAL) << "tensor not found for result #" << result.getResultNumber();
               }
               return_tensors_.push_back(found->second);

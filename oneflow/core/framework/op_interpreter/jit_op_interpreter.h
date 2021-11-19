@@ -34,7 +34,8 @@ class JitInterpreter : public OpExprInterpreter {
   JitInterpreter()
       : context_(new MLIRContext()),
         module_(ir::CreateJitModule(context_)),
-        importer_(context_, *module_) {}
+        importer_(context_, *module_),
+        current_importer_(&importer_) {}
   ~JitInterpreter() = default;
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
@@ -44,7 +45,7 @@ class JitInterpreter : public OpExprInterpreter {
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const OpExprInterpContext& ctx) const override;
   void Interrupt();
-  ir::JitImporter& GetImporter() { return importer_; }
+  ir::JitImporter& GetImporter() const { return *current_importer_; }
   void CacheExpr(Operation&, std::shared_ptr<one::UserOpExpr>);
   llvm::Optional<std::shared_ptr<one::UserOpExpr>> GetExpr(Operation*);
   void Start() { trace_start_time_ = std::chrono::steady_clock::now(); }
@@ -59,13 +60,18 @@ class JitInterpreter : public OpExprInterpreter {
                                .count();
     return mlir_trace_time / jit_time;
   }
-
+  void Trace(ir::JitImporter& importer,
+             const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
+             const std::function<std::vector<std::shared_ptr<one::Tensor>>(void)>& forward_func);
+  void DispatchModule(ModuleOp module,
+                      std::vector<std::shared_ptr<one::Tensor>> returned_lazy_tensors);
  private:
   DECLARE_NORMAL_APPLY_FUNC(UserOp);  // note(BBuf) jit deal with user op only, now.
   mutable llvm::DenseMap<llvm::hash_code, std::shared_ptr<one::UserOpExpr>> cached_user_op_exprs_;
   mutable MLIRContext* context_;
   mutable OwningOpRef<ModuleOp> module_;
   mutable ir::JitImporter importer_;
+  ir::JitImporter* current_importer_;
   mutable std::chrono::steady_clock::time_point trace_start_time_;
   mutable std::chrono::steady_clock::time_point trace_end_time_;
   mutable std::chrono::steady_clock::time_point dispatch_end_time_;

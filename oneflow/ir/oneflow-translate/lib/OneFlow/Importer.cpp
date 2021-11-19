@@ -250,10 +250,12 @@ LogicalResult Importer::AddOperandSegmentSizes(int32_t input_lbns_size, int32_t 
 }
 
 LogicalResult Importer::AddResultSegmentSizes(int32_t output_lbns_size,
-                                              std::vector<NamedAttribute>& attr_vec) {
+                                              std::vector<NamedAttribute>& attr_vec,
+                                              bool has_ctrl_out) {
   attr_vec.push_back(GetBuilder().getNamedAttr(
       "result_segment_sizes",
-      GetBuilder().getI32VectorAttr({output_lbns_size, 1} /* {data_out_size, ctrl_out_size} */)));
+      GetBuilder().getI32VectorAttr(
+          {output_lbns_size, has_ctrl_out ? 1 : 0} /* {data_out_size, ctrl_out_size} */)));
   return success();
 }
 
@@ -366,7 +368,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
         FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0), out_types, operands,
         named_attributes);
   } else {
-    if (failed(AppendCtrlOutType(out_types))) { return failure(); }
+    bool has_ctrl_out = AppendCtrlOutType(out_types).succeeded();
     OperationState state(FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0), "oneflow.user");
     for (auto na : attr_vec) {
       if (na.first.str() == "input_lbn_segment_sizes") {
@@ -379,10 +381,11 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
         }
       }
       if (na.first.str() == "output_lbns") {
-        if (failed(AddResultSegmentSizes(na.second.dyn_cast<ArrayAttr>().size(), attr_vec))) {
+        if (failed(AddResultSegmentSizes(na.second.dyn_cast<ArrayAttr>().size(), attr_vec,
+                                         has_ctrl_out))) {
           return failure();
         }
-        if (na.second.dyn_cast<ArrayAttr>().size() != out_types.size() - 1) {
+        if (has_ctrl_out && na.second.dyn_cast<ArrayAttr>().size() != out_types.size() - 1) {
           GetModule()->emitError("len(out_types) - 1 != len(output_lbns), op: " + op.name());
           return failure();
         }

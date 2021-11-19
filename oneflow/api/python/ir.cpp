@@ -30,15 +30,20 @@ namespace py = pybind11;
 
 namespace oneflow {
 
+using namespace one::ir;
+
 namespace jit {
 struct Module {
-  explicit Module(py::object py_module) : py_module_(std::move(py_module)) {}
+  explicit Module(py::object py_module)
+      : py_module_(std::move(py_module)),
+        context_(new MLIRContext()),
+        module_(CreateJitModule(context_)),
+        importer_(context_, *module_) {}
   py::object forward(const py::args& args, const py::kwargs& kwargs) {
     auto jit_interpreter = dynamic_cast<one::JitInterpreter*>(one::GetJitInterpreter().get());
     *one::MutJitEnabled() = true;
     auto i_this = reinterpret_cast<std::uintptr_t>(this);
     *one::MutJitFuncName() = "jitModule" + std::to_string(i_this) + "_" + std::to_string(nth_call_);
-    jit_interpreter->Start();
     auto inputs = args.cast<std::vector<std::shared_ptr<one::Tensor>>>();
     auto parameters_generator = py_module_.attr("parameters")();
     std::vector<std::shared_ptr<one::Tensor>> parameters{};
@@ -49,17 +54,29 @@ struct Module {
     arg_tensors.insert(arg_tensors.end(), inputs.begin(), inputs.end());
     arg_tensors.insert(arg_tensors.end(), parameters.begin(), parameters.end());
     SetJitForwardArgs(arg_tensors);
-    auto ret = py_module_.attr("forward")(*args, **kwargs);
+    py::object ret;
+    std::vector<std::shared_ptr<one::Tensor>> tensors_to_materialize{};
+    jit_interpreter->Trace(importer_, arg_tensors, [&]() {
+      ret = py_module_.attr("forward")(*args, **kwargs);
+      if (auto tensor = ret.cast<std::shared_ptr<one::Tensor>>()) {
+        tensors_to_materialize.push_back(tensor);
+      }
+      return tensors_to_materialize;
+    });
     *one::MutJitEnabled() = false;
-    jit_interpreter->Interrupt();
+    jit_interpreter->DispatchModule(*module_, tensors_to_materialize);
     jit_interpreter->End();
     LOG(ERROR) << "JIT trace overhead: " << jit_interpreter->TraceOverhead();
     nth_call_ += 1;
     return ret;
   }
+  void dump_ir() { module_->dump(); }
 
  private:
   py::object py_module_;
+  MLIRContext* context_;
+  OwningOpRef<ModuleOp> module_;
+  JitImporter importer_;
   int32_t nth_call_ = 0;  // TODO: remove this dirty workaround
 };
 }  // namespace jit

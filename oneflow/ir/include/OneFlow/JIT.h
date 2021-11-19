@@ -175,6 +175,9 @@ class JitImporter : public Importer {
                                     std::vector<::mlir::Value>& operand_vec) override {
     return success();
   };
+  LogicalResult AppendCtrlOutType(llvm::SmallVector<Type, 8>& out_types) override {
+    return failure();
+  }
   LogicalResult ProcessSystemOp(const ::oneflow::OperatorConf& op) override { return success(); };
   LogicalResult AddDeviceName(const ::oneflow::OperatorConf& op,
                               std::vector<NamedAttribute>& attr_vec) override;
@@ -213,10 +216,6 @@ class JitImporter : public Importer {
   ProcessOpContext& GetProcessOpContext() { return process_op_context_; }
 
  private:
-  // JIT interpreter owns the intermediate tensors
-  // An intermediate tensor will be materialized if:
-  // 1. it is a result tensor
-  // 2. it is being evaluated before forward function returning (print, etc)
   std::unordered_map<Tensor*, mlir::Value> result_mapping_;  // tensor* => %result
   DenseMap<llvm::hash_code, std::string> func_hash_symbol_mapping_;
   llvm::DenseMap<Value, std::shared_ptr<TensorRef>> intermediate_tensors_;
