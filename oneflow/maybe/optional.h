@@ -27,6 +27,9 @@ namespace oneflow {
 
 namespace maybe {
 
+template<typename T>
+struct Optional;
+
 namespace details {
 
 // OptionalStorage is specialized for 2 cases:
@@ -179,10 +182,52 @@ struct OptionalStorage<T, std::enable_if_t<std::is_reference<T>::value>> {
   void Copy(const OptionalStorage& s) { CopyConstruct(s); }
 };
 
+template<typename T>
+struct IsOptional : std::false_type {};
+
+template<typename T>
+struct IsOptional<Optional<T>> : std::true_type {};
+
 struct OptionalPrivateScope {
   template<typename T>
   static decltype(auto) Value(T&& opt) {
     return std::forward<T>(opt).Value();
+  }
+
+  template<typename T, typename F>
+  static auto Map(T&& opt, F&& f)
+      -> Optional<decltype(std::forward<F>(f)(std::forward<T>(opt).Value()))> {
+    if (opt.HasValue()) { return std::forward<F>(f)(std::forward<T>(opt).Value()); }
+
+    return NullOpt;
+  }
+
+  template<typename T, typename F,
+           typename U = std::decay_t<decltype(std::declval<F>()(std::declval<T>().Value()))>>
+  static auto Bind(T&& opt, F&& f) -> std::enable_if_t<IsOptional<U>::value, U> {
+    if (opt.HasValue()) { return std::forward<F>(f)(std::forward<T>(opt).Value()); }
+
+    return NullOpt;
+  }
+
+  template<typename T, typename F,
+           std::enable_if_t<std::is_same<decltype(std::declval<F>()()), void>::value, int> = 0>
+  static auto OrElse(T&& opt, F&& f) -> std::decay_t<T> {
+    if (!opt.HasValue()) {
+      std::forward<F>(f)();
+      return NullOpt;
+    }
+
+    return std::forward<T>(opt);
+  }
+
+  template<typename T, typename F,
+           std::enable_if_t<
+               std::is_convertible<decltype(std::declval<F>()()), std::decay_t<T>>::value, int> = 0>
+  static auto OrElse(T&& opt, F&& f) -> std::decay_t<T> {
+    if (!opt.HasValue()) { return std::forward<F>(f)(); }
+
+    return std::forward<T>(opt);
   }
 };
 
@@ -401,6 +446,36 @@ struct Optional {
   }
 
   void Reset() { storage.Reset(); }
+
+  template<typename F>
+  auto Map(F&& f) const& {
+    return details::OptionalPrivateScope::Map(*this, std::forward<F>(f));
+  }
+
+  template<typename F>
+  auto Map(F&& f) && {
+    return details::OptionalPrivateScope::Map(std::move(*this), std::forward<F>(f));
+  }
+
+  template<typename F>
+  auto Bind(F&& f) const& {
+    return details::OptionalPrivateScope::Bind(*this, std::forward<F>(f));
+  }
+
+  template<typename F>
+  auto Bind(F&& f) && {
+    return details::OptionalPrivateScope::Bind(std::move(*this), std::forward<F>(f));
+  }
+
+  template<typename F>
+  auto OrElse(F&& f) const& {
+    return details::OptionalPrivateScope::OrElse(*this, std::forward<F>(f));
+  }
+
+  template<typename F>
+  auto OrElse(F&& f) && {
+    return details::OptionalPrivateScope::OrElse(std::move(*this), std::forward<F>(f));
+  }
 };
 
 }  // namespace maybe

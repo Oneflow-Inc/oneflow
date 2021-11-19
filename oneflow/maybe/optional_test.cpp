@@ -260,3 +260,28 @@ TEST(Optional, Compare) {
   ASSERT_EQ(*(iter++), 2);
   ASSERT_EQ(*(iter++), 3);
 }
+
+TEST(Optional, Monadic) {
+  Optional<int> a(1), b, c(2);
+  ASSERT_EQ(a.Map([](int x) { return x + 1; }), c);
+  ASSERT_EQ(b.Map([](int x) { return x + 1; }), b);
+  ASSERT_EQ(a.Map([](int x) { return std::string(x + 1, 'a'); }).Map([](const auto& x) {
+    return (int)x.size();
+  }),
+            c);
+  ASSERT_EQ(a.Bind([](int x) -> Optional<float> {
+               if (x < 10) {
+                 return x * 1.1;
+               } else {
+                 return NullOpt;
+               }
+             })
+                .Map([](float x) { return x - 1; })
+                .Map([](float x) { return std::abs(x - 0.1) < 0.001; }),
+            Optional<bool>(true));
+
+  int x = 0;
+  b.OrElse([&] { x++; }).OrElse([&] { x *= 2; });
+  ASSERT_EQ(x, 2);
+  ASSERT_EQ(b.OrElse([] { return Optional<int>(3); }).Map([](int x) { return x - 1; }), c);
+}

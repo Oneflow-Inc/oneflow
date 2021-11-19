@@ -20,6 +20,8 @@ limitations under the License.
 #include <cstddef>
 #include <functional>
 
+#include "external/string_view.hpp"
+
 namespace oneflow {
 
 namespace maybe {
@@ -72,6 +74,11 @@ constexpr void HashCombine(std::size_t& seed, const T& v) {
   std::hash<T> hasher;
   seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
+
+template<typename T>
+using BasicStringView = nonstd::basic_string_view<T>;
+
+using StringView = BasicStringView<char>;
 
 }  // namespace maybe
 
