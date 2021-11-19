@@ -50,15 +50,6 @@ class LazyJobDeviceCtx final : public DeviceCtx {
     return (vm::Allocator*)nullptr;
   }
 
-  dnnl::engine* onednn_engine() const override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-  dnnl::stream* onednn_stream() const override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-
   DeviceType device_type() const override {
     UNIMPLEMENTED();
     return DeviceType::kInvalidDevice;

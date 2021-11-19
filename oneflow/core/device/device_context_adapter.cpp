@@ -43,9 +43,6 @@ class CpuDeviceCtxAdapter final : public DeviceCtx, public EventRecordProvider {
 
   DeviceType device_type() const override { return stream_ctx_->device_type(); }
 
-  dnnl::engine* onednn_engine() const override { return stream_ctx_->onednn_engine(); }
-  dnnl::stream* onednn_stream() const override { return stream_ctx_->onednn_stream(); }
-
   std::shared_ptr<EventRecord> MakeEventRecord() override {
     return std::make_shared<NaiveEventRecord>();
   }

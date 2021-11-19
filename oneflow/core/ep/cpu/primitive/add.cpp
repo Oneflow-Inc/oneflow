@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/add.h"
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
 #include "oneflow/core/stream/cpu/cpu_stream_context.h"
+#include "oneflow/core/ep/cpu/cpu_stream.h"
 
 namespace oneflow {
 
@@ -89,13 +90,12 @@ class AddImpl<T, type_onednn, type_calculate,
   ~AddImpl() override = default;
 
   using Add::Launch;
-  void Launch(StreamContext* stream_ctx, const void* const* srcs, size_t arity, void* dst,
+  void Launch(Stream* stream, const void* const* srcs, size_t arity, void* dst,
               size_t count) override {
-    dnnl::engine* onednn_engine =
-        CHECK_NOTNULL(dynamic_cast<CpuStreamContext*>(stream_ctx))->onednn_engine();
-    dnnl::stream* onednn_stream =
-        CHECK_NOTNULL(dynamic_cast<CpuStreamContext*>(stream_ctx))->onednn_stream();
 
+    dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
+    dnnl::stream* onednn_stream = stream->As<CpuStream>()->onednn_stream();
+    
     dnnl::memory::dims src_dims = {(dnnl::memory::dim)count};
     std::vector<dnnl::memory::desc> src_md;
     std::vector<dnnl::memory> src_mem;

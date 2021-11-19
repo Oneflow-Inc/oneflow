@@ -50,15 +50,6 @@ class CudaCopyD2HDeviceCtx : public DeviceCtx, public SingleThreadQueryCudaEvent
 
   DeviceType device_type() const override { return DeviceType::kGPU; }
 
-  dnnl::engine* onednn_engine() const override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-  dnnl::stream* onednn_stream() const override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-
  protected:
   ep::CudaStream stream_;
   std::unique_ptr<CudaHostAllocator> cuda_allocator_;
