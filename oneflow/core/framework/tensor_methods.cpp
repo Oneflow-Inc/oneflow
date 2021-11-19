@@ -128,7 +128,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
           view_eager_blob->mut_blob()->reset_dptr((char*)input_ptr + storage_offset_bytes);
         }
       });
-  JUST(SyncAccessTensorWithTimeOut(input, output, callback, "const"));
+  JUST(SyncAccessTensorWithTimeOut(input, output, callback, "mul"));
 
   return output;
 }

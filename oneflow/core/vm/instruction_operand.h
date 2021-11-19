@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/mirrored_object_id.h"
 #include "oneflow/core/vm/phy_instr_operand.h"
-#include "oneflow/core/vm/tensor_view_phy_instr_operand.h"
 
 namespace oneflow {
 namespace vm {

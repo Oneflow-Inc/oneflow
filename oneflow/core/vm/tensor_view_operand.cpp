@@ -23,6 +23,21 @@ namespace oneflow {
 namespace vm {
 
 void TensorViewOperand::ForEachConstMirroredObject(
+    const std::function<void(MirroredObject* compute)>& DoEach) const {
+  if (modifier_ == "const") { DoEach(compute_local_dep_object_->mut_mirrored_object()); }
+}
+
+void TensorViewOperand::ForEachMutMirroredObject(
+    const std::function<void(MirroredObject* compute)>& DoEach) const {
+  if (modifier_ == "mut") { DoEach(compute_local_dep_object_->mut_mirrored_object()); }
+}
+
+void TensorViewOperand::ForEachMut2MirroredObject(
+    const std::function<void(MirroredObject* compute)>& DoEach) const {
+  if (modifier_ == "mut2") { DoEach(compute_local_dep_object_->mut_mirrored_object()); }
+}
+
+void TensorViewOperand::ForEachConstMirroredObject(
     const std::function<void(MirroredObject* compute, MirroredObject* compute2)>& DoEach) const {
   if (modifier_ == "const") {
     DoEach(
