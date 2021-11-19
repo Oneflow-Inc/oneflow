@@ -50,6 +50,7 @@ message LambModelUpdateConf {
   optional float beta1 = 1 [default = 0.9];
   optional float beta2 = 2 [default = 0.999];
   optional float epsilon = 3 [default = 1e-8];
+  optional bool do_bias_correction = 4 [default = true];
 }
 
 message AdagradModelUpdateConf {

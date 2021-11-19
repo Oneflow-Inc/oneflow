@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <glog/logging.h>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/user_op_tensor.h"
 #include "oneflow/user/kernels/model_update_kernel_util.h"
@@ -688,6 +689,24 @@ class LambUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     const auto beta2 = ctx->Attr<float>("beta2");
     const auto epsilon = ctx->Attr<float>("epsilon");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
+
+    const bool do_bias_correction = ctx->Attr<bool>("do_bias_correction");
+    const float bias_correction1_val = ctx->Attr<float>("bias_correction1_val");
+    const float* bias_correction1_ptr = nullptr;
+    if (ctx->has_input("bias_correction1", 0)) {
+      const user_op::Tensor* bias_correction1= ctx->Tensor4ArgNameAndIndex("bias_correction1", 0);
+      // Just for Lazy optional input check.
+      CHECK_EQ(bias_correction1->shape().elem_cnt(), 1);
+      bias_correction1_ptr = bias_correction1->dptr<float>();
+    }
+    const float bias_correction2_val = ctx->Attr<float>("bias_correction2_val");
+    const float* bias_correction2_ptr = nullptr;
+    if (ctx->has_input("bias_correction2", 0)) {
+      const user_op::Tensor* bias_correction2 = ctx->Tensor4ArgNameAndIndex("bias_correction1", 0);
+      CHECK_EQ(bias_correction2->shape().elem_cnt(), 1);
+      bias_correction2_ptr = bias_correction2->dptr<float>();
+    }
+
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
     const float* learning_rate_ptr = nullptr;
     if (ctx->has_input("learning_rate", 0)) {
@@ -712,9 +731,10 @@ class LambUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
 
     LambUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), m->shape().elem_cnt(), scale, l1, l2, beta1, beta2, epsilon,
-        weight_decay, learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
-        model_diff->dptr<G>(), tbm.AdamDiffPtr(), model->mut_dptr<T>(), m->mut_dptr<T>(),
-        v->mut_dptr<T>(), tbm.NormBufferPtr());
+        weight_decay, learning_rate_val, do_bias_correction, bias_correction1_val,
+        bias_correction2_val, learning_rate_ptr, bias_correction1_ptr, bias_correction2_ptr,
+        scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(), tbm.AdamDiffPtr(), model->mut_dptr<T>(),
+        m->mut_dptr<T>(), v->mut_dptr<T>(), tbm.NormBufferPtr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
