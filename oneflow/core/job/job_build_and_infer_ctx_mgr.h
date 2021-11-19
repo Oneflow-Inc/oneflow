@@ -81,7 +81,7 @@ class EagerJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
 
 bool EagerExecutionEnabled();
 bool DTREnabled();
-double GetDTRMemoryThreshold();
+size_t GetDTRMemoryThreshold();
 size_t GetDTRRemainMemory();
 bool DTRDebugEnabled();
 

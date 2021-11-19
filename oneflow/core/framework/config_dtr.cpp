@@ -18,18 +18,19 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> EnableDTRStrategy(bool enable_dtr, double thres, bool enable_debug) {
+Maybe<void> EnableDTRStrategy(bool enable_dtr, size_t thres, bool enable_debug) {
   CHECK_NOTNULL_OR_RETURN((Global<bool, EnableDTR>::Get()));
-  CHECK_NOTNULL_OR_RETURN((Global<double, DTRMemoryThreshold>::Get()));
+  CHECK_NOTNULL_OR_RETURN((Global<size_t, DTRMemoryThreshold>::Get()));
   CHECK_NOTNULL_OR_RETURN((Global<size_t, DTRRemainMemory>::Get()));
   CHECK_NOTNULL_OR_RETURN((Global<bool, EnableDTRDebug>::Get()));
   *Global<bool, EnableDTR>::Get() = enable_dtr;
-  *Global<double, DTRMemoryThreshold>::Get() = thres;
+  *Global<size_t, DTRMemoryThreshold>::Get() = thres;
   *Global<bool, EnableDTRDebug>::Get() = enable_debug;
   size_t free_bytes = -1;
   size_t total_bytes = -1;
   OF_CUDA_CHECK(cudaMemGetInfo(&free_bytes, &total_bytes));
-  *Global<size_t, DTRRemainMemory>::Get() = (1 - thres) * free_bytes;
+  // *Global<size_t, DTRRemainMemory>::Get() = (1 - thres) * free_bytes;
+  *Global<size_t, DTRRemainMemory>::Get() = total_bytes - thres;
   return Maybe<void>::Ok();
 }
 

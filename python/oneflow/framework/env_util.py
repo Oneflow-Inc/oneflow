@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
+import re
 import socket
 import traceback
 from contextlib import closing
@@ -60,12 +61,12 @@ def api_enable_eager_execution(val: bool = True) -> None:
     return enable_if.unique([enable_eager_environment])(val)
 
 
-def api_enable_dtr(val: bool = False, thres: float = 1, debug: bool = False) -> None:
+def api_enable_dtr(val: bool = False, thres: str = "1500MB", debug: bool = False) -> None:
     """If True, DTR strategy will be launched. Memory threshold in percentage.
 
     Args:
         val (bool, optional): Use DTR strategy or not. Defaults to False.
-        thres (float, optional): Cuda memory threshold. Defaults to 1 (Full use).
+        thres (int | str, optional): Cuda memory threshold. Defaults to 1500MB.
         debug (bool, optional): Show detailed info or not. Defaults to False.
     """
     return enable_if.unique([enable_dtr])(val, thres, debug)
@@ -76,9 +77,26 @@ def enable_eager_environment(val=True):
     return oneflow._oneflow_internal.EnableEagerEnvironment(val)
 
 
+def str2bytes(input):
+    regex = re.compile(r"(\d+(?:\.\d+)?)\s*([kmg]?b)", re.IGNORECASE)
+    magnitude = ["b", "kb", "mb", "gb"]
+    out = regex.findall(input)
+    if len(out) != 1:
+        raise ValueError("Wrong memory input: should be value + units(b, kb, mb, gb).")
+    else:
+        return int(float(out[0][0]) * 1024 ** magnitude.index(out[0][1].lower()))
+
+
 @enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
-def enable_dtr(val=False, thres=1, debug=False):
-    return oneflow._oneflow_internal.EnableDTRStrategy(val, thres, debug)
+def enable_dtr(val=False, thres="1500MB", debug=False):
+    if isinstance(thres, str):
+        out = str2bytes(thres)
+    elif isinstance(thres, int):
+        out = thres
+    else:
+        raise TypeError("CUDA memory value should be a str or an int.")
+
+    return oneflow._oneflow_internal.EnableDTRStrategy(val, out, debug)
 
 
 def api_env_init() -> bool:
