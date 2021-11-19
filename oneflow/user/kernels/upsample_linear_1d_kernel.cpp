@@ -103,7 +103,7 @@ class UpsampleLinearGrad1DCPUKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    Memset<DeviceType::kCPU>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0,
+    Memset<DeviceType::kCPU>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
                              dx_tensor->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const float height_scale = ctx->Attr<float>("scale_factor");

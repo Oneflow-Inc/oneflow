@@ -47,14 +47,14 @@ class ReduceSumLikeOpKernel final : public user_op::OpKernel, public user_op::Cu
     if (tensor_x->shape().elem_cnt() == 0) {
       if (tensor_y->shape().elem_cnt() != 0) {
         Memset<device_type>(
-            ctx->device_ctx(), tensor_y->mut_dptr<T>(), 0,
+            ctx->stream(), tensor_y->mut_dptr<T>(), 0,
             tensor_y->shape().elem_cnt() * GetSizeOfDataType(tensor_y->data_type()));
       }
       return;
     }
     if (axis.empty()) {
       CHECK_EQ(tensor_x->shape(), tensor_y->shape());
-      Memcpy<device_type>(ctx->device_ctx(), tensor_y->mut_dptr(), tensor_x->dptr(),
+      Memcpy<device_type>(ctx->stream(), tensor_y->mut_dptr(), tensor_x->dptr(),
                           tensor_x->shape().elem_cnt() * GetSizeOfDataType(tensor_x->data_type()));
     } else {
       user_op::Tensor* tensor_tmp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);

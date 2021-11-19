@@ -55,9 +55,9 @@ class ArangeKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_RANGE_KERNEL(device, dtype)                                               \
-  REGISTER_USER_KERNEL("arange").SetCreateFn<RangeKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == device)                                                 \
+#define REGISTER_ARANGE_KERNEL(device, dtype)                                                \
+  REGISTER_USER_KERNEL("arange").SetCreateFn<ArangeKernel<device, dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == device)                                                   \
       && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
 #define REGISTER_ARANGE_KERNELS_WITH_DEVICE(device) \
