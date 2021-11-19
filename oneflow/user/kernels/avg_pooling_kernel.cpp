@@ -162,7 +162,7 @@ class AvgPool1dGradKernel final : public user_op::OpKernel {
     NdIndexOffsetHelper<int64_t, 3> index_helper(dy_vector.data());
 
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
-    Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
+    Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
     AvgPoolingKernelUtil<device_type, T>::Avgpool1dBackward(ctx->device_ctx(), index_helper,
                                                             elem_num, src, dest, params_3d);
   };
@@ -218,7 +218,7 @@ class AvgPool2dGradKernel final : public user_op::OpKernel {
     NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
 
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
-    Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
+    Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
     AvgPoolingKernelUtil<device_type, T>::Avgpool2dBackward(ctx->device_ctx(), index_helper,
                                                             elem_num, src, dest, params_3d);
   };
@@ -274,7 +274,7 @@ class AvgPool3dGradKernel final : public user_op::OpKernel {
     NdIndexOffsetHelper<int64_t, 5> index_helper(dy_vector.data());
 
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
-    Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
+    Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
     AvgPoolingKernelUtil<device_type, T>::Avgpool3dBackward(ctx->device_ctx(), index_helper,
                                                             elem_num, src, dest, params_3d);
   };
