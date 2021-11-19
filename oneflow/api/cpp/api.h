@@ -22,5 +22,6 @@ limitations under the License.
 #include "shape.h"
 #include "dtype.h"
 #include "tensor.h"
+#include "nn.h"
 
 #endif  // ONELFOW_API_H_

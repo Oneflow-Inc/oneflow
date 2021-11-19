@@ -16,9 +16,6 @@ limitations under the License.
 #include <array>
 #include <gtest/gtest.h>
 #include "oneflow/api/cpp/api.h"
-#include "oneflow/api/cpp/nn.h"
-#include "iostream"
-#include "oneflow/core/thread/thread_consistent_id.h"
 
 namespace oneflow_api {
 namespace {
@@ -26,10 +23,7 @@ namespace {
 class EnvScope {  // NOLINT
  public:
   EnvScope() { initialize(); }
-  ~EnvScope() {
-    release();
-    oneflow::ResetThisThreadUniqueConsistentId().GetOrThrow();
-  }
+  ~EnvScope() { release(); }
 };
 
 }  // namespace
