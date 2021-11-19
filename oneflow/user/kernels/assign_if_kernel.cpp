@@ -36,8 +36,8 @@ class AssignIfCPUKernel final : public user_op::OpKernel {
     CHECK_EQ(value->shape(), ref->shape());
     CHECK_EQ(value->data_type(), ref->data_type());
     const size_t tensor_bytes_size = ref->shape().elem_cnt() * GetSizeOfDataType(ref->data_type());
-    AutoMemcpy(ctx->device_ctx(), ref->mut_dptr(), value->dptr(), tensor_bytes_size,
-               ref->mem_case(), value->mem_case());
+    AutoMemcpy(ctx->stream(), ref->mut_dptr(), value->dptr(), tensor_bytes_size, ref->mem_case(),
+               value->mem_case());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

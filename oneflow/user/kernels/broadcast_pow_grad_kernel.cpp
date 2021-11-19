@@ -72,7 +72,7 @@ class BroadcastPowYGradKernel final : public user_op::OpKernel {
 
     const int64_t num_axes = dz_tensor->shape().NumAxes();
     const int64_t elem_cnt = z_tensor->shape().elem_cnt();
-    Memset<device>(ctx->device_ctx(), tmp_buffer->mut_dptr<T>(), 0,
+    Memset<device>(ctx->stream(), tmp_buffer->mut_dptr<T>(), 0,
                    GetCudaAlignedSize(elem_cnt * sizeof(T)));
     T* tmp_ptr = tmp_buffer->mut_dptr<T>();
     XpuVarNdarray<const T> z(z_tensor->shape(), z_tensor->dptr<T>(), num_axes);

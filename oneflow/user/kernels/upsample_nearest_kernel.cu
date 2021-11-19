@@ -134,7 +134,7 @@ class UpsampleNearest1DGPUKernel final : public user_op::OpKernel {
     const int64_t out_height = y_tensor->shape().At(2);
     if (in_height == out_height) {
       Memcpy<DeviceType::kGPU>(
-          ctx->device_ctx(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
+          ctx->stream(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
           x_tensor->shape().elem_cnt() * GetSizeOfDataType(x_tensor->data_type()));
     } else {
       NdIndexOffsetHelper<int64_t, 3> in_helper(x_tensor->shape().At(0), x_tensor->shape().At(1),
@@ -160,7 +160,7 @@ class UpsampleNearestGrad1DGPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0,
+    Memset<DeviceType::kGPU>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
                              dx_tensor->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const float height_scale = ctx->Attr<float>("scale_factor");
@@ -169,7 +169,7 @@ class UpsampleNearestGrad1DGPUKernel final : public user_op::OpKernel {
     const int64_t out_height = dy_tensor->shape().At(2);
     if (in_height == out_height) {
       Memcpy<DeviceType::kGPU>(
-          ctx->device_ctx(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
+          ctx->stream(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
           dy_tensor->shape().elem_cnt() * GetSizeOfDataType(dy_tensor->data_type()));
     } else {
       NdIndexOffsetHelper<int64_t, 3> dy_helper(dy_tensor->shape().At(0), dy_tensor->shape().At(1),
@@ -218,7 +218,7 @@ class UpsampleNearest2DGPUKernel final : public user_op::OpKernel {
     const int64_t out_width = y_tensor->shape().At(3);
     if (in_height == out_height && in_width == out_width) {
       Memcpy<DeviceType::kGPU>(
-          ctx->device_ctx(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
+          ctx->stream(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
           x_tensor->shape().elem_cnt() * GetSizeOfDataType(x_tensor->data_type()));
     } else {
       NdIndexOffsetHelper<int64_t, 4> in_helper(x_tensor->shape().At(0), x_tensor->shape().At(1),
@@ -245,7 +245,7 @@ class UpsampleNearest2DGradGPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0,
+    Memset<DeviceType::kGPU>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
                              dx_tensor->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const float height_scale = ctx->Attr<float>("height_scale");
@@ -257,7 +257,7 @@ class UpsampleNearest2DGradGPUKernel final : public user_op::OpKernel {
     const int64_t out_width = dy_tensor->shape().At(3);
     if (in_height == out_height && in_width == out_width) {
       Memcpy<DeviceType::kGPU>(
-          ctx->device_ctx(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
+          ctx->stream(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
           dy_tensor->shape().elem_cnt() * GetSizeOfDataType(dy_tensor->data_type()));
     } else {
       NdIndexOffsetHelper<int64_t, 4> dy_helper(dy_tensor->shape().At(0), dy_tensor->shape().At(1),
@@ -326,7 +326,7 @@ class UpsampleNearestGrad3DGPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0,
+    Memset<DeviceType::kGPU>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
                              dx_tensor->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const float height_scale = ctx->Attr<float>("height_scale");
