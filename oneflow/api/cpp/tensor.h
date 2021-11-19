@@ -34,6 +34,7 @@ class Tensor final {
  public:
   explicit Tensor(const Shape& shape = Shape(), const Device& device = Device("cpu"),
                   const DType& dtype = DType::kFloat);
+  explicit Tensor(const std::shared_ptr<oneflow::one::Tensor>& tensor);
   const Shape shape() const;
   const Device device() const;
   const DType dtype() const;
@@ -46,6 +47,8 @@ class Tensor final {
 
   template<typename T>
   static void to_blob(const Tensor& tensor, T* blob);
+
+  const std::shared_ptr<oneflow::one::Tensor>& internal_tensor() const;
 
  private:
   std::shared_ptr<oneflow::one::Tensor> tensor_ = nullptr;

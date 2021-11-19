@@ -16,6 +16,9 @@ limitations under the License.
 #include <array>
 #include <gtest/gtest.h>
 #include "oneflow/api/cpp/api.h"
+#include "oneflow/api/cpp/nn.h"
+#include "iostream"
+#include "oneflow/core/thread/thread_consistent_id.h"
 
 namespace oneflow_api {
 namespace {
@@ -23,14 +26,17 @@ namespace {
 class EnvScope {  // NOLINT
  public:
   EnvScope() { initialize(); }
-  ~EnvScope() { release(); }
+  ~EnvScope() {
+    release();
+    oneflow::ResetThisThreadUniqueConsistentId().GetOrThrow();
+  }
 };
 
 }  // namespace
 
-EnvScope scope;
-
 TEST(Api, device) {
+  EnvScope scope;
+
   auto device = Device("cpu");
   ASSERT_EQ(device.type(), "cpu");
 
@@ -46,6 +52,8 @@ TEST(Api, device) {
 }
 
 TEST(Api, tensor) {
+  EnvScope scope;
+
   const auto device = Device("cpu");
   const auto shape = Shape({16, 8, 224, 224});
   const auto dtype = DType::kDouble;
@@ -62,6 +70,8 @@ TEST(Api, tensor) {
 }
 
 TEST(Api, tensor_from_blob) {
+  EnvScope scope;
+
   std::array<double, 8> data{}, new_data{};
 
   for (int i = 0; i < 8; ++i) { data[i] = i; }
@@ -72,4 +82,17 @@ TEST(Api, tensor_from_blob) {
   ASSERT_EQ(new_data, data);
 }
 
+TEST(Api, nn) {
+  EnvScope scope;
+
+  const auto device = Device("cpu");
+  const auto shape = Shape({2, 2, 2});
+  const auto dtype = DType::kDouble;
+
+  Tensor tensor_with_all(shape, device, dtype);
+
+  tensor_with_all.zeros_();
+
+  auto result = nn::relu(tensor_with_all);
+}
 }  // namespace oneflow_api

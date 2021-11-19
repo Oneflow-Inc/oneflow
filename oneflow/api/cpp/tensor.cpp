@@ -39,6 +39,7 @@ Tensor::Tensor(const Shape& shape, const Device& device, const DType& dtype) {
                               *device.device_)
                 .GetPtrOrThrow();
 }
+Tensor::Tensor(const std::shared_ptr<oneflow::one::Tensor>& tensor) : tensor_(tensor) {}
 
 const Shape Tensor::shape() const {
   const auto shape_ = tensor_->shape();
@@ -111,6 +112,8 @@ void Tensor::to_blob(const Tensor& tensor, T* blob) {
       })
       .GetOrThrow();
 }
+
+const std::shared_ptr<oneflow::one::Tensor>& Tensor::internal_tensor() const { return tensor_; }
 
 #define REGISTER_FROM_BLOB_AND_TO_BLOB(cpp_dtype)                                         \
   template Tensor Tensor::from_blob<cpp_dtype>(const cpp_dtype* blob, const Shape& shape, \

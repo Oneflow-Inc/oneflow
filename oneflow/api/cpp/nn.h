@@ -13,28 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/shut_down_util.h"
+#ifndef ONEFLOW_API_CPP_NN_H_
+#define ONEFLOW_API_CPP_NN_H_
 
-namespace oneflow {
+#include "tensor.h"
 
-namespace {
+namespace oneflow_api {
+namespace nn {
 
-std::atomic<bool>* GetShuttingDown() {
-  static std::atomic<bool> shutting_down{false};
-  return &shutting_down;
+Tensor relu(const Tensor& tensor);
+
 }
 
-}  // namespace
+}  // namespace oneflow_api
 
-bool IsShuttingDown() {
-  auto* shutting_down = GetShuttingDown();
-  bool is_interpreter_shutdown = *shutting_down;
-  return is_interpreter_shutdown;
-}
-
-void SetShuttingDown() {
-  auto* shutting_down = GetShuttingDown();
-  if (!(*shutting_down)) { *shutting_down = true; }
-}
-
-}  // namespace oneflow
+#endif
