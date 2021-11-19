@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/user/utils/pool_util.h"
 #include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -118,9 +119,10 @@ struct PoolGpuKernelUtil {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     CHECK(gpu_pool_op_kernel_state != nullptr);
     OF_CUDNN_CHECK(cudnnPoolingForward(
-        ctx->device_ctx()->cudnn_handle(), gpu_pool_op_kernel_state->cudnn_pooling_desc(),
-        CudnnSPOnePtr<T>(), gpu_pool_op_kernel_state->cudnn_x_tensor_desc(), x->dptr(),
-        CudnnSPZeroPtr<T>(), gpu_pool_op_kernel_state->cudnn_y_tensor_desc(), y->mut_dptr()));
+        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(),
+        gpu_pool_op_kernel_state->cudnn_pooling_desc(), CudnnSPOnePtr<T>(),
+        gpu_pool_op_kernel_state->cudnn_x_tensor_desc(), x->dptr(), CudnnSPZeroPtr<T>(),
+        gpu_pool_op_kernel_state->cudnn_y_tensor_desc(), y->mut_dptr()));
   }
 
   static void BWCompute(user_op::KernelComputeContext* ctx,
@@ -131,8 +133,9 @@ struct PoolGpuKernelUtil {
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     CHECK(gpu_pool_op_kernel_state != nullptr);
     OF_CUDNN_CHECK(cudnnPoolingBackward(
-        ctx->device_ctx()->cudnn_handle(), gpu_pool_op_kernel_state->cudnn_pooling_desc(),
-        CudnnSPOnePtr<T>(), gpu_pool_op_kernel_state->cudnn_y_tensor_desc(), y->dptr(),
+        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(),
+        gpu_pool_op_kernel_state->cudnn_pooling_desc(), CudnnSPOnePtr<T>(),
+        gpu_pool_op_kernel_state->cudnn_y_tensor_desc(), y->dptr(),
         gpu_pool_op_kernel_state->cudnn_y_tensor_desc(), dy->dptr(),
         gpu_pool_op_kernel_state->cudnn_x_tensor_desc(), x->dptr(), CudnnSPZeroPtr<T>(),
         gpu_pool_op_kernel_state->cudnn_x_tensor_desc(), dx->mut_dptr()));

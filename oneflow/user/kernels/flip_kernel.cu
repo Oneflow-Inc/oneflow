@@ -91,7 +91,7 @@ class FlipGpuKernel final : public user_op::OpKernel {
             std::max<int32_t>(x_tensor->shape().At(i + 1), 1) * stride_contiguous_v.val[i + 1];
       }
     }
-    RUN_CUDA_KERNEL((FlipGpuForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt, total_dims,
+    RUN_CUDA_KERNEL((FlipGpuForward<T>), ctx->stream(), elem_cnt, elem_cnt, total_dims,
                     stride_contiguous_v, sizes_v, vis, strides_v, x_tensor->dptr<T>(),
                     y_tensor->mut_dptr<T>());
   }
