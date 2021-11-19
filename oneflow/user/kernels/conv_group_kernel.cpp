@@ -423,15 +423,6 @@ class ConvCpuKernel final : public user_op::OpKernel {
             conv_state->dilation_rate_3d_.data(), conv_state->padding_before_3d_.data(),
             col_buf_dptr);
 
-        // std::cout << "g: " << g << std::endl;
-        // std::cout << "im2col buffer len: "
-        //           << CalcElemNumOfColBuf(out->shape(), weight->shape(), idx_offset) << std::endl;
-        // for (int d = 0; d < CalcElemNumOfColBuf(out->shape(), weight->shape(), idx_offset); d++)
-        // {
-        //   std::cout << col_buf_dptr[d] << ", ";
-        // }
-        // std::cout << std::endl;
-
         // channels first: out = weight * col_buf
         // channels last:  out = (weight * col_buf)(T)
         conv_state->forward_func_(
@@ -500,6 +491,161 @@ REGISTER_CONV_KERNEL(conv3d, float, 3);
 REGISTER_CONV_KERNEL(conv1d, double, 1);
 REGISTER_CONV_KERNEL(conv2d, double, 2);
 REGISTER_CONV_KERNEL(conv3d, double, 3);
+
+template<typename T>
+class ConvDataGradCpuKernel final : public user_op::OpKernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ConvDataGradCpuKernel);
+  ConvDataGradCpuKernel() = default;
+  ~ConvDataGradCpuKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const auto& conv_state = CreateConvOpKernelState<T>(ctx, "dx", "dy", "filter");
+    CHECK_NOTNULL(conv_state.get());
+
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const user_op::Tensor* filter = ctx->Tensor4ArgNameAndIndex("filter", 0);
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+
+    const int32_t dy_group_interval = dy->shape().At(1) / conv_state->groups;
+    const int32_t filter_group_interval = filter->shape().At(0) / conv_state->groups;
+    const int32_t dx_group_interval = dx->shape().At(1) / conv_state->groups;
+
+    Memset<DeviceType::kCPU>(ctx->stream(), dx->mut_dptr<T>(), 0,
+                             dx->shape().elem_cnt() * sizeof(T));
+
+    int32_t idx_offset = conv_state->idx_offset_;
+    FOR_RANGE(int64_t, i, 0, dy->shape().At(0)) {
+      FOR_RANGE(int64_t, g, 0, conv_state->groups) {
+        // channels first:  col_buf' = weight(T) * out[i]'
+        // channels last :  col_buf' = weight(T) * out[i]'(T)
+        NewKernelUtil<DeviceType::kCPU>::OFGemm(
+            nullptr, CblasTrans, conv_state->is_out_diff_need_trans_,
+            conv_state->weight_5d_shape_.Count(1),                        //  ci * kd * kh * kw
+            conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3),  //  od * oh * ow
+            conv_state->weight_5d_shape_.At(0) / conv_state->groups,      //  filter
+            static_cast<T>(1),
+            filter->dptr<T>() + g * filter_group_interval * filter->shape().Count(1),
+            GetImgDptr<T>(dy, i) + g * dy_group_interval * dy->shape().Count(2), static_cast<T>(0),
+            col_buf->mut_dptr<T>());
+
+        // in' = col2im(col_buf')
+        conv_state->col2im_func_(
+            col_buf->dptr<T>(), ShapeView(conv_state->in_5d_shape_),
+            ShapeView(conv_state->weight_5d_shape_), ShapeView(conv_state->out_5d_shape_),
+            conv_state->strides_3d_.data(), conv_state->dilation_rate_3d_.data(),
+            conv_state->padding_before_3d_.data(),
+            GetImgMutDptr<T>(dx, i) + g * dx_group_interval * dx->shape().Count(2));
+      }
+    }
+    if (ctx->has_input("_add_to_output", 0)) {
+      const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+      CHECK_EQ(add_to_output->data_type(), dx->data_type());
+      CHECK_EQ(add_to_output->shape(), dx->shape());
+      std::unique_ptr<ep::primitive::Add> primitive =
+          ep::primitive::NewPrimitive<ep::primitive::AddFactory>(DeviceType::kCPU,
+                                                                 add_to_output->data_type());
+      CHECK(primitive);
+      primitive->Launch(ctx->stream(), add_to_output->dptr<T>(), dx->dptr<T>(), dx->mut_dptr<T>(),
+                        add_to_output->shape().elem_cnt());
+    }
+  }
+};
+
+#define REGISTER_CONV_DATA_GRAD_KERNEL(op_name, dtype)                                     \
+  REGISTER_USER_KERNEL(#op_name)                                                           \
+      .SetCreateFn<ConvDataGradCpuKernel<dtype>>()                                         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                      \
+                       && (user_op::HobAttr<int32_t>("groups") > 1)                        \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))    \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                        \
+        size_t tmp_buffer_size = 0;                                                        \
+        const auto& out_diff_shape = ctx->InputTensorDesc("dy", 0).shape();                \
+        const auto& weight_shape = ctx->InputTensorDesc("filter", 0).shape();              \
+                                                                                           \
+        int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));             \
+        tmp_buffer_size +=                                                                 \
+            CalcElemNumOfColBuf(out_diff_shape, weight_shape, idx_offset) * sizeof(dtype); \
+        return tmp_buffer_size;                                                            \
+      })
+
+REGISTER_CONV_DATA_GRAD_KERNEL(conv_data_grad, float);
+REGISTER_CONV_DATA_GRAD_KERNEL(conv_data_grad, double);
+
+template<typename T>
+class ConvFilterGradCpuKernel final : public user_op::OpKernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ConvFilterGradCpuKernel);
+  ConvFilterGradCpuKernel() = default;
+  ~ConvFilterGradCpuKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const auto& conv_state = CreateConvOpKernelState<T>(ctx, "x", "dy", "filter_diff");
+    CHECK_NOTNULL(conv_state.get());
+
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* filter_diff = ctx->Tensor4ArgNameAndIndex("filter_diff", 0);
+    user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+
+    const int32_t dy_group_interval = dy->shape().At(1) / conv_state->groups;
+    const int32_t filter_diff_group_interval = filter_diff->shape().At(0) / conv_state->groups;
+    const int32_t x_group_interval = x->shape().At(1) / conv_state->groups;
+
+    Memset<DeviceType::kCPU>(ctx->stream(), filter_diff->mut_dptr<T>(), 0,
+                             filter_diff->shape().elem_cnt() * sizeof(T));
+    int32_t idx_offset = conv_state->idx_offset_;
+    FOR_RANGE(int64_t, i, 0, dy->shape().At(0)) {
+      FOR_RANGE(int64_t, g, 0, conv_state->groups) {
+        conv_state->im2col_func_(
+            GetImgDptr<T>(x, i) + g * x_group_interval * x->shape().Count(2),
+            ShapeView(conv_state->in_5d_shape_), ShapeView(conv_state->weight_5d_shape_),
+            ShapeView(conv_state->out_5d_shape_), conv_state->strides_3d_.data(),
+            conv_state->dilation_rate_3d_.data(), conv_state->padding_before_3d_.data(),
+            col_buf->mut_dptr<T>());
+
+        // channels first:  weight' += out[i]' * col_buf(T)
+        // channels last :  weight' += out[i]'(T) * col_buf(T)
+        NewKernelUtil<DeviceType::kCPU>::OFGemm(
+            nullptr, conv_state->is_out_diff_need_trans_, CblasTrans,
+            conv_state->weight_5d_shape_.At(0) / conv_state->groups,      //  filter
+            conv_state->weight_5d_shape_.Count(1),                        //  ci * kd * kh * kw
+            conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3),  //  od * oh * ow
+            static_cast<T>(1), GetImgDptr<T>(dy, i) + g * dy_group_interval * dy->shape().Count(2),
+            col_buf->dptr<T>(), static_cast<T>(1),
+            filter_diff->mut_dptr<T>()
+                + g * filter_diff_group_interval * filter_diff->shape().Count(1));
+      }
+    }
+  }
+};
+
+#define REGISTER_CONV_FILTER_GRAD_KERNEL(op_name, dtype)                                        \
+  REGISTER_USER_KERNEL(#op_name)                                                                \
+      .SetCreateFn<ConvFilterGradCpuKernel<dtype>>()                                            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
+                       && (user_op::HobAttr<int32_t>("groups") > 1)                             \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))         \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                             \
+        size_t tmp_buffer_size = 0;                                                             \
+        const auto& out_diff_shape = ctx->InputTensorDesc("dy", 0).shape();                     \
+        const auto& weight_diff_shape = ctx->OutputTensorDesc("filter_diff", 0)->shape();       \
+                                                                                                \
+        int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));                  \
+        tmp_buffer_size +=                                                                      \
+            CalcElemNumOfColBuf(out_diff_shape, weight_diff_shape, idx_offset) * sizeof(dtype); \
+        return tmp_buffer_size;                                                                 \
+      })
+
+REGISTER_CONV_FILTER_GRAD_KERNEL(conv_filter_grad, float);
+REGISTER_CONV_FILTER_GRAD_KERNEL(conv_filter_grad, double);
 
 }  // namespace
 
