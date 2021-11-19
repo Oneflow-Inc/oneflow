@@ -49,7 +49,7 @@ class UnsortedBatchSegmentSumKernel final : public user_op::OpKernel,
 
     Memset<device_type>(ctx->stream(), out->mut_dptr(), 0, out->shape().elem_cnt() * sizeof(T));
     BatchGatherKernelUtilImpl<device_type, T, K>::Backward(
-        ctx->device_ctx(), data->dptr<T>(), segment_ids->dptr<K>(), flat_data_shape,
+        ctx->stream(), data->dptr<T>(), segment_ids->dptr<K>(), flat_data_shape,
         out->shape().At(axis), out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }

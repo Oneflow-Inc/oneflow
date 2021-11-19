@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/user/kernels/unsorted_segment_sum_kernel_util.h"
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #include <assert.h>
 
 namespace oneflow {
@@ -92,7 +93,7 @@ __global__ void UnsortedSegmentRowSumGpu(const IDX data_elem_cnt,
 }
 
 template<typename T, typename K, typename IDX, typename U>
-void UnsortedSegmentSumUtil(DeviceCtx* ctx, const K* segment_ids, const U* data,
+void UnsortedSegmentSumUtil(ep::Stream* stream, const K* segment_ids, const U* data,
                             IDX num_segment_ids, IDX num_segments, IDX outer_dim_size,
                             IDX inner_dim_size, IDX segment_id_offset, T* out) {
   const IDX data_elem_cnt = num_segment_ids * outer_dim_size * inner_dim_size;
@@ -100,25 +101,28 @@ void UnsortedSegmentSumUtil(DeviceCtx* ctx, const K* segment_ids, const U* data,
     NdIndexOffsetHelper<IDX, 2> in_helper(outer_dim_size, num_segment_ids);
     NdIndexOffsetHelper<IDX, 2> out_helper(outer_dim_size, num_segments);
     UnsortedSegmentColSumGpu<T, K, IDX, U>
-        <<<BlocksNum4ThreadsNum(data_elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            data_elem_cnt, in_helper, out_helper, data, segment_ids, num_segments,
-            segment_id_offset, out);
+        <<<BlocksNum4ThreadsNum(data_elem_cnt), kCudaThreadsNumPerBlock, 0,
+           stream->As<ep::CudaStream>()->cuda_stream()>>>(data_elem_cnt, in_helper, out_helper,
+                                                          data, segment_ids, num_segments,
+                                                          segment_id_offset, out);
 
   } else if (outer_dim_size == 1) {
     NdIndexOffsetHelper<IDX, 2> in_helper(num_segment_ids, inner_dim_size);
     NdIndexOffsetHelper<IDX, 2> out_helper(num_segments, inner_dim_size);
     UnsortedSegmentRowSumGpu<T, K, IDX, U>
-        <<<BlocksNum4ThreadsNum(data_elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            data_elem_cnt, in_helper, out_helper, data, segment_ids, num_segments,
-            segment_id_offset, out);
+        <<<BlocksNum4ThreadsNum(data_elem_cnt), kCudaThreadsNumPerBlock, 0,
+           stream->As<ep::CudaStream>()->cuda_stream()>>>(data_elem_cnt, in_helper, out_helper,
+                                                          data, segment_ids, num_segments,
+                                                          segment_id_offset, out);
 
   } else {
     NdIndexOffsetHelper<IDX, 3> in_helper(outer_dim_size, num_segment_ids, inner_dim_size);
     NdIndexOffsetHelper<IDX, 3> out_helper(outer_dim_size, num_segments, inner_dim_size);
     UnsortedSegmentSumGpu<T, K, IDX, U>
-        <<<BlocksNum4ThreadsNum(data_elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            data_elem_cnt, in_helper, out_helper, data, segment_ids, num_segments,
-            segment_id_offset, out);
+        <<<BlocksNum4ThreadsNum(data_elem_cnt), kCudaThreadsNumPerBlock, 0,
+           stream->As<ep::CudaStream>()->cuda_stream()>>>(data_elem_cnt, in_helper, out_helper,
+                                                          data, segment_ids, num_segments,
+                                                          segment_id_offset, out);
   }
 }
 
@@ -126,7 +130,7 @@ void UnsortedSegmentSumUtil(DeviceCtx* ctx, const K* segment_ids, const U* data,
 
 template<typename T, typename K, typename U>
 struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, T, K, U> final {
-  static void UnsortedSegmentSum(DeviceCtx* ctx, const K* segment_ids, const U* data,
+  static void UnsortedSegmentSum(ep::Stream* stream, const K* segment_ids, const U* data,
                                  int64_t num_segment_ids, int64_t num_segments,
                                  int64_t outer_dim_size, int64_t inner_dim_size,
                                  int64_t segment_id_offset, T* out) {
@@ -134,11 +138,11 @@ struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, T, K, U> final {
     const int64_t out_elem_cnt = outer_dim_size * num_segments * inner_dim_size;
 
     if (std::max(data_elem_cnt, out_elem_cnt) < GetMaxVal<int32_t>() / 2) {
-      UnsortedSegmentSumUtil<T, K, int32_t, U>(ctx, segment_ids, data, num_segment_ids,
+      UnsortedSegmentSumUtil<T, K, int32_t, U>(stream, segment_ids, data, num_segment_ids,
                                                num_segments, outer_dim_size, inner_dim_size,
                                                segment_id_offset, out);
     } else {
-      UnsortedSegmentSumUtil<T, K, int64_t, U>(ctx, segment_ids, data, num_segment_ids,
+      UnsortedSegmentSumUtil<T, K, int64_t, U>(stream, segment_ids, data, num_segment_ids,
                                                num_segments, outer_dim_size, inner_dim_size,
                                                segment_id_offset, out);
     }
@@ -147,12 +151,12 @@ struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, T, K, U> final {
 
 template<typename K>
 struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, float, K, float16> final {
-  static void UnsortedSegmentSum(DeviceCtx* ctx, const K* segment_ids, const float16* data,
+  static void UnsortedSegmentSum(ep::Stream* stream, const K* segment_ids, const float16* data,
                                  int64_t num_segment_ids, int64_t num_segments,
                                  int64_t outer_dim_size, int64_t inner_dim_size,
                                  int64_t segment_id_offset, float* out) {
     UnsortedSegmentSumKernelUtil<DeviceType::kGPU, float, K, half>::UnsortedSegmentSum(
-        ctx, segment_ids, reinterpret_cast<const half*>(data), num_segment_ids, num_segments,
+        stream, segment_ids, reinterpret_cast<const half*>(data), num_segment_ids, num_segments,
         outer_dim_size, inner_dim_size, segment_id_offset, out);
   }
 };

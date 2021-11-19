@@ -22,9 +22,9 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T, typename K>
 struct TwoStageReduceKernelUtil {
-  static void Divide(DeviceCtx* ctx, const int64_t n, const T* x, const K* count, T* y);
-  static void Mask(DeviceCtx* ctx, const int64_t n, const T* x, const K* mask, T* y);
-  static void Scale(DeviceCtx* ctx, const int64_t n, const T* x, const K* scale, T* y);
+  static void Divide(ep::Stream* stream, const int64_t n, const T* x, const K* count, T* y);
+  static void Mask(ep::Stream* stream, const int64_t n, const T* x, const K* mask, T* y);
+  static void Scale(ep::Stream* stream, const int64_t n, const T* x, const K* scale, T* y);
 };
 
 }  // namespace oneflow
