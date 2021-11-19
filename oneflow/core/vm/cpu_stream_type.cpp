@@ -53,7 +53,6 @@ void CpuStreamType::Compute(Instruction* instruction) const {
       + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction));
   {
     const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
-    std::cout << "\n instruction->mut_instr_msg()->instr_type_name(): "<< instruction->mut_instr_msg()->instr_type_name() << std::endl;
     CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
     instr_type_id.instruction_type().Compute(instruction);
   }

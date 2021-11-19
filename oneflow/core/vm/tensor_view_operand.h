@@ -33,49 +33,6 @@ namespace vm {
 
 class EagerBlobObject;
 
-// // access blob arg callback physical instruction operand
-// class TensorViewOperand : public TensorViewPhyInstrOperand {
-//  public:
-//   TensorViewOperand(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-//                                  const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object,
-//                                  LocalDepObject* compute_local_dep_object,
-//                                  LocalDepObject* view_compute_local_dep_object,
-//                                  const std::function<void(uint64_t, uint64_t)>& callback,
-//                                  const std::string& modifier)
-//       : eager_blob_object_(eager_blob_object),
-//         view_eager_blob_object_(view_eager_blob_object),
-//         callback_(callback),
-//         compute_local_dep_object_(compute_local_dep_object),
-//         view_compute_local_dep_object_(view_compute_local_dep_object),
-//         modifier_(modifier) {}
-//   ~TensorViewOperand() = default;
-
-//   const std::function<void(uint64_t, uint64_t)>& callback() const { return callback_; }
-//   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object() const {
-//     return eager_blob_object_;
-//   }
-//   const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object() const {
-//     return view_eager_blob_object_;
-//   }
-
-//   void ForEachConstMirroredObject(
-//       const std::function<void(MirroredObject* compute, MirroredObject* compute2)>&) const override;
-
-//   void ForEachMutMirroredObject(const std::function<void(MirroredObject* compute, MirroredObject* compute2)>&) const override;
-
-//   void ForEachMut2MirroredObject(
-//       const std::function<void(MirroredObject* compute, MirroredObject* compute2)>&) const override;
-
-//  private:
-//   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
-//   std::shared_ptr<vm::EagerBlobObject> view_eager_blob_object_;
-//   std::function<void(uint64_t, uint64_t)> callback_;
-//   LocalDepObject* compute_local_dep_object_;
-//   LocalDepObject* view_compute_local_dep_object_;
-//   const std::string modifier_;
-// };
-
-
 // access blob arg callback physical instruction operand
 class TensorViewOperand : public PhyInstrOperand {
  public:
