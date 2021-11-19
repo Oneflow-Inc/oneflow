@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/register/blob.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 
@@ -32,17 +33,12 @@ class InitializerConf;
 class MemoryCase;
 class StreamContext;
 
-void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
+void AutoMemcpy(ep::Stream* stream, void* dst, const void* src, size_t sz,
                 const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case);
-void AutoMemcpy(DeviceCtx* ctx, Blob* dst, const Blob* src);
-void AutoMemcpy(StreamContext* stream_ctx, void* dst, const void* src, size_t sz,
-                const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case);
-void AutoMemcpy(StreamContext* stream_ctx, Blob* dst, const Blob* src);
-void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
+void AutoMemcpy(ep::Stream* stream, Blob* dst, const Blob* src);
+void SyncAutoMemcpy(ep::Stream* stream, void* dst, const void* src, size_t sz,
                     const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case);
-void AutoMemset(DeviceCtx* ctx, void* dst, const char value, size_t sz,
-                const MemoryCase& dst_mem_case);
-void AutoMemset(StreamContext* stream_ctx, void* dst, const char value, size_t sz,
+void AutoMemset(ep::Stream* stream, void* dst, const char value, size_t sz,
                 const MemoryCase& dst_mem_case);
 
 template<DeviceType device_type, typename T, typename U = void>

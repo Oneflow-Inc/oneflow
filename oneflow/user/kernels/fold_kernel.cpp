@@ -74,7 +74,7 @@ class FoldKernel final : public OpKernel {
         input->shape(), output_size, kernel_size, padding, stride, dilation);
     const FoldParams<INDEX_T, NDIM, SDIM> params = state_ptr->params();
     size_t out_bytes_size = output->shape().elem_cnt() * GetSizeOfDataType(output->data_type());
-    Memset<device_type>(ctx->device_ctx(), output->mut_dptr<T>(), 0, out_bytes_size);
+    Memset<device_type>(ctx->stream(), output->mut_dptr<T>(), 0, out_bytes_size);
     FoldKernelUtil<device_type, T, INDEX_T, NDIM, SDIM>::Forward(
         ctx->device_ctx(), &params, input->dptr<T>(), output->mut_dptr<T>());
   }

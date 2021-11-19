@@ -135,7 +135,7 @@ class ReflectionPad2dGradKernel final : public OpKernel {
     NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
 
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
-    Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
+    Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
     ReflectionPad2dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
                                                     n_batch, n_channel, dy_height, dy_width,
@@ -241,7 +241,7 @@ class ReplicationPad2dGradKernel final : public OpKernel {
     NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
 
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
-    Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
+    Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
     ReplicationPad2dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
                                                      n_batch, n_channel, dy_height, dy_width,
@@ -349,7 +349,7 @@ class ConstantPad2dGradKernel final : public OpKernel {
     NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
 
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
-    Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
+    Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
     ConstantPad2dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
                                                   n_batch, n_channel, dy_height, dy_width,
