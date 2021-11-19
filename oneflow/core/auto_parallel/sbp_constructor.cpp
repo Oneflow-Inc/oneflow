@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/auto_parallel/sbp_constructor.h"
+#include "oneflow/core/auto_parallel/sbp_util.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job.pb.h"
 #include "sbp_collector.h"
@@ -167,10 +168,12 @@ Maybe<void> SbpConstructor::InitComputationCost(const OpGraph& op_graph) {
       return op_node->LogicalBlobDesc4Lbi(lbi);
     };
     for (int32_t sbp_id = 0; sbp_id < sbp_node->SbpSignatureList.size(); sbp_id++) {
-      sbp_node->Cost[sbp_id] =
-          cost_ratio_
-          * JUST(op_node->op().GetComputeComplexity(sbp_node->SbpSignatureList[sbp_id],
-                                                    logical_blob_desc4bn, parallel_desc));
+      double comp_cost = JUST(op_node->op().GetComputeComplexity(
+          sbp_node->SbpSignatureList[sbp_id], logical_blob_desc4bn, parallel_desc));
+      if (comp_cost > cut_cost)
+        sbp_node->Cost[sbp_id] = comp_cost;
+      else
+        sbp_node->Cost[sbp_id] = cost_ratio_ * comp_cost;
     }
     return Maybe<void>::Ok();
   });
@@ -250,6 +253,42 @@ void SbpConstructor::LoadLbi2SbpEdge(const OpGraph& op_graph) {
   };
 }
 
+Maybe<void> SbpConstructor::CheckSbpAgreement(const Job& job) {
+  Job new_job;
+  new_job.CopyFrom(job);
+  OpGraph op_graph(new_job);
+  // Compare sbp in job
+  JUST(op_graph.TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
+    const std::string& op_name = op_node->op().op_name();
+    const cfg::SbpSignature& auto_parallel_sbp =
+        cfg::SbpSignature(job.job_parallel_view_conf().op_name2sbp_signature_conf().at(op_name));
+    const cfg::SbpSignature& new_sbp = cfg::SbpSignature(
+        new_job.job_parallel_view_conf().op_name2sbp_signature_conf().at(op_name));
+    CHECK_EQ_OR_RETURN(auto_parallel_sbp.bn_in_op2sbp_parallel_size(),
+                       new_sbp.bn_in_op2sbp_parallel_size());
+    for (const auto& iter : auto_parallel_sbp.bn_in_op2sbp_parallel()) {
+      cfg::SbpParallel new_sbp_parallel = new_sbp.bn_in_op2sbp_parallel().at(iter.first);
+      const std::string& error_mgs = "Op: `" + op_name + "` changed sbp from "
+                                     + SbpParallelToString(iter.second) + "(AutoParallel) to "
+                                     + SbpParallelToString(new_sbp_parallel) + "(OpGraph).";
+      if (new_sbp_parallel.has_broadcast_parallel()) {
+        CHECK_OR_RETURN(iter.second.has_broadcast_parallel()) << error_mgs;
+      } else if (new_sbp_parallel.has_partial_sum_parallel()) {
+        CHECK_OR_RETURN(iter.second.has_partial_sum_parallel()) << error_mgs;
+      } else if (new_sbp_parallel.has_split_parallel()) {
+        CHECK_OR_RETURN(iter.second.has_split_parallel()) << error_mgs;
+        CHECK_EQ_OR_RETURN(new_sbp_parallel.split_parallel().axis(),
+                           iter.second.split_parallel().axis())
+            << error_mgs;
+      } else {
+        UNIMPLEMENTED_THEN_RETURN();
+      }
+    }
+    return Maybe<void>::Ok();
+  }));
+  return Maybe<void>::Ok();
+}
+
 // Print the graph with SBP in order
 void SbpConstructor::PrintSBPGraphDebugInfo() {
   // sbp constructor information
@@ -304,8 +343,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
       const auto& this_sbp_parallel = sbp_signature.bn_in_op2sbp_parallel()[ibn];
       std::cout << ", " << SbpParallelToString(this_sbp_parallel);
       const auto input_blob_modifier_ = op_node->op().InputBlobModifier4Ibn(ibn);
-      bool is_same_sbp = input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable();
-      if (is_same_sbp) std::cout << ", same SBP";
+      if (IsSameSBP(op_node, ibn)) std::cout << ", same SBP";
       std::cout << ", "
                 << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn)).shape().elem_cnt();
       std::cout << std::endl;

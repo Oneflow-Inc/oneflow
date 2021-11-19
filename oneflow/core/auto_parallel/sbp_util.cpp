@@ -63,5 +63,17 @@ double ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& producer_sbp_
   return 2 * logical_blob_size * parallel_desc.parallel_num();
 }
 
+// Judge whether we need the same SBP for both producer and consumer
+bool IsSameSBP(OpNode* consumer, const std::string& ibn) {
+  // is mutable
+  const auto input_blob_modifier_ = consumer->op().InputBlobModifier4Ibn(ibn);
+  if (input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable()) return true;
+  // kOFRecord or kTensorBuffer don't accept boxing
+  const LogicalBlobId& lbi = consumer->op().BnInOp2Lbi(ibn);
+  const OpNode& producer = consumer->ProducerOpNode4Lbi(lbi);
+  const BlobDesc& logical_blob_desc = producer.LogicalBlobDesc4Lbi(lbi);
+  return (logical_blob_desc.data_type() == DataType::kOFRecord
+          || logical_blob_desc.data_type() == DataType::kTensorBuffer);
+}
 }  // namespace auto_parallel
 }  // namespace oneflow

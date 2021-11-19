@@ -31,6 +31,9 @@ double ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& producer_sbp_
                                            const BlobDesc& logical_blob_desc,
                                            const ParallelDesc& parallel_desc, bool is_same_sbp);
 
+// Judge whether we need the same SBP for both producer and consumer
+bool IsSameSBP(OpNode* consumer, const std::string& ibn);
+
 }  // namespace auto_parallel
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_AUTO_PARALLEL_SBP_UTIL_H_
