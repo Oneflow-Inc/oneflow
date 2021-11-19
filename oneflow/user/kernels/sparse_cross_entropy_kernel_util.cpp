@@ -21,9 +21,9 @@ namespace user_op {
 
 template<typename T, typename K>
 struct SparseCrossEntropyKernelUtil<DeviceType::kCPU, T, K> {
-  static void ComputeEntropy(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
-                             const int64_t depth, const int64_t lower_bound, const T* x,
-                             const K* labels, T* y) {
+  static void ComputeEntropy(ep::Stream* stream, const int64_t num_instances,
+                             const int64_t num_classes, const int64_t depth,
+                             const int64_t lower_bound, const T* x, const K* labels, T* y) {
     FOR_RANGE(int64_t, i, 0, num_instances) {
       CHECK_GE(labels[i], 0);
       CHECK_LT(labels[i], depth);
@@ -32,9 +32,9 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kCPU, T, K> {
     }
   }
 
-  static void ComputeDiff(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
-                          const int64_t depth, const int64_t lower_bound, const T* x,
-                          const K* labels, const T* dy, T* dx) {
+  static void ComputeDiff(ep::Stream* stream, const int64_t num_instances,
+                          const int64_t num_classes, const int64_t depth, const int64_t lower_bound,
+                          const T* x, const K* labels, const T* dy, T* dx) {
     FOR_RANGE(int64_t, i, 0, num_instances) {
       CHECK_GE(labels[i], 0);
       CHECK_LT(labels[i], depth);
@@ -45,7 +45,7 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kCPU, T, K> {
     }
   }
 
-  static void ComputeDiffWithSoftmax(DeviceCtx* ctx, const int64_t elem_cnt,
+  static void ComputeDiffWithSoftmax(ep::Stream* stream, const int64_t elem_cnt,
                                      const int64_t num_classes, const int64_t depth,
                                      const int64_t lower_bound, const T* prob, const K* labels,
                                      const T* dy, T* dx) {

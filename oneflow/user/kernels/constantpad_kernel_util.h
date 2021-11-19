@@ -46,7 +46,7 @@ struct DeviceAdd {
 
 template<DeviceType device_type, typename IN_T>
 struct ConstantPad1dFunctor final {
-  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 3>& index_helper, const ShapeView& x_shape,
                   const ShapeView& y_shape, const std::vector<int64_t>& padding,
                   IN_T constant_value);
@@ -54,14 +54,14 @@ struct ConstantPad1dFunctor final {
 
 template<DeviceType device_type, typename IN_T>
 struct ConstantPad1dGradFunctor final {
-  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 3>& index_helper, const ShapeView& dy_shape,
                   const ShapeView& dx_shape, const std::vector<int64_t>& padding);
 };
 
 template<DeviceType device_type, typename IN_T>
 struct ConstantPad3dFunctor final {
-  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 5>& index_helper, const ShapeView& x_shape,
                   const ShapeView& y_shape, const std::vector<int64_t>& padding,
                   IN_T constant_value);
@@ -69,7 +69,7 @@ struct ConstantPad3dFunctor final {
 
 template<DeviceType device_type, typename IN_T>
 struct ConstantPad3dGradFunctor final {
-  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 5>& index_helper, const ShapeView& dy_shape,
                   const ShapeView& dx_shape, const std::vector<int64_t>& padding);
 };
