@@ -33,5 +33,5 @@ class MyModule(torch.nn.Module):
 
 
 linear = torch.jit.trace(MyModule(2, 3))
-for i in range(10):
+for i in range(100):
     print(linear(torch.randn(2, 2)))
