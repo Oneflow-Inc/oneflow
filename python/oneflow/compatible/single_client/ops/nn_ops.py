@@ -1297,11 +1297,7 @@ def layer_norm(
         if gamma is not None:
             scale = True
             op_builder.Input("gamma", [gamma])
-            op_builder.Output("normalized")
-        op_builder.Attr("center", center)
-        op_builder.Attr("scale", scale)
         op_builder.Attr("begin_norm_axis", begin_norm_axis)
-        op_builder.Attr("begin_params_axis", begin_params_axis)
         op_builder.Attr("epsilon", epsilon)
         y = op_builder.Build().InferAndTryRun().RemoteBlobList()[0]
         return y
