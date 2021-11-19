@@ -62,7 +62,7 @@ class ObjectPool<T, kThreadUnsafeAndDisableDestruct> {
       InitObjectPoolFields4Element(ptr.get());
       return ptr;
     } else {
-      auto* ptr = container_[container_.size() - 1];
+      auto* ptr = container_.back();
       container_.pop_back();
       ptr->__Init__(std::forward<Args>(args)...);
       InitObjectPoolFields4Element(ptr);
