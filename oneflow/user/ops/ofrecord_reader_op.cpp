@@ -67,6 +67,13 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("OFRecordReader")
       //  size data with output shape (batch_size,)
       // out_modifier->set_header_infered_before_compute(false);
       return Maybe<void>::Ok();
+    })
+    .SetComputeComplexityFn([](user_op::ComputeComplexityFnContext* ctx) -> Maybe<double> {
+      if (ctx->SbpParallel4ArgNameAndIndex("out", 0).has_split_parallel())
+        return double(ctx->Shape4ArgNameAndIndex("out", 0)->elem_cnt()
+                      * GetSizeOfDataType(DataType::kOFRecord));
+      else
+        return GetMaxVal<float>();
     });
 
 }  // namespace oneflow

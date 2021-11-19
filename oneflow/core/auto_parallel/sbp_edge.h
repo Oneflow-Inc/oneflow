@@ -352,7 +352,7 @@ double SbpEdge<SbpSignature>::GetMaxCost() {
   double max_cost = -1.0;
   for (int32_t i = 0; i < Cost.size(); i++) {
     for (int32_t j = 0; j < Cost[i].size(); j++) {
-      if (Cost[i][j] < 1e38 && Cost[i][j] > max_cost) max_cost = Cost[i][j];
+      if (Cost[i][j] < cut_cost && Cost[i][j] > max_cost) max_cost = Cost[i][j];
     }
   }
   return max_cost;
@@ -385,7 +385,7 @@ void SbpEdge<SbpSignature>::AdjustOverlapCost() {
   if (overlap_ratio < 0.0) overlap_ratio = 0.0;
   for (int32_t i = 0; i < Cost.size(); i++) {
     for (int32_t j = 0; j < Cost[i].size(); j++) {
-      if (Cost[i][j] > 0.0 && Cost[i][j] < 1e38) { Cost[i][j] = overlap_ratio * Cost[i][j]; }
+      if (Cost[i][j] > 0.0 && Cost[i][j] < cut_cost) { Cost[i][j] = overlap_ratio * Cost[i][j]; }
     }
   }
 }
@@ -411,12 +411,9 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool comp
     // SbpParallel. Use producer or op_node?
     const oneflow::BlobDesc& logical_blob_desc = producer->LogicalBlobDesc4Lbi(lbi);
     const std::string& obn = *CHECK_JUST(producer->op().obn4lbi(lbi));
-    const auto input_blob_modifier_ = consumer->op().InputBlobModifier4Ibn(ibn);
     // If we are deciding whether we need the wait time, then make is_same_sbp true.
     // B->S cause cudaEventSynchronize in current implementation.
-    bool is_same_sbp =
-        (!compute_cost)
-        || (input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable());
+    bool is_same_sbp = (!compute_cost) || IsSameSBP(consumer, ibn);
     int32_t consumer_sbp_size = EndNode->SbpSignatureList.size();
 
     // look through sbp signature in producer
