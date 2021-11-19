@@ -31,6 +31,7 @@ namespace {
 class CpuDeviceCtxAdapter final : public DeviceCtx, public EventRecordProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDeviceCtxAdapter);
+  explicit CpuDeviceCtxAdapter(StreamContext* stream_ctx) : stream_ctx_(stream_ctx) {}
   ~CpuDeviceCtxAdapter() override = default;
 
   std::unique_ptr<DeviceCtx> Copy() const {
@@ -48,7 +49,7 @@ class CpuDeviceCtxAdapter final : public DeviceCtx, public EventRecordProvider {
   }
 
  private:
-  CpuStreamContext* stream_ctx_;
+  StreamContext* stream_ctx_;
 };
 
 #ifdef WITH_CUDA
