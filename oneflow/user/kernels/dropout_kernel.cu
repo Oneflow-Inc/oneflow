@@ -43,6 +43,11 @@ union H2Pack {
   half2 h2[2];
 };
 
+union RandPack4 {
+  float4 storage;
+  float elem[4];
+};
+
 #define RETURN_VOID_IF_HALF typename std::enable_if_t<std::is_same<T, half>::value, void>
 #define RETURN_VOID_IF_FLOAT typename std::enable_if_t<std::is_same<T, float>::value, void>
 #define RETURN_VOID_IF_DOUBLE typename std::enable_if_t<std::is_same<T, double>::value, void>
@@ -61,11 +66,12 @@ __global__ RETURN_VOID_IF_FLOAT MaskAndScaleGpu(uint64_t seed,
       typename std::aligned_storage<sizeof(T) * PackFloatSize, sizeof(T) * PackFloatSize>::type;
   using MaskT = typename std::aligned_storage<sizeof(int8_t) * PackFloatSize,
                                               sizeof(int8_t) * PackFloatSize>::type;
+  RandPack4 rand_uniform_pack4;
 
-  float4 rand_uniform;
   for (int64_t linear_index = global_thread_id * PackFloatSize; linear_index < elem_cnt;
        linear_index += gridDim.x * blockDim.x * PackFloatSize) {
-    rand_uniform = curand_uniform4(&state);
+    rand_uniform_pack4.storage = curand_uniform4(&state);
+
     const LoadT* x_load = reinterpret_cast<const LoadT*>(x + linear_index);
     cuda::elementwise::Pack<T, PackFloatSize> x_vec;
     x_vec.storage = *x_load;
@@ -74,7 +80,8 @@ __global__ RETURN_VOID_IF_FLOAT MaskAndScaleGpu(uint64_t seed,
     T y_vec[PackFloatSize];
 #pragma unroll
     for (int i = 0; i < PackFloatSize; i++) {
-      mask_vec[i] = (&rand_uniform.x)[i] > rate;
+      rand_uniform_pack4.elem[i] = rand_uniform_pack4.elem[i] >= rate;
+      mask_vec[i] = rand_uniform_pack4.elem[i];
       y_vec[i] = x_vec.elem[i] * mask_vec[i] * scale;
     }
 
@@ -83,11 +90,12 @@ __global__ RETURN_VOID_IF_FLOAT MaskAndScaleGpu(uint64_t seed,
   }
 
   if (tail && global_thread_id < n_tail && global_thread_id == 0) {
-    rand_uniform = curand_uniform4(&state);
+    rand_uniform_pack4.storage = curand_uniform4(&state);
 #pragma unroll
     for (int i = 0; i < n_tail; i++) {
-      tail_mask[i] = (&rand_uniform.x)[i] > rate;
-      tail_y[i] = tail_x[i] * (&rand_uniform.x)[i] * scale;
+      rand_uniform_pack4.elem[i] = rand_uniform_pack4.elem[i] >= rate;
+      tail_mask[i] = rand_uniform_pack4.elem[i];
+      tail_y[i] = tail_x[i] * rand_uniform_pack4.elem[i] * scale;
     }
   }
 
@@ -115,10 +123,11 @@ __global__ RETURN_VOID_IF_FLOAT MaskAndScaleAddGpu(
   using MaskT = typename std::aligned_storage<sizeof(int8_t) * PackFloatSize,
                                               sizeof(int8_t) * PackFloatSize>::type;
 
-  float4 rand_uniform;
+  RandPack4 rand_uniform_pack4;
   for (int64_t linear_index = global_thread_id * PackFloatSize; linear_index < elem_cnt;
        linear_index += gridDim.x * blockDim.x * PackFloatSize) {
-    rand_uniform = curand_uniform4(&state);
+    rand_uniform_pack4.storage = curand_uniform4(&state);
+
     const LoadT* x_load = reinterpret_cast<const LoadT*>(x + linear_index);
     cuda::elementwise::Pack<T, PackFloatSize> x_vec;
     x_vec.storage = *x_load;
@@ -131,7 +140,7 @@ __global__ RETURN_VOID_IF_FLOAT MaskAndScaleAddGpu(
     T y_vec[PackFloatSize];
 #pragma unroll
     for (int i = 0; i < PackFloatSize; i++) {
-      mask_vec[i] = (&rand_uniform.x)[i] > rate;
+      mask_vec[i] = rand_uniform_pack4.elem[i];
       y_vec[i] = x_vec.elem[i] * mask_vec[i] * scale + addend_vec.elem[i];
     }
 
@@ -140,14 +149,14 @@ __global__ RETURN_VOID_IF_FLOAT MaskAndScaleAddGpu(
   }
 
   if (tail && global_thread_id < n_tail && global_thread_id == 0) {
-    rand_uniform = curand_uniform4(&state);
+    rand_uniform_pack4.storage = curand_uniform4(&state);
+
 #pragma unroll
     for (int i = 0; i < n_tail; i++) {
-      tail_mask[i] = (&rand_uniform.x)[i] > rate;
-      tail_y[i] = tail_x[i] * (&rand_uniform.x)[i] * scale + tail_addend[i];
+      tail_mask[i] = rand_uniform_pack4.elem[i];
+      tail_y[i] = tail_x[i] * rand_uniform_pack4.elem[i] * scale + tail_addend[i];
     }
   }
-
   __syncthreads();
 
   if (threadIdx.x == 0) {
@@ -174,12 +183,11 @@ __global__ RETURN_VOID_IF_HALF MaskAndScaleGpu(uint64_t seed,
   using MaskT = typename std::aligned_storage<sizeof(int8_t) * PackHalfSize,
                                               sizeof(int8_t) * PackHalfSize>::type;
 
-  float4 rand_uniform;
+  RandPack4 rand_uniform_pack4;
   half2 h2_scale = __float2half2_rn(scale);
   for (int64_t linear_index = global_thread_id * PackHalfSize; linear_index < elem_cnt;
        linear_index += gridDim.x * blockDim.x * PackHalfSize) {
-    rand_uniform = curand_uniform4(&state);
-
+    rand_uniform_pack4.storage = curand_uniform4(&state);
     const LoadT* x_load = reinterpret_cast<const LoadT*>(x + linear_index);
     H2Pack x_vec{};
     x_vec.storage = *x_load;
@@ -188,15 +196,15 @@ __global__ RETURN_VOID_IF_HALF MaskAndScaleGpu(uint64_t seed,
     half2 y_vec[PackHalf2Size];
     half2 one_or_zero_h2[PackHalf2Size];
 
-    mask_vec[0] = (&rand_uniform.x)[0] > rate;
+    mask_vec[0] = rand_uniform_pack4.elem[0] > rate;
     one_or_zero_h2[0].x = mask_vec[0];
-    mask_vec[1] = (&rand_uniform.y)[1] > rate;
+    mask_vec[1] = rand_uniform_pack4.elem[1] > rate;
     one_or_zero_h2[0].y = mask_vec[1];
     y_vec[0] = __hmul2(__hmul2(x_vec.h2[0], one_or_zero_h2[0]), h2_scale);
 
-    mask_vec[2] = (&rand_uniform.z)[2] > rate;
+    mask_vec[2] = rand_uniform_pack4.elem[2] > rate;
     one_or_zero_h2[1].x = mask_vec[2];
-    mask_vec[3] = (&rand_uniform.w)[3] > rate;
+    mask_vec[3] = rand_uniform_pack4.elem[3] > rate;
     one_or_zero_h2[1].y = mask_vec[3];
     y_vec[1] = __hmul2(__hmul2(x_vec.h2[1], one_or_zero_h2[1]), h2_scale);
 
@@ -205,11 +213,13 @@ __global__ RETURN_VOID_IF_HALF MaskAndScaleGpu(uint64_t seed,
   }
 
   if (tail && global_thread_id < n_tail && global_thread_id == 0) {
-    rand_uniform = curand_uniform4(&state);
+    half half_scale = __float2half_rn(scale);
+    rand_uniform_pack4.storage = curand_uniform4(&state);
 #pragma unroll
     for (int i = 0; i < n_tail; i++) {
-      tail_mask[i] = (&rand_uniform.x)[i] > rate;
-      tail_y[i] = __hmul(__hmul(tail_x[i], tail_mask[i]), scale);
+      rand_uniform_pack4.elem[i] = rand_uniform_pack4.elem[i] > rate;
+      tail_mask[i] = rand_uniform_pack4.elem[i];
+      tail_y[i] = tail_x[i] * static_cast<half>(rand_uniform_pack4.elem[i]) * half_scale;
     }
   }
 
@@ -237,12 +247,11 @@ __global__ RETURN_VOID_IF_HALF MaskAndScaleAddGpu(
   using MaskT = typename std::aligned_storage<sizeof(int8_t) * PackHalfSize,
                                               sizeof(int8_t) * PackHalfSize>::type;
 
-  float4 rand_uniform;
+  RandPack4 rand_uniform_pack4;
   half2 h2_scale = __float2half2_rn(scale);
   for (int64_t linear_index = global_thread_id * PackHalfSize; linear_index < elem_cnt;
        linear_index += gridDim.x * blockDim.x * PackHalfSize) {
-    rand_uniform = curand_uniform4(&state);
-
+    rand_uniform_pack4.storage = curand_uniform4(&state);
     const LoadT* x_load = reinterpret_cast<const LoadT*>(x + linear_index);
     H2Pack x_vec{};
     x_vec.storage = *x_load;
@@ -255,16 +264,16 @@ __global__ RETURN_VOID_IF_HALF MaskAndScaleAddGpu(
     half2 y_vec[PackHalf2Size];
     half2 one_or_zero_h2[PackHalf2Size];
 
-    mask_vec[0] = (&rand_uniform.x)[0] > rate;
+    mask_vec[0] = rand_uniform_pack4.elem[0] > rate;
     one_or_zero_h2[0].x = mask_vec[0];
-    mask_vec[1] = (&rand_uniform.y)[1] > rate;
+    mask_vec[1] = rand_uniform_pack4.elem[1] > rate;
     one_or_zero_h2[0].y = mask_vec[1];
     y_vec[0] =
         __hadd2(__hmul2(__hmul2(x_vec.h2[0], one_or_zero_h2[0]), h2_scale), addend_vec.h2[0]);
 
-    mask_vec[2] = (&rand_uniform.z)[2] > rate;
+    mask_vec[2] = rand_uniform_pack4.elem[2] > rate;
     one_or_zero_h2[1].x = mask_vec[2];
-    mask_vec[3] = (&rand_uniform.w)[3] > rate;
+    mask_vec[3] = rand_uniform_pack4.elem[3] > rate;
     one_or_zero_h2[1].y = mask_vec[3];
     y_vec[1] =
         __hadd2(__hmul2(__hmul2(x_vec.h2[1], one_or_zero_h2[1]), h2_scale), addend_vec.h2[0]);
@@ -274,16 +283,17 @@ __global__ RETURN_VOID_IF_HALF MaskAndScaleAddGpu(
   }
 
   if (tail && global_thread_id < n_tail && global_thread_id == 0) {
-    rand_uniform = curand_uniform4(&state);
+    half half_scale = __float2half_rn(scale);
+    rand_uniform_pack4.storage = curand_uniform4(&state);
 #pragma unroll
     for (int i = 0; i < n_tail; i++) {
-      tail_mask[i] = (&rand_uniform.x)[i] > rate;
-      tail_y[i] = __hmul(__hmul(tail_x[i], tail_mask[i]), scale) + addend[i];
+      rand_uniform_pack4.elem[i] = rand_uniform_pack4.elem[i] > rate;
+      tail_mask[i] = rand_uniform_pack4.elem[i];
+      tail_y[i] =
+          tail_x[i] * static_cast<half>(rand_uniform_pack4.elem[i]) * half_scale + addend[i];
     }
   }
-
   __syncthreads();
-
   if (threadIdx.x == 0) {
     int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
     if (new_counter == gridDim.x) {
@@ -307,18 +317,17 @@ __global__ RETURN_VOID_IF_DOUBLE MaskAndScaleGpu(uint64_t seed,
                                               sizeof(double) * PackDoubleSize>::type;
   using MaskT = typename std::aligned_storage<sizeof(int8_t) * PackDoubleSize,
                                               sizeof(int8_t) * PackDoubleSize>::type;
-
-  float4 rand_uniform;
+  RandPack4 rand_uniform_pack4;
   bool grid_loop_rand_state = 0;
 
   for (int64_t linear_index = global_thread_id * PackDoubleSize; linear_index < elem_cnt;
        linear_index += gridDim.x * blockDim.x * PackDoubleSize) {
     if (grid_loop_rand_state == 0) {
-      rand_uniform = curand_uniform4(&state);
+      rand_uniform_pack4.storage = curand_uniform4(&state);
     } else {
       // Use the last two random numbers we generated in previous iteration.
-      rand_uniform.x = rand_uniform.z;
-      rand_uniform.y = rand_uniform.w;
+      rand_uniform_pack4.elem[0] = rand_uniform_pack4.elem[2];
+      rand_uniform_pack4.elem[1] = rand_uniform_pack4.elem[3];
       grid_loop_rand_state ^= 1;
     }
     const LoadT* x_load = reinterpret_cast<const LoadT*>(x + linear_index);
@@ -329,7 +338,7 @@ __global__ RETURN_VOID_IF_DOUBLE MaskAndScaleGpu(uint64_t seed,
     double y_vec[PackDoubleSize];
 #pragma unroll
     for (int i = 0; i < 2; i++) {
-      mask_vec[i] = (&rand_uniform.x)[i] > rate;
+      mask_vec[i] = rand_uniform_pack4.elem[i];
       y_vec[i] = x_vec.elem[i] * mask_vec[i] * scale;
     }
 
@@ -339,10 +348,11 @@ __global__ RETURN_VOID_IF_DOUBLE MaskAndScaleGpu(uint64_t seed,
 
   if (tail && global_thread_id < n_tail && global_thread_id == 0) {
     float single_rand_uniform = curand_uniform(&state);
+    single_rand_uniform = single_rand_uniform > rate;
 #pragma unroll
     for (int i = 0; i < n_tail; i++) {
-      tail_mask[i] = single_rand_uniform > rate;
-      tail_y[i] = tail_x[i] * tail_mask[i] * scale;
+      tail_mask[i] = single_rand_uniform;
+      tail_y[i] = tail_x[i] * single_rand_uniform * scale;
     }
   }
   __syncthreads();
@@ -368,17 +378,17 @@ __global__ RETURN_VOID_IF_DOUBLE MaskAndScaleAddGpu(
   using MaskT = typename std::aligned_storage<sizeof(int8_t) * PackDoubleSize,
                                               sizeof(int8_t) * PackDoubleSize>::type;
 
-  float4 rand_uniform;
+  RandPack4 rand_uniform_pack4;
   bool grid_loop_rand_state = 0;
 
   for (int64_t linear_index = global_thread_id * PackDoubleSize; linear_index < elem_cnt;
        linear_index += gridDim.x * blockDim.x * PackDoubleSize) {
     if (grid_loop_rand_state == 0) {
-      rand_uniform = curand_uniform4(&state);
+      rand_uniform_pack4.storage = curand_uniform4(&state);
     } else {
       // Use the last two random numbers we generated in previous iteration.
-      rand_uniform.x = rand_uniform.z;
-      rand_uniform.y = rand_uniform.w;
+      rand_uniform_pack4.elem[0] = rand_uniform_pack4.elem[2];
+      rand_uniform_pack4.elem[1] = rand_uniform_pack4.elem[3];
       grid_loop_rand_state ^= 1;
     }
     const LoadT* x_load = reinterpret_cast<const LoadT*>(x + linear_index);
@@ -393,7 +403,8 @@ __global__ RETURN_VOID_IF_DOUBLE MaskAndScaleAddGpu(
     double y_vec[PackDoubleSize];
 #pragma unroll
     for (int i = 0; i < PackDoubleSize; i++) {
-      mask_vec[i] = (&rand_uniform.x)[i] > rate;
+      rand_uniform_pack4.elem[i] = rand_uniform_pack4.elem[i] > rate;
+      mask_vec[i] = rand_uniform_pack4.elem[i];
       y_vec[i] = x_vec.elem[i] * mask_vec[i] * scale + addend_vec.elem[i];
     }
 
@@ -402,10 +413,11 @@ __global__ RETURN_VOID_IF_DOUBLE MaskAndScaleAddGpu(
   }
   if (tail && global_thread_id < n_tail && global_thread_id == 0) {
     float single_rand_uniform = curand_uniform(&state);
+    single_rand_uniform = single_rand_uniform > rate;
 #pragma unroll
     for (int i = 0; i < n_tail; i++) {
-      tail_mask[i] = single_rand_uniform > rate;
-      tail_y[i] = tail_x[i] * tail_mask[i] * scale + addend[i];
+      tail_mask[i] = single_rand_uniform;
+      tail_y[i] = tail_x[i] * single_rand_uniform * scale + addend[i];
     }
   }
   __syncthreads();
@@ -432,17 +444,20 @@ template<typename T>
 void MaskAndScale(DeviceCtx* ctx, uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                   const int64_t elem_cnt, float rate, float scale, const T* x, int8_t* mask, T* y) {
   unsigned int grid_size = ComputeGridSize<4>(kBlockSize, elem_cnt);
-  uint64_t counter_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize;
   constexpr int pack_size = cuda::elementwise::PackSize<T>();
   const int64_t pack_num = elem_cnt / pack_size;
   const int64_t tail_offset = pack_num * pack_size;
   const int64_t n_tail = pack_num - tail_offset;
   const bool tail = n_tail > 0 ? true : false;
+  uint64_t counter_offset = 0;
   if (tail) {
+    // If tail, we need generate randnum one more time, so here we add another `1`.
+    counter_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1 + 1) * kVecSize;
     MaskAndScaleGpu<T, true><<<grid_size, kBlockSize, 0, ctx->cuda_stream()>>>(
         seed, cuda_gen_state, counter_offset, elem_cnt, rate, scale, n_tail, x, mask, y,
         (x + tail_offset), (mask + tail_offset), (y + tail_offset));
   } else {
+    counter_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize;
     MaskAndScaleGpu<T, false><<<grid_size, kBlockSize, 0, ctx->cuda_stream()>>>(
         seed, cuda_gen_state, counter_offset, elem_cnt, rate, scale, n_tail, x, mask, y,
         (x + tail_offset), (mask + tail_offset), (y + tail_offset));
@@ -454,17 +469,20 @@ void MaskAndScaleAdd(DeviceCtx* ctx, uint64_t seed, one::CUDAGeneratorState* cud
                      const int64_t elem_cnt, float rate, float scale, const T* x, int8_t* mask,
                      const T* addend, T* y) {
   unsigned int grid_size = ComputeGridSize<4>(kBlockSize, elem_cnt);
-  uint64_t counter_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize;
   constexpr int pack_size = cuda::elementwise::PackSize<T>();
   const int64_t pack_num = elem_cnt / pack_size;
   const int64_t tail_offset = pack_num * pack_size;
   const int64_t n_tail = pack_num - tail_offset;
   const bool tail = n_tail > 0 ? true : false;
+  uint64_t counter_offset = 0;
   if (tail) {
+    // If tail, we need generate randnum one more time, so here we add another `1`.
+    counter_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1 + 1) * kVecSize;
     MaskAndScaleAddGpu<T, true><<<grid_size, kBlockSize, 0, ctx->cuda_stream()>>>(
         seed, cuda_gen_state, counter_offset, elem_cnt, rate, scale, n_tail, x, mask, addend, y,
         (x + tail_offset), (mask + tail_offset), (addend + tail_offset), (y + tail_offset));
   } else {
+    counter_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize;
     MaskAndScaleAddGpu<T, false><<<grid_size, kBlockSize, 0, ctx->cuda_stream()>>>(
         seed, cuda_gen_state, counter_offset, elem_cnt, rate, scale, n_tail, x, mask, addend, y,
         (x + tail_offset), (mask + tail_offset), (addend + tail_offset), (y + tail_offset));
