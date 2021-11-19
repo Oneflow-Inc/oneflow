@@ -39,8 +39,10 @@ class LazyJobStreamType final : public StreamType {
                              InstructionStatusBuffer* status_buffer) const override;
   void DeleteInstructionStatus(const Stream& stream,
                                InstructionStatusBuffer* status_buffer) const override;
-  bool QueryInstructionStatusDone(const Stream& stream,
-                                  const InstructionStatusBuffer& status_buffer) const override;
+  bool QueryInstructionStatusLaunched(const Stream& stream,
+                                      const InstructionStatusBuffer& status_buffer) const override;
+  bool QueryInstructionStatusDoneAfterLaunched(
+      const Stream& stream, const InstructionStatusBuffer& status_buffer) const override;
   void Compute(Instruction* instruction) const override;
   bool OnSchedulerThread() const override { return false; }
   bool SupportingTransportInstructions() const override { return false; }
