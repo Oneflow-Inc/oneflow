@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -108,16 +109,16 @@ class NmsGpuKernel final : public user_op::OpKernel {
     int num_keep = ctx->Attr<int>("keep_n");
     if (num_keep <= 0 || num_keep > num_boxes) { num_keep = num_boxes; }
     const int num_blocks = CeilDiv<int>(num_boxes, kBlockSize);
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), suppression_mask, 0,
+    Memset<DeviceType::kGPU>(ctx->stream(), suppression_mask, 0,
                              num_boxes * num_blocks * sizeof(int64_t));
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), keep, 0, num_boxes * sizeof(int8_t));
+    Memset<DeviceType::kGPU>(ctx->stream(), keep, 0, num_boxes * sizeof(int8_t));
 
     dim3 blocks(num_blocks, num_blocks);
     dim3 threads(kBlockSize);
-    CalcSuppressionBitmaskMatrix<<<blocks, threads, 0, ctx->device_ctx()->cuda_stream()>>>(
+    CalcSuppressionBitmaskMatrix<<<blocks, threads, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         num_boxes, ctx->Attr<float>("iou_threshold"), boxes, suppression_mask);
     ScanSuppression<<<1, num_blocks, num_blocks * sizeof(int64_t),
-                      ctx->device_ctx()->cuda_stream()>>>(num_boxes, num_blocks, num_keep,
+                      ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(num_boxes, num_blocks, num_keep,
                                                           suppression_mask, keep);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
