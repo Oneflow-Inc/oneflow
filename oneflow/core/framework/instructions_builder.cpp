@@ -1081,8 +1081,12 @@ Maybe<void> InstructionsBuilder::TensorView(
   const auto& parallel_desc = GetParallelDesc(tensor);
   LocalDepObject* compute_local_dep_object = JUST(tensor->compute_local_dep_object());
   LocalDepObject* view_compute_local_dep_object = JUST(view_tensor->compute_local_dep_object());
+
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
   const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object = JUST(view_tensor->eager_blob_object());
+
+  view_eager_blob_object->TryInitBlob();
+  view_eager_blob_object->set_is_shape_synced(true);
       
   const auto& phy_instr_operand = std::make_shared<vm::TensorViewOperand>(
       eager_blob_object, view_eager_blob_object, compute_local_dep_object, view_compute_local_dep_object);

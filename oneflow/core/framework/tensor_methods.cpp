@@ -64,9 +64,6 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
       tensor_meta, JUST(input->tensor_storage()), input->requires_grad(),
       /*is_leaf=*/!input->requires_grad());
   tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()));
-
-  JUST(JUST(tensor_impl->eager_blob_object())->TryInitBlob());
-  JUST(tensor_impl->eager_blob_object())->set_is_shape_synced(true);
   JUST(tensor_impl->eager_blob_object())->set_last_used_device(JUST(input->device()));
   std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
 
