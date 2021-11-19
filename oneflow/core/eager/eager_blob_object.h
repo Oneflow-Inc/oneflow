@@ -35,14 +35,13 @@ class TensorBuffer {
   size_t blob_bytes() const { return blob_bytes_; }
 
   char* blob_dptr() { return blob_dptr_.get(); }
-  
+
   MemoryAllocator* non_pod_allocator() { return non_pod_allocator_.get(); }
 
   void set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>&& blob_dptr, size_t bytes) {
     blob_dptr_ = std::move(blob_dptr);
     blob_bytes_ = bytes;
   }
-
 
  private:
   size_t blob_bytes_;
@@ -72,12 +71,8 @@ class EagerBlobObject final : public BlobObject {
 
   BlobDesc* mut_blob_desc() override { return &blob_desc_; }
 
-  const Blob& blob() const override {
-    return *blob_;
-  }
-  Blob* mut_blob() override {
-    return blob_.get();
-  }
+  const Blob& blob() const override { return *blob_; }
+  Blob* mut_blob() override { return blob_.get(); }
 
   Maybe<void> TryInitBlob() override;
   Maybe<void> InitBlob();

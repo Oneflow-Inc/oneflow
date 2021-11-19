@@ -45,8 +45,7 @@ class CpuTensorViewInstructionType final : public TensorViewInstructionType {
 
   using stream_type = vm::CpuStreamType;
 };
-COMMAND(vm::RegisterInstructionType<CpuTensorViewInstructionType>(
-    "cpu.TensorView"));
+COMMAND(vm::RegisterInstructionType<CpuTensorViewInstructionType>("cpu.TensorView"));
 
 }  // namespace vm
 }  // namespace oneflow

@@ -23,34 +23,27 @@ namespace oneflow {
 namespace vm {
 
 void TensorViewOperand::ForEachConstMirroredObject(
-    const std::function<void(MirroredObject* compute)>& DoEach) const {
-}
+    const std::function<void(MirroredObject* compute)>& DoEach) const {}
 
 void TensorViewOperand::ForEachMutMirroredObject(
     const std::function<void(MirroredObject* compute)>& DoEach) const {
-  { DoEach(compute_local_dep_object_->mut_mirrored_object()); }
+  DoEach(compute_local_dep_object_->mut_mirrored_object());
 }
 
 void TensorViewOperand::ForEachMut2MirroredObject(
-    const std::function<void(MirroredObject* compute)>& DoEach) const {
-}
+    const std::function<void(MirroredObject* compute)>& DoEach) const {}
 
 void TensorViewOperand::ForEachConstMirroredObject(
-    const std::function<void(MirroredObject* compute, MirroredObject* compute2)>& DoEach) const {
-}
+    const std::function<void(MirroredObject* compute, MirroredObject* compute2)>& DoEach) const {}
 
 void TensorViewOperand::ForEachMutMirroredObject(
     const std::function<void(MirroredObject* compute, MirroredObject* compute2)>& DoEach) const {
-  {
-    DoEach(
-      compute_local_dep_object_->mut_mirrored_object(),
-      view_compute_local_dep_object_->mut_mirrored_object()); 
-  }
+  DoEach(compute_local_dep_object_->mut_mirrored_object(),
+         view_compute_local_dep_object_->mut_mirrored_object());
 }
 
 void TensorViewOperand::ForEachMut2MirroredObject(
-    const std::function<void(MirroredObject* compute, MirroredObject* compute2)>& DoEach) const {
-}
+    const std::function<void(MirroredObject* compute, MirroredObject* compute2)>& DoEach) const {}
 
 }  // namespace vm
 }  // namespace oneflow

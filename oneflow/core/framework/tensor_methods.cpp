@@ -46,17 +46,15 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
   return contig_if_nonempty;
 }
 
-
 namespace view {
 
-
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
-                         int64_t storage_offset) {
+                        int64_t storage_offset) {
   /**
-   * This function provides basic view capabilities which 
-   * accept input tensor with target shape, and return viewed tensor. 
-   * 
-   * The viewed tensor shared memory with input tensor, and both of 
+   * This function provides basic view capabilities which
+   * accept input tensor with target shape, and return viewed tensor.
+   *
+   * The viewed tensor shared memory with input tensor, and both of
    * them are memory contiguous, but has different shapes/strides.
    */
   Stride target_strides(target_shape);
@@ -67,24 +65,19 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
       std::make_shared<Stride>(target_strides), storage_offset);
 
   JUST(input->has_eager_blob_object());
+  // new output tensor
   const auto& blob_object = JUST(input->eager_blob_object());
-
   auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(
       tensor_meta, JUST(input->tensor_storage()), input->requires_grad(),
       /*is_leaf=*/!input->requires_grad());
   tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()));
-  JUST(tensor_impl->eager_blob_object())->set_last_used_device(JUST(input->device()));
   std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
-
+  // run tensor view instruction
   PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->TensorView(
-      JUST(input->AsMirroredTensor()), 
-      JUST(output->AsMirroredTensor())
-    );
+    return builder->TensorView(JUST(input->AsMirroredTensor()), JUST(output->AsMirroredTensor()));
   });
   return output;
 }
-
 
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) {
   if (!(input->is_eager() && input->is_local())) {
@@ -136,7 +129,6 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) 
   }
   return output;
 }
-
 
 }  // namespace view
 }  // namespace one

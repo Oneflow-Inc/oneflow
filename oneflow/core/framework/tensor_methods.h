@@ -33,7 +33,6 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
 
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape);
 
-
 }  // namespace view
 }  // namespace one
 }  // namespace oneflow

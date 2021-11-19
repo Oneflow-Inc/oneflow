@@ -1072,7 +1072,6 @@ const std::shared_ptr<const ParallelDesc>& GetParallelDesc(
 
 }  // namespace
 
-      
 template<typename T>
 Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_tensor) {
   /**
@@ -1082,11 +1081,14 @@ Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_t
   const auto& parallel_desc = GetParallelDesc(input_tensor);
   LocalDepObject* local_dep_object = JUST(input_tensor->compute_local_dep_object());
   LocalDepObject* view_local_dep_object = JUST(view_tensor->compute_local_dep_object());
-  const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(input_tensor->eager_blob_object());
-  const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object = JUST(view_tensor->eager_blob_object());
+  const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object =
+      JUST(input_tensor->eager_blob_object());
+  const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object =
+      JUST(view_tensor->eager_blob_object());
   // init view blob (with empty data pointer)
   view_eager_blob_object->TryInitBlob();
   view_eager_blob_object->set_is_shape_synced(true);
+  view_eager_blob_object->set_last_used_device(CHECK_JUST(input_tensor->device()));
   // prepare instruction operand
   const auto& phy_instr_operand = std::make_shared<vm::TensorViewOperand>(
       eager_blob_object, view_eager_blob_object, local_dep_object, view_local_dep_object);
@@ -1097,18 +1099,11 @@ Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_t
   // assign the data pointer to output view blob
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
-
 }
 
 template Maybe<void> InstructionsBuilder::TensorView(
     const std::shared_ptr<one::MirroredTensor> input_tensor,
-    const std::shared_ptr<one::MirroredTensor> view_tensor
-);
-
-template Maybe<void> InstructionsBuilder::TensorView(
-    const one::EagerMirroredTensorImpl* input_tensor, 
-    const one::EagerMirroredTensorImpl* view_tensor
-);
+    const std::shared_ptr<one::MirroredTensor> view_tensor);
 
 template<typename T>
 Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(

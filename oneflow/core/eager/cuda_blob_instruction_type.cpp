@@ -49,8 +49,7 @@ class GpuTensorViewInstructionType final : public TensorViewInstructionType {
 
   using stream_type = vm::CudaStreamType;
 };
-COMMAND(vm::RegisterInstructionType<GpuTensorViewInstructionType>(
-    "gpu.TensorView"));
+COMMAND(vm::RegisterInstructionType<GpuTensorViewInstructionType>("gpu.TensorView"));
 
 class GpuRecordEventInstructionType : public RecordEventInstructionType {
  public:

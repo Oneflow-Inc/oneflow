@@ -37,15 +37,13 @@ class EagerBlobObject;
 class TensorViewOperand : public PhyInstrOperand {
  public:
   TensorViewOperand(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-                                 const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object,
-                                 LocalDepObject* compute_local_dep_object,
-                                 LocalDepObject* view_compute_local_dep_object
-                                 )
+                    const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object,
+                    LocalDepObject* compute_local_dep_object,
+                    LocalDepObject* view_compute_local_dep_object)
       : eager_blob_object_(eager_blob_object),
         view_eager_blob_object_(view_eager_blob_object),
         compute_local_dep_object_(compute_local_dep_object),
-        view_compute_local_dep_object_(view_compute_local_dep_object)
-        {}
+        view_compute_local_dep_object_(view_compute_local_dep_object) {}
   ~TensorViewOperand() = default;
 
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object() const {
@@ -67,7 +65,8 @@ class TensorViewOperand : public PhyInstrOperand {
   void ForEachConstMirroredObject(
       const std::function<void(MirroredObject* compute, MirroredObject* compute2)>&) const;
 
-  void ForEachMutMirroredObject(const std::function<void(MirroredObject* compute, MirroredObject* compute2)>&) const;
+  void ForEachMutMirroredObject(
+      const std::function<void(MirroredObject* compute, MirroredObject* compute2)>&) const;
 
   void ForEachMut2MirroredObject(
       const std::function<void(MirroredObject* compute, MirroredObject* compute2)>&) const;
@@ -78,7 +77,6 @@ class TensorViewOperand : public PhyInstrOperand {
   LocalDepObject* compute_local_dep_object_;
   LocalDepObject* view_compute_local_dep_object_;
 };
-
 
 }  // namespace vm
 }  // namespace oneflow
