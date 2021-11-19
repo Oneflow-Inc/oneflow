@@ -95,6 +95,7 @@ class NmsGpuKernel final : public user_op::OpKernel {
   ~NmsGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* boxes_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* keep_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
