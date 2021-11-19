@@ -48,18 +48,6 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
 
 namespace view {
 
-// Maybe<void> SyncAccessTensorWithTimeOut(
-//     const std::shared_ptr<Tensor>& tensor,
-//     const std::shared_ptr<std::function<void(uint64_t)>>& callback, const std::string& modifier) {
-//   return SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-//     return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-//       return builder->SyncAccessBlobByCallback(JUST(tensor->AsMirroredTensor()), sc, callback,
-//                                                modifier);
-//     });
-//   });
-// }
-
-
 Maybe<void> SyncAccessTensorWithTimeOut(
     const std::shared_ptr<Tensor>& tensor,
     const std::shared_ptr<Tensor>& view_tensor,
@@ -97,26 +85,6 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   JUST(tensor_impl->eager_blob_object())->set_is_shape_synced(true);
   JUST(tensor_impl->eager_blob_object())->set_last_used_device(JUST(input->device()));
   std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
-
-  // // this callback get input tensor's data pointer
-  // const void* input_ptr = nullptr;
-  // const auto& callback =
-  //     std::function<void(uint64_t)>([&](uint64_t of_blob_ptr) {
-  //       auto* eager_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  //       input_ptr = eager_blob->blob().dptr();
-  //     });
-  // JUST(SyncAccessTensorWithTimeOut(input, callback, "const"));
-  
-  // // this callback reset output tensor's data pointer
-  // const auto& callback2 =
-  //     std::function<void(uint64_t)>([&](uint64_t of_blob_ptr) {
-  //       auto* eager_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  //       if (!(eager_blob->blob().dptr())) {
-  //         int64_t storage_offset_bytes = storage_offset * GetSizeOfDataType(eager_blob->blob().data_type());
-  //         eager_blob->mut_blob()->reset_dptr((char*)input_ptr + storage_offset_bytes);
-  //       }
-  //     });
-  // JUST(SyncAccessTensorWithTimeOut(output, callback2, "mut")); 
 
   const auto& callback =
       std::function<void(uint64_t, uint64_t)>([&](uint64_t of_blob_ptr, uint64_t of_blob_ptr2) {

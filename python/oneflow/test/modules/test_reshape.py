@@ -33,7 +33,7 @@ def _test_reshape(test_case, device):
         [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
     ).astype(np.float32)
     input = flow.tensor(x, dtype=flow.float32, device=flow.device(device))
-    of_shape = flow.reshape(input, shape=[2, 2, 2, -1]).shape
+    of_shape = flow.reshape(input, shape=[2, 2, 2, -1]).numpy().shape
     np_shape = (2, 2, 2, 2)
     test_case.assertTrue(np.array_equal(of_shape, np_shape))
 
@@ -86,10 +86,10 @@ class TestModule(flow.unittest.TestCase):
     def test_reshape(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
+            _test_reshape_backward,
             _test_reshape,
-            # _test_reshape_tuple,
-            # _test_reshape_backward,
-            # _test_reshape_scalar,
+            _test_reshape_tuple,
+            _test_reshape_scalar,
         ]
         # arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["device"] = ["cpu"]
