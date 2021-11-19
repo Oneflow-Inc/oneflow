@@ -48,18 +48,6 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
 
 namespace view {
 
-Maybe<void> SyncAccessTensorWithTimeOut(
-    const std::shared_ptr<Tensor>& tensor,
-    const std::shared_ptr<Tensor>& view_tensor
-  ) {
-    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->TensorView(
-        JUST(tensor->AsMirroredTensor()), 
-        JUST(view_tensor->AsMirroredTensor())
-      );
-    });
-}
-
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                          const Stride& target_strides, int64_t storage_offset) {
 
@@ -81,7 +69,13 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   JUST(tensor_impl->eager_blob_object())->set_is_shape_synced(true);
   JUST(tensor_impl->eager_blob_object())->set_last_used_device(JUST(input->device()));
   std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
-  JUST(SyncAccessTensorWithTimeOut(input, output));
+
+  PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    return builder->TensorView(
+      JUST(input->AsMirroredTensor()), 
+      JUST(output->AsMirroredTensor())
+    );
+  });
   return output;
 }
 
