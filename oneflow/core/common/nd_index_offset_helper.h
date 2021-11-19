@@ -21,6 +21,47 @@ limitations under the License.
 
 namespace oneflow {
 
+struct fast_divmod {
+  OF_DEVICE_FUNC fast_divmod(int d = 1) {
+    d_ = d == 0 ? 1 : d;
+    // ORT_ENFORCE(d_ >= 1 && d_ <= static_cast<uint32_t>(std::numeric_limits<int>::max()));
+
+    for (l_ = 0; l_ < 32; l_++)
+      if ((1U << l_) >= d_) break;
+
+    uint64_t one = 1;
+    uint64_t m = ((one << 32) * ((one << l_) - d_)) / d_ + 1;
+    M_ = static_cast<uint32_t>(m);
+    // according to paper, the value of m' should fit in a unsigned integer.
+    // ORT_ENFORCE(M_ > 0 && M_ == m);
+  }
+
+  OF_DEVICE_FUNC int div(int n) const {
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+    uint32_t t = __umulhi(M_, n);
+    return (t + n) >> l_;
+#else
+    // Using uint64_t for t, then t + n won't overflow.
+    uint64_t t = ((uint64_t)M_ * n) >> 32;
+    return static_cast<int>((t + n) >> l_);
+#endif
+  }
+
+  OF_DEVICE_FUNC int mod(int n) const {
+    return n - div(n) * d_;
+  }
+
+  OF_DEVICE_FUNC void divmod(int n, int& q, int& r) const {
+    q = div(n);
+    r = n - q * d_;
+  }
+
+  uint32_t d_;  // divisor
+  uint32_t M_;  // m' in the paper.
+  uint32_t l_;  // l_ = ceil(log2(d_))
+};
+
+
 template<typename T, int N>
 class NdIndexOffsetHelper {
  public:
@@ -31,18 +72,21 @@ class NdIndexOffsetHelper {
     static_assert(n <= N, "");
     T dims_arr[n] = {d0, static_cast<T>(dims)...};
     InitStrides(dims_arr, n);
+    InitDiv(N);
   }
 
-  OF_DEVICE_FUNC explicit NdIndexOffsetHelper(const T* dims) { InitStrides(dims, N); }
+  OF_DEVICE_FUNC explicit NdIndexOffsetHelper(const T* dims) { InitStrides(dims, N); InitDiv(N);}
 
   template<typename U>
   OF_DEVICE_FUNC explicit NdIndexOffsetHelper(const U* dims) {
     T dims_arr[N];
     for (int i = 0; i < N; ++i) { dims_arr[i] = dims[i]; }
     InitStrides(dims_arr, N);
+    InitDiv(N);
   }
 
-  OF_DEVICE_FUNC explicit NdIndexOffsetHelper(const T* dims, int n) { InitStrides(dims, n); }
+  OF_DEVICE_FUNC explicit NdIndexOffsetHelper(const T* dims, int n) { InitStrides(dims, n); 
+  InitDiv(N);}
 
   ~NdIndexOffsetHelper() = default;
 
@@ -104,7 +148,8 @@ class NdIndexOffsetHelper {
 #pragma unroll
 #endif
     for (int i = 0; i < n; ++i) {
-      const T idx = remaining / stride_[i];
+      // const T idx = remaining / stride_[i];
+      const T idx = div[i].div(remaining); 
       index[i] = idx;
       remaining = remaining - idx * stride_[i];
     }
@@ -120,7 +165,8 @@ class NdIndexOffsetHelper {
 #pragma unroll
 #endif
     for (int i = 0; i < n - 1; ++i) {
-      const T idx = remaining / stride_[i];
+      // const T idx = remaining / stride_[i];
+      const T idx = div[i].div(remaining); 
       *index[i] = idx;
       remaining = remaining - idx * stride_[i];
     }
@@ -139,7 +185,14 @@ class NdIndexOffsetHelper {
     for (int i = n - 2; i >= 0; --i) { stride_[i] = dims[i + 1] * stride_[i + 1]; }
   }
 
+  OF_DEVICE_FUNC void InitDiv(const int n) {
+    for(int i = n; i < N; ++i){
+      div[i] = fast_divmod(stride_[i]); 
+    }
+  }
+
   T stride_[N];
+  fast_divmod div[N]; 
 };
 
 }  // namespace oneflow
