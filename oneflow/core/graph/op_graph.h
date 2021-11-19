@@ -133,7 +133,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   Maybe<void> Init(const Job& job);
 
   // Print the graph with SBP in order
-  void PrintSBPGraphDebugInfo();
+  void PrintSBPGraphDebugInfo() const;
 
  private:
   friend class auto_parallel::SbpConstructor;
