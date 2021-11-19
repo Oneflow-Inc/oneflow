@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_KERNEL_NEW_KERNEL_UTIL_H_
 
 #include "oneflow/core/kernel/util/interface_bridge.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 
@@ -37,7 +38,7 @@ void Memcpy(ep::Stream* stream, void* dst, const void* src, size_t sz);
 template<DeviceType device_type>
 void Memset(ep::Stream* stream, void* dst, const char value, size_t sz);
 
-void WithHostBlobAndStreamSynchronizeEnv(DeviceCtx* ctx, Blob* blob,
+void WithHostBlobAndStreamSynchronizeEnv(ep::Stream* stream, Blob* blob,
                                          std::function<void(Blob*)> Callback);
 
 }  // namespace oneflow

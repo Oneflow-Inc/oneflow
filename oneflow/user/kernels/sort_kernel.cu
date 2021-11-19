@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/user/kernels/radix_sort.cuh"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -40,11 +41,11 @@ class GpuSortKernel final : public user_op::OpKernel {
     if (direction == "ASCENDING") {
       SortKeysAscending(in->dptr<T>(), instance_num, instance_size, tmp_buffer->mut_dptr<void>(),
                         tmp_buffer->shape().elem_cnt(), out->mut_dptr<T>(),
-                        ctx->device_ctx()->cuda_stream());
+                        ctx->stream()->As<ep::CudaStream>()->cuda_stream());
     } else if (direction == "DESCENDING") {
       SortKeysDescending(in->dptr<T>(), instance_num, instance_size, tmp_buffer->mut_dptr<void>(),
                          tmp_buffer->shape().elem_cnt(), out->mut_dptr<T>(),
-                         ctx->device_ctx()->cuda_stream());
+                         ctx->stream()->As<ep::CudaStream>()->cuda_stream());
     } else {
       UNIMPLEMENTED();
     }

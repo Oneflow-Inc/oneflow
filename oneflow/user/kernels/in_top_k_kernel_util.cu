@@ -49,9 +49,9 @@ __global__ void InTopkGpu(const int instance_num, const int classes_num, const T
 
 template<typename T>
 struct InTopkKernelUtil<DeviceType::kGPU, T> {
-  static void InTopk(DeviceCtx* ctx, const int instance_num, const int classes_num,
+  static void InTopk(ep::Stream* stream, const int instance_num, const int classes_num,
                      const T* targets, const float* predictions, const int k, int8_t* out) {
-    RUN_CUDA_KERNEL((InTopkGpu<T>), ctx, instance_num, instance_num, classes_num, targets,
+    RUN_CUDA_KERNEL((InTopkGpu<T>), stream, instance_num, instance_num, classes_num, targets,
                     predictions, k, out);
   }
 };
