@@ -444,22 +444,23 @@ Maybe<T*> GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type
 }  // namespace
 
 struct LocalCallOpKernelUtil final {
-  static inline void Compute(vm::Instruction* instruction) {
+  static inline Maybe<void> Compute(vm::Instruction* instruction) {
     auto* operand = LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instruction);
     operand->mut_opkernel()->composed_attrs_for_scheduler_thread()->ResetPrior(operand->attrs());
     DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
-    AllocateOutputBlobsMemory(operand, device_ctx);
+    JUST(AllocateOutputBlobsMemory(operand, device_ctx));
     if (unlikely(operand->need_temp_storage())) {
       InferTempStorageBlobDesc(operand);
-      ResetTempStorageBlob(operand);
-      TryAllocateTempStorageBlobMemory(operand, device_ctx);
+      JUST(ResetTempStorageBlob(operand));
+      JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
     }
     user_op::OpKernelState* state;
     TryInitOpKernelState(operand, device_ctx, &state);
     OpKernelCompute(operand, device_ctx, state);
     if (unlikely(operand->need_temp_storage())) {
-      DeallocateTempStorageBlobMemory(operand, device_ctx);
+      JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
     }
+    return Maybe<void>::Ok();
   }
 
   static inline LocalCallOpKernelPhyInstrOperand* GetLocalCallOpKernelPhyInstrOperand(
@@ -483,8 +484,8 @@ struct LocalCallOpKernelUtil final {
     op_infer_ctx->Update(nullptr, nullptr, nullptr);
   }
 
-  static inline void ResetTempStorageBlob(LocalCallOpKernelPhyInstrOperand* operand) {
-    operand->mut_opkernel()->mut_temp_blob_object()->InitBlob();
+  static inline Maybe<void> ResetTempStorageBlob(LocalCallOpKernelPhyInstrOperand* operand) {
+    return operand->mut_opkernel()->mut_temp_blob_object()->InitBlob();
   }
 
   static inline void TryInitOpKernelState(LocalCallOpKernelPhyInstrOperand* operand,
@@ -498,17 +499,19 @@ struct LocalCallOpKernelUtil final {
         operand->consistent_tensor_infer_result().get(), state);
   }
 
-  static inline void AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,
-                                               DeviceCtx* device_ctx) {
+  static inline Maybe<void> AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,
+                                                      DeviceCtx* device_ctx) {
     for (const auto& blob_object : *operand->outputs()) {
-      CHECK_NOTNULL(blob_object)->TryInitBlob();
-      blob_object->TryAllocateBlobBodyMemory(device_ctx);
+      CHECK_NOTNULL_OR_RETURN(blob_object);
+      JUST(blob_object->TryInitBlob());
+      JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
     }
+    return Maybe<void>::Ok();
   }
 
-  static inline void TryAllocateTempStorageBlobMemory(LocalCallOpKernelPhyInstrOperand* operand,
-                                                      DeviceCtx* device_ctx) {
-    operand->mut_opkernel()->mut_temp_blob_object()->TryAllocateBlobBodyMemory(device_ctx);
+  static inline Maybe<void> TryAllocateTempStorageBlobMemory(
+      LocalCallOpKernelPhyInstrOperand* operand, DeviceCtx* device_ctx) {
+    return operand->mut_opkernel()->mut_temp_blob_object()->TryAllocateBlobBodyMemory(device_ctx);
   }
 
   static inline void OpKernelCompute(LocalCallOpKernelPhyInstrOperand* operand,
@@ -522,9 +525,9 @@ struct LocalCallOpKernelUtil final {
     opkernel->UpdateComputeContext(nullptr, nullptr, nullptr, nullptr);
   }
 
-  static inline void DeallocateTempStorageBlobMemory(LocalCallOpKernelPhyInstrOperand* operand,
-                                                     DeviceCtx* device_ctx) {
-    operand->mut_opkernel()->mut_temp_blob_object()->DeallocateBlobDataPtr();
+  static inline Maybe<void> DeallocateTempStorageBlobMemory(
+      LocalCallOpKernelPhyInstrOperand* operand, DeviceCtx* device_ctx) {
+    return operand->mut_opkernel()->mut_temp_blob_object()->DeallocateBlobDataPtr();
   }
 };
 
@@ -533,7 +536,7 @@ void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const
 }
 
 void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
-  LocalCallOpKernelUtil::Compute(instruction);
+  CHECK_JUST(LocalCallOpKernelUtil::Compute(instruction));
 }
 
 const std::string& LocalCallOpKernelInstructionType::DebugOpTypeName(
