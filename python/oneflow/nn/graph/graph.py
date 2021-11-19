@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 from collections import OrderedDict
 from functools import partial
 from typing import Dict, Optional, Union, List
@@ -324,6 +325,12 @@ class Graph(object):
         """
         if not self._is_compiled:
             raise RuntimeError("graph must be compiled first.")
+
+        if os.path.exists(path):
+            if not os.path.isdir(path):
+                raise RuntimeError(f"{path} is not a directory.")
+        else:
+            os.mkdir(path)
 
         serialized_job = str(text_format.MessageToString(self._forward_job_proto))
         oneflow.nn.graph.SaveJobToIR(serialized_job, path)
