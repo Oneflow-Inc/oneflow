@@ -52,7 +52,7 @@ class DiagKernel final : public user_op::OpKernel {
     const T* in_buf = in->dptr<T>();
     T* out_buf = out->mut_dptr<T>();
 
-    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0, out_shape.elem_cnt() * sizeof(T));
+    Memset<device_type>(ctx->stream(), out->mut_dptr(), 0, out_shape.elem_cnt() * sizeof(T));
 
     if (in_dim == 1) {
       int32_t size = in_shape.elem_cnt();
@@ -94,7 +94,7 @@ class DiagBackwardKernel final : public user_op::OpKernel {
     T* dx_buf = dx->mut_dptr<T>();
     const T* dy_buf = dy->dptr<T>();
 
-    Memset<device_type>(ctx->device_ctx(), dx->mut_dptr<T>(), 0, dx_shape.elem_cnt() * sizeof(T));
+    Memset<device_type>(ctx->stream(), dx->mut_dptr<T>(), 0, dx_shape.elem_cnt() * sizeof(T));
 
     if (in_dim == 1) {
       dy_buf += (diagonal >= 0 ? diagonal : -diagonal * dy_shape.At(1));
@@ -112,11 +112,11 @@ class DiagBackwardKernel final : public user_op::OpKernel {
 #define REGISTER_DIAG_KERNELS(device, dtype)                                             \
   REGISTER_USER_KERNEL("diag").SetCreateFn<DiagKernel<device, dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceType() == device)                                               \
-      & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));                   \
+      && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));                  \
   REGISTER_USER_KERNEL("diag_grad")                                                      \
       .SetCreateFn<DiagBackwardKernel<device, dtype>>()                                  \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                              \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
 }  // namespace oneflow
 

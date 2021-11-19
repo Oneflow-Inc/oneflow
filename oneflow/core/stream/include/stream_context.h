@@ -30,12 +30,7 @@ class StreamContext {
   virtual ~StreamContext() = default;
 
   virtual ep::Stream* stream() = 0;
-  template<typename T>
-  T* As() {
-    return static_cast<T*>(this);
-  }
   virtual Maybe<void> AddCallback(std::function<void()> callback) = 0;
-  virtual Maybe<void> Sync() = 0;
   virtual DeviceType device_type() const = 0;
 };
 

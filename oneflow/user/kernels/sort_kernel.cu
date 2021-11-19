@@ -32,7 +32,7 @@ class GpuSortKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out->mut_dptr<T>(), in->dptr<T>(),
+    Memcpy<DeviceType::kGPU>(ctx->stream(), out->mut_dptr<T>(), in->dptr<T>(),
                              in->shape().elem_cnt() * sizeof(T));
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = in->shape().elem_cnt() / instance_size;
@@ -56,7 +56,7 @@ class GpuSortKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("sort")                                                              \
       .SetCreateFn<GpuSortKernel<dtype>>()                                                  \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                       \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))     \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))    \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                         \
         const Shape& in_shape = ctx->InputShape("in", 0);                                   \
         const int32_t instance_size = in_shape.dim_vec().back();                            \

@@ -20,16 +20,22 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace ep {
+
+class Stream;
+
+}
+
 template<DeviceType deivce_type>
 struct NewKernelUtil : public DnnIf<deivce_type>,
                        public BlasIf<deivce_type>,
                        public ArithemeticIf<deivce_type> {};
 
 template<DeviceType device_type>
-void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz);
+void Memcpy(ep::Stream* stream, void* dst, const void* src, size_t sz);
 
 template<DeviceType device_type>
-void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
+void Memset(ep::Stream* stream, void* dst, const char value, size_t sz);
 
 void WithHostBlobAndStreamSynchronizeEnv(DeviceCtx* ctx, Blob* blob,
                                          std::function<void(Blob*)> Callback);

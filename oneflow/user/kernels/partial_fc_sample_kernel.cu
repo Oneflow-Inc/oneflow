@@ -371,8 +371,8 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
       .SetCreateFn<DistributedPartialFcSampleGpuKernel<OF_PP_PAIR_FIRST(dtype_pair),             \
                                                        OF_PP_PAIR_FIRST(ltype_pair)>>()          \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                            \
-                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))     \
-                       & (user_op::HobDataType("weight", 0) == OF_PP_PAIR_SECOND(dtype_pair)))   \
+                       && (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))    \
+                       && (user_op::HobDataType("weight", 0) == OF_PP_PAIR_SECOND(dtype_pair)))  \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                               \
         const int64_t num_classes = ctx->InputTensorDesc("weight", 0).shape().At(0);             \
         const int64_t batch_size = ctx->InputTensorDesc("label", 0).shape().At(0);               \
@@ -401,14 +401,12 @@ class DistributedPartialFcSampleDisableBoxingGpuKernel final : public user_op::O
         ctx->Tensor4ArgNameAndIndex("boxing_disabled_sampled_weight_diff", 0);
     user_op::Tensor* boxing_disabled_sampled_label =
         ctx->Tensor4ArgNameAndIndex("boxing_disabled_sampled_label", 0);
-    Memcpy<DeviceType::kGPU>(ctx->device_ctx(),
-                             boxing_disabled_sampled_weight_diff->mut_dptr<void>(),
+    Memcpy<DeviceType::kGPU>(ctx->stream(), boxing_disabled_sampled_weight_diff->mut_dptr<void>(),
                              sampled_weight_diff->dptr<void>(),
                              sampled_weight_diff->shape().elem_cnt()
                                  * GetSizeOfDataType(sampled_weight_diff->data_type()));
     Memcpy<DeviceType::kGPU>(
-        ctx->device_ctx(), boxing_disabled_sampled_label->mut_dptr<void>(),
-        sampled_label->dptr<void>(),
+        ctx->stream(), boxing_disabled_sampled_label->mut_dptr<void>(), sampled_label->dptr<void>(),
         sampled_label->shape().elem_cnt() * GetSizeOfDataType(sampled_label->data_type()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -420,8 +418,8 @@ class DistributedPartialFcSampleDisableBoxingGpuKernel final : public user_op::O
           OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(ltype_pair)>>()                         \
       .SetIsMatchedHob(                                                                          \
           (user_op::HobDeviceType() == DeviceType::kGPU)                                         \
-          & (user_op::HobDataType("sampled_label", 0) == OF_PP_PAIR_SECOND(ltype_pair))          \
-          & (user_op::HobDataType("sampled_weight_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
+          && (user_op::HobDataType("sampled_label", 0) == OF_PP_PAIR_SECOND(ltype_pair))         \
+          && (user_op::HobDataType("sampled_weight_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DISTRIBUTED_PARTIAL_FC_SAMPLE_DISABLE_BOXING_GPU_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
