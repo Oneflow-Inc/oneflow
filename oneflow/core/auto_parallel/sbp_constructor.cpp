@@ -254,6 +254,42 @@ void SbpConstructor::LoadLbi2SbpEdge(const OpGraph& op_graph) {
   };
 }
 
+Maybe<void> SbpConstructor::CheckSbpAgreement(const Job& job) {
+  Job new_job;
+  new_job.CopyFrom(job);
+  OpGraph op_graph(new_job);
+  // Compare sbp in job
+  JUST(op_graph.TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
+    const std::string& op_name = op_node->op().op_name();
+    const cfg::SbpSignature& auto_parallel_sbp =
+        cfg::SbpSignature(job.job_parallel_view_conf().op_name2sbp_signature_conf().at(op_name));
+    const cfg::SbpSignature& new_sbp = cfg::SbpSignature(
+        new_job.job_parallel_view_conf().op_name2sbp_signature_conf().at(op_name));
+    CHECK_EQ_OR_RETURN(auto_parallel_sbp.bn_in_op2sbp_parallel_size(),
+                       new_sbp.bn_in_op2sbp_parallel_size());
+    for (const auto& iter : auto_parallel_sbp.bn_in_op2sbp_parallel()) {
+      cfg::SbpParallel new_sbp_parallel = new_sbp.bn_in_op2sbp_parallel().at(iter.first);
+      const std::string& error_mgs = "Op: `" + op_name + "` changed sbp from "
+                                     + SbpParallelToString(iter.second) + "(AutoParallel) to "
+                                     + SbpParallelToString(new_sbp_parallel) + "(OpGraph).";
+      if (new_sbp_parallel.has_broadcast_parallel()) {
+        CHECK_OR_RETURN(iter.second.has_broadcast_parallel()) << error_mgs;
+      } else if (new_sbp_parallel.has_partial_sum_parallel()) {
+        CHECK_OR_RETURN(iter.second.has_partial_sum_parallel()) << error_mgs;
+      } else if (new_sbp_parallel.has_split_parallel()) {
+        CHECK_OR_RETURN(iter.second.has_split_parallel()) << error_mgs;
+        CHECK_EQ_OR_RETURN(new_sbp_parallel.split_parallel().axis(),
+                           iter.second.split_parallel().axis())
+            << error_mgs;
+      } else {
+        UNIMPLEMENTED_THEN_RETURN();
+      }
+    }
+    return Maybe<void>::Ok();
+  }));
+  return Maybe<void>::Ok();
+}
+
 // Print the graph with SBP in order
 void SbpConstructor::PrintSBPGraphDebugInfo() {
   // sbp constructor information
