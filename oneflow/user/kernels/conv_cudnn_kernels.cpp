@@ -258,7 +258,7 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
       CHECK_EQ(add_to_output->data_type(), dx->data_type());
       CHECK_EQ(add_to_output->shape(), dx->shape());
       Memcpy<DeviceType::kGPU>(
-          ctx->device_ctx(), dx->mut_dptr<void>(), add_to_output->dptr<void>(),
+          ctx->stream(), dx->mut_dptr<void>(), add_to_output->dptr<void>(),
           add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       beta = CudnnSPOnePtr<T>();
     } else {

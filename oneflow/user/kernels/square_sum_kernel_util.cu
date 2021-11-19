@@ -66,18 +66,18 @@ struct SquareSumKernelUtil<DeviceType::kGPU, T> {
     const int32_t num_blocks = BlocksNum4ThreadsNum(n);
     CHECK_GE(num_blocks, 0);
     if (num_blocks == 0) {
-      Memset<DeviceType::kGPU>(ctx, y, 0, sizeof(T));
+      Memset<DeviceType::kGPU>(ctx->stream(), y, 0, sizeof(T));
     } else if (num_blocks == 1) {
       SquareSumGpu<T, true><<<1, kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
     } else {
-      Memset<DeviceType::kGPU>(ctx, y, 0, sizeof(T));
+      Memset<DeviceType::kGPU>(ctx->stream(), y, 0, sizeof(T));
       SquareSumGpu<T, false>
           <<<num_blocks, kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
     }
   }
 
   static void MultiSquareSum(DeviceCtx* ctx, const std::vector<SquareSumParam<T>>& params, T* y) {
-    Memset<DeviceType::kGPU>(ctx, y, 0, sizeof(T));
+    Memset<DeviceType::kGPU>(ctx->stream(), y, 0, sizeof(T));
     for (int64_t start = 0; start < params.size(); start += kMultiSquareSumMaxSize) {
       MultiSquareSumParams<T> gpu_params{};
       int64_t max_count = 0;
