@@ -13,14 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_API_CPP_DTYPE_H_
+#define ONEFLOW_API_CPP_DTYPE_H_
 
-#ifndef ONEFLOW_API_H_
-#define ONEFLOW_API_H_
+#include <cstdint>
+namespace oneflow_api {
 
-#include "env.h"
-#include "device.h"
-#include "shape.h"
-#include "dtype.h"
-#include "tensor.h"
+enum class DType {
+  kInvalidDataType = 0,
+  kChar = 1,
+  kFloat = 2,
+  kDouble = 3,
+  kInt8 = 4,
+  kInt32 = 5,
+  kInt64 = 6,
+  kUInt8 = 7,
+  kOFRecord = 8,
+  kFloat16 = 9,
+  kTensorBuffer = 10,
+  kBFloat16 = 11,
+  kMaxDataType = 12
+};
 
-#endif  // ONELFOW_API_H_
+}  // namespace oneflow_api
+
+#endif  // ! ONEFLOW_API_CPP_DTYPE_H_

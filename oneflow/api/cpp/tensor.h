@@ -19,6 +19,7 @@ limitations under the License.
 #include <memory>
 #include "device.h"
 #include "shape.h"
+#include "dtype.h"
 
 namespace oneflow {
 namespace one {
@@ -31,16 +32,17 @@ namespace oneflow_api {
 
 class Tensor final {
  public:
-  explicit Tensor();
-  explicit Tensor(const Device& device);
-  Tensor(const Shape& shape, const Device& device);
+  explicit Tensor(const Shape& shape = Shape(), const Device& device = Device("cpu"),
+                  const DType& dtype = DType::kFloat);
   const Shape shape() const;
   const Device device() const;
+  const DType dtype() const;
 
   void zeros_();
 
   template<typename T>
-  static Tensor from_blob(const T* blob, const Shape& shape, const Device& device);
+  static Tensor from_blob(const T* blob, const Shape& shape, const Device& device,
+                          const DType& dtype);
 
   template<typename T>
   static void to_blob(const Tensor& tensor, T* blob);

@@ -13,35 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-#include <mutex>
+#include <array>
 #include <gtest/gtest.h>
 #include "oneflow/api/cpp/api.h"
-#include "oneflow/api/cpp/device.h"
-#include "oneflow/api/cpp/env.h"
-#include "oneflow/api/cpp/tensor.h"
 
 namespace oneflow_api {
 namespace {
-std::mutex g_mutex;
 
 class EnvScope {  // NOLINT
  public:
-  EnvScope() {
-    initialize();
-    g_mutex.lock();
-  }
-  ~EnvScope() {
-    release();
-    g_mutex.unlock();
-  }
+  EnvScope() { initialize(); }
+  ~EnvScope() { release(); }
 };
 
 }  // namespace
 
-TEST(Api, init_and_release) {
-  EnvScope scope;
+EnvScope scope;
 
+TEST(Api, device) {
   auto device = Device("cpu");
   ASSERT_EQ(device.type(), "cpu");
 
@@ -57,36 +46,30 @@ TEST(Api, init_and_release) {
 }
 
 TEST(Api, tensor) {
-  EnvScope scope;
-
   const auto device = Device("cpu");
   const auto shape = Shape({16, 8, 224, 224});
+  const auto dtype = DType::kDouble;
+
   Tensor tensor;
 
-  Tensor tensor_with_device(device);
+  Tensor tensor_with_all(shape, device, dtype);
 
-  Tensor tensor_with_shape_and_device(shape, device);
+  ASSERT_EQ(tensor_with_all.shape(), shape);
+  ASSERT_EQ(tensor_with_all.device(), device);
+  ASSERT_EQ(tensor_with_all.dtype(), dtype);
 
-  ASSERT_EQ(tensor_with_shape_and_device.shape(), shape);
-  ASSERT_EQ(tensor_with_shape_and_device.device(), device);
-
-  tensor_with_shape_and_device.zeros_();
+  tensor_with_all.zeros_();
 }
 
 TEST(Api, tensor_from_blob) {
-  EnvScope scope;
+  std::array<double, 8> data{}, new_data{};
 
-  double* data = new double[8];
   for (int i = 0; i < 8; ++i) { data[i] = i; }
 
-  auto tensor = Tensor::from_blob(data, {2, 2, 2}, Device("cpu"));
+  auto tensor = Tensor::from_blob(data.data(), {2, 2, 2}, Device("cpu"), DType::kDouble);
+  Tensor::to_blob(tensor, new_data.data());
 
-  double* new_data = new double[8];
-  Tensor::to_blob(tensor, new_data);
-  for (int i = 0; i < 8; ++i) { ASSERT_EQ(new_data[i], data[i]); }
-
-  delete[] data;
-  delete[] new_data;
+  ASSERT_EQ(new_data, data);
 }
 
 }  // namespace oneflow_api

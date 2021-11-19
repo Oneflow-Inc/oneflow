@@ -23,17 +23,17 @@ namespace oneflow_api {
 
 namespace of = oneflow;
 
-of::DimVector toOneflowDimVcetor(const DimVector& dim_vec) {
+of::DimVector toOneflowDimVcetor(const std::vector<int64_t>& dim_vec) {
   return of::DimVector(dim_vec.begin(), dim_vec.end());
 }
 
-DimVector fromOneflowDimVcetor(const of::DimVector& dim_vec) {
-  return DimVector(dim_vec.begin(), dim_vec.end());
+std::vector<int64_t> fromOneflowDimVcetor(const of::DimVector& dim_vec) {
+  return std::vector<int64_t>(dim_vec.begin(), dim_vec.end());
 }
 
 Shape::Shape() : shape_(std::make_shared<of::Shape>(of::Shape({0}))) {}
 
-Shape::Shape(const DimVector& dim_vec)
+Shape::Shape(const std::vector<int64_t>& dim_vec)
     : shape_(std::make_shared<of::Shape>(toOneflowDimVcetor(dim_vec))) {}
 
 Shape::Shape(const std::initializer_list<int64_t>& dim_vec)
@@ -45,7 +45,7 @@ Shape& Shape::operator=(const Shape& shape) {
   return *this;
 }
 
-Shape& Shape::assign(const DimVector& dim_vec) {
+Shape& Shape::assign(const std::vector<int64_t>& dim_vec) {
   this->shape_->assign(toOneflowDimVcetor(dim_vec));
   return *this;
 }
@@ -54,7 +54,9 @@ bool Shape::operator==(const Shape& rhs) const { return *shape_ == *rhs.shape_; 
 
 bool Shape::operator!=(const Shape& rhs) const { return !(*this == rhs); }
 
-const DimVector Shape::dim_vec() const { return fromOneflowDimVcetor(shape_->dim_vec()); }
+const std::vector<int64_t> Shape::dim_vec() const {
+  return fromOneflowDimVcetor(shape_->dim_vec());
+}
 
 int64_t Shape::elem_cnt() const { return shape_->elem_cnt(); }
 

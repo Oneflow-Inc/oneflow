@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "tensor.h"
 #include "device.h"
+#include "oneflow/api/cpp/dtype.h"
+#include "oneflow/core/common/data_type.pb.h"
 #include "shape.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/dtype.h"
@@ -22,48 +24,33 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/thread_local_callback.h"
+#include "oneflow/api/common/ofblob.h"
+#include "oneflow/core/framework/dtype.h"
 
 namespace oneflow_api {
 
 namespace of = oneflow;
 namespace functional = of::one::functional;
 
-namespace {
-struct OfBlobCopyBuffer {
-  template<typename T>
-  static of::Maybe<void> From(uint64_t of_blob_ptr, const T* buf_ptr, size_t size) {
-    auto* of_blob = reinterpret_cast<of::OfBlob*>(of_blob_ptr);
-    of_blob->AutoMemCopyFrom<T>(buf_ptr, size);
-    return of::Maybe<void>::Ok();
-  }
-
-  template<typename T>
-  static of::Maybe<void> To(uint64_t of_blob_ptr, T* buf_ptr, size_t size) {
-    auto* of_blob = reinterpret_cast<of::OfBlob*>(of_blob_ptr);
-    of_blob->AutoMemCopyTo<T>(buf_ptr, size);
-    return of::Maybe<void>::Ok();
-  }
-};
-}  // namespace
-
-Tensor::Tensor() : Tensor(Device("cpu")) {}
-
-Tensor::Tensor(const Device& device) : Tensor(Shape(), device) {}
-
-Tensor::Tensor(const Shape& shape, const Device& device) {
+Tensor::Tensor(const Shape& shape, const Device& device, const DType& dtype) {
   of::LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
-  tensor_ = functional::Empty(*shape.shape_, of::DType::Double(), *device.device_).GetPtrOrThrow();
+  tensor_ = functional::Empty(*shape.shape_,
+                              of::DType::Get(static_cast<of::DataType>(dtype)).GetOrThrow(),
+                              *device.device_)
+                .GetPtrOrThrow();
 }
 
 const Shape Tensor::shape() const {
   const auto shape_ = tensor_->shape();
-  return Shape(DimVector(shape_->dim_vec().begin(), shape_->dim_vec().end()));
+  return Shape(std::vector<int64_t>(shape_->dim_vec().begin(), shape_->dim_vec().end()));
 }
 
 const Device Tensor::device() const {
   const auto device_ = tensor_->device().GetOrThrow();
   return Device(device_->type(), device_->device_id());
 }
+
+const DType Tensor::dtype() const { return static_cast<DType>(tensor_->dtype()->data_type()); }
 
 void Tensor::zeros_() {
   std::shared_ptr<of::one::MirroredTensor> local_tensor =
@@ -81,15 +68,16 @@ void Tensor::zeros_() {
 }
 
 template<typename T>
-Tensor Tensor::from_blob(const T* blob, const Shape& shape, const Device& device) {
-  Tensor tensor(shape, device);
+Tensor Tensor::from_blob(const T* blob, const Shape& shape, const Device& device,
+                         const DType& dtype) {
+  Tensor tensor(shape, device, dtype);
   std::shared_ptr<of::one::MirroredTensor> local_tensor =
       tensor.tensor_->AsMirroredTensor().GetPtrOrThrow();
   of::PhysicalRun([&](of::InstructionsBuilder* builder) -> of::Maybe<void> {
     return builder->AccessBlobByCallback(
         local_tensor,
         [blob, shape](uint64_t ofblob_ptr) {
-          CHECK_JUST(OfBlobCopyBuffer::template From<T>(ofblob_ptr, blob, shape.Count(0)));
+          CHECK_JUST(of::OfBlobCopyBuffer<T>::From(ofblob_ptr, blob, shape.Count(0)));
         },
         "mut");
   }).GetOrThrow();
@@ -104,7 +92,7 @@ void Tensor::to_blob(const Tensor& tensor, T* blob) {
 
   const auto& Callback =
       std::make_shared<std::function<void(uint64_t)>>([blob, shape](uint64_t ofblob_ptr) {
-        CHECK_JUST(OfBlobCopyBuffer::template To<T>(ofblob_ptr, blob, shape.Count(0)));
+        CHECK_JUST(of::OfBlobCopyBuffer<T>::To(ofblob_ptr, blob, shape.Count(0)));
       });
 
   bool is_printed = false;
@@ -124,9 +112,15 @@ void Tensor::to_blob(const Tensor& tensor, T* blob) {
       .GetOrThrow();
 }
 
-template Tensor Tensor::from_blob<double>(const double* blob, const Shape& shape,
-                                          const Device& device);
+#define REGISTER_FROM_BLOB_AND_TO_BLOB(cpp_dtype)                                         \
+  template Tensor Tensor::from_blob<cpp_dtype>(const cpp_dtype* blob, const Shape& shape, \
+                                               const Device& device, const DType& dtype); \
+  template void Tensor::to_blob<cpp_dtype>(const Tensor& tensor, cpp_dtype* blob);
 
-template void Tensor::to_blob<double>(const Tensor& tensor, double* blob);
+REGISTER_FROM_BLOB_AND_TO_BLOB(float)
+REGISTER_FROM_BLOB_AND_TO_BLOB(double)
+REGISTER_FROM_BLOB_AND_TO_BLOB(int8_t)
+REGISTER_FROM_BLOB_AND_TO_BLOB(int32_t)
+REGISTER_FROM_BLOB_AND_TO_BLOB(int64_t)
 
 }  // namespace oneflow_api

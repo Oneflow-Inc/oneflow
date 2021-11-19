@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/api/common/ofblob.h"
 #include "oneflow/extension/python/numpy.h"
 
 namespace py = pybind11;
@@ -33,20 +34,12 @@ namespace oneflow {
 struct OfBlob_CopyBuffer {
   template<typename T>
   static Maybe<void> From(uint64_t of_blob_ptr, const NumPyArrayPtr& array) {
-    T* buf_ptr = (T*)array.data();
-    size_t size = array.size();
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    of_blob->AutoMemCopyFrom<T>(buf_ptr, size);
-    return Maybe<void>::Ok();
+    return OfBlobCopyBuffer<T>::From(of_blob_ptr, (T*)array.data(), array.size());
   }
 
   template<typename T>
   static Maybe<void> To(uint64_t of_blob_ptr, const NumPyArrayPtr& array) {
-    T* buf_ptr = (T*)array.data();
-    size_t size = array.size();
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    of_blob->AutoMemCopyTo<T>(buf_ptr, size);
-    return Maybe<void>::Ok();
+    return OfBlobCopyBuffer<T>::To(of_blob_ptr, (T*)array.data(), array.size());
   }
 };
 

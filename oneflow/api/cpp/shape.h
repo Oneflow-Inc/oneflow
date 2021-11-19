@@ -27,25 +27,21 @@ class Shape;
 
 namespace oneflow_api {
 
-using DimVector = std::vector<int64_t>;
-using AxisVector = std::vector<int64_t>;
-using StrideVector = std::vector<int64_t>;
-
 class Shape {
   friend class Tensor;
 
  public:
   Shape();
-  explicit Shape(const DimVector& dim_vec);
+  explicit Shape(const std::vector<int64_t>& dim_vec);
   Shape(const std::initializer_list<int64_t>& dim_vec);
   ~Shape() = default;
   Shape& operator=(const Shape& shape);
-  Shape& assign(const DimVector& dim_vec);
+  Shape& assign(const std::vector<int64_t>& dim_vec);
 
   bool operator==(const Shape& rhs) const;
   bool operator!=(const Shape& rhs) const;
 
-  const DimVector dim_vec() const;
+  const std::vector<int64_t> dim_vec() const;
 
   int64_t elem_cnt() const;
   int64_t At(int64_t index) const;
