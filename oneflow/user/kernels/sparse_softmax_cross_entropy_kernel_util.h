@@ -23,7 +23,7 @@ namespace user_op {
 
 template<DeviceType device_type, typename T, typename K>
 struct SparseSoftmaxCrossEntropyKernelUtil {
-  static void ComputeDiff(DeviceCtx* ctx, const int64_t elem_cnt, const int64_t num_classes,
+  static void ComputeDiff(ep::Stream* stream, const int64_t elem_cnt, const int64_t num_classes,
                           const int64_t depth, const int64_t lower_bound, const T* prob,
                           const K* labels, const T* dy, T* dx);
 };

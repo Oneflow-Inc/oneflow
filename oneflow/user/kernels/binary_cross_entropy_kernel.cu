@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/loss_kernel_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 namespace user_op {
@@ -135,11 +136,10 @@ class BinaryCrossEntropyKernel final : public user_op::OpKernel {
     const T* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
     ComputeBinaryCrossEntropyOut<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                   ctx->device_ctx()->cuda_stream()>>>(
+                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         elem_cnt, input, target, reduction == ReductionType::kNone ? out : tmp_out, weight);
 
-    ApplyLossReductionIfNeed<DeviceType::kGPU, T>(ctx->device_ctx(), elem_cnt, tmp_out, out,
-                                                  reduction);
+    ApplyLossReductionIfNeed<DeviceType::kGPU, T>(ctx->stream(), elem_cnt, tmp_out, out, reduction);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -168,7 +168,7 @@ class BinaryCrossEntropyGradKernel final : public user_op::OpKernel {
     const T* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
     ComputeBinaryCrossEntropyGradOut<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                       ctx->device_ctx()->cuda_stream()>>>(
+                                       ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         elem_cnt, static_cast<float>(1.0 / elem_cnt), input, target, dy, dx, weight, reduction);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

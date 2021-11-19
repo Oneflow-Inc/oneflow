@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -84,7 +85,7 @@ class FusedCastScaleGpuKernel final : public user_op::OpKernel, public user_op::
                                  ? RoundUp(n, 2) / 2
                                  : n;
     FusedCastScaleGpu<T, U><<<BlocksNum4ThreadsNum(launch_n), kCudaThreadsNumPerBlock, 0,
-                              ctx->device_ctx()->cuda_stream()>>>(
+                              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         n, static_cast<T>(scale), x->dptr<U>(), scale_by_tensor->dptr<T>(), y->mut_dptr<T>());
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
