@@ -33,10 +33,11 @@ template<typename T>
 void FusedDropoutKernel(DeviceCtx* ctx, const int64_t elem_cnt,
                         const std::shared_ptr<one::CPUGeneratorImpl>& cpu_gen, const float rate,
                         float scale, const T* x, int8_t* mask, T* y) {
+  // The interval is [a, b).
+  std::uniform_real_distribution<float> random_distribution(GetZeroVal<float>(),
+                                                            GetOneVal<float>());
   for (int64_t i = 0; i < elem_cnt; ++i) {
-    std::uniform_real_distribution<float> random_distribution(GetZeroVal<float>(),
-                                                              GetOneVal<float>());
-    mask[i] = random_distribution(cpu_gen->engine()) > rate;
+    mask[i] = random_distribution(cpu_gen->engine()) >= rate;
     y[i] = x[i] * static_cast<T>(mask[i]) * scale;
   }
 }
@@ -84,7 +85,7 @@ class DropoutKernelCPU final : public user_op::OpKernel {
 #define REGISTER_DROPOUT_KERNEL_CPU(dtype)                                                      \
   REGISTER_USER_KERNEL("dropout")                                                               \
       .SetCreateFn<DropoutKernelCPU<dtype>>()                                                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)         \
                        && (user_op::HobDataType("mask", 0) == GetDataType<int8_t>::value))      \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
