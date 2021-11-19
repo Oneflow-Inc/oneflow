@@ -52,14 +52,14 @@ struct DivOp {
   __device__ T operator()(T a, T b) const { return a / b; }
 };
 
-template<template<typename> typename Op, typename T>
+template<template<typename> class Op, typename T>
 struct UnaryByScalarFunctor {
   __host__ __device__ explicit UnaryByScalarFunctor(T scalar) : scalar(scalar) {}
   __device__ T operator()(T a) const { return Op<T>()(a, scalar); }
   const T scalar;
 };
 
-template<template<typename> typename Op, typename T>
+template<template<typename> class Op, typename T>
 struct UnaryByScalarPtrFunctorFactory {
   __host__ __device__ explicit UnaryByScalarPtrFunctorFactory(const T* scalar_ptr)
       : scalar_ptr(scalar_ptr) {}
@@ -69,13 +69,13 @@ struct UnaryByScalarPtrFunctorFactory {
   const T* scalar_ptr;
 };
 
-template<template<typename> typename Op, typename T>
+template<template<typename> class Op, typename T>
 void LaunchUnaryByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z) {
   OF_CUDA_CHECK(
       (cuda::elementwise::Unary(UnaryByScalarFunctor<Op, T>(y), n, z, x, ctx->cuda_stream())));
 }
 
-template<template<typename> typename Op, typename T>
+template<template<typename> class Op, typename T>
 void LaunchUnaryByScalarPtr(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
   OF_CUDA_CHECK((cuda::elementwise::UnaryWithFactory(UnaryByScalarPtrFunctorFactory<Op, T>(y), n, z,
                                                      x, ctx->cuda_stream())));
