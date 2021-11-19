@@ -69,11 +69,12 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("OFRecordReader")
       return Maybe<void>::Ok();
     })
     .SetComputeComplexityFn([](user_op::ComputeComplexityFnContext* ctx) -> Maybe<double> {
-      if (ctx->SbpParallel4ArgNameAndIndex("out", 0).has_split_parallel())
+      if (ctx->SbpParallel4ArgNameAndIndex("out", 0).has_split_parallel()) {
         return double(ctx->Shape4ArgNameAndIndex("out", 0)->elem_cnt()
                       * GetSizeOfDataType(DataType::kOFRecord));
-      else
+      } else {
         return GetMaxVal<float>();
+      }
     });
 
 }  // namespace oneflow

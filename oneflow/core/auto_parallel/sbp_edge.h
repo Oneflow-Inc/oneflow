@@ -120,7 +120,7 @@ class SbpEdge {
 
   // unload a logical blob
   void UnloadLbi(oneflow::LogicalBlobId lbi) {
-    if (CarryLbis.erase(lbi) == 0) std::cout << "Unload an empty lbi!" << std::endl;
+    if (CarryLbis.erase(lbi) == 0) { std::cout << "Unload an empty lbi!" << std::endl; }
   }
 
   // Not carrying any blob
@@ -189,15 +189,17 @@ void SbpEdge<SbpSignature>::SummarizeCost() {
           // Add middle node cost
           double temp = MidNode->Cost[sbp_mid];
           // Add first edge cost
-          if (EdgeList[0]->StartNode == StartNode)
+          if (EdgeList[0]->StartNode == StartNode) {
             temp += EdgeList[0]->Cost[sbp_start][sbp_mid];
-          else
+          } else {
             temp += EdgeList[0]->Cost[sbp_mid][sbp_start];
+          }
           // Add second edge cost
-          if (EdgeList[1]->EndNode == EndNode)
+          if (EdgeList[1]->EndNode == EndNode) {
             temp += EdgeList[1]->Cost[sbp_mid][sbp_end];
-          else
+          } else {
             temp += EdgeList[1]->Cost[sbp_end][sbp_mid];
+          }
 
           // Compare and look for the minimum cost
           if (sbp_mid == 0) {
@@ -238,31 +240,31 @@ void SbpEdge<SbpSignature>::DuplicateCost(
   std::vector<std::vector<int32_t>> tmpMidNodeSbpSig;
   if (ifStart) {
     tmpCost.resize(num_sig);
-    if (MidNode) tmpMidNodeSbpSig.resize(num_sig);
+    if (MidNode) { tmpMidNodeSbpSig.resize(num_sig); }
     for (int32_t i = 0; i < num_sig; i++) {
       const int32_t sig_idx =
           ifFirst ? mergedSigId2ChildrenSigId[i].first : mergedSigId2ChildrenSigId[i].second;
       tmpCost[i] = Cost[sig_idx];
-      if (MidNode) tmpMidNodeSbpSig[i] = MidNodeSbpSig[sig_idx];
+      if (MidNode) { tmpMidNodeSbpSig[i] = MidNodeSbpSig[sig_idx]; }
     }
   } else {
     const int32_t num_start_sig = Cost.size();
     tmpCost.resize(num_start_sig);
-    if (MidNode) tmpMidNodeSbpSig.resize(num_start_sig);
+    if (MidNode) { tmpMidNodeSbpSig.resize(num_start_sig); }
     for (int32_t i = 0; i < num_start_sig; i++) {
       tmpCost[i].resize(num_sig);
-      if (MidNode) tmpMidNodeSbpSig[i].resize(num_sig);
+      if (MidNode) { tmpMidNodeSbpSig[i].resize(num_sig); }
       for (int32_t j = 0; j < num_sig; j++) {
         const int32_t sig_idx =
             ifFirst ? mergedSigId2ChildrenSigId[j].first : mergedSigId2ChildrenSigId[j].second;
         tmpCost[i][j] = Cost[i][sig_idx];
-        if (MidNode) tmpMidNodeSbpSig[i][j] = MidNodeSbpSig[i][sig_idx];
+        if (MidNode) { tmpMidNodeSbpSig[i][j] = MidNodeSbpSig[i][sig_idx]; }
       }
     }
   }
 
   Cost = tmpCost;
-  if (MidNode) MidNodeSbpSig = tmpMidNodeSbpSig;
+  if (MidNode) { MidNodeSbpSig = tmpMidNodeSbpSig; }
 }
 
 template<class SbpSignature>
@@ -329,14 +331,14 @@ double SbpEdge<SbpSignature>::GreedyStrategy() {
 template<class SbpSignature>
 double SbpEdge<SbpSignature>::GetMinCost() {
   // used the stored value if pre-computed.
-  if (min_cost >= 0) return min_cost;
+  if (min_cost >= 0) { return min_cost; }
   // Check the size of Cost
   CHECK(Cost.size() > 0) << "Cost not initialized!" << std::endl;
   // Compute the min_cost
   min_cost = *std::min_element(Cost[0].begin(), Cost[0].end());
   for (int32_t i = 1; i < Cost.size(); i++) {
     double min_cost_row = *std::min_element(Cost[i].begin(), Cost[i].end());
-    if (min_cost_row < min_cost) min_cost = min_cost_row;
+    if (min_cost_row < min_cost) { min_cost = min_cost_row; }
   }
   return min_cost;
 }
@@ -352,7 +354,7 @@ double SbpEdge<SbpSignature>::GetMaxCost() {
   double max_cost = -1.0;
   for (int32_t i = 0; i < Cost.size(); i++) {
     for (int32_t j = 0; j < Cost[i].size(); j++) {
-      if (Cost[i][j] < cut_cost && Cost[i][j] > max_cost) max_cost = Cost[i][j];
+      if (Cost[i][j] < cut_cost && Cost[i][j] > max_cost) { max_cost = Cost[i][j]; }
     }
   }
   return max_cost;
@@ -362,14 +364,14 @@ double SbpEdge<SbpSignature>::GetMaxCost() {
 template<class SbpSignature>
 void SbpEdge<SbpSignature>::DetectSpreadOverlap(double overlap_ratio_) {
   if (overlap_ratio_ < 1.0) {
-    if (overlap_ratio_ < 0.0) overlap_ratio_ = 0.0;
+    if (overlap_ratio_ < 0.0) { overlap_ratio_ = 0.0; }
 
     if (StartNode->op_node) {
       // change overlap ratio for a normal edge
       // We could use the minimum or multiplication here.
       // To be noted that sbp_proxy may have multiple outcoming edges, we can not adjust overlap
       // cost right away.
-      if (overlap_ratio_ < overlap_ratio) overlap_ratio = overlap_ratio_;
+      if (overlap_ratio_ < overlap_ratio) { overlap_ratio = overlap_ratio_; }
     } else {
       // For an edge with a proxy start node, do not change the overlap ratio since the cost only
       // contains 0 and 3e38. Change the overlap ratio for the previous edge.
@@ -402,7 +404,7 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool comp
     const oneflow::LogicalBlobId& lbi = consumer->op().BnInOp2Lbi(ibn);
 
     // Check whether lbi is transferred by this edge
-    if (use_sbp_collector_ && compute_cost && !SearchLbi(lbi)) return;
+    if (use_sbp_collector_ && compute_cost && !SearchLbi(lbi)) { return; }
 
     oneflow::OpNode* producer = StartNode->op_node;
     const oneflow::ParallelDesc& parallel_desc = consumer->parallel_desc();

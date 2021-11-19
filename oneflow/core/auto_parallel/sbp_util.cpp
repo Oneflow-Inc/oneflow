@@ -67,7 +67,7 @@ double ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& producer_sbp_
 bool IsSameSBP(OpNode* consumer, const std::string& ibn) {
   // is mutable
   const auto input_blob_modifier_ = consumer->op().InputBlobModifier4Ibn(ibn);
-  if (input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable()) return true;
+  if (input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable()) { return true; }
   // kOFRecord or kTensorBuffer don't accept boxing
   const LogicalBlobId& lbi = consumer->op().BnInOp2Lbi(ibn);
   const OpNode& producer = consumer->ProducerOpNode4Lbi(lbi);
