@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -140,7 +141,7 @@ class TfGpuPReluKernel final : public user_op::OpKernel {
       const int32_t alpha_size = alpha->shape().elem_cnt();
       const int32_t inner_size = elem_cnt / outer_size / alpha_size;
       BroadcastPReluForwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                    ctx->device_ctx()->cuda_stream()>>>(
+                                    ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), y->mut_dptr<T>());
     } else {
       user_op::Tensor* broadcasted_alpha = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -150,7 +151,7 @@ class TfGpuPReluKernel final : public user_op::OpKernel {
           ctx->stream(), XpuVarNdarray<T>(x->shape(), broadcasted_alpha->mut_dptr<T>()),
           XpuVarNdarray<const T>(left_extended_shape, alpha->dptr<T>()));
       ElemwisePReluForwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                   ctx->device_ctx()->cuda_stream()>>>(
+                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           elem_cnt, x->dptr<T>(), broadcasted_alpha->dptr<T>(), y->mut_dptr<T>());
     }
   }
@@ -201,7 +202,7 @@ class TfGpuPReluGradKernel final : public user_op::OpKernel {
       const int32_t alpha_size = alpha->shape().elem_cnt();
       const int32_t inner_size = elem_cnt / outer_size / alpha_size;
       BroadcastPReluBackwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                     ctx->device_ctx()->cuda_stream()>>>(
+                                     ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), dy->dptr<T>(),
           dx->mut_dptr<T>(), broadcasted_alpha_diff);
     } else {
@@ -213,7 +214,7 @@ class TfGpuPReluGradKernel final : public user_op::OpKernel {
           XpuVarNdarray<const T>(left_extended_shape, alpha->dptr<T>()));
 
       ElemwisePReluBackwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                    ctx->device_ctx()->cuda_stream()>>>(
+                                    ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           elem_cnt, x->dptr<T>(), broadcasted_alpha, dy->dptr<T>(), dx->mut_dptr<T>(),
           broadcasted_alpha_diff);
     }

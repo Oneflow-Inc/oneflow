@@ -33,9 +33,9 @@ class EyeKernel final : public OpKernel {
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     T* out = out_tensor->mut_dptr<T>();
     Memset<device_type>(
-        ctx->device_ctx(), out_tensor->mut_dptr<T>(), 0,
+        ctx->stream(), out_tensor->mut_dptr<T>(), 0,
         out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type()));
-    EyeFunctor<device_type, T>()(ctx->device_ctx(), m, std::min(m, n), out);
+    EyeFunctor<device_type, T>()(ctx->stream(), m, std::min(m, n), out);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

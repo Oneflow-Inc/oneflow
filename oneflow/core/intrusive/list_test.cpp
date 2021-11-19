@@ -52,7 +52,7 @@ class TestListItem : public intrusive::Base {
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  TestListItem() : intrusive_ref_(), cnt_(), foo_list_() {}
+  TestListItem() : foo_list_(), intrusive_ref_(), cnt_() {}
   intrusive::Ref intrusive_ref_;
   int* cnt_;
 };

@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include <cub/cub.cuh>
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -137,9 +138,9 @@ class GpuArgMaxKernel final : public user_op::OpKernel {
 
     ArgMax(in->dptr<T>(), instance_num, instance_size, buffer_manager.TempStoragePtr(),
            buffer_manager.TempStorageBytes(), buffer_manager.KeyValueOutPtr(),
-           ctx->device_ctx()->cuda_stream());
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream());
     WriteKeysToOutput<T><<<BlocksNum4ThreadsNum(instance_num), kCudaThreadsNumPerBlock, 0,
-                           ctx->device_ctx()->cuda_stream()>>>(
+                           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         instance_num, buffer_manager.KeyValueOutPtr(), out->mut_dptr<int64_t>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

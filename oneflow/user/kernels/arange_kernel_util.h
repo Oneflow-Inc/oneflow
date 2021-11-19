@@ -28,7 +28,7 @@ namespace oneflow {
 namespace user_op {
 template<DeviceType device_type, typename T>
 struct ArangeFunctor final {
-  void operator()(DeviceCtx* ctx, const T start, const T delta, const int64_t arange_elem_cnt,
+  void operator()(ep::Stream* stream, const T start, const T delta, const int64_t arange_elem_cnt,
                   T* out);
 };
 

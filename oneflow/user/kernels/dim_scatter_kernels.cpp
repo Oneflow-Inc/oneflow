@@ -43,9 +43,9 @@ class DimScatterKernel final : public user_op::OpKernel {
     const IN_T* src = src_tensor->dptr<IN_T>();
 
     if (input_tensor) {
-      Memcpy<device_type>(ctx->device_ctx(), output, input_tensor->dptr<IN_T>(), out_bytes_size);
+      Memcpy<device_type>(ctx->stream(), output, input_tensor->dptr<IN_T>(), out_bytes_size);
     } else if (like_tensor) {
-      Memset<device_type>(ctx->device_ctx(), output, 0, out_bytes_size);
+      Memset<device_type>(ctx->stream(), output, 0, out_bytes_size);
     } else {
       std::cerr << "Unimplemented Error" << std::endl;
       throw Error::UnimplementedError();  // TODO: Remove throw Error.
@@ -72,7 +72,7 @@ class DimScatterKernel final : public user_op::OpKernel {
     }
 
     DimScatterFunctor<device_type, IN_T, IDX_T, Opt>()(
-        ctx->device_ctx(), src_nd_helper, idx_nd_helper, output_nd_helper, ndim,
+        ctx->stream(), src_nd_helper, idx_nd_helper, output_nd_helper, ndim,
         index_tensor->shape().elem_cnt(), dim, upper_bound, index, src, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
