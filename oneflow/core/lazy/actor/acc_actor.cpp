@@ -54,7 +54,7 @@ void AccActor::Act() {
     Blob* out_blob = out_regst->GetMutSoleBlob();
     const size_t size = in_blob->ByteSizeOfBlobBody();
     CHECK_EQ(out_blob->ByteSizeOfBlobBody(), size);
-    AutoMemcpy(actor_ctx()->stream_ctx(), out_blob->ForceMutDptr(), in_blob->dptr(), size,
+    AutoMemcpy(actor_ctx()->stream_ctx()->stream(), out_blob->ForceMutDptr(), in_blob->dptr(), size,
                out_blob->mem_case(), in_blob->mem_case());
   } else {
     AsyncLaunchKernel();

@@ -160,7 +160,7 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
           if (blob->dptr() == nullptr) {
             end_event_record->Init(std::make_shared<NaiveEventRecord>());
           } else {
-            AutoMemcpy(of_blob->mut_device_ctx(), of_blob->mut_blob(), blob);
+            AutoMemcpy(of_blob->mut_device_ctx()->stream(), of_blob->mut_blob(), blob);
             auto* event_record_provider =
                 CHECK_NOTNULL(dynamic_cast<EventRecordProvider*>(of_blob->mut_device_ctx()));
             end_event_record->Init(event_record_provider->MakeEventRecord());
@@ -187,7 +187,7 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
           if (mut_blob->dptr() == nullptr) {
             end_event_record->Init(std::make_shared<NaiveEventRecord>());
           } else {
-            AutoMemcpy(of_blob->mut_device_ctx(), mut_blob, &of_blob->blob());
+            AutoMemcpy(of_blob->mut_device_ctx()->stream(), mut_blob, &of_blob->blob());
             auto* event_record_provider =
                 CHECK_NOTNULL(dynamic_cast<EventRecordProvider*>(of_blob->mut_device_ctx()));
             end_event_record->Init(event_record_provider->MakeEventRecord());

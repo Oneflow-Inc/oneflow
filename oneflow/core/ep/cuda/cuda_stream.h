@@ -87,7 +87,7 @@ class CudaStream : public Stream {
   size_t workspace_size_{};
 #endif  // CUBLAS_VERSION >= 11200
 #ifdef WITH_CUDA_GRAPHS
-  bool is_graph_capturing_;
+  bool is_graph_capturing_{};
 #endif  // WITH_CUDA_GRAPHS
 };
 

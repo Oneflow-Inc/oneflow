@@ -500,7 +500,7 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
       CHECK_EQ(add_to_output->data_type(), dx->data_type());
       CHECK_EQ(add_to_output->shape(), dx->shape());
       Memcpy<DeviceType::kGPU>(
-          ctx->device_ctx(), dx->mut_dptr<void>(), add_to_output->dptr<void>(),
+          ctx->stream(), dx->mut_dptr<void>(), add_to_output->dptr<void>(),
           add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       sp_beta = CudnnSPOnePtr<T>();
     } else {
@@ -576,9 +576,9 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
         GetParamGradDynamicSharedMemorySize<T>(m)));
     if (has_gamma_diff && has_beta_diff && has_normalized_diff && max_active_blocks > 0) {
       const user_op::Tensor* normalized = ctx->Tensor4ArgNameAndIndex("normalized", 0);
-      Memset<DeviceType::kGPU>(ctx->device_ctx(), gamma_diff->mut_dptr<T>(), 0,
+      Memset<DeviceType::kGPU>(ctx->stream(), gamma_diff->mut_dptr<T>(), 0,
                                gamma_diff->shape().elem_cnt() * sizeof(T));
-      Memset<DeviceType::kGPU>(ctx->device_ctx(), beta_diff->mut_dptr<T>(), 0,
+      Memset<DeviceType::kGPU>(ctx->stream(), beta_diff->mut_dptr<T>(), 0,
                                beta_diff->shape().elem_cnt() * sizeof(T));
       if (elem_cnt > static_cast<int64_t>(GetMaxVal<int32_t>() / 2)) {
         LayerNormParamGradImpl<T, int64_t>
@@ -624,7 +624,7 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
           NdUtil::BroadcastMul(ctx->stream(), Var({n, m}, normalized_diff->mut_dptr<T>()),
                                Val({n, m}, dy->dptr<T>()), Val({1, m}, gamma->dptr<T>()));
         } else {
-          Memcpy<DeviceType::kGPU>(ctx->device_ctx(), normalized_diff->mut_dptr<void>(),
+          Memcpy<DeviceType::kGPU>(ctx->stream(), normalized_diff->mut_dptr<void>(),
                                    dy->dptr<void>(),
                                    dy->shape().elem_cnt() * GetSizeOfDataType(dy->data_type()));
         }
@@ -734,7 +734,7 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
                                Val({n, m}, dy->dptr<float16>()),
                                Val({1, m}, gamma->dptr<float16>()));
         } else {
-          Memcpy<DeviceType::kGPU>(ctx->device_ctx(), normalized_diff->mut_dptr<void>(),
+          Memcpy<DeviceType::kGPU>(ctx->stream(), normalized_diff->mut_dptr<void>(),
                                    dy->dptr<void>(),
                                    dy->shape().elem_cnt() * GetSizeOfDataType(dy->data_type()));
         }
