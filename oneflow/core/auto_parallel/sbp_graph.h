@@ -172,7 +172,7 @@ SbpNode<SbpSignature>* SbpGraph<SbpSignature>::GenerateNode() {
 
 template<class SbpSignature>
 void SbpGraph<SbpSignature>::RemoveFromNodeList(SbpNode<SbpSignature>* this_node) {
-  if (this_node->NodeListId < 0) return;
+  if (this_node->NodeListId < 0) { return; }
   NodeList.back()->NodeListId = this_node->NodeListId;
   RemoveFrom<SbpNode<SbpSignature>*>(NodeList, this_node->NodeListId);
   this_node->NodeListId = -1;
@@ -209,10 +209,11 @@ template<class SbpSignature>
 void SbpGraph<SbpSignature>::RandomSbpSignature(bool use_sbp_collector_) {
   for (const auto& this_node : NodeList) {
     if (use_sbp_collector_) {
-      if (this_node->SbpSignatureList.size() > 0)
+      if (this_node->SbpSignatureList.size() > 0) {
         this_node->FinalSbpSignatureId = rand() % this_node->SbpSignatureList.size();
-      else
+      } else {
         this_node->FinalSbpSignatureId = rand() % this_node->ParallelCandidates.size();
+      }
     } else {
       this_node->FinalSbpSignatureId = rand() % this_node->SbpSignatureList.size();
     }
@@ -243,10 +244,11 @@ int32_t SbpGraph<SbpSignature>::NodeElimination(SbpNode<SbpSignature>* this_node
     // If a node is pointing to itself, could happen when shrink from a circle
     if (TwoNode[0] == TwoNode[1]) {
       int32_t EliminationNumber = 0;
-      if (this_node->EdgesOut.empty())
+      if (this_node->EdgesOut.empty()) {
         EliminationNumber += EdgeElimination(TwoNode[0]);
-      else
+      } else {
         EliminationNumber += EdgeElimination(this_node);
+      }
 
       EliminationNumber += ChildElimination(this_node);
       return EliminationNumber;
@@ -331,10 +333,11 @@ int32_t LookForParallelEdge(SbpEdge<SbpSignature>*& e, SbpNode<SbpSignature>* st
   for (int32_t j = start_node->EdgesOut.size() - 1; j > stopsign; j--) {
     if (end_node == start_node->EdgesOut[j]->EndNode) {
       if (!e) {
-        if (ifReverse)
+        if (ifReverse) {
           e = new SbpEdge<SbpSignature>(end_node, start_node);
-        else
+        } else {
           e = new SbpEdge<SbpSignature>(start_node, end_node);
+        }
       }
       // edge elimination
       e->EdgeList.emplace_back(start_node->EdgesOut[j]);
@@ -450,7 +453,7 @@ double SbpGraph<SbpSignature>::GreedyStrategy(bool ForceNode) {
         }
       }
     }
-    if (CostRdc == 0) break;
+    if (CostRdc == 0) { break; }
     TtlCostRdc += CostRdc;
   }
   return TtlCostRdc;
@@ -464,7 +467,7 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
   // A global buffer to store part of the one ring neighborhood.
   std::vector<int32_t> nbh_id2NodeListId;
   // Not accept a number lower than 1
-  if (nbh_num < 1) nbh_num = 1;
+  if (nbh_num < 1) { nbh_num = 1; }
   nbh_id2NodeListId.resize(nbh_num);
   std::vector<int32_t> OrgSbpSignatureId(nbh_num);
   // store all the NodeListId whose corresponding nodes will be visited
@@ -517,7 +520,7 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
           nbh_id2NodeListId[nbh_id] = nbh_1ring[nbh_1ring_id];
           CostRdc += NbhGreedyStrategy(nbh_id2NodeListId);
           // nbh_id for the next step
-          if (++nbh_id >= nbh_num) nbh_id = 1;
+          if (++nbh_id >= nbh_num) { nbh_id = 1; }
         }
       }
     }
@@ -536,7 +539,7 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
               PreVisitNodeList[tail] = nbh_NodeListId;
               PreVisitTags[nbh_NodeListId] = true;
               tail++;
-              if (tail == PreVisitNodeList.size()) tail = 0;
+              if (tail == PreVisitNodeList.size()) { tail = 0; }
             }
           }
         }
@@ -576,7 +579,7 @@ void SbpGraph<SbpSignature>::DFS_AddNbhCost(std::vector<int32_t>& nbh_id2NodeLis
     return;
   }
   // Pruning, remove all those branch with large cost
-  if (CurrCost + order2AccMinInNbhCost[order] >= MinCost) return;
+  if (CurrCost + order2AccMinInNbhCost[order] >= MinCost) { return; }
   // DFS in the next order
   int32_t nbh_id = order2nbh_id[order];
   SbpNode<SbpSignature>* sbp_node = NodeList[nbh_id2NodeListId[nbh_id]];
@@ -676,7 +679,7 @@ double SbpGraph<SbpSignature>::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2No
     // diff: -4.65661e-10, relative diff:2.09279e-16
     // Therefore, we use a threshold to filter out such fake true detection to
     // avoid unlimited search.
-    if ((OrgCost - MinCost) / OrgCost > 3e-15) return MinCost - OrgCost;
+    if ((OrgCost - MinCost) / OrgCost > 3e-15) { return MinCost - OrgCost; }
   }
   return 0.0;
 }
@@ -684,7 +687,7 @@ double SbpGraph<SbpSignature>::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2No
 // Select and Merge two nodes
 template<class SbpSignature>
 int32_t SbpGraph<SbpSignature>::PickAndMerge() {
-  if (NodeList.size() < 4) return 0;
+  if (NodeList.size() < 4) { return 0; }
   // Pick the one with the smallest cut ratio
   double min_cut_ratio = 1.0;
   double curr_cut_ratio;
@@ -740,10 +743,11 @@ int32_t SbpGraph<SbpSignature>::PickAndMerge() {
         }
       }
     }
-    if (MaxCommEdgeNum > 0)
+    if (MaxCommEdgeNum > 0) {
       return NodeMerging(NodeList[MinNodePair[0]], NodeList[MinNodePair[1]]);
-    else
+    } else {
       return 0;
+    }
   }
 }
 
@@ -761,7 +765,7 @@ void SbpGraph<SbpSignature>::DetectAdjustOverlap(double CostRatio) {
   // Find the maximum layer number in the graph
   int32_t max_layer_num = -1;
   for (const auto& this_node : NodeList) {
-    if (this_node->MinLayer > max_layer_num) max_layer_num = this_node->MinLayer;
+    if (this_node->MinLayer > max_layer_num) { max_layer_num = this_node->MinLayer; }
   }
   max_layer_num++;
   // Prestore the first and second maximum computation cost for each layer
@@ -774,7 +778,7 @@ void SbpGraph<SbpSignature>::DetectAdjustOverlap(double CostRatio) {
 
   for (const auto& this_node : NodeList) {
     int32_t lay_num = this_node->MinLayer;
-    if (lay_num < 0) continue;
+    if (lay_num < 0) { continue; }
     double comp_cost = this_node->GetMinCost();
     if (comp_cost > max_2_comp_cost[lay_num]) {
       if (comp_cost > max_1_comp_cost[lay_num]) {
@@ -791,7 +795,7 @@ void SbpGraph<SbpSignature>::DetectAdjustOverlap(double CostRatio) {
   for (const auto& this_node : NodeList) {
     int32_t lay_num = this_node->MinLayer;
     // Skip proxy nodes and single node in one layer
-    if (lay_num < 0 || max_2_comp_cost[lay_num] < 0.0) continue;
+    if (lay_num < 0 || max_2_comp_cost[lay_num] < 0.0) { continue; }
     // Detect overlap. We do not spread it since we only adjust outcoming edges.
     double min_ratio = std::min(CostRatio, 0.5);
     this_node->DetectSpreadOverlap(max_1_comp_cost[lay_num], max_2_comp_cost[lay_num],
@@ -842,7 +846,7 @@ void SbpGraph<SbpSignature>::FindMainstem(
   }
   // Find out all the nodes on the mainstem.
   for (SbpNode<SbpSignature>* this_node : NodeList) {
-    if (this_node->MinLayer >= mainstem_end_id) this_node->SpreadMainstem(op_name2sbp_node);
+    if (this_node->MinLayer >= mainstem_end_id) { this_node->SpreadMainstem(op_name2sbp_node); }
   }
 
   // Compute maximum layer for tributaries

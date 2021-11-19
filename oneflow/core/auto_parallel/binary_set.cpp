@@ -94,7 +94,7 @@ int32_t BinarySet::Total() {
 void BinarySet::OutPut(std::vector<int32_t>& out) {
   out.clear();
   for (int32_t i = 0; i < SizeOfSet; i++) {
-    if (CheckExistency(i)) out.emplace_back(i);
+    if (CheckExistency(i)) { out.emplace_back(i); }
   }
 }
 
@@ -119,9 +119,9 @@ void BinarySet::AddEntrys(std::vector<int32_t>& in) {
 
 // If two binary sets are equal to each other
 bool BinarySet::operator==(const BinarySet& rhs) const {
-  if (SizeOfSet != rhs.SizeOfSet) return false;
+  if (SizeOfSet != rhs.SizeOfSet) { return false; }
   for (int32_t i = 0; i < BinarySetValues.size(); i++) {
-    if (BinarySetValues[i] != rhs.BinarySetValues[i]) return false;
+    if (BinarySetValues[i] != rhs.BinarySetValues[i]) { return false; }
   }
   return true;
 }

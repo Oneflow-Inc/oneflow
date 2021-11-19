@@ -144,7 +144,7 @@ class SbpNode {
       const std::function<double(SbpNode<SbpSignature>*, SbpSignature*)>& SbpComputationCost);
   // Decide to use this SbpSignature
   SbpSignature* FinalSbpSignature() const {
-    if (SbpSignatureList.empty()) return NULL;
+    if (SbpSignatureList.empty()) { return NULL; }
     return SbpSignatureList[FinalSbpSignatureId];
   };
 
@@ -331,7 +331,7 @@ void SbpNode<SbpSignature>::FindLowOrderValue(
   LowOrderValue = 0;
   for (int32_t i = 0; i < OrderValue.size(); i++) {
     OrderValue[i] = CalcOrderValue4SbpSig();
-    if (OrderValue[i] < LowOrderValue) LowOrderValue = OrderValue[i];
+    if (OrderValue[i] < LowOrderValue) { LowOrderValue = OrderValue[i]; }
   }
 };
 
@@ -396,7 +396,7 @@ void SbpNode<SbpSignature>::PointTo(SbpNode<SbpSignature>* end_node) {
 
 template<class SbpSignature>
 void SbpNode<SbpSignature>::SummarizeCost() {
-  if (Children.size() == ChildNodeSbpSig.size()) return;
+  if (Children.size() == ChildNodeSbpSig.size()) { return; }
   int32_t PreviousChildrenSize = ChildNodeSbpSig.size();
   ChildNodeSbpSig.resize(Children.size());
   // Only deal with new Children
@@ -597,7 +597,7 @@ void SbpNode<SbpSignature>::NRingNeighborhood(int32_t n, std::vector<int32_t>& n
                                               std::vector<SbpNode<SbpSignature>*>& NodeList,
                                               std::vector<bool>& node_tags) {
   // Initialize 0 ring
-  if (n <= 0) n = 0;
+  if (n <= 0) { n = 0; }
   nbh_nring.resize(1);
   nbh_nring[0] = NodeListId;
   node_tags[NodeListId] = true;
@@ -629,23 +629,25 @@ void SbpNode<SbpSignature>::DetectSpreadOverlap(double max_1_comp_cost, double m
   // Actually, it is skipped before this function.
 
   // skip it if empty EdgesOut
-  if (EdgesOut.empty()) return;
+  if (EdgesOut.empty()) { return; }
 
   // total maximum copy cost of outcoming edges
   double total_copy_cost = 0.0;
   for (SbpEdge<SbpSignature>* this_edge : EdgesOut) { total_copy_cost += this_edge->GetMaxCost(); }
   // maximum of the computation cost of other operators
   double max_comp_cost;
-  if (id == max_1_id)
+  if (id == max_1_id) {
     max_comp_cost = max_2_comp_cost;
-  else
+  } else {
     max_comp_cost = max_1_comp_cost;
+  }
   // Use the ratio between the total copy cost and maximum computation cost as ratio
   double overlap_ratio;
-  if (max_comp_cost >= total_copy_cost)
+  if (max_comp_cost >= total_copy_cost) {
     overlap_ratio = min_ratio;
-  else
+  } else {
     overlap_ratio = 1.0 - (1.0 - min_ratio) * max_comp_cost / total_copy_cost;
+  }
 
   // Set up overlap ratio for the outcoming edges
   for (SbpEdge<SbpSignature>* this_edge : EdgesOut) {
@@ -655,10 +657,10 @@ void SbpNode<SbpSignature>::DetectSpreadOverlap(double max_1_comp_cost, double m
 // Detect and spread overlaps for sbp proxy.
 template<class SbpSignature>
 void SbpNode<SbpSignature>::DetectSpreadOverlap(double overlap_ratio) {
-  if (op_node) return;
+  if (op_node) { return; }
   if (overlap_ratio < 1.0) {
     // overlap ratio should be non-negative
-    if (overlap_ratio < 0.0) overlap_ratio = 0.0;
+    if (overlap_ratio < 0.0) { overlap_ratio = 0.0; }
     // double check for sbp proxy
     CHECK(EdgesIn.size() == 1) << "Multiple incoming edges for sbp proxy" << std::endl;
     EdgesIn[0]->DetectSpreadOverlap(overlap_ratio);
@@ -669,17 +671,17 @@ void SbpNode<SbpSignature>::DetectSpreadOverlap(double overlap_ratio) {
 template<class SbpSignature>
 int32_t SbpNode<SbpSignature>::GetMinLayer(
     oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
-  if (MinLayer >= 0) return MinLayer;
-  if (!op_node) return MinLayer;
+  if (MinLayer >= 0) { return MinLayer; }
+  if (!op_node) { return MinLayer; }
   for (SbpEdge<SbpSignature>* this_edge : EdgesIn) {
     int32_t producer_min_layer = this_edge->StartNode->GetMinLayer(op_name2sbp_node);
-    if (producer_min_layer > MinLayer) MinLayer = producer_min_layer;
+    if (producer_min_layer > MinLayer) { MinLayer = producer_min_layer; }
   }
   for (const auto& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
     auto it = op_name2sbp_node.find(ctrl_in_op_name);
     if (it != op_name2sbp_node.end()) {
       int32_t producer_min_layer = it->second->GetMinLayer(op_name2sbp_node);
-      if (producer_min_layer > MinLayer) MinLayer = producer_min_layer;
+      if (producer_min_layer > MinLayer) { MinLayer = producer_min_layer; }
     }
   }
   return ++MinLayer;
@@ -689,7 +691,7 @@ int32_t SbpNode<SbpSignature>::GetMinLayer(
 template<class SbpSignature>
 void SbpNode<SbpSignature>::SpreadMaxLayer(
     oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
-  if (MinLayer <= 0) return;
+  if (MinLayer <= 0) { return; }
   int32_t producer_max_lay = MinLayer - 1;
   for (SbpEdge<SbpSignature>* this_edge : EdgesIn) {
     this_edge->StartNode->DropMaxLayer(producer_max_lay);
@@ -703,14 +705,14 @@ void SbpNode<SbpSignature>::SpreadMaxLayer(
 // Drop down the maximum layer with the minimum layer form consumer
 template<class SbpSignature>
 void SbpNode<SbpSignature>::DropMaxLayer(int32_t upper_bound) {
-  if (upper_bound < MaxLayer || MaxLayer < 0) MaxLayer = upper_bound;
+  if (upper_bound < MaxLayer || MaxLayer < 0) { MaxLayer = upper_bound; }
 }
 // Set MaxLayer = MinLayer if this node does not have any consumer
 // This is the end of the whole graph
 // We could also set it to be the maximum of the MinLayer in the graph. (It should be the same.)
 template<class SbpSignature>
 void SbpNode<SbpSignature>::LiftMaxLayer() {
-  if (MaxLayer < MinLayer) MaxLayer = MinLayer;
+  if (MaxLayer < MinLayer) { MaxLayer = MinLayer; }
 }
 // Set MaxLayer = upper_bound if this node does not have any consumer
 template<class SbpSignature>
@@ -733,15 +735,16 @@ template<class SbpSignature>
 void SbpNode<SbpSignature>::SpreadMainstem(
     oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
   // Skip it if this node is already judged.
-  if (IfMainstem) return;
+  if (IfMainstem) { return; }
   // Skip sbp proxy. This is before we have proxy.
-  if (MinLayer < 0) return;
+  if (MinLayer < 0) { return; }
   IfMainstem = true;
   // If I am in the mainstem, then all the children with (MinLayer >= my layer id - 1) would be
   // considered as in the mainstem
   for (SbpEdge<SbpSignature>* this_edge : EdgesIn) {
-    if (this_edge->StartNode->MinLayer >= MinLayer - 1)
+    if (this_edge->StartNode->MinLayer >= MinLayer - 1) {
       this_edge->StartNode->SpreadMainstem(op_name2sbp_node);
+    }
   }
   for (const auto& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
     auto it = op_name2sbp_node.find(ctrl_in_op_name);
@@ -757,7 +760,7 @@ void SbpNode<SbpSignature>::RaiseConsumerNum(
     oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
   // Should clear it before running.
   // skip the proxy nodes and the sources
-  if (MinLayer <= 0) return;
+  if (MinLayer <= 0) { return; }
   for (SbpEdge<SbpSignature>* this_edge : EdgesIn) { this_edge->StartNode->counter++; }
   for (const auto& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
     auto it = op_name2sbp_node.find(ctrl_in_op_name);
@@ -772,9 +775,9 @@ void SbpNode<SbpSignature>::SpreadAvailWaitTime(
     oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node, double wait_time,
     double transfer_cost) {
   // skip the proxy nodes and the sources
-  if (MinLayer <= 0) return;
+  if (MinLayer <= 0) { return; }
   // Have not finished spreading for consumers or downstream nodes or already visited.
-  if (counter) return;
+  if (counter) { return; }
   if (IfMainstem) {
     // Nodes on the mianstem does not have any accumulate cost
     AccMainstemCost = 0;
@@ -845,8 +848,9 @@ void SbpNode<SbpSignature>::SpreadAvailWaitTime(
 // Drop down the available wait time with the minimum cost from downstreams
 template<class SbpSignature>
 void SbpNode<SbpSignature>::DropAvailWaitTime(double curr_mainstem_cost) {
-  if (AccMainstemCost < 0.0 || AccMainstemCost > curr_mainstem_cost)
+  if (AccMainstemCost < 0.0 || AccMainstemCost > curr_mainstem_cost) {
     AccMainstemCost = curr_mainstem_cost;
+  }
 }
 
 // Assemble copy cost for all the incoming edges
@@ -857,7 +861,7 @@ void SbpNode<SbpSignature>::InitializeCopyCost(bool compute_cost, bool use_sbp_c
     oneflow::OpNode* producer = sbp_node_producer->op_node;
 
     // skip it if proxy
-    if (use_sbp_collector_ && !producer) continue;
+    if (use_sbp_collector_ && !producer) { continue; }
 
     // look through input blobs
     for (const std::string& ibn : op_node->op().input_bns()) {
@@ -886,14 +890,14 @@ void SbpNode<SbpSignature>::SetMainstemWaitTime(double mainstem_wait_time) {
 // Drop down the maximum layer with the minimum layer form consumer
 template<class SbpSignature>
 void SbpNode<SbpSignature>::DropTributaryLayer(int32_t upper_bound) {
-  if (upper_bound < TributaryLayer || TributaryLayer < 0) TributaryLayer = upper_bound;
+  if (upper_bound < TributaryLayer || TributaryLayer < 0) { TributaryLayer = upper_bound; }
 }
 
 // Compute maximum layer for tributaries
 template<class SbpSignature>
 void SbpNode<SbpSignature>::SpreadTributaryLayer(
     oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
-  if (counter || MinLayer <= 0) return;
+  if (counter || MinLayer <= 0) { return; }
   int32_t producer_max_lay;
   if (IfMainstem) {
     producer_max_lay = MinLayer - 1;

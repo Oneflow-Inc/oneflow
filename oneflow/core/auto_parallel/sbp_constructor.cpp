@@ -170,10 +170,11 @@ Maybe<void> SbpConstructor::InitComputationCost(const OpGraph& op_graph) {
     for (int32_t sbp_id = 0; sbp_id < sbp_node->SbpSignatureList.size(); sbp_id++) {
       double comp_cost = JUST(op_node->op().GetComputeComplexity(
           sbp_node->SbpSignatureList[sbp_id], logical_blob_desc4bn, parallel_desc));
-      if (comp_cost > cut_cost)
+      if (comp_cost > cut_cost) {
         sbp_node->Cost[sbp_id] = comp_cost;
-      else
+      } else {
         sbp_node->Cost[sbp_id] = cost_ratio_ * comp_cost;
+      }
     }
     return Maybe<void>::Ok();
   });
@@ -190,7 +191,7 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
       // producer sbp node
       const auto* sbp_node_producer = sbp_edge->StartNode;
       // skip it if proxy
-      if (!sbp_node_producer->op_node) continue;
+      if (!sbp_node_producer->op_node) { continue; }
       sbp_edge->Cost.resize(sbp_node_producer->SbpSignatureList.size());
       int32_t consumer_sbp_size = sbp_node_consumer->SbpSignatureList.size();
       // look through sbp signature in producer
@@ -203,7 +204,7 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
     sbp_node_consumer->InitializeCopyCost(false, use_sbp_collector_);
     for (auto* sbp_edge : sbp_node_consumer->EdgesIn) {
       // skip it if proxy
-      if (!sbp_edge->StartNode->op_node) continue;
+      if (!sbp_edge->StartNode->op_node) { continue; }
       // Reset Wait time
       for (int32_t i = 0; i < sbp_edge->Cost.size(); ++i) {
         for (int32_t j = 0; j < sbp_edge->Cost[i].size(); ++j) {
@@ -343,7 +344,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
       const auto& this_sbp_parallel = sbp_signature.bn_in_op2sbp_parallel()[ibn];
       std::cout << ", " << SbpParallelToString(this_sbp_parallel);
       const auto input_blob_modifier_ = op_node->op().InputBlobModifier4Ibn(ibn);
-      if (IsSameSBP(op_node, ibn)) std::cout << ", same SBP";
+      if (IsSameSBP(op_node, ibn)) { std::cout << ", same SBP"; }
       std::cout << ", "
                 << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn)).shape().elem_cnt();
       std::cout << std::endl;

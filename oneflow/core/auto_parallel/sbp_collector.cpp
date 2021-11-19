@@ -161,8 +161,9 @@ void SbpCollector::InitializeCopyCostFromProxy2Consumer(
         const cfg::SbpParallel& sbp_consumer = consumer_sbp_bn_in_op2sbp_parallel.at(ibn);
 
         if ((!parallel_candidate.CheckExistency(SbpParallelUniverse[sbp_consumer]))
-            && (sbp_consumer.has_partial_sum_parallel() || !parallel_candidate.CheckExistency(0)))
+            && (sbp_consumer.has_partial_sum_parallel() || !parallel_candidate.CheckExistency(0))) {
           sbp_edge->Cost[sbp_id_producer][sbp_id_consumer] = GetMaxVal<float>();
+        }
       }
     }
   }
@@ -199,7 +200,7 @@ void SbpCollector::ProxySbpCandidate(
       const OpNode& producer = node->ProducerOpNode4Lbi(lbi);
 
       // not building proxy for fixed opertors
-      if (op_name2sbp_node.find(producer.op().op_name()) == op_name2sbp_node.end()) return;
+      if (op_name2sbp_node.find(producer.op().op_name()) == op_name2sbp_node.end()) { return; }
       // a set to store the id of all possible SBP Parallel for a downstream op
       // should filter out B and other repeated SBP Parallel by pre-storing them into an
       // unordered_set
@@ -212,7 +213,7 @@ void SbpCollector::ProxySbpCandidate(
         CHECK(iter != map.end()) << "blob_name " << ibn << " not found in sbp signature";
         const cfg::SbpParallel& consumer_sbp = iter->second;
         // filter out B
-        if (consumer_sbp.has_broadcast_parallel()) continue;
+        if (consumer_sbp.has_broadcast_parallel()) { continue; }
         // filter out repeated SBP
         SbpParallelIDs.insert(SbpParallelUniverse[consumer_sbp]);
       }
@@ -297,7 +298,7 @@ void SbpCollector::DFS_SBPset(
       const auto& iter = map.find(ibn);
       CHECK(iter != map.end()) << "blob_name " << ibn << " not found in sbp signature";
       const cfg::SbpParallel& consumer_sbp = iter->second;
-      if (consumer_sbp.has_broadcast_parallel()) continue;
+      if (consumer_sbp.has_broadcast_parallel()) { continue; }
       SbpParallelIDs.insert(SbpParallelUniverse[consumer_sbp]);
     }
     // next iterator
