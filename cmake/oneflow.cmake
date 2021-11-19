@@ -13,10 +13,16 @@ function(target_try_compile_option target flag)
   endif()
   if (${varName}_SUPPORTED)
     target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${flag}>)
+    if(BUILD_CUDA)
+      if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND 
+          "${CMAKE_CUDA_COMPILER_ID}" STREQUAL "Clang")
+        target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${flag}>)
+      endif()
+    endif()
   endif ()
 endfunction()
 
-function(target_try_cxx_compile_options target)
+function(target_try_compile_options target)
   foreach(flag ${ARGN})
     target_try_compile_option(${target} ${flag})
   endforeach()
@@ -35,10 +41,10 @@ function(target_treat_warnings_as_errors target)
     endif()
 
     # TODO: remove it while fixing all deprecated call
-    target_try_cxx_compile_options(${target} -Wno-error=deprecated-declarations)
+    target_try_compile_options(${target} -Wno-error=deprecated-declarations)
 
     # disable unused-* for different compile mode (maybe unused in cpu.cmake, but used in cuda.cmake)
-    target_try_cxx_compile_options(${target}
+    target_try_compile_options(${target}
       -Wno-error=unused-const-variable
       -Wno-error=unused-variable
       -Wno-error=unused-local-typedefs
@@ -47,17 +53,17 @@ function(target_treat_warnings_as_errors target)
     )
 
     # there is some strict-overflow warnings in oneflow/user/kernels/ctc_loss_kernel_util.cpp for unknown reason, disable them for now
-    target_try_cxx_compile_options(${target} -Wno-error=strict-overflow)
+    target_try_compile_options(${target} -Wno-error=strict-overflow)
 
-    target_try_cxx_compile_options(${target} -Wno-error=instantiation-after-specialization)
+    target_try_compile_options(${target} -Wno-error=instantiation-after-specialization)
 
     # disable for pointer operations of intrusive linked lists
-    target_try_cxx_compile_options(${target} -Wno-error=array-bounds)
+    target_try_compile_options(${target} -Wno-error=array-bounds)
 
-    target_try_cxx_compile_options(${target} -Wno-error=comment)
+    target_try_compile_options(${target} -Wno-error=comment)
 
     # disable visibility warnings related to https://github.com/Oneflow-Inc/oneflow/pull/3676.
-    target_try_cxx_compile_options(${target} -Wno-error=attributes)
+    target_try_compile_options(${target} -Wno-error=attributes)
   endif()
 endfunction()
 
@@ -65,7 +71,7 @@ function(set_compile_options_to_oneflow_target target)
   target_treat_warnings_as_errors(${target})
   target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Werror=return-type>)
   # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
-  target_try_cxx_compile_options(${target} -Wno-mismatched-tags)
+  target_try_compile_options(${target} -Wno-mismatched-tags)
 
   if(BUILD_CUDA)
     if ("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")

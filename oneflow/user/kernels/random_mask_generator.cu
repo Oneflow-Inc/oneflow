@@ -62,4 +62,6 @@ void RandomMaskGenerator<DeviceType::kGPU>::Generate(DeviceCtx* device_ctx, cons
                                                                              mask);
 }
 
+template class RandomMaskGenerator<DeviceType::kGPU>;
+
 }  // namespace oneflow
