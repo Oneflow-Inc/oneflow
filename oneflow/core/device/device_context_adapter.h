@@ -18,10 +18,11 @@ limitations under the License.
 
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/stream/include/stream_context.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 
-DeviceCtx* NewDeviceCtxAdapter(StreamContext* ctx);
+DeviceCtx* NewDeviceCtxAdapter(ep::Stream* stream);
 
 }  // namespace oneflow
 

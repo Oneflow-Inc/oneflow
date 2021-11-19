@@ -209,7 +209,7 @@ class NllKernel final : public user_op::OpKernel {
     T* total_weight = total_weight_blob->mut_dptr<T>();
     const T* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), total_weight, 0, sizeof(T));
+    Memset<DeviceType::kGPU>(ctx->stream(), total_weight, 0, sizeof(T));
 
     if (reduction == ReductionType::kNone) {
       ComputeNllOutNone<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
@@ -253,8 +253,7 @@ class NllGradKernel final : public user_op::OpKernel {
     const T* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
 
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), dx, 0,
-                             GetCudaAlignedSize(input_elem_cnt * sizeof(T)));
+    Memset<DeviceType::kGPU>(ctx->stream(), dx, 0, input_elem_cnt * sizeof(T));
 
     ComputeNllGradOut<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
                         ctx->device_ctx()->cuda_stream()>>>(

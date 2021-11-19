@@ -20,17 +20,6 @@ limitations under the License.
 namespace oneflow {
 
 template<>
-void Memcpy<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const void* src, size_t sz) {
-  if (dst == src) { return; }
-  OF_CUDA_CHECK(cudaMemcpyAsync(dst, src, sz, cudaMemcpyDefault, ctx->cuda_stream()));
-}
-
-template<>
-void Memset<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const char value, size_t sz) {
-  OF_CUDA_CHECK(cudaMemsetAsync(dst, value, sz, ctx->cuda_stream()));
-}
-
-template<>
 void Memcpy<DeviceType::kGPU>(ep::Stream* stream, void* dst, const void* src, size_t sz) {
   if (dst == src) { return; }
   OF_CUDA_CHECK(cudaMemcpyAsync(dst, src, sz, cudaMemcpyDefault,
