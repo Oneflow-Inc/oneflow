@@ -22,14 +22,13 @@ limitations under the License.
 namespace oneflow_api {
 
 namespace of = oneflow;
+namespace {
 
 of::DimVector toOneflowDimVcetor(const std::vector<int64_t>& dim_vec) {
   return of::DimVector(dim_vec.begin(), dim_vec.end());
 }
 
-std::vector<int64_t> fromOneflowDimVcetor(const of::DimVector& dim_vec) {
-  return std::vector<int64_t>(dim_vec.begin(), dim_vec.end());
-}
+}  // namespace
 
 Shape::Shape() : shape_(std::make_shared<of::Shape>(of::Shape({0}))) {}
 
@@ -45,18 +44,9 @@ Shape& Shape::operator=(const Shape& shape) {
   return *this;
 }
 
-Shape& Shape::assign(const std::vector<int64_t>& dim_vec) {
-  this->shape_->assign(toOneflowDimVcetor(dim_vec));
-  return *this;
-}
-
 bool Shape::operator==(const Shape& rhs) const { return *shape_ == *rhs.shape_; }
 
 bool Shape::operator!=(const Shape& rhs) const { return !(*this == rhs); }
-
-const std::vector<int64_t> Shape::dim_vec() const {
-  return fromOneflowDimVcetor(shape_->dim_vec());
-}
 
 int64_t Shape::elem_cnt() const { return shape_->elem_cnt(); }
 

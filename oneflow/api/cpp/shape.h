@@ -36,12 +36,9 @@ class Shape {
   Shape(const std::initializer_list<int64_t>& dim_vec);
   ~Shape() = default;
   Shape& operator=(const Shape& shape);
-  Shape& assign(const std::vector<int64_t>& dim_vec);
 
   bool operator==(const Shape& rhs) const;
   bool operator!=(const Shape& rhs) const;
-
-  const std::vector<int64_t> dim_vec() const;
 
   int64_t elem_cnt() const;
   int64_t At(int64_t index) const;

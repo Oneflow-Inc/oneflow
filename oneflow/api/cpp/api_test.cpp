@@ -16,6 +16,7 @@ limitations under the License.
 #include <array>
 #include <gtest/gtest.h>
 #include "oneflow/api/cpp/api.h"
+#include "oneflow/api/cpp/dtype.h"
 
 namespace oneflow_api {
 namespace {
@@ -59,34 +60,47 @@ TEST(Api, tensor) {
   ASSERT_EQ(tensor_with_all.shape(), shape);
   ASSERT_EQ(tensor_with_all.device(), device);
   ASSERT_EQ(tensor_with_all.dtype(), dtype);
-
-  tensor_with_all.zeros_();
 }
 
 TEST(Api, tensor_from_blob) {
   EnvScope scope;
 
   std::array<double, 8> data{}, new_data{};
-
   for (int i = 0; i < 8; ++i) { data[i] = i; }
 
   auto tensor = Tensor::from_blob(data.data(), {2, 2, 2}, Device("cpu"), DType::kDouble);
+
   Tensor::to_blob(tensor, new_data.data());
 
   ASSERT_EQ(new_data, data);
 }
 
+TEST(Api, tensor_zeros) {
+  EnvScope scope;
+
+  std::array<float, 8> data{}, target_data{};
+  target_data.fill(0);
+
+  Tensor tensor({2, 2, 2}, Device("cpu"), DType::kFloat);
+  tensor.zeros_();
+
+  Tensor::to_blob(tensor, data.data());
+
+  ASSERT_EQ(data, target_data);
+}
+
 TEST(Api, nn) {
   EnvScope scope;
 
-  const auto device = Device("cpu");
-  const auto shape = Shape({2, 2, 2});
-  const auto dtype = DType::kDouble;
+  std::array<float, 8> data{-3, -2, -1, 0, 1, 2, 3, 4};
+  std::array<float, 8> target_data{0, 0, 0, 0, 1, 2, 3, 4};
+  std::array<float, 8> result_data{};
 
-  Tensor tensor_with_all(shape, device, dtype);
+  auto tensor = Tensor::from_blob(data.data(), {2, 2, 2}, Device("cpu"), DType::kFloat);
+  auto result = nn::relu(tensor);
 
-  tensor_with_all.zeros_();
+  Tensor::to_blob(result, result_data.data());
 
-  auto result = nn::relu(tensor_with_all);
+  ASSERT_EQ(result_data, target_data);
 }
 }  // namespace oneflow_api
