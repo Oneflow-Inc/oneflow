@@ -2,16 +2,6 @@ include(python)
 
 include(CheckCXXCompilerFlag)
 
-function(oneflow_add_executable)
-  add_executable(${ARGV})
-  set_compile_options_to_oneflow_target(${ARGV0})
-endfunction()
-
-function(oneflow_add_library)
-  add_library(${ARGV})
-  set_compile_options_to_oneflow_target(${ARGV0})
-endfunction()
-
 function(target_try_compile_option target flag)
   # We cannot check for -Wno-foo as this won't throw a warning so we must check for the -Wfoo option directly
   # http://stackoverflow.com/questions/38785168/cc1plus-unrecognized-command-line-option-warning-on-any-other-warning
@@ -103,6 +93,16 @@ function(set_compile_options_to_oneflow_target target)
       THRUST_IGNORE_CUB_VERSION_CHECK;
     >)
   endif()
+endfunction()
+
+function(oneflow_add_executable)
+  add_executable(${ARGV})
+  set_compile_options_to_oneflow_target(${ARGV0})
+endfunction()
+
+function(oneflow_add_library)
+  add_library(${ARGV})
+  set_compile_options_to_oneflow_target(${ARGV0})
 endfunction()
 
 # source_group
