@@ -15,6 +15,7 @@ limitations under the License.
 """
 from typing import Callable, Dict, Iterator, List, Union, Tuple
 
+import math
 import oneflow as flow
 from oneflow.nn.optimizer.optimizer import Optimizer
 from oneflow.nn.parameter import Parameter
@@ -187,14 +188,22 @@ class LAMB(Optimizer):
             if closure is not None:
                 loss = closure()
             for param_group in self.param_groups:
+                if param_group["do_bias_correction"]:
+                    param_group["bias_correction1"] = 1.0 - math.pow(
+                        param_group["betas"][0], self._state["step"] + 1
+                    )
+                    param_group["bias_correction2"] = 1.0 - math.pow(
+                        param_group["betas"][1], self._state["step"] + 1
+                    )
+
                 kwargs = {
                     "learning_rate_val": param_group["lr"],
-                    # "bias_correction1_val": param_group["bias_correction1"],
-                    # "bias_correction2_val": param_group["bias_correction2"],
+                    "bias_correction1_val": param_group["bias_correction1"],
+                    "bias_correction2_val": param_group["bias_correction2"],
                     "beta1": param_group["betas"][0],
                     "beta2": param_group["betas"][1],
                     "epsilon": param_group["eps"],
-                    # "do_bias_correction": param_group["do_bias_correction"],
+                    "do_bias_correction": param_group["do_bias_correction"],
                 }
                 if param_group["adam_w_mode"]:
                     kwargs["weight_decay"] = param_group["weight_decay"]
@@ -213,7 +222,9 @@ class LAMB(Optimizer):
                     v_tensor = self._state[param]["exp_avg_sq"]
 
                     self._lamb_op(param, param.grad, m_tensor, v_tensor, **kwargs)
-            self._state["step"] = self._state["step"] + 1
+
+            self._state["step"] += 1
+
             return loss
 
     def _generate_conf_for_graph(self, train_conf, vars_conf):
@@ -230,7 +241,7 @@ class LAMB(Optimizer):
             weight_decay = param_group["weight_decay"]
             beta1 = param_group["betas"][0]
             beta2 = param_group["betas"][1]
-            # do_bias_correction = param_group["do_bias_correction"]
+            do_bias_correction = param_group["do_bias_correction"]
 
             epsilon = param_group["eps"]
 
@@ -241,7 +252,7 @@ class LAMB(Optimizer):
             optimizer_conf.mutable_lamb_conf().set_beta1(beta1)
             optimizer_conf.mutable_lamb_conf().set_beta2(beta2)
             optimizer_conf.mutable_lamb_conf().set_epsilon(epsilon)
-            # optimizer_conf.mutable_lamb_conf().set_do_bias_correction(do_bias_correction)
+            optimizer_conf.mutable_lamb_conf().set_do_bias_correction(do_bias_correction)
 
             if adam_w_mode:
                 optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(weight_decay)
