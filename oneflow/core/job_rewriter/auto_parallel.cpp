@@ -34,9 +34,13 @@ class AutoParallelPass final : public JobPass {
   Maybe<void> Apply(const OpGraph& op_graph, Job* job) const;
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
-    if (!job->job_conf().enable_auto_parallel()) { return Maybe<void>::Ok(); }
-    LOG(INFO) << "=== Enable AutoParallel ===";
     const OpGraph op_graph(*job);
+    if (!job->job_conf().enable_auto_parallel()) {
+      if (GlobalProcessCtx::Rank() == 0) op_graph.PrintSBPGraphDebugInfo();
+      return Maybe<void>::Ok();
+    }
+    LOG(INFO) << "=== Enable AutoParallel ===";
+
     return Apply(op_graph, job);
   }
 };
@@ -55,8 +59,10 @@ Maybe<void> AutoParallelPass::Apply(const OpGraph& op_graph, Job* job) const {
             << std::chrono::duration_cast<std::chrono::milliseconds>(time_end - time_begin).count()
             << " ms\n";
   if (GlobalProcessCtx::Rank() == 0) {
-    sbp_constructor.PrintSBPGraphDebugInfo();
+    // sbp_constructor.PrintSBPGraphDebugInfo();
     JUST(sbp_constructor.CheckSbpAgreement(*job));
+    const OpGraph op_graph(*job);
+    if (GlobalProcessCtx::Rank() == 0) op_graph.PrintSBPGraphDebugInfo();
   }
   return Maybe<void>::Ok();
 }
