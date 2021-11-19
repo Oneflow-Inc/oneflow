@@ -73,7 +73,7 @@ class GridSampleKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("grid_sample")                       \
       .SetCreateFn<GridSampleKernel<device, dtype>>()       \
       .SetIsMatchedHob((user_op::HobDeviceType() == device) \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value))
+                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value))
 
 REGISTER_GRID_SAMPLE_KERNEL(DeviceType::kCPU, float);
 REGISTER_GRID_SAMPLE_KERNEL(DeviceType::kCPU, double);
@@ -106,7 +106,7 @@ class GridSampleGradKernel final : public user_op::OpKernel {
     const ShapeView& output_shape = doutput->shape();
     int64_t count = output_shape.elem_cnt() / input_shape.At(1);
 
-    Memset<device_type>(ctx->device_ctx(), dinput->mut_dptr<data_type>(), 0,
+    Memset<device_type>(ctx->stream(), dinput->mut_dptr<data_type>(), 0,
                         input_shape.elem_cnt() * sizeof(data_type));
 
     if (input_shape.NumAxes() == 4) {
@@ -138,7 +138,7 @@ class GridSampleGradKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("grid_sample_grad")                  \
       .SetCreateFn<GridSampleGradKernel<device, dtype>>()   \
       .SetIsMatchedHob((user_op::HobDeviceType() == device) \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value))
+                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value))
 
 REGISTER_GRID_SAMPLE_GRAD_KERNEL(DeviceType::kCPU, float);
 REGISTER_GRID_SAMPLE_GRAD_KERNEL(DeviceType::kCPU, double);

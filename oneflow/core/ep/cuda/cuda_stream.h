@@ -13,10 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_STREAM_CUDA_CUDA_GRAPH_CONTEXT_H_
-#define ONEFLOW_CORE_STREAM_CUDA_CUDA_GRAPH_CONTEXT_H_
+#ifndef ONEFLOW_CORE_EP_CUDA_CUDA_STREAM_H_
+#define ONEFLOW_CORE_EP_CUDA_CUDA_STREAM_H_
 
-#include "oneflow/core/common/util.h"
+#include "oneflow/core/ep/include/stream.h"
 
 #ifdef WITH_CUDA
 
@@ -30,6 +30,8 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
+
+namespace ep {
 
 #ifdef WITH_CUDA_GRAPHS
 
@@ -50,38 +52,49 @@ class CudaGraphExecutable {
   int dev_;
 };
 
-class CudaGraphContext {
+#endif  // WITH_CUDA_GRAPHS
+
+class CudaStream : public Stream {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CudaGraphContext);
-  CudaGraphContext() = default;
-  virtual ~CudaGraphContext() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CudaStream);
+  explicit CudaStream(int device_ordinal);
+  ~CudaStream() override;
 
-  virtual void BeginGraphCapture() = 0;
-  virtual void EndGraphCapture(CudaGraphExecutable* executable) = 0;
-  virtual bool IsGraphCapturing() const = 0;
-  virtual void LaunchGraph(const CudaGraphExecutable* executable) = 0;
-};
+  DeviceType device_type() const override;
+  Maybe<void> Sync() override;
 
-class GenericCudaGraphContext : public CudaGraphContext {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(GenericCudaGraphContext);
-  explicit GenericCudaGraphContext(cudaStream_t stream);
-  ~GenericCudaGraphContext() override;
+  Maybe<void> OnExecutionContextSetup() override;
+  Maybe<void> OnExecutionContextTeardown() override;
 
-  void BeginGraphCapture() override;
-  void EndGraphCapture(CudaGraphExecutable* executable) override;
-  bool IsGraphCapturing() const override;
-  void LaunchGraph(const CudaGraphExecutable* executable) override;
+  cudaStream_t cuda_stream() const;
+  cublasHandle_t cublas_handle() const;
+  cudnnHandle_t cudnn_handle() const;
+
+#ifdef WITH_CUDA_GRAPHS
+  void BeginGraphCapture();
+  void EndGraphCapture(CudaGraphExecutable* executable);
+  bool IsGraphCapturing() const;
+  void LaunchGraph(const CudaGraphExecutable* executable);
+#endif
 
  private:
-  cudaStream_t stream_;
-  bool is_graph_capturing_;
+  cudaStream_t cuda_stream_{};
+  cublasHandle_t cublas_handle_{};
+  cudnnHandle_t cudnn_handle_{};
+  int device_ordinal_;
+#if CUBLAS_VERSION >= 11200
+  void* workspace_{};
+  size_t workspace_size_{};
+#endif  // CUBLAS_VERSION >= 11200
+#ifdef WITH_CUDA_GRAPHS
+  bool is_graph_capturing_{};
+#endif  // WITH_CUDA_GRAPHS
 };
 
-#endif  // WITH_CUDA_GRAPHS
+}  // namespace ep
 
 }  // namespace oneflow
 
 #endif  // WITH_CUDA
 
-#endif  // ONEFLOW_CORE_STREAM_CUDA_CUDA_GRAPH_CONTEXT_H_
+#endif  // ONEFLOW_CORE_EP_CUDA_CUDA_STREAM_H_

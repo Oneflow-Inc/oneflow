@@ -109,11 +109,11 @@ class EagerSymmetricSToPKernel final : public user_op::OpKernel {
     const void* in_ptr = in->dptr();
     void* out_ptr = out->mut_dptr();
 
-    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
+    Memset<device_type>(ctx->stream(), out->mut_dptr(), 0,
                         out_shape_view.elem_cnt() * GetSizeOfDataType(out->data_type()));
 
     const auto& tensor_slice_copier = kernel_state->tensor_slice_copier();
-    tensor_slice_copier->Copy(ctx->stream_ctx(), out_ptr, in_ptr);
+    tensor_slice_copier->Copy(ctx->stream(), out_ptr, in_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
