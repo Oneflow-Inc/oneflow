@@ -129,7 +129,9 @@ void TensorViewInstructionType::Compute(vm::Instruction* instruction) const {
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
   OfBlob ofblob(device_ctx, ptr->eager_blob_object()->mut_blob());
   OfBlob ofblob2(device_ctx, ptr->view_eager_blob_object()->mut_blob());
-  ptr->callback()(reinterpret_cast<uint64_t>(&ofblob), reinterpret_cast<uint64_t>(&ofblob2));
+
+  void* input_ptr = ofblob.mut_blob()->mut_dptr();
+  ofblob2.mut_blob()->reset_dptr(static_cast<char *>(input_ptr));
 }
 
 void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) const {

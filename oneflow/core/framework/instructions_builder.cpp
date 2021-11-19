@@ -1072,21 +1072,30 @@ const std::shared_ptr<const ParallelDesc>& GetParallelDesc(
 
 }  // namespace
 
+// const auto& callback =
+//       std::function<void(uint64_t, uint64_t)>([&](uint64_t of_blob_ptr, uint64_t of_blob_ptr2) {
+//         auto* eager_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+//         auto* view_eager_blob = reinterpret_cast<OfBlob*>(of_blob_ptr2);
+        // void* input_ptr = eager_blob->mut_blob()->mut_dptr();
+        // if (!(view_eager_blob->blob().dptr())) {
+        //   int64_t storage_offset_bytes = storage_offset * GetSizeOfDataType(eager_blob->blob().data_type());
+        //   view_eager_blob->mut_blob()->reset_dptr(static_cast<char *>(input_ptr) + storage_offset_bytes);
+        // }
+//       });
+      
 template<typename T>
 Maybe<void> InstructionsBuilder::TensorView(
     const T tensor,
-    const T view_tensor,
-    const std::function<void(uint64_t, uint64_t)>& callback, 
-    const std::string& modifier
+    const T view_tensor
   ) {
   const auto& parallel_desc = GetParallelDesc(tensor);
   LocalDepObject* compute_local_dep_object = JUST(tensor->compute_local_dep_object());
   LocalDepObject* view_compute_local_dep_object = JUST(view_tensor->compute_local_dep_object());
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
   const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object = JUST(view_tensor->eager_blob_object());
-
+      
   const auto& phy_instr_operand = std::make_shared<vm::TensorViewOperand>(
-      eager_blob_object, view_eager_blob_object, compute_local_dep_object, view_compute_local_dep_object, callback, modifier);
+      eager_blob_object, view_eager_blob_object, compute_local_dep_object, view_compute_local_dep_object);
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       Global<OneflowVM>::Get()->mut_vm(), parallel_desc->device_tag() + ".TensorView",
       parallel_desc, phy_instr_operand);
@@ -1097,16 +1106,12 @@ Maybe<void> InstructionsBuilder::TensorView(
 
 template Maybe<void> InstructionsBuilder::TensorView(
     const std::shared_ptr<one::MirroredTensor> tensor,
-    const std::shared_ptr<one::MirroredTensor> view_tensor,
-    const std::function<void(uint64_t, uint64_t)>& callback, 
-    const std::string& modifier
+    const std::shared_ptr<one::MirroredTensor> view_tensor
 );
 
 template Maybe<void> InstructionsBuilder::TensorView(
     const one::EagerMirroredTensorImpl* tensor, 
-    const one::EagerMirroredTensorImpl* viewed_tensor,
-    const std::function<void(uint64_t, uint64_t)>& callback, 
-    const std::string& modifier
+    const one::EagerMirroredTensorImpl* viewed_tensor
 );
 
 template<typename T>

@@ -151,9 +151,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   template<typename T>
   Maybe<void> TensorView(
       const T tensor,
-      const T view_tensor,
-      const std::function<void(uint64_t, uint64_t)>& callback, 
-      const std::string& modifier
+      const T view_tensor
   );
 
 
