@@ -99,12 +99,11 @@ class EagerPToBKernel final : public user_op::OpKernel {
       int64_t dst = pair.second;
 
       if (GlobalProcessCtx::Rank() == src) {
-        CHECK_JUST(
-            Send<device_type>(in_ptr, total_elem_cnt, in->data_type(), dst, ctx->device_ctx()));
+        CHECK_JUST(Send<device_type>(in_ptr, total_elem_cnt, in->data_type(), dst, ctx->stream()));
       }
       if (GlobalProcessCtx::Rank() == dst) {
         CHECK_JUST(Recv<device_type>(tmp_buffer_ptr, total_elem_cnt, out->data_type(), src,
-                                     ctx->device_ctx()));
+                                     ctx->stream()));
         add_primitive->Launch(ctx->stream(), tmp_buffer_ptr, out->dptr(), out->mut_dptr(),
                               total_elem_cnt);
       }

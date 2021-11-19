@@ -98,9 +98,9 @@ class GatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
       offset = gather_state->lower();
     }
 
-    GatherKernelUtilImpl<device_type, T, K>::Forward(
-        ctx->device_ctx(), indices->dptr<K>(), num_indices, in->dptr<T>(),
-        GetFlatShape(in->shape(), axis), out->mut_dptr<T>(), offset);
+    GatherKernelUtilImpl<device_type, T, K>::Forward(ctx->stream(), indices->dptr<K>(), num_indices,
+                                                     in->dptr<T>(), GetFlatShape(in->shape(), axis),
+                                                     out->mut_dptr<T>(), offset);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
