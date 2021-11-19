@@ -846,7 +846,7 @@ class ReshapeFunctor {
     op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    // if input tensor is contiguous, than return tensor's view
+    // if input tensor is eager local, than return tensor's view
     if (x->is_eager() && x->is_local()) { 
       return view::Reshape(x, shape); 
     }

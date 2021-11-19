@@ -46,11 +46,20 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
   return contig_if_nonempty;
 }
 
+
 namespace view {
 
-Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
-                         const Stride& target_strides, int64_t storage_offset) {
 
+Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
+                         int64_t storage_offset) {
+  /**
+   * This function provides basic view capabilities which 
+   * accept input tensor with target shape, and return viewed tensor. 
+   * 
+   * The viewed tensor shared memory with input tensor, and both of 
+   * them are memory continuous, but has different shapes/strides.
+   */
+  Stride target_strides(target_shape);
   storage_offset += JUST(input->storage_offset());
   // TODO(): Check shape compatible.
   auto tensor_meta = std::make_shared<MirroredTensorMeta>(
@@ -79,7 +88,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
 
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) {
   if (!(input->is_eager() && input->is_local())) {
-    return Error::RuntimeError() << "view::Reshape(): input should be eager local tensor, but is "
+    return Error::RuntimeError() << "view::Reshape(): input should be eager local tensor, but got "
                                  << (input->is_lazy() ? "lazy" : "consistent");
   }
   int need_infer_axis = -1;
@@ -98,14 +107,14 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) 
   size_t x_count = input->shape()->Count(0);
   if (need_infer_axis == -1) {
     CHECK_EQ_OR_RETURN(shape.Count(0), x_count);
-    output = JUST(BasicView(input, shape, Stride(shape), 0));
+    output = JUST(BasicView(input, shape, 0));
   } else {
     Shape infered_shape = shape;
     infered_shape.Set(need_infer_axis, x_count / count);
     CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
         << "Shape " << shape.ToString() << " is invalid for input of shape "
         << input->shape()->ToString();
-    output = JUST(BasicView(input, infered_shape, Stride(infered_shape), 0));
+    output = JUST(BasicView(input, infered_shape, 0));
   }
 
   if (input->requires_grad()) {
@@ -127,6 +136,7 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) 
   }
   return output;
 }
+
 
 }  // namespace view
 }  // namespace one

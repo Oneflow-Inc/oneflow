@@ -1075,21 +1075,21 @@ const std::shared_ptr<const ParallelDesc>& GetParallelDesc(
       
 template<typename T>
 Maybe<void> InstructionsBuilder::TensorView(
-    const T tensor,
+    const T input_tensor,
     const T view_tensor
   ) {
-  const auto& parallel_desc = GetParallelDesc(tensor);
-  LocalDepObject* compute_local_dep_object = JUST(tensor->compute_local_dep_object());
-  LocalDepObject* view_compute_local_dep_object = JUST(view_tensor->compute_local_dep_object());
+  const auto& parallel_desc = GetParallelDesc(input_tensor);
+  LocalDepObject* local_dep_object = JUST(input_tensor->compute_local_dep_object());
+  LocalDepObject* view_local_dep_object = JUST(view_tensor->compute_local_dep_object());
 
-  const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
+  const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(input_tensor->eager_blob_object());
   const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object = JUST(view_tensor->eager_blob_object());
 
   view_eager_blob_object->TryInitBlob();
   view_eager_blob_object->set_is_shape_synced(true);
       
   const auto& phy_instr_operand = std::make_shared<vm::TensorViewOperand>(
-      eager_blob_object, view_eager_blob_object, compute_local_dep_object, view_compute_local_dep_object);
+      eager_blob_object, view_eager_blob_object, local_dep_object, view_local_dep_object);
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       Global<OneflowVM>::Get()->mut_vm(), parallel_desc->device_tag() + ".TensorView",
       parallel_desc, phy_instr_operand);
@@ -1099,13 +1099,13 @@ Maybe<void> InstructionsBuilder::TensorView(
 }
 
 template Maybe<void> InstructionsBuilder::TensorView(
-    const std::shared_ptr<one::MirroredTensor> tensor,
+    const std::shared_ptr<one::MirroredTensor> input_tensor,
     const std::shared_ptr<one::MirroredTensor> view_tensor
 );
 
 template Maybe<void> InstructionsBuilder::TensorView(
-    const one::EagerMirroredTensorImpl* tensor, 
-    const one::EagerMirroredTensorImpl* viewed_tensor
+    const one::EagerMirroredTensorImpl* input_tensor, 
+    const one::EagerMirroredTensorImpl* view_tensor
 );
 
 template<typename T>

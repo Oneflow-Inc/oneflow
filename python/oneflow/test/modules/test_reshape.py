@@ -16,7 +16,6 @@ limitations under the License.
 
 import unittest
 from collections import OrderedDict
-import time
 import numpy as np
 
 from oneflow.test_utils.automated_test_util import *
@@ -88,8 +87,8 @@ class TestModule(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_reshape,
             _test_reshape_tuple,
-            _test_reshape_scalar,
             _test_reshape_backward,
+            _test_reshape_scalar,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

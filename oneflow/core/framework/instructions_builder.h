@@ -150,7 +150,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   
   template<typename T>
   Maybe<void> TensorView(
-      const T tensor,
+      const T input_tensor,
       const T view_tensor
   );
 
