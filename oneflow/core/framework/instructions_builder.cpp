@@ -1157,7 +1157,6 @@ template Maybe<void> InstructionsBuilder::AccessBlobByCallback(
     const one::EagerMirroredTensorImpl* tensor, const std::function<void(uint64_t)>& callback,
     const std::string& modifier);
 
-
 Maybe<void> InstructionsBuilder::ComputeRankFrontSeqCallback(
     const std::function<void()>& callback) {
   const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>(callback);

@@ -48,19 +48,19 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
 
 namespace view {
 
+// Maybe<void> SyncAccessTensorWithTimeOut(
+//     const std::shared_ptr<Tensor>& tensor,
+//     const std::shared_ptr<std::function<void(uint64_t)>>& callback, const std::string& modifier) {
+//   return SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
+//     return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+//       return builder->SyncAccessBlobByCallback(JUST(tensor->AsMirroredTensor()), sc, callback,
+//                                                modifier);
+//     });
+//   });
+// }
+
+
 Maybe<void> SyncAccessTensorWithTimeOut(
-    const std::shared_ptr<Tensor>& tensor,
-    const std::shared_ptr<std::function<void(uint64_t)>>& callback, const std::string& modifier) {
-  return SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(JUST(tensor->AsMirroredTensor()), sc, callback,
-                                               modifier);
-    });
-  });
-}
-
-
-Maybe<void> SyncAccessTensorWithTimeOut2(
     const std::shared_ptr<Tensor>& tensor,
     const std::shared_ptr<Tensor>& view_tensor,
     const std::function<void(uint64_t, uint64_t)>& callback, 
@@ -128,7 +128,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
           view_eager_blob->mut_blob()->reset_dptr((char*)input_ptr + storage_offset_bytes);
         }
       });
-  JUST(SyncAccessTensorWithTimeOut2(input, output, callback, "const"));
+  JUST(SyncAccessTensorWithTimeOut(input, output, callback, "const"));
 
   return output;
 }

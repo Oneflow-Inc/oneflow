@@ -118,7 +118,6 @@ class EagerBlobObject final : public BlobObject {
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
                   const Optional<LocalDepObject*>& dep_object);
-  
   std::unique_ptr<Blob> blob_;
   std::unique_ptr<char[]> header_buffer_;
   std::shared_ptr<TensorBuffer> tensor_buffer_;
