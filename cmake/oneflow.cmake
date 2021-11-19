@@ -2,14 +2,6 @@ include(python)
 
 include(CheckCXXCompilerFlag)
 
-function(oneflow_add_executable)
-  add_executable(${ARGV})
-endfunction()
-
-function(oneflow_add_library)
-  add_library(${ARGV})
-endfunction()
-
 function(target_try_compile_option target flag)
   # We cannot check for -Wno-foo as this won't throw a warning so we must check for the -Wfoo option directly
   # http://stackoverflow.com/questions/38785168/cc1plus-unrecognized-command-line-option-warning-on-any-other-warning
@@ -24,7 +16,7 @@ function(target_try_compile_option target flag)
   endif ()
 endfunction()
 
-function(target_try_compile_options target)
+function(target_try_cxx_compile_options target)
   foreach(flag ${ARGN})
     target_try_compile_option(${target} ${flag})
   endforeach()
@@ -33,12 +25,20 @@ endfunction()
 function(target_treat_warnings_as_errors target)
   if (TREAT_WARNINGS_AS_ERRORS)
     target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Werror>)
+    if(BUILD_CUDA)
+      # Only pass flags when cuda compiler is Clang because cmake handles -Xcompiler incorrectly
+      if ("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "Clang")
+        target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Werror>)
+        # Suppress warning from cub library -- marking as system header seems not working for .cuh files
+        target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Wno-pass-failed>)
+      endif()
+    endif()
 
     # TODO: remove it while fixing all deprecated call
-    target_try_compile_options(${target} -Wno-error=deprecated-declarations)
+    target_try_cxx_compile_options(${target} -Wno-error=deprecated-declarations)
 
     # disable unused-* for different compile mode (maybe unused in cpu.cmake, but used in cuda.cmake)
-    target_try_compile_options(${target}
+    target_try_cxx_compile_options(${target}
       -Wno-error=unused-const-variable
       -Wno-error=unused-variable
       -Wno-error=unused-local-typedefs
@@ -47,21 +47,56 @@ function(target_treat_warnings_as_errors target)
     )
 
     # there is some strict-overflow warnings in oneflow/user/kernels/ctc_loss_kernel_util.cpp for unknown reason, disable them for now
-    target_try_compile_options(${target} -Wno-error=strict-overflow)
+    target_try_cxx_compile_options(${target} -Wno-error=strict-overflow)
 
-    target_try_compile_options(${target} -Wno-error=instantiation-after-specialization)
-
-    # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
-    target_try_compile_options(${target} -Wno-mismatched-tags)
+    target_try_cxx_compile_options(${target} -Wno-error=instantiation-after-specialization)
 
     # disable for pointer operations of intrusive linked lists
-    target_try_compile_options(${target} -Wno-error=array-bounds)
+    target_try_cxx_compile_options(${target} -Wno-error=array-bounds)
 
-    target_try_compile_options(${target} -Wno-error=comment)
+    target_try_cxx_compile_options(${target} -Wno-error=comment)
 
     # disable visibility warnings related to https://github.com/Oneflow-Inc/oneflow/pull/3676.
-    target_try_compile_options(${target} -Wno-error=attributes)
+    target_try_cxx_compile_options(${target} -Wno-error=attributes)
   endif()
+endfunction()
+
+function(set_compile_options_to_oneflow_target target)
+  target_treat_warnings_as_errors(${target})
+  target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Werror=return-type>)
+  # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
+  target_try_cxx_compile_options(${target} -Wno-mismatched-tags)
+
+  if(BUILD_CUDA)
+    if ("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
+      target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+        -Xcompiler -Werror=return-type;
+        -Wno-deprecated-gpu-targets;
+        -Werror cross-execution-space-call;
+        -Xcudafe --diag_suppress=declared_but_not_referenced;
+      >)
+    elseif("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "Clang")
+      target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+        -Werror=return-type;
+      >)
+    else()
+      message(FATAL_ERROR "Unknown CUDA compiler ${CMAKE_CUDA_COMPILER_ID}")
+    endif()
+    # remove THRUST_IGNORE_CUB_VERSION_CHECK if starting using bundled cub
+    target_compile_definitions(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+      THRUST_IGNORE_CUB_VERSION_CHECK;
+    >)
+  endif()
+endfunction()
+
+function(oneflow_add_executable)
+  add_executable(${ARGV})
+  set_compile_options_to_oneflow_target(${ARGV0})
+endfunction()
+
+function(oneflow_add_library)
+  add_library(${ARGV})
+  set_compile_options_to_oneflow_target(${ARGV0})
 endfunction()
 
 # source_group
@@ -324,29 +359,6 @@ if (USE_CLANG_TIDY)
   add_dependencies(oneflow of_tidy)
 endif()
 
-if(BUILD_CUDA)
-  if ("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
-    target_compile_options(oneflow PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
-      -Xcompiler -Werror=return-type;
-      -Werror cross-execution-space-call;
-      -Wno-deprecated-gpu-targets;
-      -Xcudafe --diag_suppress=declared_but_not_referenced;
-    >)
-  elseif("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "Clang")
-    target_compile_options(oneflow PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
-      -Werror=return-type;
-    >)
-  else()
-    message(FATAL_ERROR "Unknown CUDA compiler ${CMAKE_CUDA_COMPILER_ID}")
-  endif()
-  # remove THRUST_IGNORE_CUB_VERSION_CHECK if starting using bundled cub
-  target_compile_definitions(oneflow PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
-    THRUST_IGNORE_CUB_VERSION_CHECK;
-  >)
-endif()
-
-target_compile_options(oneflow PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Werror=return-type>)
-target_treat_warnings_as_errors(oneflow)
 target_compile_definitions(oneflow PRIVATE GOOGLE_LOGGING)
 
 if (WITH_MLIR)
@@ -376,17 +388,16 @@ endif()
 if(BUILD_PYTHON)
 
   # py ext lib
-  add_library(of_pyext_obj ${of_pyext_obj_cc})
+  oneflow_add_library(of_pyext_obj ${of_pyext_obj_cc})
   target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
   target_link_libraries(of_pyext_obj oneflow)
   if(BUILD_SHARED_LIBS AND APPLE)
     target_link_libraries(of_pyext_obj ${Python3_LIBRARIES})
   endif()
   add_dependencies(of_pyext_obj oneflow)
-  target_compile_options(of_pyext_obj PRIVATE -Werror=return-type)
-  target_treat_warnings_as_errors(of_pyext_obj)
 
   pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${PYBIND_REGISTRY_CC})
+  set_compile_options_to_oneflow_target(oneflow_internal)
   set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
   add_dependencies(oneflow_internal of_cfgobj of_functional_obj of_functional_tensor_obj)
   set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
@@ -400,9 +411,7 @@ if(BUILD_PYTHON)
                         ${oneflow_exe_third_party_libs})
   target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
-  target_compile_options(oneflow_internal PRIVATE -Werror=return-type)
   target_compile_definitions(oneflow_internal PRIVATE ONEFLOW_CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
-  target_treat_warnings_as_errors(oneflow_internal)
 
   set(gen_pip_args "")
   if (BUILD_CUDA)
