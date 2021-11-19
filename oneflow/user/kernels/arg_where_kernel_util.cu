@@ -89,7 +89,7 @@ struct ArgWhereKernelUtil<DeviceType::kGPU, IN_T, OUT_T, NDIM> {
     const int64_t elem_cnt = input_shape.elem_cnt();
     // deal with empty blob
     if (elem_cnt == 0) {
-      Memset<DeviceType::kGPU>(ctx, output_size_ptr, 0, sizeof(OUT_T));
+      Memset<DeviceType::kGPU>(ctx->stream(), output_size_ptr, 0, sizeof(OUT_T));
       return;
     }
 

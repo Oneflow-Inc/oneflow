@@ -19,14 +19,14 @@ limitations under the License.
 
 namespace oneflow {
 
-template<template<typename> typename Op, typename T>
+template<template<typename> class Op, typename T>
 struct UnaryByScalarFunctor {
   __host__ __device__ explicit UnaryByScalarFunctor(T scalar) : scalar(scalar) {}
   __device__ T operator()(T a) const { return Op<T>::Invoke(a, scalar); }
   const T scalar;
 };
 
-template<template<typename> typename Op>
+template<template<typename> class Op>
 struct UnaryByScalarFunctor<Op, float16> {
   __host__ __device__ explicit UnaryByScalarFunctor(half scalar) : scalar(scalar) {}
   __device__ half operator()(half a) const { return Op<half>::Invoke(a, scalar); }

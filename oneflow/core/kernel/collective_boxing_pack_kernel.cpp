@@ -56,12 +56,12 @@ void CollectiveBoxingPackKernel::ForwardDataContent(KernelContext* ctx) const {
       if (i != dst_split_axis) { perm.push_back(i); }
     }
     auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
-        ctx->stream_ctx()->device_type(), transpose_in_dim_vec.size());
+        ctx->stream()->device_type(), transpose_in_dim_vec.size());
     CHECK(transpose);
     transpose->Launch(ctx->stream(), in->data_type(), transpose_in_dim_vec.size(),
                       transpose_in_dim_vec.data(), in->dptr(), perm.data(), out->mut_dptr());
   } else {
-    AutoMemcpy(ctx->stream_ctx(), out, in);
+    AutoMemcpy(ctx->stream(), out, in);
   }
 }
 
