@@ -90,10 +90,10 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
       std::function<void(uint64_t, uint64_t)>([&](uint64_t of_blob_ptr, uint64_t of_blob_ptr2) {
         auto* eager_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
         auto* view_eager_blob = reinterpret_cast<OfBlob*>(of_blob_ptr2);
-        const void* input_ptr = eager_blob->blob().dptr();
+        void* input_ptr = eager_blob->mut_blob()->mut_dptr();
         if (!(view_eager_blob->blob().dptr())) {
           int64_t storage_offset_bytes = storage_offset * GetSizeOfDataType(eager_blob->blob().data_type());
-          view_eager_blob->mut_blob()->reset_dptr((char*)input_ptr + storage_offset_bytes);
+          view_eager_blob->mut_blob()->reset_dptr(static_cast<char *>(input_ptr) + storage_offset_bytes);
         }
       });
   JUST(SyncAccessTensorWithTimeOut(input, output, callback, "mul"));
