@@ -148,7 +148,7 @@ class EagerPToSKernel final : public user_op::OpKernel {
     const auto& sorted_p2p_pair = kernel_state->sorted_p2p_pair();
     CHECK_EQ(sorted_in_tensor_slice_copier.size(), sorted_p2p_pair.size());
 
-    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
+    Memset<device_type>(ctx->stream(), out->mut_dptr(), 0,
                         elem_cnt_per_chunk * GetSizeOfDataType(out->data_type()));
     std::unique_ptr<ep::primitive::Add> add_primitive =
         ep::primitive::NewPrimitive<ep::primitive::AddFactory>(ctx->device_type(), in->data_type());
