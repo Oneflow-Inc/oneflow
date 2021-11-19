@@ -57,7 +57,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
    * accept input tensor with target shape, and return viewed tensor. 
    * 
    * The viewed tensor shared memory with input tensor, and both of 
-   * them are memory continuous, but has different shapes/strides.
+   * them are memory contiguous, but has different shapes/strides.
    */
   Stride target_strides(target_shape);
   storage_offset += JUST(input->storage_offset());

@@ -1074,25 +1074,27 @@ const std::shared_ptr<const ParallelDesc>& GetParallelDesc(
 
       
 template<typename T>
-Maybe<void> InstructionsBuilder::TensorView(
-    const T input_tensor,
-    const T view_tensor
-  ) {
+Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_tensor) {
+  /**
+   * TensorView instruction assign the data pointer of input tensor to output view tensor,
+   * so they can shared memory.
+   */
   const auto& parallel_desc = GetParallelDesc(input_tensor);
   LocalDepObject* local_dep_object = JUST(input_tensor->compute_local_dep_object());
   LocalDepObject* view_local_dep_object = JUST(view_tensor->compute_local_dep_object());
-
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(input_tensor->eager_blob_object());
   const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object = JUST(view_tensor->eager_blob_object());
-
+  // init view blob (with empty data pointer)
   view_eager_blob_object->TryInitBlob();
   view_eager_blob_object->set_is_shape_synced(true);
-      
+  // prepare instruction operand
   const auto& phy_instr_operand = std::make_shared<vm::TensorViewOperand>(
       eager_blob_object, view_eager_blob_object, local_dep_object, view_local_dep_object);
+  // prepare instruction
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-      Global<OneflowVM>::Get()->mut_vm(), parallel_desc->device_tag() + ".TensorView",
+      Global<VirtualMachine>::Get()->mut_vm(), parallel_desc->device_tag() + ".TensorView",
       parallel_desc, phy_instr_operand);
+  // assign the data pointer to output view blob
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 
