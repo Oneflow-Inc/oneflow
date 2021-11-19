@@ -95,14 +95,12 @@ class Linear(Module):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
-        self.weight = flow.nn.Parameter(flow.ones(out_features, in_features))
-        self.bias = flow.nn.Parameter(flow.ones(out_features)) if bias else None
-        # self.weight = flow.nn.Parameter(flow.Tensor(out_features, in_features))
-        # self.bias = flow.nn.Parameter(flow.Tensor(out_features)) if bias else None
+        self.weight = flow.nn.Parameter(flow.Tensor(out_features, in_features))
+        self.bias = flow.nn.Parameter(flow.Tensor(out_features)) if bias else None
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
-        # flow.nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+        flow.nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
         if self.bias is not None:
             (fan_in, _) = _calculate_fan_in_and_fan_out(self.weight)
             bound = 1 / math.sqrt(fan_in)

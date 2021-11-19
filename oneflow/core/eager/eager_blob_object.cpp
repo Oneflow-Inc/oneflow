@@ -125,6 +125,7 @@ Maybe<void> DTREagerBlobObject::InitBlobAttrs(
 }
 
 void DTREagerBlobObject::update_access_time() {
+  time_since_last_access_ = Global<one::DTRTensorPool>::Get()->duration() - last_access_time_;
   last_access_time_ = Global<one::DTRTensorPool>::Get()->duration();
 }
 
@@ -223,7 +224,7 @@ Maybe<double> DTREagerBlobObject::neighbor_cost() const {
 
 Maybe<double> DTREagerBlobObject::cost() const {
   auto n_cost = JUST(neighbor_cost());
-  return n_cost / blob_body_bytes_ / last_access_time_;
+  return n_cost / blob_body_bytes_ / time_since_last_access_;
 }
 
 size_t DTREagerBlobObject::input_size() const {

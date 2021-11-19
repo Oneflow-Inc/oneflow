@@ -150,6 +150,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
         could_evict_(true),
         compute_time_(0),
         last_access_time_(0),
+        time_since_last_access_(0),
         pinned_(0),
         compute_op_(nullptr) {}
   ~DTREagerBlobObject() override;
@@ -160,6 +161,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
   const std::size_t memory() const { return blob_body_bytes_; }
   const double compute_time() const { return compute_time_; }
   const double last_access_time() const { return last_access_time_; }
+  const double time_since_last_access() const { return time_since_last_access_; }
   DTRInstrOperand* compute_op() const { return compute_op_.get(); }
   Maybe<DTRInstrOperand*> user_op(int i) const {
     CHECK_LT_OR_RETURN(i, user_ops_.size());
@@ -218,6 +220,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
   bool could_evict_;
   double compute_time_;
   double last_access_time_;
+  double time_since_last_access_;
   size_t pinned_;
   std::unique_ptr<DTRInstrOperand> compute_op_;
   std::vector<std::unique_ptr<DTRInstrOperand>> user_ops_;
