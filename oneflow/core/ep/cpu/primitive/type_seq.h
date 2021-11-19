@@ -30,31 +30,16 @@ limitations under the License.
 #define CPU_PRIMITIVE_DOUBLE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
 #define CPU_PRIMITIVE_FLOAT16_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(float16, DataType::kFloat16)
 
-enum CalculateType : int {
-  Default = 0,
-  oneDNN = 1,
-};
-
 #define CPU_PRIMITIVE_ONEDNN_INT8_TYPE_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(int8_t, DataType::kInt8, dnnl::memory::data_type::s8, CalculateType::oneDNN)
-#define CPU_PRIMITIVE_ONEDNN_UINT8_TYPE_SEQ                                    \
-  OF_PP_MAKE_TUPLE_SEQ(uint8_t, DataType::kUInt8, dnnl::memory::data_type::u8, \
-                       CalculateType::oneDNN)
-#define CPU_PRIMITIVE_ONEDNN_INT32_TYPE_SEQ                                     \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32, dnnl::memory::data_type::s32, \
-                       CalculateType::oneDNN)
+  OF_PP_MAKE_TUPLE_SEQ(int8_t, DataType::kInt8, dnnl::memory::data_type::s8)
+#define CPU_PRIMITIVE_ONEDNN_UINT8_TYPE_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(uint8_t, DataType::kUInt8, dnnl::memory::data_type::u8)
+#define CPU_PRIMITIVE_ONEDNN_INT32_TYPE_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32, dnnl::memory::data_type::s32)
 #define CPU_PRIMITIVE_ONEDNN_FLOAT_TYPE_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat, dnnl::memory::data_type::f32, CalculateType::oneDNN)
-#define CPU_PRIMITIVE_ONEDNN_FLOAT16_TYPE_SEQ                                     \
-  OF_PP_MAKE_TUPLE_SEQ(float16, DataType::kFloat16, dnnl::memory::data_type::f16, \
-                       CalculateType::oneDNN)
-
-#define CPU_PRIMITIVE_DEFAULT_DOUBLE_TYPE_SEQ                                     \
-  OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble, dnnl::memory::data_type::undef, \
-                       CalculateType::Default)
-#define CPU_PRIMITIVE_DEFAULT_INT64_TYPE_SEQ                                      \
-  OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64, dnnl::memory::data_type::undef, \
-                       CalculateType::Default)
+  OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat, dnnl::memory::data_type::f32)
+#define CPU_PRIMITIVE_ONEDNN_FLOAT16_TYPE_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(float16, DataType::kFloat16, dnnl::memory::data_type::f16)
 
 #define CPU_PRIMITIVE_NATIVE_TYPE_SEQ \
   CPU_PRIMITIVE_CHAR_TYPE_SEQ         \
@@ -70,9 +55,12 @@ enum CalculateType : int {
   CPU_PRIMITIVE_ONEDNN_UINT8_TYPE_SEQ        \
   CPU_PRIMITIVE_ONEDNN_INT32_TYPE_SEQ        \
   CPU_PRIMITIVE_ONEDNN_FLOAT_TYPE_SEQ        \
-  CPU_PRIMITIVE_ONEDNN_FLOAT16_TYPE_SEQ      \
-  CPU_PRIMITIVE_DEFAULT_DOUBLE_TYPE_SEQ      \
-  CPU_PRIMITIVE_DEFAULT_INT64_TYPE_SEQ
+  CPU_PRIMITIVE_ONEDNN_FLOAT16_TYPE_SEQ
+
+#define CPU_PRIMITIVE_DEFAULT_NATIVE_TYPE_SEQ \
+  CPU_PRIMITIVE_CHAR_TYPE_SEQ                 \
+  CPU_PRIMITIVE_DOUBLE_TYPE_SEQ               \
+  CPU_PRIMITIVE_INT64_TYPE_SEQ
 
 #define CPU_PRIMITIVE_ALL_TYPE_SEQ \
   CPU_PRIMITIVE_NATIVE_TYPE_SEQ    \

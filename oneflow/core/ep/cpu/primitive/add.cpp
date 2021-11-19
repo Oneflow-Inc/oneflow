@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/ep/include/primitive/add.h"
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
-#include "oneflow/core/stream/cpu/cpu_stream_context.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
 
 namespace oneflow {
@@ -43,18 +42,12 @@ void AddCpu(const T* const* srcs, size_t arity, T* dst, size_t count) {
   }
 }
 
-template<typename T, dnnl::memory::data_type type_onednn, CalculateType type_calculate,
-         typename Enable = void>
-class AddImpl;
-
-template<typename T, dnnl::memory::data_type type_onednn, CalculateType type_calculate>
-class AddImpl<T, type_onednn, type_calculate,
-              typename std::enable_if<type_calculate == CalculateType::Default>::type>
-    : public Add {
+template<typename T>
+class AddDefaultImpl : public Add {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(AddImpl);
-  AddImpl() = default;
-  ~AddImpl() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(AddDefaultImpl);
+  AddDefaultImpl() = default;
+  ~AddDefaultImpl() override = default;
 
   using Add::Launch;
   void Launch(Stream* stream, const void* const* srcs, size_t arity, void* dst,
@@ -81,21 +74,19 @@ class AddImpl<T, type_onednn, type_calculate,
   }
 };
 
-template<typename T, dnnl::memory::data_type type_onednn, CalculateType type_calculate>
-class AddImpl<T, type_onednn, type_calculate,
-              typename std::enable_if<type_calculate == CalculateType::oneDNN>::type> : public Add {
+template<typename T, dnnl::memory::data_type type_onednn>
+class AddOneDnnImpl : public Add {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(AddImpl);
-  AddImpl() = default;
-  ~AddImpl() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(AddOneDnnImpl);
+  AddOneDnnImpl() = default;
+  ~AddOneDnnImpl() override = default;
 
   using Add::Launch;
   void Launch(Stream* stream, const void* const* srcs, size_t arity, void* dst,
               size_t count) override {
-
     dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
     dnnl::stream* onednn_stream = stream->As<CpuStream>()->onednn_stream();
-    
+
     dnnl::memory::dims src_dims = {(dnnl::memory::dim)count};
     std::vector<dnnl::memory::desc> src_md;
     std::vector<dnnl::memory> src_mem;
@@ -125,9 +116,14 @@ class AddImpl<T, type_onednn, type_calculate,
   }
 };
 
-template<typename T, dnnl::memory::data_type type_onednn, CalculateType type_calculate>
+template<typename T>
 std::unique_ptr<Add> NewAdd() {
-  return std::unique_ptr<Add>(new AddImpl<T, type_onednn, type_calculate>());
+  return std::unique_ptr<Add>(new AddDefaultImpl<T>());
+}
+
+template<typename T, dnnl::memory::data_type type_onednn>
+std::unique_ptr<Add> NewOneDnnAdd() {
+  return std::unique_ptr<Add>(new AddOneDnnImpl<T, type_onednn>());
 }
 
 class AddFactoryImpl : public AddFactory {
@@ -137,11 +133,15 @@ class AddFactoryImpl : public AddFactory {
   ~AddFactoryImpl() override = default;
 
   std::unique_ptr<Add> New(DataType data_type) override {
-#define MAKE_NEW_ADD_ENTRY(type_cpp, type_proto, type_onednn, type_calculate) \
-  {type_proto, NewAdd<type_cpp, type_onednn, type_calculate>},
+#define MAKE_NEW_ADD_ENTRY(type_cpp, type_proto) {type_proto, NewAdd<type_cpp>},
+
+#define MAKE_NEW_ONEDNN_ADD_ENTRY(type_cpp, type_proto, type_onednn) \
+  {type_proto, NewOneDnnAdd<type_cpp, type_onednn>},
 
     static const std::map<DataType, std::function<std::unique_ptr<Add>()>> new_add_handle{
-        OF_PP_FOR_EACH_TUPLE(MAKE_NEW_ADD_ENTRY, CPU_PRIMITIVE_ONEDNN_NATIVE_TYPE_SEQ)};
+        OF_PP_FOR_EACH_TUPLE(MAKE_NEW_ONEDNN_ADD_ENTRY, CPU_PRIMITIVE_ONEDNN_NATIVE_TYPE_SEQ)
+            OF_PP_FOR_EACH_TUPLE(MAKE_NEW_ADD_ENTRY, CPU_PRIMITIVE_DEFAULT_NATIVE_TYPE_SEQ)};
+#undef MAKE_NEW_ONEDNN_ADD_ENTRY
 #undef MAKE_NEW_ADD_ENTRY
     const auto it = new_add_handle.find(data_type);
     if (it != new_add_handle.end()) {

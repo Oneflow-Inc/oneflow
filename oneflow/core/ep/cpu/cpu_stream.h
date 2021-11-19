@@ -26,19 +26,20 @@ namespace ep {
 class CpuStream : public Stream {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuStream);
-  CpuStream() { 
+  CpuStream() {
     onednn_engine_.reset(new dnnl::engine(dnnl::engine::kind::cpu, 0));
-    onednn_stream_.reset(new dnnl::stream(*onednn_engine_)); }
+    onednn_stream_.reset(new dnnl::stream(*onednn_engine_));
+  }
 
   ~CpuStream() override = default;
 
   DeviceType device_type() const override { return DeviceType::kCPU; }
   Maybe<void> Sync() override { return Maybe<void>::Ok(); }
-  
+
   dnnl::engine* onednn_engine() const { return onednn_engine_.get(); }
   dnnl::stream* onednn_stream() const { return onednn_stream_.get(); }
 
-  private:
+ private:
   std::unique_ptr<dnnl::engine> onednn_engine_;
   std::unique_ptr<dnnl::stream> onednn_stream_;
 };
