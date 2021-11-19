@@ -43,7 +43,7 @@ class ConstantKernel final : public OpKernel {
     if (elem_cnt == 0) { return; }
     std::unique_ptr<ep::primitive::Fill> fill = NewFillPrimitive(ctx);
     CHECK(fill);
-    fill->Launch(ctx->stream_ctx(), out_tensor->mut_dptr(), value, elem_cnt);
+    fill->Launch(ctx->stream(), out_tensor->mut_dptr(), value, elem_cnt);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -33,7 +33,7 @@ class EyeKernel final : public OpKernel {
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     T* out = out_tensor->mut_dptr<T>();
     Memset<device_type>(
-        ctx->device_ctx(), out_tensor->mut_dptr<T>(), 0,
+        ctx->stream(), out_tensor->mut_dptr<T>(), 0,
         out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type()));
     EyeFunctor<device_type, T>()(ctx->device_ctx(), m, std::min(m, n), out);
   }
@@ -43,7 +43,7 @@ class EyeKernel final : public OpKernel {
 #define REGISTER_EYE_KERNEL(device, dtype)                                             \
   REGISTER_USER_KERNEL("eye").SetCreateFn<EyeKernel<device, dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceType() == device)                                             \
-      & (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
+      && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
 #define REGISTER_EYE_KERNELS_WITH_DEVICE(device) \
   REGISTER_EYE_KERNEL(device, uint8_t)           \

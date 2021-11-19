@@ -284,9 +284,9 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
         if (i != out_split_axis) { perm.push_back(i); }
       }
       auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
-          ctx->stream_ctx()->device_type(), transpose_in_dim_vec.size());
+          ctx->stream()->device_type(), transpose_in_dim_vec.size());
       CHECK(transpose);
-      transpose->Launch(ctx->stream_ctx(), in->data_type(), transpose_in_dim_vec.size(),
+      transpose->Launch(ctx->stream(), in->data_type(), transpose_in_dim_vec.size(),
                         transpose_in_dim_vec.data(), in->dptr(), perm.data(),
                         tmp_buffer->mut_dptr());
     }
@@ -344,21 +344,21 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
       FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.push_back(i); }
       perm.insert(perm.begin() + in_split_axis, 0);
       auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
-          ctx->stream_ctx()->device_type(), unpack_from_dim_vec.size());
+          ctx->stream()->device_type(), unpack_from_dim_vec.size());
       CHECK(transpose);
-      transpose->Launch(ctx->stream_ctx(), in->data_type(), unpack_from_dim_vec.size(),
+      transpose->Launch(ctx->stream(), in->data_type(), unpack_from_dim_vec.size(),
                         unpack_from_dim_vec.data(), unpack_from_ptr, perm.data(), out->mut_dptr());
     }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EAGER_CCL_S2S_KERNEL(dtype)                                            \
-  REGISTER_USER_KERNEL("eager_nccl_s2s")                                                \
-      .SetCreateFn<EagerCclS2SKernel<dtype>>()                                          \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                   \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_EAGER_CCL_S2S_KERNEL(dtype)                                             \
+  REGISTER_USER_KERNEL("eager_nccl_s2s")                                                 \
+      .SetCreateFn<EagerCclS2SKernel<dtype>>()                                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                    \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferEagerCclS2SKernelTmpBufferSize);
 
 REGISTER_EAGER_CCL_S2S_KERNEL(int8_t)

@@ -516,8 +516,95 @@ def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", []> {
   let summary = "OneFlow add_n operation";
   let input = (ins Variadic<AnyType>:$in);
   let output = (outs AnyType:$out);
+  let hasCanonicalizer = 1;
 }
 
+def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect]> {
+  let summary = "";
+  let input = (ins
+    AnyType:$in0,
+    AnyType:$in1
+  );
+  let output = (outs AnyType:$out);
+}
+
+def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [AttrSizedOperandSegments, AttrSizedResultSegments, NoSideEffect]> {
+  let summary = "";
+  let input = (ins
+    AnyType:$x,
+    Optional<AnyType>:$moving_mean,
+    Optional<AnyType>:$moving_variance,
+    AnyType:$gamma,
+    AnyType:$beta,
+    Optional<AnyType>:$_add_to_output
+  );
+  let attrs = (ins
+    SI32Attr:$axis,
+    F32Attr:$epsilon,
+    BoolAttr:$training,
+    F32Attr:$momentum
+  );
+  let output = (outs
+    AnyType:$y,
+    Optional<AnyType>:$mean,
+    Optional<AnyType>:$inv_variance
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes,
+    I32ElementsAttr:$result_segment_sizes
+  );
+}
+
+def OneFlow_NormalizationAddReluOp : OneFlow_BaseOp<"normalization_add_relu", [AttrSizedOperandSegments, AttrSizedResultSegments]> {
+  let summary = "";
+  let input = (ins
+    AnyType:$x,
+    Optional<AnyType>:$addend,
+    Optional<AnyType>:$moving_mean,
+    Optional<AnyType>:$moving_variance,
+    AnyType:$gamma,
+    AnyType:$beta
+  );
+  let attrs = (ins
+    SI32Attr:$axis,
+    F32Attr:$epsilon,
+    BoolAttr:$training,
+    F32Attr:$momentum
+  );
+  let output = (outs
+    AnyType:$y,
+    AnyType:$reserve_space,
+    Optional<AnyType>:$mean,
+    Optional<AnyType>:$inv_variance
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes,
+    I32ElementsAttr:$result_segment_sizes
+  );
+  let builders = [
+    OpBuilder<(ins
+      "Value":$x,
+      "Value":$addend,
+      "Value":$moving_mean,
+      "Value":$moving_variance,
+      "Value":$gamma,
+      "Value":$beta,
+      "StringRef":$op_name,
+      "BoolAttr":$trainable,
+      "StringRef":$device_tag,
+      "ArrayAttr":$device_name,
+      "IntegerAttr":$scope_symbol_id,
+      "ArrayAttr":$hierarchy,
+      "DenseElementsAttr":$operand_segment_sizes,
+      "DenseElementsAttr":$result_segment_sizes,
+      "IntegerAttr":$axis,
+      "FloatAttr":$epsilon,
+      "BoolAttr":$training,
+      "FloatAttr":$momentum
+    )>
+  ];
+  let hasCanonicalizer = 1;
+}
 
 // optimizer ops
 
@@ -604,7 +691,10 @@ def OneFlowImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", []> {
 
 def OneFlowCropMirrorNormalizeFromUINT8Op : OneFlow_BaseOp<"crop_mirror_normalize_from_uint8", []> {
   let summary = "OneFlow crop_mirror_normalize_from_uint8 operation";
-  let input = (ins AnyType:$in);
+  let input = (ins
+    AnyType:$in,
+    Optional<AnyType>:$mirror
+  );
   let output = (outs AnyType:$out);
   let attrs = (ins
     StrAttr:$color_space,
@@ -716,29 +806,16 @@ def OneFlow_MlirJitOp : OneFlow_UserBaseOp<"mlir_jit", [
     StrAttr:$mlir_assembly
   );
   let builders = [
-    OpBuilder<(ins
-      "FuncOp":$callee,
+    OpBuilder<(ins "FuncOp":$callee,
       "NamedAttrList":$attributes,
-      CArg<"ValueRange", "{}">:$data_input
-    ), [{
+      CArg<"ValueRange", "{}">:$data_input), [{
       $_state.addOperands(data_input);
-      $_state.addAttribute("callee",$_builder.getSymbolRefAttr(callee));
+      $_state.addAttributes(attributes);
+      $_state.addAttribute("callee", SymbolRefAttr::get(callee));
       $_state.addTypes(callee.getType().getResults());
-      $_state.addAttributes(attributes);
-    }]>,
-    OpBuilder<(ins
-      "SymbolRefAttr":$callee,
-      "TypeRange":$results,
-      "NamedAttrList":$attributes,
-      CArg<"ValueRange", "{}">:$data_input
-    ), [{
-      $_state.addOperands(data_input);
-      $_state.addAttribute("callee", callee);
-      $_state.addTypes(results);
-      $_state.addAttributes(attributes);
     }]>
   ];
-    let extraClassDeclaration = [{
+  let extraClassDeclaration = [{
     operand_range getArgOperands() {
       return {arg_operand_begin(), arg_operand_end()};
     }
@@ -959,6 +1036,75 @@ def FusedBiasAddGeluPattern : Pat<
     $axis
   ),
   []
+>;
+
+def GetFirstValue :
+  NativeCodeCall<"*$0.begin()">;
+def IsTraingTrue: Constraint<CPred<"$0.getValue()">, "">;
+// TODO: check mean and inv_variance are not used
+def NormalizationAddReluPattern : Pattern<
+  /* match */ (
+    OneFlow_ReluOp (
+      OneFlow_Add2Op (
+          OneFlow_NormalizationOp:$results
+            $bn_x,
+            $bn_moving_mean,
+            $bn_moving_variance,
+            $bn_gamma,
+            $bn_beta,
+            $bn__add_to_output, // TODO: check this is none
+            $bn_op_name,
+            $bn_trainable,
+            $bn_device_tag,
+            $bn_device_name,
+            $bn_scope_symbol_id,
+            $bn_hierarchy,
+            $operand_segment_sizes,
+            $result_segment_sizes,
+            $bn_axis,
+            $bn_epsilon,
+            $bn_training,
+            $bn_momentum
+      ),
+      $addend,
+      $add_op_name,
+      $add_trainable,
+      $add_device_tag,
+      $add_device_name,
+      $add_scope_symbol_id,
+      $add_hierarchy
+    ),
+    $relu_op_name,
+    $relu_trainable,
+    $relu_device_tag,
+    $relu_device_name,
+    $relu_scope_symbol_id,
+    $relu_hierarchy
+  ),
+  /* replace */ [(
+    OneFlow_NormalizationAddReluOp: $fuse_results
+    $bn_x,
+    $addend,
+    (GetFirstValue $bn_moving_mean),
+    (GetFirstValue $bn_moving_variance),
+    $bn_gamma,
+    $bn_beta,
+    $bn_op_name,
+    $bn_trainable,
+    $bn_device_tag,
+    $bn_device_name,
+    $bn_scope_symbol_id,
+    $bn_hierarchy,
+    /* not used */ $operand_segment_sizes,
+    /* not used */ $result_segment_sizes,
+    $bn_axis,
+    $bn_epsilon,
+    $bn_training,
+    $bn_momentum
+  ),
+  (replaceWithValue $fuse_results__0),
+  ],
+  [(IsTraingTrue $bn_training)]
 >;
 
 #endif // ONEFLOW_PATTERNS

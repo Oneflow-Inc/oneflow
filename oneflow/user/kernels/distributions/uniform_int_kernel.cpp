@@ -22,7 +22,7 @@ namespace {
   REGISTER_USER_KERNEL("uniform_int")                       \
       .SetCreateFn<UniformIntKernel<device, dtype>>()       \
       .SetIsMatchedHob((user_op::HobDeviceType() == device) \
-                       & (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
+                       && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
 REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, float)
 REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, double)

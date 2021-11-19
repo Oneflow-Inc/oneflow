@@ -60,7 +60,7 @@ void CalcSumOfBlobs(KernelContext* ctx, const std::function<Blob*(const std::str
     Blob* src_blob_i = BnInOp2Blob(src_bns.Get(i));
     srcs[i] = src_blob_i->dptr<T>();
   }
-  primitive->Launch(ctx->stream_ctx(), srcs.data(), srcs.size(), dst_blob->mut_dptr<T>(),
+  primitive->Launch(ctx->stream(), srcs.data(), srcs.size(), dst_blob->mut_dptr<T>(),
                     dst_blob->static_shape().elem_cnt());
 }
 
@@ -69,7 +69,7 @@ void CopyFromFirstToOtherBlobs(KernelContext* ctx,
                                const PbRpf<std::string>& bns) {
   const Blob* blob_0 = BnInOp2Blob(bns.Get(0));
   FOR_RANGE(size_t, i, 1, bns.size()) {
-    AutoMemcpy(ctx->stream_ctx(), BnInOp2Blob(bns.Get(i)), blob_0);
+    AutoMemcpy(ctx->stream(), BnInOp2Blob(bns.Get(i)), blob_0);
   }
 }
 
@@ -155,7 +155,7 @@ void ConcatSplitPartDataContent(DeviceCtx* ctx, const DataContentDesc& in_desc,
     }
     int64_t copy_elem_num = std::min(in_elem_num, out_elem_num);
     size_t copy_size = copy_elem_num * one_elem_size;
-    Memcpy<DeviceType::kCPU>(ctx, out_ptr, in_ptr, copy_size);
+    Memcpy<DeviceType::kCPU>(ctx->stream(), out_ptr, in_ptr, copy_size);
     in_elem_num -= copy_elem_num;
     out_elem_num -= copy_elem_num;
     in_ptr += copy_size;

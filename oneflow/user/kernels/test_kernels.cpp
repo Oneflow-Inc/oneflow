@@ -82,7 +82,7 @@ class TestReshapeKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
+    Memcpy<DeviceType::kGPU>(ctx->stream(), out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
                              in_blob->shape().elem_cnt() * sizeof(float));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -101,7 +101,7 @@ class CopyIn2OutKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
+    Memcpy<DeviceType::kGPU>(ctx->stream(), out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
                              in_blob->shape().elem_cnt() * sizeof(float));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -133,13 +133,13 @@ class TestMultiOutputOrderKernel final : public user_op::OpKernel {
     const user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out1_blob = ctx->Tensor4ArgNameAndIndex("out1", 0);
     user_op::Tensor* out2_blob = ctx->Tensor4ArgNameAndIndex("out2", 0);
-    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out1_blob->mut_dptr<char>(), in_blob->dptr<char>(),
+    Memcpy<DeviceType::kGPU>(ctx->stream(), out1_blob->mut_dptr<char>(), in_blob->dptr<char>(),
                              in_blob->shape().elem_cnt() * sizeof(float));
     std::unique_ptr<ep::primitive::Fill> fill =
-        ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream_ctx()->device_type(),
+        ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream()->device_type(),
                                                                 out2_blob->data_type());
     CHECK(fill);
-    fill->Launch(ctx->stream_ctx(), out2_blob->mut_dptr(), 0.0, out2_blob->shape().elem_cnt());
+    fill->Launch(ctx->stream(), out2_blob->mut_dptr(), 0.0, out2_blob->shape().elem_cnt());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -147,7 +147,7 @@ class TestMultiOutputOrderKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("TestMultiOutputOrder")
     .SetCreateFn<TestMultiOutputOrderKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
-                     & (user_op::HobDataType("in", 0) == DataType::kFloat));
+                     && (user_op::HobDataType("in", 0) == DataType::kFloat));
 
 class TestMultiInputFwKernel final : public user_op::OpKernel {
  public:
@@ -158,7 +158,7 @@ class TestMultiInputFwKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x1_blob = ctx->Tensor4ArgNameAndIndex("x1", 0);
     user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
-    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), y_blob->mut_dptr<char>(), x1_blob->dptr<char>(),
+    Memcpy<DeviceType::kGPU>(ctx->stream(), y_blob->mut_dptr<char>(), x1_blob->dptr<char>(),
                              x1_blob->shape().elem_cnt() * sizeof(float));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -167,7 +167,7 @@ class TestMultiInputFwKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("TestMultiInput")
     .SetCreateFn<TestMultiInputFwKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
-                     & (user_op::HobDataType("x1", 0) == DataType::kFloat));
+                     && (user_op::HobDataType("x1", 0) == DataType::kFloat));
 
 class TestMultiInputBwKernel final : public user_op::OpKernel {
  public:
@@ -179,13 +179,11 @@ class TestMultiInputBwKernel final : public user_op::OpKernel {
     user_op::Tensor* x1_diff_blob = ctx->Tensor4ArgNameAndIndex("x1_diff", 0);
     user_op::Tensor* x2_diff_blob = ctx->Tensor4ArgNameAndIndex("x2_diff", 0);
     std::unique_ptr<ep::primitive::Fill> fill =
-        ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream_ctx()->device_type(),
+        ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream()->device_type(),
                                                                 x1_diff_blob->data_type());
     CHECK(fill);
-    fill->Launch(ctx->stream_ctx(), x1_diff_blob->mut_dptr(), 1.0,
-                 x1_diff_blob->shape().elem_cnt());
-    fill->Launch(ctx->stream_ctx(), x2_diff_blob->mut_dptr(), 2.0,
-                 x2_diff_blob->shape().elem_cnt());
+    fill->Launch(ctx->stream(), x1_diff_blob->mut_dptr(), 1.0, x1_diff_blob->shape().elem_cnt());
+    fill->Launch(ctx->stream(), x2_diff_blob->mut_dptr(), 2.0, x2_diff_blob->shape().elem_cnt());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -193,7 +191,7 @@ class TestMultiInputBwKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("TestMultiInputGrad")
     .SetCreateFn<TestMultiInputBwKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
-                     & (user_op::HobDataType("x1", 0) == DataType::kFloat));
+                     && (user_op::HobDataType("x1", 0) == DataType::kFloat));
 
 #endif
 
@@ -216,7 +214,7 @@ class ReluCpuKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("cpu_only_relu_test")
     .SetCreateFn<ReluCpuKernel<float>>()
     .SetIsMatchedHob((user_op::HobDataType("in", 0) == DataType::kFloat)
-                     & (user_op::HobDataType("out", 0) == DataType::kFloat));
+                     && (user_op::HobDataType("out", 0) == DataType::kFloat));
 
 class TestSourceKernel final : public user_op::OpKernel {
  public:
@@ -234,7 +232,7 @@ class TestSourceKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("TestSource")
     .SetCreateFn<TestSourceKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("out", 0) == DataType::kFloat))
+                     && (user_op::HobDataType("out", 0) == DataType::kFloat))
     .SetInferTmpSizeFn([](user_op::InferContext*) { return 0; });
 
 class TestSourceMultiGpuFixedOutNumKernel final : public user_op::OpKernel {
@@ -255,7 +253,7 @@ class TestSourceMultiGpuFixedOutNumKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("TestSourceMultiGpuFixedOutNum")
     .SetCreateFn<TestSourceMultiGpuFixedOutNumKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("out", 0) == DataType::kFloat));
+                     && (user_op::HobDataType("out", 0) == DataType::kFloat));
 
 class TestDynamicSourceKernel final : public user_op::OpKernel {
  public:
@@ -274,7 +272,7 @@ class TestDynamicSourceKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("TestDynamicSource")
     .SetCreateFn<TestDynamicSourceKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("out", 0) == DataType::kFloat));
+                     && (user_op::HobDataType("out", 0) == DataType::kFloat));
 
 class TestRandomSourceKernel final : public user_op::OpKernel {
  public:
@@ -302,7 +300,7 @@ class TestRandomSourceKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("TestRandomSource")
     .SetCreateFn<TestRandomSourceKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("out", 0) == DataType::kFloat));
+                     && (user_op::HobDataType("out", 0) == DataType::kFloat));
 
 class TestDataTypeAttrKernel final : public user_op::OpKernel {
  public:

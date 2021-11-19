@@ -26,9 +26,9 @@ using namespace boxing::collective;
 namespace {
 
 CollectiveBoxingActorContext* GetCollectiveBoxingActorContext(KernelContext* kernel_ctx) {
-  auto* actor_context_pointer = CHECK_NOTNULL(dynamic_cast<ActorContextProvider*>(kernel_ctx));
+  auto* actor_context_provider = CHECK_NOTNULL(dynamic_cast<ActorContextProvider*>(kernel_ctx));
   return CHECK_NOTNULL(
-      dynamic_cast<CollectiveBoxingActorContext*>(actor_context_pointer->GetActorContext()));
+      dynamic_cast<CollectiveBoxingActorContext*>(actor_context_provider->GetActorContext()));
 }
 
 class CollectiveBoxingKernelState final : public KernelState {

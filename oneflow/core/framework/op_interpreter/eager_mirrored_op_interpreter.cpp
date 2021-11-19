@@ -27,7 +27,6 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/stride.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/operator/operator.h"

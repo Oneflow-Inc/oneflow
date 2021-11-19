@@ -86,7 +86,7 @@ class UnfoldKernel final : public OpKernel {
   REGISTER_USER_KERNEL("unfold")                                 \
       .SetCreateFn<UnfoldKernel<device, dtype, int32_t, 2, 2>>() \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)      \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
 REGISTER_UNFOLD_KERNEL(DeviceType::kCPU, float)
 REGISTER_UNFOLD_KERNEL(DeviceType::kCPU, double)

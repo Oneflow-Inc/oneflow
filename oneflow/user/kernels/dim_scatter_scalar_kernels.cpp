@@ -41,9 +41,9 @@ class DimScatterScalarKernel final : public user_op::OpKernel {
     const IN_T src_scalar = static_cast<IN_T>(ctx->Attr<float>("src_scalar"));
 
     if (input_tensor) {
-      Memcpy<device_type>(ctx->device_ctx(), output, input_tensor->dptr<IN_T>(), out_bytes_size);
+      Memcpy<device_type>(ctx->stream(), output, input_tensor->dptr<IN_T>(), out_bytes_size);
     } else if (like_tensor) {
-      Memset<device_type>(ctx->device_ctx(), output, 0, out_bytes_size);
+      Memset<device_type>(ctx->stream(), output, 0, out_bytes_size);
     } else {
       std::cerr << "Unimplemented Error" << std::endl;
       throw Error::UnimplementedError();  // TODO: Remove throw Error.
@@ -75,13 +75,13 @@ class DimScatterScalarKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SCATTERSCALAR_KERNEL(op_type_name, device, dtype_pair, itype_pair, opt)     \
-  REGISTER_USER_KERNEL(#op_type_name)                                                        \
-      .SetCreateFn<DimScatterScalarKernel<device, OF_PP_PAIR_FIRST(dtype_pair),              \
-                                          OF_PP_PAIR_FIRST(itype_pair), opt>>()              \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                  \
-                       & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair)) \
-                       & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
+#define REGISTER_SCATTERSCALAR_KERNEL(op_type_name, device, dtype_pair, itype_pair, opt)      \
+  REGISTER_USER_KERNEL(#op_type_name)                                                         \
+      .SetCreateFn<DimScatterScalarKernel<device, OF_PP_PAIR_FIRST(dtype_pair),               \
+                                          OF_PP_PAIR_FIRST(itype_pair), opt>>()               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
+                       && (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair)) \
+                       && (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
 
 #define REGISTER_SCATTER_SCALAR_CPU_KERNELS(dtype_pair, itype_pair)                               \
   REGISTER_SCATTERSCALAR_KERNEL(dim_scatter_update_scalar, DeviceType::kCPU, dtype_pair,          \
