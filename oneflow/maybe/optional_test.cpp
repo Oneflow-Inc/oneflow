@@ -77,7 +77,7 @@ TEST(Optional, NonScalar) {
   auto x = std::make_shared<int>(233);
   ASSERT_EQ(x.use_count(), 1);
 
-  Optional<std::shared_ptr<int>> a, b(x), aa(a), aaa(InPlace, x);
+  Optional<std::shared_ptr<int>> a, b(x), aa(a), aaa(InPlace, std::make_shared<int>(244));
   ASSERT_EQ(x.use_count(), 2);
   ASSERT_EQ(*Private::Value(b), 233);
   static_assert(std::is_same<decltype(Private::Value(b)), std::shared_ptr<int>&>::value, "");
@@ -231,4 +231,32 @@ TEST(Optional, Hash) {
 
   Optional<const int&> g;
   ASSERT_EQ(std::hash<decltype(g)>()(g), NullOptHash);
+}
+
+TEST(Optional, Compare) {
+  Optional<int> a, b, c(-1), d(0), e(1), f(1);
+
+  ASSERT_EQ(a, b);
+  ASSERT_EQ(e, f);
+  ASSERT_NE(a, d);
+  ASSERT_LT(b, c);
+  ASSERT_LE(b, c);
+  ASSERT_LE(c, c);
+  ASSERT_LT(c, d);
+  ASSERT_LT(d, e);
+  ASSERT_GT(e, d);
+  ASSERT_GT(d, c);
+  ASSERT_GT(c, b);
+  ASSERT_GE(c, b);
+  ASSERT_GE(a, b);
+
+  std::set<Optional<int>> s{2, NullOpt, -1, 3, NullOpt, 2};
+
+  ASSERT_EQ(s.size(), 4);
+
+  auto iter = s.begin();
+  ASSERT_EQ(*(iter++), NullOpt);
+  ASSERT_EQ(*(iter++), -1);
+  ASSERT_EQ(*(iter++), 2);
+  ASSERT_EQ(*(iter++), 3);
 }

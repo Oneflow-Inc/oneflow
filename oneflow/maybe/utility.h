@@ -33,6 +33,10 @@ struct NullOptType {
 
   bool operator==(NullOptType) const { return true; }
   bool operator!=(NullOptType) const { return false; }
+  bool operator<(NullOptType) const { return false; }
+  bool operator>(NullOptType) const { return false; }
+  bool operator<=(NullOptType) const { return true; }
+  bool operator>=(NullOptType) const { return true; }
 };
 
 constexpr const std::size_t NullOptHash = -3333;

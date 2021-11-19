@@ -267,6 +267,24 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
 
   bool operator!=(const Variant& v) const { return !operator==(v); }
 
+  bool operator<(const Variant& v) const {
+    if (index < v.index) return true;
+    if (index > v.index) return false;
+
+    return v.visit([this](const auto& elem) { return Get<RemoveCVRef<decltype(elem)>>() < elem; });
+  }
+
+  bool operator>=(const Variant& v) const { return !(*this < v); }
+
+  bool operator>(const Variant& v) const {
+    if (index > v.index) return true;
+    if (index < v.index) return false;
+
+    return v.visit([this](const auto& elem) { return Get<RemoveCVRef<decltype(elem)>>() > elem; });
+  }
+
+  bool operator<=(const Variant& v) const { return !(*this > v); }
+
   template<typename T, std::enable_if_t<HasType<T>, int> = 0>
   friend bool operator==(const Variant& v, const T& x) {
     if (v.index != IndexOfType<T>) return false;

@@ -280,13 +280,48 @@ struct Optional {
 
   bool operator!=(const Optional& opt) const { return !operator==(opt); }
 
+  bool operator<(const Optional& opt) const {
+    if (HasValue()) {
+      if (opt.HasValue()) {
+        return Value() < opt.Value();
+      } else {
+        return false;
+      }
+    } else {
+      return opt.HasValue();
+    }
+  }
+
+  bool operator>=(const Optional& opt) const { return !operator<(opt); }
+
+  bool operator>(const Optional& opt) const {
+    if (HasValue()) {
+      if (opt.HasValue()) {
+        return Value() > opt.Value();
+      } else {
+        return true;
+      }
+    } else {
+      return false;
+    }
+  }
+
+  bool operator<=(const Optional& opt) const { return !operator>(opt); }
+
   friend bool operator==(const Optional& opt, NullOptType) { return !opt.HasValue(); }
-
   friend bool operator!=(const Optional& opt, NullOptType) { return opt.HasValue(); }
-
   friend bool operator==(NullOptType, const Optional& opt) { return !opt.HasValue(); }
-
   friend bool operator!=(NullOptType, const Optional& opt) { return opt.HasValue(); }
+
+  friend bool operator<(const Optional& opt, NullOptType) { return false; }
+  friend bool operator>(const Optional& opt, NullOptType) { return opt.HasValue(); }
+  friend bool operator<=(const Optional& opt, NullOptType) { return !opt.HasValue(); }
+  friend bool operator>=(const Optional& opt, NullOptType) { return true; }
+
+  friend bool operator<(NullOptType, const Optional& opt) { return opt > NullOpt; }
+  friend bool operator>(NullOptType, const Optional& opt) { return opt < NullOpt; }
+  friend bool operator<=(NullOptType, const Optional& opt) { return opt >= NullOpt; }
+  friend bool operator>=(NullOptType, const Optional& opt) { return opt <= NullOpt; }
 
   friend bool operator==(const Optional& opt, const T& v) {
     if (opt.HasValue()) {
@@ -301,6 +336,34 @@ struct Optional {
   friend bool operator==(const T& v, const Optional& opt) { return opt == v; }
 
   friend bool operator!=(const T& v, const Optional& opt) { return !(opt == v); }
+
+  friend bool operator<(const Optional& opt, const T& v) {
+    if (opt.HasValue()) {
+      return opt.Value() < v;
+    } else {
+      return true;
+    }
+  }
+
+  friend bool operator>=(const Optional& opt, const T& v) { return !(opt < v); }
+
+  friend bool operator>(const T& v, const Optional& opt) { return opt < v; }
+
+  friend bool operator<=(const T& v, const Optional& opt) { return !(opt < v); }
+
+  friend bool operator>(const Optional& opt, const T& v) {
+    if (opt.HasValue()) {
+      return opt.Value() > v;
+    } else {
+      return false;
+    }
+  }
+
+  friend bool operator<=(const Optional& opt, const T& v) { return !(opt > v); }
+
+  friend bool operator<(const T& v, const Optional& opt) { return opt > v; }
+
+  friend bool operator>=(const T& v, const Optional& opt) { return !(opt > v); }
 
   decltype(auto) ValueOr(const T& v) const& {
     if (HasValue()) {

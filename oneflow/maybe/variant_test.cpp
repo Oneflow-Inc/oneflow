@@ -178,3 +178,46 @@ TEST(Variant, BinarySearchVisit) {
   ASSERT_EQ(a, c);
   ASSERT_NE(a, b);
 }
+
+TEST(Variant, Compare) {
+  OptionalVariant<int, float, bool> a, b, c(0), d(5), dd(5), e(-1.2f), f(2.3f), g(false), h(true);
+
+  ASSERT_EQ(a, b);
+  ASSERT_EQ(d, dd);
+  ASSERT_NE(a, c);
+  ASSERT_NE(c, d);
+  ASSERT_NE(d, e);
+  ASSERT_NE(e, f);
+  ASSERT_NE(f, g);
+  ASSERT_NE(g, h);
+  ASSERT_LT(a, c);
+  ASSERT_LT(c, d);
+  ASSERT_LT(d, e);
+  ASSERT_LT(e, f);
+  ASSERT_LT(f, g);
+  ASSERT_LT(g, h);
+  ASSERT_GT(c, a);
+  ASSERT_GT(d, c);
+  ASSERT_GT(e, d);
+  ASSERT_GT(f, e);
+  ASSERT_GT(g, f);
+  ASSERT_GT(h, g);
+  ASSERT_LE(a, b);
+  ASSERT_LE(b, c);
+  ASSERT_LE(c, d);
+  ASSERT_LE(d, dd);
+
+  std::set<OptionalVariant<int, float, bool>> s{100, 2.3f,  true, 3.3f, NullOpt,
+                                                0,   false, 22,   true, NullOpt};
+  ASSERT_EQ(s.size(), 8);
+
+  auto iter = s.begin();
+  ASSERT_EQ(*(iter++), NullOpt);
+  ASSERT_EQ(*(iter++), 0);
+  ASSERT_EQ(*(iter++), 22);
+  ASSERT_EQ(*(iter++), 100);
+  ASSERT_EQ(*(iter++), 2.3f);
+  ASSERT_EQ(*(iter++), 3.3f);
+  ASSERT_EQ(*(iter++), false);
+  ASSERT_EQ(*(iter++), true);
+}

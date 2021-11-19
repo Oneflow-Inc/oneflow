@@ -28,4 +28,9 @@ TEST(Utility, NullOpt) {
 
   ASSERT_EQ(a, NullOptType{});
   ASSERT_EQ(std::hash<NullOptType>()(a), std::hash<NullOptType>()(NullOpt));
+  ASSERT_EQ(NullOpt, a);
+  ASSERT_GE(NullOpt, a);
+  ASSERT_LE(NullOpt, a);
+  ASSERT_FALSE(NullOpt < a);
+  ASSERT_FALSE(NullOpt > a);
 }
