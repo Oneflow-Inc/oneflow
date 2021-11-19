@@ -556,6 +556,10 @@ def _roll(self, shifts, dims=None):
     return flow.roll(self, shifts=shifts, dims=dims)
 
 
+def _bmm(self, other):
+    return flow.bmm(self, other)
+
+
 def _len(self):
     if self.dim() == 0:
         raise TypeError("len() of a 0-d tensor")
@@ -826,6 +830,7 @@ def RegisterMethods():
     Tensor.log_softmax = _log_softmax
     Tensor.logical_not = _not
     Tensor.roll = _roll
+    Tensor.bmm = _bmm
     Tensor.squeeze = _squeeze
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow
