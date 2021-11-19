@@ -143,6 +143,45 @@ class HardTanhGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ReLU6Functor {
+  public:
+    ReLU6Functor() {
+      op_ = CHECK_JUST(one::OpBuilder("hardtanh").Input("in").Output("out").Build());
+    }
+    Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool inplace) const{
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("min_val", 0.0));
+      JUST(attrs.SetAttr<double>("max_val", 6.0));
+      if (inplace){
+        JUST(CheckInplaceValid(x));
+        std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+        outputs->at(0) = x;
+        JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+        return outputs->at(0);
+      }else{
+        return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+      }
+    }
+  private:
+    std::shared_ptr<OpExpr> op_;
+};
+
+class ReLU6GradFunctor{
+  public:
+    ReLU6GradFunctor() {
+      op_ = CHECK_JUST(one::OpBuilder("hardtanh_grad").Input("y").Input("dy").Output("dx").Build());
+    }
+    Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& dy) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("min_val", 0.0));
+    JUST(attrs.SetAttr<double>("max_val", 6.0));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {y, dy}, attrs);
+  }
+  private:
+    std::shared_ptr<OpExpr> op_;
+};
+
 class EluFunctor {
  public:
   EluFunctor() { op_ = CHECK_JUST(one::OpBuilder("elu").Input("in").Output("out").Build()); }
@@ -451,6 +490,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PReluGradFunctor>("PReluGrad");
   m.add_functor<impl::HardTanhFunctor>("HardTanh");
   m.add_functor<impl::HardTanhGradFunctor>("HardTanhGrad");
+  m.add_functor<impl::ReLU6Functor>("ReLU6");
+  m.add_functor<impl::ReLU6GradFunctor>("ReLU6Grad");
   m.add_functor<impl::EluFunctor>("Elu");
   m.add_functor<impl::EluGradFunctor>("EluGrad");
   m.add_functor<impl::CeluFunctor>("Celu");

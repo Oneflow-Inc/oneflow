@@ -32,6 +32,7 @@ from oneflow._C import adaptive_avg_pool2d
 from oneflow._C import adaptive_avg_pool3d
 from oneflow._C import relu
 from oneflow._C import hardtanh
+from oneflow._C import relu6
 from oneflow._C import hardsigmoid
 from oneflow._C import hardswish
 from oneflow._C import leaky_relu
@@ -59,4 +60,3 @@ from oneflow._C import ctc_greedy_decoder
 from oneflow._C import one_hot
 from oneflow.nn.modules.sparse import embedding
 from oneflow.nn.modules.linear import linear
-from oneflow.nn.modules.activation import relu6

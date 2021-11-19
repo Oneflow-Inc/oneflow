@@ -354,6 +354,15 @@ add_docstr(
     """,
 )
 add_docstr(
+    oneflow._C.relu6,
+    r"""relu6(input, inplace=False) -> Tensor
+
+    Applies the element-wise function :math:`\text{ReLU6}(x) = \min(\max(0,x), 6)`.
+
+    See :class:`~oneflow.nn.ReLU6` for more details.
+    """,
+)
+add_docstr(
     oneflow._C.leaky_relu,
     """
     leaky_relu(x: Tensor,  alpha :Float) -> Tensor
