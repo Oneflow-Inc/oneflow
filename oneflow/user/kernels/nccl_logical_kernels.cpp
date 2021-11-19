@@ -338,12 +338,12 @@ REGISTER_USER_KERNEL("_nccl_logical_all_gather")
     .SetCreateFn<NcclLogicalAllGatherKernel>()
     .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
 
-#define REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(dtype)                                  \
-  REGISTER_USER_KERNEL("_nccl_logical_all_gather_noncontinuous")                        \
-      .SetCreateFn<NcclLogicalAllGatherNoncontinuous<dtype>>()                          \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(dtype)                                   \
+  REGISTER_USER_KERNEL("_nccl_logical_all_gather_noncontinuous")                         \
+      .SetCreateFn<NcclLogicalAllGatherNoncontinuous<dtype>>()                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                    \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferAllGatherNoncontinuousKernelTmpBufferSize);
 
 REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(int8_t)
@@ -353,12 +353,12 @@ REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(float)
 REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(double)
 REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(float16)
 
-#define REGISTER_S2S_KERNEL(dtype)                                                      \
-  REGISTER_USER_KERNEL("_nccl_logical_s2s")                                             \
-      .SetCreateFn<NcclLogicalS2SKernel<dtype>>()                                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_S2S_KERNEL(dtype)                                                       \
+  REGISTER_USER_KERNEL("_nccl_logical_s2s")                                              \
+      .SetCreateFn<NcclLogicalS2SKernel<dtype>>()                                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                    \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferS2SKernelTmpBufferSize);
 
 REGISTER_S2S_KERNEL(int8_t)

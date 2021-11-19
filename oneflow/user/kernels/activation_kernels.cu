@@ -189,6 +189,8 @@ struct ReluGradFunctor<half> {
   REGISTER_RELU_FORWARD_KERNEL(DeviceType::kGPU, dtype); \
   REGISTER_RELU_BACKWARD_KERNEL(DeviceType::kGPU, dtype);
 
+namespace {
+
 REGISTER_ACTIVATION_GPU_KERNEL(half);
 REGISTER_ACTIVATION_GPU_KERNEL(float);
 REGISTER_ACTIVATION_GPU_KERNEL(double);
@@ -198,5 +200,7 @@ REGISTER_RELU_FORWARD_KERNEL(DeviceType::kGPU, uint8_t);
 REGISTER_RELU_FORWARD_KERNEL(DeviceType::kGPU, int8_t);
 REGISTER_RELU_FORWARD_KERNEL(DeviceType::kGPU, int32_t);
 REGISTER_RELU_FORWARD_KERNEL(DeviceType::kGPU, int64_t);
+
+}  // namespace
 
 }  // namespace oneflow

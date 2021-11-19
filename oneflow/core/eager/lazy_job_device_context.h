@@ -45,8 +45,6 @@ class LazyJobDeviceCtx final : public DeviceCtx {
   }
 #endif
 
-  void SyncDevice() override { UNIMPLEMENTED(); }
-
   vm::Allocator* mut_allocator() override {
     UNIMPLEMENTED();
     return (vm::Allocator*)nullptr;
