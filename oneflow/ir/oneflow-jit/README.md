@@ -35,6 +35,9 @@ There will be two modes of JIT in OneFlow:
   def any_function(a, b):
       return a + b
 
+  z = any_function(x, y) # z is a lazy tensor
+  print(z) # z is evaluated
+
   class MyModule(oneflow.nn.Module):
       def __init__(self, N, M):
           super(MyModule, self).__init__()
