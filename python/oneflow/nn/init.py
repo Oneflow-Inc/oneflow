@@ -32,7 +32,11 @@ def normal_(tensor, mean=0.0, std=1.0):
 
 
 def xavier_uniform_(tensor, gain=1.0, *, data_format="NCHW"):
-    r"""Fills the input `Tensor` with values according to the method
+    r"""
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/nn.init.html.
+
+    Fills the input `Tensor` with values according to the method
     described in `Understanding the difficulty of training deep feedforward
     neural networks` - Glorot, X. & Bengio, Y. (2010), using a uniform
     distribution. The resulting tensor will have values sampled from
@@ -56,7 +60,11 @@ def xavier_uniform_(tensor, gain=1.0, *, data_format="NCHW"):
 
 
 def xavier_normal_(tensor, gain=1.0, *, data_format="NCHW"):
-    r"""Fills the input `Tensor` with values according to the method
+    r"""
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/nn.init.html.
+
+    Fills the input `Tensor` with values according to the method
     described in `Understanding the difficulty of training deep feedforward
     neural networks` - Glorot, X. & Bengio, Y. (2010), using a normal
     distribution. The resulting tensor will have values sampled from
@@ -82,7 +90,11 @@ def xavier_normal_(tensor, gain=1.0, *, data_format="NCHW"):
 def kaiming_uniform_(
     tensor, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
 ):
-    r"""Fills the input `Tensor` with values according to the method
+    r"""
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/nn.init.html.
+
+    Fills the input `Tensor` with values according to the method
     described in `Delving deep into rectifiers: Surpassing human-level
     performance on ImageNet classification` - He, K. et al. (2015), using a
     uniform distribution. The resulting tensor will have values sampled from
@@ -115,7 +127,11 @@ def kaiming_uniform_(
 def kaiming_normal_(
     tensor, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
 ):
-    r"""Fills the input `Tensor` with values according to the method
+    r"""
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/nn.init.html.
+    
+    Fills the input `Tensor` with values according to the method
     described in `Delving deep into rectifiers: Surpassing human-level
     performance on ImageNet classification` - He, K. et al. (2015), using a
     normal distribution. The resulting tensor will have values sampled from
