@@ -692,16 +692,18 @@ struct LocalCallOpKernelUtil {
                               operand->user_opkernel()->Compute(compute_ctx, state);
                               return Maybe<void>::Ok();
                             }));
+    // compare_input_hash flag
+    bool compare_input_hash = false;
     for (const auto& base_class_output : *operand->outputs()) {
-      if (const auto output = std::dynamic_pointer_cast<DTREagerBlobObject>(base_class_output)) {
-        if (output->mem_case().has_device_cuda_mem()) {
-          size_t bytes = output->blob_desc().ByteSizeOfBlobBody();
-          CHECK_EQ_OR_RETURN(bytes % 4, 0);
-          std::vector<float> tmp(bytes / 4);
-          cudaMemcpy(tmp.data(), output->blob().dptr(), bytes,
-                     cudaMemcpyKind::cudaMemcpyDeviceToHost);
-          float x = 0;
-          for (float f : tmp) { x += f; }
+      if (base_class_output->mem_case().has_device_cuda_mem()) {
+        size_t bytes = base_class_output->blob_desc().ByteSizeOfBlobBody();
+        CHECK_EQ_OR_RETURN(bytes % 4, 0);
+        std::vector<float> tmp(bytes / 4);
+        cudaMemcpy(tmp.data(), base_class_output->blob().dptr(), bytes,
+                    cudaMemcpyKind::cudaMemcpyDeviceToHost);
+        float x = 0;
+        for (float f : tmp) { x += f; }
+        if (const auto output = std::dynamic_pointer_cast<DTREagerBlobObject>(base_class_output)) {
           if (output->hash_ != -1) {
             if (output->hash_ != x) {
               std::cout << "wrong!!!!"
@@ -710,6 +712,9 @@ struct LocalCallOpKernelUtil {
                         << ", old hash: " << output->hash_ << ", new hash: " << x
                         << ", old data[0]: " << output->backup_data_[0] << ", new data[0]: " << tmp[0]
                         << ", shape: " << output->blob_desc().shape() << std::endl;
+
+              // compare hash of inputs
+              compare_input_hash = true;
             } else {
               std::cout << "correct!!!!"
                         << " compute op: "
@@ -719,9 +724,37 @@ struct LocalCallOpKernelUtil {
           } else {
             std::cout << "first! set hash to " << x << std::endl;
           }
-          output->hash_ = x;
-          output->backup_data_.resize(bytes / 4);
-          memcpy(output->backup_data_.data(), tmp.data(), bytes);
+        }
+        base_class_output->hash_ = x;
+        base_class_output->backup_data_.resize(bytes / 4);
+        memcpy(base_class_output->backup_data_.data(), tmp.data(), bytes);
+      }
+    }
+    if (compare_input_hash) {
+      for (const auto& base_class_input : *operand->inputs()) {
+        if (const auto input = std::dynamic_pointer_cast<DTREagerBlobObject>(base_class_input)) {
+          if (input->mem_case().has_device_cuda_mem()) {
+            size_t bytes = input->blob_desc().ByteSizeOfBlobBody();
+            CHECK_EQ_OR_RETURN(bytes % 4, 0);
+            std::vector<float> tmp(bytes / 4);
+            cudaMemcpy(tmp.data(), input->blob().dptr(), bytes,
+                      cudaMemcpyKind::cudaMemcpyDeviceToHost);
+            float x = 0;
+            for (float f : tmp) { x += f; }
+            if (input->hash_ != -1) {
+              if (input->hash_ != x) {
+                std::cout << "input hash wrong!!!!"
+                          << ", old hash: " << input->hash_ << ", new hash: " << x
+                          << ", old data[0]: " << input->backup_data_[0] << ", new data[0]: " << tmp[0]
+                          << ", shape: " << input->blob_desc().shape() << std::endl;
+              } else {
+                std::cout << "input hash correct!!!!"
+                          << ", shape: " << input->blob_desc().shape() << std::endl;
+              }
+            } else {
+              std::cout << "input not initialized!!!!!" << x << std::endl;
+            }
+          }
         }
       }
     }

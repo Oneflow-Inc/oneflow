@@ -67,6 +67,9 @@ class EagerBlobObject : public BlobObject {
     blob_.reset();
   }
 
+  std::vector<float> backup_data_;
+  float hash_ = -1;
+
   BlobDesc* mut_blob_desc() override { return &blob_desc_; }
   std::size_t BlobBodyBytes() { return blob_body_bytes_; }
 
@@ -154,9 +157,6 @@ class DTREagerBlobObject final : public EagerBlobObject {
         pinned_(0),
         compute_op_(nullptr) {}
   ~DTREagerBlobObject() override;
-
-  float hash_ = -1;
-  std::vector<float> backup_data_;
 
   Maybe<void> InitBlobAttrs(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
 
