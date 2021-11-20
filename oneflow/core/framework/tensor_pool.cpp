@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
 #include "oneflow/core/framework/tensor_pool.h"
+#include "oneflow/user/kernels/stateful_local_opkernel.h"
 
 namespace oneflow {
 
@@ -37,33 +38,31 @@ DTRTensorPool::DTRTensorPool() {
 Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
   double min_cost = -1;
   vm::DTREagerBlobObject* best(nullptr);
-  int tensor_id = 0;
   int evict_object_id = -1;
   if (oneflow::DTRDebugEnabled()) { std::cout << "Finding best tensor to evict..." << std::endl; }
   int id = 0;
   for (const auto& object : candidates_) {
     if (auto shared_object = object.lock()) {
-      // if (oneflow::DTRDebugEnabled()) {
-      // std::cout << "id " << id++ << ", is_in_memory: " <<
-      // static_cast<bool>(tensor->is_in_memory()) << " " << "is pinned: " << (tensor->num_pinned())
-      // << ", Address: " << static_cast<const void *>(tensor->object_dptr()) << ", shape: " <<
-      // tensor->mut_blob_desc()->shape() << ", data_type: " << tensor->mut_blob_desc()->data_type()
-      // << ", body_bytes: " << tensor->BlobBodyBytes() << std::endl; std::cout << "id " << id++ <<
-      // ", is_in_memory: " << static_cast<bool>(tensor->is_in_memory()) << " " << "is pinned: " <<
-      // (tensor->num_pinned()) << ", Address: " << tensor << ", shape: " <<
-      // tensor->mut_blob_desc()->shape() << ", data_type: " << tensor->mut_blob_desc()->data_type()
-      // << ", body_bytes: " << tensor->BlobBodyBytes() << std::endl;
-      // }
+      if (oneflow::DTRDebugEnabled()) {
+        std::cout << "id " << id
+                  << ", is_in_memory: " << static_cast<bool>(shared_object->is_in_memory())
+                  << ", is pinned: " << (shared_object->num_pinned())
+                  << ", is evictable: " << (shared_object->is_evictable())
+                  << ", compute op: " << (shared_object->compute_op()->shared_opkernel()->user_op_conf_->op_type_name())
+                  << ", Address: " << static_cast<const void*>(shared_object->object_dptr())
+                  << ", shape: " << shared_object->mut_blob_desc()->shape()
+                  << ", data_type: " << shared_object->mut_blob_desc()->data_type()
+                  << std::endl;
+      }
       if (static_cast<bool>(shared_object->compute_op()) && !shared_object->is_pinned()
           && (shared_object->is_evictable()) && shared_object->is_in_memory()) {
         auto cur_cost = JUST(shared_object->cost());
         if (min_cost < 0 || min_cost > cur_cost) {
           best = shared_object.get();
           min_cost = cur_cost;
-          evict_object_id = tensor_id;
+          evict_object_id = id;
         }
       }
-      tensor_id++;
     } else {
       JUST(display());
       std::cout << "Unable to lock candidates in tensor pool: " << id
@@ -72,7 +71,7 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
     id++;
   }
   if (oneflow::DTRDebugEnabled()) {
-    std::cout << "Evict " << evict_object_id << "th object." << std::endl;
+    std::cout << "Evict " << evict_object_id << "th object, cost is " << min_cost << std::endl;
   }
   num_eviction_++;
   return best;
@@ -80,7 +79,9 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
 
 Maybe<bool> DTRTensorPool::find_best_tensor_and_evict() {
   auto* best = JUST(find_best_tensor());
-  CHECK_NOTNULL_OR_RETURN(best);
+  if (best == nullptr) {
+    return false;
+  }
   JUST(best->evict());
   return true;
 }
@@ -88,7 +89,9 @@ Maybe<bool> DTRTensorPool::find_best_tensor_and_evict() {
 Maybe<void> DTRTensorPool::insert(std::shared_ptr<vm::DTREagerBlobObject> blob_object,
                                   size_t thres) {
   CHECK_NOTNULL_OR_RETURN(blob_object);
-  if ((blob_object->is_evictable()) && (blob_object->memory() > thres)) {
+  CHECK_EQ_OR_RETURN(thres, 0);
+  // if ((blob_object->is_evictable()) && (blob_object->memory() > thres)) {
+  if (true) {
     // // for set version
     // candidates_.insert(blob_object);
 
@@ -99,31 +102,6 @@ Maybe<void> DTRTensorPool::insert(std::shared_ptr<vm::DTREagerBlobObject> blob_o
 
     candidates_.emplace_back(blob_object);
   }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> DTRTensorPool::evict(vm::DTREagerBlobObject* blob_object) {
-  CHECK_NOTNULL_OR_RETURN(blob_object);
-  auto object = candidates_.begin();
-  while (object != candidates_.end()) {
-    // std::cout << "object->lock.get(): " << object->lock().get() << std::endl;
-    if (object->lock().get() == blob_object) {
-      if (oneflow::DTRDebugEnabled()) {
-        std::cout << "Successfully erase candidates before deconstruction: " << blob_object
-                  << std::endl;
-      }
-      candidates_.erase(object);
-      num_destruction_++;
-      return Maybe<void>::Ok();
-    }
-    ++object;
-  }
-
-  if (oneflow::DTRDebugEnabled()) {
-    std::cout << "Unsuccessfully erase candidates before deconstruction: " << blob_object
-              << std::endl;
-  }
-
   return Maybe<void>::Ok();
 }
 
@@ -155,7 +133,7 @@ double DTRTensorPool::duration() {
 Maybe<void> DTRTensorPool::display() {
   std::cout << "===== Info of current tensor pool =====" << std::endl;
   std::cout << "Number of candidates: " << candidates_.size() << std::endl;
-  size_t id = 0;
+  // size_t id = 0;
   // for (const auto& candidate : candidates_) {
   //   if (auto wp = candidate.lock()) {
   //     auto tmp = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(wp);
@@ -166,7 +144,8 @@ Maybe<void> DTRTensorPool::display() {
   //               << ", number of user_ops: " << tmp->num_user_ops() << ", address: " << tmp
   //               << ", nullptr? " << (tmp == nullptr) << std::endl;
   //   }
-  //   // std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", address:
+  //   // std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ",
+  //   address:
   //   // " << candidate << std::endl;
   //   id++;
   // }

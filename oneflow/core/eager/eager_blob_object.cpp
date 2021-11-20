@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_pool.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/common/shape_vec.h"
+#include "oneflow/user/kernels/stateful_local_opkernel.h"
 
 namespace oneflow {
 namespace vm {
@@ -86,17 +87,10 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
 }
 
 DTREagerBlobObject::~DTREagerBlobObject() {
-  // evict_from_pool();
   clear_invalid_object();
   non_pod_initer_.reset();
   tensor_buffer_.reset();
   blob_.reset();
-}
-
-void DTREagerBlobObject::evict_from_pool() {
-  // std::cout << "evict from pool===============================" << std::endl;
-  if (IsShuttingDown()) { return; }
-  CHECK_JUST(Global<one::DTRTensorPool>::Get()->evict(this));
 }
 
 void DTREagerBlobObject::clear_invalid_object() {
@@ -230,6 +224,11 @@ Maybe<double> DTREagerBlobObject::cost() const {
 size_t DTREagerBlobObject::input_size() const {
   const auto& ptr = dynamic_cast<DTRInstrOperand*>(compute_op_.get());
   return ptr->inputs().size();
+}
+
+bool DTREagerBlobObject::is_evictable() const {
+  if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "nll") { return false; }
+  return could_evict_;
 }
 
 }  // namespace vm

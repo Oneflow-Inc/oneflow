@@ -184,7 +184,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
   bool is_pinned() const { return (pinned_ > 0); }
   int num_pinned() const { return pinned_; }
   int num_user_ops() const { return user_ops_.size(); }
-  bool is_evictable() const { return could_evict_; }
+  bool is_evictable() const;
 
   void pin() {
     pinned_++;
@@ -207,7 +207,6 @@ class DTREagerBlobObject final : public EagerBlobObject {
   Maybe<double> child_cost() const;
   Maybe<double> neighbor_cost() const;
   size_t input_size() const;
-  void evict_from_pool();
   void clear_invalid_object();
 
   // TODO: variable cost functions in terms of different heuristics

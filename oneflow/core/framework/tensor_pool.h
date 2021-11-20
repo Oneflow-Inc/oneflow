@@ -40,7 +40,6 @@ struct DTRTensorPool {
   }
 
   Maybe<void> insert(std::shared_ptr<vm::DTREagerBlobObject> blob_object, size_t thres = 0);
-  Maybe<void> evict(vm::DTREagerBlobObject* blob_object);
   Maybe<void> clear();
 
   Maybe<vm::DTREagerBlobObject*> find_best_tensor();

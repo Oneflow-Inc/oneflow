@@ -220,6 +220,10 @@ std::unique_ptr<LocalCallOpKernelPhyInstrOperand> DTROp2LocalCallOp(DTRInstrOper
   std::shared_ptr<one::EagerBlobObjectList> output_shared_ptr =
       std::make_shared<one::EagerBlobObjectList>(outputs.size());
 
+  if (oneflow::DTRDebugEnabled()) {
+    std::cout << "going to recompute " << operand->shared_opkernel()->user_op_conf_->op_type_name()
+              << std::endl;
+  }
   for (int i = 0; i < inputs.size(); ++i) {
     input_shared_ptr->at(i) = CHECK_NOTNULL(inputs[i].lock());
   }
@@ -746,6 +750,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
           dtr_blob_object->update_user_ops(operand);
           return Maybe<void>::Ok();
         }));
+    if (oneflow::DTRDebugEnabled()) { std::cout << "recompute ok!!!" << std::endl; }
     return Maybe<void>::Ok();
   }
 
@@ -847,11 +852,8 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
   // }
 };
 
-
 Maybe<void> DTRUtil::recompute(vm::DTREagerBlobObject* object, const vm::Stream& stream) {
-  if (object->is_in_memory()) {
-    return Maybe<void>::Ok();
-  }
+  if (object->is_in_memory()) { return Maybe<void>::Ok(); }
   return DTRLocalCallOpKernelUtil::recompute(object, stream);
 }
 
