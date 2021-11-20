@@ -19,7 +19,7 @@ namespace oneflow {
 
 template<template<typename> class BIN_OP, typename T>
 struct ScalarMathFunctor<DeviceType::kCPU, BIN_OP, T> final {
-  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const T scalar, const T* in, T* out) {
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, const T scalar, const T* in, T* out) {
     DoScalarMath<BIN_OP, T>(elem_cnt, scalar, in, out);
   }
 };
@@ -47,8 +47,8 @@ class ScalarMathKernel final : public user_op::OpKernel {
 
     int64_t elem_cnt = out->shape().elem_cnt();
     if (elem_cnt != 0) {
-      ScalarMathFunctor<device_type, BIN_OP, T>()(ctx->device_ctx(), elem_cnt, scalar_operand,
-                                                  in_ptr, out_ptr);
+      ScalarMathFunctor<device_type, BIN_OP, T>()(ctx->stream(), elem_cnt, scalar_operand, in_ptr,
+                                                  out_ptr);
     } else {
       // For 0-d Tensor
       return;

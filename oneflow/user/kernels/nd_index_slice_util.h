@@ -45,20 +45,20 @@ inline NdIndexSliceArgs<T, I> ConstructNdIndexSliceArgs(const user_op::Tensor& d
 
 template<DeviceType device_type, typename T, typename I>
 struct GatherNdFunctor final {
-  void operator()(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
+  void operator()(ep::Stream* stream, const NdIndexSliceArgs<T, I>& args, const I* indices,
                   const T* dense, T* slices) const;
 };
 
 template<DeviceType device_type, typename T, typename I>
 struct ScatterNdAddFunctor final {
-  void operator()(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
+  void operator()(ep::Stream* stream, const NdIndexSliceArgs<T, I>& args, const I* indices,
                   const T* slices, T* dense) const;
 };
 
 template<DeviceType device_type, typename T, typename I>
 struct FillByNdIndexFunctor final {
-  void operator()(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices, T* dense,
-                  T value) const;
+  void operator()(ep::Stream* stream, const NdIndexSliceArgs<T, I>& args, const I* indices,
+                  T* dense, T value) const;
 };
 
 template<typename I>

@@ -36,24 +36,24 @@ using Col2ImFunc = void (*)(const T* col_buf, const ShapeView& in_shape,
                             const int32_t* padding_before, T* in_diff_ptr);
 
 template<typename T>
-using GemmFunc = void (*)(enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b, const int m,
-                          const int n, const int k, const T alpha, const T* a, const T* b,
-                          const T beta, T* c);
+using GemmFunc = void (*)(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a,
+                          enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
+                          const T alpha, const T* a, const T* b, const T beta, T* c);
 
 template<typename T>
-void Gemm4ChannelFirst(enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b, const int m,
-                       const int n, const int k, const T alpha, const T* a, const T* b,
-                       const T beta, T* c) {
-  NewKernelUtil<DeviceType::kCPU>::OFGemm(nullptr, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
+void Gemm4ChannelFirst(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a,
+                       enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
+                       const T alpha, const T* a, const T* b, const T beta, T* c) {
+  NewKernelUtil<DeviceType::kCPU>::OFGemm(stream, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
 
 template<typename T>
-void Gemm4ChannelLast(enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b, const int m,
-                      const int n, const int k, const T alpha, const T* a, const T* b, const T beta,
-                      T* c) {
+void Gemm4ChannelLast(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a,
+                      enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
+                      const T alpha, const T* a, const T* b, const T beta, T* c) {
   trans_a = (trans_a == CblasNoTrans) ? CblasTrans : CblasNoTrans;
   trans_b = (trans_b == CblasNoTrans) ? CblasTrans : CblasNoTrans;
-  NewKernelUtil<DeviceType::kCPU>::OFGemm(nullptr, trans_b, trans_a, n, m, k, alpha, b, a, beta, c);
+  NewKernelUtil<DeviceType::kCPU>::OFGemm(stream, trans_b, trans_a, n, m, k, alpha, b, a, beta, c);
 }
 
 template<typename T>
@@ -420,7 +420,7 @@ class ConvCpuKernel final : public user_op::OpKernel {
       // channels last:  out = (weight * col_buf)(T)
       int32_t idx_offset = conv_state->idx_offset_;
       conv_state->forward_func_(
-          CblasNoTrans, CblasNoTrans,
+          ctx->stream(), CblasNoTrans, CblasNoTrans,
           conv_state->weight_5d_shape_.At(0),                           // filter
           conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3),  // od * oh * ow
           conv_state->weight_5d_shape_.Count(1),                        // ci * kd * kh * kw
@@ -442,7 +442,7 @@ class ConvCpuKernel final : public user_op::OpKernel {
         // channels first:  out += bias * bias_mul
         // channels last:   out += (bias * bias_mul)(T)
         conv_state->forward_func_(
-            CblasNoTrans, CblasNoTrans,
+            ctx->stream(), CblasNoTrans, CblasNoTrans,
             conv_state->weight_5d_shape_.At(0),                           // filter
             conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3),  // od * oh * ow
             1,                                                            // 1
@@ -510,7 +510,7 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
       // channels first:  col_buf' = weight(T) * out[i]'
       // channels last :  col_buf' = weight(T) * out[i]'(T)
       NewKernelUtil<DeviceType::kCPU>::OFGemm(
-          nullptr, CblasTrans, conv_state->is_out_diff_need_trans_,
+          ctx->stream(), CblasTrans, conv_state->is_out_diff_need_trans_,
           conv_state->weight_5d_shape_.Count(1),                        //  ci * kd * kh * kw
           conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3),  //  od * oh * ow
           conv_state->weight_5d_shape_.At(0),                           //  filter
@@ -590,7 +590,7 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
       // channels first:  weight' += out[i]' * col_buf(T)
       // channels last :  weight' += out[i]'(T) * col_buf(T)
       NewKernelUtil<DeviceType::kCPU>::OFGemm(
-          nullptr, conv_state->is_out_diff_need_trans_, CblasTrans,
+          ctx->stream(), conv_state->is_out_diff_need_trans_, CblasTrans,
           conv_state->weight_5d_shape_.At(0),                           //  filter
           conv_state->weight_5d_shape_.Count(1),                        //  ci * kd * kh * kw
           conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3),  //  od * oh * ow
@@ -657,7 +657,7 @@ class ConvBiasGradCpuKernel final : public user_op::OpKernel {
       // channels first:  bias' += out' * bias_mul
       // channels last:   bias' += out'(T) * bias_mul
       NewKernelUtil<DeviceType::kCPU>::OFGemm(
-          nullptr, is_out_diff_need_trans, CblasNoTrans,
+          ctx->stream(), is_out_diff_need_trans, CblasNoTrans,
           filter,                                             //  filter
           1,                                                  //  1
           dy->shape().Count(idx_offset, idx_offset + ndims),  //  od * oh * ow

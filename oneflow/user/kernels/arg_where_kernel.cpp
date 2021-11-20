@@ -49,7 +49,7 @@ class ArgWhereKernel final : public user_op::OpKernel {
     void* tmp_ptr = tmp ? tmp->mut_dptr() : nullptr;
     size_t tmp_size = tmp ? tmp->shape().elem_cnt() * GetSizeOfDataType(tmp->data_type()) : 0;
     ArgWhereKernelUtil<device_type, IN_T, OUT_T, NDIM>::ArgWhere(
-        ctx->device_ctx(), input->shape(), input->dptr<IN_T>(), tmp_ptr, tmp_size,
+        ctx->stream(), input->shape(), input->dptr<IN_T>(), tmp_ptr, tmp_size,
         output->mut_dptr<OUT_T>(), output_size->mut_dptr<OUT_T>());
   }
 };

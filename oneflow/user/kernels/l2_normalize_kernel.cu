@@ -99,7 +99,7 @@ class GpuL2NormalizeKernel final : public user_op::OpKernel {
     int32_t c = x->shape().At(axis);
     int32_t n = x->shape().elem_cnt() / c;
     int32_t d = x->shape().Count(axis + 1);
-    RUN_CUDA_KERNEL((L2NormalizeForward<T>), ctx->device_ctx(), n, n, c, d, static_cast<T>(epsilon),
+    RUN_CUDA_KERNEL((L2NormalizeForward<T>), ctx->stream(), n, n, c, d, static_cast<T>(epsilon),
                     x->dptr<T>(), square_x_sum->mut_dptr<T>(), y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -131,9 +131,8 @@ class GpuL2NormalizeGradKernel final : public user_op::OpKernel {
     int32_t c = dy->shape().At(axis);
     int32_t n = dy->shape().elem_cnt() / c;
     int32_t d = dy->shape().Count(axis + 1);
-    RUN_CUDA_KERNEL((L2NormalizeBackward<T>), ctx->device_ctx(), n, n, c, d,
-                    static_cast<T>(epsilon), y->dptr<T>(), dy->dptr<T>(), square_x_sum->dptr<T>(),
-                    dx->mut_dptr<T>());
+    RUN_CUDA_KERNEL((L2NormalizeBackward<T>), ctx->stream(), n, n, c, d, static_cast<T>(epsilon),
+                    y->dptr<T>(), dy->dptr<T>(), square_x_sum->dptr<T>(), dx->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
