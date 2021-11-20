@@ -221,7 +221,8 @@ Maybe<double> DTREagerBlobObject::cost() const {
   if (oneflow::DTRDebugEnabled()) {
     std::cout << "n_cost " << n_cost << ", blob_body_bytes_ " << blob_body_bytes_ << ", time_since_last_access " << time_since_last_access << std::endl;
   }
-  return n_cost / blob_body_bytes_ / time_since_last_access;
+  return blob_body_bytes_ / time_since_last_access;
+  // return n_cost / blob_body_bytes_ / time_since_last_access;
   // return n_cost / blob_body_bytes_ / last_access_time_;
 }
 

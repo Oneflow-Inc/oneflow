@@ -692,6 +692,39 @@ struct LocalCallOpKernelUtil {
                               operand->user_opkernel()->Compute(compute_ctx, state);
                               return Maybe<void>::Ok();
                             }));
+    for (const auto& base_class_output : *operand->outputs()) {
+      if (const auto output = std::dynamic_pointer_cast<DTREagerBlobObject>(base_class_output)) {
+        if (output->mem_case().has_device_cuda_mem()) {
+          size_t bytes = output->blob_desc().ByteSizeOfBlobBody();
+          CHECK_EQ_OR_RETURN(bytes % 4, 0);
+          std::vector<float> tmp(bytes / 4);
+          cudaMemcpy(tmp.data(), output->blob().dptr(), bytes,
+                     cudaMemcpyKind::cudaMemcpyDeviceToHost);
+          float x = 0;
+          for (float f : tmp) { x += f; }
+          if (output->hash_ != -1) {
+            if (output->hash_ != x) {
+              std::cout << "wrong!!!!"
+                        << " compute op: "
+                        << output->compute_op()->shared_opkernel()->user_op_conf_->op_type_name()
+                        << ", old hash: " << output->hash_ << ", new hash: " << x
+                        << ", old data[0]: " << output->backup_data_[0] << ", new data[0]: " << tmp[0]
+                        << ", shape: " << output->blob_desc().shape() << std::endl;
+            } else {
+              std::cout << "correct!!!!"
+                        << " compute op: "
+                        << output->compute_op()->shared_opkernel()->user_op_conf_->op_type_name()
+                        << ", old hash: " << output->hash_ << ", new hash: " << x << std::endl;
+            }
+          } else {
+            std::cout << "first! set hash to " << x << std::endl;
+          }
+          output->hash_ = x;
+          output->backup_data_.resize(bytes / 4);
+          memcpy(output->backup_data_.data(), tmp.data(), bytes);
+        }
+      }
+    }
     return Maybe<void>::Ok();
   }
 
@@ -741,16 +774,13 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
           if (!dtr_blob_object->is_in_memory()) {
             CHECK_GT_OR_RETURN(dtr_blob_object->input_size(), 0);
             // TODO: recursive recompute the inputs
-            if (oneflow::DTRDebugEnabled()) {
-              std::cout << "Input tensor is not in memory (Recompute...)" << std::endl;
-            }
             JUST(recompute(dtr_blob_object, stream));
           }
           dtr_blob_object->update_access_time();
           dtr_blob_object->update_user_ops(operand);
           return Maybe<void>::Ok();
         }));
-    if (oneflow::DTRDebugEnabled()) { std::cout << "recompute ok!!!" << std::endl; }
+    if (oneflow::DTRDebugEnabled()) { std::cout << "prepare ok!!!" << std::endl; }
     return Maybe<void>::Ok();
   }
 
@@ -815,9 +845,6 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
     JUST(
         ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
           if (!dtr_blob_object->is_in_memory()) {
-            if (oneflow::DTRDebugEnabled()) {
-              std::cout << "Input tensor is not in memory (Recompute...)" << std::endl;
-            }
             CHECK_GT_OR_RETURN(dtr_blob_object->input_size(), 0);
             JUST(recompute(dtr_blob_object, stream));
           }
@@ -832,7 +859,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
     JUST(FullCompute(operand, device_ctx));
     if (oneflow::DTRDebugEnabled()) {
       // if (oneflow::DTRDebugEnabled() || !object->is_in_memory()) {
-      std::cout << "Now in memory? " << object->is_in_memory() << std::endl;
+      CHECK_OR_RETURN(object->is_in_memory());
     }
 
     // unpin inputs

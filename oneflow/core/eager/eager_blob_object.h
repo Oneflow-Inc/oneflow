@@ -155,6 +155,9 @@ class DTREagerBlobObject final : public EagerBlobObject {
         compute_op_(nullptr) {}
   ~DTREagerBlobObject() override;
 
+  float hash_ = -1;
+  std::vector<float> backup_data_;
+
   Maybe<void> InitBlobAttrs(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
 
   // Getters and Setters
