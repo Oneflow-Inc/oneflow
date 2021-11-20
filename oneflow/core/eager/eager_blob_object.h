@@ -161,7 +161,6 @@ class DTREagerBlobObject final : public EagerBlobObject {
   const std::size_t memory() const { return blob_body_bytes_; }
   const double compute_time() const { return compute_time_; }
   const double last_access_time() const { return last_access_time_; }
-  const double time_since_last_access() const { return time_since_last_access_; }
   DTRInstrOperand* compute_op() const { return compute_op_.get(); }
   Maybe<DTRInstrOperand*> user_op(int i) const {
     CHECK_LT_OR_RETURN(i, user_ops_.size());

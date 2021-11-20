@@ -49,9 +49,9 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
                   << ", is pinned: " << (shared_object->num_pinned())
                   << ", is evictable: " << (shared_object->is_evictable())
                   << ", compute op: " << (shared_object->compute_op()->shared_opkernel()->user_op_conf_->op_type_name())
-                  << ", Address: " << static_cast<const void*>(shared_object->object_dptr())
+                  // << ", Address: " << static_cast<const void*>(shared_object->object_dptr())
                   << ", shape: " << shared_object->mut_blob_desc()->shape()
-                  << ", data_type: " << shared_object->mut_blob_desc()->data_type()
+                  // << ", data_type: " << shared_object->mut_blob_desc()->data_type()
                   << std::endl;
       }
       if (static_cast<bool>(shared_object->compute_op()) && !shared_object->is_pinned()
