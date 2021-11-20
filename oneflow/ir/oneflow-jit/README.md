@@ -44,7 +44,7 @@ There will be two modes of JIT in OneFlow:
       @oneflow.jit.exec
       def forward(self, input): # python forward will be run every time the module it is called
           output = self.linear(input)
-          print(output)
+          print(output) # will print eager tensor with data
           return output
 
 
