@@ -115,11 +115,12 @@ class NmsGpuKernel final : public user_op::OpKernel {
 
     dim3 blocks(num_blocks, num_blocks);
     dim3 threads(kBlockSize);
-    CalcSuppressionBitmaskMatrix<<<blocks, threads, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+    CalcSuppressionBitmaskMatrix<<<blocks, threads, 0,
+                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         num_boxes, ctx->Attr<float>("iou_threshold"), boxes, suppression_mask);
     ScanSuppression<<<1, num_blocks, num_blocks * sizeof(int64_t),
-                      ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(num_boxes, num_blocks, num_keep,
-                                                          suppression_mask, keep);
+                      ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+        num_boxes, num_blocks, num_keep, suppression_mask, keep);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
