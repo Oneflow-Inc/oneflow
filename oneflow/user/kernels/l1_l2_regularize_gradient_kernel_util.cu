@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/l1_l2_regularize_gradient_kernel_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -32,10 +33,11 @@ __global__ void L1L2RegularizeGradientGpu(int64_t n, const T* model, const T* mo
 
 template<typename T>
 struct L1L2RegularizeGradientKernelUtil<DeviceType::kGPU, T> {
-  static void RegularizeGradient(DeviceCtx* ctx, int64_t n, const T* model, const T* model_diff,
+  static void RegularizeGradient(ep::Stream* stream, int64_t n, const T* model, const T* model_diff,
                                  T* out, const T l1, const T l2) {
     L1L2RegularizeGradientGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                                ctx->cuda_stream()>>>(n, model, model_diff, out, l1, l2);
+                                stream->As<ep::CudaStream>()->cuda_stream()>>>(n, model, model_diff,
+                                                                               out, l1, l2);
   }
 };
 

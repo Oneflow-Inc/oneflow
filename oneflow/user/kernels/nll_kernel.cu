@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/user/kernels/loss_kernel_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 namespace user_op {
@@ -213,10 +214,11 @@ class NllKernel final : public user_op::OpKernel {
 
     if (reduction == ReductionType::kNone) {
       ComputeNllOutNone<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
-                          ctx->device_ctx()->cuda_stream()>>>(
+                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           num_instances, num_classes, ignore_index, input, target, out, weight, total_weight);
     } else {
-      ComputeNllOutReduce<<<1, kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
+      ComputeNllOutReduce<<<1, kCudaThreadsNumPerBlock, 0,
+                            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           num_instances, num_classes, ignore_index, input, target, out, weight, total_weight,
           reduction == ReductionType::kMean);
     }
@@ -256,7 +258,7 @@ class NllGradKernel final : public user_op::OpKernel {
     Memset<DeviceType::kGPU>(ctx->stream(), dx, 0, input_elem_cnt * sizeof(T));
 
     ComputeNllGradOut<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
-                        ctx->device_ctx()->cuda_stream()>>>(
+                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         num_instances, num_classes, ignore_index, target, dy, dx, weight, total_weight, reduction);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

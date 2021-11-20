@@ -36,7 +36,7 @@ class NormalDistribution<DeviceType::kCPU, T> final {
   NormalDistribution(T mean, T std) : mean_(mean), std_(std) {}
   ~NormalDistribution() = default;
 
-  void operator()(DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, T* dptr,
                   const std::shared_ptr<one::Generator>& generator) const;
 
  private:
@@ -52,7 +52,7 @@ class NormalDistribution<DeviceType::kGPU, T> final {
   NormalDistribution(T mean, T std) : mean_(mean), std_(std) {}
   ~NormalDistribution() = default;
 
-  void operator()(DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, T* dptr,
                   const std::shared_ptr<one::Generator>& generator) const;
 
  private:
