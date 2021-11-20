@@ -84,7 +84,8 @@ def _test_nms(test_case, device):
     test_case.assertTrue(np.allclose(keep.numpy(), keep_np))
 
 
-class TestNMS(unittest.TestCase):
+@flow.unittest.skip_unless_1n1d()
+class TestNMS(flow.unittest.TestCase):
     def test_nms(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_nms]
