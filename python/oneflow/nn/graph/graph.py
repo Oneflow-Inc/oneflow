@@ -34,6 +34,7 @@ from oneflow.nn.graph.util import add_indent, seq_to_func_return, sys_exc_error_
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 from oneflow.nn.optimizer.optimizer import Optimizer
+import time
 
 
 class Graph(object):
@@ -447,9 +448,9 @@ class Graph(object):
             assert not self._is_compiled, (
                 "nn.Graph " + self._name + " has already been compiled."
             )
-
+            t0 = time.clock()
             eager_outputs = self._build_graph(*args)
-
+            t1 = time.clock()
             self._print(0, 0, self._shallow_repr() + " end building graph.")
         except:
             self._print(
@@ -469,9 +470,13 @@ class Graph(object):
                 0,
                 self._shallow_repr() + " start compiling plan and init graph runtime.",
             )
-
+            t2 = time.clock()
             self._c_nn_graph.complie_and_init_runtime()
-
+            t3 = time.clock()
+            print('build graph consumes time:%ss\n \
+                  complie and init Runtime consumes time:%ss\n \
+                  from build graph to complie and init Runtime the end consumes time:%ss\n'
+                  %(str(t1-t0),str(t3-t2),str(t3-t0)))
             self._print(
                 0,
                 0,
