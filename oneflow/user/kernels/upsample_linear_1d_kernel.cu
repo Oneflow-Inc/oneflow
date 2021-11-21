@@ -91,7 +91,7 @@ class UpsampleLinear1DGPUKernel final : public user_op::OpKernel {
           x_tensor->shape().elem_cnt() * GetSizeOfDataType(x_tensor->data_type()));
     } else {
       const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
-      RUN_CUDA_KERNEL((UpsampleLinear1DForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+      RUN_CUDA_KERNEL((UpsampleLinear1DForward<T>), ctx->stream(), elem_cnt, elem_cnt,
                       x_tensor->dptr<T>(), in_helper, out_helper, in_height, scale_height,
                       align_corners, y_tensor->mut_dptr<T>());
     }
@@ -128,7 +128,7 @@ class UpsampleLinearGrad1DGPUKernel final : public user_op::OpKernel {
           dy_tensor->shape().elem_cnt() * GetSizeOfDataType(dy_tensor->data_type()));
     } else {
       const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
-      RUN_CUDA_KERNEL((UpsampleLinear1DBackward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+      RUN_CUDA_KERNEL((UpsampleLinear1DBackward<T>), ctx->stream(), elem_cnt, elem_cnt,
                       dy_tensor->dptr<T>(), dy_helper, dx_helper, in_height, scale_height,
                       align_corners, dx_tensor->mut_dptr<T>());
     }

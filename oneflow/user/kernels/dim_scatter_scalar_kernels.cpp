@@ -68,8 +68,8 @@ class DimScatterScalarKernel final : public user_op::OpKernel {
     }
 
     DimScatterScalarFunctor<device_type, IN_T, IDX_T, Opt>()(
-        ctx->device_ctx(), idx_nd_helper, output_nd_helper, ndim, index_tensor->shape().elem_cnt(),
-        dim, upper_bound, index, src_scalar, output);
+        ctx->stream(), idx_nd_helper, output_nd_helper, ndim, index_tensor->shape().elem_cnt(), dim,
+        upper_bound, index, src_scalar, output);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

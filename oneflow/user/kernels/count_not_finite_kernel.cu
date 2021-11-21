@@ -17,6 +17,7 @@ limitations under the License.
 #include <cub/cub.cuh>
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -89,9 +90,9 @@ class CountNotFiniteGpuKernel final : public user_op::OpKernel, public user_op::
     const int64_t elem_cnt = x->shape().elem_cnt();
     Memset<DeviceType::kGPU>(ctx->stream(), y->mut_dptr<int64_t>(), 0,
                              y->shape().elem_cnt() * sizeof(int64_t));
-    CountNotFiniteGpu<T>
-        <<<GetCountNotFiniteNumBlocks(elem_cnt), kCudaThreadsNumPerBlock, 0,
-           ctx->device_ctx()->cuda_stream()>>>(elem_cnt, x->dptr<T>(), y->mut_dptr<int64_t>());
+    CountNotFiniteGpu<T><<<GetCountNotFiniteNumBlocks(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+        elem_cnt, x->dptr<T>(), y->mut_dptr<int64_t>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -141,7 +142,7 @@ class MultiCountNotFiniteGpuKernel final : public user_op::OpKernel,
       }
       MultiCountNotFiniteGpu<T, 128>
           <<<GetCountNotFiniteNumBlocks(max_elem_cnt), kCudaThreadsNumPerBlock, 0,
-             ctx->device_ctx()->cuda_stream()>>>(para);
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(para);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

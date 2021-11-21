@@ -1595,6 +1595,16 @@ class TestTensorNumpy(flow.unittest.TestCase):
         # TODO: (s0, b) has bug
         # x = ori_x.to_consistent(placement=placement, sbp=[flow.sbp.split(0), flow.sbp.broadcast])
 
+    @flow.unittest.skip_unless_1n1d()
+    @autotest()
+    def test_tensor_bmm(test_case):
+        t = random(1, 5)
+        k = random(1, 5)
+        input1 = random_pytorch_tensor(ndim=3, dim0=t, dim1=3, dim2=k)
+        input2 = random_pytorch_tensor(ndim=3, dim0=t, dim1=k, dim2=5)
+        of_out = input1.bmm(input2)
+        return of_out
+
 
 if __name__ == "__main__":
     unittest.main()
