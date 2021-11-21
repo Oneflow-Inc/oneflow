@@ -72,14 +72,14 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
     return Maybe<void>::Ok();
   }
 
-  void ForEachConstMirroredObject(
-      const std::function<void(vm::MirroredObject* compute)>&) const override;
+  const DependenceVector& input_dependences() const override { return input_dependences_; }
+  const DependenceVector& output_dependences() const override { return output_dependences_; }
 
-  void ForEachMutMirroredObject(
-      const std::function<void(vm::MirroredObject* compute)>&) const override;
+  void ForEachConstMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
 
-  void ForEachMut2MirroredObject(
-      const std::function<void(vm::MirroredObject* compute)>&) const override;
+  void ForEachMutMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
+
+  void ForEachMut2MirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
 
   bool need_temp_storage() const { return need_temp_storage_; }
   const user_op::OpKernel* user_opkernel() const { return user_opkernel_; }
@@ -101,9 +101,13 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
         outputs_(outputs),
         consistent_tensor_infer_result_(consistent_tensor_infer_result),
         op_interp_ctx_(op_interp_ctx_),
-        user_opkernel_(nullptr),
-        need_temp_storage_(false),
-        dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode) {}
+        dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode),
+        input_dependences_(),
+        output_dependences_() {
+    ForEachConstMirroredObject(SetInserter(&input_dependences_));
+    ForEachMutMirroredObject(SetInserter(&output_dependences_));
+    ForEachMut2MirroredObject(SetInserter(&output_dependences_));
+  }
 
   Maybe<void> Init();
 
@@ -115,6 +119,8 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   const user_op::OpKernel* user_opkernel_;
   bool need_temp_storage_;
   const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode_;
+  DependenceVector input_dependences_;
+  DependenceVector output_dependences_;
 };
 
 }  // namespace vm
