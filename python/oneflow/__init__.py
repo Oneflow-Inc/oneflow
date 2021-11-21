@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
 import sys
 import collections
 
@@ -303,6 +304,7 @@ from oneflow.nn.modules.math_ops import addmm_op as addmm
 from oneflow.nn.modules.math_ops import topk_op as topk
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
 from oneflow.nn.modules.nonzero import nonzero_op as nonzero
+from oneflow.nn.modules.nms import nms_op as nms
 from oneflow.nn.modules.numel import numel_op as numel
 from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
@@ -373,5 +375,6 @@ import oneflow.multiprocessing
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__
-    print("MLIR JIT engine will load:", oneflow_internal_path)
-    oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)
+    if os.getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"):
+        print("MLIR JIT engine will load:", oneflow_internal_path, file=sys.stderr)
+        oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)

@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
 #include "oneflow/user/kernels/loss_kernel_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 namespace user_op {
@@ -108,7 +109,8 @@ class KLDivKernel : public SimpleLossKernel<DeviceType::kGPU, T, KLDivKernel<T>>
                   const T* target, T* out) const {
     const bool log_target = ctx->Attr<bool>("log_target");
     ComputeKLDivOut<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                      ctx->device_ctx()->cuda_stream()>>>(elem_cnt, input, target, out, log_target);
+                      ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(elem_cnt, input, target,
+                                                                            out, log_target);
   }
 };
 
@@ -119,7 +121,7 @@ class KLDivGradKernel : public SimpleLossGradKernel<DeviceType::kGPU, T, KLDivGr
                   const T* target, const T* dy, T* dx, const ReductionType reduction) const {
     const bool log_target = ctx->Attr<bool>("log_target");
     ComputeKLDivGradOut<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                          ctx->device_ctx()->cuda_stream()>>>(
+                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         elem_cnt, static_cast<float>(1.0 / elem_cnt), input, target, dy, dx, reduction, log_target);
   }
 };

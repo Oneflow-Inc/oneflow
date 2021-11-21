@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/kernel/util/cuda_half_util.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -70,8 +71,9 @@ class GpuGeluKernel final : public user_op::OpKernel, public user_op::CudaGraphS
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t elem_cnt = x->shape().elem_cnt();
-    OF_CUDA_CHECK((cuda::elementwise::Unary(GeluFunctor<T>(), elem_cnt, y->mut_dptr<T>(),
-                                            x->dptr<T>(), ctx->device_ctx()->cuda_stream())));
+    OF_CUDA_CHECK(
+        (cuda::elementwise::Unary(GeluFunctor<T>(), elem_cnt, y->mut_dptr<T>(), x->dptr<T>(),
+                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -99,9 +101,9 @@ class GpuGeluGradKernel final : public user_op::OpKernel, public user_op::CudaGr
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const int64_t elem_cnt = x->shape().elem_cnt();
-    OF_CUDA_CHECK(
-        (cuda::elementwise::Binary(GeluGradFunctor<T>(), elem_cnt, dx->mut_dptr<T>(), x->dptr<T>(),
-                                   dy->dptr<T>(), ctx->device_ctx()->cuda_stream())));
+    OF_CUDA_CHECK((cuda::elementwise::Binary(GeluGradFunctor<T>(), elem_cnt, dx->mut_dptr<T>(),
+                                             x->dptr<T>(), dy->dptr<T>(),
+                                             ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

@@ -23,10 +23,10 @@ namespace oneflow {
 
 template<DeviceType device_type, typename IN_T, typename OUT_T, int NDIM>
 struct ArgWhereKernelUtil {
-  static void ArgWhere(DeviceCtx* ctx, const ShapeView& input_shape, const IN_T* input_ptr,
+  static void ArgWhere(ep::Stream* stream, const ShapeView& input_shape, const IN_T* input_ptr,
                        void* temp_storage, size_t temp_storage_bytes, OUT_T* output_ptr,
                        OUT_T* output_size_ptr);
-  static size_t GetWorkspaceBytesSize(DeviceCtx* ctx, int64_t elem_cnt);
+  static size_t GetWorkspaceBytesSize(ep::Stream* stream, int64_t elem_cnt);
 };
 
 #define INSTANTIATE_ARG_WHERE_KERNEL_UTIL(device, itype, otype, ndim) \

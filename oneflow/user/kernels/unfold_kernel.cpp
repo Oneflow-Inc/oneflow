@@ -73,7 +73,7 @@ class UnfoldKernel final : public OpKernel {
 
     const UnfoldParams<INDEX_T, NDIM, SDIM> params = state_ptr->params();
     UnfoldKernelUtil<device_type, T, INDEX_T, NDIM, SDIM>::Forward(
-        ctx->device_ctx(), &params, input->dptr<T>(), output->mut_dptr<T>());
+        ctx->stream(), &params, input->dptr<T>(), output->mut_dptr<T>());
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

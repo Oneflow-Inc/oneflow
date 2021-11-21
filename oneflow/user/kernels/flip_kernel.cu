@@ -91,7 +91,7 @@ class FlipGpuKernel final : public user_op::OpKernel {
             std::max<int32_t>(x_tensor->shape().At(i + 1), 1) * stride_contiguous_v.val[i + 1];
       }
     }
-    RUN_CUDA_KERNEL((FlipGpuForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt, total_dims,
+    RUN_CUDA_KERNEL((FlipGpuForward<T>), ctx->stream(), elem_cnt, elem_cnt, total_dims,
                     stride_contiguous_v, sizes_v, vis, strides_v, x_tensor->dptr<T>(),
                     y_tensor->mut_dptr<T>());
   }
@@ -108,11 +108,11 @@ class FlipGrad1DGpuKernel final : public user_op::OpKernel {
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0,
+    Memset<DeviceType::kGPU>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
                              dx_tensor->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     Memcpy<DeviceType::kGPU>(
-        ctx->device_ctx(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
+        ctx->stream(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
         dy_tensor->shape().elem_cnt() * GetSizeOfDataType(dy_tensor->data_type()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
