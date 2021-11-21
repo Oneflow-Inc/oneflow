@@ -161,11 +161,11 @@ class EagerPToSKernel final : public user_op::OpKernel {
         const auto& tensor_slice_copier = sorted_in_tensor_slice_copier.at(i);
         tensor_slice_copier->Copy(ctx->stream(), tmp_buffer_ptr, in_ptr);
         CHECK_JUST(Send<device_type>(reinterpret_cast<const void*>(tmp_buffer_ptr),
-                                     elem_cnt_per_chunk, in->data_type(), dst, ctx->device_ctx()));
+                                     elem_cnt_per_chunk, in->data_type(), dst, ctx->stream()));
       }
       if (GlobalProcessCtx::Rank() == dst) {
         CHECK_JUST(Recv<device_type>(tmp_buffer_ptr, elem_cnt_per_chunk, out->data_type(), src,
-                                     ctx->device_ctx()));
+                                     ctx->stream()));
         add_primitive->Launch(ctx->stream(), tmp_buffer_ptr, out->dptr(), out->mut_dptr(),
                               elem_cnt_per_chunk);
       }

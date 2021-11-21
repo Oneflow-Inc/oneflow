@@ -1740,6 +1740,11 @@
     "TensorTuple (Tensor sampled_weight_diff, Tensor sampled_label) => DistributedPariticalFCSampleDisableBoxing"
   bind_python: False
 
+- name: "nms"
+  signature:
+    "Tensor (Tensor x, Float iou_threshold, Int32 keep_n=-1) => Nms"
+  bind_python: True
+
 - name: "meshgrid"
   signature: "TensorTuple (TensorTuple tensors) => Meshgrid"
   bind_python: True

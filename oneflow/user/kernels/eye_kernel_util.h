@@ -28,7 +28,7 @@ namespace user_op {
 
 template<DeviceType device_type, typename T>
 struct EyeFunctor final {
-  void operator()(DeviceCtx* ctx, const int64_t& cols, const int64_t& rows, T* out);
+  void operator()(ep::Stream* stream, const int64_t& cols, const int64_t& rows, T* out);
 };
 
 template<typename T>

@@ -1944,6 +1944,22 @@ class PariticalFCSampleDisableBoxing {
   std::shared_ptr<OpExpr> op_;
 };
 
+class NmsFunctor {
+ public:
+  NmsFunctor() { op_ = CHECK_JUST(one::OpBuilder("nms").Input("in").Output("out").Build()); }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& iou_threshold,
+                           const int32_t& keep_n) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("iou_threshold", iou_threshold));
+    JUST(attrs.SetAttr<int32_t>("keep_n", keep_n));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2007,6 +2023,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::CtcGreedyDecoderFunctor>("CtcGreedyDecoder");
   m.add_functor<impl::PartialFCSampleFunctor>("DistributedPariticalFCSample");
   m.add_functor<impl::PariticalFCSampleDisableBoxing>("DistributedPariticalFCSampleDisableBoxing");
+  m.add_functor<impl::NmsFunctor>("Nms");
 };
 
 }  // namespace functional
