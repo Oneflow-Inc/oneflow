@@ -16,8 +16,9 @@ limitations under the License.
 """
 This file is mostly referenced from PyTorch v1.8.1 torch/_tensor_str.py
 """
-import numpy as np
+import os
 import math
+import numpy as np
 from typing import Optional
 
 import oneflow as flow
@@ -32,6 +33,71 @@ class __PrinterOptions(object):
 
 
 PRINT_OPTS = __PrinterOptions()
+
+
+def set_printoptions(
+    precision=None,
+    threshold=None,
+    edgeitems=None,
+    linewidth=None,
+    profile=None,
+    sci_mode=None,
+):
+    r"""Set options for printing. Items shamelessly taken from NumPy
+
+    Args:
+        precision: Number of digits of precision for floating point output
+            (default = 4).
+        threshold: Total number of array elements which trigger summarization
+            rather than full `repr` (default = 1000).
+        edgeitems: Number of array items in summary at beginning and end of
+            each dimension (default = 3).
+        linewidth: The number of characters per line for the purpose of
+            inserting line breaks (default = 80). Thresholded matrices will
+            ignore this parameter.
+        profile: Sane defaults for pretty printing. Can override with any of
+            the above options. (any one of `default`, `short`, `full`)
+        sci_mode: Enable (True) or disable (False) scientific notation. If
+            None (default) is specified, the value is defined by
+            `torch._tensor_str._Formatter`. This value is automatically chosen
+            by the framework.
+    """
+    if profile is not None:
+        if profile == "default":
+            PRINT_OPTS.precision = 4
+            PRINT_OPTS.threshold = 1000
+            PRINT_OPTS.edgeitems = 3
+            PRINT_OPTS.linewidth = 80
+        elif profile == "short":
+            PRINT_OPTS.precision = 2
+            PRINT_OPTS.threshold = 1000
+            PRINT_OPTS.edgeitems = 2
+            PRINT_OPTS.linewidth = 80
+        elif profile == "full":
+            PRINT_OPTS.precision = 4
+            PRINT_OPTS.threshold = inf
+            PRINT_OPTS.edgeitems = 3
+            PRINT_OPTS.linewidth = 80
+
+    if precision is not None:
+        PRINT_OPTS.precision = precision
+    if threshold is not None:
+        PRINT_OPTS.threshold = threshold
+    if edgeitems is not None:
+        PRINT_OPTS.edgeitems = edgeitems
+    if linewidth is not None:
+        PRINT_OPTS.linewidth = linewidth
+        set_printoptions.user_set_linewidth = True
+    PRINT_OPTS.sci_mode = sci_mode
+set_printoptions.user_set_linewidth = False
+
+
+def _autoset_linewidth():
+    assert set_printoptions.user_set_linewidth == False
+    # os.terminal_size(columns, lines), 
+    # columns represents width of the terminal window in characters 
+    # and lines represents height of the terminal window in characters.
+    PRINT_OPTS.linewidth = os.get_terminal_size()[0]
 
 
 def _try_convert_to_local_tensor(tensor):
@@ -145,7 +211,6 @@ def _vector_str(self, indent, summarize, formatter1):
     elements_per_line = max(
         1, int(math.floor((PRINT_OPTS.linewidth - indent) / (element_length)))
     )
-    char_per_line = element_length * elements_per_line
 
     def _val_formatter(val, formatter1=formatter1):
         return formatter1.format(val)
@@ -294,6 +359,8 @@ def _gen_tensor_str_template(tensor, is_meta):
 
 
 def _gen_tensor_str(tensor):
+    if set_printoptions.user_set_linewidth == False:
+        _autoset_linewidth()
     return _gen_tensor_str_template(tensor, False)
 
 
