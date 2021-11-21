@@ -41,18 +41,29 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
   int evict_object_id = -1;
   if (oneflow::DTRDebugEnabled()) { std::cout << "Finding best tensor to evict..." << std::endl; }
   int id = 0;
+  double tensor_pool_mem = 0.;
   for (const auto& object : candidates_) {
     if (auto shared_object = object.lock()) {
       if (oneflow::DTRDebugEnabled()) {
+        double mem = shared_object->BlobBodyBytes() * 1. / 1024 / 1024;
+        const std::string& compute_op = shared_object->compute_op()->shared_opkernel()->user_op_conf_->op_type_name();
         std::cout << "id " << id
                   << ", is_in_memory: " << static_cast<bool>(shared_object->is_in_memory())
                   << ", is pinned: " << (shared_object->num_pinned())
                   << ", is evictable: " << (shared_object->is_evictable())
-                  << ", compute op: " << (shared_object->compute_op()->shared_opkernel()->user_op_conf_->op_type_name())
+                  << ", compute op: " << compute_op
                   // << ", Address: " << static_cast<const void*>(shared_object->object_dptr())
                   << ", shape: " << shared_object->mut_blob_desc()->shape()
+                  << ", memory: " << mem << "MB"
                   // << ", data_type: " << shared_object->mut_blob_desc()->data_type()
                   << std::endl;
+        // copy op in lenet/alexnet model is always to copy parameters
+        // from cpu to gpu during model.to('cuda')
+        // copying from cpu to gpu uses cuda h2d memory pool, unrelated
+        // to the cuda memory pool dtr uses.
+        if (shared_object->is_in_memory() && compute_op != "copy") {
+          tensor_pool_mem += mem;
+        }
       }
       if (static_cast<bool>(shared_object->compute_op()) && !shared_object->is_pinned()
           && (shared_object->is_evictable()) && shared_object->is_in_memory()) {
@@ -71,6 +82,7 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
     id++;
   }
   if (oneflow::DTRDebugEnabled()) {
+    std::cout << "pool mem is " << tensor_pool_mem << "MB" << std::endl;
     std::cout << "Evict " << evict_object_id << "th object, cost is " << min_cost << std::endl;
   }
   num_eviction_++;

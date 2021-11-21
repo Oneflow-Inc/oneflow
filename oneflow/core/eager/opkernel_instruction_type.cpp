@@ -692,6 +692,27 @@ struct LocalCallOpKernelUtil {
                               operand->user_opkernel()->Compute(compute_ctx, state);
                               return Maybe<void>::Ok();
                             }));
+
+    if (oneflow::DTRDebugEnabled()) {
+    for (int i : operand->opkernel().input_tuple_indexes4mut_ibns()) {
+      const std::string &op_type_name = operand->opkernel().op_type_name();
+      std::cout << "mutable! op: " << op_type_name << ", input " << i << std::endl;
+      const auto& mut_input = operand->inputs()->at(i);
+      if (mut_input->mem_case().has_device_cuda_mem()) {
+        size_t bytes = mut_input->blob_desc().ByteSizeOfBlobBody();
+        std::vector<float> tmp(bytes / 4);
+        cudaMemcpy(tmp.data(), mut_input->blob().dptr(), bytes,
+                   cudaMemcpyKind::cudaMemcpyDeviceToHost);
+        float x = 0;
+        for (float f : tmp) { x += f; }
+        mut_input->hash_ = x;
+        mut_input->backup_data_.resize(bytes / 4);
+        memcpy(mut_input->backup_data_.data(), tmp.data(), bytes);
+      } else {
+        std::cout << "non gpu memory, op is: " << op_type_name << std::endl;
+      }
+    }
+
     // compare_input_hash flag
     bool compare_input_hash = false;
     for (const auto& base_class_output : *operand->outputs()) {
@@ -700,7 +721,7 @@ struct LocalCallOpKernelUtil {
         CHECK_EQ_OR_RETURN(bytes % 4, 0);
         std::vector<float> tmp(bytes / 4);
         cudaMemcpy(tmp.data(), base_class_output->blob().dptr(), bytes,
-                    cudaMemcpyKind::cudaMemcpyDeviceToHost);
+                   cudaMemcpyKind::cudaMemcpyDeviceToHost);
         float x = 0;
         for (float f : tmp) { x += f; }
         if (const auto output = std::dynamic_pointer_cast<DTREagerBlobObject>(base_class_output)) {
@@ -710,8 +731,9 @@ struct LocalCallOpKernelUtil {
                         << " compute op: "
                         << output->compute_op()->shared_opkernel()->user_op_conf_->op_type_name()
                         << ", old hash: " << output->hash_ << ", new hash: " << x
-                        << ", old data[0]: " << output->backup_data_[0] << ", new data[0]: " << tmp[0]
-                        << ", shape: " << output->blob_desc().shape() << std::endl;
+                        << ", old data[0]: " << output->backup_data_[0]
+                        << ", new data[0]: " << tmp[0] << ", shape: " << output->blob_desc().shape()
+                        << std::endl;
 
               // compare hash of inputs
               compare_input_hash = true;
@@ -728,6 +750,8 @@ struct LocalCallOpKernelUtil {
         base_class_output->hash_ = x;
         base_class_output->backup_data_.resize(bytes / 4);
         memcpy(base_class_output->backup_data_.data(), tmp.data(), bytes);
+      } else {
+        std::cout << "compute non gpu memory, op is: " << operand->opkernel().op_type_name() << std::endl;
       }
     }
     if (compare_input_hash) {
@@ -738,14 +762,15 @@ struct LocalCallOpKernelUtil {
             CHECK_EQ_OR_RETURN(bytes % 4, 0);
             std::vector<float> tmp(bytes / 4);
             cudaMemcpy(tmp.data(), input->blob().dptr(), bytes,
-                      cudaMemcpyKind::cudaMemcpyDeviceToHost);
+                       cudaMemcpyKind::cudaMemcpyDeviceToHost);
             float x = 0;
             for (float f : tmp) { x += f; }
             if (input->hash_ != -1) {
               if (input->hash_ != x) {
                 std::cout << "input hash wrong!!!!"
                           << ", old hash: " << input->hash_ << ", new hash: " << x
-                          << ", old data[0]: " << input->backup_data_[0] << ", new data[0]: " << tmp[0]
+                          << ", old data[0]: " << input->backup_data_[0]
+                          << ", new data[0]: " << tmp[0]
                           << ", shape: " << input->blob_desc().shape() << std::endl;
               } else {
                 std::cout << "input hash correct!!!!"
@@ -754,9 +779,12 @@ struct LocalCallOpKernelUtil {
             } else {
               std::cout << "input not initialized!!!!!" << x << std::endl;
             }
+          } else {
+            std::cout << "input non gpu memory, op is: " << operand->opkernel().op_type_name() << std::endl;
           }
         }
       }
+    }
     }
     return Maybe<void>::Ok();
   }

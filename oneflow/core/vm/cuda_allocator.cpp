@@ -174,7 +174,6 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   OF_CUDA_CHECK(cudaMemGetInfo(&free_bytes, &total_bytes));
   const size_t remain_bytes = 50 * 1048576;
   // const size_t available_bytes = free_bytes - remain_bytes;  // remain at least 50MiB memory
-  const size_t dtr_remain_bytes = oneflow::GetDTRRemainMemory();
   size_t available_bytes = -1;
   if (total_memory_bytes_ + remain_bytes < oneflow::GetDTRMemoryThreshold()) {
     available_bytes = oneflow::GetDTRMemoryThreshold() - total_memory_bytes_
