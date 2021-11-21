@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -45,7 +46,7 @@ class AssignIfGPUKernel final : public user_op::OpKernel {
     CHECK_EQ(value->data_type(), ref->data_type());
     const size_t elem_cnt = ref->shape().elem_cnt();
     AssignGpu<assign_if, C, T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                 ctx->device_ctx()->cuda_stream()>>>(
+                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         elem_cnt, condition->dptr<C>(), value->dptr<T>(), ref->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
