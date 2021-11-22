@@ -216,6 +216,7 @@ class JitImporter : public Importer {
   ProcessOpContext& GetProcessOpContext() { return process_op_context_; }
 
  private:
+  //  TODO: extract a process_func_context
   std::unordered_map<Tensor*, mlir::Value> result_mapping_;  // tensor* => %result
   DenseMap<llvm::hash_code, std::string> func_hash_symbol_mapping_;
   llvm::DenseMap<Value, std::shared_ptr<TensorRef>> intermediate_tensors_;
