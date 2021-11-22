@@ -152,7 +152,7 @@ void AvgForwardCompute(KernelComputeContext* ctx, const int32_t& dim) {
 
   const int out_elems = out_tensor->shape().elem_cnt();
 
-  RUN_CUDA_KERNEL((AdaptiveAvgPoolCudaKernel<T>), ctx->device_ctx(), out_elems, in_ptr, out_ptr,
+  RUN_CUDA_KERNEL((AdaptiveAvgPoolCudaKernel<T>), ctx->stream(), out_elems, in_ptr, out_ptr,
                   out_elems, in.At(2), in.At(3), in.At(4), out.At(2), out.At(3), out.At(4));
 }
 
@@ -174,8 +174,8 @@ void AvgBackwardCompute(KernelComputeContext* ctx, const int32_t& dim) {
   const int in_elems = in_tensor->shape().elem_cnt();
   const int out_elems = out_tensor->shape().elem_cnt();
 
-  RUN_CUDA_KERNEL((InitPtr<T>), ctx->device_ctx(), in_elems, in_elems, in_ptr);
-  RUN_CUDA_KERNEL((AdaptiveAvgPoolGradCudaKernel<T>), ctx->device_ctx(), out_elems, in_ptr, out_ptr,
+  RUN_CUDA_KERNEL((InitPtr<T>), ctx->stream(), in_elems, in_elems, in_ptr);
+  RUN_CUDA_KERNEL((AdaptiveAvgPoolGradCudaKernel<T>), ctx->stream(), out_elems, in_ptr, out_ptr,
                   out_elems, in.At(2), in.At(3), in.At(4), out.At(2), out.At(3), out.At(4));
 }
 
