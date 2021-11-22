@@ -50,7 +50,6 @@ class Model(flow.nn.Module):
 
     def forward(self, x, label):
         x1 = flow.matmul(x, self.w1)
-        #label = flow.matmul(label, self.w2)
         return x1, label
 
 
