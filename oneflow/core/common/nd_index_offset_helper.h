@@ -134,7 +134,8 @@ class NdIndexOffsetHelper {
 #pragma unroll
 #endif
     for (int i = 0; i < N - 1; ++i) {
-      const T idx = remaining / stride_[i];
+      // const T idx = remaining / stride_[i];
+      const T idx = div[i].div(remaining); 
       index[i] = idx;
       remaining = remaining - idx * stride_[i];
     }
