@@ -60,8 +60,9 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   Stride target_strides(target_shape);
   storage_offset = storage_offset + JUST(JUST(input->AsMirroredTensor())->storage_offset());
   // TODO(): Check shape compatible.
+  auto device = JUST(input->device());
   auto tensor_meta = std::make_shared<MirroredTensorMeta>(
-      std::make_shared<Shape>(target_shape), input->dtype()->data_type(), JUST(input->device()),
+      std::make_shared<Shape>(target_shape), input->dtype()->data_type(), device),
       std::make_shared<Stride>(target_strides), storage_offset);
 
   JUST(input->has_eager_blob_object());
