@@ -58,7 +58,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
    * them are memory contiguous, but has different shapes/strides.
    */
   Stride target_strides(target_shape);
-  storage_offset += JUST(input->storage_offset());
+  storage_offset = storage_offset + JUST(JUST(input->AsMirroredTensor())->storage_offset());
   // TODO(): Check shape compatible.
   auto tensor_meta = std::make_shared<MirroredTensorMeta>(
       std::make_shared<Shape>(target_shape), input->dtype()->data_type(), JUST(input->device()),
