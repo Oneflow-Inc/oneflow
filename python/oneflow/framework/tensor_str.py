@@ -70,7 +70,7 @@ def set_printoptions(
             None (default) is specified, the value is defined by
             `oneflow._tensor_str._Formatter`. This value is automatically chosen
             by the framework.
-        Note: linewidth equal to terminal columns, manual setting will invalidate
+        Note: linewidth equals to terminal columns, manual setting will invalidate
             the default automatic setting.
     """
     if profile is not None:
