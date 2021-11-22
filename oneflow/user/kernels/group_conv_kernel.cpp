@@ -408,6 +408,8 @@ class ConvCpuKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
+    const T* input_ptr = (const T*)in->dptr();
+    const T* weight_ptr = (const T*)weight->dptr<T>();
     T* col_buf_dptr = tmp_buffer->mut_dptr<T>();
     int32_t idx_offset = conv_state->idx_offset_;
     const int32_t input_group_interval = in->shape().At(1) / conv_state->groups;
@@ -422,9 +424,7 @@ class ConvCpuKernel final : public user_op::OpKernel {
     bool is_bias_mul_inited = false;
 
     for (int64_t i = 0; i < in->shape().At(0); ++i) {
-      const T* input_ptr = GetImgDptr<T>(in, i);
-      const T* weight_ptr = weight->dptr<T>();
-      T* output_ptr = GetImgMutDptr<T>(out, i);
+      T* output_ptr = out->mut_dptr<T>();
       for (int64_t g = 0; g < conv_state->groups; g++) {
         conv_state->im2col_func_(
             input_ptr, ShapeView(conv_state->in_5d_shape_), ShapeView(conv_state->weight_5d_shape_),
@@ -519,6 +519,9 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* filter = ctx->Tensor4ArgNameAndIndex("filter", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    const T* filter_ptr = (const T*)filter->dptr<T>();
+    const T* dy_ptr = (const T*)dy->dptr<T>();
+    T* dx_ptr = (T*)dx->mut_dptr();
 
     int32_t idx_offset = conv_state->idx_offset_;
     const int32_t dy_group_interval = dy->shape().At(1) / conv_state->groups;
@@ -535,9 +538,6 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
                              dx->shape().elem_cnt() * sizeof(T));
 
     FOR_RANGE(int64_t, i, 0, dy->shape().At(0)) {
-      const T* filter_ptr = filter->dptr<T>();
-      const T* dy_ptr = GetImgDptr<T>(dy, i);
-      T* dx_ptr = GetImgMutDptr<T>(dx, i);
       FOR_RANGE(int64_t, g, 0, conv_state->groups) {
         // channels first:  col_buf' = weight(T) * out[i]'
         // channels last :  col_buf' = weight(T) * out[i]'(T)
@@ -611,6 +611,12 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* filter_diff = ctx->Tensor4ArgNameAndIndex("filter_diff", 0);
     user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    Memset<DeviceType::kCPU>(ctx->stream(), filter_diff->mut_dptr<T>(), 0,
+                             filter_diff->shape().elem_cnt() * sizeof(T));
+    const T* x_ptr = (const T*)x->dptr();
+    const T* dy_ptr = (const T*)dy->dptr();
+    T* filter_diff_ptr = (T*)filter_diff->mut_dptr<T>();
+
     int32_t idx_offset = conv_state->idx_offset_;
     const int32_t dy_group_interval = dy->shape().At(1) / conv_state->groups;
     const int32_t filter_diff_group_interval = filter_diff->shape().At(0) / conv_state->groups;
@@ -622,12 +628,7 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
     const int32_t n = conv_state->weight_5d_shape_.Count(1);
     const int32_t k = conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3);
 
-    Memset<DeviceType::kCPU>(ctx->stream(), filter_diff->mut_dptr<T>(), 0,
-                             filter_diff->shape().elem_cnt() * sizeof(T));
     FOR_RANGE(int64_t, i, 0, dy->shape().At(0)) {
-      const T* x_ptr = GetImgDptr<T>(x, i);
-      const T* dy_ptr = GetImgDptr<T>(dy, i);
-      T* filter_diff_ptr = filter_diff->mut_dptr<T>();
       FOR_RANGE(int64_t, g, 0, conv_state->groups) {
         conv_state->im2col_func_(
             x_ptr, ShapeView(conv_state->in_5d_shape_), ShapeView(conv_state->weight_5d_shape_),
