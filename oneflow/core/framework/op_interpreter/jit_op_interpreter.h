@@ -63,8 +63,9 @@ class JitInterpreter : public OpExprInterpreter {
   void Trace(ir::JitImporter& importer,
              const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
              const std::function<std::vector<std::shared_ptr<one::Tensor>>(void)>& forward_func);
-  void DispatchModule(ModuleOp module,
+  void DispatchModule(ModuleOp module, const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
                       std::vector<std::shared_ptr<one::Tensor>> returned_lazy_tensors);
+
  private:
   DECLARE_NORMAL_APPLY_FUNC(UserOp);  // note(BBuf) jit deal with user op only, now.
   mutable llvm::DenseMap<llvm::hash_code, std::shared_ptr<one::UserOpExpr>> cached_user_op_exprs_;

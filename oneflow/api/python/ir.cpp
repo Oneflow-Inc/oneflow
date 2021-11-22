@@ -63,7 +63,7 @@ struct Module {
       return tensors_to_materialize;
     });
     *one::MutJitEnabled() = false;
-    jit_interpreter->DispatchModule(*module_, tensors_to_materialize);
+    jit_interpreter->DispatchModule(*module_, arg_tensors, tensors_to_materialize);
     importer_.ResetMappings();
     jit_interpreter->End();
     LOG(ERROR) << "JIT trace overhead: " << jit_interpreter->TraceOverhead();

@@ -87,7 +87,8 @@ void InsertLbnSegmentIntoVec(const ::mlir::ArrayAttr& lbn_segment_keys,
 }
 
 void JitInterpreter::DispatchModule(
-    ModuleOp module, std::vector<std::shared_ptr<one::Tensor>> returned_lazy_tensors) {
+    ModuleOp module, const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
+    std::vector<std::shared_ptr<one::Tensor>> returned_lazy_tensors) {
   llvm::DenseMap<Value, std::shared_ptr<Tensor>> mapping;
   // TODO: handle the case if there are more than one function in the module.
   ReturnOp return_op;
@@ -107,7 +108,7 @@ void JitInterpreter::DispatchModule(
                   auto index = indexed_operand.index();
                   auto operand = indexed_operand.value();
                   if (auto arg = operand.dyn_cast<mlir::BlockArgument>()) {
-                    inputs[index] = GetJitForwardArgs()[arg.getArgNumber()];
+                    inputs[index] = arg_tensors[arg.getArgNumber()];
                   } else {
                     auto found = mapping.find(operand);
                     if (found->first) {
@@ -171,7 +172,7 @@ void JitInterpreter::Interrupt() {
   if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module_->print(llvm::outs()); }
   MlirTraceEnd();
   auto ret = GetImporter().GetReturnTensors();
-  DispatchModule(*module_, {ret.begin(), ret.end()});
+  DispatchModule(*module_, GetJitForwardArgs(), {ret.begin(), ret.end()});
   GetImporter().ResetMappings();
 }  // namespace one
 
