@@ -210,7 +210,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       : thread_(nullptr),
         actor_ctx_(actor_ctx),
         stream_ctx_(actor_ctx->stream_ctx()),
-        device_ctx_(NewDeviceCtxAdapter(actor_ctx->stream_ctx())),
+        device_ctx_(NewDeviceCtxAdapter(actor_ctx->stream_ctx()->stream())),
         stream_kernel_observer_(nullptr) {
     auto* kernel_observer_provider = dynamic_cast<KernelObserverProvider*>(stream_ctx_);
     if (kernel_observer_provider != nullptr) {
@@ -494,8 +494,6 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       });
     }
   }
-
-  StreamContext* stream_ctx() const override { return stream_ctx_; }
 
   ep::Stream* stream() const override { return stream_ctx_->stream(); }
 

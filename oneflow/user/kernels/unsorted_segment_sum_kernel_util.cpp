@@ -19,7 +19,7 @@ namespace oneflow {
 
 template<typename T, typename K>
 struct UnsortedSegmentSumKernelUtil<DeviceType::kCPU, T, K, T> final {
-  static void UnsortedSegmentSum(DeviceCtx* ctx, const K* segment_ids, const T* data,
+  static void UnsortedSegmentSum(ep::Stream* stream, const K* segment_ids, const T* data,
                                  int64_t num_segment_ids, int64_t num_segments,
                                  int64_t outer_dim_size, int64_t inner_dim_size,
                                  int64_t segment_id_offset, T* out);
@@ -27,7 +27,7 @@ struct UnsortedSegmentSumKernelUtil<DeviceType::kCPU, T, K, T> final {
 
 template<typename T, typename K>
 void UnsortedSegmentSumKernelUtil<DeviceType::kCPU, T, K, T>::UnsortedSegmentSum(
-    DeviceCtx* ctx, const K* segment_ids, const T* data, int64_t num_segment_ids,
+    ep::Stream* stream, const K* segment_ids, const T* data, int64_t num_segment_ids,
     int64_t num_segments, int64_t outer_dim_size, int64_t inner_dim_size, int64_t segment_id_offset,
     T* out) {
   FOR_RANGE(int64_t, outer_idx, 0, outer_dim_size) {

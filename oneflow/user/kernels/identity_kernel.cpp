@@ -35,7 +35,7 @@ class IdentityKernel final : public user_op::OpKernel, public user_op::CudaGraph
     CHECK_EQ(out->shape(), in_shape);
     const DataType in_data_type = in->data_type();
     CHECK_EQ(out->data_type(), in_data_type);
-    Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<void>(), in->dptr<void>(),
+    Memcpy<device_type>(ctx->stream(), out->mut_dptr<void>(), in->dptr<void>(),
                         in_shape.elem_cnt() * GetSizeOfDataType(in_data_type));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

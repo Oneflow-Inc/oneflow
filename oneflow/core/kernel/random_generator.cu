@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/random_generator.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -34,11 +35,10 @@ void RngUniformGpu<double>(const curandGenerator_t& gen, int64_t n, double* ret)
 
 }  // namespace
 
-RandomGenerator<DeviceType::kGPU>::RandomGenerator(int64_t seed, DeviceCtx* device_ctx) {
-  CHECK_NOTNULL(device_ctx);
+RandomGenerator<DeviceType::kGPU>::RandomGenerator(int64_t seed, ep::Stream* stream) {
   OF_CURAND_CHECK(curandCreateGenerator(&curand_generator_, CURAND_RNG_PSEUDO_DEFAULT));
   OF_CURAND_CHECK(curandSetPseudoRandomGeneratorSeed(curand_generator_, seed));
-  OF_CURAND_CHECK(curandSetStream(curand_generator_, device_ctx->cuda_stream()));
+  OF_CURAND_CHECK(curandSetStream(curand_generator_, stream->As<ep::CudaStream>()->cuda_stream()));
 }
 
 RandomGenerator<DeviceType::kGPU>::~RandomGenerator() {

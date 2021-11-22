@@ -24,7 +24,7 @@ namespace {
 
 template<typename T>
 struct DiagFunctor<DeviceType::kCPU, T> final {
-  void operator()(DeviceCtx* ctx, T* out_buf, const T* in_buf, int32_t size, int32_t stride,
+  void operator()(ep::Stream* stream, T* out_buf, const T* in_buf, int32_t size, int32_t stride,
                   int32_t in_dim) {
     if (in_dim == 1) {
       FOR_RANGE(int32_t, i, 0, size) { out_buf[i * stride] = in_buf[i]; }
@@ -36,7 +36,7 @@ struct DiagFunctor<DeviceType::kCPU, T> final {
 
 template<typename T>
 struct DiagGradFunctor<DeviceType::kCPU, T> final {
-  void operator()(DeviceCtx* ctx, T* dx_buf, const T* dy_buf, int32_t dx_cnt, int32_t dy_cnt,
+  void operator()(ep::Stream* stream, T* dx_buf, const T* dy_buf, int32_t dx_cnt, int32_t dy_cnt,
                   int32_t stride, int32_t in_dim) {
     if (in_dim == 1) {
       FOR_RANGE(int32_t, i, 0, dx_cnt) { dx_buf[i] = dy_buf[i * stride]; }
