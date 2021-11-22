@@ -355,7 +355,7 @@ add_docstr(
 )
 add_docstr(
     oneflow._C.relu6,
-    r"""relu6(input, inplace=False) -> Tensor
+    """relu6(input, inplace=False) -> Tensor
 
     Applies the element-wise function :math:`\text{ReLU6}(x) = \min(\max(0,x), 6)`.
 
