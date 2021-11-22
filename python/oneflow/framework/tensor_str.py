@@ -28,8 +28,18 @@ class __PrinterOptions(object):
     precision: int = 4
     threshold: float = 1000
     edgeitems: int = 3
-    linewidth: int = None
+    userset_linewidth: int = None
     sci_mode: Optional[bool] = None
+
+    autoset_linewidth: bool = True
+
+    @property
+    def linewidth(self):
+        return _autoset_linewidth() if self.autoset_linewidth else self.linewidth
+        
+    @linewidth.setter
+    def linewidth(self, value):
+        self.userset_linewidth = value
 
 
 PRINT_OPTS = __PrinterOptions()
@@ -89,20 +99,18 @@ def set_printoptions(
         PRINT_OPTS.linewidth = linewidth
     PRINT_OPTS.sci_mode = sci_mode
     if profile is not None or linewidth is not None:
-        set_printoptions.user_set_linewidth = True
-set_printoptions.user_set_linewidth = False
+        PRINT_OPTS.autoset_linewidth = False
 
 
 def _autoset_linewidth():
-    assert set_printoptions.user_set_linewidth == False
-    # os.terminal_size(columns, lines), 
-    # columns represents width of the terminal window in characters 
+    # os.terminal_size(columns, lines),
+    # columns represents width of the terminal window in characters
     # and lines represents height of the terminal window in characters.
     try:
         linewidth = os.get_terminal_size()[0]
     except OSError:
         linewidth = 80
-    PRINT_OPTS.linewidth = linewidth
+    return linewidth
 
 
 def _try_convert_to_local_tensor(tensor):
@@ -364,13 +372,9 @@ def _gen_tensor_str_template(tensor, is_meta):
 
 
 def _gen_tensor_str(tensor):
-    if set_printoptions.user_set_linewidth == False:
-        _autoset_linewidth()
     return _gen_tensor_str_template(tensor, False)
 
 
 def _gen_tensor_meta_str(tensor):
     # meta
-    if set_printoptions.user_set_linewidth == False:
-        _autoset_linewidth()
     return _gen_tensor_str_template(tensor, True)
