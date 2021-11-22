@@ -101,13 +101,13 @@ class ColBufWriter {
  protected:
   const T* src_ptr_;
   T* dst_ptr_;
-  int64_t c_size_ ;
-  int64_t id_size_;
-  int64_t ih_size_;
-  int64_t iw_size_;
-  int64_t od_size_;
-  int64_t oh_size_;
-  int64_t ow_size_;
+  int64_t c_size_ = 0;
+  int64_t id_size_ = 0;
+  int64_t ih_size_ = 0;
+  int64_t iw_size_ = 0;
+  int64_t od_size_ = 0;
+  int64_t oh_size_ = 0;
+  int64_t ow_size_ = 0;
 };
 
 template<typename T>
