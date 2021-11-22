@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/kernel/chain_kernel_observer.h"
 #include "oneflow/core/kernel/cuda_check_numerics_kernel_observer.h"
 #include "oneflow/core/graph/stream_id.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 #ifdef WITH_CUDA
 #include <cublas_v2.h>
@@ -34,7 +35,6 @@ namespace oneflow {
 namespace {
 
 constexpr int kCudaEventReuseRecycleThreshold = 32;
-constexpr size_t kDefaultWorkspaceSize = 4 * 1024 * 1024;  // 4M
 
 void SetAffinityByDevice(int64_t dev_id) {
   auto node_device_desc =
@@ -71,6 +71,7 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
   DeviceType device_type() const override { return DeviceType::kGPU; }
   KernelObserver* GetKernelObserver() override;
 
+  ep::Stream* stream() override;
   cudaStream_t cuda_stream() const override;
   cublasHandle_t cublas_handle() const override;
   cudnnHandle_t cudnn_handle() const override;
@@ -86,10 +87,8 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
   cudaEvent_t GetEvent();
   void SyncRecycleEvent(cudaEvent_t event);
 
+  ep::CudaStream stream_;
   Channel<std::pair<cudaEvent_t, std::function<void()>>> cb_event_chan_;
-  cudaStream_t cuda_stream_{};
-  cublasHandle_t cublas_handle_{};
-  cudnnHandle_t cudnn_handle_{};
   int cuda_event_flags_;
   bool reuse_cuda_event_;
   std::deque<cudaEvent_t> consumer_event_queue_;
@@ -102,50 +101,18 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
 #ifdef WITH_CUDA_GRAPHS
   std::unique_ptr<GenericCudaGraphContext> cuda_graph_ctx_impl_;
 #endif  // WITH_CUDA_GRAPHS
-#if CUBLAS_VERSION >= 11200
-  void* workspace_{};
-  size_t workspace_size_{};
-#endif  // CUBLAS_VERSION >= 11200
 };
 
 }  // namespace
 
-CudaStreamContextImpl::CudaStreamContextImpl(int device_ordinal) : device_ordinal_(device_ordinal) {
+CudaStreamContextImpl::CudaStreamContextImpl(int device_ordinal)
+    : stream_(device_ordinal), device_ordinal_(device_ordinal) {
   CudaCurrentDeviceGuard guard(device_ordinal_);
   cuda_event_flags_ = cudaEventDisableTiming;
   if (ParseBooleanFromEnv("ONEFLOW_STREAM_CUDA_EVENT_FLAG_BLOCKING_SYNC", false)) {
     cuda_event_flags_ |= cudaEventBlockingSync;
   }
   reuse_cuda_event_ = ParseBooleanFromEnv("ONEFLOW_STREAM_REUSE_CUDA_EVENT", false);
-
-  // cuda_stream
-  OF_CUDA_CHECK(cudaStreamCreate(&cuda_stream_));
-
-  // cublas_handle
-  OF_CUBLAS_CHECK(cublasCreate(&cublas_handle_));
-  OF_CUBLAS_CHECK(cublasSetStream(cublas_handle_, cuda_stream_));
-#if CUBLAS_VERSION >= 11000
-  if (Global<ResourceDesc, ForSession>::Get()->enable_tensor_float_32_compute()) {
-    OF_CUBLAS_CHECK(cublasSetMathMode(cublas_handle_, CUBLAS_TF32_TENSOR_OP_MATH));
-  }
-#endif  // CUBLAS_VERSION >= 11000
-#if CUBLAS_VERSION >= 11200
-  workspace_size_ = kDefaultWorkspaceSize;
-  OF_CUDA_CHECK(cudaMalloc(&workspace_, workspace_size_));
-  OF_CUBLAS_CHECK(cublasSetWorkspace(cublas_handle_, workspace_, workspace_size_));
-#endif  // CUBLAS_VERSION >= 11200
-
-  // cudnn_handle
-  if (IsCuda9OnTuringDevice()) {
-    OF_CUDA_CHECK(cudaDeviceSynchronize());
-    OF_CUDA_CHECK(cudaGetLastError());
-  }
-  OF_CUDNN_CHECK(cudnnCreate(&cudnn_handle_));
-  if (IsCuda9OnTuringDevice()) {
-    OF_CUDA_CHECK(cudaDeviceSynchronize());
-    cudaGetLastError();
-  }
-  OF_CUDNN_CHECK(cudnnSetStream(cudnn_handle_, cuda_stream_));
 
   std::vector<std::shared_ptr<KernelObserver>> kernel_observers;
   if (ParseBooleanFromEnv("ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS", false)) {
@@ -157,7 +124,7 @@ CudaStreamContextImpl::CudaStreamContextImpl(int device_ordinal) : device_ordina
   kernel_observer_.reset(new ChainKernelObserver(kernel_observers));
 
 #ifdef WITH_CUDA_GRAPHS
-  cuda_graph_ctx_impl_.reset(new GenericCudaGraphContext(cuda_stream_));
+  cuda_graph_ctx_impl_.reset(new GenericCudaGraphContext(stream_.cuda_stream()));
 #endif  // WITH_CUDA_GRAPHS
 
   poller_thread_ = std::thread([this]() {
@@ -177,16 +144,9 @@ CudaStreamContextImpl::~CudaStreamContextImpl() {
   CudaCurrentDeviceGuard guard(device_ordinal_);
   cb_event_chan_.Close();
   poller_thread_.join();
-  OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream_));
   for (cudaEvent_t event : consumer_event_queue_) { OF_CUDA_CHECK(cudaEventDestroy(event)); }
   for (cudaEvent_t event : producer_event_queue_) { OF_CUDA_CHECK(cudaEventDestroy(event)); }
   for (cudaEvent_t event : global_event_queue_) { OF_CUDA_CHECK(cudaEventDestroy(event)); }
-  OF_CUDNN_CHECK(cudnnDestroy(cudnn_handle_));
-  OF_CUBLAS_CHECK(cublasDestroy(cublas_handle_));
-  OF_CUDA_CHECK(cudaStreamDestroy(cuda_stream_));
-#if CUBLAS_VERSION >= 11200
-  OF_CUDA_CHECK(cudaFree(workspace_));
-#endif  // CUBLAS_VERSION >= 11200
 }
 
 Maybe<void> CudaStreamContextImpl::OnExecutionContextSetup() {
@@ -199,7 +159,7 @@ Maybe<void> CudaStreamContextImpl::OnExecutionContextTeardown() { return Maybe<v
 
 Maybe<void> CudaStreamContextImpl::AddCallback(std::function<void()> callback) {
   cudaEvent_t cuda_event = GetEvent();
-  OF_CUDA_CHECK(cudaEventRecord(cuda_event, cuda_stream_));
+  OF_CUDA_CHECK(cudaEventRecord(cuda_event, stream_.cuda_stream()));
   cb_event_chan_.Send(std::make_pair(cuda_event, std::move(callback)));
   return Maybe<void>::Ok();
 }
@@ -239,7 +199,7 @@ void CudaStreamContextImpl::SyncRecycleEvent(cudaEvent_t event) {
 }
 
 Maybe<void> CudaStreamContextImpl::Sync() {
-  cudaError_t err = cudaStreamSynchronize(cuda_stream_);
+  cudaError_t err = cudaStreamSynchronize(stream_.cuda_stream());
   if (err == cudaSuccess) {
     return Maybe<void>::Ok();
   } else {
@@ -249,11 +209,13 @@ Maybe<void> CudaStreamContextImpl::Sync() {
 
 KernelObserver* CudaStreamContextImpl::GetKernelObserver() { return kernel_observer_.get(); }
 
-cudaStream_t CudaStreamContextImpl::cuda_stream() const { return cuda_stream_; }
+ep::Stream* CudaStreamContextImpl::stream() { return &stream_; }
 
-cublasHandle_t CudaStreamContextImpl::cublas_handle() const { return cublas_handle_; }
+cudaStream_t CudaStreamContextImpl::cuda_stream() const { return stream_.cuda_stream(); }
 
-cudnnHandle_t CudaStreamContextImpl::cudnn_handle() const { return cudnn_handle_; }
+cublasHandle_t CudaStreamContextImpl::cublas_handle() const { return stream_.cublas_handle(); }
+
+cudnnHandle_t CudaStreamContextImpl::cudnn_handle() const { return stream_.cudnn_handle(); }
 
 #ifdef WITH_CUDA_GRAPHS
 

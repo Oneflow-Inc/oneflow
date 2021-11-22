@@ -172,9 +172,7 @@ Maybe<void> RunEmptyOp(TensorTuple* outputs) {
   const auto& shape = tensor_impl->tensor_meta()->shape_ptr();
   const auto& data_type = tensor_impl->dtype();
   const auto& device = tensor_impl->device();
-  const auto empty_expr = JUST(op_expr_helper::EmptyOp(*shape, data_type));
-  std::shared_ptr<TensorTuple> inputs = std::make_shared<TensorTuple>();
-  JUST(NaiveInterpret(*empty_expr, *inputs, device, outputs, OpExprInterpContext(AttrMap{})));
+  outputs->at(0) = JUST(functional::Empty(*shape, DType(data_type), device));
   return Maybe<void>::Ok();
 }
 
