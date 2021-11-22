@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/cuda/softmax.cuh"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -94,7 +95,7 @@ class FusedScaleMaskSoftmaxKernel final : public user_op::OpKernel {
                                        ctx->Attr<float>("scale_value"));
     cuda::softmax::DirectStore<ComputeType, T> store(y->mut_dptr<T>(), cols);
     OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
-        ctx->device_ctx()->cuda_stream(), load, store, rows, cols)));
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream(), load, store, rows, cols)));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -134,7 +135,7 @@ class FusedScaleMaskSoftmaxGradKernel final : public user_op::OpKernel {
                                          static_cast<T>(0.0), ctx->Attr<float>("scale_value"));
     OF_CUDA_CHECK((cuda::softmax::DispatchSoftmaxGrad<decltype(load_y), decltype(load_dy),
                                                       decltype(store), ComputeType>(
-        ctx->device_ctx()->cuda_stream(), load_y, load_dy, store, rows, cols)));
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream(), load_y, load_dy, store, rows, cols)));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
