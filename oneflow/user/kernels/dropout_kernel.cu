@@ -526,8 +526,8 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
     uint64_t seed = cuda_generator->current_seed();
 
     const float rate = ctx->Attr<float>("rate");
-    float scale = 1.0;
-    if (rate != 1.0) { scale = 1.0 / (1.0 - rate); }
+    float scale = 0.0;
+    if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
     one::CUDAGeneratorState* cuda_gen_state = cuda_generator->cuda_gen_state();
 
     if (ctx->has_input("_add_to_output", 0)) {
