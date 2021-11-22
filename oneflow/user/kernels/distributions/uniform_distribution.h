@@ -35,7 +35,7 @@ class UniformDistribution<DeviceType::kCPU, T> final {
   UniformDistribution(T low, T high) : low_(low), high_(high) {}
   ~UniformDistribution() = default;
 
-  void operator()(DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, T* dptr,
                   const std::shared_ptr<one::Generator>& generator) const;
 
  private:
@@ -51,7 +51,7 @@ class UniformDistribution<DeviceType::kGPU, T> final {
   UniformDistribution(T low, T high) : low_(low), high_(high) {}
   ~UniformDistribution() = default;
 
-  void operator()(DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, T* dptr,
                   const std::shared_ptr<one::Generator>& generator) const;
 
  private:

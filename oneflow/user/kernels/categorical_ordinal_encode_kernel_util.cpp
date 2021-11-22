@@ -19,8 +19,8 @@ namespace oneflow {
 
 template<typename T>
 struct CategoricalOrdinalEncodeKernelUtil<DeviceType::kCPU, T> {
-  static void Encode(DeviceCtx* ctx, int64_t capacity, T* table, T* size, int64_t n, const T* hash,
-                     T* out) {
+  static void Encode(ep::Stream* stream, int64_t capacity, T* table, T* size, int64_t n,
+                     const T* hash, T* out) {
     for (int64_t i = 0; i < n; ++i) {
       const T h = hash[i];
       bool success = false;
