@@ -63,14 +63,15 @@ def set_printoptions(
         edgeitems: Number of array items in summary at beginning and end of
             each dimension (default = 3).
         linewidth: The number of characters per line for the purpose of
-            inserting line breaks (default = terminal_columns). Manual setting
-            will invalidate the default automatic setting.
+            inserting line breaks (default = terminal_columns).
         profile: Sane defaults for pretty printing. Can override with any of
             the above options. (any one of `default`, `short`, `full`)
         sci_mode: Enable (True) or disable (False) scientific notation. If
             None (default) is specified, the value is defined by
             `oneflow._tensor_str._Formatter`. This value is automatically chosen
             by the framework.
+        Note: linewidth equal to terminal columns, manual setting will invalidate
+            the default automatic setting.
     """
     if profile is not None:
         if profile == "default":
