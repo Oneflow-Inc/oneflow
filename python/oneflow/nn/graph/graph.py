@@ -447,13 +447,13 @@ class Graph(object):
     def _compile(self, *args):
         # Build graph
         try:
-            self._print(0, 0, self._shallow_repr() + " start building graph."," ")
+            self._print(0, 0, self._shallow_repr() + " start building graph.")
             assert not self._is_compiled, (
                 "nn.Graph " + self._name + " has already been compiled."
             )
             t0 = time.clock()
             eager_outputs = self._build_graph(*args)
-            self._print(0, 0, self._shallow_repr() + " end building graph."," ")
+            self._print(0, 0, self._shallow_repr() + " end building graph.")
         except:
             self._print(
                 2,
@@ -464,13 +464,12 @@ class Graph(object):
                 + sys_exc_error_msg()," "
             )
             raise
-
         # Complie graph to execution plan and init Runtime
         try:
             self._print(
                 0,
                 0,
-                self._shallow_repr() + " start compiling plan and init graph runtime."," "
+                self._shallow_repr() + " start compiling plan and init graph runtime."
             )
             self._c_nn_graph.complie_and_init_runtime()
             t1 = time.clock()
@@ -478,7 +477,9 @@ class Graph(object):
             self._print(
                 0,
                 0,
-                self._shallow_repr() + " end compiling plan and init graph rumtime.",time_str_0
+                self._shallow_repr() + " end compiling plan \
+                and init graph rumtime."+'\n'+"from build graph \
+                to complie and init Runtime the end consumes time:%ss"+" "+time_str_0 + '\n'
             )
         except:
             self._print(
@@ -487,21 +488,18 @@ class Graph(object):
                 "[ERROR]"
                 + self._shallow_repr()
                 + " compiling plan or initialing graph runtime got error : ",
-                sys_exc_error_msg()," "
+                sys_exc_error_msg()
             )
             raise
-
         self._is_compiled = True
         return eager_outputs
 
     def _build_graph(self, *args):
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
-
         # Get config form GraphConfig
         self._outputs_buffer_size = self.config._outputs_buffer_size
         self._generate_config_proto()
-
         with graph_build_util.graph_build_context(self.config.proto, session):
             # Deal with inputs
             self._print(0, 1, self._shallow_repr() + " start building graph inputs.")
