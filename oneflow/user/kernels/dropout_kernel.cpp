@@ -48,6 +48,12 @@ class DropoutKernelCPU final : public user_op::OpKernel {
   DropoutKernelCPU() = default;
   ~DropoutKernelCPU() = default;
 
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    const auto& generator = CHECK_JUST(one::MakeGenerator(DeviceType::kCPU));
+    return std::make_shared<FusedDropoutKernelState>(generator);
+  }
+
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);

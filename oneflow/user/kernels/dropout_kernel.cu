@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 #include "oneflow/core/kernel/random_generator.h"
 #include "oneflow/core/common/data_type.h"
@@ -503,6 +504,12 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
  public:
   DropoutKernelGPU() = default;
   ~DropoutKernelGPU() = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    const auto& generator = CHECK_JUST(one::MakeGenerator(DeviceType::kGPU));
+    return std::make_shared<FusedDropoutKernelState>(generator);
+  }
 
  private:
   using user_op::OpKernel::Compute;

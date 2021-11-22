@@ -63,7 +63,7 @@ Maybe<void> Dropout::Apply(const DropoutCaptureState* ctx, const TensorTuple& ou
 
   const std::shared_ptr<oneflow::one::Tensor>& mask = ctx->SavedTensors().at(0);
   in_grads->resize(1);
-  float scale = 1.0f;
+  float scale = 0.0f;  // When dropout rate = 1.0, we set scale as zero.
   if (ctx->rate < 1.0f) { scale = 1.0f / (1.0f - ctx->rate); }
   in_grads->at(0) = JUST(functional::DropoutGrad(out_grads.at(0), mask, scale));
   return Maybe<void>::Ok();

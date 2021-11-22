@@ -41,8 +41,8 @@ REGISTER_USER_OP("dropout")
     })
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
                        const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
-      float scale = op_conf.attr<float>("scale");
-      CHECK_GT_OR_RETURN(scale, 1);
+      float rate = op_conf.attr<float>("rate");
+      CHECK_GE_OR_RETURN(rate, 0.0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -91,8 +91,8 @@ REGISTER_USER_OP_GRAD("dropout").SetGenBackwardOpConfFn([](const user_op::UserOp
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     const float rate = op.attr<float>("rate");
-    float scale = 1.0f;
-    if (scale != 1.0f) { scale = 1.0f / (1.0f - rate); }
+    float scale = 0.0f;  // When dropout rate = 1.0, we set scale as zero.
+    if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
     user_op::UserOpConfWrapper dropout_grad_op =
         builder.Op("dropout_grad")
             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
