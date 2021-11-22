@@ -20,7 +20,7 @@ namespace oneflow {
 namespace one {
 struct NllCaptureState : public AutoGradCaptureState {
   int64_t ignore_index = -100;
-  std::string reduction = "";
+  // std::string reduction = "";
 };
 
 class Nll : public OpExprGradFunction<NllCaptureState> {
@@ -44,7 +44,7 @@ Maybe<void> Nll::Capture(NllCaptureState* ctx, const TensorTuple& inputs,
                          const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->ignore_index = JUST(composed_attrs.GetAttr<int64_t>("ignore_index"));
-  ctx->reduction = JUST(composed_attrs.GetAttr<std::string>("reduction"));
+  // ctx->reduction = JUST(composed_attrs.GetAttr<std::string>("reduction"));
   ctx->SaveTensorForBackward(inputs.at(0));   // input
   ctx->SaveTensorForBackward(inputs.at(1));   // target
   ctx->SaveTensorForBackward(outputs.at(1));  // total_weight
@@ -66,10 +66,10 @@ Maybe<void> Nll::Apply(const NllCaptureState* ctx, const TensorTuple& out_grads,
   if (ctx->SavedTensors().size() == 4) {
     const auto& weight = ctx->SavedTensors().at(3);
     in_grads->at(0) = JUST(functional::NllLossGrad(dy, input, target, weight, total_weight,
-                                                   ctx->ignore_index, ctx->reduction));
+                                                   ctx->ignore_index));
   } else {
     in_grads->at(0) = JUST(functional::NllLossGrad(dy, input, target, NullOpt, total_weight,
-                                                   ctx->ignore_index, ctx->reduction));
+                                                   ctx->ignore_index));
   }
   return Maybe<void>::Ok();
 }

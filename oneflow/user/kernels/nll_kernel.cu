@@ -75,95 +75,95 @@ __global__ RETURN_VOID_IF_HALF ComputeNllOutNone(const int64_t num_instances, co
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 
-template<typename T, typename K>
-__global__ RETURN_VOID_IF_NOT_HALF ComputeNllOutReduce(const int64_t num_instances,
-                                                       const K num_classes, const K ignore_index,
-                                                       const T* input, const K* target, T* out,
-                                                       const T* weight, T* total_weight,
-                                                       bool is_reduce_mean) {
-  const T zero_val = GetZeroVal<T>();
-  const T one_val = GetOneVal<T>();
-  typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
-  __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
-  T weight_thread_sum = zero_val;
-  T out_thread_sum = zero_val;
-  for (int i = threadIdx.x; i < num_instances; i += kCudaThreadsNumPerBlock) {
-    K label = target[i];
-    if (label == ignore_index) { continue; }
-    assert(label >= 0);
-    assert(label < num_classes);
-    const T cur_weight = weight == nullptr ? one_val : weight[label];
-    weight_thread_sum += cur_weight;
-    out_thread_sum -= input[i * num_classes + label] * cur_weight;
-  }
-  __syncthreads();
-  T weight_block_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(weight_thread_sum, cub::Sum());
-  T out_block_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(out_thread_sum, cub::Sum());
-  if (threadIdx.x == 0) {
-    *out = out_block_sum;
-    *total_weight = weight_block_sum;
-    if (is_reduce_mean) { *out /= *total_weight; }
-  }
-}
+// template<typename T, typename K>
+// __global__ RETURN_VOID_IF_NOT_HALF ComputeNllOutReduce(const int64_t num_instances,
+//                                                        const K num_classes, const K ignore_index,
+//                                                        const T* input, const K* target, T* out,
+//                                                        const T* weight, T* total_weight,
+//                                                        bool is_reduce_mean) {
+//   const T zero_val = GetZeroVal<T>();
+//   const T one_val = GetOneVal<T>();
+//   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
+//   __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
+//   T weight_thread_sum = zero_val;
+//   T out_thread_sum = zero_val;
+//   for (int i = threadIdx.x; i < num_instances; i += kCudaThreadsNumPerBlock) {
+//     K label = target[i];
+//     if (label == ignore_index) { continue; }
+//     assert(label >= 0);
+//     assert(label < num_classes);
+//     const T cur_weight = weight == nullptr ? one_val : weight[label];
+//     weight_thread_sum += cur_weight;
+//     out_thread_sum -= input[i * num_classes + label] * cur_weight;
+//   }
+//   __syncthreads();
+//   T weight_block_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(weight_thread_sum, cub::Sum());
+//   T out_block_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(out_thread_sum, cub::Sum());
+//   if (threadIdx.x == 0) {
+//     *out = out_block_sum;
+//     *total_weight = weight_block_sum;
+//     if (is_reduce_mean) { *out /= *total_weight; }
+//   }
+// }
 
-template<typename T, typename K>
-__global__ RETURN_VOID_IF_HALF ComputeNllOutReduce(const int64_t num_instances, const K num_classes,
-                                                   const K ignore_index, const T* input,
-                                                   const K* target, T* out, const T* weight,
-                                                   T* total_weight, bool is_reduce_mean) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  const T zero_val = __float2half(0.0);
-  const T one_val = __float2half(1.0);
-  typedef cub::BlockReduce<half, kCudaThreadsNumPerBlock> BlockReduce;
-  __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
-  half weight_thread_sum = zero_val;
-  half out_thread_sum = zero_val;
-  for (int i = threadIdx.x; i < num_instances; i += kCudaThreadsNumPerBlock) {
-    K label = target[i];
-    if (label == ignore_index) { continue; }
-    assert(label >= 0);
-    assert(label < num_classes);
-    const half cur_weight = weight == nullptr ? one_val : weight[label];
-    weight_thread_sum = __hadd(weight_thread_sum, cur_weight);
-    out_thread_sum = __hsub(out_thread_sum, __hmul(input[i * num_classes + label], cur_weight));
-  }
-  __syncthreads();
-  half weight_block_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(weight_thread_sum, cub::Sum());
-  half out_block_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(out_thread_sum, cub::Sum());
-  if (threadIdx.x == 0) {
-    *out = out_block_sum;
-    *total_weight = weight_block_sum;
-    if (is_reduce_mean) { *out = __hdiv(*out, *total_weight); }
-  }
-#else
-  printf("use half need nvcc arch >= 530");
-  assert(false);
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
-}
+// template<typename T, typename K>
+// __global__ RETURN_VOID_IF_HALF ComputeNllOutReduce(const int64_t num_instances, const K
+// num_classes,
+//                                                    const K ignore_index, const T* input,
+//                                                    const K* target, T* out, const T* weight,
+//                                                    T* total_weight, bool is_reduce_mean) {
+// #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+//   const T zero_val = __float2half(0.0);
+//   const T one_val = __float2half(1.0);
+//   typedef cub::BlockReduce<half, kCudaThreadsNumPerBlock> BlockReduce;
+//   __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
+//   half weight_thread_sum = zero_val;
+//   half out_thread_sum = zero_val;
+//   for (int i = threadIdx.x; i < num_instances; i += kCudaThreadsNumPerBlock) {
+//     K label = target[i];
+//     if (label == ignore_index) { continue; }
+//     assert(label >= 0);
+//     assert(label < num_classes);
+//     const half cur_weight = weight == nullptr ? one_val : weight[label];
+//     weight_thread_sum = __hadd(weight_thread_sum, cur_weight);
+//     out_thread_sum = __hsub(out_thread_sum, __hmul(input[i * num_classes + label], cur_weight));
+//   }
+//   __syncthreads();
+//   half weight_block_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(weight_thread_sum,
+//   cub::Sum()); half out_block_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(out_thread_sum,
+//   cub::Sum()); if (threadIdx.x == 0) {
+//     *out = out_block_sum;
+//     *total_weight = weight_block_sum;
+//     if (is_reduce_mean) { *out = __hdiv(*out, *total_weight); }
+//   }
+// #else
+//   printf("use half need nvcc arch >= 530");
+//   assert(false);
+// #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
+// }
 
 template<typename T, typename K>
 __global__ RETURN_VOID_IF_NOT_HALF ComputeNllGradOut(const int64_t num_instances,
                                                      const K num_classes, const K ignore_index,
                                                      const K* target, const T* dy, T* dx,
-                                                     const T* weight, const T* total_weight,
-                                                     const ReductionType reduction_type) {
+                                                     const T* weight, const T* total_weight) {
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
     K label = target[i];
     if (label == ignore_index) { continue; }
     assert(label >= 0);
     assert(label < num_classes);
     const T cur_weight = weight == nullptr ? -GetOneVal<T>() : -weight[label];
-    dx[i * num_classes + label] =
-        (reduction_type == ReductionType::kNone ? dy[i] : (*dy)) * cur_weight;
-    if (reduction_type == ReductionType::kMean) { dx[i * num_classes + label] /= *total_weight; }
+    dx[i * num_classes + label] = dy[i] * cur_weight;
+    // dx[i * num_classes + label] =
+    //     (reduction_type == ReductionType::kNone ? dy[i] : (*dy)) * cur_weight;
+    // if (reduction_type == ReductionType::kMean) { dx[i * num_classes + label] /= *total_weight; }
   }
 }
 
 template<typename T, typename K>
 __global__ RETURN_VOID_IF_HALF ComputeNllGradOut(const int64_t num_instances, const K num_classes,
                                                  const K ignore_index, const K* target, const T* dy,
-                                                 T* dx, const T* weight, const T* total_weight,
-                                                 const ReductionType reduction_type) {
+                                                 T* dx, const T* weight, const T* total_weight) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
     K label = target[i];
@@ -171,11 +171,12 @@ __global__ RETURN_VOID_IF_HALF ComputeNllGradOut(const int64_t num_instances, co
     assert(label >= 0);
     assert(label < num_classes);
     const half cur_weight = weight == nullptr ? __float2half(-1.0) : __hneg(weight[label]);
-    dx[i * num_classes + label] =
-        __hmul(reduction_type == ReductionType::kNone ? dy[i] : (*dy), cur_weight);
-    if (reduction_type == ReductionType::kMean) {
-      dx[i * num_classes + label] = __hdiv(dx[i * num_classes + label], *total_weight);
-    }
+    dx[i * num_classes + label] = __hmul(dy[i], cur_weight);
+    // dx[i * num_classes + label] =
+    //     __hmul(reduction_type == ReductionType::kNone ? dy[i] : (*dy), cur_weight);
+    // if (reduction_type == ReductionType::kMean) {
+    //   dx[i * num_classes + label] = __hdiv(dx[i * num_classes + label], *total_weight);
+    // }
   }
 #else
   printf("use half need nvcc arch >= 530");
@@ -201,7 +202,7 @@ class NllKernel final : public user_op::OpKernel {
     CHECK_EQ(input_blob->shape().elem_cnt() % num_instances, 0);
     const K num_classes = static_cast<K>(input_blob->shape().elem_cnt() / num_instances);
     const K ignore_index = static_cast<K>(ctx->Attr<int64_t>("ignore_index"));
-    const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
+    // const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
 
     const T* input = input_blob->dptr<T>();
     const K* target = target_blob->dptr<K>();
@@ -211,15 +212,19 @@ class NllKernel final : public user_op::OpKernel {
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
     Memset<DeviceType::kGPU>(ctx->stream(), total_weight, 0, sizeof(T));
 
-    if (reduction == ReductionType::kNone) {
-      ComputeNllOutNone<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
-                          ctx->device_ctx()->cuda_stream()>>>(
-          num_instances, num_classes, ignore_index, input, target, out, weight, total_weight);
-    } else {
-      ComputeNllOutReduce<<<1, kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
-          num_instances, num_classes, ignore_index, input, target, out, weight, total_weight,
-          reduction == ReductionType::kMean);
-    }
+    ComputeNllOutNone<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
+                        ctx->device_ctx()->cuda_stream()>>>(
+        num_instances, num_classes, ignore_index, input, target, out, weight, total_weight);
+
+    // if (reduction == ReductionType::kNone) {
+    //   ComputeNllOutNone<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
+    //                       ctx->device_ctx()->cuda_stream()>>>(
+    //       num_instances, num_classes, ignore_index, input, target, out, weight, total_weight);
+    // } else {
+    //   ComputeNllOutReduce<<<1, kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
+    //       num_instances, num_classes, ignore_index, input, target, out, weight, total_weight,
+    //       reduction == ReductionType::kMean);
+    // }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -244,7 +249,7 @@ class NllGradKernel final : public user_op::OpKernel {
     CHECK_EQ(input_elem_cnt % num_instances, 0);
     const K num_classes = static_cast<K>(input_elem_cnt / num_instances);
     const K ignore_index = static_cast<K>(ctx->Attr<int64_t>("ignore_index"));
-    const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
+    // const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
 
     const T* dy = dy_blob->dptr<T>();
     const K* target = target_blob->dptr<K>();
@@ -257,7 +262,7 @@ class NllGradKernel final : public user_op::OpKernel {
 
     ComputeNllGradOut<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
                         ctx->device_ctx()->cuda_stream()>>>(
-        num_instances, num_classes, ignore_index, target, dy, dx, weight, total_weight, reduction);
+        num_instances, num_classes, ignore_index, target, dy, dx, weight, total_weight);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

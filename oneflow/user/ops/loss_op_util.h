@@ -42,6 +42,14 @@ user_op::GetSbpFn GenLossBackwardDefaultGetSbpFn(
     const std::function<void(user_op::UserOpSbpSignatureBuilder& builder)>& f =
         [](user_op::UserOpSbpSignatureBuilder& builder) {});
 
+user_op::GetSbpFn GenLossForwardDefaultGetSbpFnNew(
+    const std::function<void(user_op::UserOpSbpSignatureBuilder& builder)>& f =
+        [](user_op::UserOpSbpSignatureBuilder& builder) {});
+
+user_op::GetSbpFn GenLossBackwardDefaultGetSbpFnNew(
+    const std::function<void(user_op::UserOpSbpSignatureBuilder& builder)>& f =
+        [](user_op::UserOpSbpSignatureBuilder& builder) {});
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_USER_OPS_LOSS_OP_UTIL_H_

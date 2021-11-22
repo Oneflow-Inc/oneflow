@@ -20,7 +20,7 @@ namespace oneflow {
 namespace one {
 
 struct BinaryCrossEntropyCaptureState : public AutoGradCaptureState {
-  std::string reduction = "";
+  // std::string reduction = "";
 };
 
 class BinaryCrossEntropy : public OpExprGradFunction<BinaryCrossEntropyCaptureState> {
@@ -45,7 +45,7 @@ Maybe<void> BinaryCrossEntropy::Capture(BinaryCrossEntropyCaptureState* ctx,
                                         const TensorTuple& inputs, const TensorTuple& outputs,
                                         const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->reduction = JUST(composed_attrs.GetAttr<std::string>("reduction"));
+  // ctx->reduction = JUST(composed_attrs.GetAttr<std::string>("reduction"));
   ctx->SaveTensorForBackward(inputs.at(0));  // input
   ctx->SaveTensorForBackward(inputs.at(1));  // target
   if (inputs.size() == 3) {
@@ -64,10 +64,10 @@ Maybe<void> BinaryCrossEntropy::Apply(const BinaryCrossEntropyCaptureState* ctx,
   if (ctx->SavedTensors().size() == 3) {
     const auto& weight = ctx->SavedTensors().at(2);
     in_grads->at(0) =
-        JUST(functional::BinaryCrossEntropyLossGrad(dy, input, target, weight, ctx->reduction));
+        JUST(functional::BinaryCrossEntropyLossGrad(dy, input, target, weight));
   } else {
     in_grads->at(0) =
-        JUST(functional::BinaryCrossEntropyLossGrad(dy, input, target, NullOpt, ctx->reduction));
+        JUST(functional::BinaryCrossEntropyLossGrad(dy, input, target, NullOpt));
   }
   return Maybe<void>::Ok();
 }

@@ -20,7 +20,7 @@ namespace oneflow {
 namespace one {
 
 struct BinaryCrossEntropyWithLogitsCaptureState : public AutoGradCaptureState {
-  std::string reduction = "";
+  // std::string reduction = "";
   bool has_pos_weight = false;
 };
 
@@ -48,7 +48,7 @@ Maybe<void> BinaryCrossEntropyWithLogits::Capture(BinaryCrossEntropyWithLogitsCa
                                                   const TensorTuple& outputs,
                                                   const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->reduction = JUST(composed_attrs.GetAttr<std::string>("reduction"));
+  // ctx->reduction = JUST(composed_attrs.GetAttr<std::string>("reduction"));
   ctx->has_pos_weight = JUST(composed_attrs.GetAttr<bool>("has_pos_weight"));
   ctx->SaveTensorForBackward(inputs.at(0));  // input
   ctx->SaveTensorForBackward(inputs.at(1));  // target
@@ -75,20 +75,20 @@ Maybe<void> BinaryCrossEntropyWithLogits::Apply(const BinaryCrossEntropyWithLogi
     if (ctx->has_pos_weight) {
       const auto& pos_weight = ctx->SavedTensors().at(2);
       in_grads->at(0) = JUST(functional::BinaryCrossEntropyWithLogitsLossGrad(
-          dy, input, target, NullOpt, pos_weight, ctx->reduction));
+          dy, input, target, NullOpt, pos_weight));
     } else {
       const auto& weight = ctx->SavedTensors().at(2);
       in_grads->at(0) = JUST(functional::BinaryCrossEntropyWithLogitsLossGrad(
-          dy, input, target, weight, NullOpt, ctx->reduction));
+          dy, input, target, weight, NullOpt));
     }
   } else if (ctx->SavedTensors().size() == 4) {
     const auto& weight = ctx->SavedTensors().at(2);
     const auto& pos_weight = ctx->SavedTensors().at(3);
     in_grads->at(0) = JUST(functional::BinaryCrossEntropyWithLogitsLossGrad(
-        dy, input, target, weight, pos_weight, ctx->reduction));
+        dy, input, target, weight, pos_weight));
   } else {
     in_grads->at(0) = JUST(functional::BinaryCrossEntropyWithLogitsLossGrad(
-        dy, input, target, NullOpt, NullOpt, ctx->reduction));
+        dy, input, target, NullOpt, NullOpt));
   }
   return Maybe<void>::Ok();
 }

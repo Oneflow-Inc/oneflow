@@ -22,7 +22,7 @@ namespace oneflow {
 namespace one {
 
 struct SmoothL1LossCaptureState : public AutoGradCaptureState {
-  std::string reduction = "none";
+  // std::string reduction = "none";
   float beta = 0.0;
   bool requires_grad = false;
 };
@@ -47,7 +47,7 @@ class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossCaptureState> {
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->beta = JUST(composed_attrs.GetAttr<float>("beta"));
-    ctx->reduction = JUST(composed_attrs.GetAttr<std::string>("reduction"));
+    // ctx->reduction = JUST(composed_attrs.GetAttr<std::string>("reduction"));
     return Maybe<void>::Ok();
   }
 
@@ -59,8 +59,8 @@ class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossCaptureState> {
     if (ctx->requires_grad) {
       const auto& prediction = ctx->SavedTensors().at(0);
       const auto& label = ctx->SavedTensors().at(1);
-      in_grads->at(0) = JUST(functional::SmoothL1LossGrad(out_grads.at(0), prediction, label,
-                                                          ctx->beta, ctx->reduction));
+      in_grads->at(0) =
+          JUST(functional::SmoothL1LossGrad(out_grads.at(0), prediction, label, ctx->beta));
     }
     return Maybe<void>::Ok();
   }

@@ -18,34 +18,35 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> CheckLossReductionAndInferOutputTenserDesc(
-    user_op::InferContext* ctx, const std::string& output_name, bool output_is_dynamic,
-    const Shape& output_shape_when_reduction_is_none) {
-  const std::string reduction = ctx->Attr<std::string>("reduction");
-  CHECK_OR_RETURN(LossReductionTypeIsRight(reduction));
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc(output_name, 0);
-  *out_desc->mut_is_dynamic() = output_is_dynamic;
-  if (reduction == "none") {
-    *out_desc->mut_shape() = output_shape_when_reduction_is_none;
-  } else {
-    *out_desc->mut_shape() = Shape();
-  }
-  return Maybe<void>::Ok();
-}
+// Maybe<void> CheckLossReductionAndInferOutputTenserDesc(
+//     user_op::InferContext* ctx, const std::string& output_name, bool output_is_dynamic,
+//     const Shape& output_shape_when_reduction_is_none) {
+//   const std::string reduction = ctx->Attr<std::string>("reduction");
+//   CHECK_OR_RETURN(LossReductionTypeIsRight(reduction));
+//   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc(output_name, 0);
+//   *out_desc->mut_is_dynamic() = output_is_dynamic;
+//   if (reduction == "none") {
+//     *out_desc->mut_shape() = output_shape_when_reduction_is_none;
+//   } else {
+//     *out_desc->mut_shape() = Shape();
+//   }
+//   return Maybe<void>::Ok();
+// }
 
-Maybe<void> CheckLossReductionAndCheckInputTenserDesc(
-    user_op::InferContext* ctx, const std::string& input_name,
-    const Shape& input_shape_when_reduction_is_none) {
-  const std::string reduction = ctx->Attr<std::string>("reduction");
-  CHECK_OR_RETURN(LossReductionTypeIsRight(reduction));
-  const auto& input_desc = ctx->InputTensorDesc(input_name, 0);
-  if (reduction == "none") {
-    CHECK_EQ_OR_RETURN(input_desc.shape(), input_shape_when_reduction_is_none);
-  } else {
-    CHECK_EQ_OR_RETURN(input_desc.shape(), Shape());
-  }
-  return Maybe<void>::Ok();
-}
+
+// Maybe<void> CheckLossReductionAndCheckInputTenserDesc(
+//     user_op::InferContext* ctx, const std::string& input_name,
+//     const Shape& input_shape_when_reduction_is_none) {
+//   const std::string reduction = ctx->Attr<std::string>("reduction");
+//   CHECK_OR_RETURN(LossReductionTypeIsRight(reduction));
+//   const auto& input_desc = ctx->InputTensorDesc(input_name, 0);
+//   if (reduction == "none") {
+//     CHECK_EQ_OR_RETURN(input_desc.shape(), input_shape_when_reduction_is_none);
+//   } else {
+//     CHECK_EQ_OR_RETURN(input_desc.shape(), Shape());
+//   }
+//   return Maybe<void>::Ok();
+// }
 
 user_op::GetSbpFn GenLossForwardDefaultGetSbpFn(
     const std::function<void(user_op::UserOpSbpSignatureBuilder& builder)>& f) {
@@ -66,6 +67,20 @@ user_op::GetSbpFn GenLossForwardDefaultGetSbpFn(
   };
 }
 
+user_op::GetSbpFn GenLossForwardDefaultGetSbpFnNew(
+    const std::function<void(user_op::UserOpSbpSignatureBuilder& builder)>& f) {
+  return [=](user_op::SbpContext* ctx) -> Maybe<void> {
+    auto builder = ctx->NewBuilder()
+                       .Split(user_op::OpArg("input", 0), 0)
+                       .Split(user_op::OpArg("target", 0), 0)
+                       .Broadcast(user_op::OpArg("weight", 0))
+                       .Split(user_op::OpArg("out", 0), 0);
+    f(builder);
+    builder.Build();
+    return Maybe<void>::Ok();
+  };
+}
+
 user_op::GetSbpFn GenLossBackwardDefaultGetSbpFn(
     const std::function<void(user_op::UserOpSbpSignatureBuilder& builder)>& f) {
   return [=](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -81,6 +96,21 @@ user_op::GetSbpFn GenLossBackwardDefaultGetSbpFn(
     } else {
       builder.Split(user_op::OpArg("dy", 0), 0);
     }
+    builder.Build();
+    return Maybe<void>::Ok();
+  };
+}
+
+user_op::GetSbpFn GenLossBackwardDefaultGetSbpFnNew(
+    const std::function<void(user_op::UserOpSbpSignatureBuilder& builder)>& f) {
+  return [=](user_op::SbpContext* ctx) -> Maybe<void> {
+    auto builder = ctx->NewBuilder()
+                       .Split(user_op::OpArg("input", 0), 0)
+                       .Split(user_op::OpArg("target", 0), 0)
+                       .Broadcast(user_op::OpArg("weight", 0))
+                       .Split(user_op::OpArg("dx", 0), 0)
+                       .Split(user_op::OpArg("dy", 0), 0);
+    f(builder);
     builder.Build();
     return Maybe<void>::Ok();
   };

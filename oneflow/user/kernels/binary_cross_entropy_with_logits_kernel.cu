@@ -98,12 +98,11 @@ template<typename T>
 __global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, float inv_elem_cnt,
                                                            const T* input, const T* target,
                                                            const T* dy, T* dx, const T* weight,
-                                                           const T* pos_weight_processed,
-                                                           const ReductionType reduction_type) {
+                                                           const T* pos_weight_processed) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T input_val = input[i];
     const T target_val = target[i];
-    const T dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
+    const T dy_val = dy[i];
     const T input_sigmoid = CalSigmoid(input_val);
     T dx_val;
     if (pos_weight_processed == nullptr) {
@@ -115,7 +114,7 @@ __global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, flo
                   - pos_weight_processed_val);
     }
     if (weight != nullptr) { dx_val *= weight[i]; }
-    if (reduction_type == ReductionType::kMean) { dx_val *= inv_elem_cnt; }
+    // if (reduction_type == ReductionType::kMean) { dx_val *= inv_elem_cnt; }
     dx[i] = dx_val;
   }
 }
@@ -125,13 +124,12 @@ __global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, flo
                                                            const half* input, const half* target,
                                                            const half* dy, half* dx,
                                                            const half* weight,
-                                                           const half* pos_weight_processed,
-                                                           const ReductionType reduction_type) {
+                                                           const half* pos_weight_processed) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const float input_val = __half2float(input[i]);
     const float target_val = __half2float(target[i]);
-    const float dy_val = __half2float(reduction_type == ReductionType::kNone ? dy[i] : *dy);
+    const float dy_val = __half2float(dy[i]);
     const float input_sigmoid = CalSigmoid(input_val);
     half dx_val;
     if (pos_weight_processed == nullptr) {
@@ -145,9 +143,9 @@ __global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, flo
     }
 
     if (weight != nullptr) { dx_val = __hmul(dx_val, weight[i]); }
-    if (reduction_type == ReductionType::kMean) {
-      dx_val = __float2half(__half2float(dx_val) * inv_elem_cnt);
-    }
+    // if (reduction_type == ReductionType::kMean) {
+    //   dx_val = __float2half(__half2float(dx_val) * inv_elem_cnt);
+    // }
     dx[i] = dx_val;
   }
 #else
@@ -169,7 +167,7 @@ class BinaryCrossEntropyWithLogitsKernel final : public user_op::OpKernel {
     const auto* target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
     auto* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     auto* tmp_buffer_blob = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
+    // const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
 
     const int64_t elem_cnt = input_blob->shape().elem_cnt();
 
@@ -187,11 +185,12 @@ class BinaryCrossEntropyWithLogitsKernel final : public user_op::OpKernel {
     T* pos_weight_processed = nullptr;
 
     if (ctx->Attr<bool>("has_pos_weight")) {
-      if (reduction == ReductionType::kNone) {
-        pos_weight_processed = tmp_buffer;
-      } else {
-        pos_weight_processed = tmp_buffer + elem_cnt;
-      }
+      pos_weight_processed = tmp_buffer;
+      // if (reduction == ReductionType::kNone) {
+      //   pos_weight_processed = tmp_buffer;
+      // } else {
+      //   pos_weight_processed = tmp_buffer + elem_cnt;
+      // }
       Shape pos_weight_shape = Shape::Ones(target_blob->shape().NumAxes());
       pos_weight_shape.Set(pos_weight_shape.NumAxes() - 1,
                            ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->shape().elem_cnt());
@@ -203,11 +202,10 @@ class BinaryCrossEntropyWithLogitsKernel final : public user_op::OpKernel {
     ComputeBinaryCrossEntropyWithLogitsOut<<<BlocksNum4ThreadsNum(elem_cnt),
                                              kCudaThreadsNumPerBlock, 0,
                                              ctx->device_ctx()->cuda_stream()>>>(
-        elem_cnt, input, target, reduction == ReductionType::kNone ? out : tmp_out, weight,
-        pos_weight_processed);
+        elem_cnt, input, target, out, weight, pos_weight_processed);
 
-    ApplyLossReductionIfNeed<DeviceType::kGPU, T>(ctx->device_ctx(), elem_cnt, tmp_out, out,
-                                                  reduction);
+    // ApplyLossReductionIfNeed<DeviceType::kGPU, T>(ctx->device_ctx(), elem_cnt, tmp_out, out,
+    //                                               reduction);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -226,7 +224,7 @@ class BinaryCrossEntropyWithLogitsGradKernel final : public user_op::OpKernel {
     const auto* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     auto* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
     auto* tmp_buffer_blob = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
+    // const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
 
     const int64_t elem_cnt = input_blob->shape().elem_cnt();
 
@@ -255,7 +253,7 @@ class BinaryCrossEntropyWithLogitsGradKernel final : public user_op::OpKernel {
                                                  kCudaThreadsNumPerBlock, 0,
                                                  ctx->device_ctx()->cuda_stream()>>>(
         elem_cnt, static_cast<float>(1.0 / elem_cnt), input, target, dy, dx, weight,
-        pos_weight_processed, reduction);
+        pos_weight_processed);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -264,10 +262,11 @@ template<typename T>
 user_op::InferTmpSizeFn GenFwInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
     const int64_t n = ctx->InputShape("input", 0).elem_cnt();
-    const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
+    // const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
     size_t tmp_buffer_size = 0;
     if (ctx->Attr<bool>("has_pos_weight")) { tmp_buffer_size += GetCudaAlignedSize(n * sizeof(T)); }
-    if (reduction != ReductionType::kNone) { tmp_buffer_size += GetCudaAlignedSize(n * sizeof(T)); }
+    // if (reduction != ReductionType::kNone) { tmp_buffer_size += GetCudaAlignedSize(n *
+    // sizeof(T)); }
     return tmp_buffer_size;
   };
 }

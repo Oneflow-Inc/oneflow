@@ -21,7 +21,7 @@ namespace one {
 
 struct KLDivLossCaptureState : public AutoGradCaptureState {
   bool log_target = false;
-  std::string reduction = "";
+  // std::string reduction = "";
 };
 
 class KLDivLoss : public OpExprGradFunction<KLDivLossCaptureState> {
@@ -46,7 +46,7 @@ Maybe<void> KLDivLoss::Capture(KLDivLossCaptureState* ctx, const TensorTuple& in
                                const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->log_target = JUST(composed_attrs.GetAttr<bool>("log_target"));
-  ctx->reduction = JUST(composed_attrs.GetAttr<std::string>("reduction"));
+  // ctx->reduction = JUST(composed_attrs.GetAttr<std::string>("reduction"));
   ctx->SaveTensorForBackward(inputs.at(0));  // input
   ctx->SaveTensorForBackward(inputs.at(1));  // target
   return Maybe<void>::Ok();
@@ -58,8 +58,7 @@ Maybe<void> KLDivLoss::Apply(const KLDivLossCaptureState* ctx, const TensorTuple
   const auto& input = ctx->SavedTensors().at(0);
   const auto& target = ctx->SavedTensors().at(1);
   in_grads->resize(ctx->SavedTensors().size());
-  in_grads->at(0) =
-      JUST(functional::KLDivLossGrad(dy, input, target, ctx->log_target, ctx->reduction));
+  in_grads->at(0) = JUST(functional::KLDivLossGrad(dy, input, target, ctx->log_target));
 
   return Maybe<void>::Ok();
 }
