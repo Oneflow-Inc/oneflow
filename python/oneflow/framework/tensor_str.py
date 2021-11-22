@@ -98,7 +98,11 @@ def _autoset_linewidth():
     # os.terminal_size(columns, lines), 
     # columns represents width of the terminal window in characters 
     # and lines represents height of the terminal window in characters.
-    PRINT_OPTS.linewidth = os.get_terminal_size()[0]
+    try:
+        linewidth = os.get_terminal_size()[0]
+    except OSError:
+        linewidth = 80
+    PRINT_OPTS.linewidth = linewidth
 
 
 def _try_convert_to_local_tensor(tensor):
