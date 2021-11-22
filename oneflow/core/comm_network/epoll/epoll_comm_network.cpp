@@ -94,13 +94,9 @@ EpollCommNet::~EpollCommNet() {
 
 void EpollCommNet::SendMsg(int64_t dst_machine_id, void * data, size_t size) {
   SocketMsg msg;
-  msg.actor_msg.size = 0;
   msg.msg_type = SocketMsgType::kActor;
-  char ** addr = reinterpret_cast<char**>(data);
-  char * msg_addr = *addr;
   msg.actor_msg.size = size;
-  std::memcpy(msg.actor_msg.data, msg_addr, size);
-  free(data);
+  std::memcpy(msg.actor_msg.data, data, size);
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 
 }

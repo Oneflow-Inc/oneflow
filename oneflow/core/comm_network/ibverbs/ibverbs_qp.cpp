@@ -166,9 +166,7 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
 
 void IBVerbsQP::PostSendRequest(void * data, size_t size) {
   ActorMsgMR* msg_mr = message_pool_->GetMessage();
-  char ** addr = reinterpret_cast<char**>(data);
-  char * msg_addr = *addr;
-  msg_mr->set_data(reinterpret_cast<char*>(msg_addr), size);
+  msg_mr->set_data(reinterpret_cast<char*>(data), size);
   free(data);
   WorkRequestId* wr_id = NewWorkRequestId();
   wr_id->msg_mr = msg_mr;
