@@ -268,9 +268,12 @@ Maybe<void> SbpConstructor::CheckSbpAgreement(const Job& job) {
                        new_sbp.bn_in_op2sbp_parallel_size());
     for (const auto& iter : auto_parallel_sbp.bn_in_op2sbp_parallel()) {
       cfg::SbpParallel new_sbp_parallel = new_sbp.bn_in_op2sbp_parallel().at(iter.first);
-      const std::string& error_mgs = "Op: `" + op_name + "` changed sbp from "
-                                     + SbpParallelToString(iter.second) + "(AutoParallel) to "
-                                     + SbpParallelToString(new_sbp_parallel) + "(OpGraph).";
+      // According error message, we can find op_type in op_conf.proto with type_id and locate
+      // the error op type.
+      const std::string& error_mgs =
+          "Op: `" + op_name + "`(type_id: " + std::to_string(op_node->op().op_conf().op_type_case())
+          + ") changed sbp from " + SbpParallelToString(iter.second) + "(AutoParallel) to "
+          + SbpParallelToString(new_sbp_parallel) + "(OpGraph).";
       if (new_sbp_parallel.has_broadcast_parallel()) {
         CHECK_OR_RETURN(iter.second.has_broadcast_parallel()) << error_mgs;
       } else if (new_sbp_parallel.has_partial_sum_parallel()) {
