@@ -35,7 +35,7 @@ class InTopkKernel final : public user_op::OpKernel {
     CHECK_EQ(predictions->shape().NumAxes(), 2);
     const int32_t instance_num = predictions->shape().At(0);
     const int32_t classes_num = predictions->shape().At(1);
-    InTopkKernelUtil<device_type, T>::InTopk(ctx->device_ctx(), instance_num, classes_num,
+    InTopkKernelUtil<device_type, T>::InTopk(ctx->stream(), instance_num, classes_num,
                                              targets->dptr<T>(), predictions->dptr<float>(), k,
                                              out->mut_dptr<int8_t>());
   }
@@ -46,8 +46,8 @@ class InTopkKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("in_top_k")                                              \
       .SetCreateFn<InTopkKernel<device, OF_PP_PAIR_FIRST(target_dtype_pair)>>() \
       .SetIsMatchedHob(                                                         \
-          (user_op::HobDeviceTag() == device)                                   \
-          & (user_op::HobDataType("targets", 0) == OF_PP_PAIR_SECOND(target_dtype_pair)));
+          (user_op::HobDeviceType() == device)                                  \
+          && (user_op::HobDataType("targets", 0) == OF_PP_PAIR_SECOND(target_dtype_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_IN_TOP_K_KERNEL, DEVICE_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 

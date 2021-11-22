@@ -23,7 +23,8 @@ namespace user_op {
 template<typename T, typename INDEX_T, int NDIM, int SDIM>
 struct FoldKernelUtil<DeviceType::kCPU, T, INDEX_T, NDIM, SDIM> {
   using ParamType = FoldParams<INDEX_T, NDIM, SDIM>;
-  static void Forward(DeviceCtx* ctx, const void* raw_params, const T* input_ptr, T* output_ptr) {
+  static void Forward(ep::Stream* stream, const void* raw_params, const T* input_ptr,
+                      T* output_ptr) {
     const auto* params = static_cast<const ParamType*>(raw_params);
     for (INDEX_T in_offset = 0; in_offset < params->in_elem_cnt; ++in_offset) {
       using ParamType = FoldParams<INDEX_T, NDIM, SDIM>;

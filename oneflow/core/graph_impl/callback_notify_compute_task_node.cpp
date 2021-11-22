@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/compute_task_node.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
 
 namespace oneflow {
 
@@ -24,7 +25,6 @@ class CallbackNotifyCompTaskNode final : public CompTaskNode {
   ~CallbackNotifyCompTaskNode() = default;
 
   TaskType GetTaskType() const override { return TaskType::kCallbackNotify; }
-  bool IsIndependent() const override { return true; }
 
  private:
   void ProduceAllRegstsAndBindEdges() override;
@@ -48,12 +48,8 @@ void CallbackNotifyCompTaskNode::BuildExecGphAndRegst() {
   CHECK(node->op()->output_bns().empty());
 }
 
-REGISTER_INDEPENDENT_THREAD_NUM(TaskType::kCallbackNotify, 1);
-
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kCallbackNotify)
-    .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
-      return generator->GenerateIndependentTaskStreamIndex(TaskType::kCallbackNotify);
-    });
+REGISTER_NAMED_TASK_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kCallbackNotify,
+                                        "CALLBACK_NOTIFY");
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kCallbackNotifyConf,
                                        CallbackNotifyCompTaskNode);

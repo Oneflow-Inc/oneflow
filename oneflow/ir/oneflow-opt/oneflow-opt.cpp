@@ -34,10 +34,9 @@ struct TestOneFlowTraitFolder : public PassWrapper<TestOneFlowTraitFolder, Funct
     assert(
         succeeded(applyPatternsAndFoldGreedily(getFunction(), RewritePatternSet(&getContext()))));
   }
+  StringRef getArgument() const final { return "test-oneflow-trait-folder"; }
 };
-void registerTestOneFlowTraitsPass() {
-  PassRegistration<TestOneFlowTraitFolder>("test-oneflow-trait-folder", "Run trait folding");
-}
+void registerTestOneFlowTraitsPass() { PassRegistration<TestOneFlowTraitFolder>(); }
 
 }  // namespace mlir
 
