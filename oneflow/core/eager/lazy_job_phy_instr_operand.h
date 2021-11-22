@@ -43,25 +43,31 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
 
   LaunchLazyJobPhyInstrOperand(const std::shared_ptr<NNGraphIf>& nn_graph,
                                const one::EagerBlobObjectListPtr& param_blob_objects)
-      : nn_graph_(nn_graph), param_blob_objects_(param_blob_objects) {}
+      : nn_graph_(nn_graph),
+        param_blob_objects_(param_blob_objects),
+        input_dependences_(),
+        output_dependences_() {
+    ForEachConstMirroredObject(SetInserter(&input_dependences_));
+    ForEachMutMirroredObject(SetInserter(&output_dependences_));
+    ForEachMut2MirroredObject(SetInserter(&output_dependences_));
+  }
 
   const std::shared_ptr<NNGraphIf>& nn_graph() const { return nn_graph_; }
 
-  void ForEachConstMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override {}
+  const DependenceVector& input_dependences() const override { return input_dependences_; }
+  const DependenceVector& output_dependences() const override { return output_dependences_; }
 
-  void ForEachMutMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override;
+  void ForEachConstMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const {}
 
-  void ForEachMut2MirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override {}
+  void ForEachMutMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
+
+  void ForEachMut2MirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const {}
 
  private:
   std::shared_ptr<NNGraphIf> nn_graph_;
   one::EagerBlobObjectListPtr param_blob_objects_;
+  DependenceVector input_dependences_;
+  DependenceVector output_dependences_;
 };
 }  // namespace vm
 }  // namespace oneflow

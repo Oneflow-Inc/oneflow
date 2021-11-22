@@ -26,19 +26,15 @@ namespace oneflow {
 namespace vm {
 
 void CriticalSectionBeginPhyInstrOperand::ForEachMirroredObject(
-    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-    const {
+    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
   for (const auto& eager_blob_object : *eager_blob_objects_) {
-    DoEach(nullptr,
-           CHECK_JUST(eager_blob_object->compute_local_dep_object())->mut_mirrored_object());
+    DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object())->mut_mirrored_object());
   }
 }
 
 void CriticalSectionEndPhyInstrOperand::ForEachMirroredObject(
-    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-    const {
-  DoEach(nullptr,
-         CHECK_JUST(eager_blob_object_->compute_local_dep_object())->mut_mirrored_object());
+    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
+  DoEach(CHECK_JUST(eager_blob_object_->compute_local_dep_object())->mut_mirrored_object());
 }
 
 namespace {
@@ -53,9 +49,8 @@ constexpr auto* CriticalSectionLocalDepObject =
 }  // namespace
 
 void CriticalSectionBeginPhyInstrOperand::ForEachMutMirroredObject(
-    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-    const {
-  DoEach(nullptr, CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object());
+    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
+  DoEach(CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object());
 }
 
 void CriticalSectionBeginPhyInstrOperand::FinishInvalidInterfaceEventRecords() {
@@ -88,7 +83,7 @@ void InputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_bl
   if (blob->dptr() == nullptr) {
     end_event_record->Init(std::make_shared<NaiveEventRecord>());
   } else {
-    AutoMemcpy(of_blob->mut_device_ctx(), of_blob->mut_blob(), blob);
+    AutoMemcpy(of_blob->mut_device_ctx()->stream(), of_blob->mut_blob(), blob);
     auto* event_record_provider =
         CHECK_NOTNULL(dynamic_cast<EventRecordProvider*>(of_blob->mut_device_ctx()));
     end_event_record->Init(event_record_provider->MakeEventRecord());
@@ -108,7 +103,7 @@ void OutputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_b
   if (mut_blob->dptr() == nullptr) {
     end_event_record->Init(std::make_shared<NaiveEventRecord>());
   } else {
-    AutoMemcpy(of_blob->mut_device_ctx(), mut_blob, &of_blob->blob());
+    AutoMemcpy(of_blob->mut_device_ctx()->stream(), mut_blob, &of_blob->blob());
     auto* event_record_provider =
         CHECK_NOTNULL(dynamic_cast<EventRecordProvider*>(of_blob->mut_device_ctx()));
     end_event_record->Init(event_record_provider->MakeEventRecord());
@@ -116,9 +111,8 @@ void OutputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_b
 }
 
 void CriticalSectionEndPhyInstrOperand::ForEachMutMirroredObject(
-    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-    const {
-  DoEach(nullptr, CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object());
+    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
+  DoEach(CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object());
 }
 
 }  // namespace vm

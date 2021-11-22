@@ -466,8 +466,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
  private:
   template<typename PhyInstrOperandT>
-  Maybe<intrusive::shared_ptr<LocalDepObject>> MakeCriticalSectionBegin(
-      const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand);
+  Maybe<void> MakeCriticalSectionBegin(const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand);
 
   template<typename PhyInstrOperandT>
   Maybe<void> MakeCriticalSectionEnd(const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand);

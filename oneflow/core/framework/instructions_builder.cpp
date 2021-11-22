@@ -38,6 +38,7 @@ limitations under the License.
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/consume_local_dep_object_phy_instr_operand.h"
 #include "oneflow/core/vm/release_tensor_arg_phy_instr_operand.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/framework/tensor.h"
@@ -255,23 +256,21 @@ static constexpr auto* GetCriticalSectionDevice =
 }  // namespace
 
 template<typename PhyInstrOperandT>
-Maybe<intrusive::shared_ptr<LocalDepObject>> InstructionsBuilder::MakeCriticalSectionBegin(
+Maybe<void> InstructionsBuilder::MakeCriticalSectionBegin(
     const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand) {
-  static std::string instr_name("CriticalSectionBegin");
-  auto instruction = intrusive::make_shared<vm::InstructionMsg>(instr_name);
-  const auto& device = JUST(GetCriticalSectionDevice());
-  const auto local_dep_object = JUST(LocalDepObject::New(*device));
-  *instruction->mut_phy_instr_operand() = phy_instr_operand;
+  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+      Global<VirtualMachine>::Get()->mut_vm(), "CriticalSectionBegin",
+      std::shared_ptr<const ParallelDesc>(), phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
-  return local_dep_object;
+  return Maybe<void>::Ok();
 }
 
 template<typename PhyInstrOperandT>
 Maybe<void> InstructionsBuilder::MakeCriticalSectionEnd(
     const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand) {
-  static std::string instr_name("CriticalSectionEnd");
-  auto instruction = intrusive::make_shared<vm::InstructionMsg>(instr_name);
-  *instruction->mut_phy_instr_operand() = phy_instr_operand;
+  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+      Global<VirtualMachine>::Get()->mut_vm(), "CriticalSectionEnd",
+      std::shared_ptr<const ParallelDesc>(), phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
@@ -312,11 +311,11 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const one::EagerBlobObjectListPtr
       JUST(MakeCriticalSectionBegin(phy_instr_operand));
     }
     {
-      static std::string instr_name("LaunchLazyJob");
-      intrusive::shared_ptr<vm::InstructionMsg> instruction =
-          intrusive::make_shared<vm::InstructionMsg>(instr_name);
-      *instruction->mut_phy_instr_operand() =
+      const auto& phy_instr_operand =
           std::make_shared<vm::LaunchLazyJobPhyInstrOperand>(nn_graph, parameters);
+      auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+          Global<VirtualMachine>::Get()->mut_vm(), "LaunchLazyJob",
+          std::shared_ptr<const ParallelDesc>(), phy_instr_operand);
       instruction_list_->EmplaceBack(std::move(instruction));
     }
     for (int i = 0; i < nn_graph->inputs_op_names().size(); ++i) {
@@ -785,7 +784,6 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
     const one::OpExprInterpContext& ctx, Symbol<Device> op_device) {
   const auto& parallel_desc_sym = JUST(Placement4Device(op_device)).shared_from_symbol();
-  const auto& instr_type_name = JUST(op_device->local_call_instruction_name());
   for (const auto& input : *input_eager_blob_objects) {
     const auto& blob_last_used_device = JUST(input->last_used_device());
     if (blob_last_used_device != op_device) {
@@ -794,13 +792,12 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     }
     input->set_last_used_device(op_device);
   }
-  intrusive::shared_ptr<vm::InstructionMsg> instruction =
-      intrusive::make_shared<vm::InstructionMsg>(instr_type_name);
-  auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(
+  auto phy_instr_operand = JUST(vm::LocalCallOpKernelPhyInstrOperand::New(
       opkernel, input_eager_blob_objects, output_eager_blob_objects, consistent_tensor_infer_result,
-      ctx, *one::CurrentDevVmDepObjectConsumeMode());
-  *instruction->mut_parallel_desc() = parallel_desc_sym;
-  *instruction->mut_phy_instr_operand() = phy_instr_operand;
+      ctx, *one::CurrentDevVmDepObjectConsumeMode()));
+  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+      Global<VirtualMachine>::Get()->mut_vm(), JUST(op_device->local_call_instruction_name()),
+      parallel_desc_sym, phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   for (const auto& output : *output_eager_blob_objects) {
     if (!output->producer_op_device().has_value()) {
@@ -1032,13 +1029,12 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
                           last_used_device));
     }
   }
-  std::string instr_name = parallel_desc->device_tag() + ".ReleaseTensor";
-  intrusive::shared_ptr<vm::InstructionMsg> instruction =
-      intrusive::make_shared<vm::InstructionMsg>(instr_name);
   LocalDepObject* compute_local_dep_object = JUST(eager_blob_object->compute_local_dep_object());
-  *instruction->mut_phy_instr_operand() = std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(
+  const auto& phy_instr_operand = std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(
       eager_blob_object, compute_local_dep_object);
-  *instruction->mut_parallel_desc() = parallel_desc;
+  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+      Global<VirtualMachine>::Get()->mut_vm(), parallel_desc->device_tag() + ".ReleaseTensor",
+      parallel_desc, phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
@@ -1050,21 +1046,18 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(LocalDepObject* compute_local_de
   OF_PROFILER_RANGE_PUSH("SoftStream");
   const auto& parallel_desc = JUST(Placement4Device(op_device)).shared_from_symbol();
   {
-    intrusive::shared_ptr<vm::InstructionMsg> instruction =
-        intrusive::make_shared<vm::InstructionMsg>(parallel_desc->device_tag() + ".RecordEvent");
-    *instruction->mut_phy_instr_operand() =
-        std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(compute_local_dep_object,
-                                                                   modifier);
-    *instruction->mut_parallel_desc() = parallel_desc;
+    const auto& phy_instr_operand = std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(
+        compute_local_dep_object, modifier);
+    auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+        Global<VirtualMachine>::Get()->mut_vm(), parallel_desc->device_tag() + ".RecordEvent",
+        parallel_desc, phy_instr_operand);
     instruction_list_->EmplaceBack(std::move(instruction));
   }
   {
-    intrusive::shared_ptr<vm::InstructionMsg> instruction =
-        intrusive::make_shared<vm::InstructionMsg>("Touch");
-    *instruction->mut_phy_instr_operand() =
-        std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(compute_local_dep_object,
-                                                                   modifier);
-    *instruction->mut_parallel_desc() = parallel_desc;
+    const auto& phy_instr_operand = std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(
+        compute_local_dep_object, modifier);
+    auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+        Global<VirtualMachine>::Get()->mut_vm(), "Touch", parallel_desc, phy_instr_operand);
     instruction_list_->EmplaceBack(std::move(instruction));
   }
   OF_PROFILER_RANGE_POP();
@@ -1117,14 +1110,13 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
                                                       const std::function<void(uint64_t)>& callback,
                                                       const std::string& modifier) {
   const auto& parallel_desc = GetParallelDesc(tensor);
-  std::string instr_name = parallel_desc->device_tag() + ".AccessBlobByCallback";
-  intrusive::shared_ptr<vm::InstructionMsg> instruction =
-      intrusive::make_shared<vm::InstructionMsg>(instr_name);
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
   LocalDepObject* compute_local_dep_object = JUST(tensor->compute_local_dep_object());
-  *instruction->mut_phy_instr_operand() = std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(
+  const auto& phy_instr_operand = std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(
       eager_blob_object, compute_local_dep_object, callback, modifier);
-  *instruction->mut_parallel_desc() = parallel_desc;
+  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+      Global<VirtualMachine>::Get()->mut_vm(),
+      parallel_desc->device_tag() + ".AccessBlobByCallback", parallel_desc, phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
@@ -1139,10 +1131,11 @@ template Maybe<void> InstructionsBuilder::AccessBlobByCallback(
 
 Maybe<void> InstructionsBuilder::ComputeRankFrontSeqCallback(
     const std::function<void()>& callback) {
-  intrusive::shared_ptr<vm::InstructionMsg> instruction =
-      intrusive::make_shared<vm::InstructionMsg>("ComputeRankFrontSeqCallback");
+  const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>(callback);
+  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+      Global<VirtualMachine>::Get()->mut_vm(), "ComputeRankFrontSeqCallback",
+      std::shared_ptr<const ParallelDesc>(), phy_instr_operand);
   instruction->add_int64_operand(GlobalProcessCtx::Rank());
-  *instruction->mut_phy_instr_operand() = std::make_shared<vm::NoArgCbPhyInstrOperand>(callback);
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }

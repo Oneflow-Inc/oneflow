@@ -31,7 +31,6 @@ namespace user_op {
 class OpKernel;
 class TensorDesc;
 class InferContext;
-class KernelCreateContext;
 
 class KernelRegContext {
  public:
@@ -48,7 +47,7 @@ class KernelRegContext {
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
 
   template<typename T>
-  T Attr(const std::string& attr_name) const {
+  const T& Attr(const std::string& attr_name) const {
     return AttrValueCast<T>(*Attr4Name(attr_name));
   }
 
@@ -58,18 +57,19 @@ class KernelRegContext {
   virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
 };
 
-using OpKernelCreateFn = std::function<const OpKernel*(KernelCreateContext* ctx)>;
+using OpKernelCreateFn = std::function<const OpKernel*()>;
 using InferTmpSizeFn = std::function<size_t(InferContext*)>;
 using AddInplaceArgPair = std::function<Maybe<void>(
     const std::string& out_arg_name, int32_t out_arg_index, const std::string& in_arg_name,
     int32_t in_arg_index, bool is_mutable)>;
 using InplaceProposalFn = std::function<Maybe<void>(const InferContext&, AddInplaceArgPair)>;
-using IsMatchedHob = hob::BoolFunctorPtr<user_op::KernelRegContext>;
+using IsMatchedHob = std::shared_ptr<hob::BaseExpr<user_op::KernelRegContext, bool>>;
 
 struct OpKernelRegistryResult {
   std::string op_type_name;
 
   OpKernelCreateFn create_fn;
+  bool need_temp_storage;
   InferTmpSizeFn infer_tmp_size_fn;
   InplaceProposalFn inplace_proposal_fn;
   IsMatchedHob is_matched_hob;
@@ -81,15 +81,13 @@ class OpKernelRegistry final {
 
   template<typename T>
   OpKernelRegistry& SetCreateFn() {
-    return SetCreateFn(
-        [](KernelCreateContext* ctx) -> const OpKernel* { return NewOpKernel<T>(); });
+    return SetCreateFn([]() -> const OpKernel* { return NewOpKernel<T>(); });
   }
   template<typename T>
-  OpKernelRegistry& SetCreateWithCtxFn() {
-    return SetCreateFn(
-        [](KernelCreateContext* ctx) -> const OpKernel* { return NewOpKernelWithCtx<T>(ctx); });
+  OpKernelRegistry& SetIsMatchedHob(const T& hob) {
+    result_.is_matched_hob = std::make_shared<T>(hob);
+    return *this;
   }
-  OpKernelRegistry& SetIsMatchedHob(IsMatchedHob hob);
   OpKernelRegistry& SetInferTmpSizeFn(InferTmpSizeFn fn);
   OpKernelRegistry& SetInplaceProposalFn(InplaceProposalFn fn);
 
