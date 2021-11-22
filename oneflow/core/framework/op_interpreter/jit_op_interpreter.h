@@ -63,7 +63,8 @@ class JitInterpreter : public OpExprInterpreter {
   void Trace(ir::JitImporter& importer,
              const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
              const std::function<std::vector<std::shared_ptr<one::Tensor>>(void)>& forward_func);
-  void DispatchModule(ModuleOp module, const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
+  void DispatchModule(ModuleOp module, const std::string& func_name,
+                      const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
                       std::vector<std::shared_ptr<one::Tensor>> returned_lazy_tensors);
 
  private:
