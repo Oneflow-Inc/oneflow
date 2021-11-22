@@ -72,21 +72,25 @@ class NdIndexOffsetHelper {
     static_assert(n <= N, "");
     T dims_arr[n] = {d0, static_cast<T>(dims)...};
     InitStrides(dims_arr, n);
-    InitDiv(N);
+    // InitDiv(N);
   }
 
-  OF_DEVICE_FUNC explicit NdIndexOffsetHelper(const T* dims) { InitStrides(dims, N); InitDiv(N);}
+  OF_DEVICE_FUNC explicit NdIndexOffsetHelper(const T* dims) { 
+    InitStrides(dims, N); 
+    // InitDiv(N);
+  }
 
   template<typename U>
   OF_DEVICE_FUNC explicit NdIndexOffsetHelper(const U* dims) {
     T dims_arr[N];
     for (int i = 0; i < N; ++i) { dims_arr[i] = dims[i]; }
     InitStrides(dims_arr, N);
-    InitDiv(N);
+    // InitDiv(N);
   }
 
   OF_DEVICE_FUNC explicit NdIndexOffsetHelper(const T* dims, int n) { InitStrides(dims, n); 
-  InitDiv(N);}
+  // InitDiv(N);
+  }
 
   ~NdIndexOffsetHelper() = default;
 
@@ -182,15 +186,24 @@ class NdIndexOffsetHelper {
 
  private:
   OF_DEVICE_FUNC void InitStrides(const T* dims, const int n) {
-    for (int i = n - 1; i < N; ++i) { stride_[i] = 1; }
-    for (int i = n - 2; i >= 0; --i) { stride_[i] = dims[i + 1] * stride_[i + 1]; }
-  }
-
-  OF_DEVICE_FUNC void InitDiv(const int n) {
-    for(int i = n; i < N; ++i){
-      div[i] = fast_divmod(stride_[i]); 
+    for (int i = n - 1; i < N; ++i) { 
+      stride_[i] = 1; 
+      div[i] = stride_[i];
+    }
+    for (int i = n - 2; i >= 0; --i) { 
+      stride_[i] = dims[i + 1] * stride_[i + 1]; 
+      div[i] = stride_[i];
     }
   }
+
+  // OF_DEVICE_FUNC void InitDiv(const T* dims, const int n) {
+  //   for(int i = n; i < N; ++i){
+  //     div[i] = fast_divmod(1); 
+  //   }
+  //   for (int i = n - 2; i >= 0; --i) { 
+  //     stride_[i] = dims[i + 1] * stride_[i + 1]; 
+  //   }
+  // }
 
   T stride_[N];
   fast_divmod div[N]; 
