@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -63,7 +64,7 @@ class GpuPReluKernel final : public user_op::OpKernel {
     const int channels = x->shape().At(1);
     const int32_t inner_size = elem_cnt / batch / channels;
     PReluForwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                         ctx->device_ctx()->cuda_stream()>>>(
+                         ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -98,11 +99,11 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
     const int channels = x->shape().At(1);
     const int32_t inner_size = elem_cnt / batch / channels;
 
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), alpha_diff->mut_dptr<T>(), 0,
+    Memset<DeviceType::kGPU>(ctx->stream(), alpha_diff->mut_dptr<T>(), 0,
                              alpha_diff->shape().elem_cnt() * sizeof(T));
 
     PReluBackwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                          ctx->device_ctx()->cuda_stream()>>>(
+                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), dy->dptr<T>(),
         dx->mut_dptr<T>(), alpha_diff->mut_dptr<T>());
   }

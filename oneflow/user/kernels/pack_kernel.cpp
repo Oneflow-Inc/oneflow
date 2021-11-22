@@ -57,8 +57,8 @@ class PackKernel final : public user_op::OpKernel {
     CHECK_NOTNULL(state_wrapper);
     const size_t index = state_wrapper->Get().first;
     CHECK_EQ(state_wrapper->Get().second, pack_num);
-    Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<char>() + index * copy_size,
-                        in->dptr<char>(), copy_size);
+    Memcpy<device_type>(ctx->stream(), out->mut_dptr<char>() + index * copy_size, in->dptr<char>(),
+                        copy_size);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
