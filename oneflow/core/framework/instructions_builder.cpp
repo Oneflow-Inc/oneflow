@@ -783,9 +783,9 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     }
     input->set_last_used_device(op_device);
   }
-  const auto& phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(
+  auto phy_instr_operand = JUST(vm::LocalCallOpKernelPhyInstrOperand::New(
       opkernel, input_eager_blob_objects, output_eager_blob_objects, consistent_tensor_infer_result,
-      ctx, *one::CurrentDevVmDepObjectConsumeMode());
+      ctx, *one::CurrentDevVmDepObjectConsumeMode()));
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       Global<VirtualMachine>::Get()->mut_vm(), JUST(op_device->local_call_instruction_name()),
       parallel_desc_sym, phy_instr_operand);

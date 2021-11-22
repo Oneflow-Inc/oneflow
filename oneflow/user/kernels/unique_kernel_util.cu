@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/unique_kernel_util.h"
 #include "oneflow/core/cuda/unique.cuh"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -28,39 +29,40 @@ constexpr cuda::unique::Flag kUniqueWithCountsFlag =
 
 template<typename KEY, typename IDX>
 struct UniqueKernelUtil<DeviceType::kGPU, KEY, IDX> {
-  static void Unique(DeviceCtx* ctx, int64_t n, const KEY* in, IDX* num_unique, KEY* unique_out,
+  static void Unique(ep::Stream* stream, int64_t n, const KEY* in, IDX* num_unique, KEY* unique_out,
                      IDX* idx_out, void* workspace, int64_t workspace_size_in_bytes);
-  static void UniqueWithCounts(DeviceCtx* ctx, int64_t n, const KEY* in, IDX* num_unique,
+  static void UniqueWithCounts(ep::Stream* stream, int64_t n, const KEY* in, IDX* num_unique,
                                KEY* unique_out, IDX* idx_out, IDX* count, void* workspace,
                                int64_t workspace_size_in_bytes);
-  static void GetUniqueWorkspaceSizeInBytes(DeviceCtx* ctx, int64_t n,
+  static void GetUniqueWorkspaceSizeInBytes(ep::Stream* stream, int64_t n,
                                             int64_t* workspace_size_in_bytes);
-  static void GetUniqueWithCountsWorkspaceSizeInBytes(DeviceCtx* ctx, int64_t n,
+  static void GetUniqueWithCountsWorkspaceSizeInBytes(ep::Stream* stream, int64_t n,
                                                       int64_t* workspace_size_in_bytes);
 };
 
 template<typename KEY, typename IDX>
-void UniqueKernelUtil<DeviceType::kGPU, KEY, IDX>::Unique(DeviceCtx* ctx, int64_t n, const KEY* in,
-                                                          IDX* num_unique, KEY* unique_out,
-                                                          IDX* idx_out, void* workspace,
+void UniqueKernelUtil<DeviceType::kGPU, KEY, IDX>::Unique(ep::Stream* stream, int64_t n,
+                                                          const KEY* in, IDX* num_unique,
+                                                          KEY* unique_out, IDX* idx_out,
+                                                          void* workspace,
                                                           int64_t workspace_size_in_bytes) {
-  OF_CUDA_CHECK(
-      (cuda::unique::Launch<KEY, IDX>(kUniqueFlag, n, in, unique_out, num_unique, idx_out, nullptr,
-                                      workspace, workspace_size_in_bytes, ctx->cuda_stream())));
+  OF_CUDA_CHECK((cuda::unique::Launch<KEY, IDX>(kUniqueFlag, n, in, unique_out, num_unique, idx_out,
+                                                nullptr, workspace, workspace_size_in_bytes,
+                                                stream->As<ep::CudaStream>()->cuda_stream())));
 }
 
 template<typename KEY, typename IDX>
 void UniqueKernelUtil<DeviceType::kGPU, KEY, IDX>::UniqueWithCounts(
-    DeviceCtx* ctx, int64_t n, const KEY* in, IDX* num_unique, KEY* unique_out, IDX* idx_out,
+    ep::Stream* stream, int64_t n, const KEY* in, IDX* num_unique, KEY* unique_out, IDX* idx_out,
     IDX* count, void* workspace, int64_t workspace_size_in_bytes) {
-  OF_CUDA_CHECK((cuda::unique::Launch<KEY, IDX>(kUniqueWithCountsFlag, n, in, unique_out,
-                                                num_unique, idx_out, count, workspace,
-                                                workspace_size_in_bytes, ctx->cuda_stream())));
+  OF_CUDA_CHECK((cuda::unique::Launch<KEY, IDX>(
+      kUniqueWithCountsFlag, n, in, unique_out, num_unique, idx_out, count, workspace,
+      workspace_size_in_bytes, stream->As<ep::CudaStream>()->cuda_stream())));
 }
 
 template<typename KEY, typename IDX>
 void UniqueKernelUtil<DeviceType::kGPU, KEY, IDX>::GetUniqueWorkspaceSizeInBytes(
-    DeviceCtx* ctx, int64_t n, int64_t* workspace_size_in_bytes) {
+    ep::Stream* stream, int64_t n, int64_t* workspace_size_in_bytes) {
   size_t ws = 0;
   OF_CUDA_CHECK((cuda::unique::GetWorkspaceSize<KEY, IDX>(kUniqueFlag, n, &ws)));
   *workspace_size_in_bytes = static_cast<int64_t>(ws);
@@ -68,7 +70,7 @@ void UniqueKernelUtil<DeviceType::kGPU, KEY, IDX>::GetUniqueWorkspaceSizeInBytes
 
 template<typename KEY, typename IDX>
 void UniqueKernelUtil<DeviceType::kGPU, KEY, IDX>::GetUniqueWithCountsWorkspaceSizeInBytes(
-    DeviceCtx* ctx, int64_t n, int64_t* workspace_size_in_bytes) {
+    ep::Stream* stream, int64_t n, int64_t* workspace_size_in_bytes) {
   size_t ws = 0;
   OF_CUDA_CHECK((cuda::unique::GetWorkspaceSize<KEY, IDX>(kUniqueWithCountsFlag, n, &ws)));
   *workspace_size_in_bytes = static_cast<int64_t>(ws);

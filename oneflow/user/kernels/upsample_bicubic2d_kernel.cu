@@ -157,7 +157,7 @@ class UpsampleBicubic2dGPUKernel final : public user_op::OpKernel {
       const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
       const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
 
-      RUN_CUDA_KERNEL((UpsampleBicubic2dForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+      RUN_CUDA_KERNEL((UpsampleBicubic2dForward<T>), ctx->stream(), elem_cnt, elem_cnt,
                       x_tensor->dptr<T>(), nbatch, channels, in_height, in_width, out_height,
                       out_width, scale_height, scale_width, align_corners, y_tensor->mut_dptr<T>());
     }
@@ -198,7 +198,7 @@ class UpsampleBicubic2dGradGPUKernel final : public user_op::OpKernel {
       const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
       const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
 
-      RUN_CUDA_KERNEL((UpsampleBicubic2dBackward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+      RUN_CUDA_KERNEL((UpsampleBicubic2dBackward<T>), ctx->stream(), elem_cnt, elem_cnt,
                       dy_tensor->dptr<T>(), nbatch, channels, in_height, in_width, out_height,
                       out_width, scale_height, scale_width, align_corners,
                       dx_tensor->mut_dptr<T>());

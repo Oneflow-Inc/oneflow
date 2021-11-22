@@ -482,6 +482,20 @@ class ExpandFunctor {
     std::vector<int32_t> in_shape(x->shape()->NumAxes());
     for (int i = 0; i < in_shape.size(); ++i) { in_shape[i] = x->shape()->At(i); }
 
+    // check the parameters
+    int shift = shape.NumAxes() - in_shape.size();
+    for (int i = shape.NumAxes() - 1; i >= 0; --i) {
+      int index = i - shift;
+      if (index >= 0) {
+        if (shape.At(i) != -1 && shape.At(i) != in_shape.at(index)) {
+          CHECK_OR_RETURN(shape.At(i) > 0 && in_shape.at(index) == 1)
+              << "Invalid expand shape " << shape.ToString();
+        }
+      } else {
+        CHECK_GT_OR_RETURN(shape.At(i), 0) << "Invalid expand shape " << shape.ToString();
+      }
+    }
+
     std::vector<int32_t> expand_shape(shape.NumAxes());
     for (int i = 0; i < shape.NumAxes(); ++i) { expand_shape[i] = shape.dim_vec().at(i); }
 
