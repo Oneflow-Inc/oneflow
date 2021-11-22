@@ -35,7 +35,10 @@ if (WITH_TENSORRT)
 endif()
 
 include(hwloc)
-include(oneDNN)
+if (BUILD_ONEDNN)
+  include(oneDNN)
+endif()
+
 
 option(CUDA_STATIC "" ON)
 
@@ -139,8 +142,10 @@ set(oneflow_third_party_libs
     ${CMAKE_THREAD_LIBS_INIT}
     ${FLATBUFFERS_STATIC_LIBRARIES}
     ${LZ4_STATIC_LIBRARIES}
-    ${ONEDNN_STATIC_LIBRARIES}
 )
+if (BUILD_ONEDNN)
+  set(oneflow_third_party_libs ${oneflow_third_party_libs} ${ONEDNN_STATIC_LIBRARIES})
+endif()
 
 if (NOT WITH_XLA)
   list(APPEND oneflow_third_party_libs ${RE2_LIBRARIES})
@@ -168,8 +173,11 @@ set(oneflow_third_party_dependencies
   flatbuffers
   lz4_copy_libs_to_destination
   lz4_copy_headers_to_destination
-  onednn
 )
+if (BUILD_ONEDNN)
+  list(APPEND oneflow_third_party_dependencies onednn)
+endif()
+
 
 if (WITH_COCOAPI)
   list(APPEND oneflow_third_party_dependencies cocoapi_copy_headers_to_destination)
@@ -198,9 +206,12 @@ list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS
     ${ABSL_INCLUDE_DIR}
     ${OPENSSL_INCLUDE_DIR}
     ${FLATBUFFERS_INCLUDE_DIR}
-    ${LZ4_INCLUDE_DIR}
-    ${ONEDNN_INCLUDE_DIR}
+    ${LZ4_INCLUDE_DIR} 
 )
+if (BUILD_ONEDNN)
+  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${ONEDNN_INCLUDE_DIR})
+endif()
+
 
 if (NOT WITH_XLA)
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${RE2_INCLUDE_DIR})

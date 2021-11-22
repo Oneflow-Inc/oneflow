@@ -4,11 +4,11 @@ set(ONEDNN_INSTALL_DIR ${THIRD_PARTY_DIR}/onednn)
 set(ONEDNN_INCLUDE_DIR ${ONEDNN_INSTALL_DIR}/include)
 set(ONEDNN_LIBRARY_DIR ${ONEDNN_INSTALL_DIR}/lib)
 
-set(oneDNN_URL https://github.com/oneapi-src/oneDNN/archive/refs/tags/v2.4.3.tar.gz)
-use_mirror(VARIABLE oneDNN_URL URL ${oneDNN_URL})
+set(ONEDNN_URL https://github.com/oneapi-src/oneDNN/archive/refs/tags/v2.4.3.tar.gz)
+use_mirror(VARIABLE ONEDNN_URL URL ${ONEDNN_URL})
 
 if(WIN32)
-    # set(ONEDNN_LIBRARY_NAMES onednn.lib)
+    message(FATAL_ERROR "Windows system does not support onednn")
 else()
     if(BUILD_SHARED_LIBS)
       if("${CMAKE_SHARED_LIBRARY_SUFFIX}" STREQUAL ".dylib")
@@ -34,7 +34,7 @@ if(THIRD_PARTY)
 
 ExternalProject_Add(onednn
     PREFIX onednn
-    URL ${oneDNN_URL}
+    URL ${ONEDNN_URL}
     URL_MD5 c60ea96acbaccec053be7e3fa81c6184
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE OFF

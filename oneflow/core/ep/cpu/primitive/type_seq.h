@@ -19,7 +19,10 @@ limitations under the License.
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/data_type.h"
 #include <half.hpp>
+
+#ifdef WITH_ONEDNN
 #include "oneapi/dnnl/dnnl.hpp"
+#endif
 
 #define CPU_PRIMITIVE_CHAR_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(char, DataType::kChar)
 #define CPU_PRIMITIVE_INT8_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(int8_t, DataType::kInt8)

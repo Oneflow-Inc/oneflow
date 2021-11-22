@@ -17,7 +17,9 @@ limitations under the License.
 #define ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
 
 #include "oneflow/core/ep/include/stream.h"
+#ifdef WITH_ONEDNN
 #include "oneapi/dnnl/dnnl.hpp"
+#endif
 
 namespace oneflow {
 
@@ -27,8 +29,10 @@ class CpuStream : public Stream {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuStream);
   CpuStream() {
+#ifdef WITH_ONEDNN
     onednn_engine_.reset(new dnnl::engine(dnnl::engine::kind::cpu, 0));
     onednn_stream_.reset(new dnnl::stream(*onednn_engine_));
+#endif
   }
 
   ~CpuStream() override = default;
@@ -36,12 +40,14 @@ class CpuStream : public Stream {
   DeviceType device_type() const override { return DeviceType::kCPU; }
   Maybe<void> Sync() override { return Maybe<void>::Ok(); }
 
+#ifdef WITH_ONEDNN
   dnnl::engine* onednn_engine() const { return onednn_engine_.get(); }
   dnnl::stream* onednn_stream() const { return onednn_stream_.get(); }
 
  private:
   std::unique_ptr<dnnl::engine> onednn_engine_;
   std::unique_ptr<dnnl::stream> onednn_stream_;
+#endif
 };
 
 }  // namespace ep
