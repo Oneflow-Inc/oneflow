@@ -28,7 +28,6 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/functional/sequence_function.h"
 
-
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -151,6 +150,7 @@ class ReLU6Functor {
     }
     Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool inplace) const{
       // ASSERT_FALSE(inplace);
+      CHECK_OR_RETURN(inplace==false) << "nn.functional.relu6 does not support inplace now";
       MutableAttrMap attrs;
       JUST(attrs.SetAttr<double>("min_val", 0.0));
       JUST(attrs.SetAttr<double>("max_val", 6.0));
