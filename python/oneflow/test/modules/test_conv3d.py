@@ -42,7 +42,7 @@ class TestConv3DModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(n=30)
+    @autotest(n=300)
     def test_conv3d_group_with_random_data(test_case):
         channels = 720  # lcm(1, 2, 3, 4, 5, 6)
         m = torch.nn.Conv3d(
