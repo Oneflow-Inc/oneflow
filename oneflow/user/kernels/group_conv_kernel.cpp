@@ -101,7 +101,7 @@ class ColBufWriter {
  protected:
   const T* src_ptr_;
   T* dst_ptr_;
-  int64_t c_size_;
+  int64_t c_size_ ;
   int64_t id_size_;
   int64_t ih_size_;
   int64_t iw_size_;
@@ -208,12 +208,12 @@ class ColBufUtil final {
   }
 
  private:
-  int64_t id_num_;
-  int64_t ih_num_;
-  int64_t iw_num_;
-  int64_t od_num_;
-  int64_t oh_num_;
-  int64_t ow_num_;
+  int64_t id_num_ = 0;
+  int64_t ih_num_ = 0;
+  int64_t iw_num_ = 0;
+  int64_t od_num_ = 0;
+  int64_t oh_num_ = 0;
+  int64_t ow_num_ = 0;
   const int32_t* strides_;
   const int32_t* dilation_rate_;
   const int32_t* padding_before_;
@@ -307,10 +307,10 @@ struct ConvOpKernelState final : public user_op::OpKernelState {
   std::vector<int32_t> dilation_rate_3d_;
   std::vector<int32_t> padding_before_3d_;
 
-  enum CBLAS_TRANSPOSE is_out_diff_need_trans_;
-  int32_t idx_offset_;
-  bool is_dynamic_;
-  int32_t groups;
+  enum CBLAS_TRANSPOSE is_out_diff_need_trans_ = CblasNoTrans;
+  int32_t idx_offset_ = 0;
+  bool is_dynamic_ = false;
+  int32_t groups = 1;
 
   void Update(const ShapeView& x_shape, const ShapeView& out_shape) {
     auto Gen5DShape = [](const ShapeView& shape, int32_t idx_offset) -> Shape {
