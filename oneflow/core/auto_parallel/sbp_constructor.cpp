@@ -263,8 +263,7 @@ Maybe<void> SbpConstructor::CheckSbpAgreement(const Job& job) {
     const std::string& op_name = op_node->op().op_name();
     const cfg::SbpSignature& auto_parallel_sbp =
         cfg::SbpSignature(job.job_parallel_view_conf().op_name2sbp_signature_conf().at(op_name));
-    const cfg::SbpSignature& new_sbp = cfg::SbpSignature(
-        new_job.job_parallel_view_conf().op_name2sbp_signature_conf().at(op_name));
+    const cfg::SbpSignature& new_sbp = op_node->sbp_signature();
     CHECK_EQ_OR_RETURN(auto_parallel_sbp.bn_in_op2sbp_parallel_size(),
                        new_sbp.bn_in_op2sbp_parallel_size());
     for (const auto& iter : auto_parallel_sbp.bn_in_op2sbp_parallel()) {
@@ -362,6 +361,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
                 << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(obn)).shape().elem_cnt();
       std::cout << std::endl;
     }
+    std::cout << std::endl;
   }
 }
 

@@ -600,6 +600,7 @@ void OpGraph::PrintSBPGraphDebugInfo() const {
                 << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(obn)).shape().elem_cnt();
       std::cout << std::endl;
     }
+    std::cout << std::endl;
   }
 }
 
