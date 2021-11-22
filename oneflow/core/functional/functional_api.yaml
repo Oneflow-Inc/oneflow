@@ -1714,7 +1714,7 @@
   bind_python: True
 
 - name: "fused_scale_mask_softmax_dropout_grad"
-  signature: "Tensor (Tensor softmax_y, Tensor dy, Tensor dropout_mask, Tensor mask, Float scale=1.0, Float dropout_scale=1.0) => FusedScaleMaskSoftmaxDropoutGrad"
+  signature: "Tensor (Tensor softmax_y, Tensor dy, Tensor mask, Tensor dropout_mask, Float scale=1.0, Float dropout_scale=1.0) => FusedScaleMaskSoftmaxDropoutGrad"
   bind_python: False
 
 - name: "fused_scale_tril_softmax_mask_scale"
