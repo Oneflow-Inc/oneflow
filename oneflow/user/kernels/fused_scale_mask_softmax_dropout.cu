@@ -192,7 +192,8 @@ class FusedScaleMaskSoftmaxDropoutGradKernel final : public user_op::OpKernel {
                                          static_cast<T>(0.0), ctx->Attr<float>("scale_value"));
     OF_CUDA_CHECK((cuda::softmax::DispatchSoftmaxGrad<decltype(load_softmax_y), decltype(load_dy),
                                                       decltype(store), ComputeType>(
-        ctx->stream()->As<ep::CudaStream>()->cuda_stream(), load_softmax_y, load_dy, store, rows, cols)));
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream(), load_softmax_y, load_dy, store, rows,
+        cols)));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
