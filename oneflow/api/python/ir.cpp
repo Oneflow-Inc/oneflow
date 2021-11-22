@@ -53,7 +53,6 @@ struct Module {
     std::vector<std::shared_ptr<one::Tensor>> arg_tensors{};
     arg_tensors.insert(arg_tensors.end(), inputs.begin(), inputs.end());
     arg_tensors.insert(arg_tensors.end(), parameters.begin(), parameters.end());
-    SetJitForwardArgs(arg_tensors);
     py::object ret;
     std::vector<std::shared_ptr<one::Tensor>> tensors_to_materialize{};
     jit_interpreter->Trace(importer_, arg_tensors, [&]() {
