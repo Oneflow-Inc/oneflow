@@ -38,17 +38,16 @@ class TensorViewOperand : public PhyInstrOperand {
  public:
   TensorViewOperand(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
                     const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object,
-                    LocalDepObject* compute_local_dep_object
-                )
+                    LocalDepObject* compute_local_dep_object)
       : eager_blob_object_(eager_blob_object),
         view_eager_blob_object_(view_eager_blob_object),
         compute_local_dep_object_(compute_local_dep_object),
         input_dependences_(),
         output_dependences_() {
-        ForEachConstMirroredObject(SetInserter(&input_dependences_));
-        ForEachMutMirroredObject(SetInserter(&output_dependences_));
-        ForEachMut2MirroredObject(SetInserter(&output_dependences_));
-    }
+    ForEachConstMirroredObject(SetInserter(&input_dependences_));
+    ForEachMutMirroredObject(SetInserter(&output_dependences_));
+    ForEachMut2MirroredObject(SetInserter(&output_dependences_));
+  }
   ~TensorViewOperand() = default;
 
   const DependenceVector& input_dependences() const override { return input_dependences_; }
@@ -61,14 +60,11 @@ class TensorViewOperand : public PhyInstrOperand {
     return view_eager_blob_object_;
   }
 
-  void ForEachConstMirroredObject(
-      const std::function<void(vm::MirroredObject* compute)>&) const;
+  void ForEachConstMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
 
-  void ForEachMutMirroredObject(
-      const std::function<void(vm::MirroredObject* compute)>&) const;
+  void ForEachMutMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
 
-  void ForEachMut2MirroredObject(
-      const std::function<void(vm::MirroredObject* compute)>&) const;
+  void ForEachMut2MirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
 
  private:
   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;

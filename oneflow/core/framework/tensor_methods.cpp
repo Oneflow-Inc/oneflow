@@ -70,12 +70,12 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(
       tensor_meta, JUST(input->tensor_storage()), input->requires_grad(),
       /*is_leaf=*/!input->requires_grad());
-  tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()));
+  JUST(tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object())));
   std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
   // run tensor view instruction
-  PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->TensorView(JUST(input->AsMirroredTensor()), JUST(output->AsMirroredTensor()));
-  });
+  }));
   return output;
 }
 

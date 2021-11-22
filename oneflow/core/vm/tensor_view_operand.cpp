@@ -27,7 +27,7 @@ void TensorViewOperand::ForEachConstMirroredObject(
 
 void TensorViewOperand::ForEachMutMirroredObject(
     const std::function<void(MirroredObject* compute)>& DoEach) const {
-        DoEach(compute_local_dep_object_->mut_mirrored_object());
+  DoEach(compute_local_dep_object_->mut_mirrored_object());
 }
 
 void TensorViewOperand::ForEachMut2MirroredObject(
