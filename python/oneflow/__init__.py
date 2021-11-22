@@ -65,6 +65,7 @@ def is_deprecated(func_or_class):
 from oneflow._C import abs
 from oneflow._C import exp
 from oneflow._C import acos
+from oneflow._C import acos as arccos
 from oneflow._C import acosh
 from oneflow._C import acosh as arccosh
 from oneflow._C import atanh
