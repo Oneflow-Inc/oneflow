@@ -95,6 +95,7 @@ class CudaAllocator final : public Allocator {
   // Try find free Piece which size is larger than aligned_size in Bins.
   // Return nullptr when find failure
   Piece* FindPiece(size_t aligned_size);
+  void Display();
 
   // Insert the free Piece to the appropriate Bin which bin size is smaller than piece
   void InsertPiece2Bin(Piece* piece);

@@ -34,6 +34,8 @@ inline bool IsAlignedSize(size_t size) { return size % kCudaMemAllocAlignSize ==
 
 static const size_t kPieceSplitThreshold = 128 << 20;  // 128MiB
 
+inline double bytes2Mb(size_t bytes) { return bytes * 1. / 1024 / 1024; }
+
 }  // namespace
 
 CudaAllocator::CudaAllocator(int64_t device_id)
@@ -108,6 +110,28 @@ void CudaAllocator::UnMarkPiece(Piece* piece) {
   ptr2piece_.erase(it);
 }
 
+void CudaAllocator::Display() {
+  double total_free_piece_bytes = 0.;
+  for (int32_t bin_num = 0; bin_num < kBinNumSize; ++bin_num) {
+    Bin* bin = &bins_.at(bin_num);
+    for (auto it = bin->pieces.begin(); it != bin->pieces.end(); ++it) {
+      Piece* piece = *it;
+      CHECK(piece->is_free);
+      CHECK_NOTNULL(piece->ptr);
+      CHECK_EQ(piece->bin_num, bin_num);
+      CHECK(IsAlignedSize(piece->size));
+      std::cout << "piece in bin " << bin_num << ", memory: " << piece->size * 1. / 1024 / 1024
+                << "MB" << std::endl;
+      total_free_piece_bytes += piece->size;
+    }
+  }
+  std::cout << "total_free_piece_bytes: " << bytes2Mb(total_free_piece_bytes) << "MB"
+            << ", total allocate bytes: " << bytes2Mb(total_allocate_bytes_) << "MB"
+            << ", total deallocate bytes: " << bytes2Mb(total_deallocate_bytes_) << "MB" 
+            << ", total memory bytes: " << bytes2Mb(total_memory_bytes_) << "MB" 
+            << std::endl;
+}
+
 CudaAllocator::Piece* CudaAllocator::FindPiece(size_t aligned_size) {
   // if (oneflow::DTRDebugEnabled()) { std::cout << "find piece" << std::endl; }
   CHECK(IsAlignedSize(aligned_size));
@@ -172,7 +196,7 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   size_t free_bytes = -1;
   size_t total_bytes = -1;
   OF_CUDA_CHECK(cudaMemGetInfo(&free_bytes, &total_bytes));
-  const size_t remain_bytes = 50 * 1048576;
+  const size_t remain_bytes = 0; // 50 * 1048576;
   // const size_t available_bytes = free_bytes - remain_bytes;  // remain at least 50MiB memory
   size_t available_bytes = -1;
   if (total_memory_bytes_ + remain_bytes < oneflow::GetDTRMemoryThreshold()) {
@@ -342,6 +366,8 @@ void CudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
       // it++;
     }
   }
+
+  if (piece == nullptr) { Display(); }
 
   CHECK(piece != nullptr) << "Error! : Out of memory when allocate size : " << size;
   CHECK_NOTNULL(piece->ptr);
