@@ -436,8 +436,8 @@ class ConvCpuKernel final : public user_op::OpKernel {
         // channels last:  out = (weight * col_buf)(T)
         conv_state->forward_func_(CblasNoTrans, CblasNoTrans,
                                   m,  // filter / groups
-                                  k,  // od * oh * ow
-                                  n,  // ci * kd * kh * kw
+                                  k,  // od * oh * ow / groups
+                                  n,  // ci * kd * kh * kw / groups
                                   static_cast<T>(1), weight_ptr, col_buf_dptr, static_cast<T>(0),
                                   output_ptr);
         input_ptr += input_step;
@@ -543,8 +543,8 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
         // channels last :  col_buf' = weight(T) * out[i]'(T)
         NewKernelUtil<DeviceType::kCPU>::OFGemm(
             nullptr, CblasTrans, conv_state->is_out_diff_need_trans_,
-            m,  //  ci * kd * kh * kw
-            k,  //  od * oh * ow
+            m,  //  ci * kd * kh * kw / groups
+            k,  //  od * oh * ow / groups
             n,  //  filter / groups
             static_cast<T>(1), filter_ptr, dy_ptr, static_cast<T>(0), col_buf->mut_dptr<T>());
 
@@ -611,19 +611,26 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* filter_diff = ctx->Tensor4ArgNameAndIndex("filter_diff", 0);
     user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-
+    int32_t idx_offset = conv_state->idx_offset_;
     const int32_t dy_group_interval = dy->shape().At(1) / conv_state->groups;
     const int32_t filter_diff_group_interval = filter_diff->shape().At(0) / conv_state->groups;
     const int32_t x_group_interval = x->shape().At(1) / conv_state->groups;
+    const int32_t x_step = x_group_interval * x->shape().Count(2);
+    const int32_t dy_step = dy_group_interval * dy->shape().Count(2);
+    const int32_t filter_diff_step = filter_diff_group_interval * filter_diff->shape().Count(1);
+    const int32_t m = conv_state->weight_5d_shape_.At(0) / conv_state->groups;
+    const int32_t k = conv_state->weight_5d_shape_.Count(1);
+    const int32_t n = conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3);
 
     Memset<DeviceType::kCPU>(ctx->stream(), filter_diff->mut_dptr<T>(), 0,
                              filter_diff->shape().elem_cnt() * sizeof(T));
-    int32_t idx_offset = conv_state->idx_offset_;
     FOR_RANGE(int64_t, i, 0, dy->shape().At(0)) {
+      const T* x_ptr = GetImgDptr<T>(x, i);
+      const T* dy_ptr = GetImgDptr<T>(dy, i);
+      T* filter_diff_ptr = filter_diff->mut_dptr<T>();
       FOR_RANGE(int64_t, g, 0, conv_state->groups) {
         conv_state->im2col_func_(
-            GetImgDptr<T>(x, i) + g * x_group_interval * x->shape().Count(2),
-            ShapeView(conv_state->in_5d_shape_), ShapeView(conv_state->weight_5d_shape_),
+            x_ptr, ShapeView(conv_state->in_5d_shape_), ShapeView(conv_state->weight_5d_shape_),
             ShapeView(conv_state->out_5d_shape_), conv_state->strides_3d_.data(),
             conv_state->dilation_rate_3d_.data(), conv_state->padding_before_3d_.data(),
             col_buf->mut_dptr<T>());
@@ -632,13 +639,13 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
         // channels last :  weight' += out[i]'(T) * col_buf(T)
         NewKernelUtil<DeviceType::kCPU>::OFGemm(
             nullptr, conv_state->is_out_diff_need_trans_, CblasTrans,
-            conv_state->weight_5d_shape_.At(0) / conv_state->groups,      //  filter
-            conv_state->weight_5d_shape_.Count(1),                        //  ci * kd * kh * kw
-            conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3),  //  od * oh * ow
-            static_cast<T>(1), GetImgDptr<T>(dy, i) + g * dy_group_interval * dy->shape().Count(2),
-            col_buf->dptr<T>(), static_cast<T>(1),
-            filter_diff->mut_dptr<T>()
-                + g * filter_diff_group_interval * filter_diff->shape().Count(1));
+            m,  //  filter / groups
+            k,  //  ci * kd * kh * kw / groups
+            n,  //  od * oh * ow / groups
+            static_cast<T>(1), dy_ptr, col_buf->dptr<T>(), static_cast<T>(1), filter_diff_ptr);
+        x_ptr += x_step;
+        dy_ptr += dy_step;
+        filter_diff_ptr += filter_diff_step;
       }
     }
   }
