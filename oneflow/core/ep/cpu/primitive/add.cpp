@@ -133,17 +133,17 @@ std::unique_ptr<Add> NewOneDnnAdd() {
 #endif
 
 #define CPU_PRIMITIVE_ADD_ONEDNN_TYPE_SEQ \
-  CPU_PRIMITIVE_ONEDNN_INT8_TYPE_SEQ         \
-  CPU_PRIMITIVE_ONEDNN_UINT8_TYPE_SEQ        \
-  CPU_PRIMITIVE_ONEDNN_INT32_TYPE_SEQ        \
-  CPU_PRIMITIVE_ONEDNN_FLOAT_TYPE_SEQ        \
-  CPU_PRIMITIVE_ONEDNN_FLOAT16_TYPE_SEQ
+  CPU_PRIMITIVE_ONEDNN_INT8_TYPE_SEQ      \
+  CPU_PRIMITIVE_ONEDNN_UINT8_TYPE_SEQ     \
+  CPU_PRIMITIVE_ONEDNN_INT32_TYPE_SEQ     \
+  CPU_PRIMITIVE_ONEDNN_FLOAT_TYPE_SEQ     \
+  CPU_PRIMITIVE_ONEDNN_FLOAT16_TYPE_SEQ   \
+  CPU_PRIMITIVE_ONEDNN_BFLOAT16_TYPE_SEQ
 
 #define CPU_PRIMITIVE_ADD_DEFAULT_TYPE_SEQ \
-  CPU_PRIMITIVE_CHAR_TYPE_SEQ                 \
-  CPU_PRIMITIVE_DOUBLE_TYPE_SEQ               \
+  CPU_PRIMITIVE_CHAR_TYPE_SEQ              \
+  CPU_PRIMITIVE_DOUBLE_TYPE_SEQ            \
   CPU_PRIMITIVE_INT64_TYPE_SEQ
-
 
 class AddFactoryImpl : public AddFactory {
  public:
@@ -155,8 +155,7 @@ class AddFactoryImpl : public AddFactory {
 #define MAKE_NEW_ADD_ENTRY(type_cpp, type_proto) {type_proto, NewAdd<type_cpp>},
 
 #ifdef WITH_ONEDNN
-#define MAKE_NEW_ONEDNN_ADD_ENTRY(type_cpp, type_proto, type_onednn) \
-  {type_proto, NewOneDnnAdd<type_onednn>},
+#define MAKE_NEW_ONEDNN_ADD_ENTRY(type_onednn, type_proto) {type_proto, NewOneDnnAdd<type_onednn>},
 
     static const std::map<DataType, std::function<std::unique_ptr<Add>()>> new_add_handle{
         OF_PP_FOR_EACH_TUPLE(MAKE_NEW_ONEDNN_ADD_ENTRY, CPU_PRIMITIVE_ADD_ONEDNN_TYPE_SEQ)
