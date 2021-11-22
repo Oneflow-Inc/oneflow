@@ -222,9 +222,10 @@ class UserOpExprOpDeviceInferContext final : public user_op::DeviceInferContext 
   }
 
  private:
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override {
-    return composed_attrs_.Attr4Name(attr_name);
+  const void* Attr4Name(const std::string& attr_name) const override {
+    // return composed_attrs_.Attr4Name(attr_name);
+    UNIMPLEMENTED();
+    return nullptr;
   }
   const UserOpExpr* user_op_expr_;
   const ComposedAttrMap composed_attrs_;

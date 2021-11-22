@@ -49,13 +49,14 @@ class KernelRegContext {
 
   template<typename T>
   T Attr(const std::string& attr_name) const {
-    return AttrValueCast<T>(*Attr4Name(attr_name));
+    // return AttrValueCast<T>(*Attr4Name(attr_name));
+    return *reinterpret_cast<const T*>(Attr4Name(attr_name));
   }
 
  protected:
   KernelRegContext() = default;
   KernelRegContext(const KernelRegContext&) = delete;
-  virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
+  virtual const void* Attr4Name(const std::string& attr_name) const = 0;
 };
 
 using OpKernelCreateFn = std::function<const OpKernel*(KernelCreateContext* ctx)>;

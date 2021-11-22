@@ -114,9 +114,10 @@ class KernelCreateContext final : public user_op::KernelCreateContext {
 
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override {
-    return user_op_conf().Attr4Name(attr_name);
+  const void* Attr4Name(const std::string& attr_name) const override {
+    // return user_op_conf().Attr4Name(attr_name);
+    UNIMPLEMENTED();
+    return nullptr;
   }
 
   user_op::UserOpConfWrapper user_op_conf_;
@@ -187,9 +188,10 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
 
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override {
-    return user_op_conf().Attr4Name(attr_name);
+  const void* Attr4Name(const std::string& attr_name) const override {
+    // return user_op_conf().Attr4Name(attr_name);
+    UNIMPLEMENTED();
+    return nullptr;
   }
 
   user_op::UserOpConfWrapper user_op_conf_;
@@ -345,9 +347,10 @@ class UserKernelOpInferContext : public user_op::InferContext {
 
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override {
-    return user_op_conf().Attr4Name(attr_name);
+  const void* Attr4Name(const std::string& attr_name) const override {
+    // return user_op_conf().Attr4Name(attr_name);
+    UNIMPLEMENTED();
+    return nullptr;
   }
 
   user_op::UserOpConfWrapper user_op_conf_;
@@ -443,9 +446,10 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
 
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override {
-    return user_op_conf().Attr4Name(attr_name);
+  const void* Attr4Name(const std::string& attr_name) const override {
+    // return user_op_conf().Attr4Name(attr_name);
+    UNIMPLEMENTED();
+    return nullptr;
   }
 
   user_op::UserOpConfWrapper user_op_conf_;
@@ -551,9 +555,10 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
  private:
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override {
-    return user_op_conf().Attr4Name(attr_name);
+  const void* Attr4Name(const std::string& attr_name) const override {
+    // return user_op_conf().Attr4Name(attr_name);
+    UNIMPLEMENTED();
+    return nullptr;
   }
 
   const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
@@ -584,9 +589,10 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
 
   const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
 
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override {
-    return user_op_conf().Attr4Name(attr_name);
+  const void* Attr4Name(const std::string& attr_name) const override {
+    // return user_op_conf().Attr4Name(attr_name);
+    UNIMPLEMENTED();
+    return nullptr;
   }
 
  private:

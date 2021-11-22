@@ -210,7 +210,7 @@ class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
 class LocalUserOpInferContext : public user_op::InferContext {
  public:
   LocalUserOpInferContext(const user_op::UserOpConfWrapper* user_op_conf,
-                          const ComposedAttrMap* composed_attrs,
+                          const std::shared_ptr<const OpSchema>* op_schema,
                           const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                           const std::shared_ptr<const ArgTuple>& output_arg_tuple);
   ~LocalUserOpInferContext() override = default;
@@ -321,13 +321,12 @@ class LocalUserOpInferContext : public user_op::InferContext {
     return tensor_desc;
   }
   const user_op::UserOpConfWrapper& user_op_conf() const { return *user_op_conf_; }
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override {
-    return composed_attrs_->Attr4Name(attr_name);
+  const void* Attr4Name(const std::string& attr_name) const override {
+    return CHECK_JUST((*op_schema_)->GetAttr(attr_name.data()));
   }
 
   const user_op::UserOpConfWrapper* user_op_conf_;
-  const ComposedAttrMap* composed_attrs_;
+  const std::shared_ptr<const OpSchema>* op_schema_;
   ZeroCopyBaseContext zero_copy_base_ctx_;
 };
 
@@ -335,7 +334,7 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
  public:
   explicit LocalUserKernelComputeContext(DeviceCtx* device_ctx, const std::string& device_tag,
                                          const user_op::UserOpConfWrapper* user_op_conf,
-                                         const ComposedAttrMap* composed_attrs,
+                                         const std::shared_ptr<const OpSchema>* op_schema,
                                          const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                          const std::shared_ptr<const ArgTuple>& output_arg_tuple,
                                          vm::EagerBlobObject* tmp_buffer);
@@ -365,13 +364,12 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
 
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override {
-    return composed_attrs_->Attr4Name(attr_name);
+  const void* Attr4Name(const std::string& attr_name) const override {
+    return CHECK_JUST((*op_schema_)->GetAttr(attr_name.data()));
   }
 
   const user_op::UserOpConfWrapper* user_op_conf_;
-  const ComposedAttrMap* composed_attrs_;
+  const std::shared_ptr<const OpSchema>* op_schema_;
   DeviceCtx* device_ctx_;
   std::unique_ptr<StreamContext> stream_ctx_;
   LocalUserKernelBaseContext base_ctx_;
@@ -381,7 +379,7 @@ class StatefulLocalOpKernel final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StatefulLocalOpKernel);
   static Maybe<StatefulLocalOpKernel> New(const std::shared_ptr<OperatorConf>& op_conf,
-                                          const Symbol<Device>& device, const AttrMap& base_attrs,
+                                          const Symbol<Device>& device,
                                           const std::shared_ptr<const ParallelDesc>& parallel_desc,
                                           const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                           const std::shared_ptr<const ArgTuple>& output_arg_tuple);
@@ -402,12 +400,20 @@ class StatefulLocalOpKernel final {
     return output_tuple_indexes4mut2_obns_;
   }
 
-  ComposedAttrMap* composed_attrs_for_scheduler_thread() const {
-    return composed_attrs_for_scheduler_thread_.get();
+  const std::shared_ptr<const OpSchema>* op_schema_for_scheduler_thread() const {
+    return op_schema_for_scheduler_thread_.get();
   }
 
-  ComposedAttrMap* composed_attrs_for_main_thread() const {
-    return composed_attrs_for_main_thread_.get();
+  void set_op_schema_for_scheduler_thread(const std::shared_ptr<const OpSchema>& op_schema) {
+    *op_schema_for_scheduler_thread_.get() = op_schema;
+  }
+
+  const std::shared_ptr<const OpSchema>* op_schema_for_main_thread() const {
+    return op_schema_for_main_thread_.get();
+  }
+
+  void set_op_schema_for_main_thread(const std::shared_ptr<const OpSchema>& op_schema) {
+    *op_schema_for_main_thread_.get() = op_schema;
   }
 
   LocalUserOpInferContext* op_infer_ctx_for_scheduler_thread() const {
@@ -452,8 +458,8 @@ class StatefulLocalOpKernel final {
   const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
 
   std::shared_ptr<OperatorConf> op_conf_;
-  std::unique_ptr<ComposedAttrMap> composed_attrs_for_scheduler_thread_;
-  std::unique_ptr<ComposedAttrMap> composed_attrs_for_main_thread_;
+  std::unique_ptr<std::shared_ptr<const OpSchema>> op_schema_for_scheduler_thread_;
+  std::unique_ptr<std::shared_ptr<const OpSchema>> op_schema_for_main_thread_;
   std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
   Symbol<Device> device_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;

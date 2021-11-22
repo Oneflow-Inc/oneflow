@@ -30,6 +30,8 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/functional/tensor_processor.h"
 
+#include "oneflow/core/framework/op_schema.h"
+
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -223,16 +225,16 @@ class ReduceMaxFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
-    MutableAttrMap attrs;
+    auto op_schema = std::make_shared<ReduceMaxOpSchema>();
     if (axis.empty()) {
       std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
+      op_schema->axis = reduce_axis;
     } else {
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+      op_schema->axis = axis;
     }
-    JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    op_schema->keepdims = keepdims;
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, OpExprInterpContext(op_schema));
   }
 
  private:
@@ -247,16 +249,16 @@ class ReduceMinFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
-    MutableAttrMap attrs;
+    auto op_schema = std::make_shared<ReduceMinOpSchema>();
     if (axis.empty()) {
       std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
+      op_schema->axis = reduce_axis;
     } else {
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+      op_schema->axis = axis;
     }
-    JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    op_schema->keepdims = keepdims;
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, OpExprInterpContext(op_schema));
   }
 
  private:
@@ -271,20 +273,19 @@ class ReduceSumFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
-    // const DataType dtype = x->dtype()->data_type();
-    MutableAttrMap attrs;
+    auto op_schema = std::make_shared<ReduceSumOpSchema>();
     if (axis.empty()) {
       std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
+      op_schema->axis = reduce_axis;
     } else {
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+      op_schema->axis = axis;
     }
-    JUST(attrs.SetAttr<bool>("keepdims", keepdims));
+    op_schema->keepdims = keepdims;
     TensorProcessor tensor_processor;
     JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, OpExprInterpContext(op_schema));
   }
 
  private:
@@ -672,9 +673,11 @@ class CastFunctor {
                            const Symbol<DType>& dtype) const {
     if (x->dtype() == dtype) { return x; }
 
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    // MutableAttrMap attrs;
+    // JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    auto schema = std::make_shared<CastOpSchema>();
+    schema->dtype = dtype->data_type();
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, OpExprInterpContext(schema));
   }
 
  private:
@@ -1232,22 +1235,22 @@ class ScalarLogicalBaseFunctor {
   virtual ~ScalarLogicalBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
     const DataType dtype = x->dtype()->data_type();
-    MutableAttrMap attrs;
+    auto op_schema = std::make_shared<ScalarLogicalOpSchema>();
 
     if (IsFloatingDataType(dtype)) {
-      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
-      JUST(attrs.SetAttr<bool>("has_float_operand", true));
-      JUST(attrs.SetAttr<bool>("has_int_operand", false));
+      op_schema->float_operand = JUST(scalar.As<double>());
+      op_schema->has_float_operand = true;
+      op_schema->has_int_operand = false;
     } else if (IsIntegralDataType(dtype) || dtype == DataType::kUInt8) {
-      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
-      JUST(attrs.SetAttr<bool>("has_float_operand", false));
-      JUST(attrs.SetAttr<bool>("has_int_operand", true));
+      op_schema->int_operand = JUST(scalar.As<int64_t>());
+      op_schema->has_float_operand = false;
+      op_schema->has_int_operand = true;
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
                                   << " should be float or int.";
     }
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, OpExprInterpContext(op_schema));
   }
 
  private:

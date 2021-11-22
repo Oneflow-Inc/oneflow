@@ -249,10 +249,10 @@ class FlattenFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& start_dim,
                            const int32_t& end_dim) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("start_dim", start_dim));
-    JUST(attrs.SetAttr<int32_t>("end_dim", end_dim));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    auto op_schema = std::make_shared<FlattenOpSchema>();
+    op_schema->start_dim = start_dim;
+    op_schema->end_dim = end_dim;
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, OpExprInterpContext(op_schema));
   }
 
  private:
@@ -369,9 +369,9 @@ class ArgWhereFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
                                 const Symbol<DType>& dtype) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
+    auto op_schema = std::make_shared<ArgWhereOpSchema>();
+    op_schema->dtype = dtype->data_type();
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, OpExprInterpContext(op_schema));
   }
 
  private:
@@ -860,21 +860,21 @@ class ReshapeFunctor {
       }
     }
     size_t x_count = x->shape()->Count(0);
-    MutableAttrMap attrs;
+    auto schema = std::make_shared<ReshapeOpSchema>();
     if (need_infer_axis == -1) {
       CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
           << "\n Shape " << shape.ToString() << " is invalid for input shape "
           << x->shape()->ToString();
-      JUST(attrs.SetAttr<Shape>("shape", shape));
+      schema->shape = shape;
     } else {
       Shape infered_shape = shape;
       infered_shape.Set(need_infer_axis, x_count / count);
       CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
           << "\n Shape " << shape.ToString() << " is invalid for input shape "
           << x->shape()->ToString();
-      JUST(attrs.SetAttr<Shape>("shape", infered_shape));
+      schema->shape = infered_shape;
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, OpExprInterpContext(schema));
   }
 
  private:
@@ -888,11 +888,11 @@ class SliceBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
                            const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
-    JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
-    JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    auto op_schema = std::make_shared<SliceOpSchema>();
+    op_schema->start = start;
+    op_schema->stop = stop;
+    op_schema->step = step;
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, OpExprInterpContext(op_schema));
   }
 
  protected:

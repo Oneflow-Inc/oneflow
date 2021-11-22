@@ -117,8 +117,8 @@ Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(Symbol<Device> device)
   JUST(BuildOpConf(op_conf.get(), {}));
   op_conf->set_device_tag(JUST(device->of_type()));
   auto parallel_desc = JUST(Placement4Device(device)).shared_from_symbol();
-  const auto& opkernel = JUST(StatefulLocalOpKernel::New(
-      op_conf, device, base_attrs(), parallel_desc, input_arg_tuple(), output_arg_tuple()));
+  const auto& opkernel = JUST(StatefulLocalOpKernel::New(op_conf, device, parallel_desc,
+                                                         input_arg_tuple(), output_arg_tuple()));
   device2kernel_.emplace(device, opkernel);
   return opkernel;
 }
@@ -274,9 +274,9 @@ class UserOpExprInferContext : public user_op::InferContext {
   const std::string& device_tag() const override { return device_tag_; }
 
  private:
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override {
-    return composed_attrs_.Attr4Name(attr_name);
+  const void* Attr4Name(const std::string& attr_name) const override {
+    // return composed_attrs_.Attr4Name(attr_name);
+    return CHECK_JUST(op_schema_->GetAttr(attr_name.data()));
   }
   const UserOpExpr* user_op_expr_;
   const ComposedAttrMap composed_attrs_;
@@ -407,9 +407,9 @@ class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
   }
 
  private:
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override {
-    return composed_attrs_.Attr4Name(attr_name);
+  const void* Attr4Name(const std::string& attr_name) const override {
+    // return composed_attrs_.Attr4Name(attr_name);
+    return CHECK_JUST(op_schema_->GetAttr(attr_name.data()));
   }
   const UserOpExpr* user_op_expr_;
   const ComposedAttrMap composed_attrs_;

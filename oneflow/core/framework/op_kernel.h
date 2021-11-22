@@ -64,12 +64,13 @@ class KernelCreateContext {
   const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
   template<typename T>
   const T& Attr(const std::string& attr_name) const {
-    return AttrValueCast<T>(*Attr4Name(attr_name));
+    // return AttrValueCast<T>(*Attr4Name(attr_name));
+    return *reinterpret_cast<const T*>(Attr4Name(attr_name));
   }
 
  protected:
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
-  virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
+  virtual const void* Attr4Name(const std::string& attr_name) const = 0;
 };
 
 class KernelInitContext {
@@ -118,7 +119,8 @@ class KernelInitContext {
 
   template<typename T>
   const T& Attr(const std::string& attr_name) const {
-    return AttrValueCast<T>(*Attr4Name(attr_name));
+    // return AttrValueCast<T>(*Attr4Name(attr_name));
+    return *reinterpret_cast<const T*>(Attr4Name(attr_name));
   }
 
   template<typename T>
@@ -128,7 +130,7 @@ class KernelInitContext {
   KernelInitContext() = default;
 
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
-  virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
+  virtual const void* Attr4Name(const std::string& attr_name) const = 0;
 };
 
 class KernelInferContext {
@@ -174,7 +176,8 @@ class KernelInferContext {
 
   template<typename T>
   const T& Attr(const std::string& attr_name) const {
-    return AttrValueCast<T>(*Attr4Name(attr_name));
+    // return AttrValueCast<T>(*Attr4Name(attr_name));
+    return *reinterpret_cast<const T*>(Attr4Name(attr_name));
   }
 
   virtual InferContext* MutOpInferContext() {
@@ -191,7 +194,7 @@ class KernelInferContext {
   KernelInferContext() = default;
 
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
-  virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
+  virtual const void* Attr4Name(const std::string& attr_name) const = 0;
 };
 
 class Tensor;
@@ -236,7 +239,8 @@ class KernelComputeContext {
 
   template<typename T>
   const T& Attr(const std::string& attr_name) const {
-    return AttrValueCast<T>(*Attr4Name(attr_name));
+    // return AttrValueCast<T>(*Attr4Name(attr_name));
+    return *reinterpret_cast<const T*>(Attr4Name(attr_name));
   }
 
  protected:
@@ -244,7 +248,7 @@ class KernelComputeContext {
 
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
 
-  virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
+  virtual const void* Attr4Name(const std::string& attr_name) const = 0;
 };
 
 class OpKernelState {

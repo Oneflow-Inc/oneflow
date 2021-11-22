@@ -24,7 +24,6 @@ limitations under the License.
 #include "oneflow/core/framework/attr_value.h"
 
 namespace oneflow {
-namespace one {
 
 class OpSchema {
  public:
@@ -33,7 +32,6 @@ class OpSchema {
     return *reinterpret_cast<const T*>(JUST(GetAttr(attr_name)));
   }
 
- protected:
   virtual Maybe<const void*> GetAttr(const char* attr_name) const = 0;
 };
 
@@ -53,7 +51,7 @@ class ConstantOpSchema : public OpSchema {
     } else if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
     } else {
-      return Error::RuntimeError() << "Op schema has no attribute named " << attr_name;
+      return Error::RuntimeError() << "Constant op has no attribute named " << attr_name;
     }
   }
 
@@ -66,7 +64,129 @@ class ConstantOpSchema : public OpSchema {
   std::vector<std::string> nd_sbp;
 };
 
-}  // namespace one
+class ReshapeOpSchema : public OpSchema {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "shape")) {
+      return (const void*)&shape;
+    } else {
+      return Error::RuntimeError() << "Reshape op has no attribute named " << attr_name;
+    }
+  }
+
+ public:
+  Shape shape;
+};
+
+class CastOpSchema : public OpSchema {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "dtype")) {
+      return (const void*)&dtype;
+    } else {
+      return Error::RuntimeError() << "Cast op has no attribute named " << attr_name;
+    }
+  }
+
+ public:
+  DataType dtype;
+};
+
+class ScalarLogicalOpSchema : public OpSchema {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "float_operand")) {
+      return (const void*)&float_operand;
+    } else if (!strcmp(attr_name, "int_operand")) {
+      return (const void*)&int_operand;
+    } else if (!strcmp(attr_name, "has_float_operand")) {
+      return (const void*)&has_float_operand;
+    } else if (!strcmp(attr_name, "has_int_operand")) {
+      return (const void*)&has_int_operand;
+    } else {
+      return Error::RuntimeError() << "ScalarLogical op has no attribute named " << attr_name;
+    }
+  }
+
+ public:
+  double float_operand;
+  int64_t int_operand;
+  bool has_float_operand;
+  bool has_int_operand;
+};
+
+class ArgWhereOpSchema : public OpSchema {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "dtype")) {
+      return (const void*)&dtype;
+    } else {
+      return Error::RuntimeError() << "ArgWhere op has no attribute named " << attr_name;
+    }
+  }
+
+ public:
+  DataType dtype;
+};
+
+class SliceOpSchema : public OpSchema {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "start")) {
+      return (const void*)&start;
+    } else if (!strcmp(attr_name, "stop")) {
+      return (const void*)&stop;
+    } else if (!strcmp(attr_name, "step")) {
+      return (const void*)&step;
+    } else {
+      return Error::RuntimeError() << "Slice op has no attribute named " << attr_name;
+    }
+  }
+
+ public:
+  std::vector<int64_t> start;
+  std::vector<int64_t> stop;
+  std::vector<int64_t> step;
+};
+
+class FlattenOpSchema : public OpSchema {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "start_dim")) {
+      return (const void*)&start_dim;
+    } else if (!strcmp(attr_name, "end_dim")) {
+      return (const void*)&end_dim;
+    } else {
+      return Error::RuntimeError() << "Flatten op has no attribute named " << attr_name;
+    }
+  }
+
+ public:
+  int32_t start_dim;
+  int32_t end_dim;
+};
+
+class ReduceOpSchema : public OpSchema {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "axis")) {
+      return (const void*)&axis;
+    } else if (!strcmp(attr_name, "keepdims")) {
+      return (const void*)&keepdims;
+    } else {
+      return Error::RuntimeError() << "Reduce op has no attribute named " << attr_name;
+    }
+  }
+
+ public:
+  std::vector<int32_t> axis;
+  bool keepdims;
+};
+
+class ReduceMinOpSchema : public ReduceOpSchema {};
+class ReduceMaxOpSchema : public ReduceOpSchema {};
+class ReduceSumOpSchema : public ReduceOpSchema {};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_OP_SCHEMA_H_
