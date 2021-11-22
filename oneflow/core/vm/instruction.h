@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/intrusive/flat_msg.h"
 #include "oneflow/core/intrusive/intrusive.h"
+#include "oneflow/core/intrusive/object_pool.h"
 #include "oneflow/core/vm/stream_desc.h"
 #include "oneflow/core/vm/vm_object.h"
 #include "oneflow/core/vm/stream_type.h"
@@ -171,8 +172,17 @@ FLAT_MSG_END(InstructionStatusBuffer);
 // clang-format on
 
 struct Instruction;
-class InstructionEdge final : public intrusive::Base {
+class InstructionEdge final
+    : public intrusive::Base,
+      public intrusive::EnableObjectPool<InstructionEdge,
+                                         intrusive::kThreadUnsafeAndDisableDestruct> {
  public:
+  InstructionEdge()
+      : intrusive_ref_(),
+        src_instruction_(),
+        dst_instruction_(),
+        in_edge_hook_(),
+        out_edge_hook_() {}
   void __Init__() {
     clear_src_instruction();
     clear_dst_instruction();
@@ -196,16 +206,9 @@ class InstructionEdge final : public intrusive::Base {
     set_dst_instruction(dst_instruction);
   }
 
- private:
-  friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  InstructionEdge()
-      : intrusive_ref_(),
-        src_instruction_(),
-        dst_instruction_(),
-        in_edge_hook_(),
-        out_edge_hook_() {}
+ private:
   intrusive::Ref intrusive_ref_;
   // fields
   Instruction* src_instruction_;

@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/user/kernels/loss_kernel_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 namespace user_op {
@@ -249,9 +250,9 @@ class BinaryCrossEntropyWithLogitsGradKernel final : public user_op::OpKernel {
           XpuVarNdarray<const T>(pos_weight_shape, pos_weight),
           XpuVarNdarray<const T>(target_blob->shape(), target));
     }
-    ComputeBinaryCrossEntropyWithLogitsGradOut<<<BlocksNum4ThreadsNum(elem_cnt),
-                                                 kCudaThreadsNumPerBlock, 0,
-                                                 ctx->device_ctx()->cuda_stream()>>>(
+    ComputeBinaryCrossEntropyWithLogitsGradOut<<<
+        BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         elem_cnt, static_cast<float>(1.0 / elem_cnt), input, target, dy, dx, weight,
         pos_weight_processed);
   }

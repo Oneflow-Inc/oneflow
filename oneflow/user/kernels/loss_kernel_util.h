@@ -43,12 +43,12 @@ inline ReductionType GetReductionType(const std::string& reduction) {
 
 template<DeviceType device_type, typename T>
 RETURN_VOID_IF_CPU(device_type)
-ApplyLossReductionIfNeed(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* out,
+ApplyLossReductionIfNeed(ep::Stream* stream, int64_t elem_cnt, const T* tmp_out, T* out,
                          const ReductionType reduction_type);
 
 template<DeviceType device_type, typename T>
 RETURN_VOID_IF_GPU(device_type)
-ApplyLossReductionIfNeed(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* out,
+ApplyLossReductionIfNeed(ep::Stream* stream, int64_t elem_cnt, const T* tmp_out, T* out,
                          const ReductionType reduction_type);
 
 template<typename T>
