@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/ep/include/primitive/permute.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
 
@@ -86,7 +87,7 @@ class EagerNcclAllReduceKernel final : public user_op::OpKernel {
     CHECK_EQ(in->data_type(), out->data_type());
     OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
                                 GetNcclDataType(in->data_type()), ncclSum, kernel_state->comm(),
-                                ctx->device_ctx()->cuda_stream()));
+                                ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -124,7 +125,7 @@ class EagerNcclBroadcastKernel final : public user_op::OpKernel {
     }
     OF_NCCL_CHECK(ncclBroadcast(in_ptr, out->mut_dptr(), out->shape().elem_cnt(),
                                 GetNcclDataType(out->data_type()), nccl_root, kernel_state->comm(),
-                                ctx->device_ctx()->cuda_stream()));
+                                ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -159,7 +160,7 @@ class EagerNcclReduceKernel final : public user_op::OpKernel {
     }
     OF_NCCL_CHECK(ncclReduce(in->dptr(), out_ptr, in->shape().elem_cnt(),
                              GetNcclDataType(in->data_type()), ncclSum, root, kernel_state->comm(),
-                             ctx->device_ctx()->cuda_stream()));
+                             ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -187,10 +188,10 @@ class EagerNcclReduceScatterKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->data_type(), out->data_type());
     const auto& op_type = ctx->Attr<std::string>("op_type");
-    OF_NCCL_CHECK(ncclReduceScatter(in->dptr(), out->mut_dptr(), out->shape().elem_cnt(),
-                                    GetNcclDataType(in->data_type()),
-                                    CHECK_JUST(MapAt(op_type2ncclRedOp_t, op_type)),
-                                    kernel_state->comm(), ctx->device_ctx()->cuda_stream()));
+    OF_NCCL_CHECK(ncclReduceScatter(
+        in->dptr(), out->mut_dptr(), out->shape().elem_cnt(), GetNcclDataType(in->data_type()),
+        CHECK_JUST(MapAt(op_type2ncclRedOp_t, op_type)), kernel_state->comm(),
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
@@ -224,7 +225,7 @@ class EagerNcclAllGatherKernel final : public user_op::OpKernel {
     CHECK_EQ(in->data_type(), out->data_type());
     OF_NCCL_CHECK(ncclAllGather(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
                                 GetNcclDataType(in->data_type()), kernel_state->comm(),
-                                ctx->device_ctx()->cuda_stream()));
+                                ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -290,9 +291,9 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
         if (i != out_split_axis) { perm.push_back(i); }
       }
       auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
-          ctx->stream_ctx()->device_type(), transpose_in_dim_vec.size());
+          ctx->stream()->device_type(), transpose_in_dim_vec.size());
       CHECK(transpose);
-      transpose->Launch(ctx->stream_ctx(), in->data_type(), transpose_in_dim_vec.size(),
+      transpose->Launch(ctx->stream(), in->data_type(), transpose_in_dim_vec.size(),
                         transpose_in_dim_vec.data(), in->dptr(), perm.data(),
                         tmp_buffer->mut_dptr());
     }
@@ -312,11 +313,12 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
         OF_NCCL_CHECK(ncclSend(reinterpret_cast<const void*>(
                                    reinterpret_cast<const char*>(pack_to_ptr) + j * chunk_size),
                                elem_per_chunk, GetNcclDataType(in->data_type()), j,
-                               kernel_state->comm(), ctx->device_ctx()->cuda_stream()));
+                               kernel_state->comm(),
+                               ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
         OF_NCCL_CHECK(ncclRecv(
             reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr) + j * chunk_size),
             elem_per_chunk, GetNcclDataType(in->data_type()), j, kernel_state->comm(),
-            ctx->device_ctx()->cuda_stream()));
+            ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
       }
       OF_NCCL_CHECK(ncclGroupEnd());
     }
@@ -334,21 +336,21 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
       FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.push_back(i); }
       perm.insert(perm.begin() + in_split_axis, 0);
       auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
-          ctx->stream_ctx()->device_type(), unpack_from_dim_vec.size());
+          ctx->stream()->device_type(), unpack_from_dim_vec.size());
       CHECK(transpose);
-      transpose->Launch(ctx->stream_ctx(), in->data_type(), unpack_from_dim_vec.size(),
+      transpose->Launch(ctx->stream(), in->data_type(), unpack_from_dim_vec.size(),
                         unpack_from_dim_vec.data(), unpack_from_ptr, perm.data(), out->mut_dptr());
     }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EAGER_NCCL_S2S_KERNEL(dtype)                                           \
-  REGISTER_USER_KERNEL("eager_nccl_s2s")                                                \
-      .SetCreateFn<EagerNcclS2SKernel<dtype>>()                                         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_EAGER_NCCL_S2S_KERNEL(dtype)                                            \
+  REGISTER_USER_KERNEL("eager_nccl_s2s")                                                 \
+      .SetCreateFn<EagerNcclS2SKernel<dtype>>()                                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                    \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferEagerNcclS2SKernelTmpBufferSize);
 
 REGISTER_EAGER_NCCL_S2S_KERNEL(int8_t)

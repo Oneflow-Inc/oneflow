@@ -29,7 +29,7 @@ class CopyNd : public Primitive {
   CopyNd() = default;
   ~CopyNd() override = default;
 
-  virtual void Launch(StreamContext* stream_ctx, DataType data_type, size_t num_dims, void* dst,
+  virtual void Launch(Stream* stream, DataType data_type, size_t num_dims, void* dst,
                       const int64_t* dst_dims, const int64_t* dst_pos, const void* src,
                       const int64_t* src_dims, const int64_t* src_pos,
                       const int64_t* extent) const = 0;

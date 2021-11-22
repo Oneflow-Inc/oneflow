@@ -81,8 +81,7 @@ class NllKernel final : public user_op::OpKernel {
     const K* target = target_blob->dptr<K>();
     T* out = out_blob->mut_dptr<T>();
     T* total_weight = total_weight_blob->mut_dptr<T>();
-    T* tmp_buffer = tmp_buffer_blob->mut_dptr<T>();
-    T* tmp_out = tmp_buffer;
+    T* tmp_out = reduction == ReductionType::kNone ? nullptr : tmp_buffer_blob->mut_dptr<T>();
     const T* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
 
@@ -127,8 +126,7 @@ class NllGradKernel final : public user_op::OpKernel {
     T* dx = dx_blob->mut_dptr<T>();
     const T* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
-    Memset<DeviceType::kCPU>(ctx->device_ctx(), dx, 0,
-                             GetCudaAlignedSize(input_elem_cnt * sizeof(T)));
+    Memset<DeviceType::kCPU>(ctx->stream(), dx, 0, GetCudaAlignedSize(input_elem_cnt * sizeof(T)));
     ComputeNllGradOut(num_instances, num_classes, ignore_index, target, dy, dx, weight,
                       total_weight, reduction);
   }
@@ -136,21 +134,21 @@ class NllGradKernel final : public user_op::OpKernel {
 };
 
 }  // namespace
-#define REGISTER_NLL_KERNEL(dtype_pair, ltype_pair)                                           \
-  REGISTER_USER_KERNEL("nll")                                                                 \
-      .SetCreateFn<NllKernel<OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(ltype_pair)>>()   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                         \
-                       & (user_op::HobDataType("target", 0) == OF_PP_PAIR_SECOND(ltype_pair)) \
-                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))   \
+#define REGISTER_NLL_KERNEL(dtype_pair, ltype_pair)                                            \
+  REGISTER_USER_KERNEL("nll")                                                                  \
+      .SetCreateFn<NllKernel<OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(ltype_pair)>>()    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                          \
+                       && (user_op::HobDataType("target", 0) == OF_PP_PAIR_SECOND(ltype_pair)) \
+                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))   \
       .SetInferTmpSizeFn(loss::GenDefaultInferTmpSizeFn<OF_PP_PAIR_FIRST(dtype_pair)>());
 
 #define REGISTER_NLL_GRAD_KERNEL(dtype_pair, ltype_pair)                                        \
   REGISTER_USER_KERNEL("nll_grad")                                                              \
       .SetCreateFn<NllGradKernel<OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(ltype_pair)>>() \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
-                       & (user_op::HobDataType("target", 0) == OF_PP_PAIR_SECOND(ltype_pair))   \
-                       & (user_op::HobDataType("dy", 0) == OF_PP_PAIR_SECOND(dtype_pair))       \
-                       & (user_op::HobDataType("dx", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
+                       && (user_op::HobDataType("target", 0) == OF_PP_PAIR_SECOND(ltype_pair))  \
+                       && (user_op::HobDataType("dy", 0) == OF_PP_PAIR_SECOND(dtype_pair))      \
+                       && (user_op::HobDataType("dx", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_NLL_KERNEL, FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 

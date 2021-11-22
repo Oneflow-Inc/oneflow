@@ -56,7 +56,13 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
         input_blob_objects_(input_blob_objects),
         output_blob_objects_(output_blob_objects),
         param_blob_objects_(param_blob_objects),
-        nn_graph_(nn_graph) {}
+        nn_graph_(nn_graph),
+        input_dependences_(),
+        output_dependences_() {
+    ForEachConstMirroredObject(SetInserter(&input_dependences_));
+    ForEachMutMirroredObject(SetInserter(&output_dependences_));
+    ForEachMut2MirroredObject(SetInserter(&output_dependences_));
+  }
 
   const one::EagerBlobObjectListPtr& input_blob_objects() const { return input_blob_objects_; }
   const one::EagerBlobObjectListPtr& output_blob_objects() const { return output_blob_objects_; }
@@ -68,17 +74,14 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
     return op_name2end_event_record_;
   }
 
-  void ForEachConstMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override;
+  const DependenceVector& input_dependences() const override { return input_dependences_; }
+  const DependenceVector& output_dependences() const override { return output_dependences_; }
 
-  void ForEachMutMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override;
+  void ForEachConstMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
 
-  void ForEachMut2MirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override;
+  void ForEachMutMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
+
+  void ForEachMut2MirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
 
  private:
   mutable intrusive::shared_ptr<LocalDepObject> inputs_local_dep_object_;
@@ -89,6 +92,8 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
   one::EagerBlobObjectListPtr output_blob_objects_;
   one::EagerBlobObjectListPtr param_blob_objects_;
   std::shared_ptr<NNGraphIf> nn_graph_;
+  DependenceVector input_dependences_;
+  DependenceVector output_dependences_;
 };
 }  // namespace vm
 }  // namespace oneflow
