@@ -417,8 +417,8 @@ class ConvCpuKernel final : public user_op::OpKernel {
     const int32_t weight_step = weight_group_interval * weight->shape().Count(1);
     const int32_t output_step = output_group_interval * out->shape().Count(2);
     const int32_t m = conv_state->weight_5d_shape_.At(0) / conv_state->groups;
-    const int32_t k = conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3);
-    const int32_t n = conv_state->weight_5d_shape_.Count(1);
+    const int32_t n = conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3);
+    const int32_t k = conv_state->weight_5d_shape_.Count(1);
     bool is_bias_mul_inited = false;
 
     for (int64_t i = 0; i < in->shape().At(0); ++i) {
@@ -436,8 +436,8 @@ class ConvCpuKernel final : public user_op::OpKernel {
         // channels last:  out = (weight * col_buf)(T)
         conv_state->forward_func_(CblasNoTrans, CblasNoTrans,
                                   m,  // filter / groups
-                                  k,  // od * oh * ow / groups
-                                  n,  // ci * kd * kh * kw / groups
+                                  n,  // od * oh * ow
+                                  k,  // ci * kd * kh * kw / groups
                                   static_cast<T>(1), weight_ptr, col_buf_dptr, static_cast<T>(0),
                                   output_ptr);
         input_ptr += input_step;
@@ -528,8 +528,8 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
     const int32_t filter_step = filter_group_interval * filter->shape().Count(1);
     const int32_t dy_step = dy_group_interval * dy->shape().Count(2);
     const int32_t m = conv_state->weight_5d_shape_.Count(1);
-    const int32_t k = conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3);
-    const int32_t n = conv_state->weight_5d_shape_.At(0) / conv_state->groups;
+    const int32_t n = conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3);
+    const int32_t k = conv_state->weight_5d_shape_.At(0) / conv_state->groups;
 
     Memset<DeviceType::kCPU>(ctx->stream(), dx->mut_dptr<T>(), 0,
                              dx->shape().elem_cnt() * sizeof(T));
@@ -544,8 +544,8 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
         NewKernelUtil<DeviceType::kCPU>::OFGemm(
             nullptr, CblasTrans, conv_state->is_out_diff_need_trans_,
             m,  //  ci * kd * kh * kw / groups
-            k,  //  od * oh * ow / groups
-            n,  //  filter / groups
+            n,  //  od * oh * ow
+            k,  //  filter / groups
             static_cast<T>(1), filter_ptr, dy_ptr, static_cast<T>(0), col_buf->mut_dptr<T>());
 
         // in' = col2im(col_buf')
@@ -619,8 +619,8 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
     const int32_t dy_step = dy_group_interval * dy->shape().Count(2);
     const int32_t filter_diff_step = filter_diff_group_interval * filter_diff->shape().Count(1);
     const int32_t m = conv_state->weight_5d_shape_.At(0) / conv_state->groups;
-    const int32_t k = conv_state->weight_5d_shape_.Count(1);
-    const int32_t n = conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3);
+    const int32_t n = conv_state->weight_5d_shape_.Count(1);
+    const int32_t k = conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3);
 
     Memset<DeviceType::kCPU>(ctx->stream(), filter_diff->mut_dptr<T>(), 0,
                              filter_diff->shape().elem_cnt() * sizeof(T));
@@ -640,8 +640,8 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
         NewKernelUtil<DeviceType::kCPU>::OFGemm(
             nullptr, conv_state->is_out_diff_need_trans_, CblasTrans,
             m,  //  filter / groups
-            k,  //  ci * kd * kh * kw / groups
-            n,  //  od * oh * ow / groups
+            n,  //  ci * kd * kh * kw
+            k,  //  od * oh * ow / groups
             static_cast<T>(1), dy_ptr, col_buf->dptr<T>(), static_cast<T>(1), filter_diff_ptr);
         x_ptr += x_step;
         dy_ptr += dy_step;
