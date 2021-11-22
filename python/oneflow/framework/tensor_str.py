@@ -371,4 +371,6 @@ def _gen_tensor_str(tensor):
 
 def _gen_tensor_meta_str(tensor):
     # meta
+    if set_printoptions.user_set_linewidth == False:
+        _autoset_linewidth()
     return _gen_tensor_str_template(tensor, True)
