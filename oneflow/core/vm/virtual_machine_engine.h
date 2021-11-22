@@ -42,7 +42,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   using ActiveStreamList = intrusive::List<INTRUSIVE_FIELD(Stream, active_stream_hook_)>;
   using ThreadCtxList = intrusive::List<INTRUSIVE_FIELD(ThreadCtx, thread_ctx_hook_)>;
   using LogicalObjectDeleteList = intrusive::List<INTRUSIVE_FIELD(LogicalObject, delete_hook_)>;
-  using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, instruction_hook_)>;
   using LivelyInstructionList =
       intrusive::List<INTRUSIVE_FIELD(Instruction, lively_instruction_hook_)>;
   using BarrierInstructionList =
@@ -132,7 +131,11 @@ class VirtualMachineEngine final : public intrusive::Base {
   bool OnSchedulerThread(const StreamType& stream_type);
 
   void ReleaseInstruction(Instruction* instruction);
-  void MakeInstructions(InstructionMsg*, /*out*/ InstructionList* ret_instruction_list);
+  template<void (VirtualMachineEngine::*DoEachInstruction)(Instruction*)>
+  void ForEachNewInstruction(InstructionMsg* instr_msg, Stream* stream,
+                             const std::shared_ptr<const ParallelDesc>& pd);
+  template<void (VirtualMachineEngine::*DoEachInstruction)(Instruction*)>
+  void MakeInstructions(InstructionMsg*);
   void RunInstructionsInAdvance(InstructionMsg* instr_msg);
   template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
   void ForEachMirroredObject(Id2LogicalObject* id2logical_object, const Operand& operand,
@@ -170,13 +173,21 @@ class VirtualMachineEngine final : public intrusive::Base {
   RwMutexedObjectAccess* AccessMirroredObject(OperandAccessType access_type,
                                               MirroredObject* mirrored_object,
                                               Instruction* instrution);
-  void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object, Instruction* instruction);
+  void ConsumeAndTryDispatch(Instruction* instruction);
+  void ConsumeMirroredObjects(Instruction* instruction);
   void DispatchInstruction(Instruction* instruction);
   void TryDeleteLogicalObjects();
 
   bool EdgeDispatchable(const Instruction* src, const Instruction* dst) const;
   bool Dispatchable(Instruction* instruction) const;
   void TryDispatchReadyInstructions();
+
+  // deprecated single-client functions
+  template<void (VirtualMachineEngine::*DoEachInstruction)(Instruction*)>
+  void SingleClientMakeInstructions(InstructionMsg*);
+  void SingleClientConsumeAndTryDispatch(Instruction* instruction);
+  void SingleClientConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
+                                          Instruction* instruction);
 
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
