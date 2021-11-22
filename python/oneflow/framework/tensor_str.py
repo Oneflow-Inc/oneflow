@@ -69,7 +69,7 @@ def set_printoptions(
             the above options. (any one of `default`, `short`, `full`)
         sci_mode: Enable (True) or disable (False) scientific notation. If
             None (default) is specified, the value is defined by
-            `torch._tensor_str._Formatter`. This value is automatically chosen
+            `oneflow._tensor_str._Formatter`. This value is automatically chosen
             by the framework.
     """
     if profile is not None:
