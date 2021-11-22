@@ -34,12 +34,7 @@ void TensorViewOperand::ForEachMut2MirroredObject(
     const std::function<void(MirroredObject* compute)>& DoEach) const {}
 
 void TensorViewOperand::ForEachConstMirroredObject(
-    const std::function<void(MirroredObject* compute, MirroredObject* compute2)>& DoEach) const {
-        DoEach(
-            compute_local_dep_object_->mut_mirrored_object(),
-            compute_local_dep_object_->mut_mirrored_object()
-        );
-    }
+    const std::function<void(MirroredObject* compute, MirroredObject* compute2)>& DoEach) const {}
 
 void TensorViewOperand::ForEachMutMirroredObject(
     const std::function<void(MirroredObject* compute, MirroredObject* compute2)>& DoEach) const {
@@ -50,12 +45,7 @@ void TensorViewOperand::ForEachMutMirroredObject(
 }
 
 void TensorViewOperand::ForEachMut2MirroredObject(
-    const std::function<void(MirroredObject* compute, MirroredObject* compute2)>& DoEach) const {
-        DoEach(
-            compute_local_dep_object_->mut_mirrored_object(),
-            compute_local_dep_object_->mut_mirrored_object()
-        );
-    }
+    const std::function<void(MirroredObject* compute, MirroredObject* compute2)>& DoEach) const {}
 
 }  // namespace vm
 }  // namespace oneflow
