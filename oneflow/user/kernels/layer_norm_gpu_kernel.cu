@@ -319,8 +319,9 @@ void DispatchLayerNormForwardGpu(ep::Stream* stream, const int num_instances, co
     LayerNormForwardGpu<T, false, true>(stream, num_instances, norm_size, epsilon, x_ptr, gamma_ptr,
                                         beta_ptr, normalized_ptr, y_ptr, mean, inv_variance);
   } else {
-    LayerNormForwardGpu<T, false, false>(stream, num_instances, norm_size, epsilon, x_ptr, gamma_ptr,
-                                         beta_ptr, normalized_ptr, y_ptr, mean, inv_variance);
+    LayerNormForwardGpu<T, false, false>(stream, num_instances, norm_size, epsilon, x_ptr,
+                                         gamma_ptr, beta_ptr, normalized_ptr, y_ptr, mean,
+                                         inv_variance);
   }
 }
 
@@ -329,15 +330,16 @@ void LaunchLayerNormForward(ep::Stream* stream, const int num_instances, const i
                             const double epsilon, const T* x_ptr, const T* gamma_ptr,
                             const T* beta_ptr, T* normalized_ptr, T* y_ptr, user_op::Tensor* mean,
                             user_op::Tensor* inv_variance) {
-  DispatchLayerNormForwardGpu<T>(stream, num_instances, norm_size, epsilon, x_ptr, gamma_ptr, beta_ptr,
-                                 normalized_ptr, y_ptr, mean, inv_variance);
+  DispatchLayerNormForwardGpu<T>(stream, num_instances, norm_size, epsilon, x_ptr, gamma_ptr,
+                                 beta_ptr, normalized_ptr, y_ptr, mean, inv_variance);
 }
 
 template<>
-void LaunchLayerNormForward<float16>(ep::Stream* stream, const int num_instances, const int norm_size,
-                                     const double epsilon, const float16* x_ptr,
-                                     const float16* gamma_ptr, const float16* beta_ptr,
-                                     float16* normalized_ptr, float16* y_ptr, user_op::Tensor* mean,
+void LaunchLayerNormForward<float16>(ep::Stream* stream, const int num_instances,
+                                     const int norm_size, const double epsilon,
+                                     const float16* x_ptr, const float16* gamma_ptr,
+                                     const float16* beta_ptr, float16* normalized_ptr,
+                                     float16* y_ptr, user_op::Tensor* mean,
                                      user_op::Tensor* inv_variance) {
   DispatchLayerNormForwardGpu<half>(
       stream, num_instances, norm_size, epsilon, reinterpret_cast<const half*>(x_ptr),
@@ -386,7 +388,7 @@ class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
       }
       CHECK_EQ(y->shape().elem_cnt() % instance_size, 0);
     }
-    if (IsForwardFusedKernelSupported<T>(norm_size, instance_size)) {
+    if (norm_size == instance_size) {
       LayerNormForwardGpu<T>(ctx->stream(), num_instances, norm_size, epsilon, x->dptr<T>(),
                              gamma_ptr, beta_ptr, normalized->mut_dptr<T>(), y->mut_dptr<T>(), mean,
                              inv_variance);
@@ -455,8 +457,8 @@ class LayerNormGradKernel final : public user_op::OpKernel, public user_op::Cuda
     cuda::layer_norm::DirectStore<ComputeType, T> store(dx->mut_dptr<T>(), cols);
     OF_CUDA_CHECK((cuda::layer_norm::DispatchLayerNormGrad<decltype(load_x), decltype(load_dy),
                                                            decltype(store), ComputeType>(
-        ctx->stream()->As<ep::CudaStream>()->cuda_stream(), load_x, load_dy, store, mean->dptr<ComputeType>(),
-        inv_variance->dptr<ComputeType>(), rows, cols)));
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream(), load_x, load_dy, store,
+        mean->dptr<ComputeType>(), inv_variance->dptr<ComputeType>(), rows, cols)));
   };
 };
 
