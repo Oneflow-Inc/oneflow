@@ -899,8 +899,8 @@ class FusedScaleMaskSoftmaxDropoutGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& softmax_y,
                            const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& mask,
-                           const std::shared_ptr<one::Tensor>& dropout_mask,
-                           const float& scale, const float& dropout_scale) const {
+                           const std::shared_ptr<one::Tensor>& dropout_mask, const float& scale,
+                           const float& dropout_scale) const {
     MutableAttrMap attrs_;
     JUST(attrs_.SetAttr<float>("scale_value", scale));
     JUST(attrs_.SetAttr<float>("dropout_scale_value", dropout_scale));
