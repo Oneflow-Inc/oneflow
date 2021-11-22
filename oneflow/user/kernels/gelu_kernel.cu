@@ -16,6 +16,8 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
 #include "oneflow/core/cuda/elementwise.cuh"
+#include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -30,7 +32,7 @@ struct GeluFunctor {
 
 template<typename T>
 struct GeluGradFunctor {
-  const T coef = sqrt(static_cast<T>(2.0) / acos(static_cast<T>(-1.0)));
+  const T coef = std::sqrt(static_cast<T>(2.0) / std::acos(static_cast<T>(-1.0)));
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
     return static_cast<T>(0.5)
            * (static_cast<T>(1.0) + erf(static_cast<T>(M_SQRT1_2) * x)
@@ -58,18 +60,20 @@ struct GeluGradFunctor<half> {
 }  // namespace
 
 template<typename T>
-class GpuGeluKernel final : public user_op::OpKernel {
+class GpuGeluKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   GpuGeluKernel() = default;
   ~GpuGeluKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t elem_cnt = x->shape().elem_cnt();
-    OF_CUDA_CHECK((cuda::elementwise::Unary(GeluFunctor<T>(), elem_cnt, y->mut_dptr<T>(),
-                                            x->dptr<T>(), ctx->device_ctx()->cuda_stream())));
+    OF_CUDA_CHECK(
+        (cuda::elementwise::Unary(GeluFunctor<T>(), elem_cnt, y->mut_dptr<T>(), x->dptr<T>(),
+                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -77,38 +81,39 @@ class GpuGeluKernel final : public user_op::OpKernel {
 
 #define REGISTER_GPU_GELU_KERNEL(dtype)                                             \
   REGISTER_USER_KERNEL("gelu").SetCreateFn<GpuGeluKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == "gpu")                                            \
-      & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+      (user_op::HobDeviceType() == DeviceType::kGPU)                                \
+      && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_GELU_KERNEL(float)
 REGISTER_GPU_GELU_KERNEL(double)
 REGISTER_GPU_GELU_KERNEL(half)
 
 template<typename T>
-class GpuGeluGradKernel final : public user_op::OpKernel {
+class GpuGeluGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   GpuGeluGradKernel() = default;
   ~GpuGeluGradKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const int64_t elem_cnt = x->shape().elem_cnt();
-    OF_CUDA_CHECK(
-        (cuda::elementwise::Binary(GeluGradFunctor<T>(), elem_cnt, dx->mut_dptr<T>(), x->dptr<T>(),
-                                   dy->dptr<T>(), ctx->device_ctx()->cuda_stream())));
+    OF_CUDA_CHECK((cuda::elementwise::Binary(GeluGradFunctor<T>(), elem_cnt, dx->mut_dptr<T>(),
+                                             x->dptr<T>(), dy->dptr<T>(),
+                                             ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_GELU_GRAD_KERNEL(dtype)              \
-  REGISTER_USER_KERNEL("gelu_grad")                       \
-      .SetCreateFn<GpuGeluGradKernel<dtype>>()            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_GPU_GELU_GRAD_KERNEL(dtype)                          \
+  REGISTER_USER_KERNEL("gelu_grad")                                   \
+      .SetCreateFn<GpuGeluGradKernel<dtype>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_GELU_GRAD_KERNEL(float)
 REGISTER_GPU_GELU_GRAD_KERNEL(double)

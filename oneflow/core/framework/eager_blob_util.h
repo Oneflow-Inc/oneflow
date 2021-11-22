@@ -26,7 +26,7 @@ namespace oneflow {
 
 namespace compatible_py {
 
-class EagerPhysicalBlobHeader : public BlobHeaderTrait {
+class EagerPhysicalBlobHeader final : public BlobHeaderTrait {
  public:
   EagerPhysicalBlobHeader(const std::shared_ptr<Shape>& static_shape,
                           const std::shared_ptr<Shape>& shape, DataType dtype);

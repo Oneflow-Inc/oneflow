@@ -16,15 +16,17 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EAGER_LOCAL_CALL_OPKERNEL_PHY_INSTR_OPERAND_H_
 #define ONEFLOW_CORE_EAGER_LOCAL_CALL_OPKERNEL_PHY_INSTR_OPERAND_H_
 
+#include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_interpreter.h"
-#include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/instruction_operand.h"
 
 namespace oneflow {
 namespace one {
 
 class StatefulLocalOpKernel;
+class ConsistentTensorInferResult;
 
 using EagerBlobObjectList = std::vector<std::shared_ptr<vm::EagerBlobObject>>;
 using EagerBlobObjectListPtr =
@@ -46,17 +48,21 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   LocalCallOpKernelPhyInstrOperand(LocalCallOpKernelPhyInstrOperand&&) = delete;
   ~LocalCallOpKernelPhyInstrOperand() override = default;
 
-  LocalCallOpKernelPhyInstrOperand(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
-                                   const one::EagerBlobObjectListPtr& inputs,
-                                   const one::EagerBlobObjectListPtr& outputs,
-                                   const one::OpExprInterpContext& op_interp_ctx_)
-      : opkernel_(opkernel), inputs_(inputs), outputs_(outputs), op_interp_ctx_(op_interp_ctx_) {}
+  template<typename... Args>
+  static Maybe<LocalCallOpKernelPhyInstrOperand> New(Args&&... args) {
+    auto* ptr = new LocalCallOpKernelPhyInstrOperand(std::forward<Args>(args)...);
+    JUST(ptr->Init());
+    return std::shared_ptr<LocalCallOpKernelPhyInstrOperand>(ptr);
+  }
 
   const one::StatefulLocalOpKernel& opkernel() const { return *opkernel_; }
   const one::EagerBlobObjectListPtr& inputs() const { return inputs_; }
   const one::EagerBlobObjectListPtr& outputs() const { return outputs_; }
   const AttrMap& attrs() const { return op_interp_ctx_.attrs; }
   const one::OpExprInterpContext& op_interp_ctx() const { return op_interp_ctx_; }
+  const one::DevVmDepObjectConsumeMode& dev_vm_dep_object_consume_mode() const {
+    return dev_vm_dep_object_consume_mode_;
+  }
 
   one::StatefulLocalOpKernel* mut_opkernel() { return opkernel_.get(); }
 
@@ -66,28 +72,55 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
     return Maybe<void>::Ok();
   }
 
-  void ForEachConstMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override;
+  const DependenceVector& input_dependences() const override { return input_dependences_; }
+  const DependenceVector& output_dependences() const override { return output_dependences_; }
 
-  void ForEachMutMirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override;
+  void ForEachConstMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
 
-  void ForEachMut2MirroredObject(
-      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override;
+  void ForEachMutMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
 
+  void ForEachMut2MirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
+
+  bool need_temp_storage() const { return need_temp_storage_; }
   const user_op::OpKernel* user_opkernel() const { return user_opkernel_; }
 
-  void set_user_opkernel(const user_op::OpKernel* user_opkernel) { user_opkernel_ = user_opkernel; }
+  const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result()
+      const {
+    return consistent_tensor_infer_result_;
+  }
 
  private:
+  LocalCallOpKernelPhyInstrOperand(
+      const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+      const one::EagerBlobObjectListPtr& inputs, const one::EagerBlobObjectListPtr& outputs,
+      const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
+      const one::OpExprInterpContext& op_interp_ctx_,
+      const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode)
+      : opkernel_(opkernel),
+        inputs_(inputs),
+        outputs_(outputs),
+        consistent_tensor_infer_result_(consistent_tensor_infer_result),
+        op_interp_ctx_(op_interp_ctx_),
+        dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode),
+        input_dependences_(),
+        output_dependences_() {
+    ForEachConstMirroredObject(SetInserter(&input_dependences_));
+    ForEachMutMirroredObject(SetInserter(&output_dependences_));
+    ForEachMut2MirroredObject(SetInserter(&output_dependences_));
+  }
+
+  Maybe<void> Init();
+
   std::shared_ptr<one::StatefulLocalOpKernel> opkernel_;
   one::EagerBlobObjectListPtr inputs_;
   one::EagerBlobObjectListPtr outputs_;
+  std::shared_ptr<const one::ConsistentTensorInferResult> consistent_tensor_infer_result_;
   const one::OpExprInterpContext op_interp_ctx_;
   const user_op::OpKernel* user_opkernel_;
+  bool need_temp_storage_;
+  const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode_;
+  DependenceVector input_dependences_;
+  DependenceVector output_dependences_;
 };
 
 }  // namespace vm

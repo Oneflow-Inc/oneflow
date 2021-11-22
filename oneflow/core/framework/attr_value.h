@@ -93,7 +93,7 @@ class AttrVal {
   bool operator!=(const AttrVal& other) const { return !(*this == other); }
 
  private:
-  OF_DISALLOW_COPY_AND_MOVE(AttrVal)
+  OF_DISALLOW_COPY_AND_MOVE(AttrVal);
 };
 
 template<typename T>
@@ -112,7 +112,7 @@ class TypedAttrVal final : public AttrVal {
   const T& val() const { return val_; }
 
  private:
-  OF_DISALLOW_COPY_AND_MOVE(TypedAttrVal)
+  OF_DISALLOW_COPY_AND_MOVE(TypedAttrVal);
 
   T val_;
 };

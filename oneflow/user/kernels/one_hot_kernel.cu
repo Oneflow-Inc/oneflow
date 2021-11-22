@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -34,12 +35,13 @@ __global__ void OneHotEncodeGpu(int64_t elem_cnt, const int64_t depth, const T o
 }  // namespace
 
 template<typename T, typename K>
-class GpuOneHotKernel final : public user_op::OpKernel {
+class GpuOneHotKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   GpuOneHotKernel() = default;
   ~GpuOneHotKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -52,7 +54,7 @@ class GpuOneHotKernel final : public user_op::OpKernel {
     const T off_value = IsFloatingDataType(dtype)
                             ? static_cast<T>(ctx->Attr<double>("floating_off_value"))
                             : static_cast<T>(ctx->Attr<int64_t>("integer_off_value"));
-    RUN_CUDA_KERNEL((OneHotEncodeGpu<T, K>), ctx->device_ctx(), num_indices * depth,
+    RUN_CUDA_KERNEL((OneHotEncodeGpu<T, K>), ctx->stream(), num_indices * depth,
                     num_indices * depth, depth, on_value, off_value, indices->dptr<K>(),
                     out->mut_dptr<T>());
   }
@@ -61,9 +63,9 @@ class GpuOneHotKernel final : public user_op::OpKernel {
 
 #define REGISTER_GPU_ONE_HOT_KERNEL(dtype, itype)                                               \
   REGISTER_USER_KERNEL("one_hot").SetCreateFn<GpuOneHotKernel<dtype, itype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == "gpu")                                                        \
-      & (user_op::HobDataType("indices", 0) == GetDataType<itype>::value)                       \
-      & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+      (user_op::HobDeviceType() == DeviceType::kGPU)                                            \
+      && (user_op::HobDataType("indices", 0) == GetDataType<itype>::value)                      \
+      && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_ONE_HOT_KERNEL(int32_t, int32_t)
 REGISTER_GPU_ONE_HOT_KERNEL(int32_t, int64_t)

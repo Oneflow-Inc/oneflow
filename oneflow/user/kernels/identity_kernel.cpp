@@ -15,13 +15,14 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
 namespace {
 
 template<DeviceType device_type>
-class IdentityKernel final : public user_op::OpKernel {
+class IdentityKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   IdentityKernel() = default;
   ~IdentityKernel() override = default;
@@ -34,7 +35,7 @@ class IdentityKernel final : public user_op::OpKernel {
     CHECK_EQ(out->shape(), in_shape);
     const DataType in_data_type = in->data_type();
     CHECK_EQ(out->data_type(), in_data_type);
-    Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<void>(), in->dptr<void>(),
+    Memcpy<device_type>(ctx->stream(), out->mut_dptr<void>(), in->dptr<void>(),
                         in_shape.elem_cnt() * GetSizeOfDataType(in_data_type));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -43,7 +44,7 @@ class IdentityKernel final : public user_op::OpKernel {
 #define REGISTER_IDENTITY_KERNEL(op, device)                                                    \
   REGISTER_USER_KERNEL(op)                                                                      \
       .SetCreateFn<IdentityKernel<device>>()                                                    \
-      .SetIsMatchedHob(user_op::HobDeviceTag() == device)                                       \
+      .SetIsMatchedHob(user_op::HobDeviceType() == device)                                      \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, false));                      \

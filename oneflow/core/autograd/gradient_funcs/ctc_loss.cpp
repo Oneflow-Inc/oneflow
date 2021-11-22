@@ -17,24 +17,25 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
 
-struct CTCLossInterpState : public OpExprInterpState {
+struct CTCLossCaptureState : public AutoGradCaptureState {
+  int64_t max_target_length;
   int32_t blank;
   bool zero_infinity;
   bool requires_grad;
 };
 
-class CTCLoss : public OpExprGradFunction<CTCLossInterpState> {
+class CTCLoss : public OpExprGradFunction<CTCLossCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(CTCLossInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(CTCLossCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const CTCLossInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const CTCLossCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -46,17 +47,16 @@ Maybe<void> CTCLoss::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  const std::string& op_name = fw_op_expr->op_name();
-  grad_op_ = JUST(op_expr_helper::CTCLossGradOp(0, false, GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CTCLoss::Capture(CTCLossInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> CTCLoss::Capture(CTCLossCaptureState* ctx, const TensorTuple& inputs,
                              const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
+  ctx->max_target_length = JUST(composed_attrs.GetAttr<int64_t>("max_target_length"));
   ctx->blank = JUST(composed_attrs.GetAttr<int32_t>("blank"));
   ctx->zero_infinity = JUST(composed_attrs.GetAttr<bool>("zero_infinity"));
 
@@ -71,7 +71,7 @@ Maybe<void> CTCLoss::Capture(CTCLossInterpState* ctx, const TensorTuple& inputs,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CTCLoss::Apply(const CTCLossInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> CTCLoss::Apply(const CTCLossCaptureState* ctx, const TensorTuple& out_grads,
                            TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 2);
@@ -83,13 +83,10 @@ Maybe<void> CTCLoss::Apply(const CTCLossInterpState* ctx, const TensorTuple& out
   const auto& targets = ctx->SavedTensors().at(3);
   const auto& input_lengths = ctx->SavedTensors().at(4);
   const auto& target_lengths = ctx->SavedTensors().at(5);
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<int32_t>("blank", ctx->blank));
-  JUST(attrs.SetAttr<bool>("zero_infinity", ctx->zero_infinity));
   in_grads->resize(4);
-  in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(
-      *grad_op_, {grad_out, log_probs, targets, input_lengths, target_lengths, loss, alpha},
-      attrs));
+  in_grads->at(0) = JUST(functional::CtcLossGrad(grad_out, log_probs, targets, input_lengths,
+                                                 target_lengths, loss, alpha, ctx->blank,
+                                                 ctx->zero_infinity, ctx->max_target_length));
   return Maybe<void>::Ok();
 }
 

@@ -15,42 +15,36 @@ limitations under the License.
 */
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
 
-struct SparseSoftmaxCrossEntropyInterpState : public OpExprInterpState {
+struct SparseSoftmaxCrossEntropyCaptureState : public AutoGradCaptureState {
   int64_t depth;
 };
 
-class SparseSoftmaxCrossEntropy : public OpExprGradFunction<SparseSoftmaxCrossEntropyInterpState> {
+class SparseSoftmaxCrossEntropy : public OpExprGradFunction<SparseSoftmaxCrossEntropyCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(SparseSoftmaxCrossEntropyInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(SparseSoftmaxCrossEntropyCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const SparseSoftmaxCrossEntropyInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const SparseSoftmaxCrossEntropyCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
   AttrMap base_attrs_;
-  std::shared_ptr<OpExpr> grad_op_;
 };
 
 Maybe<void> SparseSoftmaxCrossEntropy::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  const std::string& op_name = fw_op_expr->op_name();
-  grad_op_ =
-      JUST(op_expr_helper::SparseSoftmaxCrossEntropyGradOp(/*depth=*/-1, GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SparseSoftmaxCrossEntropy::Capture(SparseSoftmaxCrossEntropyInterpState* ctx,
+Maybe<void> SparseSoftmaxCrossEntropy::Capture(SparseSoftmaxCrossEntropyCaptureState* ctx,
                                                const TensorTuple& inputs,
                                                const TensorTuple& outputs,
                                                const AttrMap& attrs) const {
@@ -58,16 +52,16 @@ Maybe<void> SparseSoftmaxCrossEntropy::Capture(SparseSoftmaxCrossEntropyInterpSt
   ctx->depth = JUST(composed_attrs.GetAttr<int64_t>("depth"));
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
   CHECK_EQ_OR_RETURN(outputs.size(), 2);
-  ctx->SaveTensorForBackward(outputs.at(1));  // prob
+  ctx->SaveTensorForBackward(outputs.at(0));  // prob
   ctx->SaveTensorForBackward(inputs.at(1));   // label
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SparseSoftmaxCrossEntropy::Apply(const SparseSoftmaxCrossEntropyInterpState* ctx,
+Maybe<void> SparseSoftmaxCrossEntropy::Apply(const SparseSoftmaxCrossEntropyCaptureState* ctx,
                                              const TensorTuple& out_grads,
                                              TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 2);
-  const auto& dy = out_grads.at(0);
+  const auto& dy = out_grads.at(1);
   const auto& prob = ctx->SavedTensors().at(0);
   const auto& label = ctx->SavedTensors().at(1);
   MutableAttrMap attrs;
@@ -75,7 +69,7 @@ Maybe<void> SparseSoftmaxCrossEntropy::Apply(const SparseSoftmaxCrossEntropyInte
   // SparseSoftmaxCrossEntropy has 2 inputs (prediction and label), and the second input does not
   // require gradient.
   in_grads->resize(2);
-  in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {prob, label, dy}, attrs));
+  in_grads->at(0) = JUST(functional::SparseSoftmaxCrossEntropyGrad(dy, prob, label, ctx->depth));
   return Maybe<void>::Ok();
 }
 

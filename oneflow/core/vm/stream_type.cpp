@@ -15,10 +15,10 @@ limitations under the License.
 */
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/stream.msg.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/intrusive/intrusive.h"
 
 namespace oneflow {
 namespace vm {
@@ -53,7 +53,7 @@ void StreamType::Run(Instruction* instruction) const {
   }
 }
 
-void StreamType::Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+void StreamType::Run(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
   InterpretType interpret_type = instr_msg->instr_type_id().stream_type_id().interpret_type();
   if (interpret_type == InterpretType::kCompute) {
     Compute(vm, instr_msg);
@@ -64,7 +64,7 @@ void StreamType::Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
   }
 }
 
-void StreamType::Run(VirtualMachine* vm, Instruction* instruction) const {
+void StreamType::Run(VirtualMachineEngine* vm, Instruction* instruction) const {
   auto interpret_type = instruction->stream().stream_id().stream_type_id().interpret_type();
   if (interpret_type == InterpretType::kCompute) {
     Compute(vm, instruction);

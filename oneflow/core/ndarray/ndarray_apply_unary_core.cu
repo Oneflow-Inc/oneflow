@@ -29,9 +29,10 @@ __global__ void NdarrayApplyUnaryInplaceApplyGpu(T* ptr, size_t n) {
 
 template<typename T, template<typename> class unary_func>
 struct NdarrayApplyUnaryCoreWrapper<DeviceType::kGPU, T, unary_func> final {
-  static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y) {
+  static void InplaceApply(ep::Stream* stream, const XpuVarNdarray<T>& y) {
     size_t n = y.host_shape().HostElemNum();
-    RUN_CUDA_KERNEL((NdarrayApplyUnaryInplaceApplyGpu<T, unary_func>), ctx, n, y.host_ptr(), n);
+    if (n == 0) { return; }
+    RUN_CUDA_KERNEL((NdarrayApplyUnaryInplaceApplyGpu<T, unary_func>), stream, n, y.host_ptr(), n);
   }
 };
 

@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator.h"
 
 #include <mutex>
+#include "oneflow/core/control/global_process_ctx.h"
 #ifdef WITH_CUDA
 #include "oneflow/core/device/cuda_util.h"
 #endif  // WITH_CUDA
@@ -65,41 +66,36 @@ Maybe<Generator> DefaultCPUGenerator() {
 
 #ifdef WITH_CUDA
 Maybe<Generator> DefaultCUDAGenerator(int device_index) {
-  static std::vector<std::shared_ptr<Generator>> default_cuda_generator;
-  static std::once_flag init_flags;
-  static int device_count = 0;
-  std::call_once(init_flags, [&]() {
-    device_count = detail::GetCudaDeviceCount();
-    default_cuda_generator.resize(device_count);
-    for (int i = 0; i < device_count; ++i) {
-      default_cuda_generator[i] = std::make_shared<Generator>(
-          CHECK_JUST(CHECK_JUST(DefaultAutoGenerator())->Get<CUDAGeneratorImpl>(i)));
-    }
-  });
-  if (device_index == -1) { OF_CUDA_CHECK(cudaGetDevice(&device_index)); }
+  static int device_count = GetCudaDeviceCount();
+  static std::vector<std::once_flag> init_flags(device_count);
+  static std::vector<std::shared_ptr<Generator>> default_cuda_generator(device_count);
+
+  if (device_index == -1) { device_index = GetCudaDeviceIndex(); }
   CHECK_OR_RETURN(device_index >= 0 && device_index < device_count)
       << "Invalid device index " << device_index;
+  std::call_once(init_flags[device_index], [&]() {
+    default_cuda_generator[device_index] = std::make_shared<Generator>(
+        CHECK_JUST(CHECK_JUST(DefaultAutoGenerator())->Get<CUDAGeneratorImpl>(device_index)));
+  });
   return default_cuda_generator.at(device_index);
 }
 #endif  // WITH_CUDA
 
 Maybe<Generator> MakeAutoGenerator() {
-  return std::make_shared<Generator>(
-      std::make_shared<AutoGeneratorImpl>(detail::GetNonDeterministicRandom()));
+  return std::make_shared<Generator>(std::make_shared<AutoGeneratorImpl>(default_rng_seed_val));
 }
 
 Maybe<Generator> MakeCPUGenerator() {
-  return std::make_shared<Generator>(
-      std::make_shared<CPUGeneratorImpl>(detail::GetNonDeterministicRandom()));
+  return std::make_shared<Generator>(std::make_shared<CPUGeneratorImpl>(default_rng_seed_val));
 }
 
 #ifdef WITH_CUDA
 Maybe<Generator> MakeCUDAGenerator(int device_index) {
-  if (device_index == -1) { OF_CUDA_CHECK(cudaGetDevice(&device_index)); }
-  CHECK_OR_RETURN(device_index >= 0 && device_index < detail::GetCudaDeviceCount())
+  if (device_index == -1) { device_index = GetCudaDeviceIndex(); }
+  CHECK_OR_RETURN(device_index >= 0 && device_index < GetCudaDeviceCount())
       << "Invalid device index " << device_index;
   return std::make_shared<Generator>(
-      std::make_shared<CUDAGeneratorImpl>(detail::GetNonDeterministicRandom(), device_index));
+      std::make_shared<CUDAGeneratorImpl>(default_rng_seed_val, device_index));
 }
 #endif  // WITH_CUDA
 
@@ -115,9 +111,9 @@ Maybe<Generator> MakeGenerator(const std::string& device, int device_index) {
   else if (device == "auto") {
     return MakeAutoGenerator();
   } else {
-    UNIMPLEMENTED_THEN_RETURN() << "Invalid device " << device
-                                << " for making generator, please make sure the device is one of "
-                                   "\"cpu\", \"cuda\" and \"auto\".";
+    return Error::RuntimeError() << "Invalid device " << device
+                                 << " for making generator, please make sure the device is one of "
+                                 << PrintAvailableDevices();
   }
 }
 
@@ -133,10 +129,18 @@ Maybe<Generator> DefaultGenerator(const std::string& device, int device_index) {
   else if (device == "auto") {
     return DefaultAutoGenerator();
   } else {
-    UNIMPLEMENTED_THEN_RETURN() << "Invalid device " << device
-                                << " for making generator, please make sure the device is one of "
-                                   "\"cpu\", \"cuda\" and \"auto\".";
+    return Error::RuntimeError() << "Invalid device " << device
+                                 << " for making generator, please make sure the device is one of "
+                                 << PrintAvailableDevices();
   }
+}
+
+Maybe<Generator> DefaultGenerator(DeviceType device, int device_index) {
+  return DefaultGenerator(DeviceTypeName(device), device_index);
+}
+
+Maybe<Generator> MakeGenerator(DeviceType device, int device_index) {
+  return MakeGenerator(DeviceTypeName(device), device_index);
 }
 
 }  // namespace one

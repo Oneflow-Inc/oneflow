@@ -34,19 +34,28 @@ message AdamModelUpdateConf {
   optional float beta1 = 1 [default = 0.9];
   optional float beta2 = 2 [default = 0.999];
   optional float epsilon = 3 [default = 1e-8];
-  optional bool do_bias_correction = 4 [default = false];
+  optional bool do_bias_correction = 4 [default = true];
+  optional bool amsgrad = 5 [default = false];
 }
 
 message LazyAdamModelUpdateConf {
   optional float beta1 = 1 [default = 0.9];
   optional float beta2 = 2 [default = 0.999];
   optional float epsilon = 3 [default = 1e-8];
+  optional bool do_bias_correction = 4 [default = true];
+  optional bool amsgrad = 5 [default = false];
 }
 
 message LambModelUpdateConf {
   required float beta1 = 1;
   required float beta2 = 2;
   required float epsilon = 3;
+}
+
+message AdagradModelUpdateConf {
+  required float lr_decay = 1 [default = 0.0];
+  required float initial_accumulator_value = 2 [default = 0.0];
+  required float epsilon = 3 [default = 1e-10];
 }
 
 message ClipByGlobalNormConf {
@@ -88,6 +97,7 @@ message OptimizerConf {
     AdamModelUpdateConf adam_conf = 1004;
     LazyAdamModelUpdateConf lazy_adam_conf = 1005;
     LambModelUpdateConf lamb_conf = 1006;
+    AdagradModelUpdateConf adagrad_conf = 1007;
   }
 }
 
@@ -104,6 +114,7 @@ message NormalModelUpdateOpUserConf {
     AdamModelUpdateConf adam_conf = 1004;
     LazyAdamModelUpdateConf lazy_adam_conf = 1005;
     LambModelUpdateConf lamb_conf = 1006;
+    AdagradModelUpdateConf adagrad_conf = 1007;
   }
 }
 
@@ -169,7 +180,7 @@ message IndexedSlicesOptimizerConf {
 message ParallelBlobConf {
   required BlobDescProto logical_blob_desc_conf = 1;
   required ParallelConf parallel_conf = 2;
-  required ParallelDistribution parallel_distribution = 3;
+  required NdSbp nd_sbp = 3;
 }
 
 message JobInputDef {

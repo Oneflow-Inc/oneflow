@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/radix_sort.cuh"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -50,9 +51,6 @@ class TmpBufferManager final {
   int32_t* SortedIndicesPtr() const { return sorted_indices_ptr_; }
   void* TempStoragePtr() const { return temp_storage_ptr_; }
 
-  int32_t SortedInElemCnt() const { return sorted_in_elem_cnt_; }
-  int32_t IndicesElemCnt() const { return indices_elem_cnt_; }
-  int32_t SortedIndicesElemCnt() const { return sorted_indices_elem_cnt_; }
   int32_t TempStorageBytes() const { return temp_storage_bytes_; }
 
  private:
@@ -82,8 +80,10 @@ class GpuRadixSortTopKKernel final : public user_op::OpKernel {
   ~GpuRadixSortTopKKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    if (in->shape().elem_cnt() == 0) { return; }
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     TmpBufferManager<T> buf_manager(static_cast<int32_t>(tmp_buffer->shape().elem_cnt()),
@@ -94,47 +94,50 @@ class GpuRadixSortTopKKernel final : public user_op::OpKernel {
     const int32_t instance_num = elem_cnt / instance_size;
     const int32_t k = std::min(ctx->Attr<int32_t>("k"), instance_size);
     InitializeIndices<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                        ctx->device_ctx()->cuda_stream()>>>(elem_cnt, buf_manager.IndicesPtr(),
-                                                            instance_size);
+                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+        elem_cnt, buf_manager.IndicesPtr(), instance_size);
     SortPairsDescending(in->dptr<T>(), buf_manager.IndicesPtr(), instance_num, instance_size,
                         buf_manager.TempStoragePtr(), buf_manager.TempStorageBytes(),
                         buf_manager.SortedInPtr(), buf_manager.SortedIndicesPtr(),
-                        ctx->device_ctx()->cuda_stream());
+                        ctx->stream()->As<ep::CudaStream>()->cuda_stream());
     OF_CUDA_CHECK(cudaMemcpy2DAsync(out->mut_dptr<int32_t>(), k * sizeof(int32_t),
                                     buf_manager.SortedIndicesPtr(), instance_size * sizeof(int32_t),
                                     k * sizeof(int32_t), instance_num, cudaMemcpyDefault,
-                                    ctx->device_ctx()->cuda_stream()));
+                                    ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(dtype)                                                \
-  REGISTER_USER_KERNEL("top_k")                                                                    \
-      .SetCreateFn<GpuRadixSortTopKKernel<dtype>>()                                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") & (user_op::HobAttr<int32_t>("k") > 128) \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))             \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
-        const Shape& in_shape = ctx->InputShape("in", 0);                                          \
-        const int32_t elem_cnt = in_shape.elem_cnt();                                              \
-        const int32_t instance_size = in_shape.dim_vec().back();                                   \
-        const int32_t instance_num = elem_cnt / instance_size;                                     \
-                                                                                                   \
-        /* Sorted In*/                                                                             \
-        const int32_t sorted_in_aligned_bytes = GetCudaAlignedSize(elem_cnt * sizeof(dtype));      \
-        /* Indices */                                                                              \
-        const int32_t indices_aligned_bytes = GetCudaAlignedSize(elem_cnt * sizeof(int32_t));      \
-        /* Sorted Indices */                                                                       \
-        const int32_t sorted_indices_aligned_bytes = indices_aligned_bytes;                        \
-        /* CUB Temp Storage */                                                                     \
-        int32_t temp_storage_bytes =                                                               \
-            InferTempStorageForSortPairsDescending<dtype, int32_t>(instance_num, instance_size);   \
-                                                                                                   \
-        return sorted_in_aligned_bytes + indices_aligned_bytes + sorted_indices_aligned_bytes      \
-               + temp_storage_bytes;                                                               \
+#define REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(dtype)                                              \
+  REGISTER_USER_KERNEL("top_k")                                                                  \
+      .SetCreateFn<GpuRadixSortTopKKernel<dtype>>()                                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                            \
+                       && (user_op::HobAttr<int32_t>("k") > 128)                                 \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))          \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
+        const Shape& in_shape = ctx->InputShape("in", 0);                                        \
+        const int32_t elem_cnt = in_shape.elem_cnt();                                            \
+        const int32_t instance_size = in_shape.dim_vec().back();                                 \
+        const int32_t instance_num = elem_cnt / instance_size;                                   \
+                                                                                                 \
+        /* Sorted In*/                                                                           \
+        const int32_t sorted_in_aligned_bytes = GetCudaAlignedSize(elem_cnt * sizeof(dtype));    \
+        /* Indices */                                                                            \
+        const int32_t indices_aligned_bytes = GetCudaAlignedSize(elem_cnt * sizeof(int32_t));    \
+        /* Sorted Indices */                                                                     \
+        const int32_t sorted_indices_aligned_bytes = indices_aligned_bytes;                      \
+        /* CUB Temp Storage */                                                                   \
+        int32_t temp_storage_bytes =                                                             \
+            InferTempStorageForSortPairsDescending<dtype, int32_t>(instance_num, instance_size); \
+                                                                                                 \
+        return sorted_in_aligned_bytes + indices_aligned_bytes + sorted_indices_aligned_bytes    \
+               + temp_storage_bytes;                                                             \
       });
 
 REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(float)
 REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(double)
+REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(uint8_t)
+REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(int8_t)
 REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(int32_t)
 REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(int64_t)
 

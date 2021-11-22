@@ -18,17 +18,17 @@ limitations under the License.
 
 #include <vector>
 #include <string>
-#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/job/placement.pb.h"
-#include "oneflow/core/vm/instruction.msg.h"
-#include "oneflow/core/vm/vm_resource_desc.msg.h"
+#include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/vm/vm_resource_desc.h"
 #include "oneflow/core/operator/op_node_signature_desc.h"
 
 namespace oneflow {
 namespace vm {
 
-class VmDesc;
-class VmResourceDesc;
+struct VmDesc;
+struct VmResourceDesc;
 
 class TestResourceDescScope final {
  public:
@@ -41,13 +41,14 @@ class TestResourceDescScope final {
 };
 
 struct TestUtil {
-  static ObjectMsgPtr<VmResourceDesc> NewVmResourceDesc() { return NewVmResourceDesc(1); }
+  static intrusive::shared_ptr<VmResourceDesc> NewVmResourceDesc() { return NewVmResourceDesc(1); }
 
-  static ObjectMsgPtr<VmResourceDesc> NewVmResourceDesc(int64_t device_num) {
+  static intrusive::shared_ptr<VmResourceDesc> NewVmResourceDesc(int64_t device_num) {
     return NewVmResourceDesc(device_num, 1);
   }
 
-  static ObjectMsgPtr<VmResourceDesc> NewVmResourceDesc(int64_t device_num, int64_t machine_num);
+  static intrusive::shared_ptr<VmResourceDesc> NewVmResourceDesc(int64_t device_num,
+                                                                 int64_t machine_num);
 
   // return logical_object_id
   static int64_t NewObject(InstructionMsgList* list, const std::string& device_tag,

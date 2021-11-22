@@ -44,6 +44,14 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
   } else {
     sorted_blob_desc_vec_.push_back(std::make_unique<const BlobDesc>(BlobDesc(DataType::kChar)));
   }
+
+  if ((proto.mem_case().has_device_cuda_mem())
+      || (proto.has_variable_op_name() && !proto.variable_op_name().empty())) {
+    // NOTE(chengcheng): When this regst is shared with EagerBlobObject, header is ALWAYS separated.
+    has_separated_header_ = true;
+  } else {
+    has_separated_header_ = false;
+  }
 }
 
 int64_t RtRegstDesc::GetOrdinalForLbi(const LogicalBlobId& lbi) const {
@@ -86,7 +94,7 @@ size_t RtRegstDesc::TotalMainByteSize4AllRegst() const {
 }
 
 size_t RtRegstDesc::MainByteSize4OneRegst() const {
-  if (mem_case_.has_device_cuda_mem()) {
+  if (has_separated_header_) {
     return GetSoleBlobDesc()->AlignedByteSizeOfBlobBody();
   } else {
     return GetSoleBlobDesc()->AlignedTotalByteSize();
@@ -98,8 +106,9 @@ size_t RtRegstDesc::TotalSeparatedHeaderByteSize4AllRegst() const {
 }
 
 size_t RtRegstDesc::SeparatedHeaderByteSize4OneRegst() const {
-  if (mem_case_.has_device_cuda_mem()) {
-    return GetSoleBlobDesc()->ByteSizeOfBlobHeader();
+  if (has_separated_header_) {
+    // NOTE(chengcheng): Header size need to be aligned for XRT memory allocate
+    return GetSoleBlobDesc()->AlignedByteSizeOfBlobHeader();
   } else {
     return 0;
   }

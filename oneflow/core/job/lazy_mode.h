@@ -22,16 +22,15 @@ namespace oneflow {
 
 class LazyMode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LazyMode)
+  OF_DISALLOW_COPY_AND_MOVE(LazyMode);
   LazyMode() = delete;
   ~LazyMode() = delete;
 
   static bool is_enabled();
-  class Gard {
+  class Guard {
    public:
-    OF_DISALLOW_COPY_AND_MOVE(Gard)
-    Gard(bool enabled) : prev_mode_(LazyMode::is_enabled()) { LazyMode::set_enabled(enabled); }
-    ~Gard() { LazyMode::set_enabled(prev_mode_); }
+    Guard(bool enabled) : prev_mode_(LazyMode::is_enabled()) { LazyMode::set_enabled(enabled); }
+    ~Guard() { LazyMode::set_enabled(prev_mode_); }
 
    private:
     bool prev_mode_;

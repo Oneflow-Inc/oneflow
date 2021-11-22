@@ -35,33 +35,35 @@ __global__ void CudaClipBackward(F clip_func, int64_t n, const T* x, const T* dy
 template<typename T>
 struct ClipKernelUtil<DeviceType::kGPU, T> {
   template<typename F>
-  static void Forward(DeviceCtx* ctx, F clip_func, const int64_t n, const T* x, T* y) {
-    RUN_CUDA_KERNEL((CudaClipForward<T, F>), ctx, n, clip_func, n, x, y);
+  static void Forward(ep::Stream* stream, F clip_func, const int64_t n, const T* x, T* y) {
+    if (n == 0) { return; }
+    RUN_CUDA_KERNEL((CudaClipForward<T, F>), stream, n, clip_func, n, x, y);
   }
 
   template<typename F>
-  static void Backward(DeviceCtx* ctx, F clip_func, const int64_t n, const T* x, const T* dy,
+  static void Backward(ep::Stream* stream, F clip_func, const int64_t n, const T* x, const T* dy,
                        T* dx) {
-    RUN_CUDA_KERNEL((CudaClipBackward<T, F>), ctx, n, clip_func, n, x, dy, dx);
+    if (n == 0) { return; }
+    RUN_CUDA_KERNEL((CudaClipBackward<T, F>), stream, n, clip_func, n, x, dy, dx);
   }
 };
 
-#define INITIATE_CLIP_KERNEL_UTIL_GPU(dtype, dtype_v)                                          \
-  template struct ClipKernelUtil<DeviceType::kGPU, dtype>;                                     \
-  template void ClipKernelUtil<DeviceType::kGPU, dtype>::Forward(                              \
-      DeviceCtx*, ClipByMinFunctor<dtype>, const int64_t n, const dtype*, dtype*);             \
-  template void ClipKernelUtil<DeviceType::kGPU, dtype>::Forward(                              \
-      DeviceCtx*, ClipByMaxFunctor<dtype>, const int64_t n, const dtype*, dtype*);             \
-  template void ClipKernelUtil<DeviceType::kGPU, dtype>::Forward(                              \
-      DeviceCtx*, ClipByMinMaxFunctor<dtype>, const int64_t n, const dtype*, dtype*);          \
-  template void ClipKernelUtil<DeviceType::kGPU, dtype>::Backward(                             \
-      DeviceCtx*, ClipByMinGradFunctor<dtype>, const int64_t n, const dtype*, const dtype*,    \
-      dtype*);                                                                                 \
-  template void ClipKernelUtil<DeviceType::kGPU, dtype>::Backward(                             \
-      DeviceCtx*, ClipByMaxGradFunctor<dtype>, const int64_t n, const dtype*, const dtype*,    \
-      dtype*);                                                                                 \
-  template void ClipKernelUtil<DeviceType::kGPU, dtype>::Backward(                             \
-      DeviceCtx*, ClipByMinMaxGradFunctor<dtype>, const int64_t n, const dtype*, const dtype*, \
+#define INITIATE_CLIP_KERNEL_UTIL_GPU(dtype, dtype_v)                                           \
+  template struct ClipKernelUtil<DeviceType::kGPU, dtype>;                                      \
+  template void ClipKernelUtil<DeviceType::kGPU, dtype>::Forward(                               \
+      ep::Stream*, ClipByMinFunctor<dtype>, const int64_t n, const dtype*, dtype*);             \
+  template void ClipKernelUtil<DeviceType::kGPU, dtype>::Forward(                               \
+      ep::Stream*, ClipByMaxFunctor<dtype>, const int64_t n, const dtype*, dtype*);             \
+  template void ClipKernelUtil<DeviceType::kGPU, dtype>::Forward(                               \
+      ep::Stream*, ClipByMinMaxFunctor<dtype>, const int64_t n, const dtype*, dtype*);          \
+  template void ClipKernelUtil<DeviceType::kGPU, dtype>::Backward(                              \
+      ep::Stream*, ClipByMinGradFunctor<dtype>, const int64_t n, const dtype*, const dtype*,    \
+      dtype*);                                                                                  \
+  template void ClipKernelUtil<DeviceType::kGPU, dtype>::Backward(                              \
+      ep::Stream*, ClipByMaxGradFunctor<dtype>, const int64_t n, const dtype*, const dtype*,    \
+      dtype*);                                                                                  \
+  template void ClipKernelUtil<DeviceType::kGPU, dtype>::Backward(                              \
+      ep::Stream*, ClipByMinMaxGradFunctor<dtype>, const int64_t n, const dtype*, const dtype*, \
       dtype*);
 
 OF_PP_FOR_EACH_TUPLE(INITIATE_CLIP_KERNEL_UTIL_GPU, ARITHMETIC_DATA_TYPE_SEQ)

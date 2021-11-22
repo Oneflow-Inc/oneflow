@@ -66,7 +66,7 @@ std::string ReplaceStrValInCfgFdOrCfgRpf(CfgMessage* msg, const std::string& fd_
                                          const std::string& new_val) {
   if (msg->FieldDefined4FieldName<std::string>(fd_name_may_have_idx)) {
     // Do not define old_val with type const std::string&, because the value will be changed
-    const std::string old_val = *msg->FieldPtr4FieldName<std::string>(fd_name_may_have_idx);
+    std::string old_val = *msg->FieldPtr4FieldName<std::string>(fd_name_may_have_idx);
     *msg->MutableFieldPtr4FieldName<std::string>(fd_name_may_have_idx) = new_val;
     return old_val;
   }
@@ -77,7 +77,7 @@ std::string ReplaceStrValInCfgFdOrCfgRpf(CfgMessage* msg, const std::string& fd_
   CHECK_NOTNULL(rp_field);
   CHECK_LT(index, rp_field->size());
   // Do not define old_val with type const std::string&, because the value will be changed
-  const std::string old_val = rp_field->Get(index);
+  std::string old_val = rp_field->Get(index);
   *msg->MutableFieldPtr4FieldName<CfgRpf<std::string>>(field_name)->Mutable(index) = new_val;
   return old_val;
 }

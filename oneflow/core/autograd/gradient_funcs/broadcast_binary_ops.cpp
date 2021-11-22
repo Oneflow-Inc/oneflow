@@ -16,213 +16,328 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
 
-namespace {
-
-class ReduceSumLikeModule {
- public:
-  ReduceSumLikeModule(const std::string& op_name) {
-    identity_op_ = CHECK_JUST(op_expr_helper::IdentityOp(op_name + "_identity"));
-    reshape_like_op_ = CHECK_JUST(op_expr_helper::ReshapeLikeOp(op_name + "_reshape_like"));
-    reduce_sum_like_op_ =
-        CHECK_JUST(op_expr_helper::ReduceSumLikeOp({-1}, op_name + "reduce_sum_like"));
-  }
-
-  Maybe<Tensor> forward(const std::shared_ptr<Tensor>& input,
-                        const std::shared_ptr<Tensor>& like) const {
-    const auto& in_shape = *(input->shape());
-    const auto& like_shape = *(like->shape());
-    TensorTuple inputs{input};
-    MutableAttrMap attrs;
-    std::shared_ptr<OpExpr> op = identity_op_;
-    if (in_shape != like_shape) {
-      const Shape& left_extended_shape =
-          CreateLeftExtendedShape(ShapeView(like_shape), in_shape.NumAxes());
-      if (in_shape == left_extended_shape) {
-        op = reshape_like_op_;
-      } else {
-        op = reduce_sum_like_op_;
-        const AxisVector& broadcast_axis_vec = left_extended_shape.Axes4BroadcastTo(in_shape);
-        JUST(attrs.SetAttr<std::vector<int32_t>>(
-            "axis", std::vector<int32_t>{broadcast_axis_vec.begin(), broadcast_axis_vec.end()}));
-      }
-      inputs.push_back(like);
-    }
-    return JUST(OpInterpUtil::Dispatch<Tensor>(*op, inputs, attrs));
-  }
-
- private:
-  std::shared_ptr<OpExpr> identity_op_;
-  std::shared_ptr<OpExpr> reshape_like_op_;
-  std::shared_ptr<OpExpr> reduce_sum_like_op_;
+struct BroadcastBinaryCaptureState : public AutoGradCaptureState {
+  int x_index = -1;
+  int y_index = -1;
+  int z_index = -1;
+  bool x_requires_grad = false;
+  bool y_requires_grad = false;
+  bool broadcast_x = false;
+  bool broadcast_y = false;
 };
 
-}  // namespace
-
-class BroadcastBinaryGrad : public OpExprGradFunction<OpExprInterpState> {
+class BroadcastBinaryGrad : public OpExprGradFunction<BroadcastBinaryCaptureState> {
  public:
   BroadcastBinaryGrad() = default;
   virtual ~BroadcastBinaryGrad() = default;
 
-  virtual Maybe<void> Init(const OpExpr& op) {
-    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-    op_name_ = fw_op_expr->op_name();
-    return Maybe<void>::Ok();
-  }
+  virtual Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const AttrMap& attrs) const override {
+  Maybe<void> Capture(BroadcastBinaryCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
-    ctx->SaveTensorForBackward(inputs.at(0));
-    ctx->SaveTensorForBackward(inputs.at(1));
-    ctx->SaveTensorForBackward(outputs.at(0));
-    return Maybe<void>::Ok();
+    ctx->x_requires_grad = inputs.at(0)->requires_grad();
+    ctx->y_requires_grad = inputs.at(1)->requires_grad();
+    ctx->broadcast_x = (*inputs.at(0)->shape() != *outputs.at(0)->shape());
+    ctx->broadcast_y = (*inputs.at(1)->shape() != *outputs.at(0)->shape());
+    return SaveTensorForBackward(ctx, inputs, outputs);
   }
 
  protected:
-  std::string op_name_;
+  virtual Maybe<void> SaveTensorForBackward(BroadcastBinaryCaptureState* ctx,
+                                            const TensorTuple& inputs,
+                                            const TensorTuple& outputs) const = 0;
 };
 
 class BroadcastAdd : public BroadcastBinaryGrad {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    JUST(BroadcastBinaryGrad::Init(op));
-    x_grad_op_ = std::make_shared<ReduceSumLikeModule>(op_name_ + "_x");
-    y_grad_op_ = std::make_shared<ReduceSumLikeModule>(op_name_ + "_y");
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const BroadcastBinaryCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    const auto& x = ctx->SavedTensors().at(0);
-    const auto& y = ctx->SavedTensors().at(1);
     in_grads->resize(2);
-    if (x->requires_grad()) { in_grads->at(0) = JUST(x_grad_op_->forward(out_grads.at(0), x)); }
-    if (y->requires_grad()) { in_grads->at(1) = JUST(y_grad_op_->forward(out_grads.at(0), y)); }
+    if (ctx->x_requires_grad) {
+      if (ctx->broadcast_x) {
+        const auto& x = ctx->SavedTensors().at(ctx->x_index);
+        in_grads->at(0) = JUST(functional::BroadcastReduceSumLike(out_grads.at(0), x));
+      } else {
+        in_grads->at(0) = out_grads.at(0);
+      }
+    }
+    if (ctx->y_requires_grad) {
+      if (ctx->broadcast_y) {
+        const auto& y = ctx->SavedTensors().at(ctx->y_index);
+        in_grads->at(1) = JUST(functional::BroadcastReduceSumLike(out_grads.at(0), y));
+      } else {
+        in_grads->at(1) = out_grads.at(0);
+      }
+    }
     return Maybe<void>::Ok();
   }
 
- private:
-  std::shared_ptr<ReduceSumLikeModule> x_grad_op_;
-  std::shared_ptr<ReduceSumLikeModule> y_grad_op_;
+ protected:
+  Maybe<void> SaveTensorForBackward(BroadcastBinaryCaptureState* ctx, const TensorTuple& inputs,
+                                    const TensorTuple& outputs) const override {
+    if (ctx->x_requires_grad && ctx->broadcast_x) {
+      ctx->x_index = ctx->SaveTensorForBackward(inputs.at(0));
+    }
+    if (ctx->y_requires_grad && ctx->broadcast_y) {
+      ctx->y_index = ctx->SaveTensorForBackward(inputs.at(1));
+    }
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_add", BroadcastAdd);
 
 class BroadcastSub : public BroadcastBinaryGrad {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    JUST(BroadcastBinaryGrad::Init(op));
-    x_grad_op_ = std::make_shared<ReduceSumLikeModule>(op_name_ + "_x");
-    y_grad_op_ = std::make_shared<ReduceSumLikeModule>(op_name_ + "_y");
-    y_grad_mul_op_ =
-        JUST(op_expr_helper::ScalarMulOp(-1.f, GradientOpName(op_name_ + "_y_scalar_mul")));
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const BroadcastBinaryCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    const auto& x = ctx->SavedTensors().at(0);
-    const auto& y = ctx->SavedTensors().at(1);
     in_grads->resize(2);
-    if (x->requires_grad()) { in_grads->at(0) = JUST(x_grad_op_->forward(out_grads.at(0), x)); }
-    if (y->requires_grad()) {
-      const auto& grad = JUST(OpInterpUtil::Dispatch<Tensor>(*y_grad_mul_op_, {out_grads.at(0)}));
-      in_grads->at(1) = JUST(y_grad_op_->forward(grad, y));
+    if (ctx->x_requires_grad) {
+      if (ctx->broadcast_x) {
+        const auto& x = ctx->SavedTensors().at(ctx->x_index);
+        in_grads->at(0) = JUST(functional::BroadcastReduceSumLike(out_grads.at(0), x));
+      } else {
+        in_grads->at(0) = out_grads.at(0);
+      }
+    }
+    if (ctx->y_requires_grad) {
+      const auto& grad = JUST(functional::ScalarMul(out_grads.at(0), Scalar(-1.f), false));
+      if (ctx->broadcast_y) {
+        const auto& y = ctx->SavedTensors().at(ctx->y_index);
+        in_grads->at(1) = JUST(functional::BroadcastReduceSumLike(grad, y));
+      } else {
+        in_grads->at(1) = grad;
+      }
     }
     return Maybe<void>::Ok();
   }
 
- private:
-  std::shared_ptr<ReduceSumLikeModule> x_grad_op_;
-  std::shared_ptr<ReduceSumLikeModule> y_grad_op_;
-  std::shared_ptr<OpExpr> y_grad_mul_op_;
+ protected:
+  Maybe<void> SaveTensorForBackward(BroadcastBinaryCaptureState* ctx, const TensorTuple& inputs,
+                                    const TensorTuple& outputs) const override {
+    if (ctx->x_requires_grad && ctx->broadcast_x) {
+      ctx->x_index = ctx->SaveTensorForBackward(inputs.at(0));
+    }
+    if (ctx->y_requires_grad && ctx->broadcast_y) {
+      ctx->y_index = ctx->SaveTensorForBackward(inputs.at(1));
+    }
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_sub", BroadcastSub);
 
 class BroadcastMul : public BroadcastBinaryGrad {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    JUST(BroadcastBinaryGrad::Init(op));
-    x_grad_op_ = std::make_shared<ReduceSumLikeModule>(op_name_ + "_x");
-    y_grad_op_ = std::make_shared<ReduceSumLikeModule>(op_name_ + "_y");
-    x_grad_mul_op_ =
-        JUST(op_expr_helper::BroadcastMulOp(GradientOpName(op_name_ + "_x_broadcast_mul")));
-    y_grad_mul_op_ =
-        JUST(op_expr_helper::BroadcastMulOp(GradientOpName(op_name_ + "_y_broadcast_mul")));
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const BroadcastBinaryCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    const auto& x = ctx->SavedTensors().at(0);
-    const auto& y = ctx->SavedTensors().at(1);
     in_grads->resize(2);
-    if (x->requires_grad()) {
-      const auto& x_grad =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*x_grad_mul_op_, {out_grads.at(0), y}));
-      in_grads->at(0) = JUST(x_grad_op_->forward(x_grad, x));
+    if (ctx->x_requires_grad) {
+      const auto& y = ctx->SavedTensors().at(ctx->y_index);
+      const auto& x_grad = JUST(functional::Mul(out_grads.at(0), y));
+      if (ctx->broadcast_x) {
+        const auto& x = ctx->SavedTensors().at(ctx->x_index);
+        in_grads->at(0) = JUST(functional::BroadcastReduceSumLike(x_grad, x));
+      } else {
+        in_grads->at(0) = x_grad;
+      }
     }
-    if (y->requires_grad()) {
-      const auto& y_grad =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*y_grad_mul_op_, {out_grads.at(0), x}));
-      in_grads->at(1) = JUST(y_grad_op_->forward(y_grad, y));
+    if (ctx->y_requires_grad) {
+      const auto& x = ctx->SavedTensors().at(ctx->x_index);
+      const auto& y_grad = JUST(functional::Mul(out_grads.at(0), x));
+      if (ctx->broadcast_y) {
+        const auto& y = ctx->SavedTensors().at(ctx->y_index);
+        in_grads->at(1) = JUST(functional::BroadcastReduceSumLike(y_grad, y));
+      } else {
+        in_grads->at(1) = y_grad;
+      }
     }
     return Maybe<void>::Ok();
   }
 
- private:
-  std::shared_ptr<ReduceSumLikeModule> x_grad_op_;
-  std::shared_ptr<ReduceSumLikeModule> y_grad_op_;
-  std::shared_ptr<OpExpr> x_grad_mul_op_;
-  std::shared_ptr<OpExpr> y_grad_mul_op_;
+ protected:
+  Maybe<void> SaveTensorForBackward(BroadcastBinaryCaptureState* ctx, const TensorTuple& inputs,
+                                    const TensorTuple& outputs) const override {
+    if (ctx->x_requires_grad) {
+      ctx->y_index = ctx->SaveTensorForBackward(inputs.at(1));
+      if (ctx->broadcast_x) { ctx->x_index = ctx->SaveTensorForBackward(inputs.at(0)); }
+    }
+    if (ctx->y_requires_grad) {
+      if (ctx->x_index == -1 /*x has not been saved*/) {
+        ctx->x_index = ctx->SaveTensorForBackward(inputs.at(0));
+      }
+      if (ctx->broadcast_y && ctx->y_index == -1 /*y has not been saved*/) {
+        ctx->y_index = ctx->SaveTensorForBackward(inputs.at(1));
+      }
+    }
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_mul", BroadcastMul);
 
 class BroadcastDiv : public BroadcastBinaryGrad {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    JUST(BroadcastBinaryGrad::Init(op));
-    x_grad_op_ = std::make_shared<ReduceSumLikeModule>(op_name_ + "_x");
-    x_grad_div_op_ =
-        JUST(op_expr_helper::BroadcastDivOp(GradientOpName(op_name_ + "_x_broadcast_div")));
-    y_grad_op_ = JUST(op_expr_helper::BroadcastDivGradOp(GradientOpName(op_name_ + "_y")));
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const BroadcastBinaryCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    const auto& x = ctx->SavedTensors().at(0);
-    const auto& y = ctx->SavedTensors().at(1);
-    const auto& z = ctx->SavedTensors().at(2);
     in_grads->resize(2);
-    if (x->requires_grad()) {
-      const auto& x_grad =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*x_grad_div_op_, {out_grads.at(0), y}));
-      in_grads->at(0) = JUST(x_grad_op_->forward(x_grad, x));
+    if (ctx->x_requires_grad) {
+      const auto& y = ctx->SavedTensors().at(ctx->y_index);
+      const auto& x_grad = JUST(functional::Div(out_grads.at(0), y));
+      if (ctx->broadcast_x) {
+        const auto& x = ctx->SavedTensors().at(ctx->x_index);
+        in_grads->at(0) = JUST(functional::BroadcastReduceSumLike(x_grad, x));
+      } else {
+        in_grads->at(0) = x_grad;
+      }
     }
-    if (y->requires_grad()) {
-      in_grads->at(1) = JUST(OpInterpUtil::Dispatch<Tensor>(*y_grad_op_, {out_grads.at(0), z, y}));
+    if (ctx->y_requires_grad) {
+      const auto& y = ctx->SavedTensors().at(ctx->y_index);
+      const auto& z = ctx->SavedTensors().at(ctx->z_index);
+      in_grads->at(1) = JUST(functional::DivGrad(out_grads.at(0), z, y));
     }
     return Maybe<void>::Ok();
   }
 
- private:
-  std::shared_ptr<ReduceSumLikeModule> x_grad_op_;
-  std::shared_ptr<OpExpr> x_grad_div_op_;
-  std::shared_ptr<OpExpr> y_grad_op_;
+ protected:
+  Maybe<void> SaveTensorForBackward(BroadcastBinaryCaptureState* ctx, const TensorTuple& inputs,
+                                    const TensorTuple& outputs) const override {
+    if (ctx->x_requires_grad) {
+      ctx->y_index = ctx->SaveTensorForBackward(inputs.at(1));
+      if (ctx->broadcast_x) { ctx->x_index = ctx->SaveTensorForBackward(inputs.at(0)); }
+    }
+    if (ctx->y_requires_grad) {
+      if (ctx->y_index == -1 /*y has not been saved*/) {
+        ctx->y_index = ctx->SaveTensorForBackward(inputs.at(1));
+      }
+      ctx->z_index = ctx->SaveTensorForBackward(outputs.at(0));
+    }
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_div", BroadcastDiv);
+
+class BroadcastPow : public BroadcastBinaryGrad {
+ public:
+  Maybe<void> Apply(const BroadcastBinaryCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    const auto& x = ctx->SavedTensors().at(ctx->x_index);
+    const auto& y = ctx->SavedTensors().at(ctx->y_index);
+    const auto& z = ctx->SavedTensors().at(ctx->z_index);
+    in_grads->resize(2);
+    if (ctx->x_requires_grad) {
+      in_grads->at(0) = JUST(functional::BroadcastPowXGrad(out_grads.at(0), x, y, z));
+    }
+    if (ctx->y_requires_grad) {
+      in_grads->at(1) = JUST(functional::BroadcastPowYGrad(out_grads.at(0), x, y, z));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ protected:
+  Maybe<void> SaveTensorForBackward(BroadcastBinaryCaptureState* ctx, const TensorTuple& inputs,
+                                    const TensorTuple& outputs) const override {
+    ctx->x_index = ctx->SaveTensorForBackward(inputs.at(0));
+    ctx->y_index = ctx->SaveTensorForBackward(inputs.at(1));
+    ctx->z_index = ctx->SaveTensorForBackward(outputs.at(0));
+    return Maybe<void>::Ok();
+  }
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_pow", BroadcastPow);
+
+class BroadcastMinMax : public BroadcastBinaryGrad {
+ public:
+  Maybe<void> Apply(const BroadcastBinaryCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    const auto& out_shape = *(out_grads.at(0)->shape());
+    in_grads->resize(2);
+    if (ctx->x_requires_grad || ctx->y_requires_grad) {
+      const auto& x = ctx->SavedTensors().at(ctx->x_index);
+      const auto& y = ctx->SavedTensors().at(ctx->y_index);
+      auto broad_x_ = x;
+      auto broad_y_ = y;
+      if (ctx->broadcast_x) {
+        const auto& x_shape = *(x->shape());
+        const Shape& left_extended_x_shape =
+            CreateLeftExtendedShape(ShapeView(x_shape), out_shape.NumAxes());
+        const AxisVector& broadcast_axis_vec = left_extended_x_shape.Axes4BroadcastTo(out_shape);
+        const std::vector<int32_t> x_axis =
+            std::vector<int32_t>{broadcast_axis_vec.begin(), broadcast_axis_vec.end()};
+        broad_x_ = JUST(functional::BroadcastLike(x, out_grads.at(0), x_axis));
+      }
+      if (ctx->broadcast_y) {
+        const auto& y_shape = *(y->shape());
+        const Shape& left_extended_y_shape =
+            CreateLeftExtendedShape(ShapeView(y_shape), out_shape.NumAxes());
+        const AxisVector& broadcast_axis_vec = left_extended_y_shape.Axes4BroadcastTo(out_shape);
+        const std::vector<int32_t> y_axis =
+            std::vector<int32_t>{broadcast_axis_vec.begin(), broadcast_axis_vec.end()};
+        broad_y_ = JUST(functional::BroadcastLike(y, out_grads.at(0), y_axis));
+      }
+      const auto& broad_grads =
+          JUST(elementwise_grad_functor_(out_grads.at(0), broad_x_, broad_y_));
+      if (ctx->x_requires_grad) {
+        if (ctx->broadcast_x) {
+          in_grads->at(0) = JUST(functional::BroadcastReduceSumLike(broad_grads->at(0), x));
+        } else {
+          in_grads->at(0) = broad_grads->at(0);
+        }
+      }
+      if (ctx->y_requires_grad) {
+        if (ctx->broadcast_y) {
+          in_grads->at(1) = JUST(functional::BroadcastReduceSumLike(broad_grads->at(1), y));
+        } else {
+          in_grads->at(1) = broad_grads->at(1);
+        }
+      }
+    }
+    return Maybe<void>::Ok();
+  }
+
+ protected:
+  Maybe<void> SaveTensorForBackward(BroadcastBinaryCaptureState* ctx, const TensorTuple& inputs,
+                                    const TensorTuple& outputs) const override {
+    if (ctx->x_requires_grad || ctx->y_requires_grad) {
+      ctx->x_index = ctx->SaveTensorForBackward(inputs.at(0));
+      ctx->y_index = ctx->SaveTensorForBackward(inputs.at(1));
+    }
+    return Maybe<void>::Ok();
+  }
+
+  std::function<Maybe<TensorTuple>(const std::shared_ptr<Tensor>&, const std::shared_ptr<Tensor>&,
+                                   const std::shared_ptr<Tensor>&)>
+      elementwise_grad_functor_;
+};
+
+class BroadcastMinimum : public BroadcastMinMax {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    JUST(BroadcastMinMax::Init(op));
+    elementwise_grad_functor_ = functional::ElementwiseMinGrad;
+    return Maybe<void>::Ok();
+  }
+};
+
+class BroadcastMaximum : public BroadcastMinMax {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    JUST(BroadcastMinMax::Init(op));
+    elementwise_grad_functor_ = functional::ElementwiseMaxGrad;
+    return Maybe<void>::Ok();
+  }
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_minimum", BroadcastMinimum);
+REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_maximum", BroadcastMaximum);
 
 }  // namespace one
 }  // namespace oneflow

@@ -37,6 +37,10 @@ class CombinedMarginLossOpKernelState final : public user_op::OpKernelState {
 
 std::shared_ptr<user_op::OpKernelState> CreateCombinedMarginLossOpKernelState(
     user_op::KernelInitContext* ctx, const std::string& in_arg_name) {
+  if (ctx->parallel_ctx().parallel_num() == 1) {
+    return std::shared_ptr<user_op::OpKernelState>(nullptr);
+  }
+
   const cfg::SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex(in_arg_name, 0);
   if (in_sbp.has_split_parallel() && in_sbp.split_parallel().axis() == 1
       && ctx->parallel_ctx().parallel_num() > 1) {
@@ -105,13 +109,13 @@ class CombinedMarginLossCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_COMBINED_MARGIN_LOSS_CPU_KERNEL(in_type, indices_type)               \
-  REGISTER_USER_KERNEL("combined_margin_loss")                                        \
-      .SetCreateFn<CombinedMarginLossCpuKernel<OF_PP_PAIR_FIRST(in_type),             \
-                                               OF_PP_PAIR_FIRST(indices_type)>>()     \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                             \
-                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(in_type)) \
-                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(indices_type)));
+#define REGISTER_COMBINED_MARGIN_LOSS_CPU_KERNEL(in_type, indices_type)                \
+  REGISTER_USER_KERNEL("combined_margin_loss")                                         \
+      .SetCreateFn<CombinedMarginLossCpuKernel<OF_PP_PAIR_FIRST(in_type),              \
+                                               OF_PP_PAIR_FIRST(indices_type)>>()      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(in_type)) \
+                       && (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(indices_type)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_COMBINED_MARGIN_LOSS_CPU_KERNEL, FLOATING_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
@@ -163,13 +167,13 @@ class CombinedMarginLossGradCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_COMBINED_MARGIN_LOSS_GRAD_CPU_KERNEL(dy_type, indices_type)           \
-  REGISTER_USER_KERNEL("combined_margin_loss_grad")                                    \
-      .SetCreateFn<CombinedMarginLossGradCpuKernel<OF_PP_PAIR_FIRST(dy_type),          \
-                                                   OF_PP_PAIR_FIRST(indices_type)>>()  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
-                       & (user_op::HobDataType("dy", 0) == OF_PP_PAIR_SECOND(dy_type)) \
-                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(indices_type)));
+#define REGISTER_COMBINED_MARGIN_LOSS_GRAD_CPU_KERNEL(dy_type, indices_type)            \
+  REGISTER_USER_KERNEL("combined_margin_loss_grad")                                     \
+      .SetCreateFn<CombinedMarginLossGradCpuKernel<OF_PP_PAIR_FIRST(dy_type),           \
+                                                   OF_PP_PAIR_FIRST(indices_type)>>()   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                   \
+                       && (user_op::HobDataType("dy", 0) == OF_PP_PAIR_SECOND(dy_type)) \
+                       && (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(indices_type)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_COMBINED_MARGIN_LOSS_GRAD_CPU_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)

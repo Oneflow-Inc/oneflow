@@ -20,6 +20,8 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/functional/impl/common.h"
+#include "oneflow/core/functional/tensor_processor.h"
 
 namespace oneflow {
 namespace one {
@@ -31,7 +33,10 @@ class BinaryFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, y});
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple);
   }
 
  protected:
@@ -41,14 +46,51 @@ class BinaryFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class BinaryFloatFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({x, y}, DType::Float()).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple);
+  }
+
+ protected:
+  BinaryFloatFunctor() = default;
+  virtual ~BinaryFloatFunctor() = default;
+
+  std::shared_ptr<OpExpr> op_;
+};
+
+class BinaryGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& dz) const {
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y, dz}).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple);
+  }
+
+ protected:
+  BinaryGradFunctor() = default;
+  virtual ~BinaryGradFunctor() = default;
+
+  std::shared_ptr<OpExpr> op_;
+};
+
 class InplaceableBinaryFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y, bool inplace) const {
     if (inplace) {
+      JUST(CheckInplaceValid(x));
+      JUST(CheckShapeCanExpandTo(*y->shape(), *x->shape()));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
-      JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*op_, {x, y}, outputs.get()));
+      JUST(OpInterpUtil::Dispatch(*op_, {x, y}, outputs.get()));
       return outputs->at(0);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x, y});

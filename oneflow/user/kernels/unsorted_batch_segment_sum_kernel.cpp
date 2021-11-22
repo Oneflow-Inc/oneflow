@@ -14,7 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/batch_gather_kernel_util.h"
+#include "oneflow/user/kernels/batch_gather_kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -32,7 +33,8 @@ Shape GetFlatShape(const ShapeView& shape, const int64_t axis) {
 }  // namespace
 
 template<DeviceType device_type, typename T, typename K>
-class UnsortedBatchSegmentSumKernel final : public user_op::OpKernel {
+class UnsortedBatchSegmentSumKernel final : public user_op::OpKernel,
+                                            public user_op::CudaGraphSupport {
  public:
   UnsortedBatchSegmentSumKernel() = default;
   ~UnsortedBatchSegmentSumKernel() = default;
@@ -45,22 +47,22 @@ class UnsortedBatchSegmentSumKernel final : public user_op::OpKernel {
     const int64_t axis = segment_ids->shape().NumAxes() - 1;
     const Shape& flat_data_shape = GetFlatShape(data->shape(), axis);
 
-    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0, out->shape().elem_cnt() * sizeof(T));
+    Memset<device_type>(ctx->stream(), out->mut_dptr(), 0, out->shape().elem_cnt() * sizeof(T));
     BatchGatherKernelUtilImpl<device_type, T, K>::Backward(
-        ctx->device_ctx(), data->dptr<T>(), segment_ids->dptr<K>(), flat_data_shape,
+        ctx->stream(), data->dptr<T>(), segment_ids->dptr<K>(), flat_data_shape,
         out->shape().At(axis), out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_UNSORTED_BATCH_SEGMENT_SUM_KERNEL(device, out_dtype, segment_ids_dtype)     \
-  REGISTER_USER_KERNEL("unsorted_batch_segment_sum")                                         \
-      .SetCreateFn<UnsortedBatchSegmentSumKernel<device, OF_PP_PAIR_FIRST(out_dtype),        \
-                                                 OF_PP_PAIR_FIRST(segment_ids_dtype)>>()     \
-      .SetIsMatchedHob(                                                                      \
-          (user_op::HobDeviceTag() == device)                                                \
-          & (user_op::HobDataType("segment_ids", 0) == OF_PP_PAIR_SECOND(segment_ids_dtype)) \
-          & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_dtype)));
+#define REGISTER_UNSORTED_BATCH_SEGMENT_SUM_KERNEL(device, out_dtype, segment_ids_dtype)      \
+  REGISTER_USER_KERNEL("unsorted_batch_segment_sum")                                          \
+      .SetCreateFn<UnsortedBatchSegmentSumKernel<device, OF_PP_PAIR_FIRST(out_dtype),         \
+                                                 OF_PP_PAIR_FIRST(segment_ids_dtype)>>()      \
+      .SetIsMatchedHob(                                                                       \
+          (user_op::HobDeviceType() == device)                                                \
+          && (user_op::HobDataType("segment_ids", 0) == OF_PP_PAIR_SECOND(segment_ids_dtype)) \
+          && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_dtype)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_BATCH_SEGMENT_SUM_KERNEL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)

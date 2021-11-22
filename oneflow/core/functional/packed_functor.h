@@ -21,8 +21,6 @@ limitations under the License.
 
 #include "oneflow/core/common/function_traits.h"
 #include "oneflow/core/common/type_traits.h"
-#include "oneflow/core/functional/value_types.h"
-#include "oneflow/core/functional/function_signature.h"
 
 namespace oneflow {
 namespace one {
@@ -31,80 +29,45 @@ namespace functional {
 template<typename T>
 using remove_cvref_t = oneflow::detail::remove_cvref_t<T>;
 
-struct FunctionBody {
-  virtual operator void*() = 0;
-};
-
 template<typename T>
-class FunctionBodyImpl;
+class PackedFunctor;
 
 template<typename R, typename... Args>
-class FunctionBodyImpl<R(Args...)> : public FunctionBody {
+class PackedFunctor<R(Args...)> {
  public:
-  template<typename Func,
-           typename std::enable_if<
-               std::is_same<typename function_traits<Func>::func_type, R(Args...)>::value,
-               int>::type = 0>
-  FunctionBodyImpl(const Func& func) {
-    func_ = [func](const remove_cvref_t<Args>&... args) {
-      return func(std::forward<const remove_cvref_t<Args>&>(args)...);
-    };
-  }
-
-  operator void*() override { return &func_; }
-
- private:
-  std::function<R(const remove_cvref_t<Args>&...)> func_;
-};
-
-class Functor {
- public:
-  Functor(const std::shared_ptr<FunctionBody>& body, const FunctionSignature& signatrue)
-      : signatrue_(signatrue), body_(body) {}
-
-  template<typename R, typename... Args>
-  R call(const remove_cvref_t<Args>&... args) const {
-    if (!detail::CheckSignature<R(Args...)>(signatrue_).Ok()) {
-      LOG(FATAL) << "The function was called with wrong arguments.";
-    }
-    using FuncType = std::function<R(const remove_cvref_t<Args>&...)>;
-    auto* func = reinterpret_cast<FuncType*>(body_->operator void*());
-    return (*func)(std::forward<const remove_cvref_t<Args>&>(args)...);
-  }
-
- private:
-  FunctionSignature signatrue_;
-  std::shared_ptr<FunctionBody> body_;
-};
-
-class PackedFunctor {
- public:
-  PackedFunctor(const std::string& func_name, const Functor& functor)
-      : func_name_(func_name), functor_(functor) {}
+  PackedFunctor(const std::string& func_name, const std::function<R(Args...)>& impl)
+      : func_name_(func_name), impl_(impl) {}
 
   virtual ~PackedFunctor() = default;
 
-  template<typename Func>
-  static PackedFunctor Make(const std::string& func_name, const Func& func);
-
-  template<typename R, typename... Args>
-  R call(Args... args) const {
-    return functor_.call<R, Args...>(std::forward<Args>(args)...);
+  template<typename... TArgs>
+  R call(TArgs&&... args) const {
+    return impl_(std::forward<TArgs>(args)...);
   }
 
  private:
   std::string func_name_;
-  Functor functor_;
+  std::function<R(Args...)> impl_;
 };
 
-template<typename Func>
-PackedFunctor PackedFunctor::Make(const std::string& func_name, const Func& func) {
-  using func_type = typename function_traits<Func>::func_type;
-  auto body = std::make_shared<FunctionBodyImpl<func_type>>(func);
-  FunctionSignature signatute = detail::PackFunctionSignature<func_type>::pack();
-  Functor functor(body, signatute);
-  return PackedFunctor(func_name, std::move(functor));
-}
+template<typename T>
+class PackedFunctorMaker;
+
+template<typename R, typename... Args>
+class PackedFunctorMaker<R(Args...)> {
+ public:
+  using FType = R(const remove_cvref_t<Args>&...);
+
+  template<typename Func,
+           typename std::enable_if<
+               std::is_same<typename function_traits<Func>::func_type, R(Args...)>::value,
+               int>::type = 0>
+  static PackedFunctor<FType> make(const std::string& func_name, const Func& func) {
+    return PackedFunctor<FType>(func_name, [func](const remove_cvref_t<Args>&... args) -> R {
+      return func(std::forward<const remove_cvref_t<Args>&>(args)...);
+    });
+  }
+};
 
 }  // namespace functional
 }  // namespace one

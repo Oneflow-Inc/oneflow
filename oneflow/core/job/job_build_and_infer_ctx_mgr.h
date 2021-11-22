@@ -63,7 +63,7 @@ class LazyJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
   friend class Global<LazyJobBuildAndInferCtxMgr>;
 
   Maybe<void> VirtualCloseJob() override;
-  JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const;
+  JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const override;
 };
 
 class EagerJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
@@ -76,7 +76,7 @@ class EagerJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
   friend class Global<EagerJobBuildAndInferCtxMgr>;
 
   Maybe<void> VirtualCloseJob() override;
-  JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const;
+  JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const override;
 };
 
 bool EagerExecutionEnabled();

@@ -42,7 +42,7 @@ void GenQuantScaleAffine(const T* in_ptr, const int32_t quantization_bit,
   T denominator = static_cast<T>(pow(2.0, quantization_bit)) - 1;
 
   *scale = (in_max - in_min) / denominator;
-  *zero_point = -std::round(in_min / (*scale));
+  *zero_point = -std::nearbyint(in_min / (*scale));
 }
 
 template<typename T>
@@ -116,11 +116,11 @@ class CpuMinMaxObserverKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MIN_MAX_OBSERVER_KERNEL(dtype)                      \
-  REGISTER_USER_KERNEL("min_max_observer")                           \
-      .SetCreateFn<CpuMinMaxObserverKernel<dtype>>()                 \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU) \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
+#define REGISTER_MIN_MAX_OBSERVER_KERNEL(dtype)                       \
+  REGISTER_USER_KERNEL("min_max_observer")                            \
+      .SetCreateFn<CpuMinMaxObserverKernel<dtype>>()                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
 
 REGISTER_MIN_MAX_OBSERVER_KERNEL(float);
 REGISTER_MIN_MAX_OBSERVER_KERNEL(double);

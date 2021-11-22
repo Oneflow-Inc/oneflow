@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
 
@@ -33,12 +34,14 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(Int64)           \
   OF_PP_MAKE_TUPLE_SEQ(UInt8)           \
   OF_PP_MAKE_TUPLE_SEQ(OFRecord)        \
-  OF_PP_MAKE_TUPLE_SEQ(TensorBuffer)
+  OF_PP_MAKE_TUPLE_SEQ(TensorBuffer)    \
+  OF_PP_MAKE_TUPLE_SEQ(BFloat16)
 
 class DType final {
  public:
-  DType(const DType&) = delete;
+  DType(const DType&) = default;
   DType(DType&&) = delete;
+  explicit DType(DataType data_type) : data_type_(data_type) {}
   ~DType() = default;
 
   bool operator==(const DType& other) const { return this->data_type() == other.data_type(); }
@@ -50,18 +53,18 @@ class DType final {
   const std::string& name() const;
   Maybe<size_t> bytes() const;
 
-  static Maybe<const std::shared_ptr<const DType>&> Get(DataType);
+  static Maybe<const Symbol<DType>&> Get(DataType);
+  static const int priority_order[DataType::kMaxDataType];
 
-#define DECLARE_GET_DATA_TYPE_FUNCTION(data_type) \
-  static const std::shared_ptr<const DType>& data_type();
+#define DECLARE_GET_DATA_TYPE_FUNCTION(data_type) static const Symbol<DType>& data_type();
   OF_PP_FOR_EACH_TUPLE(DECLARE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ)
 #undef DECLARE_GET_DATA_TYPE_FUNCTION
 
  private:
-  explicit DType(DataType data_type) : data_type_(data_type) {}
-
   DataType data_type_;
 };
+
+Symbol<DType> promoteTypes(const Symbol<DType> a, const Symbol<DType> b);
 
 }  // namespace oneflow
 

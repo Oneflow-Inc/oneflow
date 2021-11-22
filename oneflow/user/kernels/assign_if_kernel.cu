@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -33,6 +34,7 @@ class AssignIfGPUKernel final : public user_op::OpKernel {
   ~AssignIfGPUKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* condition = ctx->Tensor4ArgNameAndIndex("condition", 0);
     CHECK_EQ(condition->shape().NumAxes(), 1);
@@ -44,7 +46,7 @@ class AssignIfGPUKernel final : public user_op::OpKernel {
     CHECK_EQ(value->data_type(), ref->data_type());
     const size_t elem_cnt = ref->shape().elem_cnt();
     AssignGpu<assign_if, C, T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                 ctx->device_ctx()->cuda_stream()>>>(
+                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         elem_cnt, condition->dptr<C>(), value->dptr<T>(), ref->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
@@ -57,9 +59,9 @@ class AssignIfGPUKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(op_type_name)                                                             \
       .SetCreateFn<AssignIfGPUKernel<assign_if, condition_type, value_type>>()                   \
       .SetIsMatchedHob(                                                                          \
-          (user_op::HobDeviceTag() == DeviceType::kGPU)                                          \
-          & (user_op::HobDataType("condition", 0) == GetDataType<condition_type>::value)         \
-          & (user_op::HobDataType("value", 0) == GetDataType<value_type>::value));
+          (user_op::HobDeviceType() == DeviceType::kGPU)                                         \
+          && (user_op::HobDataType("condition", 0) == GetDataType<condition_type>::value)        \
+          && (user_op::HobDataType("value", 0) == GetDataType<value_type>::value));
 
 #define REGISTER_ASSIGN_IF_GPU_KERNEL(condition_type, value_type)                         \
   REGISTER_ASSIGN_WITH_CONDITION_VALUE_GPU_KERNEL(                                        \
