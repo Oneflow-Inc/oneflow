@@ -28,7 +28,7 @@ class __PrinterOptions(object):
     precision: int = 4
     threshold: float = 1000
     edgeitems: int = 3
-    linewidth: int = 80
+    linewidth: int = None
     sci_mode: Optional[bool] = None
 
 
@@ -87,8 +87,9 @@ def set_printoptions(
         PRINT_OPTS.edgeitems = edgeitems
     if linewidth is not None:
         PRINT_OPTS.linewidth = linewidth
-        set_printoptions.user_set_linewidth = True
     PRINT_OPTS.sci_mode = sci_mode
+    if profile is not None or linewidth is not None:
+        set_printoptions.user_set_linewidth = True
 set_printoptions.user_set_linewidth = False
 
 
