@@ -41,7 +41,7 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
 
   user_op::TensorDesc* total_weight_desc = ctx->OutputTensorDesc("total_weight", 0);
   *total_weight_desc->mut_is_dynamic() = input_desc.is_dynamic();
-  *total_weight_desc->mut_shape() = Shape({1});
+  *total_weight_desc->mut_shape() = Shape({});
 
   return Maybe<void>::Ok();
 }
@@ -66,7 +66,7 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(target_desc.shape().NumAxes(), 1);
   CHECK_EQ_OR_RETURN(input_desc.shape().At(0), target_desc.shape().At(0));
   CHECK_EQ_OR_RETURN(dy_desc.shape(), target_desc.shape());
-  CHECK_EQ_OR_RETURN(total_weight_desc.shape(), Shape({1}));
+  CHECK_EQ_OR_RETURN(total_weight_desc.shape(), Shape({}));
   if (ctx->has_input("weight", 0)) {
     const auto& weight_desc = ctx->InputTensorDesc("weight", 0);
     CHECK_EQ_OR_RETURN(weight_desc.is_dynamic(), input_desc.is_dynamic());
@@ -109,7 +109,7 @@ REGISTER_USER_OP("nll")
     })
     .SetDataTypeInferFn(InferDataType)
     .SetGetSbpFn(GenLossForwardDefaultGetSbpFnNew([](user_op::UserOpSbpSignatureBuilder& builder) {
-      builder.Broadcast(user_op::OpArg("total_weight", 0));
+      builder.PartialSum(user_op::OpArg("total_weight", 0));
     }));
 
 REGISTER_USER_OP("nll_grad")
@@ -124,7 +124,7 @@ REGISTER_USER_OP("nll_grad")
     .SetTensorDescInferFn(InferGradTensorDescFn)
     .SetDataTypeInferFn(InferGradDataType)
     .SetGetSbpFn(GenLossBackwardDefaultGetSbpFnNew([](user_op::UserOpSbpSignatureBuilder& builder) {
-      builder.Broadcast(user_op::OpArg("total_weight", 0));
+      builder.PartialSum(user_op::OpArg("total_weight", 0));
     }));
 
 REGISTER_USER_OP_GRAD("nll").SetGenBackwardOpConfFn(
