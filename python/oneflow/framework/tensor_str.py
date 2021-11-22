@@ -35,7 +35,7 @@ class __PrinterOptions(object):
 
     @property
     def linewidth(self):
-        return _autoset_linewidth() if self.autoset_linewidth else self.linewidth
+        return _autoset_linewidth() if self.autoset_linewidth else self.userset_linewidth
         
     @linewidth.setter
     def linewidth(self, value):
