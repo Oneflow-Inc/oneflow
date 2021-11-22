@@ -39,6 +39,9 @@ class OpenvinoExecutable : public Executable {
   bool Run(const std::vector<Parameter>& inputs, const ExecutableRunOptions& run_options,
            bool block_until_done = true) override;
 
+  InferenceEngine::Blob::Ptr ParameterToBlobPtr(const Parameter& input,
+                                                const InferenceEngine::TensorDesc& in_desc);
+
  private:
   std::unique_ptr<InferenceEngine::ExecutableNetwork> executable_network_;
   util::Map<std::string, int> in_out_to_param_idx_;

@@ -21,7 +21,7 @@ from random import choice
 import numpy as np
 
 import oneflow as flow
-import oneflow.unittest
+from test_xrt import *
 
 
 def get_graph():
@@ -45,26 +45,9 @@ class TestXrtReLU(flow.unittest.TestCase):
         relu_g = get_graph()
         out = relu_g(x_cpu)
 
-        relu_g_openvino = get_graph()
-        relu_g_openvino.config.enable_xrt_use_openvino(True)
-        out_openvino = relu_g_openvino(x_cpu)
-        test_case.assertTrue(
-            np.allclose(out.numpy(), out_openvino.numpy(), rtol=1e-3, atol=1e-4)
-        )
-
-        relu_g_tensorrt = get_graph()
-        relu_g_tensorrt.config.enable_xrt_use_tensorrt(True)
-        out_tensorrt = relu_g_tensorrt(x_cuda)
-        test_case.assertTrue(
-            np.allclose(out.numpy(), out_tensorrt.numpy(), rtol=1e-3, atol=1e-4)
-        )
-
-        relu_g_xla = get_graph()
-        relu_g_xla.config.enable_xrt_use_xla_jit(True)
-        out_xla = relu_g_xla(x_cuda)
-        test_case.assertTrue(
-            np.allclose(out.numpy(), out_xla.numpy(), rtol=1e-3, atol=1e-4)
-        )
+        test_xrt_openvino(test_case, get_graph(), x_cpu, out)
+        test_xrt_tensorrt(test_case, get_graph(), x_cuda, out)
+        test_xrt_xla(test_case, get_graph(), x_cuda, out)
 
 
 if __name__ == "__main__":

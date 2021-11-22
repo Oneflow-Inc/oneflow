@@ -38,8 +38,7 @@ bool OpenvinoExecutable::Run(const std::vector<Parameter>& inputs,
     InferenceEngineDataDesc data_desc(inputs[input_idx].shape(), inputs[input_idx].data_type());
     InferenceEngine::TensorDesc in_desc(data_desc.precision(), data_desc.dims(),
                                         data_desc.layout());
-    InferenceEngine::Blob::Ptr in_blob =
-        InferenceEngine::make_shared_blob<float>(in_desc, inputs[input_idx].data<float>());
+    InferenceEngine::Blob::Ptr in_blob = ParameterToBlobPtr(inputs[input_idx], in_desc);
     infer_request->SetBlob(input_info_iter->first, in_blob);
   }
 
@@ -58,13 +57,36 @@ bool OpenvinoExecutable::Run(const std::vector<Parameter>& inputs,
                                       this->results_[output_idx].data_type());
     InferenceEngine::TensorDesc out_desc(data_desc.precision(), data_desc.dims(),
                                          data_desc.layout());
-    InferenceEngine::Blob::Ptr out_blob = InferenceEngine::make_shared_blob<float>(
-        out_desc, this->results_[output_idx].data<float>());
+    InferenceEngine::Blob::Ptr out_blob = ParameterToBlobPtr(this->results_[output_idx], out_desc);
     infer_request->SetBlob(output_info_iter->first, out_blob);
   }
 
   infer_request->Infer();
   return true;
+}
+
+InferenceEngine::Blob::Ptr OpenvinoExecutable::ParameterToBlobPtr(
+    const Parameter& input, const InferenceEngine::TensorDesc& in_desc) {
+  const DataType& date_type = input.data_type();
+
+  if (date_type == DataType::kChar) {
+    return InferenceEngine::make_shared_blob<char>(in_desc, input.data<char>());
+  } else if (date_type == DataType::kFloat) {
+    return InferenceEngine::make_shared_blob<float>(in_desc, input.data<float>());
+  } else if (date_type == DataType::kDouble) {
+    return InferenceEngine::make_shared_blob<double>(in_desc, input.data<double>());
+  } else if (date_type == DataType::kInt8) {
+    return InferenceEngine::make_shared_blob<char>(in_desc, input.data<char>());
+  } else if (date_type == DataType::kInt32) {
+    return InferenceEngine::make_shared_blob<int32_t>(in_desc, input.data<int32_t>());
+  } else if (date_type == DataType::kInt64) {
+    return InferenceEngine::make_shared_blob<int64_t>(in_desc, input.data<int64_t>());
+  } else if (date_type == DataType::kUInt8) {
+    return InferenceEngine::make_shared_blob<unsigned char>(in_desc, input.data<unsigned char>());
+  } else {
+    UNIMPLEMENTED();
+  }
+  return InferenceEngine::Blob::Ptr();
 }
 
 }  // namespace openvino

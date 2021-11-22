@@ -1,0 +1,81 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
+import unittest
+from random import randint
+from random import choice
+
+import numpy as np
+
+import oneflow as flow
+import oneflow.unittest
+
+
+def test_xrt_openvino(test_case, graph, input, ref_out, rtol=1e-3, atol=1e-4):
+    graph.config.enable_xrt_use_openvino(True)
+    if len(input) == 1:
+        out = graph(input)
+    else:
+        out = graph(*input)
+
+    if len(ref_out) == 1:
+        test_case.assertTrue(
+            np.allclose(ref_out[0].numpy(), out.numpy(), rtol=rtol, atol=atol)
+        )
+    else:
+        test_case.assertTrue(len(ref_out) == len(out))
+        for i in range(len(ref_out)):
+            test_case.assertTrue(
+                np.allclose(ref_out[i].numpy(), out[i].numpy(), rtol=rtol, atol=atol)
+            )
+
+
+def test_xrt_tensorrt(test_case, graph, input, ref_out, rtol=1e-3, atol=1e-4):
+    graph.config.enable_xrt_use_tensorrt(True)
+    if len(input) == 1:
+        out = graph(input)
+    else:
+        out = graph(*input)
+
+    if len(ref_out) == 1:
+        test_case.assertTrue(
+            np.allclose(ref_out[0].numpy(), out.numpy(), rtol=rtol, atol=atol)
+        )
+    else:
+        test_case.assertTrue(len(ref_out) == len(out))
+        for i in range(len(ref_out)):
+            test_case.assertTrue(
+                np.allclose(ref_out[i].numpy(), out[i].numpy(), rtol=rtol, atol=atol)
+            )
+
+
+def test_xrt_xla(test_case, graph, input, ref_out, rtol=1e-3, atol=1e-4):
+    graph.config.enable_xrt_use_xla_jit(True)
+    if len(input) == 1:
+        out = graph(input)
+    else:
+        out = graph(*input)
+
+    if len(ref_out) == 1:
+        test_case.assertTrue(
+            np.allclose(ref_out[0].numpy(), out.numpy(), rtol=rtol, atol=atol)
+        )
+    else:
+        test_case.assertTrue(len(ref_out) == len(out))
+        for i in range(len(ref_out)):
+            test_case.assertTrue(
+                np.allclose(ref_out[i].numpy(), out[i].numpy(), rtol=rtol, atol=atol)
+            )

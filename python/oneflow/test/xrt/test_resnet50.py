@@ -22,7 +22,7 @@ import numpy as np
 
 from oneflow.test.modules.resnet50_model import resnet50
 import oneflow as flow
-import oneflow.unittest
+from test_xrt import *
 
 
 res50_module = resnet50(

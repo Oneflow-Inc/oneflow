@@ -31,8 +31,8 @@ class ReshapeOp : public OpenvinoOpKernel {
     std::vector<size_t> dim_vec;
     for (int i = 0; i < shape.NumAxes(); ++i) { dim_vec.push_back(shape.At(i)); }
 
-    std::shared_ptr<ngraph::Node> alpha_node =
-        std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape({dim_vec.size()}), dim_vec);
+    std::shared_ptr<ngraph::Node> alpha_node = std::make_shared<ngraph::op::Constant>(
+        ngraph::element::i32, ngraph::Shape({dim_vec.size()}), dim_vec);
     std::shared_ptr<ngraph::Node> ngraph_node =
         std::make_shared<ngraph::op::v1::Reshape>(ctx->Input("in_0"), alpha_node, false);
     ngraph_node->set_friendly_name(ctx->op_name().c_str());
