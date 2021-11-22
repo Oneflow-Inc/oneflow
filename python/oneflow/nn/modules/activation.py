@@ -168,18 +168,6 @@ class ReLU6(Module):
         return inplace_str
 
 
-# def relu6(input, inplace=False):
-#     r"""relu6(input, inplace=False) -> Tensor
-
-#     Applies the element-wise function :math:`\text{ReLU6}(x) = \min(\max(0,x), 6)`.
-
-#     See :class:`~oneflow.nn.ReLU6` for more details.
-#     """
-#     if inplace:
-#         warnings.warn("nn.functional.relu6 do not support inplace now")
-#     return flow._C.hardtanh(input, min_val=0.0, max_val=6.0)
-
-
 class Tanh(Module):
     """This operator computes the hyperbolic tangent value of Tensor.
 
