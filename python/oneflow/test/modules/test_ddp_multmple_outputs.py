@@ -19,14 +19,17 @@ from oneflow.nn.parallel import DistributedDataParallel as ddp
 import oneflow.unittest
 import numpy as np
 import os
+from collections import OrderedDict
+from test_util import GenArgDict
 
 train_x = [
     flow.tensor([[1, 2], [2, 3]], dtype=flow.float32),
     flow.tensor([[4, 6], [3, 1]], dtype=flow.float32),
 ]
+
 train_float32 = [
-    flow.tensor([[8], [13]], dtype=flow.float32),
-    flow.tensor([[26], [9]], dtype=flow.float32),
+    flow.tensor([[1, 2], [2, 3]], dtype=flow.float32),
+    flow.tensor([[4, 6], [3, 1]], dtype=flow.float32),
 ]
 
 train_int32 = [
@@ -39,42 +42,55 @@ class Model(flow.nn.Module):
     def __init__(self):
         super().__init__()
         self.lr = 0.01
-        self.iter_count = 100
+        self.iter_count = 10
         self.w1 = flow.nn.Parameter(flow.tensor([[0], [0]],
+                                                dtype=flow.float32))
+        self.w2 = flow.nn.Parameter(flow.tensor([[0], [0]],
                                                 dtype=flow.float32))
 
     def forward(self, x, label):
         x1 = flow.matmul(x, self.w1)
+        #label = flow.matmul(label, self.w2)
         return x1, label
 
 
-def train(train_x, train_y, test_case):
-    m = Model().to("cuda")
+def train(test_case, train_x, device, output, requires_grad):
+    m = Model().to(device)
     m = ddp(m)
     loss = flow.nn.MSELoss(reduction="sum")
     optimizer = flow.optim.SGD(m.parameters(), m.lr)
 
     for i in range(0, m.iter_count):
         rank = flow.env.get_rank()
-        x = train_x[rank].to("cuda")
-        y = train_y[rank].to("cuda")
 
+        x = train_x[rank].clone().to(device)
+        y = output[rank].clone().to(device)
+        y.requires_grad = requires_grad
         y_pred, y2 = m(x, y)
-        test_case.assertFalse(y2.requires_grad)
+        test_case.assertTrue(y2.requires_grad == y.requires_grad)
         l = loss(y_pred, y)
         l.backward()
         optimizer.step()
         optimizer.zero_grad()
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestDdpMultmpleOutputs(flow.unittest.TestCase):
     def test_outputs_float32(test_case):
-        train(train_x, train_float32, test_case)
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["output"] = [train_float32]
+        arg_dict["requires_grad"] = [True, False]
+        for arg in GenArgDict(arg_dict):
+            train(test_case, train_x, **arg)
 
     def test_outputs_int32(test_case):
-        train(train_x, train_int32, test_case)
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["output"] = [train_int32]
+        arg_dict["requires_grad"] = [False]
+        for arg in GenArgDict(arg_dict):
+            train(test_case, train_x, **arg)
 
 
 if __name__ == "__main__":
