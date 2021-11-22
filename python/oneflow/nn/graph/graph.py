@@ -34,6 +34,7 @@ from oneflow.nn.graph.util import add_indent, seq_to_func_return, sys_exc_error_
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 from oneflow.nn.optimizer.optimizer import Optimizer
+import time
 
 
 class Graph(object):
@@ -363,16 +364,19 @@ class Graph(object):
         shallow_repr = "(GRAPH:" + self._name + ":" + self.__class__.__name__ + ")"
         return shallow_repr
 
-    def _print(self, s_level=2, v_level=0, msg: str = ""):
+    def _print(self, s_level=2, v_level=0, msg: str = "",cost_time_str:str = ""):
         r"""Do print according to info level.
         """
         assert isinstance(s_level, int)
         assert isinstance(v_level, int)
         assert isinstance(msg, str)
+        assert isinstance(cost_time_str, str)
         if s_level >= self._debug_min_s_level:
             if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
-                print(msg)
-
+                if msg==self._shallow_repr() + " end compiling plan and init graph rumtime.":
+                    print(msg + '\n' "from build graph to complie and init Runtime the end consumes time:%ss"%cost_time_str)
+                else:
+                    print(msg)
     @property
     def _config_proto(self):
         return self.config.proto
@@ -443,14 +447,13 @@ class Graph(object):
     def _compile(self, *args):
         # Build graph
         try:
-            self._print(0, 0, self._shallow_repr() + " start building graph.")
+            self._print(0, 0, self._shallow_repr() + " start building graph."," ")
             assert not self._is_compiled, (
                 "nn.Graph " + self._name + " has already been compiled."
             )
-
+            t0 = time.clock()
             eager_outputs = self._build_graph(*args)
-
-            self._print(0, 0, self._shallow_repr() + " end building graph.")
+            self._print(0, 0, self._shallow_repr() + " end building graph."," ")
         except:
             self._print(
                 2,
@@ -458,7 +461,7 @@ class Graph(object):
                 "[ERROR]"
                 + self._shallow_repr()
                 + " build graph got error: "
-                + sys_exc_error_msg(),
+                + sys_exc_error_msg()," "
             )
             raise
 
@@ -467,15 +470,15 @@ class Graph(object):
             self._print(
                 0,
                 0,
-                self._shallow_repr() + " start compiling plan and init graph runtime.",
+                self._shallow_repr() + " start compiling plan and init graph runtime."," "
             )
-
             self._c_nn_graph.complie_and_init_runtime()
-
+            t1 = time.clock()
+            cost_time_str = str(t1 - t0)
             self._print(
                 0,
                 0,
-                self._shallow_repr() + " end compiling plan and init graph rumtime.",
+                self._shallow_repr() + " end compiling plan and init graph rumtime.",cost_time_str
             )
         except:
             self._print(
@@ -484,7 +487,7 @@ class Graph(object):
                 "[ERROR]"
                 + self._shallow_repr()
                 + " compiling plan or initialing graph runtime got error : ",
-                sys_exc_error_msg(),
+                sys_exc_error_msg()," "
             )
             raise
 
