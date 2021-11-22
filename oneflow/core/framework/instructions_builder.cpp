@@ -1076,7 +1076,7 @@ template<typename T>
 Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_tensor) {
   /**
    * TensorView instruction assign the data pointer of input tensor to output view tensor,
-   * so they can shared memory.
+   * so they can share memory.
    */
   const auto& parallel_desc = GetParallelDesc(input_tensor);
   LocalDepObject* local_dep_object = JUST(input_tensor->compute_local_dep_object());
