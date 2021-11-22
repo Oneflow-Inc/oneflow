@@ -70,15 +70,6 @@ class TensorViewOperand : public PhyInstrOperand {
   void ForEachMut2MirroredObject(
       const std::function<void(vm::MirroredObject* compute)>&) const;
 
-  void ForEachConstMirroredObject(
-      const std::function<void(MirroredObject* compute, MirroredObject* compute2)>&) const;
-
-  void ForEachMutMirroredObject(
-      const std::function<void(MirroredObject* compute, MirroredObject* compute2)>&) const;
-
-  void ForEachMut2MirroredObject(
-      const std::function<void(MirroredObject* compute, MirroredObject* compute2)>&) const;
-
  private:
   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
   std::shared_ptr<vm::EagerBlobObject> view_eager_blob_object_;
