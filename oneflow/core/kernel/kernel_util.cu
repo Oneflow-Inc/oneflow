@@ -25,9 +25,9 @@ namespace oneflow {
   template<typename T, typename Derived> \
   void GpuKernelUtilIf<T, Derived>::
 
-KU_IF_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+KU_IF_METHOD InitializeWithConf(ep::Stream* stream, const InitializerConf& initializer_conf,
                                 uint32_t random_seed, Blob* blob) {
-  WithHostBlobAndStreamSynchronizeEnv(ctx, blob, [&](Blob* host_blob) {
+  WithHostBlobAndStreamSynchronizeEnv(stream, blob, [&](Blob* host_blob) {
     KernelUtil<DeviceType::kCPU, T>::InitializeWithConf(nullptr, initializer_conf, random_seed,
                                                         host_blob);
   });

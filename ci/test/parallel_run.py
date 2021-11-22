@@ -54,7 +54,7 @@ def everyN(l: list, n: int):
 
 
 def contains_oom_info(txt: str):
-    return "memory" in txt or "Memory" in txt or "CUDNN" in txt
+    return "memory" in txt or "Memory" in txt or "CUDNN" in txt or "ALLOC" in txt
 
 
 def should_retry(txt: str):

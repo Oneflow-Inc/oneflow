@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/math_unary_elementwise_func.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -134,16 +135,17 @@ class CombinedMarginLossGpuKernel final : public user_op::OpKernel {
     }
     if (m1 == 1.0 && m2 == 0.0) {
       GpuForward<T, K, true><<<BlocksNum4ThreadsNum(x->shape().elem_cnt()), kCudaThreadsNumPerBlock,
-                               0, ctx->device_ctx()->cuda_stream()>>>(
+                               0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           x->shape().elem_cnt(), x->shape().Count(1), lower_bound, static_cast<T>(m1),
           static_cast<T>(m2), static_cast<T>(m3), x->dptr<T>(), label->dptr<K>(), y->mut_dptr<T>(),
           theta->mut_dptr<T>());
     } else {
-      GpuForward<T, K, false><<<BlocksNum4ThreadsNum(x->shape().elem_cnt()),
-                                kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
-          x->shape().elem_cnt(), x->shape().Count(1), lower_bound, static_cast<T>(m1),
-          static_cast<T>(m2), static_cast<T>(m3), x->dptr<T>(), label->dptr<K>(), y->mut_dptr<T>(),
-          theta->mut_dptr<T>());
+      GpuForward<T, K, false>
+          <<<BlocksNum4ThreadsNum(x->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+              x->shape().elem_cnt(), x->shape().Count(1), lower_bound, static_cast<T>(m1),
+              static_cast<T>(m2), static_cast<T>(m3), x->dptr<T>(), label->dptr<K>(),
+              y->mut_dptr<T>(), theta->mut_dptr<T>());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -189,17 +191,19 @@ class CombinedMarginLossGradGpuKernel final : public user_op::OpKernel {
       lower_bound = kernel_state->lower();
     }
     if (m1 == 1.0 && m2 == 0.0) {
-      GpuBackward<T, K, true><<<BlocksNum4ThreadsNum(dy->shape().elem_cnt()),
-                                kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
-          dy->shape().elem_cnt(), dy->shape().Count(1), lower_bound, static_cast<T>(m1),
-          static_cast<T>(m2), static_cast<T>(m3), dy->dptr<T>(), label->dptr<K>(), theta->dptr<T>(),
-          dx->mut_dptr<T>());
+      GpuBackward<T, K, true>
+          <<<BlocksNum4ThreadsNum(dy->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+              dy->shape().elem_cnt(), dy->shape().Count(1), lower_bound, static_cast<T>(m1),
+              static_cast<T>(m2), static_cast<T>(m3), dy->dptr<T>(), label->dptr<K>(),
+              theta->dptr<T>(), dx->mut_dptr<T>());
     } else {
-      GpuBackward<T, K, false><<<BlocksNum4ThreadsNum(dy->shape().elem_cnt()),
-                                 kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
-          dy->shape().elem_cnt(), dy->shape().Count(1), lower_bound, static_cast<T>(m1),
-          static_cast<T>(m2), static_cast<T>(m3), dy->dptr<T>(), label->dptr<K>(), theta->dptr<T>(),
-          dx->mut_dptr<T>());
+      GpuBackward<T, K, false>
+          <<<BlocksNum4ThreadsNum(dy->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+              dy->shape().elem_cnt(), dy->shape().Count(1), lower_bound, static_cast<T>(m1),
+              static_cast<T>(m2), static_cast<T>(m3), dy->dptr<T>(), label->dptr<K>(),
+              theta->dptr<T>(), dx->mut_dptr<T>());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

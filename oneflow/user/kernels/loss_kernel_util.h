@@ -43,12 +43,12 @@ inline ReductionType GetReductionType(const std::string& reduction) {
 
 template<DeviceType device_type, typename T>
 RETURN_VOID_IF_CPU(device_type)
-ApplyLossReductionIfNeed(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* out,
+ApplyLossReductionIfNeed(ep::Stream* stream, int64_t elem_cnt, const T* tmp_out, T* out,
                          const ReductionType reduction_type);
 
 template<DeviceType device_type, typename T>
 RETURN_VOID_IF_GPU(device_type)
-ApplyLossReductionIfNeed(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* out,
+ApplyLossReductionIfNeed(ep::Stream* stream, int64_t elem_cnt, const T* tmp_out, T* out,
                          const ReductionType reduction_type);
 
 template<typename T>
@@ -89,7 +89,7 @@ class SimpleLossKernel : public user_op::OpKernel {
 
     static_cast<const R*>(this)->ComputeOut(ctx, elem_cnt, input, target,
                                             reduction == ReductionType::kNone ? out : tmp_out);
-    ApplyLossReductionIfNeed<device_type, T>(ctx->device_ctx(), elem_cnt, tmp_out, out, reduction);
+    ApplyLossReductionIfNeed<device_type, T>(ctx->stream(), elem_cnt, tmp_out, out, reduction);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

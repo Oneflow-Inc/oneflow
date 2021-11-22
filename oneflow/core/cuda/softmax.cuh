@@ -44,7 +44,7 @@ struct MaxOp {
   __device__ __forceinline__ T operator()(const T& a, const T& b) const { return max(a, b); }
 };
 
-template<template<typename> typename ReductionOp, typename T, int thread_group_width = kWarpSize>
+template<template<typename> class ReductionOp, typename T, int thread_group_width = kWarpSize>
 __inline__ __device__ T WarpAllReduce(T val) {
   for (int mask = thread_group_width / 2; mask > 0; mask /= 2) {
     val = ReductionOp<T>()(val, __shfl_xor_sync(0xffffffff, val, mask));
@@ -52,7 +52,7 @@ __inline__ __device__ T WarpAllReduce(T val) {
   return val;
 }
 
-template<template<typename> typename ReductionOp, typename T, int block_size>
+template<template<typename> class ReductionOp, typename T, int block_size>
 __inline__ __device__ T BlockAllReduce(T val) {
   typedef cub::BlockReduce<T, block_size> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
@@ -522,7 +522,6 @@ __global__ void SoftmaxBlockSMemImpl(LOAD load, STORE store, const int64_t rows,
         } else {
           __trap();
         }
-        thread_max = max(thread_max, pack[i]);
       }
       store.template store<pack_size>(pack, row, pack_id * pack_size);
     }

@@ -144,7 +144,7 @@ class SGDUpdateKernel final : public user_op::OpKernel, public user_op::CudaGrap
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
     SGDUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, weight_decay,
+        ctx->stream(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, weight_decay,
         learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(),
         model->mut_dptr<T>());
   }
@@ -216,11 +216,11 @@ class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
                                                        num_values);
     CHECK_GE(tmp_buffer->shape().elem_cnt(), buffer_manager.GetTotalBufferSize());
     ReduceSumUtilT::ReduceSum(
-        ctx->device_ctx(), num_indices, feature_size, model_diff_indices->dptr<K>(),
+        ctx->stream(), num_indices, feature_size, model_diff_indices->dptr<K>(),
         model_diff_values->dptr<T>(), buffer_manager.NumUniqueDiffIndicesPtr(),
         buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
         buffer_manager.UniqueWorkspacePtr(), buffer_manager.UniqueWorkspaceBytes());
-    MdUpdateUtilT::Update(ctx->device_ctx(), weight_decay, num_indices, feature_size,
+    MdUpdateUtilT::Update(ctx->stream(), weight_decay, num_indices, feature_size,
                           kernel_state->lower(), kernel_state->upper(),
                           buffer_manager.NumUniqueDiffIndicesPtr(), learning_rate->dptr<float>(),
                           buffer_manager.UniqueDiffIndicesPtr(),
@@ -283,9 +283,9 @@ class MomentumUpdateKernel final : public user_op::OpKernel, public user_op::Cud
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
     MomentumUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta,
-        weight_decay, learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
-        model_diff->dptr<G>(), model->mut_dptr<T>(), momentum->mut_dptr<T>());
+        ctx->stream(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta, weight_decay,
+        learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(),
+        model->mut_dptr<T>(), momentum->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -346,12 +346,12 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
                                                        num_values);
     CHECK_GE(tmp_buffer->shape().elem_cnt(), buffer_manager.GetTotalBufferSize());
     ReduceSumUtilT::ReduceSum(
-        ctx->device_ctx(), num_indices, feature_size, model_diff_indices->dptr<K>(),
+        ctx->stream(), num_indices, feature_size, model_diff_indices->dptr<K>(),
         model_diff_values->dptr<T>(), buffer_manager.NumUniqueDiffIndicesPtr(),
         buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
         buffer_manager.UniqueWorkspacePtr(), buffer_manager.UniqueWorkspaceBytes());
     MdUpdateUtilT::Update(
-        ctx->device_ctx(), beta, weight_decay, num_indices, feature_size, kernel_state->lower(),
+        ctx->stream(), beta, weight_decay, num_indices, feature_size, kernel_state->lower(),
         kernel_state->upper(), buffer_manager.NumUniqueDiffIndicesPtr(),
         learning_rate->dptr<float>(), buffer_manager.UniqueDiffIndicesPtr(),
         buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>(), momentum->mut_dptr<T>());
@@ -439,7 +439,7 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     }
 
     AdamUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
+        ctx->stream(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
         epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val, bias_correction1_val,
         bias_correction2_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, bias_correction1_ptr,
         bias_correction2_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), m->mut_dptr<T>(),
@@ -508,8 +508,8 @@ class AdagradUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
     AdagradUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, lr_decay,
-        epsilon, weight_decay, learning_rate_val, train_step_val, learning_rate_ptr, train_step_ptr,
+        ctx->stream(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, lr_decay, epsilon,
+        weight_decay, learning_rate_val, train_step_val, learning_rate_ptr, train_step_ptr,
         scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), sum->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
@@ -598,13 +598,13 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
     CHECK_GE(tmp_buffer->shape().elem_cnt(), buffer_manager.GetTotalBufferSize());
 
     ReduceSumUtilT::ReduceSum(
-        ctx->device_ctx(), num_indices, feature_size, model_diff_indices->dptr<K>(),
+        ctx->stream(), num_indices, feature_size, model_diff_indices->dptr<K>(),
         model_diff_values->dptr<T>(), buffer_manager.NumUniqueDiffIndicesPtr(),
         buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
         buffer_manager.UniqueWorkspacePtr(), buffer_manager.UniqueWorkspaceBytes());
 
     MdUpdateUtilT::Update(
-        ctx->device_ctx(), beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
+        ctx->stream(), beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
         learning_rate_val, num_indices, feature_size, kernel_state->lower(), kernel_state->upper(),
         buffer_manager.NumUniqueDiffIndicesPtr(), learning_rate_ptr, bias_correction1_ptr,
         bias_correction2_ptr, buffer_manager.UniqueDiffIndicesPtr(),
@@ -703,10 +703,10 @@ class LambUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
     LambUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->device_ctx(), m->shape().elem_cnt(), scale, l1, l2, beta1, beta2, epsilon,
-        weight_decay, learning_rate->dptr<float>(), scale_by_ptr, skip_if_ptr,
-        model_diff->dptr<G>(), tbm.AdamDiffPtr(), model->mut_dptr<T>(), m->mut_dptr<T>(),
-        v->mut_dptr<T>(), tbm.NormBufferPtr(), beta1_t->mut_dptr<T>(), beta2_t->mut_dptr<T>());
+        ctx->stream(), m->shape().elem_cnt(), scale, l1, l2, beta1, beta2, epsilon, weight_decay,
+        learning_rate->dptr<float>(), scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(),
+        tbm.AdamDiffPtr(), model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>(),
+        tbm.NormBufferPtr(), beta1_t->mut_dptr<T>(), beta2_t->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -749,7 +749,7 @@ class BiasCorrectionFactorKernel final : public user_op::OpKernel,
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const auto beta = ctx->Attr<float>("beta");
     BiasCorrectionFactorKernelUtil<device_type>::BiasCorrectionFactorCompute(
-        ctx->device_ctx(), beta, train_step->dptr<int64_t>(), out->mut_dptr<float>());
+        ctx->stream(), beta, train_step->dptr<int64_t>(), out->mut_dptr<float>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -806,10 +806,9 @@ class RmsPropUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
       mean_gradient_ptr = mean_gradient->mut_dptr<T>();
     }
     RmsPropUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, centered,
-        epsilon, weight_decay, decay_rate, learning_rate_val, learning_rate_ptr, scale_by_ptr,
-        skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), mean_square->mut_dptr<T>(),
-        mean_gradient_ptr);
+        ctx->stream(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, centered, epsilon,
+        weight_decay, decay_rate, learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
+        model_diff->dptr<G>(), model->mut_dptr<T>(), mean_square->mut_dptr<T>(), mean_gradient_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -899,7 +898,7 @@ class LarsUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
     LarsUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, momentum_beta,
+        ctx->stream(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, momentum_beta,
         epsilon, lars_coefficient, weight_decay, learning_rate->dptr<float>(), scale_by_ptr,
         skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), momentum->mut_dptr<T>(),
         tlm.DataTmpPtr(), tlm.ModelDiffPtr());

@@ -21,7 +21,7 @@ namespace user_op {
 
 template<typename T>
 struct EyeFunctor<DeviceType::kCPU, T> final {
-  void operator()(DeviceCtx* ctx, const int64_t& cols, const int64_t& rows, T* out) {
+  void operator()(ep::Stream* stream, const int64_t& cols, const int64_t& rows, T* out) {
     SetOneInDiag(cols, rows, out);
   }
 };
