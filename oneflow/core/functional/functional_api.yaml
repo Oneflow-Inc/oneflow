@@ -393,10 +393,6 @@
   signature: "Tensor (Tensor x, Bool inplace=False) => ReLU6"
   bind_python: True
 
-- name: "relu6_grad"
-  signature: "Tensor (Tensor y, Tensor dy) => ReLU6Grad"
-  bind_python: False
-
 - name: "tan"
   signature: "Tensor (Tensor x) => Tan"
   bind_python: True
