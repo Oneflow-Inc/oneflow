@@ -409,31 +409,40 @@ class ConvCpuKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     T* col_buf_dptr = tmp_buffer->mut_dptr<T>();
+    int32_t idx_offset = conv_state->idx_offset_;
     const int32_t input_group_interval = in->shape().At(1) / conv_state->groups;
     const int32_t weight_group_interval = weight->shape().At(0) / conv_state->groups;
     const int32_t output_group_interval = out->shape().At(1) / conv_state->groups;
-    int32_t idx_offset = conv_state->idx_offset_;
+    const int32_t input_step = input_group_interval * in->shape().Count(2);
+    const int32_t weight_step = weight_group_interval * weight->shape().Count(1);
+    const int32_t output_step = output_group_interval * out->shape().Count(2);
+    const int32_t m = conv_state->weight_5d_shape_.At(0) / conv_state->groups;
+    const int32_t k = conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3);
+    const int32_t n = conv_state->weight_5d_shape_.Count(1);
     bool is_bias_mul_inited = false;
+
     for (int64_t i = 0; i < in->shape().At(0); ++i) {
+      const T* input_ptr = GetImgDptr<T>(in, i);
+      const T* weight_ptr = weight->dptr<T>();
+      T* output_ptr = GetImgMutDptr<T>(out, i);
       for (int64_t g = 0; g < conv_state->groups; g++) {
         conv_state->im2col_func_(
-            GetImgDptr<T>(in, i) + g * input_group_interval * in->shape().Count(2),
-            ShapeView(conv_state->in_5d_shape_), ShapeView(conv_state->weight_5d_shape_),
+            input_ptr, ShapeView(conv_state->in_5d_shape_), ShapeView(conv_state->weight_5d_shape_),
             ShapeView(conv_state->out_5d_shape_), conv_state->strides_3d_.data(),
             conv_state->dilation_rate_3d_.data(), conv_state->padding_before_3d_.data(),
             col_buf_dptr);
 
         // channels first: out = weight * col_buf
         // channels last:  out = (weight * col_buf)(T)
-        conv_state->forward_func_(
-            CblasNoTrans, CblasNoTrans,
-            conv_state->weight_5d_shape_.At(0) / conv_state->groups,      // filter
-            conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3),  // od * oh * ow
-            conv_state->weight_5d_shape_.Count(1),                        // ci * kd * kh * kw
-            static_cast<T>(1),
-            weight->dptr<T>() + g * weight_group_interval * weight->shape().Count(1), col_buf_dptr,
-            static_cast<T>(0),
-            GetImgMutDptr<T>(out, i) + g * output_group_interval * out->shape().Count(2));
+        conv_state->forward_func_(CblasNoTrans, CblasNoTrans,
+                                  m,  // filter / groups
+                                  k,  // od * oh * ow
+                                  n,  // ci * kd * kh * kw
+                                  static_cast<T>(1), weight_ptr, col_buf_dptr, static_cast<T>(0),
+                                  output_ptr);
+        input_ptr += input_step;
+        weight_ptr += weight_step;
+        output_ptr += output_step;
       }
 
       const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
@@ -511,35 +520,43 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
+    int32_t idx_offset = conv_state->idx_offset_;
     const int32_t dy_group_interval = dy->shape().At(1) / conv_state->groups;
     const int32_t filter_group_interval = filter->shape().At(0) / conv_state->groups;
     const int32_t dx_group_interval = dx->shape().At(1) / conv_state->groups;
+    const int32_t dx_step = dx_group_interval * dx->shape().Count(2);
+    const int32_t filter_step = filter_group_interval * filter->shape().Count(1);
+    const int32_t dy_step = dy_group_interval * dy->shape().Count(2);
+    const int32_t m = conv_state->weight_5d_shape_.Count(1);
+    const int32_t k = conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3);
+    const int32_t n = conv_state->weight_5d_shape_.At(0) / conv_state->groups;
 
     Memset<DeviceType::kCPU>(ctx->stream(), dx->mut_dptr<T>(), 0,
                              dx->shape().elem_cnt() * sizeof(T));
 
-    int32_t idx_offset = conv_state->idx_offset_;
     FOR_RANGE(int64_t, i, 0, dy->shape().At(0)) {
+      const T* filter_ptr = filter->dptr<T>();
+      const T* dy_ptr = GetImgDptr<T>(dy, i);
+      T* dx_ptr = GetImgMutDptr<T>(dx, i);
       FOR_RANGE(int64_t, g, 0, conv_state->groups) {
         // channels first:  col_buf' = weight(T) * out[i]'
         // channels last :  col_buf' = weight(T) * out[i]'(T)
         NewKernelUtil<DeviceType::kCPU>::OFGemm(
             nullptr, CblasTrans, conv_state->is_out_diff_need_trans_,
-            conv_state->weight_5d_shape_.Count(1),                        //  ci * kd * kh * kw
-            conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3),  //  od * oh * ow
-            conv_state->weight_5d_shape_.At(0) / conv_state->groups,      //  filter
-            static_cast<T>(1),
-            filter->dptr<T>() + g * filter_group_interval * filter->shape().Count(1),
-            GetImgDptr<T>(dy, i) + g * dy_group_interval * dy->shape().Count(2), static_cast<T>(0),
-            col_buf->mut_dptr<T>());
+            m,  //  ci * kd * kh * kw
+            k,  //  od * oh * ow
+            n,  //  filter / groups
+            static_cast<T>(1), filter_ptr, dy_ptr, static_cast<T>(0), col_buf->mut_dptr<T>());
 
         // in' = col2im(col_buf')
         conv_state->col2im_func_(
             col_buf->dptr<T>(), ShapeView(conv_state->in_5d_shape_),
             ShapeView(conv_state->weight_5d_shape_), ShapeView(conv_state->out_5d_shape_),
             conv_state->strides_3d_.data(), conv_state->dilation_rate_3d_.data(),
-            conv_state->padding_before_3d_.data(),
-            GetImgMutDptr<T>(dx, i) + g * dx_group_interval * dx->shape().Count(2));
+            conv_state->padding_before_3d_.data(), dx_ptr);
+        filter_ptr += filter_step;
+        dy_ptr += dy_step;
+        dx_ptr += dx_step;
       }
     }
     if (ctx->has_input("_add_to_output", 0)) {

@@ -457,7 +457,7 @@ class TestConv1d(flow.unittest.TestCase):
 
     @autotest(n=30)
     def test_conv1d_group_with_random_data(test_case):
-        channels = 720 # lcm(1, 2, 3, 4, 5, 6)
+        channels = 720  # lcm(1, 2, 3, 4, 5, 6)
         m = torch.nn.Conv1d(
             in_channels=channels,
             out_channels=channels,
@@ -474,6 +474,7 @@ class TestConv1d(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=3, dim1=channels).to(device)
         y = m(x)
         return y
+
 
 if __name__ == "__main__":
     unittest.main()
