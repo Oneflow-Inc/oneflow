@@ -212,16 +212,16 @@ class ColBufUtil final {
   }
 
  private:
-  int64_t id_num_ = 0;
-  int64_t ih_num_ = 0;
-  int64_t iw_num_ = 0;
-  int64_t od_num_ = 0;
-  int64_t oh_num_ = 0;
-  int64_t ow_num_ = 0;
   const int32_t* strides_;
   const int32_t* dilation_rate_;
   const int32_t* padding_before_;
   DHWValidFunc<T> dhw_valid_func_;
+  int64_t id_num_;
+  int64_t ih_num_;
+  int64_t iw_num_;
+  int64_t od_num_;
+  int64_t oh_num_;
+  int64_t ow_num_;
 };
 
 template<typename T>
