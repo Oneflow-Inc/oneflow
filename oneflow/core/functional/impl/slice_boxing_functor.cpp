@@ -45,7 +45,8 @@ Maybe<one::UserOpExpr> EagerSToB(Symbol<ParallelDesc> in_parallel_desc,
       .Output("out")
       // TODO(hjchen2)
       // .Attr<int64_t>("in_split_axis", src_sbp->split_parallel().axis())
-      // .Attr<std::string>("in_parallel_conf", PbMessage2TxtString(in_parallel_desc->parallel_conf()))
+      // .Attr<std::string>("in_parallel_conf",
+      // PbMessage2TxtString(in_parallel_desc->parallel_conf()))
       // .Attr<std::string>("out_parallel_conf",
       //                    PbMessage2TxtString(out_parallel_desc->parallel_conf()))
       // .Attr<Shape>("shape", shape)
@@ -60,7 +61,8 @@ Maybe<one::UserOpExpr> EagerPToB(Symbol<ParallelDesc> in_parallel_desc,
       .Input("in")
       .Output("out")
       // TODO(hjchen2)
-      // .Attr<std::string>("in_parallel_conf", PbMessage2TxtString(in_parallel_desc->parallel_conf()))
+      // .Attr<std::string>("in_parallel_conf",
+      // PbMessage2TxtString(in_parallel_desc->parallel_conf()))
       // .Attr<std::string>("out_parallel_conf",
       //                    PbMessage2TxtString(out_parallel_desc->parallel_conf()))
       // .Attr<Shape>("shape", shape)
@@ -79,7 +81,8 @@ Maybe<one::UserOpExpr> EagerNaiveSToS(Symbol<ParallelDesc> in_parallel_desc,
       // TODO(hjchen2)
       // .Attr<int64_t>("in_split_axis", src_sbp->split_parallel().axis())
       // .Attr<int64_t>("out_split_axis", dst_sbp->split_parallel().axis())
-      // .Attr<std::string>("in_parallel_conf", PbMessage2TxtString(in_parallel_desc->parallel_conf()))
+      // .Attr<std::string>("in_parallel_conf",
+      // PbMessage2TxtString(in_parallel_desc->parallel_conf()))
       // .Attr<std::string>("out_parallel_conf",
       //                    PbMessage2TxtString(out_parallel_desc->parallel_conf()))
       // .Attr<Shape>("shape", shape)
@@ -96,7 +99,8 @@ Maybe<one::UserOpExpr> EagerBToS(Symbol<ParallelDesc> in_parallel_desc,
       .Output("out")
       // TODO(hjchen2)
       // .Attr<int64_t>("out_split_axis", dst_sbp->split_parallel().axis())
-      // .Attr<std::string>("in_parallel_conf", PbMessage2TxtString(in_parallel_desc->parallel_conf()))
+      // .Attr<std::string>("in_parallel_conf",
+      // PbMessage2TxtString(in_parallel_desc->parallel_conf()))
       // .Attr<std::string>("out_parallel_conf",
       //                    PbMessage2TxtString(out_parallel_desc->parallel_conf()))
       // .Attr<Shape>("shape", shape)
@@ -113,7 +117,8 @@ Maybe<one::UserOpExpr> EagerPToS(Symbol<ParallelDesc> in_parallel_desc,
       .Output("out")
       // TODO(hjchen2)
       // .Attr<int64_t>("out_split_axis", dst_sbp->split_parallel().axis())
-      // .Attr<std::string>("in_parallel_conf", PbMessage2TxtString(in_parallel_desc->parallel_conf()))
+      // .Attr<std::string>("in_parallel_conf",
+      // PbMessage2TxtString(in_parallel_desc->parallel_conf()))
       // .Attr<std::string>("out_parallel_conf",
       //                    PbMessage2TxtString(out_parallel_desc->parallel_conf()))
       // .Attr<Shape>("shape", shape)

@@ -389,15 +389,15 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
 
   const std::string& device_tag = op_conf->device_tag();
   const user_op::UserOpConfWrapper* user_op_conf = opkernel->user_op_conf_.get();
-  opkernel->op_infer_ctx_for_scheduler_thread_.reset(new LocalUserOpInferContext(
-      user_op_conf, opkernel->op_schema_for_scheduler_thread_.get(), input_arg_tuple,
-      output_arg_tuple));
+  opkernel->op_infer_ctx_for_scheduler_thread_.reset(
+      new LocalUserOpInferContext(user_op_conf, opkernel->op_schema_for_scheduler_thread_.get(),
+                                  input_arg_tuple, output_arg_tuple));
   opkernel->compute_ctx_.reset(new LocalUserKernelComputeContext(
       nullptr, device_tag, user_op_conf, opkernel->op_schema_for_scheduler_thread_.get(),
       input_arg_tuple, output_arg_tuple, opkernel->mut_temp_blob_object()));
-  opkernel->reg_ctx_.reset(new LocalUserKernelRegContext(
-      device_tag, user_op_conf, opkernel->op_schema_for_scheduler_thread_.get(), input_arg_tuple,
-      output_arg_tuple));
+  opkernel->reg_ctx_.reset(new LocalUserKernelRegContext(device_tag, user_op_conf,
+                                                         opkernel->op_schema_for_main_thread_.get(),
+                                                         input_arg_tuple, output_arg_tuple));
   const auto* op_reg_val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(user_op_conf->op_type_name());
   CHECK_NOTNULL_OR_RETURN(op_reg_val);
