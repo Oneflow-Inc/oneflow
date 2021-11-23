@@ -373,7 +373,6 @@ class Graph(object):
         if s_level >= self._debug_min_s_level:
             if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
                 print(msg)
-
     @property
     def _config_proto(self):
         return self.config.proto
@@ -450,7 +449,6 @@ class Graph(object):
             )
             t0 = time.clock()
             eager_outputs = self._build_graph(*args)
-            t1 = time.clock()
             self._print(0, 0, self._shallow_repr() + " end building graph.")
         except:
             self._print(
@@ -462,25 +460,22 @@ class Graph(object):
                 + sys_exc_error_msg(),
             )
             raise
-
         # Complie graph to execution plan and init Runtime
         try:
             self._print(
                 0,
                 0,
-                self._shallow_repr() + " start compiling plan and init graph runtime.",
+                self._shallow_repr() + " start compiling plan and init graph runtime."," "
             )
-            t2 = time.clock()
             self._c_nn_graph.complie_and_init_runtime()
-            t3 = time.clock()
-            print('build graph consumes time:%ss\n \
-                  complie and init Runtime consumes time:%ss\n \
-                  from build graph to complie and init Runtime the end consumes time:%ss\n'
-                  %(str(t1-t0),str(t3-t2),str(t3-t0)))
+            t1 = time.clock()
+            cost_time_str = str(t1 - t0)
             self._print(
                 0,
                 0,
-                self._shallow_repr() + " end compiling plan and init graph rumtime.",
+                self._shallow_repr() + " end compiling plan and init graph rumtime." + '\n' + 
+                    "from build graph to complie and init Runtime the end consumes time:" + 
+                     cost_time_str + 's',
             )
         except:
             self._print(
@@ -488,22 +483,19 @@ class Graph(object):
                 0,
                 "[ERROR]"
                 + self._shallow_repr()
-                + " compiling plan or initialing graph runtime got error : ",
-                sys_exc_error_msg(),
+                + " compiling plan or initialing graph runtime got error : "
+                +sys_exc_error_msg(),
             )
             raise
-
         self._is_compiled = True
         return eager_outputs
 
     def _build_graph(self, *args):
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
-
         # Get config form GraphConfig
         self._outputs_buffer_size = self.config._outputs_buffer_size
         self._generate_config_proto()
-
         with graph_build_util.graph_build_context(self.config.proto, session):
             # Deal with inputs
             self._print(0, 1, self._shallow_repr() + " start building graph inputs.")
@@ -790,7 +782,6 @@ class Graph(object):
                 mapped_args.append(seq_args)
             else:
                 self._io_item_check(arg, None, io_type, idx)
-
         return mapped_args
 
     def _empty_like_io(self, io_type, *args):
@@ -805,9 +796,7 @@ class Graph(object):
                     )
                 else:
                     eager_out = oneflow.empty(shape, dtype=dtype, device=t.device)
-
             return eager_out
-
         return self._mapping_io(io_type, func, *args)
 
     def _copy_io(self, io_type, *args):
@@ -815,7 +804,6 @@ class Graph(object):
             with oneflow._oneflow_internal.lazy_mode.guard(False):
                 build_arg = tensor.to(copy=True)
                 return build_arg
-
         return self._mapping_io(io_type, func, *args)
 
     def _flatten_io(self, io_type, *args):
@@ -1012,5 +1000,4 @@ class Graph(object):
 
 if __name__ == "__main__":
     import doctest
-
     doctest.testmod(raise_on_error=True)
