@@ -13,28 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
-#define ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
-
-#include "oneflow/core/ep/include/stream.h"
+#include "oneflow/core/ep/cpu/cpu_device_manager.h"
+#include "oneflow/core/ep/cpu/cpu_device.h"
 
 namespace oneflow {
 
 namespace ep {
 
-class CpuStream : public Stream {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CpuStream);
-  CpuStream() = default;
-  ~CpuStream() override = default;
+std::shared_ptr<Device> CpuDeviceManager::GetDevice(size_t device_index) {
+  std::lock_guard<std::mutex> lock(device_mutex_);
+  if (!device_) { device_.reset(new CpuDevice()); }
+  return device_;
+}
 
-  DeviceType device_type() const override;
-  Maybe<void> Sync() override;
-  void RecordEvent(Event* event) override;
-};
+size_t CpuDeviceManager::GetDeviceCount(size_t /*primary_device_index*/) { return 1; }
+
+size_t CpuDeviceManager::GetDeviceCount() { return 1; }
+
+REGISTER_EP_DEVICE_MANAGER(DeviceType::kCPU, CpuDeviceManager);
 
 }  // namespace ep
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_

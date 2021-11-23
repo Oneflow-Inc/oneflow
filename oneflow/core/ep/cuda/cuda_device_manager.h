@@ -13,28 +13,36 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
-#define ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
+#ifndef ONEFLOW_CORE_EP_CUDA_CUDA_DEVICE_MANAGER_H_
+#define ONEFLOW_CORE_EP_CUDA_CUDA_DEVICE_MANAGER_H_
 
-#include "oneflow/core/ep/include/stream.h"
+#include "oneflow/core/ep/include/device_manager.h"
+
+#ifdef WITH_CUDA
 
 namespace oneflow {
 
 namespace ep {
 
-class CpuStream : public Stream {
+class CudaDeviceManager : public DeviceManager {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CpuStream);
-  CpuStream() = default;
-  ~CpuStream() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(CudaDeviceManager);
+  CudaDeviceManager() = default;
+  virtual ~CudaDeviceManager() = default;
 
-  DeviceType device_type() const override;
-  Maybe<void> Sync() override;
-  void RecordEvent(Event* event) override;
+  std::shared_ptr<Device> GetDevice(size_t device_index) override;
+  size_t GetDeviceCount(size_t primary_device_index) override;
+  size_t GetDeviceCount() override;
+
+ private:
+  std::mutex devices_mutex_;
+  std::vector<std::shared_ptr<Device>> devices_;
 };
 
 }  // namespace ep
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
+#endif  // WITH_CUDA
+
+#endif  // ONEFLOW_CORE_EP_CUDA_CUDA_DEVICE_MANAGER_H_
