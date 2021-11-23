@@ -65,26 +65,9 @@ class TestXrtResNet50(flow.unittest.TestCase):
         resnet50_g = get_cpu_graph()
         out = resnet50_g(x_cpu)
 
-        resnet50_g_openvino = get_cpu_graph()
-        resnet50_g_openvino.config.enable_xrt_use_openvino(True)
-        out_openvino = resnet50_g_openvino(x_cpu)
-        test_case.assertTrue(
-            np.allclose(out.numpy(), out_openvino.numpy(), rtol=1e-3, atol=1e-4)
-        )
-
-        resnet50_g_tensorrt = get_cuda_graph()
-        resnet50_g_tensorrt.config.enable_xrt_use_tensorrt(True)
-        out_tensorrt = resnet50_g_tensorrt(x_cuda)
-        test_case.assertTrue(
-            np.allclose(out.numpy(), out_tensorrt.numpy(), rtol=1e-3, atol=1e-4)
-        )
-
-        resnet50_g_xla = get_cuda_graph()
-        resnet50_g_xla.config.enable_xrt_use_xla_jit(True)
-        out_xla = resnet50_g_xla(x_cuda)
-        test_case.assertTrue(
-            np.allclose(out.numpy(), out_xla.numpy(), rtol=1e-3, atol=1e-4)
-        )
+        test_xrt_openvino(test_case, get_cpu_graph(), x_cpu, out)
+        test_xrt_tensorrt(test_case, get_cuda_graph(), x_cuda, out)
+        test_xrt_xla(test_case, get_cuda_graph(), x_cuda, out)
 
 
 if __name__ == "__main__":

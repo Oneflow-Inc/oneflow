@@ -24,18 +24,6 @@ import oneflow as flow
 from test_xrt import *
 
 
-def get_graph():
-    class ConcatGraph(flow.nn.Graph):
-        def __init__(self):
-            super().__init__()
-
-        def build(self, x, y):
-            return flow.cat([x, y], dim=1)
-
-    concat_g = ConcatGraph()
-    return concat_g
-
-
 class TestXrtConcat(flow.unittest.TestCase):
     def test_xrt_concat(test_case):
         x = np.random.random((1, 10, 2)).astype(np.float32)
@@ -45,12 +33,13 @@ class TestXrtConcat(flow.unittest.TestCase):
         y_cpu = flow.tensor(y, dtype=flow.float32, device=flow.device("cpu"))
         y_cuda = flow.tensor(y, dtype=flow.float32, device=flow.device("cuda"))
 
-        concat_g = get_graph()
+        concat = lambda argx, argy: flow.cat([argx, argy], dim=1)
+        concat_g = generate_graph(concat)
         out = concat_g(x_cpu, y_cpu)
 
-        test_xrt_openvino(test_case, get_graph(), [x_cpu, y_cpu], out)
-        test_xrt_tensorrt(test_case, get_graph(), [x_cuda, y_cuda], out)
-        test_xrt_xla(test_case, get_graph(), [x_cuda, y_cuda], out)
+        test_xrt_openvino(test_case, generate_graph(concat), [x_cpu, y_cpu], out)
+        test_xrt_tensorrt(test_case, generate_graph(concat), [x_cuda, y_cuda], out)
+        test_xrt_xla(test_case, generate_graph(concat), [x_cuda, y_cuda], out)
 
 
 if __name__ == "__main__":

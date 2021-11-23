@@ -15,6 +15,7 @@ limitations under the License.
 """
 
 import unittest
+import os
 from random import randint
 from random import choice
 
@@ -24,7 +25,24 @@ import oneflow as flow
 import oneflow.unittest
 
 
+def generate_graph(func):
+    class Graph(flow.nn.Graph):
+        def __init__(self):
+            super().__init__()
+        
+        def build(self, *args):
+            return func(*args)
+            
+    return Graph()
+
+
 def test_xrt_openvino(test_case, graph, input, ref_out, rtol=1e-3, atol=1e-4):
+    if os.getenv("ONEFLOW_TEST_FORCE_OPENVINO") and not flow.sysconfig.with_openvino():
+        test_case.assertTrue(False)
+
+    if not flow.sysconfig.with_openvino():
+        return
+
     graph.config.enable_xrt_use_openvino(True)
     if len(input) == 1:
         out = graph(input)
@@ -44,6 +62,12 @@ def test_xrt_openvino(test_case, graph, input, ref_out, rtol=1e-3, atol=1e-4):
 
 
 def test_xrt_tensorrt(test_case, graph, input, ref_out, rtol=1e-3, atol=1e-4):
+    if os.getenv("ONEFLOW_TEST_FORCE_TENSORRT") and not flow.sysconfig.with_tensorrt():
+        test_case.assertTrue(False)
+
+    if not flow.sysconfig.with_tensorrt():
+        return
+
     graph.config.enable_xrt_use_tensorrt(True)
     if len(input) == 1:
         out = graph(input)
@@ -63,6 +87,12 @@ def test_xrt_tensorrt(test_case, graph, input, ref_out, rtol=1e-3, atol=1e-4):
 
 
 def test_xrt_xla(test_case, graph, input, ref_out, rtol=1e-3, atol=1e-4):
+    if os.getenv("ONEFLOW_TEST_FORCE_XLA") and not flow.sysconfig.with_xla():
+        test_case.assertTrue(False)
+
+    if not flow.sysconfig.with_xla():
+        return
+
     graph.config.enable_xrt_use_xla_jit(True)
     if len(input) == 1:
         out = graph(input)

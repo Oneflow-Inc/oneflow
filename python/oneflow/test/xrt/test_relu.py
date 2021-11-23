@@ -24,30 +24,18 @@ import oneflow as flow
 from test_xrt import *
 
 
-def get_graph():
-    class ReLUGraph(flow.nn.Graph):
-        def __init__(self):
-            super().__init__()
-
-        def build(self, x):
-            return flow.relu(x)
-
-    relu_g = ReLUGraph()
-    return relu_g
-
-
 class TestXrtReLU(flow.unittest.TestCase):
     def test_xrt_relu(test_case):
         x = np.random.random((1, 10, 2)).astype(np.float32)
         x_cpu = flow.tensor(x, dtype=flow.float32, device=flow.device("cpu"))
         x_cuda = flow.tensor(x, dtype=flow.float32, device=flow.device("cuda"))
 
-        relu_g = get_graph()
+        relu_g = generate_graph(flow.relu)
         out = relu_g(x_cpu)
 
-        test_xrt_openvino(test_case, get_graph(), x_cpu, out)
-        test_xrt_tensorrt(test_case, get_graph(), x_cuda, out)
-        test_xrt_xla(test_case, get_graph(), x_cuda, out)
+        test_xrt_openvino(test_case, generate_graph(flow.relu), x_cpu, out)
+        test_xrt_tensorrt(test_case, generate_graph(flow.relu), x_cuda, out)
+        test_xrt_xla(test_case, generate_graph(flow.relu), x_cuda, out)
 
 
 if __name__ == "__main__":
