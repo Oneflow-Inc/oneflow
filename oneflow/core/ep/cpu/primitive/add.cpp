@@ -106,7 +106,7 @@ class AddOneDnnImpl : public Add {
     auto sum_prim = dnnl::sum(sum_pd);
     auto dst_mem = dnnl::memory(sum_pd.dst_desc(), *onednn_engine, dst);
     std::unordered_map<int, dnnl::memory> sum_args{{DNNL_ARG_DST, dst_mem}};
-    for (int n = 0; n < arity; ++n) { sum_args.insert({DNNL_ARG_MULTIPLE_SRC + n, src_mem[n]}); }
+    for (int i = 0; i < arity; ++i) { sum_args.insert({DNNL_ARG_MULTIPLE_SRC + i, src_mem[i]}); }
 
     sum_prim.execute(*onednn_stream, sum_args);
     onednn_stream->wait();
