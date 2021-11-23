@@ -121,6 +121,19 @@ struct IsDifferentTypesT<T> : std::true_type {};
 template<typename T, typename... Ts>
 constexpr auto IsDifferentTypes = IsDifferentTypesT<T, Ts...>::value;
 
+template<typename T>
+struct ConstRefExceptVoidT {
+  using type = const T&;
+};
+
+template<>
+struct ConstRefExceptVoidT<void> {
+  using type = void;
+};
+
+template<typename T>
+using ConstRefExceptVoid = typename ConstRefExceptVoidT<T>::type;
+
 }  // namespace maybe
 
 }  // namespace oneflow
