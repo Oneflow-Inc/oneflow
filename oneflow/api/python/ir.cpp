@@ -83,6 +83,25 @@ std::string GetMLIRAttrType(const AttrType& attr_type) {
   }
 }
 
+const std::set<std::string>& GetIdempotentOps() {
+  static std::set<std::string> ret{"abs",   "ceil", "floor", "ones_like", "relu",      "relu_grad",
+                                   "relu6", "rint", "round", "sign",      "zeros_like"};
+  return ret;
+}
+const std::set<std::string>& GetInvolutionOps() {
+  static std::set<std::string> ret{"reciprocal", "negative"};
+  return ret;
+}
+std::string GetBaseOp(const std::string& op_name) {
+  if (GetInvolutionOps().find(op_name) != GetInvolutionOps().end()) {
+    return "OneFlow_InvolutionBaseOp";
+  } else if (GetIdempotentOps().find(op_name) != GetIdempotentOps().end()) {
+    return "OneFlow_IdempotentBaseOp";
+  } else {
+    return "OneFlow_BaseOp";
+  }
+}
+
 void PrintOne(const oneflow::UserOpDef& op_def) {
   // TODO: handle in out size/optional
   // TODO: handle "," in last element
@@ -128,10 +147,10 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
 #endif  // WITH_MLIR
   m.def("gen_ods", []() {
     for (const auto& kv : user_op::UserOpRegistryMgr::Get().GetAllOpRegistryResults()) {
-      std::cout << "def OneFlow_" << convertToCamelFromSnakeCase(kv.first, true)
-                << "Op : OneFlow_BaseOp<\"" << kv.first << "\", []> {"
-                << "\n";
       const oneflow::user_op::OpRegistryResult& r = kv.second;
+      std::cout << "def OneFlow_" << convertToCamelFromSnakeCase(kv.first, true)
+                << "Op : " << GetBaseOp(r.op_type_name) << "<\"" << kv.first << "\", []> {"
+                << "\n";
       const oneflow::UserOpDef& op_def = r.op_def;
       PrintOne(op_def);
       std::cout << "\n";

@@ -838,7 +838,7 @@ def OneFlow_TfPreluOp : OneFlow_BaseOp<"tf_prelu", []> {
   );
 }
 
-def OneFlow_ReluOp : OneFlow_BaseOp<"relu", []> {
+def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", []> {
   let input = (ins
     AnyType:$in
   );
@@ -1329,7 +1329,7 @@ def OneFlow_ReplicationPad2dOp : OneFlow_BaseOp<"replication_pad2d", []> {
   );
 }
 
-def OneFlow_ReluGradOp : OneFlow_BaseOp<"relu_grad", []> {
+def OneFlow_ReluGradOp : OneFlow_IdempotentBaseOp<"relu_grad", []> {
   let input = (ins
     AnyType:$y,
     AnyType:$dy
@@ -1612,7 +1612,7 @@ def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", []> {
   );
 }
 
-def OneFlow_OnesLikeOp : OneFlow_BaseOp<"ones_like", []> {
+def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", []> {
   let input = (ins
     AnyType:$like
   );
@@ -2630,7 +2630,7 @@ def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", []> {
   );
 }
 
-def OneFlow_NegativeOp : OneFlow_BaseOp<"negative", []> {
+def OneFlow_NegativeOp : OneFlow_InvolutionBaseOp<"negative", []> {
   let input = (ins
     AnyType:$x
   );
@@ -3500,7 +3500,7 @@ def OneFlow_MaxPool_1dGradOp : OneFlow_BaseOp<"max_pool_1d_grad", []> {
   );
 }
 
-def OneFlow_AbsOp : OneFlow_BaseOp<"abs", []> {
+def OneFlow_AbsOp : OneFlow_IdempotentBaseOp<"abs", []> {
   let input = (ins
     AnyType:$x
   );
@@ -3898,7 +3898,7 @@ def OneFlow_AcoshOp : OneFlow_BaseOp<"acosh", []> {
   );
 }
 
-def OneFlow_SignOp : OneFlow_BaseOp<"sign", []> {
+def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", []> {
   let input = (ins
     AnyType:$x
   );
@@ -4801,7 +4801,7 @@ def OneFlow_CastToTickOp : OneFlow_BaseOp<"cast_to_tick", []> {
   );
 }
 
-def OneFlow_RoundOp : OneFlow_BaseOp<"round", []> {
+def OneFlow_RoundOp : OneFlow_IdempotentBaseOp<"round", []> {
   let input = (ins
     AnyType:$x
   );
@@ -5553,7 +5553,7 @@ def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", []> {
   );
 }
 
-def OneFlow_FloorOp : OneFlow_BaseOp<"floor", []> {
+def OneFlow_FloorOp : OneFlow_IdempotentBaseOp<"floor", []> {
   let input = (ins
     AnyType:$x
   );
@@ -6285,7 +6285,7 @@ def OneFlow_BroadcastNotEqualOp : OneFlow_BaseOp<"broadcast_not_equal", []> {
   );
 }
 
-def OneFlow_ReciprocalOp : OneFlow_BaseOp<"reciprocal", []> {
+def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", []> {
   let input = (ins
     AnyType:$x
   );
@@ -6348,7 +6348,7 @@ def OneFlow_PowOp : OneFlow_BaseOp<"pow", []> {
   );
 }
 
-def OneFlow_CeilOp : OneFlow_BaseOp<"ceil", []> {
+def OneFlow_CeilOp : OneFlow_IdempotentBaseOp<"ceil", []> {
   let input = (ins
     AnyType:$x
   );
@@ -6777,7 +6777,7 @@ def OneFlow_TriuOp : OneFlow_BaseOp<"triu", []> {
   );
 }
 
-def OneFlow_RintOp : OneFlow_BaseOp<"rint", []> {
+def OneFlow_RintOp : OneFlow_IdempotentBaseOp<"rint", []> {
   let input = (ins
     AnyType:$x
   );
