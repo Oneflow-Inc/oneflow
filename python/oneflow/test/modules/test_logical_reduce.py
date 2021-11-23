@@ -53,6 +53,42 @@ class TestLogicalReduce(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=4, dtype=float, requires_grad=False).to(device)
         return torch.any(x)
 
+    @autotest(auto_backward=False)
+    def test_matrix_row_all_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dtype=float, requires_grad=False).to(device)
+        return torch.all(x, 1)
+
+    @autotest(auto_backward=False)
+    def test_matrix_row_any_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dtype=float, requires_grad=False).to(device)
+        return torch.any(x, 1)
+
+    @autotest(auto_backward=False)
+    def test_matrix_col_all_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dtype=float, requires_grad=False).to(device)
+        return torch.all(x, 0)
+
+    @autotest(auto_backward=False)
+    def test_matrix_col_any_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dtype=float, requires_grad=False).to(device)
+        return torch.any(x, 0)
+
+    @autotest(auto_backward=False)
+    def test_all_keepdim_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dtype=float, requires_grad=False).to(device)
+        return torch.all(x, 1, keepdim=True)
+
+    @autotest(auto_backward=False)
+    def test_any_keepdim_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dtype=float, requires_grad=False).to(device)
+        return torch.any(x, 1, keepdim=True)
+
 
 if __name__ == "__main__":
     unittest.main()
