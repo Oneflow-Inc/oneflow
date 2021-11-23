@@ -364,13 +364,12 @@ class Graph(object):
         shallow_repr = "(GRAPH:" + self._name + ":" + self.__class__.__name__ + ")"
         return shallow_repr
 
-    def _print(self, s_level=2, v_level=0, msg: str = "",time_str: str=" "):
+    def _print(self, s_level=2, v_level=0, msg: str = ""):
         r"""Do print according to info level.
         """
         assert isinstance(s_level, int)
         assert isinstance(v_level, int)
         assert isinstance(msg, str)
-        assert isinstance(time_str, str)
         if s_level >= self._debug_min_s_level:
             if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
                 print(msg)
@@ -453,7 +452,7 @@ class Graph(object):
             eager_outputs = self._build_graph(*args)
             t1 = time.clock()
             self._print(0, 0, self._shallow_repr() + " end building graph." + "cost time by build graph:" +
-            str(t1-t0) + '\n',
+            str(t1-t0) + 's' + '\n',
          )
         except:
             self._print(
