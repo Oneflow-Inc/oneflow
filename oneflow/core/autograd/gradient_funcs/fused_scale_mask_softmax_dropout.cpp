@@ -78,8 +78,8 @@ Maybe<void> FusedScaleMaskSoftmaxDropout::Apply(const FusedScaleMaskSoftmaxDropo
   const std::shared_ptr<oneflow::one::Tensor>& dropout_mask = ctx->SavedTensors().at(1);
   const std::shared_ptr<oneflow::one::Tensor>& softmax_y = ctx->SavedTensors().at(2);
   const std::shared_ptr<oneflow::one::Tensor>& input_grad =
-      JUST(functional::FusedScaleMaskSoftmaxDropoutGrad(softmax_y, out_grads.at(0), dropout_mask,
-                                                        mask, ctx->scale, ctx->dropout_scale));
+      JUST(functional::FusedScaleMaskSoftmaxDropoutGrad(
+          softmax_y, out_grads.at(0), mask, dropout_mask, ctx->scale, ctx->dropout_scale));
 
   in_grads->at(0) = input_grad;
   return Maybe<void>::Ok();
