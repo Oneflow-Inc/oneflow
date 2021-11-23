@@ -31,8 +31,7 @@ template<DeviceType device_type, typename T, template<typename> class binary_fun
 struct NdarrayReduce<
     device_type, T, binary_func,
     typename std::enable_if<
-        std::is_same<T, typename DevDType<device_type, T>::type>::value
-        && std::is_same<T, typename BinaryFuncTrait<binary_func, T>::return_type>::value>::type>
+        std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
     final {
   using RetT = typename BinaryFuncTrait<binary_func, T>::return_type;
   static void Reduce(ep::Stream* stream, const XpuVarNdarray<RetT>& origin_y,
@@ -85,7 +84,7 @@ struct NdarrayReduce<
   }
 };
 
-template<DeviceType device_type, typename T, template<typename> class binary_func>
+/*template<DeviceType device_type, typename T, template<typename> class binary_func>
 struct NdarrayReduce<
     device_type, T, binary_func,
     typename std::enable_if<
@@ -104,6 +103,14 @@ struct NdarrayReduce<
     CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
     if (NdarrayNoReduce<device_type, T, binary_func>::Matched(y, x)) {
       NdarrayNoReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
+    } else if (NdarrayScalarReduce<device_type, T, binary_func>::Matched(y, x)) {
+      NdarrayScalarReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
+    } else if (NdarrayMatrixRowReduce<device_type, T, binary_func>::Matched(y, x)) {
+      NdarrayMatrixRowReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
+    } else if (NdarrayMatrixColReduce<device_type, T, binary_func>::Matched(y, x)) {
+      NdarrayMatrixColReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
+    } else if (NdarrayXYZCubeXZReduce<device_type, T, binary_func>::Matched(y, x)) {
+      NdarrayXYZCubeXZReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
     } else {
       NdarrayDefaultReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
     }
@@ -133,7 +140,7 @@ struct NdarrayReduce<
       prev_axis_is_reduced = cur_axis_is_reduced;
     }
   }
-};
+};*/
 
 template<DeviceType device_type, typename T, template<typename> class binary_func>
 struct NdarrayReduce<
