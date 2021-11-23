@@ -77,8 +77,8 @@ std::string GetMLIRAttrType(const AttrType& attr_type) {
     return "ShapeArrayAttr";
   } else if (attr_type == ::oneflow::kAtListString) {
     return "StrArrayAttr";
-
   } else {
+    LOG(FATAL) << "fail to convert: " << attr_type;
     return "failure";
   }
 }
