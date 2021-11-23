@@ -92,19 +92,35 @@ const std::set<std::string>& GetInvolutionOps() {
   static std::set<std::string> ret{"reciprocal", "negative"};
   return ret;
 }
+bool IsInvolutionOp(const std::string& op_name) {
+  return GetInvolutionOps().find(op_name) != GetInvolutionOps().end();
+}
+bool IsIdempotentOp(const std::string& op_name) {
+  return GetIdempotentOps().find(op_name) != GetIdempotentOps().end();
+}
 std::string GetBaseOp(const std::string& op_name) {
-  if (GetInvolutionOps().find(op_name) != GetInvolutionOps().end()) {
+  if (IsInvolutionOp(op_name)) {
     return "OneFlow_InvolutionBaseOp";
-  } else if (GetIdempotentOps().find(op_name) != GetIdempotentOps().end()) {
+  } else if (IsIdempotentOp(op_name)) {
     return "OneFlow_IdempotentBaseOp";
   } else {
     return "OneFlow_BaseOp";
   }
 }
 
-void PrintOne(const oneflow::UserOpDef& op_def) {
+bool ShouldGenEmptyBody(const std::string& op_name) {
+  if (IsInvolutionOp(op_name) || IsIdempotentOp(op_name)) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+void PrintBody(const oneflow::UserOpDef& op_def) {
   // TODO: handle in out size/optional
   // TODO: handle "," in last element
+  std::cout << "{"
+            << "\n";
   // inputs
   if (op_def.input().size()) {
     std::cout << "  let input = (ins"
@@ -137,9 +153,9 @@ void PrintOne(const oneflow::UserOpDef& op_def) {
     }
     std::cout << "  );"
               << "\n";
-    std::cout << "}"
-              << "\n";
   }
+  std::cout << "}"
+            << "\n";
 }
 
 }  // namespace
@@ -155,10 +171,9 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
     for (const auto& kv : user_op::UserOpRegistryMgr::Get().GetAllOpRegistryResults()) {
       const oneflow::user_op::OpRegistryResult& r = kv.second;
       std::cout << "def OneFlow_" << convertToCamelFromSnakeCase(kv.first, true)
-                << "Op : " << GetBaseOp(r.op_type_name) << "<\"" << kv.first << "\", []> {"
-                << "\n";
+                << "Op : " << GetBaseOp(r.op_type_name) << "<\"" << kv.first << "\", []> ";
       const oneflow::UserOpDef& op_def = r.op_def;
-      PrintOne(op_def);
+      PrintBody(op_def);
       std::cout << "\n";
     }
   });
