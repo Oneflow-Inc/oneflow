@@ -175,23 +175,20 @@ class BinaryCrossEntropyWithLogitsKernel final : public user_op::OpKernel {
     const T* input = input_blob->dptr<T>();
     const T* target = target_blob->dptr<T>();
     T* out = out_blob->mut_dptr<T>();
-    T* tmp_buffer = tmp_buffer_blob->mut_dptr<T>();
-    T* tmp_out = tmp_buffer;
+    // T* tmp_buffer = tmp_buffer_blob->mut_dptr<T>();
+    // T* tmp_out = tmp_buffer;
 
     const T* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
-    const T* pos_weight = ctx->has_input("pos_weight", 0)
-                              ? ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->dptr<T>()
-                              : nullptr;
+    // const T* pos_weight = ctx->has_input("pos_weight", 0)
+    //                           ? ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->dptr<T>()
+    //                           : nullptr;
     T* pos_weight_processed = nullptr;
 
     if (ctx->Attr<bool>("has_pos_weight")) {
-      pos_weight_processed = tmp_buffer;
-      // if (reduction == ReductionType::kNone) {
-      //   pos_weight_processed = tmp_buffer;
-      // } else {
-      //   pos_weight_processed = tmp_buffer + elem_cnt;
-      // }
+      pos_weight_processed = tmp_buffer_blob->mut_dptr<T>();
+      const T* pos_weight = ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->dptr<T>();
+
       Shape pos_weight_shape = Shape::Ones(target_blob->shape().NumAxes());
       pos_weight_shape.Set(pos_weight_shape.NumAxes() - 1,
                            ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->shape().elem_cnt());
@@ -233,15 +230,18 @@ class BinaryCrossEntropyWithLogitsGradKernel final : public user_op::OpKernel {
     const T* input = input_blob->dptr<T>();
     const T* target = target_blob->dptr<T>();
     T* dx = dx_blob->mut_dptr<T>();
-    T* tmp_buffer = tmp_buffer_blob->mut_dptr<T>();
+    // T* tmp_buffer = tmp_buffer_blob->mut_dptr<T>();
     const T* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
-    const T* pos_weight = ctx->has_input("pos_weight", 0)
-                              ? ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->dptr<T>()
-                              : nullptr;
+    // const T* pos_weight = ctx->has_input("pos_weight", 0)
+    //                           ? ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->dptr<T>()
+    //                           : nullptr;
     T* pos_weight_processed = nullptr;
+
     if (ctx->Attr<bool>("has_pos_weight")) {
-      pos_weight_processed = tmp_buffer;
+      pos_weight_processed = tmp_buffer_blob->mut_dptr<T>();
+      const T* pos_weight = ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->dptr<T>();
+
       Shape pos_weight_shape = Shape::Ones(target_blob->shape().NumAxes());
       pos_weight_shape.Set(pos_weight_shape.NumAxes() - 1,
                            ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->shape().elem_cnt());
@@ -263,11 +263,8 @@ template<typename T>
 user_op::InferTmpSizeFn GenFwInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
     const int64_t n = ctx->InputShape("input", 0).elem_cnt();
-    // const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
     size_t tmp_buffer_size = 0;
     if (ctx->Attr<bool>("has_pos_weight")) { tmp_buffer_size += GetCudaAlignedSize(n * sizeof(T)); }
-    // if (reduction != ReductionType::kNone) { tmp_buffer_size += GetCudaAlignedSize(n *
-    // sizeof(T)); }
     return tmp_buffer_size;
   };
 }
