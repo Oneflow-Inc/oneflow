@@ -71,7 +71,8 @@ Maybe<one::UserOpExpr> EagerNcclAllReduce(Symbol<ParallelDesc> parallel_desc) {
   return one::OpBuilder("eager_nccl_all_reduce", *JUST(UniqueStr("eager_nccl_all_reduce")))
       .Input("in")
       .Output("out")
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      // TODO(hjchen2)
+      // .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
       .Build();
 }
 
@@ -82,8 +83,9 @@ Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc
   return one::OpBuilder("eager_nccl_reduce_scatter", *JUST(UniqueStr("eager_nccl_reduce_scatter")))
       .Input("in")
       .Output("out")
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      .Attr<std::string>("op_type", op_type)
+      // TODO(hjchen2)
+      // .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      // .Attr<std::string>("op_type", op_type)
       .Build();
 }
 static constexpr auto* CachedNcclReduceScatterOpExpr =
@@ -93,7 +95,8 @@ Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc) {
   return one::OpBuilder("eager_nccl_all_gather", *JUST(UniqueStr("eager_nccl_all_gather")))
       .Input("in")
       .Output("out")
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      // TODO(hjchen2)
+      // .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
       .Build();
 }
 
@@ -105,9 +108,10 @@ Maybe<one::UserOpExpr> EagerNcclS2S(Symbol<ParallelDesc> parallel_desc,
   return one::OpBuilder("eager_nccl_s2s", *JUST(UniqueStr("eager_nccl_s2s")))
       .Input("in")
       .Output("out")
-      .Attr<int64_t>("in_split_axis", src_sbp->split_parallel().axis())
-      .Attr<int64_t>("out_split_axis", dst_sbp->split_parallel().axis())
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      // TODO(hjchen2)
+      // .Attr<int64_t>("in_split_axis", src_sbp->split_parallel().axis())
+      // .Attr<int64_t>("out_split_axis", dst_sbp->split_parallel().axis())
+      // .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
       .Build();
 }
 
@@ -117,8 +121,9 @@ Maybe<one::UserOpExpr> EagerNcclReduce(Symbol<ParallelDesc> parallel_desc, int64
   return one::OpBuilder("eager_nccl_reduce", *JUST(UniqueStr("eager_nccl_reduce")))
       .Input("in")
       .Output("out")
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      .Attr<int64_t>("root", root)
+      // TODO(hjchen2)
+      // .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      // .Attr<int64_t>("root", root)
       .Build();
 }
 
@@ -148,8 +153,9 @@ Maybe<one::UserOpExpr> RankGroupAndDeviceType2AllReduceOpExpr(Symbol<RankGroup> 
   return one::OpBuilder("eager_nccl_all_reduce")
       .Input("in")
       .Output("out")
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      .Attr<bool>("async_launch", true)
+      // TODO(hjchen2)
+      // .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      // .Attr<bool>("async_launch", true)
       .Build();
 }
 

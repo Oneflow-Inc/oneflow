@@ -43,8 +43,9 @@ Maybe<one::UserOpExpr> EagerSymmetricSToP(Symbol<ParallelDesc> parallel_desc,
   return one::OpBuilder("eager_symmetric_s_to_p", *JUST(UniqueStr("eager_symmetric_s_to_p")))
       .Input("in")
       .Output("out")
-      .Attr<int64_t>("in_split_axis", src_sbp->split_parallel().axis())
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      // TODO(hjchen2)
+      // .Attr<int64_t>("in_split_axis", src_sbp->split_parallel().axis())
+      // .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
       .Build();
 }
 

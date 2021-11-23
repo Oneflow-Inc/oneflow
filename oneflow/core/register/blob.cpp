@@ -55,4 +55,13 @@ char* Blob::mut_contiguous_header_ptr() {
   return header_ptr_;
 }
 
+#define INIT_GLOBAL_BLOB_MUTABLE_CHECKER(is_header_mutable, is_body_mutable)             \
+  COMMAND(Global<BlobAccessCheckerIf<is_header_mutable, is_body_mutable>>::SetAllocated( \
+      new BlobAccessCheckerIf<is_header_mutable, is_body_mutable>()))
+
+INIT_GLOBAL_BLOB_MUTABLE_CHECKER(false, false);
+INIT_GLOBAL_BLOB_MUTABLE_CHECKER(false, true);
+INIT_GLOBAL_BLOB_MUTABLE_CHECKER(true, false);
+INIT_GLOBAL_BLOB_MUTABLE_CHECKER(true, true);
+
 }  // namespace oneflow

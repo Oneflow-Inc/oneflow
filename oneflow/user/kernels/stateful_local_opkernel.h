@@ -421,7 +421,7 @@ class StatefulLocalOpKernel final {
   void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
 
   Maybe<void> ChooseOpKernel(const user_op::OpKernel** user_opkernel, bool* need_temp_storage,
-                             const AttrMap& attrs, EagerBlobObjectListRawPtr inputs,
+                             EagerBlobObjectListRawPtr inputs,
                              EagerBlobObjectListRawPtr outputs,
                              ConsistentTensorInferResultRawPtr consistent_tensor_infer_result);
 

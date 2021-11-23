@@ -14,11 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
-#include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/eager/eager_blob_object.h"
-#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/operator/operator.h"
@@ -182,10 +180,8 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
-  void Update(const AttrMap& attrs, EagerBlobObjectListRawPtr inputs,
-              EagerBlobObjectListRawPtr outputs,
+  void Update(EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
               ConsistentTensorInferResultRawPtr consistent_tensor_infer_result) {
-    composed_attrs_->ResetPrior(attrs);
     base_ctx_.Update(inputs, outputs, consistent_tensor_infer_result);
   }
 
@@ -424,11 +420,11 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
 StatefulLocalOpKernel::~StatefulLocalOpKernel() = default;
 
 Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(
-    const user_op::OpKernel** user_opkernel, bool* need_temp_storage, const AttrMap& attrs,
+    const user_op::OpKernel** user_opkernel, bool* need_temp_storage,
     EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
     ConsistentTensorInferResultRawPtr consistent_tensor_infer_result) {
   OF_PROFILER_RANGE_GUARD("ChooseOpKernel");
-  reg_ctx_->Update(attrs, inputs, outputs, consistent_tensor_infer_result);
+  reg_ctx_->Update(inputs, outputs, consistent_tensor_infer_result);
 
   DataType primary_dtype = kInvalidDataType;
   if (likely(!inputs->empty())) {
@@ -441,7 +437,7 @@ Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(
 
   for (const auto& pair : dtype2cached_kernels_[primary_dtype]) {
     if (likely(pair.first->is_matched_hob->get(*reg_ctx_))) {
-      reg_ctx_->Update(AttrMap{}, nullptr, nullptr, nullptr);
+      reg_ctx_->Update(nullptr, nullptr, nullptr);
       *need_temp_storage = pair.first->need_temp_storage;
       *user_opkernel = pair.second.get();
       return Maybe<void>::Ok();
@@ -459,7 +455,7 @@ Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(
       {kernel_reg_val, std::shared_ptr<const user_op::OpKernel>(kernel)});
 
   infer_tmp_size_fn_map_.emplace(kernel, &kernel_reg_val->infer_tmp_size_fn);
-  reg_ctx_->Update(AttrMap{}, nullptr, nullptr, nullptr);
+  reg_ctx_->Update(nullptr, nullptr, nullptr);
   *need_temp_storage = kernel_reg_val->need_temp_storage;
   *user_opkernel = kernel;
   return Maybe<void>::Ok();

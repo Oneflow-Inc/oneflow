@@ -1170,7 +1170,6 @@ class NormalizationFunctor {
                                    .Input("gamma")
                                    .Input("beta")
                                    .Output("y")
-                                   .Attr("training", false)
                                    .Build());
     norm_training_stats_op_ = CHECK_JUST(one::OpBuilder("normalization")
                                              .Input("x")
@@ -1181,7 +1180,6 @@ class NormalizationFunctor {
                                              .Output("y")
                                              .Output("mean")
                                              .Output("inv_variance")
-                                             .Attr("training", true)
                                              .Build());
     norm_training_no_stats_op_ = CHECK_JUST(one::OpBuilder("normalization")
                                                 .Input("x")
@@ -1190,7 +1188,6 @@ class NormalizationFunctor {
                                                 .Output("y")
                                                 .Output("mean")
                                                 .Output("inv_variance")
-                                                .Attr("training", true)
                                                 .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -1211,9 +1208,11 @@ class NormalizationFunctor {
     if (!training) {
       CHECK_OR_RETURN(moving_mean && moving_variance)
           << "Must have moving_mean and moving_variance in eval mode.";
+      JUST(attrs.SetAttr<bool>("training", false));
       return OpInterpUtil::Dispatch<one::Tensor>(
           *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
     }
+    JUST(attrs.SetAttr<bool>("training", true));
     if (moving_mean) {
       return OpInterpUtil::Dispatch<one::Tensor>(
           *norm_training_stats_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta},
@@ -1240,7 +1239,6 @@ class NormalizationAddReluFunctor {
                                    .Input("beta")
                                    .Output("y")
                                    .Output("reserve_space")
-                                   .Attr("training", false)
                                    .Build());
     norm_training_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
                                              .Input("x")
@@ -1252,7 +1250,6 @@ class NormalizationAddReluFunctor {
                                              .Output("reserve_space")
                                              .Output("mean")
                                              .Output("inv_variance")
-                                             .Attr("training", true)
                                              .Build());
     norm_training_no_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
                                                 .Input("x")
@@ -1262,7 +1259,6 @@ class NormalizationAddReluFunctor {
                                                 .Output("reserve_space")
                                                 .Output("mean")
                                                 .Output("inv_variance")
-                                                .Attr("training", true)
                                                 .Build());
 
     addend_norm_eval_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
@@ -1274,7 +1270,6 @@ class NormalizationAddReluFunctor {
                                           .Input("beta")
                                           .Output("y")
                                           .Output("reserve_space")
-                                          .Attr("training", false)
                                           .Build());
     addend_norm_training_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
                                                     .Input("x")
@@ -1287,7 +1282,6 @@ class NormalizationAddReluFunctor {
                                                     .Output("reserve_space")
                                                     .Output("mean")
                                                     .Output("inv_variance")
-                                                    .Attr("training", true)
                                                     .Build());
     addend_norm_training_no_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
                                                        .Input("x")
@@ -1298,7 +1292,6 @@ class NormalizationAddReluFunctor {
                                                        .Output("reserve_space")
                                                        .Output("mean")
                                                        .Output("inv_variance")
-                                                       .Attr("training", true)
                                                        .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -1320,6 +1313,7 @@ class NormalizationAddReluFunctor {
     if (!is_training) {
       CHECK_OR_RETURN(moving_mean && moving_variance)
           << "Must have moving_mean and moving_variance in eval mode.";
+      JUST(attrs.SetAttr<bool>("training", false));
       if (addend) {
         return OpInterpUtil::Dispatch<one::Tensor>(
             *addend_norm_eval_op_,
@@ -1328,7 +1322,10 @@ class NormalizationAddReluFunctor {
         return OpInterpUtil::Dispatch<one::Tensor>(
             *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
       }
-    } else if (moving_mean) {
+    }
+
+    JUST(attrs.SetAttr<bool>("training", true));
+    if (moving_mean) {
       if (addend) {
         return OpInterpUtil::Dispatch<one::Tensor>(
             *addend_norm_training_stats_op_,

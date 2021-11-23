@@ -43,11 +43,12 @@ Maybe<one::UserOpExpr> EagerSToB(Symbol<ParallelDesc> in_parallel_desc,
   return one::OpBuilder("eager_s_to_b", *JUST(UniqueStr("eager_s_to_b")))
       .Input("in")
       .Output("out")
-      .Attr<int64_t>("in_split_axis", src_sbp->split_parallel().axis())
-      .Attr<std::string>("in_parallel_conf", PbMessage2TxtString(in_parallel_desc->parallel_conf()))
-      .Attr<std::string>("out_parallel_conf",
-                         PbMessage2TxtString(out_parallel_desc->parallel_conf()))
-      .Attr<Shape>("shape", shape)
+      // TODO(hjchen2)
+      // .Attr<int64_t>("in_split_axis", src_sbp->split_parallel().axis())
+      // .Attr<std::string>("in_parallel_conf", PbMessage2TxtString(in_parallel_desc->parallel_conf()))
+      // .Attr<std::string>("out_parallel_conf",
+      //                    PbMessage2TxtString(out_parallel_desc->parallel_conf()))
+      // .Attr<Shape>("shape", shape)
       .Build();
 }
 
@@ -58,10 +59,11 @@ Maybe<one::UserOpExpr> EagerPToB(Symbol<ParallelDesc> in_parallel_desc,
   return one::OpBuilder("eager_p_to_b", *JUST(UniqueStr("eager_p_to_b")))
       .Input("in")
       .Output("out")
-      .Attr<std::string>("in_parallel_conf", PbMessage2TxtString(in_parallel_desc->parallel_conf()))
-      .Attr<std::string>("out_parallel_conf",
-                         PbMessage2TxtString(out_parallel_desc->parallel_conf()))
-      .Attr<Shape>("shape", shape)
+      // TODO(hjchen2)
+      // .Attr<std::string>("in_parallel_conf", PbMessage2TxtString(in_parallel_desc->parallel_conf()))
+      // .Attr<std::string>("out_parallel_conf",
+      //                    PbMessage2TxtString(out_parallel_desc->parallel_conf()))
+      // .Attr<Shape>("shape", shape)
       .Build();
 }
 
@@ -74,12 +76,13 @@ Maybe<one::UserOpExpr> EagerNaiveSToS(Symbol<ParallelDesc> in_parallel_desc,
   return one::OpBuilder("eager_naive_s_to_s", *JUST(UniqueStr("eager_naive_s_to_s")))
       .Input("in")
       .Output("out")
-      .Attr<int64_t>("in_split_axis", src_sbp->split_parallel().axis())
-      .Attr<int64_t>("out_split_axis", dst_sbp->split_parallel().axis())
-      .Attr<std::string>("in_parallel_conf", PbMessage2TxtString(in_parallel_desc->parallel_conf()))
-      .Attr<std::string>("out_parallel_conf",
-                         PbMessage2TxtString(out_parallel_desc->parallel_conf()))
-      .Attr<Shape>("shape", shape)
+      // TODO(hjchen2)
+      // .Attr<int64_t>("in_split_axis", src_sbp->split_parallel().axis())
+      // .Attr<int64_t>("out_split_axis", dst_sbp->split_parallel().axis())
+      // .Attr<std::string>("in_parallel_conf", PbMessage2TxtString(in_parallel_desc->parallel_conf()))
+      // .Attr<std::string>("out_parallel_conf",
+      //                    PbMessage2TxtString(out_parallel_desc->parallel_conf()))
+      // .Attr<Shape>("shape", shape)
       .Build();
 }
 
@@ -91,11 +94,12 @@ Maybe<one::UserOpExpr> EagerBToS(Symbol<ParallelDesc> in_parallel_desc,
   return one::OpBuilder("eager_b_to_s", *JUST(UniqueStr("eager_b_to_s")))
       .Input("in")
       .Output("out")
-      .Attr<int64_t>("out_split_axis", dst_sbp->split_parallel().axis())
-      .Attr<std::string>("in_parallel_conf", PbMessage2TxtString(in_parallel_desc->parallel_conf()))
-      .Attr<std::string>("out_parallel_conf",
-                         PbMessage2TxtString(out_parallel_desc->parallel_conf()))
-      .Attr<Shape>("shape", shape)
+      // TODO(hjchen2)
+      // .Attr<int64_t>("out_split_axis", dst_sbp->split_parallel().axis())
+      // .Attr<std::string>("in_parallel_conf", PbMessage2TxtString(in_parallel_desc->parallel_conf()))
+      // .Attr<std::string>("out_parallel_conf",
+      //                    PbMessage2TxtString(out_parallel_desc->parallel_conf()))
+      // .Attr<Shape>("shape", shape)
       .Build();
 }
 
@@ -107,11 +111,12 @@ Maybe<one::UserOpExpr> EagerPToS(Symbol<ParallelDesc> in_parallel_desc,
   return one::OpBuilder("eager_p_to_s", *JUST(UniqueStr("eager_p_to_s")))
       .Input("in")
       .Output("out")
-      .Attr<int64_t>("out_split_axis", dst_sbp->split_parallel().axis())
-      .Attr<std::string>("in_parallel_conf", PbMessage2TxtString(in_parallel_desc->parallel_conf()))
-      .Attr<std::string>("out_parallel_conf",
-                         PbMessage2TxtString(out_parallel_desc->parallel_conf()))
-      .Attr<Shape>("shape", shape)
+      // TODO(hjchen2)
+      // .Attr<int64_t>("out_split_axis", dst_sbp->split_parallel().axis())
+      // .Attr<std::string>("in_parallel_conf", PbMessage2TxtString(in_parallel_desc->parallel_conf()))
+      // .Attr<std::string>("out_parallel_conf",
+      //                    PbMessage2TxtString(out_parallel_desc->parallel_conf()))
+      // .Attr<Shape>("shape", shape)
       .Build();
 }
 

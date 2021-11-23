@@ -749,9 +749,10 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
       JUST(OpBuilder("hierarchical_parallel_cast", "trivial_op_name")
                .Input("in")
                .Output("out")
-               .Attr<std::vector<std::string>>("nd_sbp", *sbp_list_ptr)
-               .Attr<std::string>("grad_mode", grad_mode)
-               .Attr<std::vector<std::string>>("grad_nd_sbp", grad_sbp_str_list)
+               // TODO(hjchen2)
+               // .Attr<std::vector<std::string>>("nd_sbp", *sbp_list_ptr)
+               // .Attr<std::string>("grad_mode", grad_mode)
+               // .Attr<std::vector<std::string>>("grad_nd_sbp", grad_sbp_str_list)
                .Build());
 
   if (input_proxy) {
