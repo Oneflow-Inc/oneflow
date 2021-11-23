@@ -17,6 +17,7 @@ limitations under the License.
 #include <cstdlib>
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/just.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/control/ctrl_client.h"
@@ -37,6 +38,7 @@ limitations under the License.
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -360,22 +362,12 @@ Maybe<void> NNGraph::CreateVariableOp(
     } else {
       // To create a ConsistentTensor: shape, dtype, sbp + parallel desc, is_lazy, requires_grad,
       const ParallelDesc& desc = node->parallel_desc();
-      auto sbp_info = node->op().op_conf().variable_conf().nd_sbp();
+      auto sbp_strs = node->op().op_conf().variable_conf().nd_sbp();
       cfg::NdSbp nd_sbp;
-      for (auto it = sbp_info.begin(); it != sbp_info.end(); ++it) {
-        nd_sbp.add_sbp_parallel();
-        int sbp_id = nd_sbp.sbp_parallel_size() - 1;
-        // TODO(zzk0): format may be corruptted
-        if (*it == "S") {
-          int64_t axis = std::atoi((*it).substr(2, (*it).length() - 3).c_str());
-          *(nd_sbp.mutable_sbp_parallel(sbp_id)->mutable_split_parallel()->mutable_axis()) = axis;
-        } else if (*it == "B") {
-          nd_sbp.mutable_sbp_parallel(sbp_id)->mutable_broadcast_parallel();
-        } else if (*it == "P") {
-          nd_sbp.mutable_sbp_parallel(sbp_id)->mutable_partial_sum_parallel();
-        } else {
-          UNIMPLEMENTED_AND_RETURN();
-        }
+      for (auto it = sbp_strs.begin(); it != sbp_strs.end(); ++it) {
+        cfg::SbpParallel* sbp_parallel = nd_sbp.add_sbp_parallel();
+        bool status = ParseSbpParallelFromString(*it, sbp_parallel);
+        if (!status) { UNIMPLEMENTED_THEN_RETURN(); }
       }
       std::shared_ptr<one::ConsistentTensor> tensor = JUST(one::ConsistentTensor::MakeTensor(
           shape, dtype, nd_sbp, desc, is_lazy, requires_grad, is_leaf));
