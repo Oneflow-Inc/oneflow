@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
-REGISTER_NO_GRAD_USER_OP("range")
+REGISTER_NO_GRAD_USER_OP("arange")
     .Output("out")
     .Attr<int64_t>("integer_start")
     .Attr<int64_t>("integer_delta")
@@ -39,8 +39,8 @@ REGISTER_NO_GRAD_USER_OP("range")
         // CHECK when limit > start, delta > 0; limit < start, delta < 0;
         CHECK_GT_OR_RETURN((integer_limit - integer_start) / integer_delta, static_cast<int64_t>(0))
             << "RuntimeError: upper bound and larger bound inconsistent with step sign";
-        range_elem_cnt = ((integer_limit - integer_start + integer_delta - 1)
-                          / integer_delta);  // Do the ceil division, ceil((limit-start)/delta)
+        range_elem_cnt =
+            std::ceil(static_cast<double>(integer_limit - integer_start) / integer_delta);
       } else {
         double float_delta = ctx->Attr<double>("float_delta");
         CHECK_NE_OR_RETURN(float_delta, static_cast<double>(0.0))

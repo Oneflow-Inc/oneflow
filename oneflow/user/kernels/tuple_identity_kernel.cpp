@@ -37,7 +37,7 @@ class TupleIdentityKernel final : public user_op::OpKernel {
       CHECK_EQ(out_i->data_type(), data_type);
       const ShapeView& shape = in_i->shape();
       CHECK_EQ(out_i->shape(), shape);
-      Memcpy<device_type>(ctx->device_ctx(), out_i->mut_dptr(), in_i->dptr(),
+      Memcpy<device_type>(ctx->stream(), out_i->mut_dptr(), in_i->dptr(),
                           shape.elem_cnt() * GetSizeOfDataType(data_type));
     }
   }

@@ -69,6 +69,7 @@ struct OpKernelRegistryResult {
   std::string op_type_name;
 
   OpKernelCreateFn create_fn;
+  bool need_temp_storage;
   InferTmpSizeFn infer_tmp_size_fn;
   InplaceProposalFn inplace_proposal_fn;
   IsMatchedHob is_matched_hob;

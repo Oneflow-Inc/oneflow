@@ -30,12 +30,13 @@ struct NdarrayApplyBroadcastUnary<
     device_type, T, unary_func,
     typename std::enable_if<std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
     final {
-  static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
+  static void Apply(ep::Stream* stream, const XpuVarNdarray<T>& y,
+                    const XpuVarNdarray<const T>& x) {
     CheckBroadcastable(y, x);
     DimVector simplified_y_dim;
     DimVector simplified_x_dim;
     SimplifyBroadcastShapes(y.shape(), x.shape(), &simplified_y_dim, &simplified_x_dim);
-    SwitchApply(SwitchCase(simplified_y_dim.size()), ctx,
+    SwitchApply(SwitchCase(simplified_y_dim.size()), stream,
                 XpuVarNdarray<T>(Shape(simplified_y_dim), y.ptr()),
                 XpuVarNdarray<const T>(Shape(simplified_x_dim), x.ptr()));
   }
@@ -59,10 +60,11 @@ struct NdarrayApplyBroadcastUnary<
     device_type, T, unary_func,
     typename std::enable_if<!std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
     final {
-  static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
+  static void Apply(ep::Stream* stream, const XpuVarNdarray<T>& y,
+                    const XpuVarNdarray<const T>& x) {
     using NewT = typename DevDType<device_type, T>::type;
     return NdarrayApplyBroadcastUnary<device_type, NewT, unary_func>::Apply(
-        ctx, reinterpret_cast<const XpuVarNdarray<NewT>&>(y),
+        stream, reinterpret_cast<const XpuVarNdarray<NewT>&>(y),
         reinterpret_cast<const XpuVarNdarray<const NewT>&>(x));
   }
 };

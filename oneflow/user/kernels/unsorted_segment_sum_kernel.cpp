@@ -94,7 +94,7 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel, public user_op:
     int64_t num_segments = out->shape().At(axis);
     int64_t inner_dim_size = out->shape().Count(axis + 1);
     int64_t num_segment_ids = segment_ids->shape().elem_cnt();
-    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0, out->shape().elem_cnt() * sizeof(T));
+    Memset<device_type>(ctx->stream(), out->mut_dptr(), 0, out->shape().elem_cnt() * sizeof(T));
 
     int64_t offset = 0;
     if (state != nullptr) {
@@ -106,7 +106,7 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel, public user_op:
 
     if (num_segment_ids != 0) {
       UnsortedSegmentSumKernelUtil<device_type, T, K, T>::UnsortedSegmentSum(
-          ctx->device_ctx(), segment_ids->dptr<K>(), data->dptr<T>(), num_segment_ids, num_segments,
+          ctx->stream(), segment_ids->dptr<K>(), data->dptr<T>(), num_segment_ids, num_segments,
           outer_dim_size, inner_dim_size, offset, out->mut_dptr<T>());
     }
   }
@@ -119,8 +119,8 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel, public user_op:
                                             OF_PP_PAIR_FIRST(segment_ids_type)>>()            \
       .SetIsMatchedHob(                                                                       \
           (user_op::HobDeviceType() == device)                                                \
-          & (user_op::HobDataType("segment_ids", 0) == OF_PP_PAIR_SECOND(segment_ids_type))   \
-          & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_type)));
+          && (user_op::HobDataType("segment_ids", 0) == OF_PP_PAIR_SECOND(segment_ids_type))  \
+          && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_type)));
 
 #define REGISTER_UNSORTED_SEGMENT_SUM_KERNEL_CASE(device_type, out_type, segment_ids_type) \
   REGISTER_UNSORTED_SEGMENT_SUM_KERNEL(device_type, out_type, segment_ids_type,            \
@@ -159,7 +159,7 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
     int64_t num_segments = out->shape().At(axis);
     int64_t inner_dim_size = out->shape().Count(axis + 1);
     int64_t num_segment_ids = segment_ids->shape().elem_cnt();
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), tmp_buf->mut_dptr(), 0,
+    Memset<DeviceType::kGPU>(ctx->stream(), tmp_buf->mut_dptr(), 0,
                              out->shape().elem_cnt() * sizeof(float));
     int64_t offset = 0;
     if (state != nullptr) {
@@ -170,8 +170,8 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
     }
 
     UnsortedSegmentSumKernelUtil<DeviceType::kGPU, float, K, float16>::UnsortedSegmentSum(
-        ctx->device_ctx(), segment_ids->dptr<K>(), data->dptr<float16>(), num_segment_ids,
-        num_segments, outer_dim_size, inner_dim_size, offset, tmp_buf->mut_dptr<float>());
+        ctx->stream(), segment_ids->dptr<K>(), data->dptr<float16>(), num_segment_ids, num_segments,
+        outer_dim_size, inner_dim_size, offset, tmp_buf->mut_dptr<float>());
 
     auto f2h = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
         ctx->device_type(), DataType::kFloat, DataType::kFloat16);
@@ -187,8 +187,8 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
       .SetCreateFn<UnsortedSegmentSumHalfKernel<OF_PP_PAIR_FIRST(segment_ids_type)>>()          \
       .SetIsMatchedHob(                                                                         \
           (user_op::HobDeviceType() == DeviceType::kGPU)                                        \
-          & (user_op::HobDataType("segment_ids", 0) == OF_PP_PAIR_SECOND(segment_ids_type))     \
-          & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_type)))                    \
+          && (user_op::HobDataType("segment_ids", 0) == OF_PP_PAIR_SECOND(segment_ids_type))    \
+          && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_type)))                   \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
         const Shape* out_shape = ctx->OutputShape("out", 0);                                    \
         return GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(float));                       \

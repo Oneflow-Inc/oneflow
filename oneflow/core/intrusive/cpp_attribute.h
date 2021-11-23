@@ -13,16 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_STREAM_STREAM_CONTEXT_ADAPTER_H_
-#define ONEFLOW_CORE_STREAM_STREAM_CONTEXT_ADAPTER_H_
+#ifndef ONEFLOW_CORE_COMMON_INTRUSIVE_ATTRIBUTE_H_
+#define ONEFLOW_CORE_COMMON_INTRUSIVE_ATTRIBUTE_H_
 
-#include "oneflow/core/stream/include/stream_context.h"
-#include "oneflow/core/device/device_context.h"
+#include <gtest/gtest.h>
 
-namespace oneflow {
+#define INTRUSIVE_PREDICT_TRUE GOOGLE_PREDICT_TRUE
+#define INTRUSIVE_PREDICT_FALSE GOOGLE_PREDICT_FALSE
 
-StreamContext* NewStreamContextAdapter(DeviceCtx* ctx);
-
-}  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_STREAM_STREAM_CONTEXT_ADAPTER_H_
+#endif  // ONEFLOW_CORE_COMMON_INTRUSIVE_ATTRIBUTE_H_

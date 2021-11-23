@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -209,7 +210,7 @@ class GpuHeapSelectionTopKKernel final : public user_op::OpKernel {
     num_heap = std::min(num_heap, kCudaThreadsNumPerBlock);
 
     HeapTopKKernel<T><<<instance_num, num_heap, num_heap * heap_size * sizeof(Entry<T>),
-                        ctx->device_ctx()->cuda_stream()>>>(
+                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         in->dptr<T>(), instance_num, instance_size, k, heap_size, GetMaxVal<int32_t>(),
         GetMinVal<T>(), out->mut_dptr<int32_t>());
   }
@@ -218,8 +219,8 @@ class GpuHeapSelectionTopKKernel final : public user_op::OpKernel {
 
 #define REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(dtype)                                           \
   REGISTER_USER_KERNEL("top_k").SetCreateFn<GpuHeapSelectionTopKKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kGPU) & (user_op::HobAttr<int32_t>("k") <= 128)    \
-      & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
+      (user_op::HobDeviceType() == DeviceType::kGPU) && (user_op::HobAttr<int32_t>("k") <= 128)   \
+      && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(float)
 REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(double)
