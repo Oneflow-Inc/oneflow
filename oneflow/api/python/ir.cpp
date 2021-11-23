@@ -128,7 +128,7 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
 #endif  // WITH_MLIR
   m.def("gen_ods", []() {
     for (const auto& kv : user_op::UserOpRegistryMgr::Get().GetAllOpRegistryResults()) {
-      std::cout << "def OneFlow" << convertToCamelFromSnakeCase(kv.first, true)
+      std::cout << "def OneFlow_" << convertToCamelFromSnakeCase(kv.first, true)
                 << "Op : OneFlow_BaseOp<\"" << kv.first << "\", []> {"
                 << "\n";
       const oneflow::user_op::OpRegistryResult& r = kv.second;
