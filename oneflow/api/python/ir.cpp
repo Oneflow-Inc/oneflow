@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_def.h"
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
+#include <regex>
 
 namespace {
 using namespace oneflow;
@@ -98,22 +99,38 @@ bool IsInvolutionOp(const std::string& op_name) {
 bool IsIdempotentOp(const std::string& op_name) {
   return GetIdempotentOps().find(op_name) != GetIdempotentOps().end();
 }
+
+bool IsPoolOp(const std::string& op_name) {
+  return (op_name.rfind("avg", 0) == 0 || op_name.rfind("max", 0) == 0)
+         && op_name.find("pool") != std::string::npos;
+}
+bool IsGradOp(const std::string& op_name) { return op_name.find("grad") != std::string::npos; }
+bool IsLazyPoolOp(const std::string& op_name) { return op_name.find("_pool") != std::string::npos; }
 std::string GetBaseOp(const std::string& op_name) {
   if (IsInvolutionOp(op_name)) {
     return "OneFlow_InvolutionBaseOp";
   } else if (IsIdempotentOp(op_name)) {
     return "OneFlow_IdempotentBaseOp";
+  } else if (IsPoolOp(op_name)) {
+    return "OneFlow_" + std::string(IsLazyPoolOp(op_name) ? "Lazy" : "Eager") + "Pool"
+           + std::string(IsGradOp(op_name) ? "Grad" : "") + "BaseOp";
   } else {
     return "OneFlow_BaseOp";
   }
 }
 
+std::string GetPoolOpClassName(const std::string& op_name) {
+  std::string ret((IsLazyPoolOp(op_name) ? "Lazy" : "Eager")
+                  + convertToCamelFromSnakeCase(op_name, true));
+  ret = std::regex_replace(ret, std::regex("pool"), "Pool");
+  ret = std::regex_replace(ret, std::regex("_1d"), "1D");
+  ret = std::regex_replace(ret, std::regex("_2d"), "2D");
+  ret = std::regex_replace(ret, std::regex("_3d"), "3D");
+  return ret;
+}
+
 bool ShouldGenEmptyBody(const std::string& op_name) {
-  if (IsInvolutionOp(op_name) || IsIdempotentOp(op_name)) {
-    return true;
-  } else {
-    return false;
-  }
+  return IsInvolutionOp(op_name) || IsIdempotentOp(op_name) || IsPoolOp(op_name);
 }
 
 void PrintArgDef(const UserOpDef_ArgDef& arg_def) {
@@ -200,6 +217,14 @@ void PrintBody(const oneflow::UserOpDef& op_def) {
   PrintTraitAttrs(op_def);
 }
 
+std::string GetOpClassName(const std::string& op_name) {
+  if (IsPoolOp(op_name)) {
+    return GetPoolOpClassName(op_name);
+  } else {
+    return convertToCamelFromSnakeCase(op_name, true);
+  }
+}
+
 }  // namespace
 
 namespace oneflow {
@@ -218,8 +243,9 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
                    [](const std::pair<K, V>& p) { return p; });
     for (const auto& kv : sorted) {
       const oneflow::user_op::OpRegistryResult& r = kv.second;
-      std::cout << "def OneFlow_" << convertToCamelFromSnakeCase(kv.first, true)
-                << "Op : " << GetBaseOp(r.op_type_name) << "<\"" << kv.first << "\", []> ";
+      auto op_class_name = GetOpClassName(kv.first);
+      std::cout << "def OneFlow_" << op_class_name << "Op : " << GetBaseOp(r.op_type_name) << "<\""
+                << kv.first << "\", []> ";
       const oneflow::UserOpDef& op_def = r.op_def;
       if (ShouldGenEmptyBody(r.op_type_name)) {
         std::cout << "{}\n";

@@ -705,233 +705,29 @@ def OneFlow_AtanhGradOp : OneFlow_BaseOp<"atanh_grad", []> {
   );
 }
 
-def OneFlow_AvgPool_1dOp : OneFlow_BaseOp<"avg_pool_1d", []> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-}
+def OneFlow_LazyAvgPool1DOp : OneFlow_LazyPoolBaseOp<"avg_pool_1d", []> {}
 
-def OneFlow_AvgPool_1dGradOp : OneFlow_BaseOp<"avg_pool_1d_grad", []> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-}
+def OneFlow_LazyAvgPool1DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_1d_grad", []> {}
 
-def OneFlow_AvgPool_2dOp : OneFlow_BaseOp<"avg_pool_2d", []> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-}
+def OneFlow_LazyAvgPool2DOp : OneFlow_LazyPoolBaseOp<"avg_pool_2d", []> {}
 
-def OneFlow_AvgPool_2dGradOp : OneFlow_BaseOp<"avg_pool_2d_grad", []> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-}
+def OneFlow_LazyAvgPool2DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_2d_grad", []> {}
 
-def OneFlow_AvgPool_3dOp : OneFlow_BaseOp<"avg_pool_3d", []> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-}
+def OneFlow_LazyAvgPool3DOp : OneFlow_LazyPoolBaseOp<"avg_pool_3d", []> {}
 
-def OneFlow_AvgPool_3dGradOp : OneFlow_BaseOp<"avg_pool_3d_grad", []> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-}
+def OneFlow_LazyAvgPool3DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_3d_grad", []> {}
 
-def OneFlow_Avgpool_1dOp : OneFlow_BaseOp<"avgpool_1d", []> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    BoolAttr:$ceil_mode,
-    BoolAttr:$count_include_pad,
-    SI64Attr:$divisor_override
-  );
-}
+def OneFlow_EagerAvgPool1DOp : OneFlow_EagerPoolBaseOp<"avgpool_1d", []> {}
 
-def OneFlow_Avgpool_1dGradOp : OneFlow_BaseOp<"avgpool_1d_grad", []> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    BoolAttr:$ceil_mode,
-    BoolAttr:$count_include_pad,
-    SI64Attr:$divisor_override
-  );
-}
+def OneFlow_EagerAvgPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_1d_grad", []> {}
 
-def OneFlow_Avgpool_2dOp : OneFlow_BaseOp<"avgpool_2d", []> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    BoolAttr:$ceil_mode,
-    BoolAttr:$count_include_pad,
-    SI64Attr:$divisor_override
-  );
-}
+def OneFlow_EagerAvgPool2DOp : OneFlow_EagerPoolBaseOp<"avgpool_2d", []> {}
 
-def OneFlow_Avgpool_2dGradOp : OneFlow_BaseOp<"avgpool_2d_grad", []> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    BoolAttr:$ceil_mode,
-    BoolAttr:$count_include_pad,
-    SI64Attr:$divisor_override
-  );
-}
+def OneFlow_EagerAvgPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_2d_grad", []> {}
 
-def OneFlow_Avgpool_3dOp : OneFlow_BaseOp<"avgpool_3d", []> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    BoolAttr:$ceil_mode,
-    BoolAttr:$count_include_pad,
-    SI64Attr:$divisor_override
-  );
-}
+def OneFlow_EagerAvgPool3DOp : OneFlow_EagerPoolBaseOp<"avgpool_3d", []> {}
 
-def OneFlow_Avgpool_3dGradOp : OneFlow_BaseOp<"avgpool_3d_grad", []> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    BoolAttr:$ceil_mode,
-    BoolAttr:$count_include_pad,
-    SI64Attr:$divisor_override
-  );
-}
+def OneFlow_EagerAvgPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_3d_grad", []> {}
 
 def OneFlow_BatchGatherOp : OneFlow_BaseOp<"batch_gather", []> {
   let input = (ins
@@ -3658,239 +3454,29 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", []> {
   );
 }
 
-def OneFlow_MaxPool_1dOp : OneFlow_BaseOp<"max_pool_1d", []> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-}
+def OneFlow_LazyMaxPool1DOp : OneFlow_LazyPoolBaseOp<"max_pool_1d", []> {}
 
-def OneFlow_MaxPool_1dGradOp : OneFlow_BaseOp<"max_pool_1d_grad", []> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-}
+def OneFlow_LazyMaxPool1DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_1d_grad", []> {}
 
-def OneFlow_MaxPool_2dOp : OneFlow_BaseOp<"max_pool_2d", []> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-}
+def OneFlow_LazyMaxPool2DOp : OneFlow_LazyPoolBaseOp<"max_pool_2d", []> {}
 
-def OneFlow_MaxPool_2dGradOp : OneFlow_BaseOp<"max_pool_2d_grad", []> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-}
+def OneFlow_LazyMaxPool2DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_2d_grad", []> {}
 
-def OneFlow_MaxPool_3dOp : OneFlow_BaseOp<"max_pool_3d", []> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-}
+def OneFlow_LazyMaxPool3DOp : OneFlow_LazyPoolBaseOp<"max_pool_3d", []> {}
 
-def OneFlow_MaxPool_3dGradOp : OneFlow_BaseOp<"max_pool_3d_grad", []> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-}
+def OneFlow_LazyMaxPool3DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_3d_grad", []> {}
 
-def OneFlow_Maxpool_1dOp : OneFlow_BaseOp<"maxpool_1d", []> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y,
-    AnyType:$indice
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    SI32ArrayAttr:$dilation,
-    BoolAttr:$return_indices,
-    BoolAttr:$ceil_mode
-  );
-}
+def OneFlow_EagerMaxPool1DOp : OneFlow_EagerPoolBaseOp<"maxpool_1d", []> {}
 
-def OneFlow_Maxpool_1dGradOp : OneFlow_BaseOp<"maxpool_1d_grad", []> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$indice,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    SI32ArrayAttr:$dilation,
-    BoolAttr:$return_indices,
-    BoolAttr:$ceil_mode
-  );
-}
+def OneFlow_EagerMaxPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_1d_grad", []> {}
 
-def OneFlow_Maxpool_2dOp : OneFlow_BaseOp<"maxpool_2d", []> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y,
-    AnyType:$indice
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    SI32ArrayAttr:$dilation,
-    BoolAttr:$return_indices,
-    BoolAttr:$ceil_mode
-  );
-}
+def OneFlow_EagerMaxPool2DOp : OneFlow_EagerPoolBaseOp<"maxpool_2d", []> {}
 
-def OneFlow_Maxpool_2dGradOp : OneFlow_BaseOp<"maxpool_2d_grad", []> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$indice,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    SI32ArrayAttr:$dilation,
-    BoolAttr:$return_indices,
-    BoolAttr:$ceil_mode
-  );
-}
+def OneFlow_EagerMaxPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_2d_grad", []> {}
 
-def OneFlow_Maxpool_3dOp : OneFlow_BaseOp<"maxpool_3d", []> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y,
-    AnyType:$indice
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    SI32ArrayAttr:$dilation,
-    BoolAttr:$return_indices,
-    BoolAttr:$ceil_mode
-  );
-}
+def OneFlow_EagerMaxPool3DOp : OneFlow_EagerPoolBaseOp<"maxpool_3d", []> {}
 
-def OneFlow_Maxpool_3dGradOp : OneFlow_BaseOp<"maxpool_3d_grad", []> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$indice,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    SI32ArrayAttr:$dilation,
-    BoolAttr:$return_indices,
-    BoolAttr:$ceil_mode
-  );
-}
+def OneFlow_EagerMaxPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_3d_grad", []> {}
 
 def OneFlow_MegatronGptMmapDataLoaderOp : OneFlow_BaseOp<"megatron_gpt_mmap_data_loader", []> {
   let input = (ins
