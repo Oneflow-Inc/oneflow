@@ -476,7 +476,7 @@ def OneFlow_AdaptiveAvgPool3dGradOp : OneFlow_BaseOp<"adaptive_avg_pool3d_grad",
 
 def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", []> {
   let input = (ins
-    AnyType:$in
+    Variadic<AnyType>:$in
   );
   let output = (outs
     AnyType:$out
@@ -1530,7 +1530,7 @@ def OneFlow_CombinedMarginLossGradOp : OneFlow_BaseOp<"combined_margin_loss_grad
 
 def OneFlow_ConcatOp : OneFlow_BaseOp<"concat", []> {
   let input = (ins
-    AnyType:$in
+    Variadic<AnyType>:$in
   );
   let output = (outs
     AnyType:$out
@@ -3904,10 +3904,10 @@ def OneFlow_MishGradOp : OneFlow_BaseOp<"mish_grad", []> {
 
 def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", []> {
   let input = (ins
-    AnyType:$in
+    Variadic<AnyType>:$in
   );
   let output = (outs
-    AnyType:$out
+    Variadic<AnyType>:$out
   );
   let attrs = (ins
     StrAttr:$mlir_assembly
@@ -3956,7 +3956,7 @@ def OneFlow_MovingAverageMinMaxObserverOp : OneFlow_BaseOp<"moving_average_min_m
 
 def OneFlow_MultiCountNotFiniteOp : OneFlow_BaseOp<"multi_count_not_finite", []> {
   let input = (ins
-    AnyType:$x
+    Variadic<AnyType>:$x
   );
   let output = (outs
     AnyType:$y
@@ -3965,7 +3965,7 @@ def OneFlow_MultiCountNotFiniteOp : OneFlow_BaseOp<"multi_count_not_finite", []>
 
 def OneFlow_MultiSquareSumOp : OneFlow_BaseOp<"multi_square_sum", []> {
   let input = (ins
-    AnyType:$x
+    Variadic<AnyType>:$x
   );
   let output = (outs
     AnyType:$y
@@ -5702,10 +5702,10 @@ def OneFlow_SparseSoftmaxCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_softmax_c
 def OneFlow_SplitLikeOp : OneFlow_BaseOp<"split_like", []> {
   let input = (ins
     AnyType:$in,
-    AnyType:$like
+    Variadic<AnyType>:$like
   );
   let output = (outs
-    AnyType:$out
+    Variadic<AnyType>:$out
   );
   let attrs = (ins
     SI64Attr:$axis
@@ -5858,7 +5858,7 @@ def OneFlow_TensorBufferToListOfTensorsOp : OneFlow_BaseOp<"tensor_buffer_to_lis
     AnyType:$in
   );
   let output = (outs
-    AnyType:$out
+    Variadic<AnyType>:$out
   );
   let attrs = (ins
     AnyI64ElementsAttr:$out_shape,
@@ -5872,7 +5872,7 @@ def OneFlow_TensorBufferToListOfTensorsV2Op : OneFlow_BaseOp<"tensor_buffer_to_l
     AnyType:$in
   );
   let output = (outs
-    AnyType:$out
+    Variadic<AnyType>:$out
   );
   let attrs = (ins
     ShapeArrayAttr:$out_shapes,
@@ -6017,10 +6017,10 @@ def OneFlow_TriuOp : OneFlow_BaseOp<"triu", []> {
 
 def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", []> {
   let input = (ins
-    AnyType:$in
+    Variadic<AnyType>:$in
   );
   let output = (outs
-    AnyType:$out
+    Variadic<AnyType>:$out
   );
 }
 

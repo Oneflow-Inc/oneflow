@@ -119,10 +119,11 @@ bool ShouldGenEmptyBody(const std::string& op_name) {
 void PrintArgDef(const UserOpDef_ArgDef& arg_def) {
   std::cout << "    ";
   if (arg_def.is_optional()) { std::cout << "Optional<"; }
+  if (arg_def.num_as_min()) { std::cout << "Variadic<"; }
   std::cout << "AnyType";
-  if (arg_def.is_optional()) { std::cout << ">"; }
+  if (arg_def.is_optional() || arg_def.num_as_min()) { std::cout << ">"; }
+  CHECK(!(arg_def.is_optional() && arg_def.num_as_min())) << arg_def.DebugString();
   std::cout << ":$" << arg_def.name();
-  if (arg_def.num() > 1) {}
   if (arg_def.num_as_min()) {
     // TODO: add verifier
   }
