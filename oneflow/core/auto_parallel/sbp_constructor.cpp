@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/sbp_util.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "sbp_collector.h"
 
 namespace oneflow {
@@ -86,6 +87,17 @@ Maybe<void> SbpConstructor::DumpNdSbpSignatureForJob(const OpGraph& op_graph, Jo
     sbp_node->FinalSbpSignature()->ToProto(
         &(*job->mutable_job_parallel_view_conf()
                ->mutable_op_name2sbp_signature_conf())[node->op().op_name()]);
+    // TODO: Specially update sbp conf by using polymorphism function
+    // Update sbp for variable op
+    if (node->op().op_conf().has_variable_conf()) {
+      for (auto& op : *job->mutable_net()->mutable_op()) {
+        if (op.name() == node->op().op_name()) {
+          op.mutable_variable_conf()->mutable_nd_sbp()->Clear();
+          op.mutable_variable_conf()->mutable_nd_sbp()->Add(
+              SbpParallelToString(sbp_node->FinalSbpSignature()->bn_in_op2sbp_parallel()["out"]));
+        }
+      }
+    }
   });
   return Maybe<void>::Ok();
 }
