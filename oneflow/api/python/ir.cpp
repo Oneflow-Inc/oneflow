@@ -89,22 +89,27 @@ void PrintOne(const oneflow::UserOpDef& op_def) {
   // inputs
   std::cout << "  let input = (ins"
             << "\n";
-  for (const auto& input : op_def.input()) { std::cout << "    AnyType:$" << input.name() << "\n"; }
+  for (auto it = op_def.input().begin(); it != op_def.input().end(); ++it) {
+    std::cout << "    AnyType:$" << it->name() << (std::next(it) == op_def.input().end() ? "" : ",")
+              << "\n";
+  }
   std::cout << "  );"
             << "\n";
   // outputs
   std::cout << "  let output = (outs"
             << "\n";
-  for (const auto& output : op_def.output()) {
-    std::cout << "    AnyType:$" << output.name() << "\n";
+  for (auto it = op_def.output().begin(); it != op_def.output().end(); ++it) {
+    std::cout << "    AnyType:$" << it->name()
+              << (std::next(it) == op_def.output().end() ? "" : ",") << "\n";
   }
   std::cout << "  );"
             << "\n";
   // attrs
   std::cout << "  let attrs = (ins"
             << "\n";
-  for (const auto& attr : op_def.attr()) {
-    std::cout << "    " << GetMLIRAttrType(attr.type()) << ":$" << attr.name() << "\n";
+  for (auto it = op_def.attr().begin(); it != op_def.attr().end(); ++it) {
+    std::cout << "    " << GetMLIRAttrType(it->type()) << ":$" << it->name()
+              << (std::next(it) == op_def.attr().end() ? "" : ",") << "\n";
   }
   std::cout << "  );"
             << "\n";
