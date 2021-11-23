@@ -20,7 +20,9 @@ limitations under the License.
 #include <cstddef>
 #include <cstdlib>
 #include <memory>
+#include <sstream>
 #include <string>
+#include <type_traits>
 #include <vector>
 #include <iostream>
 
@@ -77,26 +79,103 @@ struct StackedErrorTraits {
     return se.StackElem(index);
   }
 
-  template<typename... Args>
-  static void PushStack(const T& se, Args&&... args) {
+  template<typename U, typename... Args,
+           std::enable_if_t<std::is_same<T, RemoveCVRef<U>>::value, int> = 0>
+  static void PushStack(U&& se, Args&&... args) {
     se.PushStack(std::forward<Args>(args)...);
   }
 
-  [[noreturn]] static void Abort(T& se) { se.Abort(); }
+  template<typename U, std::enable_if_t<std::is_same<T, RemoveCVRef<U>>::value, int> = 0>
+  static std::string Dump(U&& se) {
+    return se.Dump();
+  }
+
+  template<typename U, std::enable_if_t<std::is_same<T, RemoveCVRef<U>>::value, int> = 0>
+  [[noreturn]] static void Abort(U&& se) {
+    se.Abort();
+  }
+};
+
+template<typename T>
+struct StackedErrorTraits<std::unique_ptr<T>> {
+  StackedErrorTraits() = delete;
+
+  using PointedTraits = StackedErrorTraits<T>;
+
+  using ValueType = std::unique_ptr<T>;
+
+  using ErrorType = typename PointedTraits::ErrorType;
+  using StackEntryType = typename PointedTraits::StackEntryType;
+
+  static const ErrorType& Error(const ValueType& se) { return PointedTraits::Error(*se); }
+
+  static std::size_t StackSize(const ValueType& se) { return PointedTraits::StackSize(*se); }
+
+  static ConstRefExceptVoid<StackEntryType> StackElem(const T& se, std::size_t index) {
+    return PointedTraits::StackElem(*se, index);
+  }
+
+  template<typename U, typename... Args,
+           std::enable_if_t<std::is_same<ValueType, RemoveCVRef<U>>::value, int> = 0>
+  static void PushStack(U&& se, Args&&... args) {
+    PointedTraits::PushStack(*se, std::forward<Args>(args)...);
+  }
+
+  template<typename U, std::enable_if_t<std::is_same<ValueType, RemoveCVRef<U>>::value, int> = 0>
+  static std::string Dump(U&& se) {
+    return PointedTraits::Dump(*se);
+  }
+
+  template<typename U, std::enable_if_t<std::is_same<ValueType, RemoveCVRef<U>>::value, int> = 0>
+  [[noreturn]] static void Abort(U&& se) {
+    PointedTraits::Abort(*se);
+  }
 };
 
 // simple implementation for some customization points
 namespace simple {
 
-template<typename Message>
+template<typename T>
+struct MessageFormatTrait;
+
+template<>
+struct MessageFormatTrait<std::string> {
+  template<typename Code, typename... Args>
+  static std::string Format(Code&& code, Args&&... args) {
+    if (sizeof...(args) > 0) {
+      std::stringstream res;
+
+      res << code << ": ";
+      [[maybe_unused]] int dummy[] = {(res << args, 0)...};
+
+      return res.str();
+    } else {
+      return code;
+    }
+  }
+};
+
+template<>
+struct MessageFormatTrait<StringView> {
+  template<typename Code>
+  static StringView Format(Code&& code) {
+    return code;
+  }
+};
+
+template<typename Message, typename MessageFormatTraits = MessageFormatTrait<Message>>
 struct ErrorStackEntry {
   StringView filename;
   std::size_t lineno;
   StringView function;
   Message message;
 
-  ErrorStackEntry(StringView filename, std::size_t lineno, StringView function, Message message)
-      : filename(filename), lineno(lineno), function(function), message(std::move(message)) {}
+  template<typename... Args>
+  ErrorStackEntry(StringView filename, std::size_t lineno, StringView function, Args&&... args)
+      : filename(filename),
+        lineno(lineno),
+        function(function),
+        message(MessageFormatTraits::Format(std::forward<Args>(args)...)) {}
 };
 
 template<typename E, typename M = std::string>
@@ -113,6 +192,17 @@ struct StackedError : details::ErrorStackFromContainerBase<StackedError<E, M>> {
 
   ErrorType& Error() { return error; }
   const ErrorType& Error() const { return error; }
+
+  std::string Dump() {
+    std::stringstream res;
+    res << "error occurred: " << error << std::endl;
+    for (const auto& elem : stack) {
+      res << "from " << elem.function << " in " << elem.filename << ":" << elem.lineno << ": "
+          << elem.message << std::endl;
+    }
+
+    return res.str();
+  }
 
   [[noreturn]] void Abort() {
     std::cerr << "error occurred: " << error << std::endl;
@@ -151,6 +241,13 @@ struct NoStackError {
 
   template<typename... Args>
   void PushStack(Args&&... args) {}
+
+  std::string Dump() {
+    std::stringstream res;
+    res << error << std::endl;
+
+    return res.str();
+  }
 
   [[noreturn]] void Abort() {
     std::cerr << error << std::endl;

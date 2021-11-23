@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/maybe/variant.h"
 
 using namespace oneflow::maybe;
+using namespace std::string_literals;
 
 TEST(Variant, Basics) {
   Variant<int, float> a, b(1), c(1.2f), d(InPlaceType<int>, 'a'), e(InPlaceType<float>, 6.66);
@@ -220,4 +221,16 @@ TEST(Variant, Compare) {
   ASSERT_EQ(*(iter++), 3.3f);
   ASSERT_EQ(*(iter++), false);
   ASSERT_EQ(*(iter++), true);
+}
+
+TEST(Variant, UniquePtr) {
+  Variant<std::string, std::unique_ptr<int>> a("hello"s), b(std::make_unique<int>(1));
+
+  ASSERT_EQ(a, "hello"s);
+  ASSERT_EQ(*b.Get<1>(), 1);
+
+  Variant<std::string, std::unique_ptr<int>> c(std::move(a)), d(std::move(b));
+
+  ASSERT_EQ(c, "hello"s);
+  ASSERT_EQ(*d.Get<1>(), 1);
 }

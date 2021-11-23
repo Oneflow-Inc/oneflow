@@ -134,6 +134,18 @@ struct ConstRefExceptVoidT<void> {
 template<typename T>
 using ConstRefExceptVoid = typename ConstRefExceptVoidT<T>::type;
 
+template<typename T>
+using RemoveRValRef =
+    std::conditional_t<std::is_rvalue_reference<T>::value, std::remove_reference_t<T>, T>;
+
+template<typename T, typename... U>
+struct DependentNameT {
+  using type = T;
+};
+
+template<typename T, typename... U>
+using DependentName = typename DependentNameT<T, U...>::type;
+
 }  // namespace maybe
 
 }  // namespace oneflow

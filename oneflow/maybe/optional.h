@@ -20,6 +20,7 @@ limitations under the License.
 #include <type_traits>
 #include <utility>
 
+#include "oneflow/maybe/just.h"
 #include "oneflow/maybe/utility.h"
 #include "oneflow/maybe/type_traits.h"
 
@@ -182,12 +183,6 @@ struct OptionalStorage<T, std::enable_if_t<std::is_reference<T>::value>> {
   void Copy(const OptionalStorage& s) { CopyConstruct(s); }
 };
 
-template<typename T>
-struct IsOptional : std::false_type {};
-
-template<typename T>
-struct IsOptional<Optional<T>> : std::true_type {};
-
 struct OptionalPrivateScope {
   template<typename T>
   static decltype(auto) Value(T&& opt) {
@@ -237,7 +232,7 @@ struct OptionalPrivateScope {
 // this Optional DO NOT guarantee exception safty
 template<typename T>
 struct Optional {
- private:
+ protected:
   details::OptionalStorage<T> storage;
 
   using Type = std::remove_const_t<T>;
@@ -250,6 +245,7 @@ struct Optional {
 
   // we DO NOT export Value method, then leave these methods accessable for the JUST macro
   friend struct details::OptionalPrivateScope;
+  friend struct details::JustPrivateScope;
 
  public:
   static_assert(!std::is_same<Type, NullOptType>::value, "NullOptType is not allowed in Optional");
