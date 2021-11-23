@@ -29,7 +29,8 @@ oneflow
             atanh, 
             bernoulli,
             broadcast_like, 
-            batch_gather, 
+            batch_gather,
+            bmm,
             cat, 
             concat,
             cast, 
@@ -142,5 +143,6 @@ oneflow
             inference_mode,
             is_grad_enabled,
             is_floating_point,
+            set_printoptions,
 .. autofunction:: oneflow.relu
 .. autofunction:: oneflow.env.get_rank

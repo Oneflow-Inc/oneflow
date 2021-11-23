@@ -32,7 +32,6 @@ class CpuStreamContext : public StreamContext, public KernelObserverProvider {
 
   ep::Stream* stream() override;
   Maybe<void> AddCallback(std::function<void()> callback) override;
-  Maybe<void> Sync() override;
   KernelObserver* GetKernelObserver() override;
   DeviceType device_type() const override { return DeviceType::kCPU; }
 
@@ -57,8 +56,6 @@ Maybe<void> CpuStreamContext::AddCallback(std::function<void()> callback) {
   callback();
   return Maybe<void>::Ok();
 }
-
-Maybe<void> CpuStreamContext::Sync() { return Maybe<void>::Ok(); }
 
 KernelObserver* CpuStreamContext::GetKernelObserver() { return kernel_observer_.get(); }
 
