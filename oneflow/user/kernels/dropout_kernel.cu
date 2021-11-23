@@ -27,10 +27,6 @@ namespace oneflow {
 
 namespace {
 
-/*
-curand_uniform4 interval is (0, 1.0]
-*/
-
 constexpr int32_t kVecSize = 4;
 constexpr int32_t kBlockSize = 256;
 constexpr int32_t PackDoubleSize = 2;
@@ -81,7 +77,7 @@ __global__ RETURN_VOID_IF_FLOAT MaskAndScaleGpu(uint64_t seed,
     T y_vec[PackFloatSize];
 #pragma unroll
     for (int i = 0; i < PackFloatSize; i++) {
-      rand_uniform_pack4.elem[i] = rand_uniform_pack4.elem[i] >= rate;
+      rand_uniform_pack4.elem[i] = rand_uniform_pack4.elem[i] > rate;
       mask_vec[i] = rand_uniform_pack4.elem[i];
       y_vec[i] = x_vec.elem[i] * mask_vec[i] * scale;
     }
@@ -90,14 +86,11 @@ __global__ RETURN_VOID_IF_FLOAT MaskAndScaleGpu(uint64_t seed,
     *(reinterpret_cast<MaskT*>(mask + linear_index)) = *reinterpret_cast<MaskT*>(mask_vec);
   }
 
-  if (tail && global_thread_id < n_tail && global_thread_id == 0) {
-    rand_uniform_pack4.storage = curand_uniform4(&state);
-#pragma unroll
-    for (int i = 0; i < n_tail; i++) {
-      rand_uniform_pack4.elem[i] = rand_uniform_pack4.elem[i] >= rate;
-      tail_mask[i] = rand_uniform_pack4.elem[i];
-      tail_y[i] = tail_x[i] * rand_uniform_pack4.elem[i] * scale;
-    }
+  if (tail && global_thread_id < n_tail) {
+    float rand_uniform = curand_uniform(&state);
+    rand_uniform = rand_uniform > rate;
+    tail_mask[global_thread_id] = rand_uniform;
+    tail_y[global_thread_id] = tail_x[global_thread_id] * rand_uniform * scale;
   }
 
   __syncthreads();
@@ -141,6 +134,7 @@ __global__ RETURN_VOID_IF_FLOAT MaskAndScaleAddGpu(
     T y_vec[PackFloatSize];
 #pragma unroll
     for (int i = 0; i < PackFloatSize; i++) {
+      rand_uniform_pack4.elem[i] = rand_uniform_pack4.elem[i] > rate;
       mask_vec[i] = rand_uniform_pack4.elem[i];
       y_vec[i] = x_vec.elem[i] * mask_vec[i] * scale + addend_vec.elem[i];
     }
@@ -149,15 +143,14 @@ __global__ RETURN_VOID_IF_FLOAT MaskAndScaleAddGpu(
     *(reinterpret_cast<MaskT*>(mask + linear_index)) = *reinterpret_cast<MaskT*>(mask_vec);
   }
 
-  if (tail && global_thread_id < n_tail && global_thread_id == 0) {
-    rand_uniform_pack4.storage = curand_uniform4(&state);
-
-#pragma unroll
-    for (int i = 0; i < n_tail; i++) {
-      tail_mask[i] = rand_uniform_pack4.elem[i];
-      tail_y[i] = tail_x[i] * rand_uniform_pack4.elem[i] * scale + tail_addend[i];
-    }
+  if (tail && global_thread_id < n_tail) {
+    float rand_uniform = curand_uniform(&state);
+    rand_uniform = rand_uniform > rate;
+    tail_mask[global_thread_id] = rand_uniform;
+    tail_y[global_thread_id] =
+        tail_x[global_thread_id] * rand_uniform * scale + tail_addend[global_thread_id];
   }
+
   __syncthreads();
 
   if (threadIdx.x == 0) {
@@ -213,15 +206,13 @@ __global__ RETURN_VOID_IF_HALF MaskAndScaleGpu(uint64_t seed,
     *(reinterpret_cast<MaskT*>(mask + linear_index)) = *reinterpret_cast<MaskT*>(mask_vec);
   }
 
-  if (tail && global_thread_id < n_tail && global_thread_id == 0) {
+  if (tail && global_thread_id < n_tail) {
     half half_scale = __float2half_rn(scale);
-    rand_uniform_pack4.storage = curand_uniform4(&state);
-#pragma unroll
-    for (int i = 0; i < n_tail; i++) {
-      rand_uniform_pack4.elem[i] = rand_uniform_pack4.elem[i] > rate;
-      tail_mask[i] = rand_uniform_pack4.elem[i];
-      tail_y[i] = tail_x[i] * static_cast<half>(rand_uniform_pack4.elem[i]) * half_scale;
-    }
+    float rand_uniform = curand_uniform(&state);
+    rand_uniform = rand_uniform > rate;
+    tail_mask[global_thread_id] = rand_uniform;
+    tail_y[global_thread_id] =
+        tail_x[global_thread_id] * static_cast<half>(rand_uniform) * half_scale;
   }
 
   __syncthreads();
@@ -283,17 +274,16 @@ __global__ RETURN_VOID_IF_HALF MaskAndScaleAddGpu(
     *(reinterpret_cast<MaskT*>(mask + linear_index)) = *reinterpret_cast<MaskT*>(mask_vec);
   }
 
-  if (tail && global_thread_id < n_tail && global_thread_id == 0) {
+  if (tail && global_thread_id < n_tail) {
     half half_scale = __float2half_rn(scale);
-    rand_uniform_pack4.storage = curand_uniform4(&state);
-#pragma unroll
-    for (int i = 0; i < n_tail; i++) {
-      rand_uniform_pack4.elem[i] = rand_uniform_pack4.elem[i] > rate;
-      tail_mask[i] = rand_uniform_pack4.elem[i];
-      tail_y[i] =
-          tail_x[i] * static_cast<half>(rand_uniform_pack4.elem[i]) * half_scale + addend[i];
-    }
+    float rand_uniform = curand_uniform(&state);
+    rand_uniform = rand_uniform > rate;
+    tail_mask[global_thread_id] = rand_uniform;
+    tail_y[global_thread_id] =
+        tail_x[global_thread_id] * static_cast<half>(rand_uniform) * half_scale
+        + tail_addend[global_thread_id];
   }
+
   __syncthreads();
   if (threadIdx.x == 0) {
     int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
@@ -339,6 +329,7 @@ __global__ RETURN_VOID_IF_DOUBLE MaskAndScaleGpu(uint64_t seed,
     double y_vec[PackDoubleSize];
 #pragma unroll
     for (int i = 0; i < 2; i++) {
+      rand_uniform_pack4.elem[i] = rand_uniform_pack4.elem[i] > rate;
       mask_vec[i] = rand_uniform_pack4.elem[i];
       y_vec[i] = x_vec.elem[i] * mask_vec[i] * scale;
     }
@@ -347,15 +338,13 @@ __global__ RETURN_VOID_IF_DOUBLE MaskAndScaleGpu(uint64_t seed,
     *(reinterpret_cast<MaskT*>(mask + linear_index)) = *reinterpret_cast<MaskT*>(mask_vec);
   }
 
-  if (tail && global_thread_id < n_tail && global_thread_id == 0) {
-    float single_rand_uniform = curand_uniform(&state);
-    single_rand_uniform = single_rand_uniform > rate;
-#pragma unroll
-    for (int i = 0; i < n_tail; i++) {
-      tail_mask[i] = single_rand_uniform;
-      tail_y[i] = tail_x[i] * single_rand_uniform * scale;
-    }
+  if (tail && global_thread_id < n_tail) {
+    float rand_uniform = curand_uniform(&state);
+    rand_uniform = rand_uniform > rate;
+    tail_mask[global_thread_id] = rand_uniform;
+    tail_y[global_thread_id] = tail_x[global_thread_id] * rand_uniform * scale;
   }
+
   __syncthreads();
   if (threadIdx.x == 0) {
     int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
@@ -412,15 +401,15 @@ __global__ RETURN_VOID_IF_DOUBLE MaskAndScaleAddGpu(
     *(reinterpret_cast<LoadT*>(y + linear_index)) = *reinterpret_cast<LoadT*>(y_vec);
     *(reinterpret_cast<MaskT*>(mask + linear_index)) = *reinterpret_cast<MaskT*>(mask_vec);
   }
-  if (tail && global_thread_id < n_tail && global_thread_id == 0) {
-    float single_rand_uniform = curand_uniform(&state);
-    single_rand_uniform = single_rand_uniform > rate;
-#pragma unroll
-    for (int i = 0; i < n_tail; i++) {
-      tail_mask[i] = single_rand_uniform;
-      tail_y[i] = tail_x[i] * single_rand_uniform * scale + addend[i];
-    }
+
+  if (tail && global_thread_id < n_tail) {
+    float rand_uniform = curand_uniform(&state);
+    rand_uniform = rand_uniform > rate;
+    tail_mask[global_thread_id] = rand_uniform;
+    tail_y[global_thread_id] =
+        tail_x[global_thread_id] * rand_uniform * scale + tail_addend[global_thread_id];
   }
+
   __syncthreads();
   if (threadIdx.x == 0) {
     int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
@@ -453,7 +442,7 @@ void MaskAndScale(DeviceCtx* ctx, uint64_t seed, one::CUDAGeneratorState* cuda_g
   uint64_t counter_offset = 0;
   if (tail) {
     // If tail, we need generate randnum one more time, so here we add another `1`.
-    counter_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1 + 1) * kVecSize;
+    counter_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize + 1;
     MaskAndScaleGpu<T, true><<<grid_size, kBlockSize, 0, ctx->cuda_stream()>>>(
         seed, cuda_gen_state, counter_offset, elem_cnt, rate, scale, n_tail, x, mask, y,
         (x + tail_offset), (mask + tail_offset), (y + tail_offset));
@@ -478,7 +467,7 @@ void MaskAndScaleAdd(DeviceCtx* ctx, uint64_t seed, one::CUDAGeneratorState* cud
   uint64_t counter_offset = 0;
   if (tail) {
     // If tail, we need generate randnum one more time, so here we add another `1`.
-    counter_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1 + 1) * kVecSize;
+    counter_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize + 1;
     MaskAndScaleAddGpu<T, true><<<grid_size, kBlockSize, 0, ctx->cuda_stream()>>>(
         seed, cuda_gen_state, counter_offset, elem_cnt, rate, scale, n_tail, x, mask, addend, y,
         (x + tail_offset), (mask + tail_offset), (addend + tail_offset), (y + tail_offset));
