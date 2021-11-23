@@ -173,7 +173,11 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
       std::cout << "def OneFlow_" << convertToCamelFromSnakeCase(kv.first, true)
                 << "Op : " << GetBaseOp(r.op_type_name) << "<\"" << kv.first << "\", []> ";
       const oneflow::UserOpDef& op_def = r.op_def;
-      PrintBody(op_def);
+      if (ShouldGenEmptyBody(r.op_type_name)) {
+        std::cout << "{}\n";
+      } else {
+        PrintBody(op_def);
+      }
       std::cout << "\n";
     }
   });
