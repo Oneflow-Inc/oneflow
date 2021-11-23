@@ -165,6 +165,7 @@ import oneflow.framework.env_util as env_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
 from oneflow.framework.multi_client_session import MultiClientSession
+from oneflow.framework.tensor_str import set_printoptions
 
 if not env_util.HasAllMultiClientEnvVars():
     env_util.SetDefaultMultiClientEnvVars()
