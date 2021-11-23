@@ -548,7 +548,7 @@ def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", []> {
   }];
 }
 
-def OneFlow_AdaptiveAvgPool1dOp : OneFlow_BaseOp<"adaptive_avg_pool1d", []> {
+def OneFlow_AdaptiveAvgPool1DOp : OneFlow_BaseOp<"adaptive_avg_pool1d", []> {
   let input = (ins
     AnyType:$x
   );
@@ -564,7 +564,7 @@ def OneFlow_AdaptiveAvgPool1dOp : OneFlow_BaseOp<"adaptive_avg_pool1d", []> {
   }];
 }
 
-def OneFlow_AdaptiveAvgPool1dGradOp : OneFlow_BaseOp<"adaptive_avg_pool1d_grad", []> {
+def OneFlow_AdaptiveAvgPool1DGradOp : OneFlow_BaseOp<"adaptive_avg_pool1d_grad", []> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -581,7 +581,7 @@ def OneFlow_AdaptiveAvgPool1dGradOp : OneFlow_BaseOp<"adaptive_avg_pool1d_grad",
   }];
 }
 
-def OneFlow_AdaptiveAvgPool2dOp : OneFlow_BaseOp<"adaptive_avg_pool2d", []> {
+def OneFlow_AdaptiveAvgPool2DOp : OneFlow_BaseOp<"adaptive_avg_pool2d", []> {
   let input = (ins
     AnyType:$x
   );
@@ -597,7 +597,7 @@ def OneFlow_AdaptiveAvgPool2dOp : OneFlow_BaseOp<"adaptive_avg_pool2d", []> {
   }];
 }
 
-def OneFlow_AdaptiveAvgPool2dGradOp : OneFlow_BaseOp<"adaptive_avg_pool2d_grad", []> {
+def OneFlow_AdaptiveAvgPool2DGradOp : OneFlow_BaseOp<"adaptive_avg_pool2d_grad", []> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -614,7 +614,7 @@ def OneFlow_AdaptiveAvgPool2dGradOp : OneFlow_BaseOp<"adaptive_avg_pool2d_grad",
   }];
 }
 
-def OneFlow_AdaptiveAvgPool3dOp : OneFlow_BaseOp<"adaptive_avg_pool3d", []> {
+def OneFlow_AdaptiveAvgPool3DOp : OneFlow_BaseOp<"adaptive_avg_pool3d", []> {
   let input = (ins
     AnyType:$x
   );
@@ -630,7 +630,7 @@ def OneFlow_AdaptiveAvgPool3dOp : OneFlow_BaseOp<"adaptive_avg_pool3d", []> {
   }];
 }
 
-def OneFlow_AdaptiveAvgPool3dGradOp : OneFlow_BaseOp<"adaptive_avg_pool3d_grad", []> {
+def OneFlow_AdaptiveAvgPool3DGradOp : OneFlow_BaseOp<"adaptive_avg_pool3d_grad", []> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -2089,7 +2089,7 @@ def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", []> {
   }];
 }
 
-def OneFlow_ConstantPad1dOp : OneFlow_BaseOp<"constant_pad1d", []> {
+def OneFlow_ConstantPad1DOp : OneFlow_BaseOp<"constant_pad1d", []> {
   let input = (ins
     AnyType:$x
   );
@@ -2107,7 +2107,7 @@ def OneFlow_ConstantPad1dOp : OneFlow_BaseOp<"constant_pad1d", []> {
   }];
 }
 
-def OneFlow_ConstantPad1dGradOp : OneFlow_BaseOp<"constant_pad1d_grad", []> {
+def OneFlow_ConstantPad1DGradOp : OneFlow_BaseOp<"constant_pad1d_grad", []> {
   let input = (ins
     AnyType:$dy
   );
@@ -2125,7 +2125,7 @@ def OneFlow_ConstantPad1dGradOp : OneFlow_BaseOp<"constant_pad1d_grad", []> {
   }];
 }
 
-def OneFlow_ConstantPad2dOp : OneFlow_BaseOp<"constant_pad2d", []> {
+def OneFlow_ConstantPad2DOp : OneFlow_BaseOp<"constant_pad2d", []> {
   let input = (ins
     AnyType:$x
   );
@@ -2143,7 +2143,7 @@ def OneFlow_ConstantPad2dOp : OneFlow_BaseOp<"constant_pad2d", []> {
   }];
 }
 
-def OneFlow_ConstantPad2dGradOp : OneFlow_BaseOp<"constant_pad2d_grad", []> {
+def OneFlow_ConstantPad2DGradOp : OneFlow_BaseOp<"constant_pad2d_grad", []> {
   let input = (ins
     AnyType:$dy
   );
@@ -2161,7 +2161,7 @@ def OneFlow_ConstantPad2dGradOp : OneFlow_BaseOp<"constant_pad2d_grad", []> {
   }];
 }
 
-def OneFlow_ConstantPad3dOp : OneFlow_BaseOp<"constant_pad3d", []> {
+def OneFlow_ConstantPad3DOp : OneFlow_BaseOp<"constant_pad3d", []> {
   let input = (ins
     AnyType:$x
   );
@@ -2179,7 +2179,7 @@ def OneFlow_ConstantPad3dOp : OneFlow_BaseOp<"constant_pad3d", []> {
   }];
 }
 
-def OneFlow_ConstantPad3dGradOp : OneFlow_BaseOp<"constant_pad3d_grad", []> {
+def OneFlow_ConstantPad3DGradOp : OneFlow_BaseOp<"constant_pad3d_grad", []> {
   let input = (ins
     AnyType:$dy
   );
@@ -2624,7 +2624,7 @@ def OneFlow_CudnnFusedNormalizationAddReluGradOp : OneFlow_BaseOp<"cudnn_fused_n
   }];
 }
 
-def OneFlow_Deconv1dOp : OneFlow_BaseOp<"deconv1d", []> {
+def OneFlow_Deconv1DOp : OneFlow_BaseOp<"deconv1d", []> {
   let input = (ins
     AnyType:$in,
     AnyType:$weight
@@ -2648,7 +2648,7 @@ def OneFlow_Deconv1dOp : OneFlow_BaseOp<"deconv1d", []> {
   }];
 }
 
-def OneFlow_Deconv2dOp : OneFlow_BaseOp<"deconv2d", []> {
+def OneFlow_Deconv2DOp : OneFlow_BaseOp<"deconv2d", []> {
   let input = (ins
     AnyType:$in,
     AnyType:$weight
@@ -2672,7 +2672,7 @@ def OneFlow_Deconv2dOp : OneFlow_BaseOp<"deconv2d", []> {
   }];
 }
 
-def OneFlow_Deconv3dOp : OneFlow_BaseOp<"deconv3d", []> {
+def OneFlow_Deconv3DOp : OneFlow_BaseOp<"deconv3d", []> {
   let input = (ins
     AnyType:$in,
     AnyType:$weight
@@ -6313,7 +6313,7 @@ def OneFlow_ReduceSumLikeOp : OneFlow_BaseOp<"reduce_sum_like", []> {
   }];
 }
 
-def OneFlow_ReflectionPad2dOp : OneFlow_BaseOp<"reflection_pad2d", []> {
+def OneFlow_ReflectionPad2DOp : OneFlow_BaseOp<"reflection_pad2d", []> {
   let input = (ins
     AnyType:$x
   );
@@ -6329,7 +6329,7 @@ def OneFlow_ReflectionPad2dOp : OneFlow_BaseOp<"reflection_pad2d", []> {
   }];
 }
 
-def OneFlow_ReflectionPad2dGradOp : OneFlow_BaseOp<"reflection_pad2d_grad", []> {
+def OneFlow_ReflectionPad2DGradOp : OneFlow_BaseOp<"reflection_pad2d_grad", []> {
   let input = (ins
     AnyType:$dy
   );
@@ -6388,7 +6388,7 @@ def OneFlow_RepeatOp : OneFlow_BaseOp<"repeat", []> {
   }];
 }
 
-def OneFlow_ReplicationPad2dOp : OneFlow_BaseOp<"replication_pad2d", []> {
+def OneFlow_ReplicationPad2DOp : OneFlow_BaseOp<"replication_pad2d", []> {
   let input = (ins
     AnyType:$x
   );
@@ -6404,7 +6404,7 @@ def OneFlow_ReplicationPad2dOp : OneFlow_BaseOp<"replication_pad2d", []> {
   }];
 }
 
-def OneFlow_ReplicationPad2dGradOp : OneFlow_BaseOp<"replication_pad2d_grad", []> {
+def OneFlow_ReplicationPad2DGradOp : OneFlow_BaseOp<"replication_pad2d_grad", []> {
   let input = (ins
     AnyType:$dy
   );
@@ -8253,7 +8253,7 @@ def OneFlow_UpsampleOp : OneFlow_BaseOp<"upsample", []> {
   }];
 }
 
-def OneFlow_UpsampleBicubic_2dOp : OneFlow_BaseOp<"upsample_bicubic_2d", []> {
+def OneFlow_UpsampleBicubic2DOp : OneFlow_BaseOp<"upsample_bicubic_2d", []> {
   let input = (ins
     AnyType:$x
   );
@@ -8272,7 +8272,7 @@ def OneFlow_UpsampleBicubic_2dOp : OneFlow_BaseOp<"upsample_bicubic_2d", []> {
   }];
 }
 
-def OneFlow_UpsampleBicubic_2dGradOp : OneFlow_BaseOp<"upsample_bicubic_2d_grad", []> {
+def OneFlow_UpsampleBicubic2DGradOp : OneFlow_BaseOp<"upsample_bicubic_2d_grad", []> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -8292,7 +8292,7 @@ def OneFlow_UpsampleBicubic_2dGradOp : OneFlow_BaseOp<"upsample_bicubic_2d_grad"
   }];
 }
 
-def OneFlow_UpsampleBilinear_2dOp : OneFlow_BaseOp<"upsample_bilinear_2d", []> {
+def OneFlow_UpsampleBilinear2DOp : OneFlow_BaseOp<"upsample_bilinear_2d", []> {
   let input = (ins
     AnyType:$x
   );
@@ -8311,7 +8311,7 @@ def OneFlow_UpsampleBilinear_2dOp : OneFlow_BaseOp<"upsample_bilinear_2d", []> {
   }];
 }
 
-def OneFlow_UpsampleBilinear_2dGradOp : OneFlow_BaseOp<"upsample_bilinear_2d_grad", []> {
+def OneFlow_UpsampleBilinear2DGradOp : OneFlow_BaseOp<"upsample_bilinear_2d_grad", []> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -8352,7 +8352,7 @@ def OneFlow_UpsampleGradOp : OneFlow_BaseOp<"upsample_grad", []> {
   }];
 }
 
-def OneFlow_UpsampleLinear_1dOp : OneFlow_BaseOp<"upsample_linear_1d", []> {
+def OneFlow_UpsampleLinear1DOp : OneFlow_BaseOp<"upsample_linear_1d", []> {
   let input = (ins
     AnyType:$x
   );
@@ -8370,7 +8370,7 @@ def OneFlow_UpsampleLinear_1dOp : OneFlow_BaseOp<"upsample_linear_1d", []> {
   }];
 }
 
-def OneFlow_UpsampleLinear_1dGradOp : OneFlow_BaseOp<"upsample_linear_1d_grad", []> {
+def OneFlow_UpsampleLinear1DGradOp : OneFlow_BaseOp<"upsample_linear_1d_grad", []> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -8389,7 +8389,7 @@ def OneFlow_UpsampleLinear_1dGradOp : OneFlow_BaseOp<"upsample_linear_1d_grad", 
   }];
 }
 
-def OneFlow_UpsampleNearest_1dOp : OneFlow_BaseOp<"upsample_nearest_1d", []> {
+def OneFlow_UpsampleNearest1DOp : OneFlow_BaseOp<"upsample_nearest_1d", []> {
   let input = (ins
     AnyType:$x
   );
@@ -8406,7 +8406,7 @@ def OneFlow_UpsampleNearest_1dOp : OneFlow_BaseOp<"upsample_nearest_1d", []> {
   }];
 }
 
-def OneFlow_UpsampleNearest_1dGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad", []> {
+def OneFlow_UpsampleNearest1DGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad", []> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -8424,7 +8424,7 @@ def OneFlow_UpsampleNearest_1dGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad"
   }];
 }
 
-def OneFlow_UpsampleNearest_2dOp : OneFlow_BaseOp<"upsample_nearest_2d", []> {
+def OneFlow_UpsampleNearest2DOp : OneFlow_BaseOp<"upsample_nearest_2d", []> {
   let input = (ins
     AnyType:$x
   );
@@ -8442,7 +8442,7 @@ def OneFlow_UpsampleNearest_2dOp : OneFlow_BaseOp<"upsample_nearest_2d", []> {
   }];
 }
 
-def OneFlow_UpsampleNearest_2dGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad", []> {
+def OneFlow_UpsampleNearest2DGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad", []> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -8461,7 +8461,7 @@ def OneFlow_UpsampleNearest_2dGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad"
   }];
 }
 
-def OneFlow_UpsampleNearest_3dOp : OneFlow_BaseOp<"upsample_nearest_3d", []> {
+def OneFlow_UpsampleNearest3DOp : OneFlow_BaseOp<"upsample_nearest_3d", []> {
   let input = (ins
     AnyType:$x
   );
@@ -8480,7 +8480,7 @@ def OneFlow_UpsampleNearest_3dOp : OneFlow_BaseOp<"upsample_nearest_3d", []> {
   }];
 }
 
-def OneFlow_UpsampleNearest_3dGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad", []> {
+def OneFlow_UpsampleNearest3DGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad", []> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -8500,7 +8500,7 @@ def OneFlow_UpsampleNearest_3dGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad"
   }];
 }
 
-def OneFlow_UpsampleTrilinear_3dOp : OneFlow_BaseOp<"upsample_trilinear_3d", []> {
+def OneFlow_UpsampleTrilinear3DOp : OneFlow_BaseOp<"upsample_trilinear_3d", []> {
   let input = (ins
     AnyType:$x
   );
@@ -8520,7 +8520,7 @@ def OneFlow_UpsampleTrilinear_3dOp : OneFlow_BaseOp<"upsample_trilinear_3d", []>
   }];
 }
 
-def OneFlow_UpsampleTrilinear_3dGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_grad", []> {
+def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_grad", []> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
