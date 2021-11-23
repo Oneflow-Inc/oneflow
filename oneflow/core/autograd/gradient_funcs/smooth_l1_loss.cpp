@@ -47,7 +47,6 @@ class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossCaptureState> {
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->beta = JUST(composed_attrs.GetAttr<float>("beta"));
-    // ctx->reduction = JUST(composed_attrs.GetAttr<std::string>("reduction"));
     return Maybe<void>::Ok();
   }
 
