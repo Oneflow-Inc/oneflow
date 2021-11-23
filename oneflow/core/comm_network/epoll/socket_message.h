@@ -63,15 +63,16 @@ struct RequestReadMsg {
 struct SocketMsg {
   SocketMsgType msg_type;
   union {
-#define MAKE_ENTRY(x, y) x##Msg y##_msg;
-    OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ)
-#undef MAKE_ENTRY
     struct {
       char data[400];
       size_t size ;
     }actor_msg;
+    RequestReadMsg request_read_msg;
+    RequestWriteMsg request_write_msg;
+    TransportMsg transport_msg;
   };
 };
+
 
 using CallBackList = std::list<std::function<void()>>;
 
