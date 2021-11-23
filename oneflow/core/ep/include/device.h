@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/ep/include/event.h"
 #include "oneflow/core/ep/include/stream.h"
-#include "oneflow/core/ep/include/active_device_context.h"
 
 namespace oneflow {
 
@@ -33,9 +32,6 @@ class Device {
   virtual ~Device() = default;
 
   virtual void SetAsActiveDevice() = 0;
-  virtual std::unique_ptr<const ActiveDeviceContext> GetThisDeviceActiveDeviceContext() = 0;
-  virtual std::unique_ptr<const ActiveDeviceContext> GetActiveDevice() = 0;
-  virtual void SetActiveDevice(const ActiveDeviceContext* active_device) = 0;
 
   virtual Stream* CreateStream() = 0;
   virtual void DestroyStream(Stream* stream) = 0;

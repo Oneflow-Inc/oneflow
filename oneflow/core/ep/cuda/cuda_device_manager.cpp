@@ -45,6 +45,16 @@ size_t CudaDeviceManager::GetDeviceCount() {
   return count;
 }
 
+size_t CudaDeviceManager::GetActiveDeviceIndex() {
+  int device = 0;
+  OF_CUDA_CHECK(cudaGetDevice(&device));
+  return static_cast<size_t>(device);
+}
+
+void CudaDeviceManager::SetActiveDeviceByIndex(size_t device_index) {
+  OF_CUDA_CHECK(cudaSetDevice(static_cast<int>(device_index)));
+}
+
 REGISTER_EP_DEVICE_MANAGER(DeviceType::kGPU, CudaDeviceManager);
 
 }  // namespace ep

@@ -31,9 +31,6 @@ class CudaDevice : public Device {
   virtual ~CudaDevice();
 
   void SetAsActiveDevice() override;
-  std::unique_ptr<const ActiveDeviceContext> GetThisDeviceActiveDeviceContext() override;
-  std::unique_ptr<const ActiveDeviceContext> GetActiveDevice() override;
-  void SetActiveDevice(const ActiveDeviceContext* active_device) override;
 
   Stream* CreateStream() override;
   void DestroyStream(Stream* stream) override;

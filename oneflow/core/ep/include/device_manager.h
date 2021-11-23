@@ -35,6 +35,8 @@ class DeviceManager {
   virtual std::shared_ptr<Device> GetDevice(size_t device_index) = 0;
   virtual size_t GetDeviceCount(size_t primary_device_index) = 0;
   virtual size_t GetDeviceCount() = 0;
+  virtual size_t GetActiveDeviceIndex() = 0;
+  virtual void SetActiveDeviceByIndex(size_t device_index) = 0;
 };
 
 #define REGISTER_EP_DEVICE_MANAGER(device_type, ManagerType) \

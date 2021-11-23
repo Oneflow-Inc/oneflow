@@ -33,6 +33,8 @@ class CudaDeviceManager : public DeviceManager {
   std::shared_ptr<Device> GetDevice(size_t device_index) override;
   size_t GetDeviceCount(size_t primary_device_index) override;
   size_t GetDeviceCount() override;
+  size_t GetActiveDeviceIndex() override;
+  void SetActiveDeviceByIndex(size_t device_index) override;
 
  private:
   std::mutex devices_mutex_;

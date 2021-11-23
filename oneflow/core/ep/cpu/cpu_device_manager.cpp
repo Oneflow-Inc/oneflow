@@ -30,6 +30,10 @@ size_t CpuDeviceManager::GetDeviceCount(size_t /*primary_device_index*/) { retur
 
 size_t CpuDeviceManager::GetDeviceCount() { return 1; }
 
+size_t CpuDeviceManager::GetActiveDeviceIndex() { return 0; }
+
+void CpuDeviceManager::SetActiveDeviceByIndex(size_t device_index) {}
+
 REGISTER_EP_DEVICE_MANAGER(DeviceType::kCPU, CpuDeviceManager);
 
 }  // namespace ep

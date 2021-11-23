@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/ep/cuda/cuda_device.h"
 #include "oneflow/core/ep/cuda/cuda_event.h"
-#include "oneflow/core/ep/cuda/cuda_active_device_context.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
 #ifdef WITH_CUDA
@@ -38,19 +37,6 @@ CudaDevice::~CudaDevice() {
 }
 
 void CudaDevice::SetAsActiveDevice() { OF_CUDA_CHECK(cudaSetDevice(device_index_)); }
-
-std::unique_ptr<const ActiveDeviceContext> CudaDevice::GetThisDeviceActiveDeviceContext() {
-  return std::make_unique<const CudaActiveDeviceContext>(device_index_);
-}
-
-std::unique_ptr<const ActiveDeviceContext> CudaDevice::GetActiveDevice() {
-  return std::make_unique<const CudaActiveDeviceContext>();
-}
-
-void CudaDevice::SetActiveDevice(const ActiveDeviceContext* active_device) {
-  auto* cuda_active_device = static_cast<const CudaActiveDeviceContext*>(active_device);  // NOLINT
-  OF_CUDA_CHECK(cudaSetDevice(cuda_active_device->device_index()));
-}
 
 Stream* CudaDevice::CreateStream() {
   CudaCurrentDeviceGuard guard(device_index_);

@@ -23,16 +23,6 @@ namespace ep {
 
 void CpuDevice::SetAsActiveDevice() {}
 
-std::unique_ptr<const ActiveDeviceContext> CpuDevice::GetThisDeviceActiveDeviceContext() {
-  return std::make_unique<const ActiveDeviceContext>();
-}
-
-std::unique_ptr<const ActiveDeviceContext> CpuDevice::GetActiveDevice() {
-  return std::make_unique<const ActiveDeviceContext>();
-}
-
-void CpuDevice::SetActiveDevice(const ActiveDeviceContext* /*active_device*/) {}
-
 Stream* CpuDevice::CreateStream() { return new CpuStream(); }
 
 void CpuDevice::DestroyStream(Stream* stream) { delete stream; }
