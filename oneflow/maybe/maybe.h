@@ -29,7 +29,6 @@ namespace oneflow {
 
 namespace maybe {
 
-// for Maybe<void>
 struct InPlaceOkType {
   explicit constexpr InPlaceOkType() = default;
 };
