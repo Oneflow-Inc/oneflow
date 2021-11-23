@@ -28,7 +28,7 @@ def np_allclose_with_shape(a, b, *args, **kwargs):
     return np.allclose(a, b, *args, **kwargs)
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+
 @flow.unittest.skip_unless_1n2d()
 class TestDDP(flow.unittest.TestCase):
     def _test_ddp_basic(test_case, dev_type):

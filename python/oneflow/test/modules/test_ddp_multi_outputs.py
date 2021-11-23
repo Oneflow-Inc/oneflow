@@ -64,14 +64,14 @@ def train(test_case, train_x, device, output, requires_grad):
         y = output[rank].clone().to(device)
         y.requires_grad = requires_grad
         y_pred, y2 = m(x, y)
-        test_case.assertTrue(y2.requires_grad == y.requires_grad)
+        test_case.assertEqual(y2.requires_grad, y.requires_grad)
         l = loss(y_pred, y)
         l.backward()
         optimizer.step()
         optimizer.zero_grad()
 
 
-@flow.unittest.skip_unless_1n1d()
+@flow.unittest.skip_unless_1n2d()
 class TestDdpMultmpleOutputs(flow.unittest.TestCase):
     def test_outputs_float32(test_case):
         arg_dict = OrderedDict()
