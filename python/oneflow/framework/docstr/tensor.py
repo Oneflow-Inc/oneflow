@@ -205,6 +205,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.arccos,
+    """
+     See :func:`oneflow.arccos`
+     """,
+)
+
+add_docstr(
     oneflow.Tensor.acosh,
     """
     See :func:`oneflow.acosh`
