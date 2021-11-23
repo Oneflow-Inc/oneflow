@@ -65,14 +65,13 @@ struct SocketMsg {
   union {
     struct {
       char data[400];
-      size_t size ;
-    }actor_msg;
+      size_t size;
+    } actor_msg;
     RequestReadMsg request_read_msg;
     RequestWriteMsg request_write_msg;
     TransportMsg transport_msg;
   };
 };
-
 
 using CallBackList = std::list<std::function<void()>>;
 

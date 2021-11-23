@@ -40,7 +40,7 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsCommNet);
   ~IBVerbsCommNet();
 
-  void SendMsg(int64_t dst_machine_id, void * addr, size_t size) override;
+  void SendMsg(int64_t dst_machine_id, void* addr, size_t size) override;
   char* SerialTokenToData(void* token, size_t* size) override;
   void* DeSerialDataToToken(char* data, size_t* size) override;
   void RecvMsg(void* data, size_t size);

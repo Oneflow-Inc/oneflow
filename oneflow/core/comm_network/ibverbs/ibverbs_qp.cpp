@@ -164,7 +164,7 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
   }
 }
 
-void IBVerbsQP::PostSendRequest(void * data, size_t size) {
+void IBVerbsQP::PostSendRequest(void* data, size_t size) {
   ActorMsgMR* msg_mr = message_pool_->GetMessage();
   msg_mr->set_data(reinterpret_cast<char*>(data), size);
   free(data);
@@ -185,7 +185,6 @@ void IBVerbsQP::PostSendRequest(void * data, size_t size) {
   memset(&(wr.wr), 0, sizeof(wr.wr));
   EnqueuePostSendReadWR(wr, sge);
 }
-
 
 void IBVerbsQP::EnqueuePostSendReadWR(ibv_send_wr wr, ibv_sge sge) {
   std::unique_lock<std::mutex> pending_send_wr_lock_(pending_send_wr_mutex_);

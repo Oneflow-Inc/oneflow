@@ -84,8 +84,7 @@ IBVerbsCommNet::~IBVerbsCommNet() {
   CHECK_EQ(ibv::wrapper.ibv_close_device(context_), 0);
 }
 
-
-void IBVerbsCommNet::SendMsg(int64_t dst_machine_id, void * data, size_t size) {
+void IBVerbsCommNet::SendMsg(int64_t dst_machine_id, void* data, size_t size) {
   qp_vec_.at(dst_machine_id)->PostSendRequest(data, size);
 }
 
@@ -109,9 +108,7 @@ void* IBVerbsCommNet::DeSerialDataToToken(char* data, size_t* token_size) {
   return token;
 }
 
-void IBVerbsCommNet::RecvMsg(void* data, size_t size) { 
-  msghandle_(data, size);
-} 
+void IBVerbsCommNet::RecvMsg(void* data, size_t size) { msghandle_(data, size); }
 
 IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT) {
   int num_device;

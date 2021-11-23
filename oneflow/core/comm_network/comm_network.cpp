@@ -49,13 +49,10 @@ void CommNet::AddReadCallBack(void* actor_read_id, std::function<void()> callbac
   AddWorkToStream(actor_read_id, callback, false);
 }
 
-void CommNet::RegisterMsgCallback(const std::function<void (void *, size_t)>  & MsgHandle = nullptr) {
-  auto cb = [] (void * data,size_t size) {
-  Global<ActorMsgBus>::Get()->HandleRecvData(data,size);
-  };
+void CommNet::RegisterMsgCallback(const std::function<void(void*, size_t)>& MsgHandle = nullptr) {
+  auto cb = [](void* data, size_t size) { Global<ActorMsgBus>::Get()->HandleRecvData(data, size); };
   msghandle_ = cb;
 }
-
 
 void CommNet::ReadDone(void* read_id) {
   ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
