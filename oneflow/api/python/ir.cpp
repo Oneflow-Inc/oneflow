@@ -110,21 +110,27 @@ bool IsConvOp(const std::string& op_name) {
 bool IsGradOp(const std::string& op_name) { return op_name.find("grad") != std::string::npos; }
 bool IsLazyPoolOp(const std::string& op_name) { return op_name.find("_pool") != std::string::npos; }
 
-std::string GetPoolOpClassName(const std::string& op_name) {
-  std::string ret((IsLazyPoolOp(op_name) ? "Lazy" : "Eager")
-                  + convertToCamelFromSnakeCase(op_name, true));
+std::string PostProcessClassName(const std::string& op_name) {
+  std::string ret = op_name;
   ret = std::regex_replace(ret, std::regex("pool"), "Pool");
   ret = std::regex_replace(ret, std::regex("_1d"), "1D");
   ret = std::regex_replace(ret, std::regex("_2d"), "2D");
   ret = std::regex_replace(ret, std::regex("_3d"), "3D");
+  ret = std::regex_replace(ret, std::regex("1d"), "1D");
+  ret = std::regex_replace(ret, std::regex("2d"), "2D");
+  ret = std::regex_replace(ret, std::regex("3d"), "3D");
+  return ret;
+}
+
+std::string GetPoolOpClassName(const std::string& op_name) {
+  std::string ret((IsLazyPoolOp(op_name) ? "Lazy" : "Eager")
+                  + convertToCamelFromSnakeCase(op_name, true));
   return ret;
 }
 
 std::string GetConvOpClassName(const std::string& op_name) {
   std::string ret(convertToCamelFromSnakeCase(op_name, true));
-  ret = std::regex_replace(ret, std::regex("1d"), "1D");
-  ret = std::regex_replace(ret, std::regex("2d"), "2D");
-  ret = std::regex_replace(ret, std::regex("3d"), "3D");
+  // NOTE: should change form conv => Convolution ?
   return ret;
 }
 
@@ -257,13 +263,15 @@ void PrintBody(const oneflow::UserOpDef& op_def) {
 }
 
 std::string GetOpClassName(const std::string& op_name) {
+  std::string ret = "";
   if (IsPoolOp(op_name)) {
-    return GetPoolOpClassName(op_name);
+    ret = GetPoolOpClassName(op_name);
   } else if (IsConvOp(op_name)) {
-    return GetConvOpClassName(op_name);
+    ret = GetConvOpClassName(op_name);
   } else {
-    return convertToCamelFromSnakeCase(op_name, true);
+    ret = convertToCamelFromSnakeCase(op_name, true);
   }
+  return PostProcessClassName(ret);
 }
 
 }  // namespace
