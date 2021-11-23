@@ -374,7 +374,7 @@ Maybe<void> NNGraph::CreateVariableOp(
         } else if (*it == "P") {
           nd_sbp.mutable_sbp_parallel(sbp_id)->mutable_partial_sum_parallel();
         } else {
-          // return Maybe<void>::error();
+          UNIMPLEMENTED_AND_RETURN();
         }
       }
       std::shared_ptr<one::ConsistentTensor> tensor = JUST(one::ConsistentTensor::MakeTensor(
