@@ -183,7 +183,7 @@ std::string GetOperandOrder(
   return ret;
 }
 
-// TODO: find a LLVM/STL container type good at find index in a sequeence
+// TODO: find a LLVM/STL container type good at finding index in a sequeence
 void PrintExtraClassDeclaration(const oneflow::UserOpDef& op_def) {
   std::cout << "  let extraClassDeclaration = [{"
             << "\n";
