@@ -189,7 +189,7 @@ std::string GetOperandOrder(
   return ret;
 }
 
-// TODO: find a LLVM/STL container type good at finding index in a sequeence
+// TODO: use MLIR Interfaces it implement this
 void PrintExtraClassDeclaration(const oneflow::UserOpDef& op_def) {
   std::cout << "  let extraClassDeclaration = [{"
             << "\n";
