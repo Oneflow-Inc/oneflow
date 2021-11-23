@@ -33,7 +33,10 @@ template<typename T>
 void FusedDropoutKernel(DeviceCtx* ctx, const int64_t elem_cnt,
                         const std::shared_ptr<one::CPUGeneratorImpl>& cpu_gen, const float rate,
                         float scale, const T* x, int8_t* mask, T* y) {
-  // The interval is [a, b).
+  /*
+  `uniform_real_distribution` interval is [a, b).
+  And `curand_uniform4` interval is (0, 1.0], so we use > in CUDA and use >= in CPU.
+  */
   std::uniform_real_distribution<float> random_distribution(GetZeroVal<float>(),
                                                             GetOneVal<float>());
   for (int64_t i = 0; i < elem_cnt; ++i) {
