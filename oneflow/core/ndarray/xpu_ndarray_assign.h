@@ -35,8 +35,9 @@ struct XpuNdarrayAssign<
     NdarrayAssignCoreWrapper<device_type, T, X, NDIMS>::Assign(stream, y, reduced);
   }
   template<int NDIMS, typename X>
-  static void Assign(ep::Stream* stream, const XpuVarNdarray<T>& y, const XpuVarNdarray<const X>& x) {
-    NdarrayAssignCastCoreWrapper<device_type, T, X, NDIMS>::Assign(stream, y, x);
+  static void Assign(ep::Stream* stream, const XpuVarNdarray<T>& y,
+                     const XpuVarNdarray<const X>& x) {
+    NdarrayAssignCoreWrapper<device_type, T, X, NDIMS>::Assign(stream, y, x);
   }
   static void Assign(ep::Stream* stream, const XpuVarNdarray<T>& y,
                      const XpuVarNdarray<const T>& x) {

@@ -93,7 +93,7 @@ struct NdarrayReduce<
         && !std::is_same<T, typename BinaryFuncTrait<binary_func, T>::return_type>::value>::type>
     final {
   using RetT = typename BinaryFuncTrait<binary_func, T>::return_type;
-  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<RetT>& origin_y,
+  static void Reduce(ep::Stream* stream, const XpuVarNdarray<RetT>& origin_y,
                      const XpuVarNdarray<const T>& origin_x, const XpuVarNdarray<T>& tmp_storage) {
     DimVector simplified_x_dim;
     DimVector simplified_y_dim;
@@ -103,9 +103,9 @@ struct NdarrayReduce<
 
     CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
     if (NdarrayNoReduce<device_type, T, binary_func>::Matched(y, x)) {
-      NdarrayNoReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
+      NdarrayNoReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
     } else {
-      NdarrayDefaultReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
+      NdarrayDefaultReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
     }
   }
 

@@ -41,7 +41,7 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferLogicalDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("output_tensor", 0) = DataType::kInt8;
+  *ctx->OutputDType("output_tensor", 0) = DataType::kBool;
   return Maybe<void>::Ok();
 }
 

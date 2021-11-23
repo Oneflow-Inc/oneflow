@@ -31,7 +31,7 @@ namespace oneflow {
         const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y, \
         const XpuVarNdarray<const T>& x);                                              \
     static void Reduce(                                                                \
-        ep::Stream* ctx,                                                                \
+        ep::Stream* ctx,                                                               \
         const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y, \
         const XpuVarNdarray<const T>& x, const XpuVarNdarray<T>& tmp_storage);         \
   }

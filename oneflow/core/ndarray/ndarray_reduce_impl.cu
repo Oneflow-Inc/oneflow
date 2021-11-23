@@ -94,7 +94,8 @@ __global__ void MatrixColReduceByWarpBlock(K num_elems, K num_cols, const T* in,
 }
 
 template<template<typename> class R, typename T, typename K, typename RetT>
-void MatrixColReduceBy1BlockLayer(ep::Stream* stream, K num_elems, K num_cols, const T* in, RetT* out) {
+void MatrixColReduceBy1BlockLayer(ep::Stream* stream, K num_elems, K num_cols, const T* in,
+                                  RetT* out) {
   CHECK_LE(num_cols, kCudaMaxBlocksNum * kCudaWarpSize);
   const K num_rows = num_elems / num_cols;
   CHECK_GT(num_rows, 0);
@@ -105,7 +106,8 @@ void MatrixColReduceBy1BlockLayer(ep::Stream* stream, K num_elems, K num_cols, c
     const int num_blocks = (num_cols + kCudaWarpSize - 1) / kCudaWarpSize;
     const int num_threads = kCudaWarpSize * kCudaWarpSize;
     auto Reduce = &MatrixColReduceByWarpBlock<R, T, K, RetT>;
-    Reduce<<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(num_elems, num_cols, in, out);
+    Reduce<<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+        num_elems, num_cols, in, out);
   }
 }
 
@@ -167,8 +169,8 @@ struct NdarrayScalarReduce<DeviceType::kGPU, T, binary_func> final {
     return y.shape().ElemNum() == 1;
   }
 
-  static void Reduce(ep::Stream* stream, const XpuVarNdarray<RetT>& y, const XpuVarNdarray<const T>& x,
-                     const XpuVarNdarray<T>& tmp_storage) {
+  static void Reduce(ep::Stream* stream, const XpuVarNdarray<RetT>& y,
+                     const XpuVarNdarray<const T>& x, const XpuVarNdarray<T>& tmp_storage) {
     CHECK(Matched(y, x));
     size_t x_size = x.shape().ElemNum();
     size_t tmp_storage_bytes = 0;
@@ -195,8 +197,8 @@ struct NdarrayMatrixRowReduce<DeviceType::kGPU, T, binary_func> final {
     return x.shape().At(0) == y.shape().At(0) && y.shape().At(1) == 1;
   }
 
-  static void Reduce(ep::Stream* stream, const XpuVarNdarray<RetT>& y, const XpuVarNdarray<const T>& x,
-                     const XpuVarNdarray<T>& tmp_storage) {
+  static void Reduce(ep::Stream* stream, const XpuVarNdarray<RetT>& y,
+                     const XpuVarNdarray<const T>& x, const XpuVarNdarray<T>& tmp_storage) {
     CHECK(Matched(y, x));
     int32_t num_rows = y.shape().ElemNum();
     int32_t num_cols = x.shape().ElemNum() / y.shape().ElemNum();
@@ -241,8 +243,8 @@ struct NdarrayMatrixColReduce<DeviceType::kGPU, T, binary_func> final {
     int32_t dim_y_;
   };
 
-  static void Reduce(ep::Stream* stream, const XpuVarNdarray<RetT>& y, const XpuVarNdarray<const T>& x,
-                     const XpuVarNdarray<T>& tmp_storage) {
+  static void Reduce(ep::Stream* stream, const XpuVarNdarray<RetT>& y,
+                     const XpuVarNdarray<const T>& x, const XpuVarNdarray<T>& tmp_storage) {
     CHECK(Matched(y, x));
     int64_t num_rows = x.shape().At(0);
     int64_t num_cols = x.shape().At(1);
@@ -301,8 +303,8 @@ struct NdarrayXYZCubeXZReduce<DeviceType::kGPU, T, binary_func> final {
     int32_t dim_yz_;
   };
 
-  static void Reduce(ep::Stream* stream, const XpuVarNdarray<RetT>& y, const XpuVarNdarray<const T>& x,
-                     const XpuVarNdarray<T>& tmp_storage) {
+  static void Reduce(ep::Stream* stream, const XpuVarNdarray<RetT>& y,
+                     const XpuVarNdarray<const T>& x, const XpuVarNdarray<T>& tmp_storage) {
     CHECK(Matched(y, x));
     int32_t num_rows = y.shape().ElemNum();
     int32_t num_cols = x.shape().ElemNum() / y.shape().ElemNum();

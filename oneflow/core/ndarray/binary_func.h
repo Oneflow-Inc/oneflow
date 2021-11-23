@@ -248,9 +248,7 @@ struct BinaryFuncAND final {
 };
 template<typename T>
 struct BinaryFuncAll final {
-  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) {
-    return BinaryFuncAND<T>::Invoke(x, y);
-  }
+  static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return BinaryFuncAND<T>::Invoke(x, y); }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncAND);
 
@@ -260,9 +258,7 @@ struct BinaryFuncOR final {
 };
 template<typename T>
 struct BinaryFuncAny final {
-  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) {
-    return BinaryFuncOR<T>::Invoke(x, y);
-  }
+  static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return BinaryFuncOR<T>::Invoke(x, y); }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncOR);
 

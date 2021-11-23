@@ -25,6 +25,7 @@ namespace oneflow {
 
 #define DTYPE_SEQ                       \
   OF_PP_MAKE_TUPLE_SEQ(InvalidDataType) \
+  OF_PP_MAKE_TUPLE_SEQ(Bool)            \
   OF_PP_MAKE_TUPLE_SEQ(Char)            \
   OF_PP_MAKE_TUPLE_SEQ(Float16)         \
   OF_PP_MAKE_TUPLE_SEQ(Float)           \

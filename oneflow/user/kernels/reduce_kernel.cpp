@@ -58,25 +58,25 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
 
 }  // namespace
 
-#define REGISTER_REDUCE_XPU_KERNEL(op_name, binary_func, device, dtype)                           \
-  REGISTER_USER_KERNEL(op_name)                                                                   \
-      .SetCreateFn<ReduceKernel<binary_func, device, dtype, dtype>>()                             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                       \
-                       & (user_op::HobDataType("output_tensor", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
-        const Shape& in_shape = ctx->InputShape("input_tensor", 0);                               \
-        return in_shape.elem_cnt() * sizeof(dtype);                                               \
+#define REGISTER_REDUCE_XPU_KERNEL(op_name, binary_func, device, dtype)                            \
+  REGISTER_USER_KERNEL(op_name)                                                                    \
+      .SetCreateFn<ReduceKernel<binary_func, device, dtype, dtype>>()                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                        \
+                       && (user_op::HobDataType("output_tensor", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
+        const Shape& in_shape = ctx->InputShape("input_tensor", 0);                                \
+        return in_shape.elem_cnt() * sizeof(dtype);                                                \
       });
 
-#define REGISTER_REDUCE_LOGICAL_XPU_KERNEL(op_name, binary_func, device, dtype)                 \
-  REGISTER_USER_KERNEL(op_name)                                                                 \
-      .SetCreateFn<ReduceKernel<binary_func, device, dtype, int8_t>>()                          \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
-                       & (user_op::HobDataType("input_tensor", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("output_tensor", 0) == DataType::kInt8))         \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
-        const Shape& in_shape = ctx->InputShape("input_tensor", 0);                             \
-        return in_shape.elem_cnt() * sizeof(dtype);                                             \
+#define REGISTER_REDUCE_LOGICAL_XPU_KERNEL(op_name, binary_func, device, dtype)                  \
+  REGISTER_USER_KERNEL(op_name)                                                                  \
+      .SetCreateFn<ReduceKernel<binary_func, device, dtype, bool>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
+                       && (user_op::HobDataType("input_tensor", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("output_tensor", 0) == DataType::kBool))         \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
+        const Shape& in_shape = ctx->InputShape("input_tensor", 0);                              \
+        return in_shape.elem_cnt() * sizeof(dtype);                                              \
       });
 
 #define REGISTER_REDUCE_ARITHMETIC_KERNELS(device, dtype)                  \

@@ -27,7 +27,7 @@ namespace oneflow {
     static bool Matched(const XpuVarNdarray<RetT>& y, const XpuVarNdarray<const T>& x) {       \
       return false;                                                                            \
     }                                                                                          \
-    static void Reduce(ep::Stream* stream, const XpuVarNdarray<RetT>& y,                           \
+    static void Reduce(ep::Stream* stream, const XpuVarNdarray<RetT>& y,                       \
                        const XpuVarNdarray<const T>& x, const XpuVarNdarray<T>& tmp_storage) { \
       UNIMPLEMENTED();                                                                         \
     }                                                                                          \

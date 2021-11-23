@@ -27,7 +27,7 @@ __global__ void NdarrayAssignGpu(XpuVarNdarray<T> y, const XpuReducedNdarray<X, 
 }
 
 template<typename T, typename X, int NDIMS>
-__global__ void NdarrayAssignCastGpu(XpuVarNdarray<T> y, const XpuVarNdarray<const X> x) {
+__global__ void NdarrayAssignGpu(XpuVarNdarray<T> y, const XpuVarNdarray<const X> x) {
   NdarrayAssignCore<T, X, NDIMS>::Assign(y, x);
 }
 
@@ -40,23 +40,19 @@ struct NdarrayAssignCoreWrapper<DeviceType::kGPU, T, X, NDIMS> final {
     size_t n = y->host_shape().HostElemNum();
     RUN_CUDA_KERNEL((NdarrayAssignGpu<T, X, NDIMS>), stream, n, *y, reduced);
   }
-};
-
-template<typename T, typename X, int NDIMS>
-struct NdarrayAssignCastCoreWrapper<DeviceType::kGPU, T, X, NDIMS> final {
-  static void Assign(ep::Stream* stream, XpuVarNdarray<T>* y, const XpuVarNdarray<const X>& x) {
-    size_t n = y->host_shape().HostElemNum();
-    RUN_CUDA_KERNEL((NdarrayAssignCastGpu<T, X, NDIMS>), stream, n, *y, x);
+  static void Assign(ep::Stream* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const X>& x) {
+    size_t n = y.host_shape().HostElemNum();
+    if (n == 0) { return; }
+    RUN_CUDA_KERNEL((NdarrayAssignGpu<T, X, NDIMS>), ctx, n, y, x);
   }
 };
 
-#define INSTANTIATE_NDARRAY_ASSIGN(ret_dtype_pair, dtype_pair, NDIMS)                              \
-  template struct NdarrayAssignCoreWrapper<DeviceType::kGPU, OF_PP_PAIR_FIRST(ret_dtype_pair),     \
-                                           OF_PP_PAIR_FIRST(dtype_pair), NDIMS>;                   \
-  template struct NdarrayAssignCastCoreWrapper<DeviceType::kGPU, OF_PP_PAIR_FIRST(ret_dtype_pair), \
-                                               OF_PP_PAIR_FIRST(dtype_pair), NDIMS>;
+#define INSTANTIATE_NDARRAY_ASSIGN(ret_dtype_pair, dtype_pair, NDIMS)                          \
+  template struct NdarrayAssignCoreWrapper<DeviceType::kGPU, OF_PP_PAIR_FIRST(ret_dtype_pair), \
+                                           OF_PP_PAIR_FIRST(dtype_pair), NDIMS>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_ASSIGN,
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
+                                     BOOL_DATA_TYPE_SEQ,
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ, DIM_SEQ);
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_ASSIGN, HALF_DATA_TYPE_SEQ, HALF_DATA_TYPE_SEQ,
                                  DIM_SEQ);
