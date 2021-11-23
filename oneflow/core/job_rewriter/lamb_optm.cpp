@@ -13,20 +13,44 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <memory>
-#include "oneflow/core/common/just.h"
-#include "oneflow/core/framework/user_op_conf.h"
-#include "oneflow/core/job/job_conf.pb.h"
-#include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job_rewriter/optimizer.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/operator/operator.h"
+
 namespace oneflow {
   
+struct BiasCorrectionFactorCacheKey {
+  float beta = 1.0;
+  ParallelConf parallel_conf;
+};
+
+bool operator==(const BiasCorrectionFactorCacheKey& lhs, const BiasCorrectionFactorCacheKey& rhs);
+
+} // namespace oneflow
+
+namespace std {
+template<>
+struct hash<oneflow::BiasCorrectionFactorCacheKey> {
+  size_t operator()(const oneflow::BiasCorrectionFactorCacheKey& key) const {
+    const auto& float_hash = std::hash<float>();
+    const auto& parallel_conf_hash = std::hash<oneflow::ParallelConf>();
+    return float_hash(key.beta) ^ parallel_conf_hash(key.parallel_conf);
+  }
+};
+
+}  // namespace std
+
+namespace oneflow {
+
 // Forward declaration for bias correction factor
 class BiasCorrectionFactorState final : public JobPassState {
   public:
+    BiasCorrectionFactorState() {}
+    ~BiasCorrectionFactorState() override = default;
+    
     std::string GetLbn(float beta, std::string bias_correction_name, ParallelConf parallel_conf, const std::function<std::string(float beta_val, std::string op_name)>& BiasCorrectionFactorStateOp);
+  
+  private:
+    HashMap<BiasCorrectionFactorCacheKey, std::string> key2lbn_;
 };
 
   
@@ -83,7 +107,7 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
   
   if (do_bias_correction) {
     // Reuse adam bias_correction job pass
-    const std::string& job_pass_state_key = "lamb_bias_correction_factor";
+    const std::string& job_pass_state_key = "adam_bias_correction_factor";
     const bool has_state = CHECK_JUST(ctx->HasState<BiasCorrectionFactorState>(job_pass_state_key));
     if (!has_state) {
       CHECK_JUST(
@@ -102,25 +126,25 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
                                              const std::string& op_name) -> std::string {
       user_op::UserOpConfWrapperBuilder op_builder(var_op->op_name() + op_name);
       const auto lamb_bias_correction_factor_op =
-          op_builder.OpTypeName("lamb_bias_correction_factor")
+          op_builder.OpTypeName("adam_bias_correction_factor")
               .Input("train_step", train_step_lbn)
               .Attr<float>("beta", beta_val)
               .Output("out")
               .ScopeSymbolId(var_op->op_conf().scope_symbol_id())
               .Build();
 
-      job_builder->AddOp(bias_correction_parallel_conf, {lamb_bias_correction_factor_op.op_conf()});
+      job_builder->AddOps(bias_correction_parallel_conf, {lamb_bias_correction_factor_op.op_conf()});
       return lamb_bias_correction_factor_op.output("out", 0);
     };
-    
+
     const std::string bias_correction1_lbn =
-        state->GetLbn(beta1, "adam_bias_correction_factor1", bias_correction_parallel_conf,
+        state->GetLbn(beta1, "lamb_bias_correction_factor1", bias_correction_parallel_conf,
                       AddLambBiasCorrectionFactorOp);
     const std::string bias_correction2_lbn =
-        state->GetLbn(beta2, "adam_bias_correction_factor2", bias_correction_parallel_conf,
+        state->GetLbn(beta2, "lamb_bias_correction_factor2", bias_correction_parallel_conf,
                       AddLambBiasCorrectionFactorOp);
 
-  lamb_update_op_builder.OpTypeName("lamb_update")
+    lamb_update_op_builder.OpTypeName("lamb_update")
       .Input("model", GenLogicalBlobName(var_op->BnInOp2Lbi("out")))
       .Input("model_diff", model_diff_lbn)
       .Input("m", GenVariableOutputLbn(m_var))
@@ -135,7 +159,7 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
       .Attr<bool>("do_bias_correction", true)
       .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
   } else {
-  lamb_update_op_builder.OpTypeName("lamb_update")
+    lamb_update_op_builder.OpTypeName("lamb_update")
       .Input("model", GenLogicalBlobName(var_op->BnInOp2Lbi("out")))
       .Input("model_diff", model_diff_lbn)
       .Input("m", GenVariableOutputLbn(m_var))
