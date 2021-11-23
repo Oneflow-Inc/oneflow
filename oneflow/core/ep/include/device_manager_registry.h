@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_EP_DEVICE_MANAGER_REGISTRY_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/ep/include/device_manager.h"
 
 namespace oneflow {
