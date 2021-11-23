@@ -20,6 +20,10 @@ def OneFlow_COCOReaderOp : OneFlow_BaseOp<"COCOReader", []> {
     BoolAttr:$stride_partition,
     StrArrayAttr:$nd_sbp
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {}; }
+    static std::vector<std::string> outputOrder() const { return {"image", "image_id", "image_size", "gt_bbox", "gt_label", "gt_segm", "gt_segm_index"}; }
+  }];
 }
 
 def OneFlow_CategoricalOrdinalEncodeOp : OneFlow_BaseOp<"CategoricalOrdinalEncode", []> {
@@ -34,6 +38,10 @@ def OneFlow_CategoricalOrdinalEncodeOp : OneFlow_BaseOp<"CategoricalOrdinalEncod
   let attrs = (ins
     BoolAttr:$hash_precomputed
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"table", "size", "in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", []> {
@@ -52,6 +60,10 @@ def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", []> {
     BoolAttr:$shuffle_after_epoch,
     StrArrayAttr:$nd_sbp
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_OneRecReaderOp : OneFlow_BaseOp<"OneRecReader", []> {
@@ -68,6 +80,10 @@ def OneFlow_OneRecReaderOp : OneFlow_BaseOp<"OneRecReader", []> {
     BoolAttr:$shuffle_after_epoch,
     BoolAttr:$verify_example
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_TestDataTypeAttrOp : OneFlow_BaseOp<"TestDataTypeAttr", []> {
@@ -80,12 +96,20 @@ def OneFlow_TestDataTypeAttrOp : OneFlow_BaseOp<"TestDataTypeAttr", []> {
   let attrs = (ins
     StrAttr:$output_type
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_TestDynamicSourceOp : OneFlow_BaseOp<"TestDynamicSource", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_TestListDataTypeAndListShapeAndListStringAttrOp : OneFlow_BaseOp<"TestListDataTypeAndListShapeAndListStringAttr", []> {
@@ -100,6 +124,10 @@ def OneFlow_TestListDataTypeAndListShapeAndListStringAttrOp : OneFlow_BaseOp<"Te
     DTArrayAttr:$out_types,
     StrArrayAttr:$string_list
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_TestMultiInputOp : OneFlow_BaseOp<"TestMultiInput", []> {
@@ -110,6 +138,10 @@ def OneFlow_TestMultiInputOp : OneFlow_BaseOp<"TestMultiInput", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x1", "x2"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_TestMultiInputGradOp : OneFlow_BaseOp<"TestMultiInputGrad", []> {
@@ -122,6 +154,10 @@ def OneFlow_TestMultiInputGradOp : OneFlow_BaseOp<"TestMultiInputGrad", []> {
     AnyType:$x1_diff,
     AnyType:$x2_diff
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x1", "x2", "y_diff"}; }
+    static std::vector<std::string> outputOrder() const { return {"x1_diff", "x2_diff"}; }
+  }];
 }
 
 def OneFlow_TestMultiOutputOrderOp : OneFlow_BaseOp<"TestMultiOutputOrder", []> {
@@ -132,6 +168,10 @@ def OneFlow_TestMultiOutputOrderOp : OneFlow_BaseOp<"TestMultiOutputOrder", []> 
     AnyType:$out1,
     AnyType:$out2
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out1", "out2"}; }
+  }];
 }
 
 def OneFlow_TestRandomSourceOp : OneFlow_BaseOp<"TestRandomSource", []> {
@@ -141,6 +181,10 @@ def OneFlow_TestRandomSourceOp : OneFlow_BaseOp<"TestRandomSource", []> {
   let attrs = (ins
     SI64Attr:$seed
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_TestReshapeOp : OneFlow_BaseOp<"TestReshape", []> {
@@ -153,12 +197,20 @@ def OneFlow_TestReshapeOp : OneFlow_BaseOp<"TestReshape", []> {
   let attrs = (ins
     AnyI64ElementsAttr:$shape
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_TestSourceOp : OneFlow_BaseOp<"TestSource", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_TestSourceMultiGpuFixedOutNumOp : OneFlow_BaseOp<"TestSourceMultiGpuFixedOutNum", []> {
@@ -168,6 +220,10 @@ def OneFlow_TestSourceMultiGpuFixedOutNumOp : OneFlow_BaseOp<"TestSourceMultiGpu
   let attrs = (ins
     SI64Attr:$out_num
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow__ncclLogical_2DSameDim0All2allOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all2all", []> {
@@ -181,6 +237,10 @@ def OneFlow__ncclLogical_2DSameDim0All2allOp : OneFlow_BaseOp<"_nccl_logical_2D_
     SI64Attr:$in_dim1_split_axis,
     SI64Attr:$out_dim1_split_axis
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow__ncclLogical_2DSameDim0AllGatherOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_gather", []> {
@@ -190,6 +250,10 @@ def OneFlow__ncclLogical_2DSameDim0AllGatherOp : OneFlow_BaseOp<"_nccl_logical_2
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow__ncclLogical_2DSameDim0AllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_gather_noncontinuous", []> {
@@ -202,6 +266,10 @@ def OneFlow__ncclLogical_2DSameDim0AllGatherNoncontinuousOp : OneFlow_BaseOp<"_n
   let attrs = (ins
     SI64Attr:$in_dim1_split_axis
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow__ncclLogical_2DSameDim0AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_reduce", []> {
@@ -211,6 +279,10 @@ def OneFlow__ncclLogical_2DSameDim0AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow__ncclLogical_2DSameDim1AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim1_all_reduce", []> {
@@ -220,6 +292,10 @@ def OneFlow__ncclLogical_2DSameDim1AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow__ncclLogicalAllGatherOp : OneFlow_BaseOp<"_nccl_logical_all_gather", []> {
@@ -229,6 +305,10 @@ def OneFlow__ncclLogicalAllGatherOp : OneFlow_BaseOp<"_nccl_logical_all_gather",
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow__ncclLogicalAllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical_all_gather_noncontinuous", []> {
@@ -241,6 +321,10 @@ def OneFlow__ncclLogicalAllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical
   let attrs = (ins
     SI64Attr:$in_split_axis
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow__ncclLogicalAllReduceOp : OneFlow_BaseOp<"_nccl_logical_all_reduce", []> {
@@ -250,6 +334,10 @@ def OneFlow__ncclLogicalAllReduceOp : OneFlow_BaseOp<"_nccl_logical_all_reduce",
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow__ncclLogicalReduceScatterOp : OneFlow_BaseOp<"_nccl_logical_reduce_scatter", []> {
@@ -259,6 +347,10 @@ def OneFlow__ncclLogicalReduceScatterOp : OneFlow_BaseOp<"_nccl_logical_reduce_s
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", []> {
@@ -272,9 +364,24 @@ def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", []> {
     SI64Attr:$in_split_axis,
     SI64Attr:$out_split_axis
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
-def OneFlow_AbsOp : OneFlow_IdempotentBaseOp<"abs", []> {}
+def OneFlow_AbsOp : OneFlow_IdempotentBaseOp<"abs", []> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
+}
 
 def OneFlow_AbsGradOp : OneFlow_BaseOp<"abs_grad", []> {
   let input = (ins
@@ -284,6 +391,10 @@ def OneFlow_AbsGradOp : OneFlow_BaseOp<"abs_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_AccOp : OneFlow_BaseOp<"acc", []> {
@@ -296,6 +407,10 @@ def OneFlow_AccOp : OneFlow_BaseOp<"acc", []> {
   let attrs = (ins
     SI32Attr:$max_acc_num
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_AcosOp : OneFlow_BaseOp<"acos", []> {
@@ -305,6 +420,10 @@ def OneFlow_AcosOp : OneFlow_BaseOp<"acos", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_AcosGradOp : OneFlow_BaseOp<"acos_grad", []> {
@@ -315,6 +434,10 @@ def OneFlow_AcosGradOp : OneFlow_BaseOp<"acos_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_AcoshOp : OneFlow_BaseOp<"acosh", []> {
@@ -324,6 +447,10 @@ def OneFlow_AcoshOp : OneFlow_BaseOp<"acosh", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_AcoshGradOp : OneFlow_BaseOp<"acosh_grad", []> {
@@ -334,6 +461,10 @@ def OneFlow_AcoshGradOp : OneFlow_BaseOp<"acosh_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", []> {
@@ -356,10 +487,14 @@ def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", []> {
     F32Attr:$weight_decay,
     F32Attr:$epsilon
   );
-}
-  let input = (ins
+  let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"model", "model_diff", "learning_rate", "scale_by_tensor", "skip_if", "train_step", "sum"}; }
+    static std::vector<std::string> outputOrder() const { return {}; }
+  }];
+}
 
 def OneFlow_AdamBiasCorrectionFactorOp : OneFlow_BaseOp<"adam_bias_correction_factor", []> {
   let input = (ins
@@ -371,6 +506,10 @@ def OneFlow_AdamBiasCorrectionFactorOp : OneFlow_BaseOp<"adam_bias_correction_fa
   let attrs = (ins
     F32Attr:$beta
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"train_step"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", []> {
@@ -400,10 +539,14 @@ def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", []> {
     BoolAttr:$amsgrad,
     BoolAttr:$do_bias_correction
   );
-}
-  let input = (ins
+  let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"model", "model_diff", "learning_rate", "scale_by_tensor", "skip_if", "bias_correction1", "bias_correction2", "m", "v", "max_v"}; }
+    static std::vector<std::string> outputOrder() const { return {}; }
+  }];
+}
 
 def OneFlow_AdaptiveAvgPool1dOp : OneFlow_BaseOp<"adaptive_avg_pool1d", []> {
   let input = (ins
@@ -415,6 +558,10 @@ def OneFlow_AdaptiveAvgPool1dOp : OneFlow_BaseOp<"adaptive_avg_pool1d", []> {
   let attrs = (ins
     SI64ArrayAttr:$output_size
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_AdaptiveAvgPool1dGradOp : OneFlow_BaseOp<"adaptive_avg_pool1d_grad", []> {
@@ -428,6 +575,10 @@ def OneFlow_AdaptiveAvgPool1dGradOp : OneFlow_BaseOp<"adaptive_avg_pool1d_grad",
   let attrs = (ins
     SI64ArrayAttr:$output_size
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_AdaptiveAvgPool2dOp : OneFlow_BaseOp<"adaptive_avg_pool2d", []> {
@@ -440,6 +591,10 @@ def OneFlow_AdaptiveAvgPool2dOp : OneFlow_BaseOp<"adaptive_avg_pool2d", []> {
   let attrs = (ins
     SI64ArrayAttr:$output_size
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_AdaptiveAvgPool2dGradOp : OneFlow_BaseOp<"adaptive_avg_pool2d_grad", []> {
@@ -453,6 +608,10 @@ def OneFlow_AdaptiveAvgPool2dGradOp : OneFlow_BaseOp<"adaptive_avg_pool2d_grad",
   let attrs = (ins
     SI64ArrayAttr:$output_size
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_AdaptiveAvgPool3dOp : OneFlow_BaseOp<"adaptive_avg_pool3d", []> {
@@ -465,6 +624,10 @@ def OneFlow_AdaptiveAvgPool3dOp : OneFlow_BaseOp<"adaptive_avg_pool3d", []> {
   let attrs = (ins
     SI64ArrayAttr:$output_size
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_AdaptiveAvgPool3dGradOp : OneFlow_BaseOp<"adaptive_avg_pool3d_grad", []> {
@@ -478,6 +641,10 @@ def OneFlow_AdaptiveAvgPool3dGradOp : OneFlow_BaseOp<"adaptive_avg_pool3d_grad",
   let attrs = (ins
     SI64ArrayAttr:$output_size
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", []> {
@@ -487,6 +654,10 @@ def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_AffineGridOp : OneFlow_BaseOp<"affine_grid", []> {
@@ -500,6 +671,10 @@ def OneFlow_AffineGridOp : OneFlow_BaseOp<"affine_grid", []> {
     AnyI64ElementsAttr:$size,
     BoolAttr:$align_corners
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"theta"}; }
+    static std::vector<std::string> outputOrder() const { return {"grid"}; }
+  }];
 }
 
 def OneFlow_AffineGridGradOp : OneFlow_BaseOp<"affine_grid_grad", []> {
@@ -513,6 +688,10 @@ def OneFlow_AffineGridGradOp : OneFlow_BaseOp<"affine_grid_grad", []> {
     AnyI64ElementsAttr:$size,
     BoolAttr:$align_corners
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dgrid"}; }
+    static std::vector<std::string> outputOrder() const { return {"dtheta"}; }
+  }];
 }
 
 def OneFlow_AmpWhiteIdentityOp : OneFlow_BaseOp<"amp_white_identity", []> {
@@ -522,6 +701,10 @@ def OneFlow_AmpWhiteIdentityOp : OneFlow_BaseOp<"amp_white_identity", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ArangeOp : OneFlow_BaseOp<"arange", []> {
@@ -538,6 +721,10 @@ def OneFlow_ArangeOp : OneFlow_BaseOp<"arange", []> {
     StrAttr:$dtype,
     StrArrayAttr:$nd_sbp
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ArgSortOp : OneFlow_BaseOp<"arg_sort", []> {
@@ -550,6 +737,10 @@ def OneFlow_ArgSortOp : OneFlow_BaseOp<"arg_sort", []> {
   let attrs = (ins
     StrAttr:$direction
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ArgmaxOp : OneFlow_BaseOp<"argmax", []> {
@@ -559,6 +750,10 @@ def OneFlow_ArgmaxOp : OneFlow_BaseOp<"argmax", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ArgwhereOp : OneFlow_BaseOp<"argwhere", []> {
@@ -572,6 +767,10 @@ def OneFlow_ArgwhereOp : OneFlow_BaseOp<"argwhere", []> {
   let attrs = (ins
     StrAttr:$dtype
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input"}; }
+    static std::vector<std::string> outputOrder() const { return {"output", "output_size"}; }
+  }];
 }
 
 def OneFlow_AsinOp : OneFlow_BaseOp<"asin", []> {
@@ -581,6 +780,10 @@ def OneFlow_AsinOp : OneFlow_BaseOp<"asin", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_AsinGradOp : OneFlow_BaseOp<"asin_grad", []> {
@@ -591,6 +794,10 @@ def OneFlow_AsinGradOp : OneFlow_BaseOp<"asin_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_AsinhOp : OneFlow_BaseOp<"asinh", []> {
@@ -600,6 +807,10 @@ def OneFlow_AsinhOp : OneFlow_BaseOp<"asinh", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_AsinhGradOp : OneFlow_BaseOp<"asinh_grad", []> {
@@ -610,6 +821,10 @@ def OneFlow_AsinhGradOp : OneFlow_BaseOp<"asinh_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_AssignOp : OneFlow_BaseOp<"assign", []> {
@@ -617,6 +832,10 @@ def OneFlow_AssignOp : OneFlow_BaseOp<"assign", []> {
     AnyType:$ref,
     AnyType:$value
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"ref", "value"}; }
+    static std::vector<std::string> outputOrder() const { return {}; }
+  }];
 }
 
 def OneFlow_AssignIfOp : OneFlow_BaseOp<"assign_if", []> {
@@ -625,6 +844,10 @@ def OneFlow_AssignIfOp : OneFlow_BaseOp<"assign_if", []> {
     AnyType:$value,
     AnyType:$condition
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"ref", "value", "condition"}; }
+    static std::vector<std::string> outputOrder() const { return {}; }
+  }];
 }
 
 def OneFlow_AssignIfNotOp : OneFlow_BaseOp<"assign_if_not", []> {
@@ -633,6 +856,10 @@ def OneFlow_AssignIfNotOp : OneFlow_BaseOp<"assign_if_not", []> {
     AnyType:$value,
     AnyType:$condition
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"ref", "value", "condition"}; }
+    static std::vector<std::string> outputOrder() const { return {}; }
+  }];
 }
 
 def OneFlow_AtanOp : OneFlow_BaseOp<"atan", []> {
@@ -642,6 +869,10 @@ def OneFlow_AtanOp : OneFlow_BaseOp<"atan", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_Atan2Op : OneFlow_BaseOp<"atan2", []> {
@@ -652,6 +883,10 @@ def OneFlow_Atan2Op : OneFlow_BaseOp<"atan2", []> {
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_Atan2XGradOp : OneFlow_BaseOp<"atan2_x_grad", []> {
@@ -663,6 +898,10 @@ def OneFlow_Atan2XGradOp : OneFlow_BaseOp<"atan2_x_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "dz"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_Atan2YGradOp : OneFlow_BaseOp<"atan2_y_grad", []> {
@@ -674,6 +913,10 @@ def OneFlow_Atan2YGradOp : OneFlow_BaseOp<"atan2_y_grad", []> {
   let output = (outs
     AnyType:$dy
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "dz"}; }
+    static std::vector<std::string> outputOrder() const { return {"dy"}; }
+  }];
 }
 
 def OneFlow_AtanGradOp : OneFlow_BaseOp<"atan_grad", []> {
@@ -684,6 +927,10 @@ def OneFlow_AtanGradOp : OneFlow_BaseOp<"atan_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_AtanhOp : OneFlow_BaseOp<"atanh", []> {
@@ -693,6 +940,10 @@ def OneFlow_AtanhOp : OneFlow_BaseOp<"atanh", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_AtanhGradOp : OneFlow_BaseOp<"atanh_grad", []> {
@@ -703,31 +954,287 @@ def OneFlow_AtanhGradOp : OneFlow_BaseOp<"atanh_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
-def OneFlow_LazyAvgPool1DOp : OneFlow_LazyPoolBaseOp<"avg_pool_1d", []> {}
+def OneFlow_LazyAvgPool1DOp : OneFlow_LazyPoolBaseOp<"avg_pool_1d", []> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let attrs = (ins
+    StrAttr:$padding,
+    SI32ArrayAttr:$padding_before,
+    SI32ArrayAttr:$padding_after,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$pool_size,
+    SI32ArrayAttr:$strides,
+    BoolAttr:$ceil_mode
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
+}
 
-def OneFlow_LazyAvgPool1DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_1d_grad", []> {}
+def OneFlow_LazyAvgPool1DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_1d_grad", []> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    StrAttr:$padding,
+    SI32ArrayAttr:$padding_before,
+    SI32ArrayAttr:$padding_after,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$pool_size,
+    SI32ArrayAttr:$strides,
+    BoolAttr:$ceil_mode
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
+}
 
-def OneFlow_LazyAvgPool2DOp : OneFlow_LazyPoolBaseOp<"avg_pool_2d", []> {}
+def OneFlow_LazyAvgPool2DOp : OneFlow_LazyPoolBaseOp<"avg_pool_2d", []> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let attrs = (ins
+    StrAttr:$padding,
+    SI32ArrayAttr:$padding_before,
+    SI32ArrayAttr:$padding_after,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$pool_size,
+    SI32ArrayAttr:$strides,
+    BoolAttr:$ceil_mode
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
+}
 
-def OneFlow_LazyAvgPool2DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_2d_grad", []> {}
+def OneFlow_LazyAvgPool2DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_2d_grad", []> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    StrAttr:$padding,
+    SI32ArrayAttr:$padding_before,
+    SI32ArrayAttr:$padding_after,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$pool_size,
+    SI32ArrayAttr:$strides,
+    BoolAttr:$ceil_mode
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
+}
 
-def OneFlow_LazyAvgPool3DOp : OneFlow_LazyPoolBaseOp<"avg_pool_3d", []> {}
+def OneFlow_LazyAvgPool3DOp : OneFlow_LazyPoolBaseOp<"avg_pool_3d", []> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let attrs = (ins
+    StrAttr:$padding,
+    SI32ArrayAttr:$padding_before,
+    SI32ArrayAttr:$padding_after,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$pool_size,
+    SI32ArrayAttr:$strides,
+    BoolAttr:$ceil_mode
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
+}
 
-def OneFlow_LazyAvgPool3DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_3d_grad", []> {}
+def OneFlow_LazyAvgPool3DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_3d_grad", []> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    StrAttr:$padding,
+    SI32ArrayAttr:$padding_before,
+    SI32ArrayAttr:$padding_after,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$pool_size,
+    SI32ArrayAttr:$strides,
+    BoolAttr:$ceil_mode
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
+}
 
-def OneFlow_EagerAvgPool1DOp : OneFlow_EagerPoolBaseOp<"avgpool_1d", []> {}
+def OneFlow_EagerAvgPool1DOp : OneFlow_EagerPoolBaseOp<"avgpool_1d", []> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$padding,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$stride,
+    BoolAttr:$ceil_mode,
+    BoolAttr:$count_include_pad,
+    SI64Attr:$divisor_override
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
+}
 
-def OneFlow_EagerAvgPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_1d_grad", []> {}
+def OneFlow_EagerAvgPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_1d_grad", []> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$padding,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$stride,
+    BoolAttr:$ceil_mode,
+    BoolAttr:$count_include_pad,
+    SI64Attr:$divisor_override
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
+}
 
-def OneFlow_EagerAvgPool2DOp : OneFlow_EagerPoolBaseOp<"avgpool_2d", []> {}
+def OneFlow_EagerAvgPool2DOp : OneFlow_EagerPoolBaseOp<"avgpool_2d", []> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$padding,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$stride,
+    BoolAttr:$ceil_mode,
+    BoolAttr:$count_include_pad,
+    SI64Attr:$divisor_override
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
+}
 
-def OneFlow_EagerAvgPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_2d_grad", []> {}
+def OneFlow_EagerAvgPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_2d_grad", []> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$padding,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$stride,
+    BoolAttr:$ceil_mode,
+    BoolAttr:$count_include_pad,
+    SI64Attr:$divisor_override
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
+}
 
-def OneFlow_EagerAvgPool3DOp : OneFlow_EagerPoolBaseOp<"avgpool_3d", []> {}
+def OneFlow_EagerAvgPool3DOp : OneFlow_EagerPoolBaseOp<"avgpool_3d", []> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$padding,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$stride,
+    BoolAttr:$ceil_mode,
+    BoolAttr:$count_include_pad,
+    SI64Attr:$divisor_override
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
+}
 
-def OneFlow_EagerAvgPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_3d_grad", []> {}
+def OneFlow_EagerAvgPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_3d_grad", []> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$padding,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$stride,
+    BoolAttr:$ceil_mode,
+    BoolAttr:$count_include_pad,
+    SI64Attr:$divisor_override
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
+}
 
 def OneFlow_BatchGatherOp : OneFlow_BaseOp<"batch_gather", []> {
   let input = (ins
@@ -737,6 +1244,10 @@ def OneFlow_BatchGatherOp : OneFlow_BaseOp<"batch_gather", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "indices"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_BatchMatmulOp : OneFlow_BaseOp<"batch_matmul", []> {
@@ -753,6 +1264,10 @@ def OneFlow_BatchMatmulOp : OneFlow_BaseOp<"batch_matmul", []> {
     BoolAttr:$transpose_b,
     F64Attr:$alpha
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"a", "b", "_add_to_output"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_BernoulliOp : OneFlow_BaseOp<"bernoulli", []> {
@@ -767,6 +1282,10 @@ def OneFlow_BernoulliOp : OneFlow_BaseOp<"bernoulli", []> {
     BoolAttr:$has_seed,
     StrAttr:$dtype
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", []> {
@@ -780,6 +1299,10 @@ def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", []> {
   let attrs = (ins
     SI32Attr:$axis
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"a", "b"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_BinaryCrossEntropyOp : OneFlow_BaseOp<"binary_cross_entropy", []> {
@@ -794,6 +1317,10 @@ def OneFlow_BinaryCrossEntropyOp : OneFlow_BaseOp<"binary_cross_entropy", []> {
   let attrs = (ins
     StrAttr:$reduction
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input", "target", "weight"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_BinaryCrossEntropyGradOp : OneFlow_BaseOp<"binary_cross_entropy_grad", []> {
@@ -809,6 +1336,10 @@ def OneFlow_BinaryCrossEntropyGradOp : OneFlow_BaseOp<"binary_cross_entropy_grad
   let attrs = (ins
     StrAttr:$reduction
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input", "target", "weight", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_BinaryCrossEntropyWithLogitsOp : OneFlow_BaseOp<"binary_cross_entropy_with_logits", []> {
@@ -825,10 +1356,14 @@ def OneFlow_BinaryCrossEntropyWithLogitsOp : OneFlow_BaseOp<"binary_cross_entrop
     BoolAttr:$has_pos_weight,
     StrAttr:$reduction
   );
-}
-  let input = (ins
+  let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input", "target", "weight", "pos_weight"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
+}
 
 def OneFlow_BinaryCrossEntropyWithLogitsGradOp : OneFlow_BaseOp<"binary_cross_entropy_with_logits_grad", []> {
   let input = (ins
@@ -845,10 +1380,14 @@ def OneFlow_BinaryCrossEntropyWithLogitsGradOp : OneFlow_BaseOp<"binary_cross_en
     BoolAttr:$has_pos_weight,
     StrAttr:$reduction
   );
-}
-  let input = (ins
+  let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input", "target", "weight", "pos_weight", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
+}
 
 def OneFlow_BroadcastAddOp : OneFlow_BaseOp<"broadcast_add", []> {
   let input = (ins
@@ -858,6 +1397,10 @@ def OneFlow_BroadcastAddOp : OneFlow_BaseOp<"broadcast_add", []> {
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_BroadcastDivOp : OneFlow_BaseOp<"broadcast_div", []> {
@@ -868,6 +1411,10 @@ def OneFlow_BroadcastDivOp : OneFlow_BaseOp<"broadcast_div", []> {
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_BroadcastDivGradOp : OneFlow_BaseOp<"broadcast_div_grad", []> {
@@ -879,6 +1426,10 @@ def OneFlow_BroadcastDivGradOp : OneFlow_BaseOp<"broadcast_div_grad", []> {
   let output = (outs
     AnyType:$dy
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"y", "z", "dz"}; }
+    static std::vector<std::string> outputOrder() const { return {"dy"}; }
+  }];
 }
 
 def OneFlow_BroadcastEqualOp : OneFlow_BaseOp<"broadcast_equal", []> {
@@ -889,6 +1440,10 @@ def OneFlow_BroadcastEqualOp : OneFlow_BaseOp<"broadcast_equal", []> {
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_BroadcastFloorModOp : OneFlow_BaseOp<"broadcast_floor_mod", []> {
@@ -899,6 +1454,10 @@ def OneFlow_BroadcastFloorModOp : OneFlow_BaseOp<"broadcast_floor_mod", []> {
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_BroadcastFmodOp : OneFlow_BaseOp<"broadcast_fmod", []> {
@@ -909,6 +1468,10 @@ def OneFlow_BroadcastFmodOp : OneFlow_BaseOp<"broadcast_fmod", []> {
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_BroadcastGreaterOp : OneFlow_BaseOp<"broadcast_greater", []> {
@@ -919,6 +1482,10 @@ def OneFlow_BroadcastGreaterOp : OneFlow_BaseOp<"broadcast_greater", []> {
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_BroadcastGreaterEqualOp : OneFlow_BaseOp<"broadcast_greater_equal", []> {
@@ -929,6 +1496,10 @@ def OneFlow_BroadcastGreaterEqualOp : OneFlow_BaseOp<"broadcast_greater_equal", 
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_BroadcastLessOp : OneFlow_BaseOp<"broadcast_less", []> {
@@ -939,6 +1510,10 @@ def OneFlow_BroadcastLessOp : OneFlow_BaseOp<"broadcast_less", []> {
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_BroadcastLessEqualOp : OneFlow_BaseOp<"broadcast_less_equal", []> {
@@ -949,6 +1524,10 @@ def OneFlow_BroadcastLessEqualOp : OneFlow_BaseOp<"broadcast_less_equal", []> {
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_BroadcastLikeOp : OneFlow_BaseOp<"broadcast_like", []> {
@@ -962,6 +1541,10 @@ def OneFlow_BroadcastLikeOp : OneFlow_BaseOp<"broadcast_like", []> {
   let attrs = (ins
     SI32ArrayAttr:$broadcast_axes
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "like"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_BroadcastLogicalAndOp : OneFlow_BaseOp<"broadcast_logical_and", []> {
@@ -972,6 +1555,10 @@ def OneFlow_BroadcastLogicalAndOp : OneFlow_BaseOp<"broadcast_logical_and", []> 
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_BroadcastLogicalOrOp : OneFlow_BaseOp<"broadcast_logical_or", []> {
@@ -982,6 +1569,10 @@ def OneFlow_BroadcastLogicalOrOp : OneFlow_BaseOp<"broadcast_logical_or", []> {
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_BroadcastLogicalXorOp : OneFlow_BaseOp<"broadcast_logical_xor", []> {
@@ -992,6 +1583,10 @@ def OneFlow_BroadcastLogicalXorOp : OneFlow_BaseOp<"broadcast_logical_xor", []> 
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_BroadcastMatmulOp : OneFlow_BaseOp<"broadcast_matmul", []> {
@@ -1008,6 +1603,10 @@ def OneFlow_BroadcastMatmulOp : OneFlow_BaseOp<"broadcast_matmul", []> {
     BoolAttr:$transpose_b,
     F64Attr:$alpha
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"a", "b", "_add_to_output"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_BroadcastMatmulGradBOp : OneFlow_BaseOp<"broadcast_matmul_grad_b", []> {
@@ -1022,6 +1621,10 @@ def OneFlow_BroadcastMatmulGradBOp : OneFlow_BaseOp<"broadcast_matmul_grad_b", [
   let attrs = (ins
     F64Attr:$alpha
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"a", "b", "_add_to_output"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_BroadcastMaximumOp : OneFlow_BaseOp<"broadcast_maximum", []> {
@@ -1032,6 +1635,10 @@ def OneFlow_BroadcastMaximumOp : OneFlow_BaseOp<"broadcast_maximum", []> {
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_BroadcastMinimumOp : OneFlow_BaseOp<"broadcast_minimum", []> {
@@ -1042,6 +1649,10 @@ def OneFlow_BroadcastMinimumOp : OneFlow_BaseOp<"broadcast_minimum", []> {
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_BroadcastMulOp : OneFlow_BaseOp<"broadcast_mul", []> {
@@ -1052,6 +1663,10 @@ def OneFlow_BroadcastMulOp : OneFlow_BaseOp<"broadcast_mul", []> {
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_BroadcastNotEqualOp : OneFlow_BaseOp<"broadcast_not_equal", []> {
@@ -1062,6 +1677,10 @@ def OneFlow_BroadcastNotEqualOp : OneFlow_BaseOp<"broadcast_not_equal", []> {
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_BroadcastPowOp : OneFlow_BaseOp<"broadcast_pow", []> {
@@ -1072,6 +1691,10 @@ def OneFlow_BroadcastPowOp : OneFlow_BaseOp<"broadcast_pow", []> {
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_BroadcastPowXGradOp : OneFlow_BaseOp<"broadcast_pow_x_grad", []> {
@@ -1084,6 +1707,10 @@ def OneFlow_BroadcastPowXGradOp : OneFlow_BaseOp<"broadcast_pow_x_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "z", "dz"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_BroadcastPowYGradOp : OneFlow_BaseOp<"broadcast_pow_y_grad", []> {
@@ -1096,6 +1723,10 @@ def OneFlow_BroadcastPowYGradOp : OneFlow_BaseOp<"broadcast_pow_y_grad", []> {
   let output = (outs
     AnyType:$dy
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "z", "dz"}; }
+    static std::vector<std::string> outputOrder() const { return {"dy"}; }
+  }];
 }
 
 def OneFlow_BroadcastSubOp : OneFlow_BaseOp<"broadcast_sub", []> {
@@ -1106,6 +1737,10 @@ def OneFlow_BroadcastSubOp : OneFlow_BaseOp<"broadcast_sub", []> {
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_CastOp : OneFlow_BaseOp<"cast", []> {
@@ -1118,6 +1753,10 @@ def OneFlow_CastOp : OneFlow_BaseOp<"cast", []> {
   let attrs = (ins
     StrAttr:$dtype
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_CastLikeOp : OneFlow_BaseOp<"cast_like", []> {
@@ -1128,6 +1767,10 @@ def OneFlow_CastLikeOp : OneFlow_BaseOp<"cast_like", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "dtype_like"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_CastToStaticShapeOp : OneFlow_BaseOp<"cast_to_static_shape", []> {
@@ -1137,6 +1780,10 @@ def OneFlow_CastToStaticShapeOp : OneFlow_BaseOp<"cast_to_static_shape", []> {
   let output = (outs
     AnyType:$output
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input"}; }
+    static std::vector<std::string> outputOrder() const { return {"output"}; }
+  }];
 }
 
 def OneFlow_CastToTickOp : OneFlow_BaseOp<"cast_to_tick", []> {
@@ -1146,6 +1793,10 @@ def OneFlow_CastToTickOp : OneFlow_BaseOp<"cast_to_tick", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_CcreluOp : OneFlow_BaseOp<"ccrelu", []> {
@@ -1155,6 +1806,10 @@ def OneFlow_CcreluOp : OneFlow_BaseOp<"ccrelu", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_CcreluGradOp : OneFlow_BaseOp<"ccrelu_grad", []> {
@@ -1165,9 +1820,24 @@ def OneFlow_CcreluGradOp : OneFlow_BaseOp<"ccrelu_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"y", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
-def OneFlow_CeilOp : OneFlow_IdempotentBaseOp<"ceil", []> {}
+def OneFlow_CeilOp : OneFlow_IdempotentBaseOp<"ceil", []> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
+}
 
 def OneFlow_CeilGradOp : OneFlow_BaseOp<"ceil_grad", []> {
   let input = (ins
@@ -1177,6 +1847,10 @@ def OneFlow_CeilGradOp : OneFlow_BaseOp<"ceil_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_CeluOp : OneFlow_BaseOp<"celu", []> {
@@ -1189,6 +1863,10 @@ def OneFlow_CeluOp : OneFlow_BaseOp<"celu", []> {
   let attrs = (ins
     F64Attr:$alpha
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_CeluGradOp : OneFlow_BaseOp<"celu_grad", []> {
@@ -1202,6 +1880,10 @@ def OneFlow_CeluGradOp : OneFlow_BaseOp<"celu_grad", []> {
   let attrs = (ins
     F64Attr:$alpha
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_ClipByScalarOp : OneFlow_BaseOp<"clip_by_scalar", []> {
@@ -1217,6 +1899,10 @@ def OneFlow_ClipByScalarOp : OneFlow_BaseOp<"clip_by_scalar", []> {
     F64Attr:$floating_max,
     SI64Attr:$integral_max
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_ClipByScalarGradOp : OneFlow_BaseOp<"clip_by_scalar_grad", []> {
@@ -1233,6 +1919,10 @@ def OneFlow_ClipByScalarGradOp : OneFlow_BaseOp<"clip_by_scalar_grad", []> {
     F64Attr:$floating_max,
     SI64Attr:$integral_max
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "x"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_ClipByScalarMaxOp : OneFlow_BaseOp<"clip_by_scalar_max", []> {
@@ -1246,6 +1936,10 @@ def OneFlow_ClipByScalarMaxOp : OneFlow_BaseOp<"clip_by_scalar_max", []> {
     F64Attr:$floating_max,
     SI64Attr:$integral_max
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_ClipByScalarMaxGradOp : OneFlow_BaseOp<"clip_by_scalar_max_grad", []> {
@@ -1260,6 +1954,10 @@ def OneFlow_ClipByScalarMaxGradOp : OneFlow_BaseOp<"clip_by_scalar_max_grad", []
     F64Attr:$floating_max,
     SI64Attr:$integral_max
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "x"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_ClipByScalarMinOp : OneFlow_BaseOp<"clip_by_scalar_min", []> {
@@ -1273,6 +1971,10 @@ def OneFlow_ClipByScalarMinOp : OneFlow_BaseOp<"clip_by_scalar_min", []> {
     F64Attr:$floating_min,
     SI64Attr:$integral_min
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_ClipByScalarMinGradOp : OneFlow_BaseOp<"clip_by_scalar_min_grad", []> {
@@ -1287,6 +1989,10 @@ def OneFlow_ClipByScalarMinGradOp : OneFlow_BaseOp<"clip_by_scalar_min_grad", []
     F64Attr:$floating_min,
     SI64Attr:$integral_min
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "x"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_CoinFlipOp : OneFlow_BaseOp<"coin_flip", []> {
@@ -1300,6 +2006,10 @@ def OneFlow_CoinFlipOp : OneFlow_BaseOp<"coin_flip", []> {
     BoolAttr:$has_seed,
     StrArrayAttr:$nd_sbp
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_CombinedMarginLossOp : OneFlow_BaseOp<"combined_margin_loss", []> {
@@ -1317,6 +2027,10 @@ def OneFlow_CombinedMarginLossOp : OneFlow_BaseOp<"combined_margin_loss", []> {
     F32Attr:$m3,
     SI64Attr:$depth
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "label"}; }
+    static std::vector<std::string> outputOrder() const { return {"y", "theta"}; }
+  }];
 }
 
 def OneFlow_CombinedMarginLossGradOp : OneFlow_BaseOp<"combined_margin_loss_grad", []> {
@@ -1334,6 +2048,10 @@ def OneFlow_CombinedMarginLossGradOp : OneFlow_BaseOp<"combined_margin_loss_grad
     F32Attr:$m3,
     SI64Attr:$depth
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "label", "theta"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_ConcatOp : OneFlow_BaseOp<"concat", []> {
@@ -1347,6 +2065,10 @@ def OneFlow_ConcatOp : OneFlow_BaseOp<"concat", []> {
     SI64Attr:$axis,
     SI64Attr:$max_dim_size
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", []> {
@@ -1361,6 +2083,10 @@ def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", []> {
     AnyI64ElementsAttr:$shape,
     StrArrayAttr:$nd_sbp
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ConstantPad1dOp : OneFlow_BaseOp<"constant_pad1d", []> {
@@ -1375,6 +2101,10 @@ def OneFlow_ConstantPad1dOp : OneFlow_BaseOp<"constant_pad1d", []> {
     F64Attr:$floating_value,
     SI64Attr:$integral_value
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_ConstantPad1dGradOp : OneFlow_BaseOp<"constant_pad1d_grad", []> {
@@ -1389,6 +2119,10 @@ def OneFlow_ConstantPad1dGradOp : OneFlow_BaseOp<"constant_pad1d_grad", []> {
     F64Attr:$floating_value,
     SI64Attr:$integral_value
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_ConstantPad2dOp : OneFlow_BaseOp<"constant_pad2d", []> {
@@ -1403,6 +2137,10 @@ def OneFlow_ConstantPad2dOp : OneFlow_BaseOp<"constant_pad2d", []> {
     F64Attr:$floating_value,
     SI64Attr:$integral_value
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_ConstantPad2dGradOp : OneFlow_BaseOp<"constant_pad2d_grad", []> {
@@ -1417,6 +2155,10 @@ def OneFlow_ConstantPad2dGradOp : OneFlow_BaseOp<"constant_pad2d_grad", []> {
     F64Attr:$floating_value,
     SI64Attr:$integral_value
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_ConstantPad3dOp : OneFlow_BaseOp<"constant_pad3d", []> {
@@ -1431,6 +2173,10 @@ def OneFlow_ConstantPad3dOp : OneFlow_BaseOp<"constant_pad3d", []> {
     F64Attr:$floating_value,
     SI64Attr:$integral_value
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_ConstantPad3dGradOp : OneFlow_BaseOp<"constant_pad3d_grad", []> {
@@ -1445,13 +2191,95 @@ def OneFlow_ConstantPad3dGradOp : OneFlow_BaseOp<"constant_pad3d_grad", []> {
     F64Attr:$floating_value,
     SI64Attr:$integral_value
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
-def OneFlow_Conv1DOp : OneFlow_ConvolutionBaseOp<"conv1d", []> {}
+def OneFlow_Conv1DOp : OneFlow_ConvolutionBaseOp<"conv1d", []> {
+  let input = (ins
+    AnyType:$in,
+    AnyType:$weight,
+    Optional<AnyType>:$bias,
+    Optional<AnyType>:$bias_multiplier
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    SI32Attr:$filters,
+    SI32ArrayAttr:$padding_before,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$strides,
+    SI32ArrayAttr:$dilation_rate,
+    SI32Attr:$groups
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "weight", "bias", "bias_multiplier"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
+}
 
-def OneFlow_Conv2DOp : OneFlow_ConvolutionBaseOp<"conv2d", []> {}
+def OneFlow_Conv2DOp : OneFlow_ConvolutionBaseOp<"conv2d", []> {
+  let input = (ins
+    AnyType:$in,
+    AnyType:$weight,
+    Optional<AnyType>:$bias,
+    Optional<AnyType>:$bias_multiplier
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    SI32Attr:$filters,
+    SI32ArrayAttr:$padding_before,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$strides,
+    SI32ArrayAttr:$dilation_rate,
+    SI32Attr:$groups
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "weight", "bias", "bias_multiplier"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
+}
 
-def OneFlow_Conv3DOp : OneFlow_ConvolutionBaseOp<"conv3d", []> {}
+def OneFlow_Conv3DOp : OneFlow_ConvolutionBaseOp<"conv3d", []> {
+  let input = (ins
+    AnyType:$in,
+    AnyType:$weight,
+    Optional<AnyType>:$bias,
+    Optional<AnyType>:$bias_multiplier
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    SI32Attr:$filters,
+    SI32ArrayAttr:$padding_before,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$strides,
+    SI32ArrayAttr:$dilation_rate,
+    SI32Attr:$groups
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "weight", "bias", "bias_multiplier"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
+}
 
 def OneFlow_ConvBiasGradOp : OneFlow_BaseOp<"conv_bias_grad", []> {
   let input = (ins
@@ -1464,6 +2292,10 @@ def OneFlow_ConvBiasGradOp : OneFlow_BaseOp<"conv_bias_grad", []> {
     StrAttr:$data_format,
     SI32Attr:$num_spatial_dims
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"bias_diff"}; }
+  }];
 }
 
 def OneFlow_ConvDataGradOp : OneFlow_BaseOp<"conv_data_grad", []> {
@@ -1485,6 +2317,10 @@ def OneFlow_ConvDataGradOp : OneFlow_BaseOp<"conv_data_grad", []> {
     SI32ArrayAttr:$dilation_rate,
     SI32Attr:$groups
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "filter", "x_like", "_add_to_output"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_ConvFilterGradOp : OneFlow_BaseOp<"conv_filter_grad", []> {
@@ -1504,6 +2340,10 @@ def OneFlow_ConvFilterGradOp : OneFlow_BaseOp<"conv_filter_grad", []> {
     SI32ArrayAttr:$dilation_rate,
     SI32Attr:$groups
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "x"}; }
+    static std::vector<std::string> outputOrder() const { return {"filter_diff"}; }
+  }];
 }
 
 def OneFlow_CopyOp : OneFlow_BaseOp<"copy", []> {
@@ -1517,6 +2357,10 @@ def OneFlow_CopyOp : OneFlow_BaseOp<"copy", []> {
     StrAttr:$device_type,
     SI64Attr:$device_id
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_CosOp : OneFlow_BaseOp<"cos", []> {
@@ -1526,6 +2370,10 @@ def OneFlow_CosOp : OneFlow_BaseOp<"cos", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_CosGradOp : OneFlow_BaseOp<"cos_grad", []> {
@@ -1536,6 +2384,10 @@ def OneFlow_CosGradOp : OneFlow_BaseOp<"cos_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_CoshOp : OneFlow_BaseOp<"cosh", []> {
@@ -1545,6 +2397,10 @@ def OneFlow_CoshOp : OneFlow_BaseOp<"cosh", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_CoshGradOp : OneFlow_BaseOp<"cosh_grad", []> {
@@ -1555,6 +2411,10 @@ def OneFlow_CoshGradOp : OneFlow_BaseOp<"cosh_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_CountNotFiniteOp : OneFlow_BaseOp<"count_not_finite", []> {
@@ -1564,6 +2424,10 @@ def OneFlow_CountNotFiniteOp : OneFlow_BaseOp<"count_not_finite", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_CpuOnlyReluTestOp : OneFlow_BaseOp<"cpu_only_relu_test", []> {
@@ -1573,12 +2437,20 @@ def OneFlow_CpuOnlyReluTestOp : OneFlow_BaseOp<"cpu_only_relu_test", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_CreateSummaryWriterOp : OneFlow_BaseOp<"create_summary_writer", []> {
   let attrs = (ins
     StrAttr:$logdir
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {}; }
+    static std::vector<std::string> outputOrder() const { return {}; }
+  }];
 }
 
 def OneFlow_CropMirrorNormalizeFromTensorbufferOp : OneFlow_BaseOp<"crop_mirror_normalize_from_tensorbuffer", []> {
@@ -1600,6 +2472,10 @@ def OneFlow_CropMirrorNormalizeFromTensorbufferOp : OneFlow_BaseOp<"crop_mirror_
     F32Attr:$crop_pos_y,
     StrAttr:$output_dtype
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "mirror"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_CropMirrorNormalizeFromUint8Op : OneFlow_BaseOp<"crop_mirror_normalize_from_uint8", []> {
@@ -1621,6 +2497,10 @@ def OneFlow_CropMirrorNormalizeFromUint8Op : OneFlow_BaseOp<"crop_mirror_normali
     F32Attr:$crop_pos_y,
     StrAttr:$output_dtype
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "mirror"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_CtcGreedyDecoderOp : OneFlow_BaseOp<"ctc_greedy_decoder", []> {
@@ -1635,6 +2515,10 @@ def OneFlow_CtcGreedyDecoderOp : OneFlow_BaseOp<"ctc_greedy_decoder", []> {
   let attrs = (ins
     BoolAttr:$merge_repeated
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"log_probs", "input_lengths"}; }
+    static std::vector<std::string> outputOrder() const { return {"decoded", "neg_sum_logits"}; }
+  }];
 }
 
 def OneFlow_CtcLossOp : OneFlow_BaseOp<"ctc_loss", []> {
@@ -1653,6 +2537,10 @@ def OneFlow_CtcLossOp : OneFlow_BaseOp<"ctc_loss", []> {
     SI32Attr:$blank,
     BoolAttr:$zero_infinity
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"log_probs", "targets", "input_lengths", "target_lengths"}; }
+    static std::vector<std::string> outputOrder() const { return {"loss", "alpha"}; }
+  }];
 }
 
 def OneFlow_CtcLossGradOp : OneFlow_BaseOp<"ctc_loss_grad", []> {
@@ -1673,6 +2561,10 @@ def OneFlow_CtcLossGradOp : OneFlow_BaseOp<"ctc_loss_grad", []> {
     SI32Attr:$blank,
     BoolAttr:$zero_infinity
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"grad_out", "log_probs", "targets", "input_lengths", "target_lengths", "loss", "alpha"}; }
+    static std::vector<std::string> outputOrder() const { return {"grad"}; }
+  }];
 }
 
 def OneFlow_CudnnFusedNormalizationAddReluOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu", []> {
@@ -1695,11 +2587,15 @@ def OneFlow_CudnnFusedNormalizationAddReluOp : OneFlow_BaseOp<"cudnn_fused_norma
     F32Attr:$epsilon,
     F32Attr:$momentum
   );
-}
-  let input = (ins
+  let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes,
     I32ElementsAttr:$result_segment_sizes
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "addend", "moving_mean", "moving_variance", "gamma", "beta"}; }
+    static std::vector<std::string> outputOrder() const { return {"y", "reserve_space", "mean", "inv_variance"}; }
+  }];
+}
 
 def OneFlow_CudnnFusedNormalizationAddReluGradOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu_grad", []> {
   let input = (ins
@@ -1722,6 +2618,10 @@ def OneFlow_CudnnFusedNormalizationAddReluGradOp : OneFlow_BaseOp<"cudnn_fused_n
     SI32Attr:$axis,
     F32Attr:$epsilon
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy", "mean", "inv_variance", "gamma", "beta", "reserve_space", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"gamma_diff", "beta_diff", "dx", "addend_diff"}; }
+  }];
 }
 
 def OneFlow_Deconv1dOp : OneFlow_BaseOp<"deconv1d", []> {
@@ -1742,6 +2642,10 @@ def OneFlow_Deconv1dOp : OneFlow_BaseOp<"deconv1d", []> {
     SI32ArrayAttr:$dilation_rate,
     SI32Attr:$groups
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "weight"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_Deconv2dOp : OneFlow_BaseOp<"deconv2d", []> {
@@ -1762,6 +2666,10 @@ def OneFlow_Deconv2dOp : OneFlow_BaseOp<"deconv2d", []> {
     SI32ArrayAttr:$dilation_rate,
     SI32Attr:$groups
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "weight"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_Deconv3dOp : OneFlow_BaseOp<"deconv3d", []> {
@@ -1782,6 +2690,10 @@ def OneFlow_Deconv3dOp : OneFlow_BaseOp<"deconv3d", []> {
     SI32ArrayAttr:$dilation_rate,
     SI32Attr:$groups
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "weight"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_DiagOp : OneFlow_BaseOp<"diag", []> {
@@ -1794,6 +2706,10 @@ def OneFlow_DiagOp : OneFlow_BaseOp<"diag", []> {
   let attrs = (ins
     SI32Attr:$diagonal
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_DiagGradOp : OneFlow_BaseOp<"diag_grad", []> {
@@ -1807,6 +2723,10 @@ def OneFlow_DiagGradOp : OneFlow_BaseOp<"diag_grad", []> {
   let attrs = (ins
     SI32Attr:$diagonal
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "in"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_DimGatherOp : OneFlow_BaseOp<"dim_gather", []> {
@@ -1820,6 +2740,10 @@ def OneFlow_DimGatherOp : OneFlow_BaseOp<"dim_gather", []> {
   let attrs = (ins
     SI32Attr:$dim
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input", "index"}; }
+    static std::vector<std::string> outputOrder() const { return {"output"}; }
+  }];
 }
 
 def OneFlow_DimScatterAddOp : OneFlow_BaseOp<"dim_scatter_add", []> {
@@ -1834,6 +2758,10 @@ def OneFlow_DimScatterAddOp : OneFlow_BaseOp<"dim_scatter_add", []> {
   let attrs = (ins
     SI32Attr:$dim
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input", "index", "src"}; }
+    static std::vector<std::string> outputOrder() const { return {"output"}; }
+  }];
 }
 
 def OneFlow_DimScatterAddLikeOp : OneFlow_BaseOp<"dim_scatter_add_like", []> {
@@ -1848,6 +2776,10 @@ def OneFlow_DimScatterAddLikeOp : OneFlow_BaseOp<"dim_scatter_add_like", []> {
   let attrs = (ins
     SI32Attr:$dim
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"like", "index", "src"}; }
+    static std::vector<std::string> outputOrder() const { return {"output"}; }
+  }];
 }
 
 def OneFlow_DimScatterAddScalarOp : OneFlow_BaseOp<"dim_scatter_add_scalar", []> {
@@ -1862,6 +2794,10 @@ def OneFlow_DimScatterAddScalarOp : OneFlow_BaseOp<"dim_scatter_add_scalar", []>
     F32Attr:$src_scalar,
     SI32Attr:$dim
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input", "index"}; }
+    static std::vector<std::string> outputOrder() const { return {"output"}; }
+  }];
 }
 
 def OneFlow_DimScatterMulOp : OneFlow_BaseOp<"dim_scatter_mul", []> {
@@ -1876,6 +2812,10 @@ def OneFlow_DimScatterMulOp : OneFlow_BaseOp<"dim_scatter_mul", []> {
   let attrs = (ins
     SI32Attr:$dim
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input", "index", "src"}; }
+    static std::vector<std::string> outputOrder() const { return {"output"}; }
+  }];
 }
 
 def OneFlow_DimScatterMulScalarOp : OneFlow_BaseOp<"dim_scatter_mul_scalar", []> {
@@ -1890,6 +2830,10 @@ def OneFlow_DimScatterMulScalarOp : OneFlow_BaseOp<"dim_scatter_mul_scalar", []>
     F32Attr:$src_scalar,
     SI32Attr:$dim
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input", "index"}; }
+    static std::vector<std::string> outputOrder() const { return {"output"}; }
+  }];
 }
 
 def OneFlow_DimScatterUpdateOp : OneFlow_BaseOp<"dim_scatter_update", []> {
@@ -1904,6 +2848,10 @@ def OneFlow_DimScatterUpdateOp : OneFlow_BaseOp<"dim_scatter_update", []> {
   let attrs = (ins
     SI32Attr:$dim
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input", "index", "src"}; }
+    static std::vector<std::string> outputOrder() const { return {"output"}; }
+  }];
 }
 
 def OneFlow_DimScatterUpdateScalarOp : OneFlow_BaseOp<"dim_scatter_update_scalar", []> {
@@ -1918,6 +2866,10 @@ def OneFlow_DimScatterUpdateScalarOp : OneFlow_BaseOp<"dim_scatter_update_scalar
     F32Attr:$src_scalar,
     SI32Attr:$dim
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input", "index"}; }
+    static std::vector<std::string> outputOrder() const { return {"output"}; }
+  }];
 }
 
 def OneFlow_DistributedPartialFcSampleOp : OneFlow_BaseOp<"distributed_partial_fc_sample", []> {
@@ -1934,6 +2886,10 @@ def OneFlow_DistributedPartialFcSampleOp : OneFlow_BaseOp<"distributed_partial_f
     SI64Attr:$num_sample,
     SI64Attr:$seed
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"weight", "label"}; }
+    static std::vector<std::string> outputOrder() const { return {"mapped_label", "sampled_label", "sampled_weight"}; }
+  }];
 }
 
 def OneFlow_DistributedPartialFcSampleDisableBoxingOp : OneFlow_BaseOp<"distributed_partial_fc_sample_disable_boxing", []> {
@@ -1945,6 +2901,10 @@ def OneFlow_DistributedPartialFcSampleDisableBoxingOp : OneFlow_BaseOp<"distribu
     AnyType:$boxing_disabled_sampled_weight_diff,
     AnyType:$boxing_disabled_sampled_label
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"sampled_weight_diff", "sampled_label"}; }
+    static std::vector<std::string> outputOrder() const { return {"boxing_disabled_sampled_weight_diff", "boxing_disabled_sampled_label"}; }
+  }];
 }
 
 def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", []> {
@@ -1959,6 +2919,10 @@ def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", []> {
   let attrs = (ins
     F32Attr:$scale
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "mask", "_add_to_output"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_DropoutGradOp : OneFlow_BaseOp<"dropout_grad", []> {
@@ -1972,6 +2936,10 @@ def OneFlow_DropoutGradOp : OneFlow_BaseOp<"dropout_grad", []> {
   let attrs = (ins
     F32Attr:$scale
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "mask"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_DynamicLossScaleScheduleOp : OneFlow_BaseOp<"dynamic_loss_scale_schedule", []> {
@@ -1984,6 +2952,10 @@ def OneFlow_DynamicLossScaleScheduleOp : OneFlow_BaseOp<"dynamic_loss_scale_sche
     SI64Attr:$increment_period,
     F32Attr:$multiplier
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"count_not_finite", "loss_scale", "good_step_counter"}; }
+    static std::vector<std::string> outputOrder() const { return {}; }
+  }];
 }
 
 def OneFlow_EagerBToSOp : OneFlow_BaseOp<"eager_b_to_s", []> {
@@ -1999,6 +2971,10 @@ def OneFlow_EagerBToSOp : OneFlow_BaseOp<"eager_b_to_s", []> {
     StrAttr:$out_parallel_conf,
     AnyI64ElementsAttr:$shape
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_EagerNaiveSToSOp : OneFlow_BaseOp<"eager_naive_s_to_s", []> {
@@ -2015,6 +2991,10 @@ def OneFlow_EagerNaiveSToSOp : OneFlow_BaseOp<"eager_naive_s_to_s", []> {
     StrAttr:$out_parallel_conf,
     AnyI64ElementsAttr:$shape
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_EagerNcclAllGatherOp : OneFlow_BaseOp<"eager_nccl_all_gather", []> {
@@ -2027,6 +3007,10 @@ def OneFlow_EagerNcclAllGatherOp : OneFlow_BaseOp<"eager_nccl_all_gather", []> {
   let attrs = (ins
     StrAttr:$parallel_conf
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_EagerNcclAllReduceOp : OneFlow_BaseOp<"eager_nccl_all_reduce", []> {
@@ -2040,6 +3024,10 @@ def OneFlow_EagerNcclAllReduceOp : OneFlow_BaseOp<"eager_nccl_all_reduce", []> {
     StrAttr:$parallel_conf,
     BoolAttr:$async_launch
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", []> {
@@ -2053,6 +3041,10 @@ def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", []> {
     StrAttr:$parallel_conf,
     SI64Attr:$root
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_EagerNcclReduceOp : OneFlow_BaseOp<"eager_nccl_reduce", []> {
@@ -2066,6 +3058,10 @@ def OneFlow_EagerNcclReduceOp : OneFlow_BaseOp<"eager_nccl_reduce", []> {
     StrAttr:$parallel_conf,
     SI64Attr:$root
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_EagerNcclReduceScatterOp : OneFlow_BaseOp<"eager_nccl_reduce_scatter", []> {
@@ -2079,6 +3075,10 @@ def OneFlow_EagerNcclReduceScatterOp : OneFlow_BaseOp<"eager_nccl_reduce_scatter
     StrAttr:$parallel_conf,
     StrAttr:$op_type
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_EagerNcclS2sOp : OneFlow_BaseOp<"eager_nccl_s2s", []> {
@@ -2093,6 +3093,10 @@ def OneFlow_EagerNcclS2sOp : OneFlow_BaseOp<"eager_nccl_s2s", []> {
     SI64Attr:$out_split_axis,
     StrAttr:$parallel_conf
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_EagerPToBOp : OneFlow_BaseOp<"eager_p_to_b", []> {
@@ -2107,6 +3111,10 @@ def OneFlow_EagerPToBOp : OneFlow_BaseOp<"eager_p_to_b", []> {
     StrAttr:$out_parallel_conf,
     AnyI64ElementsAttr:$shape
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_EagerPToSOp : OneFlow_BaseOp<"eager_p_to_s", []> {
@@ -2122,6 +3130,10 @@ def OneFlow_EagerPToSOp : OneFlow_BaseOp<"eager_p_to_s", []> {
     StrAttr:$out_parallel_conf,
     AnyI64ElementsAttr:$shape
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_EagerSToBOp : OneFlow_BaseOp<"eager_s_to_b", []> {
@@ -2137,6 +3149,10 @@ def OneFlow_EagerSToBOp : OneFlow_BaseOp<"eager_s_to_b", []> {
     StrAttr:$out_parallel_conf,
     AnyI64ElementsAttr:$shape
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", []> {
@@ -2150,6 +3166,10 @@ def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", []> 
     SI64Attr:$in_split_axis,
     StrAttr:$parallel_conf
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ElementwiseMaximumOp : OneFlow_BaseOp<"elementwise_maximum", []> {
@@ -2160,6 +3180,10 @@ def OneFlow_ElementwiseMaximumOp : OneFlow_BaseOp<"elementwise_maximum", []> {
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_ElementwiseMaximumBackwardOp : OneFlow_BaseOp<"elementwise_maximum_backward", []> {
@@ -2172,10 +3196,14 @@ def OneFlow_ElementwiseMaximumBackwardOp : OneFlow_BaseOp<"elementwise_maximum_b
     Optional<AnyType>:$dx,
     Optional<AnyType>:$dy
   );
-}
-  let input = (ins
+  let trait_attrs = (ins
     I32ElementsAttr:$result_segment_sizes
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dz", "x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx", "dy"}; }
+  }];
+}
 
 def OneFlow_ElementwiseMinimumOp : OneFlow_BaseOp<"elementwise_minimum", []> {
   let input = (ins
@@ -2185,6 +3213,10 @@ def OneFlow_ElementwiseMinimumOp : OneFlow_BaseOp<"elementwise_minimum", []> {
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_ElementwiseMinimumBackwardOp : OneFlow_BaseOp<"elementwise_minimum_backward", []> {
@@ -2197,10 +3229,14 @@ def OneFlow_ElementwiseMinimumBackwardOp : OneFlow_BaseOp<"elementwise_minimum_b
     Optional<AnyType>:$dx,
     Optional<AnyType>:$dy
   );
-}
-  let input = (ins
+  let trait_attrs = (ins
     I32ElementsAttr:$result_segment_sizes
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dz", "x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx", "dy"}; }
+  }];
+}
 
 def OneFlow_EluOp : OneFlow_BaseOp<"elu", []> {
   let input = (ins
@@ -2212,6 +3248,10 @@ def OneFlow_EluOp : OneFlow_BaseOp<"elu", []> {
   let attrs = (ins
     F64Attr:$alpha
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_EluGradOp : OneFlow_BaseOp<"elu_grad", []> {
@@ -2225,6 +3265,10 @@ def OneFlow_EluGradOp : OneFlow_BaseOp<"elu_grad", []> {
   let attrs = (ins
     F64Attr:$alpha
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", []> {
@@ -2236,6 +3280,10 @@ def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", []> {
     AnyI64ElementsAttr:$shape,
     StrArrayAttr:$nd_sbp
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ErfOp : OneFlow_BaseOp<"erf", []> {
@@ -2245,6 +3293,10 @@ def OneFlow_ErfOp : OneFlow_BaseOp<"erf", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_ErfGradOp : OneFlow_BaseOp<"erf_grad", []> {
@@ -2255,6 +3307,10 @@ def OneFlow_ErfGradOp : OneFlow_BaseOp<"erf_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_ErfcOp : OneFlow_BaseOp<"erfc", []> {
@@ -2264,6 +3320,10 @@ def OneFlow_ErfcOp : OneFlow_BaseOp<"erfc", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_ErfcGradOp : OneFlow_BaseOp<"erfc_grad", []> {
@@ -2274,6 +3334,10 @@ def OneFlow_ErfcGradOp : OneFlow_BaseOp<"erfc_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_ExpOp : OneFlow_BaseOp<"exp", []> {
@@ -2283,6 +3347,10 @@ def OneFlow_ExpOp : OneFlow_BaseOp<"exp", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_ExpGradOp : OneFlow_BaseOp<"exp_grad", []> {
@@ -2293,6 +3361,10 @@ def OneFlow_ExpGradOp : OneFlow_BaseOp<"exp_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_ExpandOp : OneFlow_BaseOp<"expand", []> {
@@ -2306,6 +3378,10 @@ def OneFlow_ExpandOp : OneFlow_BaseOp<"expand", []> {
     SI32ArrayAttr:$logical_in_shape,
     SI32ArrayAttr:$logical_expand_shape
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ExpandDimsOp : OneFlow_BaseOp<"expand_dims", []> {
@@ -2318,6 +3394,10 @@ def OneFlow_ExpandDimsOp : OneFlow_BaseOp<"expand_dims", []> {
   let attrs = (ins
     SI32Attr:$axis
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ExpandGradOp : OneFlow_BaseOp<"expand_grad", []> {
@@ -2331,6 +3411,10 @@ def OneFlow_ExpandGradOp : OneFlow_BaseOp<"expand_grad", []> {
     SI32ArrayAttr:$logical_out_shape,
     SI32ArrayAttr:$logical_expand_shape
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_Expm1Op : OneFlow_BaseOp<"expm1", []> {
@@ -2340,6 +3424,10 @@ def OneFlow_Expm1Op : OneFlow_BaseOp<"expm1", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_Expm1GradOp : OneFlow_BaseOp<"expm1_grad", []> {
@@ -2350,6 +3438,10 @@ def OneFlow_Expm1GradOp : OneFlow_BaseOp<"expm1_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_EyeOp : OneFlow_BaseOp<"eye", []> {
@@ -2362,6 +3454,10 @@ def OneFlow_EyeOp : OneFlow_BaseOp<"eye", []> {
     StrAttr:$dtype,
     StrArrayAttr:$nd_sbp
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_FakeQuantizationOp : OneFlow_BaseOp<"fake_quantization", []> {
@@ -2378,6 +3474,10 @@ def OneFlow_FakeQuantizationOp : OneFlow_BaseOp<"fake_quantization", []> {
     SI32Attr:$quantization_bit,
     StrAttr:$quantization_scheme
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "scale", "zero_point"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_FlattenOp : OneFlow_BaseOp<"flatten", []> {
@@ -2391,6 +3491,10 @@ def OneFlow_FlattenOp : OneFlow_BaseOp<"flatten", []> {
     SI32Attr:$start_dim,
     SI32Attr:$end_dim
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_FlipOp : OneFlow_BaseOp<"flip", []> {
@@ -2403,6 +3507,10 @@ def OneFlow_FlipOp : OneFlow_BaseOp<"flip", []> {
   let attrs = (ins
     SI32ArrayAttr:$dims
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_FlipGradOp : OneFlow_BaseOp<"flip_grad", []> {
@@ -2415,9 +3523,24 @@ def OneFlow_FlipGradOp : OneFlow_BaseOp<"flip_grad", []> {
   let attrs = (ins
     SI32ArrayAttr:$dims
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
-def OneFlow_FloorOp : OneFlow_IdempotentBaseOp<"floor", []> {}
+def OneFlow_FloorOp : OneFlow_IdempotentBaseOp<"floor", []> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
+}
 
 def OneFlow_FloorGradOp : OneFlow_BaseOp<"floor_grad", []> {
   let input = (ins
@@ -2427,6 +3550,10 @@ def OneFlow_FloorGradOp : OneFlow_BaseOp<"floor_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_FloordivOp : OneFlow_BaseOp<"floordiv", []> {
@@ -2437,6 +3564,10 @@ def OneFlow_FloordivOp : OneFlow_BaseOp<"floordiv", []> {
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_FloordivXGradOp : OneFlow_BaseOp<"floordiv_x_grad", []> {
@@ -2448,6 +3579,10 @@ def OneFlow_FloordivXGradOp : OneFlow_BaseOp<"floordiv_x_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "dz"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_FloordivYGradOp : OneFlow_BaseOp<"floordiv_y_grad", []> {
@@ -2459,9 +3594,17 @@ def OneFlow_FloordivYGradOp : OneFlow_BaseOp<"floordiv_y_grad", []> {
   let output = (outs
     AnyType:$dy
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "dz"}; }
+    static std::vector<std::string> outputOrder() const { return {"dy"}; }
+  }];
 }
 
 def OneFlow_FlushSummaryWriterOp : OneFlow_BaseOp<"flush_summary_writer", []> {
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {}; }
+    static std::vector<std::string> outputOrder() const { return {}; }
+  }];
 }
 
 def OneFlow_FoldOp : OneFlow_BaseOp<"fold", []> {
@@ -2478,6 +3621,10 @@ def OneFlow_FoldOp : OneFlow_BaseOp<"fold", []> {
     SI32ArrayAttr:$padding,
     SI32ArrayAttr:$dilation_rate
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", []> {
@@ -2491,6 +3638,10 @@ def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", []> {
   let attrs = (ins
     SI32Attr:$axis
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"a", "b"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_FusedBiasAddGeluGradOp : OneFlow_BaseOp<"fused_bias_add_gelu_grad", []> {
@@ -2505,6 +3656,10 @@ def OneFlow_FusedBiasAddGeluGradOp : OneFlow_BaseOp<"fused_bias_add_gelu_grad", 
   let attrs = (ins
     SI32Attr:$axis
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"a", "b", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale", []> {
@@ -2521,6 +3676,10 @@ def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale"
     SI32Attr:$axis,
     F32Attr:$scale
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"a", "b", "mask", "_add_to_output"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_FusedCastScaleOp : OneFlow_BaseOp<"fused_cast_scale", []> {
@@ -2534,6 +3693,10 @@ def OneFlow_FusedCastScaleOp : OneFlow_BaseOp<"fused_cast_scale", []> {
   let attrs = (ins
     F64Attr:$scale
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "scale_by_tensor"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_FusedScaleTrilOp : OneFlow_BaseOp<"fused_scale_tril", []> {
@@ -2552,6 +3715,10 @@ def OneFlow_FusedScaleTrilOp : OneFlow_BaseOp<"fused_scale_tril", []> {
     SI64Attr:$integer_scale_value,
     BoolAttr:$is_floating_scale_value
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_FusedSelfAttentionQueryMulKeyAndValueOp : OneFlow_BaseOp<"fused_self_attention_query_mul_key_and_value", []> {
@@ -2566,6 +3733,10 @@ def OneFlow_FusedSelfAttentionQueryMulKeyAndValueOp : OneFlow_BaseOp<"fused_self
     SI64Attr:$head_size,
     F32Attr:$alpha
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"hidden_states"}; }
+    static std::vector<std::string> outputOrder() const { return {"query_mul_key", "value"}; }
+  }];
 }
 
 def OneFlow_FusedSelfAttentionQueryMulKeyAndValueGradOp : OneFlow_BaseOp<"fused_self_attention_query_mul_key_and_value_grad", []> {
@@ -2580,6 +3751,10 @@ def OneFlow_FusedSelfAttentionQueryMulKeyAndValueGradOp : OneFlow_BaseOp<"fused_
   let attrs = (ins
     F32Attr:$alpha
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"query_mul_key_grad", "value_grad", "hidden_states"}; }
+    static std::vector<std::string> outputOrder() const { return {"hidden_states_grad"}; }
+  }];
 }
 
 def OneFlow_FusedTrilScaleSoftmaxMaskScaleOp : OneFlow_BaseOp<"fused_tril_scale_softmax_mask_scale", []> {
@@ -2597,6 +3772,10 @@ def OneFlow_FusedTrilScaleSoftmaxMaskScaleOp : OneFlow_BaseOp<"fused_tril_scale_
     F32Attr:$tril_scale_value,
     F32Attr:$mask_scale_value
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "mask"}; }
+    static std::vector<std::string> outputOrder() const { return {"y", "softmax_y"}; }
+  }];
 }
 
 def OneFlow_FusedTrilScaleSoftmaxMaskScaleGradOp : OneFlow_BaseOp<"fused_tril_scale_softmax_mask_scale_grad", []> {
@@ -2613,6 +3792,10 @@ def OneFlow_FusedTrilScaleSoftmaxMaskScaleGradOp : OneFlow_BaseOp<"fused_tril_sc
     F32Attr:$tril_scale_value,
     F32Attr:$mask_scale_value
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"softmax_y", "dy", "mask"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_GatherOp : OneFlow_BaseOp<"gather", []> {
@@ -2626,6 +3809,10 @@ def OneFlow_GatherOp : OneFlow_BaseOp<"gather", []> {
   let attrs = (ins
     SI64Attr:$axis
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "indices"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_GatherNdOp : OneFlow_BaseOp<"gather_nd", []> {
@@ -2636,6 +3823,10 @@ def OneFlow_GatherNdOp : OneFlow_BaseOp<"gather_nd", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"params", "indices"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_GeluOp : OneFlow_BaseOp<"gelu", []> {
@@ -2645,6 +3836,10 @@ def OneFlow_GeluOp : OneFlow_BaseOp<"gelu", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_GeluGradOp : OneFlow_BaseOp<"gelu_grad", []> {
@@ -2655,6 +3850,10 @@ def OneFlow_GeluGradOp : OneFlow_BaseOp<"gelu_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_GenTensorBufferOp : OneFlow_BaseOp<"gen_tensor_buffer", []> {
@@ -2668,6 +3867,10 @@ def OneFlow_GenTensorBufferOp : OneFlow_BaseOp<"gen_tensor_buffer", []> {
     StrAttr:$data_type,
     BoolAttr:$dynamic_out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_GenerateRandomBatchPermutationIndicesOp : OneFlow_BaseOp<"generate_random_batch_permutation_indices", []> {
@@ -2680,6 +3883,10 @@ def OneFlow_GenerateRandomBatchPermutationIndicesOp : OneFlow_BaseOp<"generate_r
   let attrs = (ins
     SI64Attr:$seed
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_GridSampleOp : OneFlow_BaseOp<"grid_sample", []> {
@@ -2695,6 +3902,10 @@ def OneFlow_GridSampleOp : OneFlow_BaseOp<"grid_sample", []> {
     StrAttr:$padding_mode,
     BoolAttr:$align_corners
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input", "grid"}; }
+    static std::vector<std::string> outputOrder() const { return {"output"}; }
+  }];
 }
 
 def OneFlow_GridSampleGradOp : OneFlow_BaseOp<"grid_sample_grad", []> {
@@ -2712,6 +3923,10 @@ def OneFlow_GridSampleGradOp : OneFlow_BaseOp<"grid_sample_grad", []> {
     StrAttr:$padding_mode,
     BoolAttr:$align_corners
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"doutput", "input", "grid"}; }
+    static std::vector<std::string> outputOrder() const { return {"dinput", "dgrid"}; }
+  }];
 }
 
 def OneFlow_HardsigmoidOp : OneFlow_BaseOp<"hardsigmoid", []> {
@@ -2721,6 +3936,10 @@ def OneFlow_HardsigmoidOp : OneFlow_BaseOp<"hardsigmoid", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_HardsigmoidGradOp : OneFlow_BaseOp<"hardsigmoid_grad", []> {
@@ -2731,6 +3950,10 @@ def OneFlow_HardsigmoidGradOp : OneFlow_BaseOp<"hardsigmoid_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_HardswishOp : OneFlow_BaseOp<"hardswish", []> {
@@ -2740,6 +3963,10 @@ def OneFlow_HardswishOp : OneFlow_BaseOp<"hardswish", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_HardswishGradOp : OneFlow_BaseOp<"hardswish_grad", []> {
@@ -2750,6 +3977,10 @@ def OneFlow_HardswishGradOp : OneFlow_BaseOp<"hardswish_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_HardtanhOp : OneFlow_BaseOp<"hardtanh", []> {
@@ -2763,6 +3994,10 @@ def OneFlow_HardtanhOp : OneFlow_BaseOp<"hardtanh", []> {
     F64Attr:$min_val,
     F64Attr:$max_val
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_HardtanhGradOp : OneFlow_BaseOp<"hardtanh_grad", []> {
@@ -2777,6 +4012,10 @@ def OneFlow_HardtanhGradOp : OneFlow_BaseOp<"hardtanh_grad", []> {
     F64Attr:$min_val,
     F64Attr:$max_val
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"y", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_HierarchicalParallelCastOp : OneFlow_BaseOp<"hierarchical_parallel_cast", []> {
@@ -2791,6 +4030,10 @@ def OneFlow_HierarchicalParallelCastOp : OneFlow_BaseOp<"hierarchical_parallel_c
     StrAttr:$grad_mode,
     StrArrayAttr:$grad_nd_sbp
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_HierarchicalParallelCastLikeOp : OneFlow_BaseOp<"hierarchical_parallel_cast_like", []> {
@@ -2801,6 +4044,10 @@ def OneFlow_HierarchicalParallelCastLikeOp : OneFlow_BaseOp<"hierarchical_parall
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "like"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_IdentityOp : OneFlow_BaseOp<"identity", []> {
@@ -2810,6 +4057,10 @@ def OneFlow_IdentityOp : OneFlow_BaseOp<"identity", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_IdentityBufferOp : OneFlow_BaseOp<"identity_buffer", []> {
@@ -2822,6 +4073,10 @@ def OneFlow_IdentityBufferOp : OneFlow_BaseOp<"identity_buffer", []> {
   let attrs = (ins
     SI64Attr:$buffer_size
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ImageBatchAlignOp : OneFlow_BaseOp<"image_batch_align", []> {
@@ -2837,6 +4092,10 @@ def OneFlow_ImageBatchAlignOp : OneFlow_BaseOp<"image_batch_align", []> {
     SI32Attr:$alignment,
     BoolAttr:$dynamic_out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ImageDecodeOp : OneFlow_BaseOp<"image_decode", []> {
@@ -2850,6 +4109,10 @@ def OneFlow_ImageDecodeOp : OneFlow_BaseOp<"image_decode", []> {
     StrAttr:$color_space,
     StrAttr:$data_type
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ImageFlipOp : OneFlow_BaseOp<"image_flip", []> {
@@ -2860,6 +4123,10 @@ def OneFlow_ImageFlipOp : OneFlow_BaseOp<"image_flip", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "flip_code"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ImageNormalizeOp : OneFlow_BaseOp<"image_normalize", []> {
@@ -2873,6 +4140,10 @@ def OneFlow_ImageNormalizeOp : OneFlow_BaseOp<"image_normalize", []> {
     F32ArrayAttr:$std,
     F32ArrayAttr:$mean
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ImageRandomCropOp : OneFlow_BaseOp<"image_random_crop", []> {
@@ -2889,6 +4160,10 @@ def OneFlow_ImageRandomCropOp : OneFlow_BaseOp<"image_random_crop", []> {
     F32ArrayAttr:$random_area,
     F32ArrayAttr:$random_aspect_ratio
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ImageResizeKeepAspectRatioOp : OneFlow_BaseOp<"image_resize_keep_aspect_ratio", []> {
@@ -2907,6 +4182,10 @@ def OneFlow_ImageResizeKeepAspectRatioOp : OneFlow_BaseOp<"image_resize_keep_asp
     BoolAttr:$resize_longer,
     StrAttr:$interpolation_type
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out", "size", "scale"}; }
+  }];
 }
 
 def OneFlow_ImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", []> {
@@ -2924,6 +4203,10 @@ def OneFlow_ImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", []> {
     StrAttr:$data_type,
     StrAttr:$interpolation_type
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out", "scale"}; }
+  }];
 }
 
 def OneFlow_ImageTargetResizeOp : OneFlow_BaseOp<"image_target_resize", []> {
@@ -2939,6 +4222,10 @@ def OneFlow_ImageTargetResizeOp : OneFlow_BaseOp<"image_target_resize", []> {
     SI32Attr:$target_size,
     SI32Attr:$max_size
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out", "size", "scale"}; }
+  }];
 }
 
 def OneFlow_InTopKOp : OneFlow_BaseOp<"in_top_k", []> {
@@ -2952,6 +4239,10 @@ def OneFlow_InTopKOp : OneFlow_BaseOp<"in_top_k", []> {
   let attrs = (ins
     SI32Attr:$k
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"targets", "predictions"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_update", []> {
@@ -2975,10 +4266,14 @@ def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_upda
     BoolAttr:$amsgrad,
     BoolAttr:$do_bias_correction
   );
-}
-  let input = (ins
+  let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"model", "model_diff_indices", "model_diff_values", "learning_rate", "bias_correction1", "bias_correction2", "m", "v", "max_v"}; }
+    static std::vector<std::string> outputOrder() const { return {}; }
+  }];
+}
 
 def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momentum_update", []> {
   let input = (ins
@@ -2992,6 +4287,10 @@ def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momen
     F32Attr:$beta,
     F32Attr:$weight_decay
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"model", "model_diff_indices", "model_diff_values", "learning_rate", "momentum"}; }
+    static std::vector<std::string> outputOrder() const { return {}; }
+  }];
 }
 
 def OneFlow_IndexedSlicesReduceSumOp : OneFlow_BaseOp<"indexed_slices_reduce_sum", []> {
@@ -3004,6 +4303,10 @@ def OneFlow_IndexedSlicesReduceSumOp : OneFlow_BaseOp<"indexed_slices_reduce_sum
     AnyType:$y_values,
     AnyType:$num_unique
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x_indices", "x_values"}; }
+    static std::vector<std::string> outputOrder() const { return {"y_indices", "y_values", "num_unique"}; }
+  }];
 }
 
 def OneFlow_IndexedSlicesSgdUpdateOp : OneFlow_BaseOp<"indexed_slices_sgd_update", []> {
@@ -3016,6 +4319,10 @@ def OneFlow_IndexedSlicesSgdUpdateOp : OneFlow_BaseOp<"indexed_slices_sgd_update
   let attrs = (ins
     F32Attr:$weight_decay
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"model", "model_diff_indices", "model_diff_values", "learning_rate"}; }
+    static std::vector<std::string> outputOrder() const { return {}; }
+  }];
 }
 
 def OneFlow_KlDivLossOp : OneFlow_BaseOp<"kl_div_loss", []> {
@@ -3030,6 +4337,10 @@ def OneFlow_KlDivLossOp : OneFlow_BaseOp<"kl_div_loss", []> {
     StrAttr:$reduction,
     BoolAttr:$log_target
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input", "target"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_KlDivLossGradOp : OneFlow_BaseOp<"kl_div_loss_grad", []> {
@@ -3045,6 +4356,10 @@ def OneFlow_KlDivLossGradOp : OneFlow_BaseOp<"kl_div_loss_grad", []> {
     StrAttr:$reduction,
     BoolAttr:$log_target
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input", "target", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_L1L2RegularizeGradientOp : OneFlow_BaseOp<"l1_l2_regularize_gradient", []> {
@@ -3059,6 +4374,10 @@ def OneFlow_L1L2RegularizeGradientOp : OneFlow_BaseOp<"l1_l2_regularize_gradient
     F32Attr:$l1,
     F32Attr:$l2
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"model", "model_diff"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_L2NormalizeOp : OneFlow_BaseOp<"l2_normalize", []> {
@@ -3073,6 +4392,10 @@ def OneFlow_L2NormalizeOp : OneFlow_BaseOp<"l2_normalize", []> {
     SI32Attr:$axis,
     F32Attr:$epsilon
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y", "square_x_sum"}; }
+  }];
 }
 
 def OneFlow_L2NormalizeGradOp : OneFlow_BaseOp<"l2_normalize_grad", []> {
@@ -3088,6 +4411,10 @@ def OneFlow_L2NormalizeGradOp : OneFlow_BaseOp<"l2_normalize_grad", []> {
     SI32Attr:$axis,
     F32Attr:$epsilon
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "y", "square_x_sum"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", []> {
@@ -3111,10 +4438,14 @@ def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", []> {
     F32Attr:$l2,
     F32Attr:$weight_decay
   );
-}
-  let input = (ins
+  let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"m", "v", "beta1_t", "beta2_t", "model", "model_diff", "learning_rate", "scale_by_tensor", "skip_if"}; }
+    static std::vector<std::string> outputOrder() const { return {}; }
+  }];
+}
 
 def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", []> {
   let input = (ins
@@ -3134,10 +4465,14 @@ def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", []> {
     F32Attr:$lars_coefficient,
     F32Attr:$weight_decay
   );
-}
-  let input = (ins
+  let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"model", "model_diff", "learning_rate", "momentum", "scale_by_tensor", "skip_if"}; }
+    static std::vector<std::string> outputOrder() const { return {}; }
+  }];
+}
 
 def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", []> {
   let input = (ins
@@ -3158,10 +4493,14 @@ def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", []> {
     SI64Attr:$begin_params_axis,
     F64Attr:$epsilon
   );
-}
-  let input = (ins
+  let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "beta", "gamma"}; }
+    static std::vector<std::string> outputOrder() const { return {"y", "mean", "inv_variance", "normalized"}; }
+  }];
+}
 
 def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", []> {
   let input = (ins
@@ -3178,6 +4517,10 @@ def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", []> {
     SI64Attr:$begin_norm_axis,
     F64Attr:$epsilon
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "x", "mean", "inv_variance", "_add_to_output"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_LayerNormParamGradOp : OneFlow_BaseOp<"layer_norm_param_grad", []> {
@@ -3195,11 +4538,15 @@ def OneFlow_LayerNormParamGradOp : OneFlow_BaseOp<"layer_norm_param_grad", []> {
   let attrs = (ins
     SI64Attr:$begin_params_axis
   );
-}
-  let input = (ins
+  let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes,
     I32ElementsAttr:$result_segment_sizes
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "normalized", "gamma"}; }
+    static std::vector<std::string> outputOrder() const { return {"normalized_diff", "beta_diff", "gamma_diff", "reduce_buf"}; }
+  }];
+}
 
 def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", []> {
   let input = (ins
@@ -3211,6 +4558,10 @@ def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", []> {
   let attrs = (ins
     F32Attr:$alpha
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_LeakyReluGradOp : OneFlow_BaseOp<"leaky_relu_grad", []> {
@@ -3224,6 +4575,10 @@ def OneFlow_LeakyReluGradOp : OneFlow_BaseOp<"leaky_relu_grad", []> {
   let attrs = (ins
     F32Attr:$alpha
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_LgammaOp : OneFlow_BaseOp<"lgamma", []> {
@@ -3233,6 +4588,10 @@ def OneFlow_LgammaOp : OneFlow_BaseOp<"lgamma", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_LgammaGradOp : OneFlow_BaseOp<"lgamma_grad", []> {
@@ -3243,6 +4602,10 @@ def OneFlow_LgammaGradOp : OneFlow_BaseOp<"lgamma_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_LogOp : OneFlow_BaseOp<"log", []> {
@@ -3252,6 +4615,10 @@ def OneFlow_LogOp : OneFlow_BaseOp<"log", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_Log1pOp : OneFlow_BaseOp<"log1p", []> {
@@ -3261,6 +4628,10 @@ def OneFlow_Log1pOp : OneFlow_BaseOp<"log1p", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_Log1pGradOp : OneFlow_BaseOp<"log1p_grad", []> {
@@ -3271,6 +4642,10 @@ def OneFlow_Log1pGradOp : OneFlow_BaseOp<"log1p_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_LogGradOp : OneFlow_BaseOp<"log_grad", []> {
@@ -3281,6 +4656,10 @@ def OneFlow_LogGradOp : OneFlow_BaseOp<"log_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_LogSigmoidOp : OneFlow_BaseOp<"log_sigmoid", []> {
@@ -3290,6 +4669,10 @@ def OneFlow_LogSigmoidOp : OneFlow_BaseOp<"log_sigmoid", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_LogSigmoidGradOp : OneFlow_BaseOp<"log_sigmoid_grad", []> {
@@ -3300,6 +4683,10 @@ def OneFlow_LogSigmoidGradOp : OneFlow_BaseOp<"log_sigmoid_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_LogSoftmaxOp : OneFlow_BaseOp<"log_softmax", []> {
@@ -3309,6 +4696,10 @@ def OneFlow_LogSoftmaxOp : OneFlow_BaseOp<"log_softmax", []> {
   let output = (outs
     AnyType:$prob
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"prob"}; }
+  }];
 }
 
 def OneFlow_LogSoftmaxGradOp : OneFlow_BaseOp<"log_softmax_grad", []> {
@@ -3319,6 +4710,10 @@ def OneFlow_LogSoftmaxGradOp : OneFlow_BaseOp<"log_softmax_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"prob", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_LogicalNotOp : OneFlow_BaseOp<"logical_not", []> {
@@ -3328,6 +4723,10 @@ def OneFlow_LogicalNotOp : OneFlow_BaseOp<"logical_not", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_LogicalSliceOp : OneFlow_BaseOp<"logical_slice", []> {
@@ -3342,6 +4741,10 @@ def OneFlow_LogicalSliceOp : OneFlow_BaseOp<"logical_slice", []> {
     SI64ArrayAttr:$stop,
     SI64ArrayAttr:$step
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", []> {
@@ -3354,6 +4757,10 @@ def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", []> {
     SI64ArrayAttr:$stop,
     SI64ArrayAttr:$step
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"ref", "value"}; }
+    static std::vector<std::string> outputOrder() const { return {}; }
+  }];
 }
 
 def OneFlow_MaskedFillOp : OneFlow_BaseOp<"masked_fill", []> {
@@ -3370,6 +4777,10 @@ def OneFlow_MaskedFillOp : OneFlow_BaseOp<"masked_fill", []> {
     SI64Attr:$int_operand,
     F64Attr:$float_operand
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "mask"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", []> {
@@ -3386,31 +4797,293 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", []> {
     BoolAttr:$transpose_b,
     F64Attr:$alpha
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"a", "b", "_add_to_output"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
-def OneFlow_LazyMaxPool1DOp : OneFlow_LazyPoolBaseOp<"max_pool_1d", []> {}
+def OneFlow_LazyMaxPool1DOp : OneFlow_LazyPoolBaseOp<"max_pool_1d", []> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let attrs = (ins
+    StrAttr:$padding,
+    SI32ArrayAttr:$padding_before,
+    SI32ArrayAttr:$padding_after,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$pool_size,
+    SI32ArrayAttr:$strides,
+    BoolAttr:$ceil_mode
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
+}
 
-def OneFlow_LazyMaxPool1DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_1d_grad", []> {}
+def OneFlow_LazyMaxPool1DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_1d_grad", []> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    StrAttr:$padding,
+    SI32ArrayAttr:$padding_before,
+    SI32ArrayAttr:$padding_after,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$pool_size,
+    SI32ArrayAttr:$strides,
+    BoolAttr:$ceil_mode
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
+}
 
-def OneFlow_LazyMaxPool2DOp : OneFlow_LazyPoolBaseOp<"max_pool_2d", []> {}
+def OneFlow_LazyMaxPool2DOp : OneFlow_LazyPoolBaseOp<"max_pool_2d", []> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let attrs = (ins
+    StrAttr:$padding,
+    SI32ArrayAttr:$padding_before,
+    SI32ArrayAttr:$padding_after,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$pool_size,
+    SI32ArrayAttr:$strides,
+    BoolAttr:$ceil_mode
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
+}
 
-def OneFlow_LazyMaxPool2DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_2d_grad", []> {}
+def OneFlow_LazyMaxPool2DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_2d_grad", []> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    StrAttr:$padding,
+    SI32ArrayAttr:$padding_before,
+    SI32ArrayAttr:$padding_after,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$pool_size,
+    SI32ArrayAttr:$strides,
+    BoolAttr:$ceil_mode
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
+}
 
-def OneFlow_LazyMaxPool3DOp : OneFlow_LazyPoolBaseOp<"max_pool_3d", []> {}
+def OneFlow_LazyMaxPool3DOp : OneFlow_LazyPoolBaseOp<"max_pool_3d", []> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let attrs = (ins
+    StrAttr:$padding,
+    SI32ArrayAttr:$padding_before,
+    SI32ArrayAttr:$padding_after,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$pool_size,
+    SI32ArrayAttr:$strides,
+    BoolAttr:$ceil_mode
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
+}
 
-def OneFlow_LazyMaxPool3DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_3d_grad", []> {}
+def OneFlow_LazyMaxPool3DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_3d_grad", []> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    StrAttr:$padding,
+    SI32ArrayAttr:$padding_before,
+    SI32ArrayAttr:$padding_after,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$pool_size,
+    SI32ArrayAttr:$strides,
+    BoolAttr:$ceil_mode
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
+}
 
-def OneFlow_EagerMaxPool1DOp : OneFlow_EagerPoolBaseOp<"maxpool_1d", []> {}
+def OneFlow_EagerMaxPool1DOp : OneFlow_EagerPoolBaseOp<"maxpool_1d", []> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y,
+    AnyType:$indice
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$padding,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$stride,
+    SI32ArrayAttr:$dilation,
+    BoolAttr:$return_indices,
+    BoolAttr:$ceil_mode
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y", "indice"}; }
+  }];
+}
 
-def OneFlow_EagerMaxPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_1d_grad", []> {}
+def OneFlow_EagerMaxPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_1d_grad", []> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y,
+    AnyType:$indice,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$padding,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$stride,
+    SI32ArrayAttr:$dilation,
+    BoolAttr:$return_indices,
+    BoolAttr:$ceil_mode
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "indice", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
+}
 
-def OneFlow_EagerMaxPool2DOp : OneFlow_EagerPoolBaseOp<"maxpool_2d", []> {}
+def OneFlow_EagerMaxPool2DOp : OneFlow_EagerPoolBaseOp<"maxpool_2d", []> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y,
+    AnyType:$indice
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$padding,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$stride,
+    SI32ArrayAttr:$dilation,
+    BoolAttr:$return_indices,
+    BoolAttr:$ceil_mode
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y", "indice"}; }
+  }];
+}
 
-def OneFlow_EagerMaxPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_2d_grad", []> {}
+def OneFlow_EagerMaxPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_2d_grad", []> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y,
+    AnyType:$indice,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$padding,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$stride,
+    SI32ArrayAttr:$dilation,
+    BoolAttr:$return_indices,
+    BoolAttr:$ceil_mode
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "indice", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
+}
 
-def OneFlow_EagerMaxPool3DOp : OneFlow_EagerPoolBaseOp<"maxpool_3d", []> {}
+def OneFlow_EagerMaxPool3DOp : OneFlow_EagerPoolBaseOp<"maxpool_3d", []> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y,
+    AnyType:$indice
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$padding,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$stride,
+    SI32ArrayAttr:$dilation,
+    BoolAttr:$return_indices,
+    BoolAttr:$ceil_mode
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y", "indice"}; }
+  }];
+}
 
-def OneFlow_EagerMaxPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_3d_grad", []> {}
+def OneFlow_EagerMaxPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_3d_grad", []> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y,
+    AnyType:$indice,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$padding,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$stride,
+    SI32ArrayAttr:$dilation,
+    BoolAttr:$return_indices,
+    BoolAttr:$ceil_mode
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "indice", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
+}
 
 def OneFlow_MegatronGptMmapDataLoaderOp : OneFlow_BaseOp<"megatron_gpt_mmap_data_loader", []> {
   let input = (ins
@@ -3432,6 +5105,10 @@ def OneFlow_MegatronGptMmapDataLoaderOp : OneFlow_BaseOp<"megatron_gpt_mmap_data
     SI64Attr:$random_seed,
     StrArrayAttr:$nd_sbp
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"iteration"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_MinMaxObserverOp : OneFlow_BaseOp<"min_max_observer", []> {
@@ -3448,6 +5125,10 @@ def OneFlow_MinMaxObserverOp : OneFlow_BaseOp<"min_max_observer", []> {
     StrAttr:$quantization_scheme,
     BoolAttr:$per_layer_quantization
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"scale", "zero_point"}; }
+  }];
 }
 
 def OneFlow_MishOp : OneFlow_BaseOp<"mish", []> {
@@ -3457,6 +5138,10 @@ def OneFlow_MishOp : OneFlow_BaseOp<"mish", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_MishGradOp : OneFlow_BaseOp<"mish_grad", []> {
@@ -3467,6 +5152,10 @@ def OneFlow_MishGradOp : OneFlow_BaseOp<"mish_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", []> {
@@ -3479,6 +5168,10 @@ def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", []> {
   let attrs = (ins
     StrAttr:$mlir_assembly
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", []> {
@@ -3498,10 +5191,14 @@ def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", []> {
     F32Attr:$beta,
     F32Attr:$weight_decay
   );
-}
-  let input = (ins
+  let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"model", "model_diff", "momentum", "learning_rate", "scale_by_tensor", "skip_if"}; }
+    static std::vector<std::string> outputOrder() const { return {}; }
+  }];
+}
 
 def OneFlow_MovingAverageMinMaxObserverOp : OneFlow_BaseOp<"moving_average_min_max_observer", []> {
   let input = (ins
@@ -3522,6 +5219,10 @@ def OneFlow_MovingAverageMinMaxObserverOp : OneFlow_BaseOp<"moving_average_min_m
     StrAttr:$quantization_scheme,
     F32Attr:$momentum
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "current_train_step", "moving_max", "moving_min"}; }
+    static std::vector<std::string> outputOrder() const { return {"scale", "zero_point"}; }
+  }];
 }
 
 def OneFlow_MultiCountNotFiniteOp : OneFlow_BaseOp<"multi_count_not_finite", []> {
@@ -3531,6 +5232,10 @@ def OneFlow_MultiCountNotFiniteOp : OneFlow_BaseOp<"multi_count_not_finite", []>
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_MultiSquareSumOp : OneFlow_BaseOp<"multi_square_sum", []> {
@@ -3540,6 +5245,10 @@ def OneFlow_MultiSquareSumOp : OneFlow_BaseOp<"multi_square_sum", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_MultiplyOp : OneFlow_BaseOp<"multiply", []> {
@@ -3550,6 +5259,10 @@ def OneFlow_MultiplyOp : OneFlow_BaseOp<"multiply", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_NarrowOp : OneFlow_BaseOp<"narrow", []> {
@@ -3564,6 +5277,10 @@ def OneFlow_NarrowOp : OneFlow_BaseOp<"narrow", []> {
     SI64Attr:$start,
     SI64Attr:$length
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_NarrowGradOp : OneFlow_BaseOp<"narrow_grad", []> {
@@ -3579,9 +5296,24 @@ def OneFlow_NarrowGradOp : OneFlow_BaseOp<"narrow_grad", []> {
     SI64Attr:$start,
     SI64Attr:$length
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "like"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
-def OneFlow_NegativeOp : OneFlow_InvolutionBaseOp<"negative", []> {}
+def OneFlow_NegativeOp : OneFlow_InvolutionBaseOp<"negative", []> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
+}
 
 def OneFlow_NegativeGradOp : OneFlow_BaseOp<"negative_grad", []> {
   let input = (ins
@@ -3591,6 +5323,10 @@ def OneFlow_NegativeGradOp : OneFlow_BaseOp<"negative_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_NllOp : OneFlow_BaseOp<"nll", []> {
@@ -3607,6 +5343,10 @@ def OneFlow_NllOp : OneFlow_BaseOp<"nll", []> {
     SI64Attr:$ignore_index,
     StrAttr:$reduction
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input", "target", "weight"}; }
+    static std::vector<std::string> outputOrder() const { return {"out", "total_weight"}; }
+  }];
 }
 
 def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", []> {
@@ -3624,6 +5364,10 @@ def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", []> {
     SI64Attr:$ignore_index,
     StrAttr:$reduction
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input", "target", "total_weight", "weight", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_NmsOp : OneFlow_BaseOp<"nms", []> {
@@ -3637,6 +5381,10 @@ def OneFlow_NmsOp : OneFlow_BaseOp<"nms", []> {
     F32Attr:$iou_threshold,
     SI32Attr:$keep_n
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_NormalOp : OneFlow_BaseOp<"normal", []> {
@@ -3650,6 +5398,10 @@ def OneFlow_NormalOp : OneFlow_BaseOp<"normal", []> {
     AnyI64ElementsAttr:$shape,
     StrAttr:$nd_sbp
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", []> {
@@ -3672,11 +5424,15 @@ def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", []> {
     BoolAttr:$training,
     F32Attr:$momentum
   );
-}
-  let input = (ins
+  let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes,
     I32ElementsAttr:$result_segment_sizes
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "moving_mean", "moving_variance", "gamma", "beta", "_add_to_output"}; }
+    static std::vector<std::string> outputOrder() const { return {"y", "mean", "inv_variance"}; }
+  }];
+}
 
 def OneFlow_NormalizationAddReluOp : OneFlow_BaseOp<"normalization_add_relu", []> {
   let input = (ins
@@ -3699,11 +5455,15 @@ def OneFlow_NormalizationAddReluOp : OneFlow_BaseOp<"normalization_add_relu", []
     BoolAttr:$training,
     F32Attr:$momentum
   );
-}
-  let input = (ins
+  let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes,
     I32ElementsAttr:$result_segment_sizes
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "addend", "moving_mean", "moving_variance", "gamma", "beta"}; }
+    static std::vector<std::string> outputOrder() const { return {"y", "reserve_space", "mean", "inv_variance"}; }
+  }];
+}
 
 def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_grad", []> {
   let input = (ins
@@ -3726,6 +5486,10 @@ def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_
     SI32Attr:$axis,
     F32Attr:$epsilon
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy", "mean", "inv_variance", "gamma", "beta", "reserve_space", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"gamma_diff", "beta_diff", "dx", "addend_diff"}; }
+  }];
 }
 
 def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", []> {
@@ -3745,6 +5509,10 @@ def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", []> {
     SI32Attr:$axis,
     F32Attr:$epsilon
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy", "mean", "inv_variance", "gamma"}; }
+    static std::vector<std::string> outputOrder() const { return {"gamma_diff", "beta_diff", "dx"}; }
+  }];
 }
 
 def OneFlow_NvtxEndOp : OneFlow_BaseOp<"nvtx_end", []> {
@@ -3757,6 +5525,10 @@ def OneFlow_NvtxEndOp : OneFlow_BaseOp<"nvtx_end", []> {
   let attrs = (ins
     StrAttr:$mark_prefix
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_NvtxStartOp : OneFlow_BaseOp<"nvtx_start", []> {
@@ -3769,6 +5541,10 @@ def OneFlow_NvtxStartOp : OneFlow_BaseOp<"nvtx_start", []> {
   let attrs = (ins
     StrAttr:$mark_prefix
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ObjectBboxFlipOp : OneFlow_BaseOp<"object_bbox_flip", []> {
@@ -3780,6 +5556,10 @@ def OneFlow_ObjectBboxFlipOp : OneFlow_BaseOp<"object_bbox_flip", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"bbox", "image_size", "flip_code"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ObjectBboxScaleOp : OneFlow_BaseOp<"object_bbox_scale", []> {
@@ -3790,6 +5570,10 @@ def OneFlow_ObjectBboxScaleOp : OneFlow_BaseOp<"object_bbox_scale", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"bbox", "scale"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ObjectSegmentationPolygonFlipOp : OneFlow_BaseOp<"object_segmentation_polygon_flip", []> {
@@ -3801,6 +5585,10 @@ def OneFlow_ObjectSegmentationPolygonFlipOp : OneFlow_BaseOp<"object_segmentatio
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"poly", "image_size", "flip_code"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ObjectSegmentationPolygonScaleOp : OneFlow_BaseOp<"object_segmentation_polygon_scale", []> {
@@ -3811,6 +5599,10 @@ def OneFlow_ObjectSegmentationPolygonScaleOp : OneFlow_BaseOp<"object_segmentati
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"poly", "scale"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ObjectSegmentationPolygonToMaskOp : OneFlow_BaseOp<"object_segmentation_polygon_to_mask", []> {
@@ -3822,6 +5614,10 @@ def OneFlow_ObjectSegmentationPolygonToMaskOp : OneFlow_BaseOp<"object_segmentat
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"poly", "poly_index", "image_size"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_OfrecordBytesDecoderOp : OneFlow_BaseOp<"ofrecord_bytes_decoder", []> {
@@ -3834,6 +5630,10 @@ def OneFlow_OfrecordBytesDecoderOp : OneFlow_BaseOp<"ofrecord_bytes_decoder", []
   let attrs = (ins
     StrAttr:$name
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_OfrecordImageClassificationReaderOp : OneFlow_BaseOp<"ofrecord_image_classification_reader", []> {
@@ -3857,6 +5657,10 @@ def OneFlow_OfrecordImageClassificationReaderOp : OneFlow_BaseOp<"ofrecord_image
     SI32Attr:$decode_buffer_size_per_thread,
     SI32Attr:$num_decode_threads_per_machine
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {}; }
+    static std::vector<std::string> outputOrder() const { return {"image", "label"}; }
+  }];
 }
 
 def OneFlow_OfrecordImageDecoderOp : OneFlow_BaseOp<"ofrecord_image_decoder", []> {
@@ -3870,6 +5674,10 @@ def OneFlow_OfrecordImageDecoderOp : OneFlow_BaseOp<"ofrecord_image_decoder", []
     StrAttr:$name,
     StrAttr:$color_space
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_OfrecordImageDecoderRandomCropOp : OneFlow_BaseOp<"ofrecord_image_decoder_random_crop", []> {
@@ -3888,6 +5696,10 @@ def OneFlow_OfrecordImageDecoderRandomCropOp : OneFlow_BaseOp<"ofrecord_image_de
     F32ArrayAttr:$random_area,
     F32ArrayAttr:$random_aspect_ratio
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_OfrecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", []> {
@@ -3904,6 +5716,10 @@ def OneFlow_OfrecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", []> {
     BoolAttr:$dim1_varying_length,
     BoolAttr:$truncate
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_OneHotOp : OneFlow_BaseOp<"one_hot", []> {
@@ -3921,6 +5737,10 @@ def OneFlow_OneHotOp : OneFlow_BaseOp<"one_hot", []> {
     SI64Attr:$integer_off_value,
     StrAttr:$dtype
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"indices"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_OnerecDecoderOp : OneFlow_BaseOp<"onerec_decoder", []> {
@@ -3940,9 +5760,24 @@ def OneFlow_OnerecDecoderOp : OneFlow_BaseOp<"onerec_decoder", []> {
     BoolAttr:$has_batch_padding,
     AnyI64ElementsAttr:$batch_padding
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
-def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", []> {}
+def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", []> {
+  let input = (ins
+    AnyType:$like
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"like"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
+}
 
 def OneFlow_PackOp : OneFlow_BaseOp<"pack", []> {
   let input = (ins
@@ -3954,6 +5789,10 @@ def OneFlow_PackOp : OneFlow_BaseOp<"pack", []> {
   let attrs = (ins
     SI32Attr:$pack_num
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_PadOp : OneFlow_BaseOp<"pad", []> {
@@ -3969,6 +5808,10 @@ def OneFlow_PadOp : OneFlow_BaseOp<"pad", []> {
     F64Attr:$floating_constant_value,
     SI64Attr:$integral_constant_value
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_PadGradOp : OneFlow_BaseOp<"pad_grad", []> {
@@ -3984,6 +5827,10 @@ def OneFlow_PadGradOp : OneFlow_BaseOp<"pad_grad", []> {
     F64Attr:$floating_constant_value,
     SI64Attr:$integral_constant_value
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_ParallelCastOp : OneFlow_BaseOp<"parallel_cast", []> {
@@ -3997,6 +5844,10 @@ def OneFlow_ParallelCastOp : OneFlow_BaseOp<"parallel_cast", []> {
     StrAttr:$sbp_parallel,
     StrAttr:$grad_sbp_parallel
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_PowOp : OneFlow_BaseOp<"pow", []> {
@@ -4007,6 +5858,10 @@ def OneFlow_PowOp : OneFlow_BaseOp<"pow", []> {
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_PowXGradOp : OneFlow_BaseOp<"pow_x_grad", []> {
@@ -4018,6 +5873,10 @@ def OneFlow_PowXGradOp : OneFlow_BaseOp<"pow_x_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "dz"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_PowYGradOp : OneFlow_BaseOp<"pow_y_grad", []> {
@@ -4029,6 +5888,10 @@ def OneFlow_PowYGradOp : OneFlow_BaseOp<"pow_y_grad", []> {
   let output = (outs
     AnyType:$dy
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "dz"}; }
+    static std::vector<std::string> outputOrder() const { return {"dy"}; }
+  }];
 }
 
 def OneFlow_PreluOp : OneFlow_BaseOp<"prelu", []> {
@@ -4039,6 +5902,10 @@ def OneFlow_PreluOp : OneFlow_BaseOp<"prelu", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "alpha"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_PreluGradOp : OneFlow_BaseOp<"prelu_grad", []> {
@@ -4051,6 +5918,10 @@ def OneFlow_PreluGradOp : OneFlow_BaseOp<"prelu_grad", []> {
     AnyType:$dx,
     AnyType:$alpha_diff
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "x", "alpha"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx", "alpha_diff"}; }
+  }];
 }
 
 def OneFlow_QuantizationOp : OneFlow_BaseOp<"quantization", []> {
@@ -4067,6 +5938,10 @@ def OneFlow_QuantizationOp : OneFlow_BaseOp<"quantization", []> {
     SI32Attr:$quantization_bit,
     StrAttr:$quantization_scheme
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "scale", "zero_point"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", []> {
@@ -4080,6 +5955,10 @@ def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", []> {
     F32Attr:$rate,
     SI64Attr:$seed
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"like"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_RandpermOp : OneFlow_BaseOp<"randperm", []> {
@@ -4090,9 +5969,24 @@ def OneFlow_RandpermOp : OneFlow_BaseOp<"randperm", []> {
     SI32Attr:$n,
     StrAttr:$nd_sbp
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
-def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", []> {}
+def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", []> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
+}
 
 def OneFlow_ReciprocalGradOp : OneFlow_BaseOp<"reciprocal_grad", []> {
   let input = (ins
@@ -4102,6 +5996,10 @@ def OneFlow_ReciprocalGradOp : OneFlow_BaseOp<"reciprocal_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_ReciprocalNoNanOp : OneFlow_BaseOp<"reciprocal_no_nan", []> {
@@ -4111,6 +6009,10 @@ def OneFlow_ReciprocalNoNanOp : OneFlow_BaseOp<"reciprocal_no_nan", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_ReciprocalNoNanGradOp : OneFlow_BaseOp<"reciprocal_no_nan_grad", []> {
@@ -4121,6 +6023,10 @@ def OneFlow_ReciprocalNoNanGradOp : OneFlow_BaseOp<"reciprocal_no_nan_grad", []>
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_RecvOp : OneFlow_BaseOp<"recv", []> {
@@ -4134,6 +6040,10 @@ def OneFlow_RecvOp : OneFlow_BaseOp<"recv", []> {
     StrAttr:$device_type,
     SI64Attr:$device_id
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ReduceAllOp : OneFlow_BaseOp<"reduce_all", []> {
@@ -4147,6 +6057,10 @@ def OneFlow_ReduceAllOp : OneFlow_BaseOp<"reduce_all", []> {
     SI32ArrayAttr:$axis,
     BoolAttr:$keepdims
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input_tensor"}; }
+    static std::vector<std::string> outputOrder() const { return {"output_tensor"}; }
+  }];
 }
 
 def OneFlow_ReduceAnyOp : OneFlow_BaseOp<"reduce_any", []> {
@@ -4160,6 +6074,10 @@ def OneFlow_ReduceAnyOp : OneFlow_BaseOp<"reduce_any", []> {
     SI32ArrayAttr:$axis,
     BoolAttr:$keepdims
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input_tensor"}; }
+    static std::vector<std::string> outputOrder() const { return {"output_tensor"}; }
+  }];
 }
 
 def OneFlow_ReduceMaxOp : OneFlow_BaseOp<"reduce_max", []> {
@@ -4173,6 +6091,10 @@ def OneFlow_ReduceMaxOp : OneFlow_BaseOp<"reduce_max", []> {
     SI32ArrayAttr:$axis,
     BoolAttr:$keepdims
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input_tensor"}; }
+    static std::vector<std::string> outputOrder() const { return {"output_tensor"}; }
+  }];
 }
 
 def OneFlow_ReduceMaxDeviceStageOp : OneFlow_BaseOp<"reduce_max_device_stage", []> {
@@ -4187,6 +6109,10 @@ def OneFlow_ReduceMaxDeviceStageOp : OneFlow_BaseOp<"reduce_max_device_stage", [
   let attrs = (ins
     SI32ArrayAttr:$axis
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out", "mask", "count"}; }
+  }];
 }
 
 def OneFlow_ReduceMaxDeviceStageGradOp : OneFlow_BaseOp<"reduce_max_device_stage_grad", []> {
@@ -4201,6 +6127,10 @@ def OneFlow_ReduceMaxDeviceStageGradOp : OneFlow_BaseOp<"reduce_max_device_stage
   let attrs = (ins
     SI32ArrayAttr:$axis
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"out_diff", "mask", "count"}; }
+    static std::vector<std::string> outputOrder() const { return {"in_diff"}; }
+  }];
 }
 
 def OneFlow_ReduceMaxGlobalStageOp : OneFlow_BaseOp<"reduce_max_global_stage", []> {
@@ -4216,6 +6146,10 @@ def OneFlow_ReduceMaxGlobalStageOp : OneFlow_BaseOp<"reduce_max_global_stage", [
     SI32ArrayAttr:$axis,
     BoolAttr:$keepdims
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "device_count"}; }
+    static std::vector<std::string> outputOrder() const { return {"out", "mask"}; }
+  }];
 }
 
 def OneFlow_ReduceMaxGlobalStageGradOp : OneFlow_BaseOp<"reduce_max_global_stage_grad", []> {
@@ -4231,6 +6165,10 @@ def OneFlow_ReduceMaxGlobalStageGradOp : OneFlow_BaseOp<"reduce_max_global_stage
     SI32ArrayAttr:$axis,
     BoolAttr:$keepdims
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"out_diff", "mask", "device_count"}; }
+    static std::vector<std::string> outputOrder() const { return {"in_diff"}; }
+  }];
 }
 
 def OneFlow_ReduceMinOp : OneFlow_BaseOp<"reduce_min", []> {
@@ -4244,6 +6182,10 @@ def OneFlow_ReduceMinOp : OneFlow_BaseOp<"reduce_min", []> {
     SI32ArrayAttr:$axis,
     BoolAttr:$keepdims
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input_tensor"}; }
+    static std::vector<std::string> outputOrder() const { return {"output_tensor"}; }
+  }];
 }
 
 def OneFlow_ReduceMinDeviceStageOp : OneFlow_BaseOp<"reduce_min_device_stage", []> {
@@ -4258,6 +6200,10 @@ def OneFlow_ReduceMinDeviceStageOp : OneFlow_BaseOp<"reduce_min_device_stage", [
   let attrs = (ins
     SI32ArrayAttr:$axis
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out", "mask", "count"}; }
+  }];
 }
 
 def OneFlow_ReduceMinDeviceStageGradOp : OneFlow_BaseOp<"reduce_min_device_stage_grad", []> {
@@ -4272,6 +6218,10 @@ def OneFlow_ReduceMinDeviceStageGradOp : OneFlow_BaseOp<"reduce_min_device_stage
   let attrs = (ins
     SI32ArrayAttr:$axis
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"out_diff", "mask", "count"}; }
+    static std::vector<std::string> outputOrder() const { return {"in_diff"}; }
+  }];
 }
 
 def OneFlow_ReduceMinGlobalStageOp : OneFlow_BaseOp<"reduce_min_global_stage", []> {
@@ -4287,6 +6237,10 @@ def OneFlow_ReduceMinGlobalStageOp : OneFlow_BaseOp<"reduce_min_global_stage", [
     SI32ArrayAttr:$axis,
     BoolAttr:$keepdims
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "device_count"}; }
+    static std::vector<std::string> outputOrder() const { return {"out", "mask"}; }
+  }];
 }
 
 def OneFlow_ReduceMinGlobalStageGradOp : OneFlow_BaseOp<"reduce_min_global_stage_grad", []> {
@@ -4302,6 +6256,10 @@ def OneFlow_ReduceMinGlobalStageGradOp : OneFlow_BaseOp<"reduce_min_global_stage
     SI32ArrayAttr:$axis,
     BoolAttr:$keepdims
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"out_diff", "mask", "device_count"}; }
+    static std::vector<std::string> outputOrder() const { return {"in_diff"}; }
+  }];
 }
 
 def OneFlow_ReduceProdOp : OneFlow_BaseOp<"reduce_prod", []> {
@@ -4315,6 +6273,10 @@ def OneFlow_ReduceProdOp : OneFlow_BaseOp<"reduce_prod", []> {
     SI32ArrayAttr:$axis,
     BoolAttr:$keepdims
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input_tensor"}; }
+    static std::vector<std::string> outputOrder() const { return {"output_tensor"}; }
+  }];
 }
 
 def OneFlow_ReduceSumOp : OneFlow_BaseOp<"reduce_sum", []> {
@@ -4328,6 +6290,10 @@ def OneFlow_ReduceSumOp : OneFlow_BaseOp<"reduce_sum", []> {
     SI32ArrayAttr:$axis,
     BoolAttr:$keepdims
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input_tensor"}; }
+    static std::vector<std::string> outputOrder() const { return {"output_tensor"}; }
+  }];
 }
 
 def OneFlow_ReduceSumLikeOp : OneFlow_BaseOp<"reduce_sum_like", []> {
@@ -4341,6 +6307,10 @@ def OneFlow_ReduceSumLikeOp : OneFlow_BaseOp<"reduce_sum_like", []> {
   let attrs = (ins
     SI32ArrayAttr:$axis
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "like"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_ReflectionPad2dOp : OneFlow_BaseOp<"reflection_pad2d", []> {
@@ -4353,6 +6323,10 @@ def OneFlow_ReflectionPad2dOp : OneFlow_BaseOp<"reflection_pad2d", []> {
   let attrs = (ins
     SI64ArrayAttr:$padding
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_ReflectionPad2dGradOp : OneFlow_BaseOp<"reflection_pad2d_grad", []> {
@@ -4365,11 +6339,38 @@ def OneFlow_ReflectionPad2dGradOp : OneFlow_BaseOp<"reflection_pad2d_grad", []> 
   let attrs = (ins
     SI64ArrayAttr:$padding
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
-def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", []> {}
+def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", []> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
+}
 
-def OneFlow_ReluGradOp : OneFlow_IdempotentBaseOp<"relu_grad", []> {}
+def OneFlow_ReluGradOp : OneFlow_IdempotentBaseOp<"relu_grad", []> {
+  let input = (ins
+    AnyType:$y,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"y", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
+}
 
 def OneFlow_RepeatOp : OneFlow_BaseOp<"repeat", []> {
   let input = (ins
@@ -4381,6 +6382,10 @@ def OneFlow_RepeatOp : OneFlow_BaseOp<"repeat", []> {
   let attrs = (ins
     SI32Attr:$repeat_num
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ReplicationPad2dOp : OneFlow_BaseOp<"replication_pad2d", []> {
@@ -4393,6 +6398,10 @@ def OneFlow_ReplicationPad2dOp : OneFlow_BaseOp<"replication_pad2d", []> {
   let attrs = (ins
     SI64ArrayAttr:$padding
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_ReplicationPad2dGradOp : OneFlow_BaseOp<"replication_pad2d_grad", []> {
@@ -4405,6 +6414,10 @@ def OneFlow_ReplicationPad2dGradOp : OneFlow_BaseOp<"replication_pad2d_grad", []
   let attrs = (ins
     SI64ArrayAttr:$padding
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_ReshapeOp : OneFlow_BaseOp<"reshape", []> {
@@ -4417,6 +6430,10 @@ def OneFlow_ReshapeOp : OneFlow_BaseOp<"reshape", []> {
   let attrs = (ins
     AnyI64ElementsAttr:$shape
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", []> {
@@ -4427,9 +6444,24 @@ def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "like"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
-def OneFlow_RintOp : OneFlow_IdempotentBaseOp<"rint", []> {}
+def OneFlow_RintOp : OneFlow_IdempotentBaseOp<"rint", []> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
+}
 
 def OneFlow_RintGradOp : OneFlow_BaseOp<"rint_grad", []> {
   let input = (ins
@@ -4439,6 +6471,10 @@ def OneFlow_RintGradOp : OneFlow_BaseOp<"rint_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", []> {
@@ -4461,10 +6497,14 @@ def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", []> {
     F32Attr:$decay_rate,
     F32Attr:$weight_decay
   );
-}
-  let input = (ins
+  let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"model", "model_diff", "learning_rate", "scale_by_tensor", "skip_if", "mean_square", "mean_gradient"}; }
+    static std::vector<std::string> outputOrder() const { return {}; }
+  }];
+}
 
 def OneFlow_RollOp : OneFlow_BaseOp<"roll", []> {
   let input = (ins
@@ -4477,9 +6517,24 @@ def OneFlow_RollOp : OneFlow_BaseOp<"roll", []> {
     SI32ArrayAttr:$shifts,
     SI32ArrayAttr:$dims
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
-def OneFlow_RoundOp : OneFlow_IdempotentBaseOp<"round", []> {}
+def OneFlow_RoundOp : OneFlow_IdempotentBaseOp<"round", []> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
+}
 
 def OneFlow_RoundGradOp : OneFlow_BaseOp<"round_grad", []> {
   let input = (ins
@@ -4489,6 +6544,10 @@ def OneFlow_RoundGradOp : OneFlow_BaseOp<"round_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_RsqrtOp : OneFlow_BaseOp<"rsqrt", []> {
@@ -4498,6 +6557,10 @@ def OneFlow_RsqrtOp : OneFlow_BaseOp<"rsqrt", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_RsqrtGradOp : OneFlow_BaseOp<"rsqrt_grad", []> {
@@ -4508,6 +6571,10 @@ def OneFlow_RsqrtGradOp : OneFlow_BaseOp<"rsqrt_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_SamePaddingOp : OneFlow_BaseOp<"same_padding", []> {
@@ -4524,6 +6591,10 @@ def OneFlow_SamePaddingOp : OneFlow_BaseOp<"same_padding", []> {
     SI32ArrayAttr:$strides,
     SI32ArrayAttr:$dilation_rate
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_SamePaddingGradOp : OneFlow_BaseOp<"same_padding_grad", []> {
@@ -4541,6 +6612,10 @@ def OneFlow_SamePaddingGradOp : OneFlow_BaseOp<"same_padding_grad", []> {
     SI32ArrayAttr:$strides,
     SI32ArrayAttr:$dilation_rate
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x_like", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_ScalarAddOp : OneFlow_BaseOp<"scalar_add", []> {
@@ -4556,6 +6631,10 @@ def OneFlow_ScalarAddOp : OneFlow_BaseOp<"scalar_add", []> {
     SI64Attr:$int_operand,
     F64Attr:$float_operand
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ScalarAddByTensorOp : OneFlow_BaseOp<"scalar_add_by_tensor", []> {
@@ -4566,6 +6645,10 @@ def OneFlow_ScalarAddByTensorOp : OneFlow_BaseOp<"scalar_add_by_tensor", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "scalar"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_ScalarDivByTensorOp : OneFlow_BaseOp<"scalar_div_by_tensor", []> {
@@ -4576,6 +6659,10 @@ def OneFlow_ScalarDivByTensorOp : OneFlow_BaseOp<"scalar_div_by_tensor", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "scalar"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_ScalarFloordivOp : OneFlow_BaseOp<"scalar_floordiv", []> {
@@ -4591,6 +6678,10 @@ def OneFlow_ScalarFloordivOp : OneFlow_BaseOp<"scalar_floordiv", []> {
     SI64Attr:$int_operand,
     F64Attr:$float_operand
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ScalarFmodOp : OneFlow_BaseOp<"scalar_fmod", []> {
@@ -4606,6 +6697,10 @@ def OneFlow_ScalarFmodOp : OneFlow_BaseOp<"scalar_fmod", []> {
     SI64Attr:$int_operand,
     F64Attr:$float_operand
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ScalarLogicalAndOp : OneFlow_BaseOp<"scalar_logical_and", []> {
@@ -4621,6 +6716,10 @@ def OneFlow_ScalarLogicalAndOp : OneFlow_BaseOp<"scalar_logical_and", []> {
     SI64Attr:$int_operand,
     F64Attr:$float_operand
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ScalarLogicalEqualOp : OneFlow_BaseOp<"scalar_logical_equal", []> {
@@ -4636,6 +6735,10 @@ def OneFlow_ScalarLogicalEqualOp : OneFlow_BaseOp<"scalar_logical_equal", []> {
     SI64Attr:$int_operand,
     F64Attr:$float_operand
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ScalarLogicalGreaterOp : OneFlow_BaseOp<"scalar_logical_greater", []> {
@@ -4651,6 +6754,10 @@ def OneFlow_ScalarLogicalGreaterOp : OneFlow_BaseOp<"scalar_logical_greater", []
     SI64Attr:$int_operand,
     F64Attr:$float_operand
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ScalarLogicalGreaterEqualOp : OneFlow_BaseOp<"scalar_logical_greater_equal", []> {
@@ -4666,6 +6773,10 @@ def OneFlow_ScalarLogicalGreaterEqualOp : OneFlow_BaseOp<"scalar_logical_greater
     SI64Attr:$int_operand,
     F64Attr:$float_operand
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ScalarLogicalLessOp : OneFlow_BaseOp<"scalar_logical_less", []> {
@@ -4681,6 +6792,10 @@ def OneFlow_ScalarLogicalLessOp : OneFlow_BaseOp<"scalar_logical_less", []> {
     SI64Attr:$int_operand,
     F64Attr:$float_operand
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ScalarLogicalLessEqualOp : OneFlow_BaseOp<"scalar_logical_less_equal", []> {
@@ -4696,6 +6811,10 @@ def OneFlow_ScalarLogicalLessEqualOp : OneFlow_BaseOp<"scalar_logical_less_equal
     SI64Attr:$int_operand,
     F64Attr:$float_operand
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ScalarLogicalNotEqualOp : OneFlow_BaseOp<"scalar_logical_not_equal", []> {
@@ -4711,6 +6830,10 @@ def OneFlow_ScalarLogicalNotEqualOp : OneFlow_BaseOp<"scalar_logical_not_equal",
     SI64Attr:$int_operand,
     F64Attr:$float_operand
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ScalarLogicalOrOp : OneFlow_BaseOp<"scalar_logical_or", []> {
@@ -4726,6 +6849,10 @@ def OneFlow_ScalarLogicalOrOp : OneFlow_BaseOp<"scalar_logical_or", []> {
     SI64Attr:$int_operand,
     F64Attr:$float_operand
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ScalarLogicalXorOp : OneFlow_BaseOp<"scalar_logical_xor", []> {
@@ -4741,6 +6868,10 @@ def OneFlow_ScalarLogicalXorOp : OneFlow_BaseOp<"scalar_logical_xor", []> {
     SI64Attr:$int_operand,
     F64Attr:$float_operand
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ScalarMulOp : OneFlow_BaseOp<"scalar_mul", []> {
@@ -4756,6 +6887,10 @@ def OneFlow_ScalarMulOp : OneFlow_BaseOp<"scalar_mul", []> {
     SI64Attr:$int_operand,
     F64Attr:$float_operand
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", []> {
@@ -4766,6 +6901,10 @@ def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "scalar"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_ScalarPowOp : OneFlow_BaseOp<"scalar_pow", []> {
@@ -4781,6 +6920,10 @@ def OneFlow_ScalarPowOp : OneFlow_BaseOp<"scalar_pow", []> {
     SI64Attr:$int_operand,
     F64Attr:$float_operand
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ScalarPowGradOp : OneFlow_BaseOp<"scalar_pow_grad", []> {
@@ -4797,6 +6940,10 @@ def OneFlow_ScalarPowGradOp : OneFlow_BaseOp<"scalar_pow_grad", []> {
     SI64Attr:$int_operand,
     F64Attr:$float_operand
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_ScalarSubByTensorOp : OneFlow_BaseOp<"scalar_sub_by_tensor", []> {
@@ -4807,6 +6954,10 @@ def OneFlow_ScalarSubByTensorOp : OneFlow_BaseOp<"scalar_sub_by_tensor", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "scalar"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_ScatterNdOp : OneFlow_BaseOp<"scatter_nd", []> {
@@ -4820,6 +6971,10 @@ def OneFlow_ScatterNdOp : OneFlow_BaseOp<"scatter_nd", []> {
   let attrs = (ins
     AnyI64ElementsAttr:$shape
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"indices", "updates"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_ScatterNdLikeOp : OneFlow_BaseOp<"scatter_nd_like", []> {
@@ -4831,6 +6986,10 @@ def OneFlow_ScatterNdLikeOp : OneFlow_BaseOp<"scatter_nd_like", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"like", "indices", "updates"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_SeluOp : OneFlow_BaseOp<"selu", []> {
@@ -4840,6 +6999,10 @@ def OneFlow_SeluOp : OneFlow_BaseOp<"selu", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_SeluGradOp : OneFlow_BaseOp<"selu_grad", []> {
@@ -4850,6 +7013,10 @@ def OneFlow_SeluGradOp : OneFlow_BaseOp<"selu_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_SendOp : OneFlow_BaseOp<"send", []> {
@@ -4859,6 +7026,10 @@ def OneFlow_SendOp : OneFlow_BaseOp<"send", []> {
   let attrs = (ins
     SI64Attr:$dst_process_id
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {}; }
+  }];
 }
 
 def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", []> {
@@ -4876,10 +7047,14 @@ def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", []> {
     F32Attr:$l2,
     F32Attr:$weight_decay
   );
-}
-  let input = (ins
+  let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"model", "model_diff", "learning_rate", "scale_by_tensor", "skip_if"}; }
+    static std::vector<std::string> outputOrder() const { return {}; }
+  }];
+}
 
 def OneFlow_SigmoidOp : OneFlow_BaseOp<"sigmoid", []> {
   let input = (ins
@@ -4888,6 +7063,10 @@ def OneFlow_SigmoidOp : OneFlow_BaseOp<"sigmoid", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_SigmoidCrossEntropyOp : OneFlow_BaseOp<"sigmoid_cross_entropy", []> {
@@ -4898,6 +7077,10 @@ def OneFlow_SigmoidCrossEntropyOp : OneFlow_BaseOp<"sigmoid_cross_entropy", []> 
   let output = (outs
     AnyType:$loss
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"prediction", "label"}; }
+    static std::vector<std::string> outputOrder() const { return {"loss"}; }
+  }];
 }
 
 def OneFlow_SigmoidCrossEntropyGradOp : OneFlow_BaseOp<"sigmoid_cross_entropy_grad", []> {
@@ -4909,6 +7092,10 @@ def OneFlow_SigmoidCrossEntropyGradOp : OneFlow_BaseOp<"sigmoid_cross_entropy_gr
   let output = (outs
     AnyType:$prediction_diff
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"prediction", "loss_diff", "label"}; }
+    static std::vector<std::string> outputOrder() const { return {"prediction_diff"}; }
+  }];
 }
 
 def OneFlow_SigmoidGradOp : OneFlow_BaseOp<"sigmoid_grad", []> {
@@ -4919,6 +7106,10 @@ def OneFlow_SigmoidGradOp : OneFlow_BaseOp<"sigmoid_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"y", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_SigmoidV2Op : OneFlow_BaseOp<"sigmoid_v2", []> {
@@ -4928,6 +7119,10 @@ def OneFlow_SigmoidV2Op : OneFlow_BaseOp<"sigmoid_v2", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_SigmoidV2GradOp : OneFlow_BaseOp<"sigmoid_v2_grad", []> {
@@ -4938,9 +7133,24 @@ def OneFlow_SigmoidV2GradOp : OneFlow_BaseOp<"sigmoid_v2_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
-def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", []> {}
+def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", []> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
+}
 
 def OneFlow_SignGradOp : OneFlow_BaseOp<"sign_grad", []> {
   let input = (ins
@@ -4950,6 +7160,10 @@ def OneFlow_SignGradOp : OneFlow_BaseOp<"sign_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_SiluOp : OneFlow_BaseOp<"silu", []> {
@@ -4959,6 +7173,10 @@ def OneFlow_SiluOp : OneFlow_BaseOp<"silu", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_SiluGradOp : OneFlow_BaseOp<"silu_grad", []> {
@@ -4969,6 +7187,10 @@ def OneFlow_SiluGradOp : OneFlow_BaseOp<"silu_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_SinOp : OneFlow_BaseOp<"sin", []> {
@@ -4978,6 +7200,10 @@ def OneFlow_SinOp : OneFlow_BaseOp<"sin", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_SinGradOp : OneFlow_BaseOp<"sin_grad", []> {
@@ -4988,6 +7214,10 @@ def OneFlow_SinGradOp : OneFlow_BaseOp<"sin_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_SinhOp : OneFlow_BaseOp<"sinh", []> {
@@ -4997,6 +7227,10 @@ def OneFlow_SinhOp : OneFlow_BaseOp<"sinh", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_SinhGradOp : OneFlow_BaseOp<"sinh_grad", []> {
@@ -5007,6 +7241,10 @@ def OneFlow_SinhGradOp : OneFlow_BaseOp<"sinh_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_SliceOp : OneFlow_BaseOp<"slice", []> {
@@ -5021,6 +7259,10 @@ def OneFlow_SliceOp : OneFlow_BaseOp<"slice", []> {
     SI64ArrayAttr:$stop,
     SI64ArrayAttr:$step
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_SliceGradOp : OneFlow_BaseOp<"slice_grad", []> {
@@ -5036,6 +7278,10 @@ def OneFlow_SliceGradOp : OneFlow_BaseOp<"slice_grad", []> {
     SI64ArrayAttr:$stop,
     SI64ArrayAttr:$step
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "like"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", []> {
@@ -5051,6 +7297,10 @@ def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", []> {
     SI64ArrayAttr:$stop,
     SI64ArrayAttr:$step
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "update"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_SmoothL1LossOp : OneFlow_BaseOp<"smooth_l1_loss", []> {
@@ -5065,6 +7315,10 @@ def OneFlow_SmoothL1LossOp : OneFlow_BaseOp<"smooth_l1_loss", []> {
     StrAttr:$reduction,
     F32Attr:$beta
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input", "target"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", []> {
@@ -5080,6 +7334,10 @@ def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", []> {
     StrAttr:$reduction,
     F32Attr:$beta
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input", "target", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_SoftmaxOp : OneFlow_BaseOp<"softmax", []> {
@@ -5089,6 +7347,10 @@ def OneFlow_SoftmaxOp : OneFlow_BaseOp<"softmax", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_SoftmaxCrossEntropyOp : OneFlow_BaseOp<"softmax_cross_entropy", []> {
@@ -5100,6 +7362,10 @@ def OneFlow_SoftmaxCrossEntropyOp : OneFlow_BaseOp<"softmax_cross_entropy", []> 
     AnyType:$prob,
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"prediction", "label"}; }
+    static std::vector<std::string> outputOrder() const { return {"prob", "out"}; }
+  }];
 }
 
 def OneFlow_SoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"softmax_cross_entropy_grad", []> {
@@ -5111,6 +7377,10 @@ def OneFlow_SoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"softmax_cross_entropy_gr
   let output = (outs
     AnyType:$prediction_diff
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "label", "prob"}; }
+    static std::vector<std::string> outputOrder() const { return {"prediction_diff"}; }
+  }];
 }
 
 def OneFlow_SoftmaxGradOp : OneFlow_BaseOp<"softmax_grad", []> {
@@ -5121,6 +7391,10 @@ def OneFlow_SoftmaxGradOp : OneFlow_BaseOp<"softmax_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"y", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_SoftplusOp : OneFlow_BaseOp<"softplus", []> {
@@ -5130,6 +7404,10 @@ def OneFlow_SoftplusOp : OneFlow_BaseOp<"softplus", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_SoftplusGradOp : OneFlow_BaseOp<"softplus_grad", []> {
@@ -5140,6 +7418,10 @@ def OneFlow_SoftplusGradOp : OneFlow_BaseOp<"softplus_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_SoftsignOp : OneFlow_BaseOp<"softsign", []> {
@@ -5149,6 +7431,10 @@ def OneFlow_SoftsignOp : OneFlow_BaseOp<"softsign", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_SoftsignGradOp : OneFlow_BaseOp<"softsign_grad", []> {
@@ -5159,6 +7445,10 @@ def OneFlow_SoftsignGradOp : OneFlow_BaseOp<"softsign_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_SortOp : OneFlow_BaseOp<"sort", []> {
@@ -5171,6 +7461,10 @@ def OneFlow_SortOp : OneFlow_BaseOp<"sort", []> {
   let attrs = (ins
     StrAttr:$direction
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_SparseCrossEntropyOp : OneFlow_BaseOp<"sparse_cross_entropy", []> {
@@ -5184,6 +7478,10 @@ def OneFlow_SparseCrossEntropyOp : OneFlow_BaseOp<"sparse_cross_entropy", []> {
   let attrs = (ins
     SI64Attr:$depth
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"prediction", "label"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_SparseCrossEntropyGradOp : OneFlow_BaseOp<"sparse_cross_entropy_grad", []> {
@@ -5198,6 +7496,10 @@ def OneFlow_SparseCrossEntropyGradOp : OneFlow_BaseOp<"sparse_cross_entropy_grad
   let attrs = (ins
     SI64Attr:$depth
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"prediction", "label", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"prediction_diff"}; }
+  }];
 }
 
 def OneFlow_SparseCrossEntropyMsOp : OneFlow_BaseOp<"sparse_cross_entropy_ms", []> {
@@ -5211,6 +7513,10 @@ def OneFlow_SparseCrossEntropyMsOp : OneFlow_BaseOp<"sparse_cross_entropy_ms", [
   let attrs = (ins
     SI64Attr:$depth
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"prediction", "label"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_SparseCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_cross_entropy_ms_grad", []> {
@@ -5225,6 +7531,10 @@ def OneFlow_SparseCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_cross_entropy_ms
   let attrs = (ins
     SI64Attr:$depth
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"prediction", "label", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"prediction_diff"}; }
+  }];
 }
 
 def OneFlow_SparseSoftmaxCrossEntropyOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy", []> {
@@ -5239,6 +7549,10 @@ def OneFlow_SparseSoftmaxCrossEntropyOp : OneFlow_BaseOp<"sparse_softmax_cross_e
   let attrs = (ins
     SI64Attr:$depth
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"prediction", "label"}; }
+    static std::vector<std::string> outputOrder() const { return {"prob", "out"}; }
+  }];
 }
 
 def OneFlow_SparseSoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_grad", []> {
@@ -5253,6 +7567,10 @@ def OneFlow_SparseSoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"sparse_softmax_cro
   let attrs = (ins
     SI64Attr:$depth
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"label", "dy", "prob"}; }
+    static std::vector<std::string> outputOrder() const { return {"prediction_diff"}; }
+  }];
 }
 
 def OneFlow_SparseSoftmaxCrossEntropyMsOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_ms", []> {
@@ -5267,6 +7585,10 @@ def OneFlow_SparseSoftmaxCrossEntropyMsOp : OneFlow_BaseOp<"sparse_softmax_cross
   let attrs = (ins
     SI64Attr:$depth
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"prediction", "label"}; }
+    static std::vector<std::string> outputOrder() const { return {"prob", "out"}; }
+  }];
 }
 
 def OneFlow_SparseSoftmaxCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_ms_grad", []> {
@@ -5281,6 +7603,10 @@ def OneFlow_SparseSoftmaxCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_softmax_c
   let attrs = (ins
     SI64Attr:$depth
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"label", "dy", "prob"}; }
+    static std::vector<std::string> outputOrder() const { return {"prediction_diff"}; }
+  }];
 }
 
 def OneFlow_SplitLikeOp : OneFlow_BaseOp<"split_like", []> {
@@ -5294,6 +7620,10 @@ def OneFlow_SplitLikeOp : OneFlow_BaseOp<"split_like", []> {
   let attrs = (ins
     SI64Attr:$axis
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "like"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_SqrtOp : OneFlow_BaseOp<"sqrt", []> {
@@ -5303,6 +7633,10 @@ def OneFlow_SqrtOp : OneFlow_BaseOp<"sqrt", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_SqrtGradOp : OneFlow_BaseOp<"sqrt_grad", []> {
@@ -5313,6 +7647,10 @@ def OneFlow_SqrtGradOp : OneFlow_BaseOp<"sqrt_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_SquareOp : OneFlow_BaseOp<"square", []> {
@@ -5322,6 +7660,10 @@ def OneFlow_SquareOp : OneFlow_BaseOp<"square", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_SquareGradOp : OneFlow_BaseOp<"square_grad", []> {
@@ -5332,6 +7674,10 @@ def OneFlow_SquareGradOp : OneFlow_BaseOp<"square_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_SquareSumOp : OneFlow_BaseOp<"square_sum", []> {
@@ -5341,6 +7687,10 @@ def OneFlow_SquareSumOp : OneFlow_BaseOp<"square_sum", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_SqueezeOp : OneFlow_BaseOp<"squeeze", []> {
@@ -5353,6 +7703,10 @@ def OneFlow_SqueezeOp : OneFlow_BaseOp<"squeeze", []> {
   let attrs = (ins
     SI32ArrayAttr:$axes
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_SspVariableProxyOp : OneFlow_BaseOp<"ssp_variable_proxy", []> {
@@ -5366,6 +7720,10 @@ def OneFlow_SspVariableProxyOp : OneFlow_BaseOp<"ssp_variable_proxy", []> {
   let attrs = (ins
     SI64Attr:$buffer_size
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"var"}; }
+    static std::vector<std::string> outputOrder() const { return {"ref", "value"}; }
+  }];
 }
 
 def OneFlow_SummaryWriteHistogramOp : OneFlow_BaseOp<"summary_write_histogram", []> {
@@ -5374,6 +7732,10 @@ def OneFlow_SummaryWriteHistogramOp : OneFlow_BaseOp<"summary_write_histogram", 
     AnyType:$step,
     AnyType:$tag
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "step", "tag"}; }
+    static std::vector<std::string> outputOrder() const { return {}; }
+  }];
 }
 
 def OneFlow_SummaryWriteImageOp : OneFlow_BaseOp<"summary_write_image", []> {
@@ -5382,6 +7744,10 @@ def OneFlow_SummaryWriteImageOp : OneFlow_BaseOp<"summary_write_image", []> {
     AnyType:$step,
     AnyType:$tag
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "step", "tag"}; }
+    static std::vector<std::string> outputOrder() const { return {}; }
+  }];
 }
 
 def OneFlow_SummaryWritePbOp : OneFlow_BaseOp<"summary_write_pb", []> {
@@ -5389,6 +7755,10 @@ def OneFlow_SummaryWritePbOp : OneFlow_BaseOp<"summary_write_pb", []> {
     AnyType:$in,
     AnyType:$step
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "step"}; }
+    static std::vector<std::string> outputOrder() const { return {}; }
+  }];
 }
 
 def OneFlow_SummaryWriteScalarOp : OneFlow_BaseOp<"summary_write_scalar", []> {
@@ -5397,6 +7767,10 @@ def OneFlow_SummaryWriteScalarOp : OneFlow_BaseOp<"summary_write_scalar", []> {
     AnyType:$step,
     AnyType:$tag
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in", "step", "tag"}; }
+    static std::vector<std::string> outputOrder() const { return {}; }
+  }];
 }
 
 def OneFlow_TanOp : OneFlow_BaseOp<"tan", []> {
@@ -5406,6 +7780,10 @@ def OneFlow_TanOp : OneFlow_BaseOp<"tan", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_TanGradOp : OneFlow_BaseOp<"tan_grad", []> {
@@ -5416,6 +7794,10 @@ def OneFlow_TanGradOp : OneFlow_BaseOp<"tan_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_TanhOp : OneFlow_BaseOp<"tanh", []> {
@@ -5425,6 +7807,10 @@ def OneFlow_TanhOp : OneFlow_BaseOp<"tanh", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_TanhGradOp : OneFlow_BaseOp<"tanh_grad", []> {
@@ -5435,6 +7821,10 @@ def OneFlow_TanhGradOp : OneFlow_BaseOp<"tanh_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_TensorBufferToListOfTensorsOp : OneFlow_BaseOp<"tensor_buffer_to_list_of_tensors", []> {
@@ -5449,6 +7839,10 @@ def OneFlow_TensorBufferToListOfTensorsOp : OneFlow_BaseOp<"tensor_buffer_to_lis
     StrAttr:$out_dtype,
     BoolAttr:$dynamic_out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_TensorBufferToListOfTensorsV2Op : OneFlow_BaseOp<"tensor_buffer_to_list_of_tensors_v2", []> {
@@ -5463,6 +7857,10 @@ def OneFlow_TensorBufferToListOfTensorsV2Op : OneFlow_BaseOp<"tensor_buffer_to_l
     DTArrayAttr:$out_dtypes,
     BoolAttr:$dynamic_out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_TensorBufferToTensorOp : OneFlow_BaseOp<"tensor_buffer_to_tensor", []> {
@@ -5476,6 +7874,10 @@ def OneFlow_TensorBufferToTensorOp : OneFlow_BaseOp<"tensor_buffer_to_tensor", [
     AnyI64ElementsAttr:$instance_shape,
     StrAttr:$dtype
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_TensorScatterNdAddOp : OneFlow_BaseOp<"tensor_scatter_nd_add", []> {
@@ -5487,6 +7889,10 @@ def OneFlow_TensorScatterNdAddOp : OneFlow_BaseOp<"tensor_scatter_nd_add", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"params", "updates", "indices"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_TensorScatterNdUpdateOp : OneFlow_BaseOp<"tensor_scatter_nd_update", []> {
@@ -5498,6 +7904,10 @@ def OneFlow_TensorScatterNdUpdateOp : OneFlow_BaseOp<"tensor_scatter_nd_update",
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"params", "updates", "indices"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_TensorToTensorBufferOp : OneFlow_BaseOp<"tensor_to_tensor_buffer", []> {
@@ -5510,6 +7920,10 @@ def OneFlow_TensorToTensorBufferOp : OneFlow_BaseOp<"tensor_to_tensor_buffer", [
   let attrs = (ins
     SI32Attr:$instance_dims
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_TestUserOpAttrAutoTypeOp : OneFlow_BaseOp<"test_user_op_attr_auto_type", []> {
@@ -5523,6 +7937,10 @@ def OneFlow_TestUserOpAttrAutoTypeOp : OneFlow_BaseOp<"test_user_op_attr_auto_ty
     SI32Attr:$int1,
     SI32Attr:$int2
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_TfPreluOp : OneFlow_BaseOp<"tf_prelu", []> {
@@ -5533,6 +7951,10 @@ def OneFlow_TfPreluOp : OneFlow_BaseOp<"tf_prelu", []> {
   let output = (outs
     AnyType:$y
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "alpha"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_TfPreluGradOp : OneFlow_BaseOp<"tf_prelu_grad", []> {
@@ -5545,6 +7967,10 @@ def OneFlow_TfPreluGradOp : OneFlow_BaseOp<"tf_prelu_grad", []> {
     AnyType:$dx,
     AnyType:$alpha_diff
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "x", "alpha"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx", "alpha_diff"}; }
+  }];
 }
 
 def OneFlow_TopKOp : OneFlow_BaseOp<"top_k", []> {
@@ -5558,6 +7984,10 @@ def OneFlow_TopKOp : OneFlow_BaseOp<"top_k", []> {
     SI32Attr:$k,
     BoolAttr:$sorted
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_TransposeOp : OneFlow_BaseOp<"transpose", []> {
@@ -5570,6 +8000,10 @@ def OneFlow_TransposeOp : OneFlow_BaseOp<"transpose", []> {
   let attrs = (ins
     SI32ArrayAttr:$perm
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"input"}; }
+    static std::vector<std::string> outputOrder() const { return {"output"}; }
+  }];
 }
 
 def OneFlow_TrilOp : OneFlow_BaseOp<"tril", []> {
@@ -5585,6 +8019,10 @@ def OneFlow_TrilOp : OneFlow_BaseOp<"tril", []> {
     SI64Attr:$integer_fill_value,
     BoolAttr:$is_floating_fill_value
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_TriuOp : OneFlow_BaseOp<"triu", []> {
@@ -5597,6 +8035,10 @@ def OneFlow_TriuOp : OneFlow_BaseOp<"triu", []> {
   let attrs = (ins
     SI64Attr:$diagonal
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", []> {
@@ -5606,6 +8048,10 @@ def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", []> {
   let output = (outs
     Variadic<AnyType>:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_UnfoldOp : OneFlow_BaseOp<"unfold", []> {
@@ -5622,6 +8068,10 @@ def OneFlow_UnfoldOp : OneFlow_BaseOp<"unfold", []> {
     SI32ArrayAttr:$strides,
     SI32ArrayAttr:$dilation_rate
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_UnfoldTensorOp : OneFlow_BaseOp<"unfold_tensor", []> {
@@ -5636,6 +8086,10 @@ def OneFlow_UnfoldTensorOp : OneFlow_BaseOp<"unfold_tensor", []> {
     SI32Attr:$size,
     SI32Attr:$step
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_UnfoldTensorGradOp : OneFlow_BaseOp<"unfold_tensor_grad", []> {
@@ -5651,6 +8105,10 @@ def OneFlow_UnfoldTensorGradOp : OneFlow_BaseOp<"unfold_tensor_grad", []> {
     SI32Attr:$size,
     SI32Attr:$step
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "x"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_UniformOp : OneFlow_BaseOp<"uniform", []> {
@@ -5664,6 +8122,10 @@ def OneFlow_UniformOp : OneFlow_BaseOp<"uniform", []> {
     AnyI64ElementsAttr:$shape,
     StrAttr:$nd_sbp
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_UniformIntOp : OneFlow_BaseOp<"uniform_int", []> {
@@ -5677,6 +8139,10 @@ def OneFlow_UniformIntOp : OneFlow_BaseOp<"uniform_int", []> {
     AnyI64ElementsAttr:$shape,
     StrAttr:$nd_sbp
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", []> {
@@ -5692,6 +8158,10 @@ def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", []> {
   let attrs = (ins
     StrAttr:$out_idx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y", "idx", "count", "num_unique"}; }
+  }];
 }
 
 def OneFlow_UnpackOp : OneFlow_BaseOp<"unpack", []> {
@@ -5704,6 +8174,10 @@ def OneFlow_UnpackOp : OneFlow_BaseOp<"unpack", []> {
   let attrs = (ins
     SI32Attr:$unpack_num
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"in"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_UnsortedBatchSegmentSumOp : OneFlow_BaseOp<"unsorted_batch_segment_sum", []> {
@@ -5717,6 +8191,10 @@ def OneFlow_UnsortedBatchSegmentSumOp : OneFlow_BaseOp<"unsorted_batch_segment_s
   let attrs = (ins
     SI64Attr:$num_segments
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"data", "segment_ids"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_UnsortedSegmentSumOp : OneFlow_BaseOp<"unsorted_segment_sum", []> {
@@ -5731,6 +8209,10 @@ def OneFlow_UnsortedSegmentSumOp : OneFlow_BaseOp<"unsorted_segment_sum", []> {
     SI64Attr:$axis,
     SI64Attr:$num_segments
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"data", "segment_ids"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_UnsortedSegmentSumLikeOp : OneFlow_BaseOp<"unsorted_segment_sum_like", []> {
@@ -5745,6 +8227,10 @@ def OneFlow_UnsortedSegmentSumLikeOp : OneFlow_BaseOp<"unsorted_segment_sum_like
   let attrs = (ins
     SI64Attr:$axis
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"data", "segment_ids", "like"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_UpsampleOp : OneFlow_BaseOp<"upsample", []> {
@@ -5761,6 +8247,10 @@ def OneFlow_UpsampleOp : OneFlow_BaseOp<"upsample", []> {
     StrAttr:$data_format,
     StrAttr:$interpolation
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_UpsampleBicubic_2dOp : OneFlow_BaseOp<"upsample_bicubic_2d", []> {
@@ -5776,6 +8266,10 @@ def OneFlow_UpsampleBicubic_2dOp : OneFlow_BaseOp<"upsample_bicubic_2d", []> {
     BoolAttr:$align_corners,
     StrAttr:$data_format
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_UpsampleBicubic_2dGradOp : OneFlow_BaseOp<"upsample_bicubic_2d_grad", []> {
@@ -5792,6 +8286,10 @@ def OneFlow_UpsampleBicubic_2dGradOp : OneFlow_BaseOp<"upsample_bicubic_2d_grad"
     BoolAttr:$align_corners,
     StrAttr:$data_format
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "x"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_UpsampleBilinear_2dOp : OneFlow_BaseOp<"upsample_bilinear_2d", []> {
@@ -5807,6 +8305,10 @@ def OneFlow_UpsampleBilinear_2dOp : OneFlow_BaseOp<"upsample_bilinear_2d", []> {
     BoolAttr:$align_corners,
     StrAttr:$data_format
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_UpsampleBilinear_2dGradOp : OneFlow_BaseOp<"upsample_bilinear_2d_grad", []> {
@@ -5823,6 +8325,10 @@ def OneFlow_UpsampleBilinear_2dGradOp : OneFlow_BaseOp<"upsample_bilinear_2d_gra
     BoolAttr:$align_corners,
     StrAttr:$data_format
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "x"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_UpsampleGradOp : OneFlow_BaseOp<"upsample_grad", []> {
@@ -5840,6 +8346,10 @@ def OneFlow_UpsampleGradOp : OneFlow_BaseOp<"upsample_grad", []> {
     StrAttr:$data_format,
     StrAttr:$interpolation
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "x"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_UpsampleLinear_1dOp : OneFlow_BaseOp<"upsample_linear_1d", []> {
@@ -5854,6 +8364,10 @@ def OneFlow_UpsampleLinear_1dOp : OneFlow_BaseOp<"upsample_linear_1d", []> {
     BoolAttr:$align_corners,
     StrAttr:$data_format
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_UpsampleLinear_1dGradOp : OneFlow_BaseOp<"upsample_linear_1d_grad", []> {
@@ -5869,6 +8383,10 @@ def OneFlow_UpsampleLinear_1dGradOp : OneFlow_BaseOp<"upsample_linear_1d_grad", 
     BoolAttr:$align_corners,
     StrAttr:$data_format
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "x"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_UpsampleNearest_1dOp : OneFlow_BaseOp<"upsample_nearest_1d", []> {
@@ -5882,6 +8400,10 @@ def OneFlow_UpsampleNearest_1dOp : OneFlow_BaseOp<"upsample_nearest_1d", []> {
     F32Attr:$scale_factor,
     StrAttr:$data_format
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_UpsampleNearest_1dGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad", []> {
@@ -5896,6 +8418,10 @@ def OneFlow_UpsampleNearest_1dGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad"
     F32Attr:$scale_factor,
     StrAttr:$data_format
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "x"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_UpsampleNearest_2dOp : OneFlow_BaseOp<"upsample_nearest_2d", []> {
@@ -5910,6 +8436,10 @@ def OneFlow_UpsampleNearest_2dOp : OneFlow_BaseOp<"upsample_nearest_2d", []> {
     F32Attr:$width_scale,
     StrAttr:$data_format
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_UpsampleNearest_2dGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad", []> {
@@ -5925,6 +8455,10 @@ def OneFlow_UpsampleNearest_2dGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad"
     F32Attr:$width_scale,
     StrAttr:$data_format
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "x"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_UpsampleNearest_3dOp : OneFlow_BaseOp<"upsample_nearest_3d", []> {
@@ -5940,6 +8474,10 @@ def OneFlow_UpsampleNearest_3dOp : OneFlow_BaseOp<"upsample_nearest_3d", []> {
     F32Attr:$width_scale,
     StrAttr:$data_format
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_UpsampleNearest_3dGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad", []> {
@@ -5956,6 +8494,10 @@ def OneFlow_UpsampleNearest_3dGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad"
     F32Attr:$width_scale,
     StrAttr:$data_format
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "x"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_UpsampleTrilinear_3dOp : OneFlow_BaseOp<"upsample_trilinear_3d", []> {
@@ -5972,6 +8514,10 @@ def OneFlow_UpsampleTrilinear_3dOp : OneFlow_BaseOp<"upsample_trilinear_3d", []>
     BoolAttr:$align_corners,
     StrAttr:$data_format
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x"}; }
+    static std::vector<std::string> outputOrder() const { return {"y"}; }
+  }];
 }
 
 def OneFlow_UpsampleTrilinear_3dGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_grad", []> {
@@ -5989,6 +8535,10 @@ def OneFlow_UpsampleTrilinear_3dGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_g
     BoolAttr:$align_corners,
     StrAttr:$data_format
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"dy", "x"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_WhereOp : OneFlow_BaseOp<"where", []> {
@@ -6000,6 +8550,10 @@ def OneFlow_WhereOp : OneFlow_BaseOp<"where", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"condition", "x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_WhereScalarXOp : OneFlow_BaseOp<"where_scalar_x", []> {
@@ -6016,6 +8570,10 @@ def OneFlow_WhereScalarXOp : OneFlow_BaseOp<"where_scalar_x", []> {
     SI64Attr:$int_operand,
     F64Attr:$float_operand
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"condition", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_WhereScalarXyOp : OneFlow_BaseOp<"where_scalar_xy", []> {
@@ -6035,6 +8593,10 @@ def OneFlow_WhereScalarXyOp : OneFlow_BaseOp<"where_scalar_xy", []> {
     SI64Attr:$y_int_operand,
     F64Attr:$y_float_operand
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"condition"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_WhereScalarYOp : OneFlow_BaseOp<"where_scalar_y", []> {
@@ -6051,6 +8613,10 @@ def OneFlow_WhereScalarYOp : OneFlow_BaseOp<"where_scalar_y", []> {
     SI64Attr:$int_operand,
     F64Attr:$float_operand
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"condition", "x"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 
 def OneFlow_XdivyOp : OneFlow_BaseOp<"xdivy", []> {
@@ -6061,6 +8627,10 @@ def OneFlow_XdivyOp : OneFlow_BaseOp<"xdivy", []> {
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_XdivyXGradOp : OneFlow_BaseOp<"xdivy_x_grad", []> {
@@ -6072,6 +8642,10 @@ def OneFlow_XdivyXGradOp : OneFlow_BaseOp<"xdivy_x_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "dz"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_XdivyYGradOp : OneFlow_BaseOp<"xdivy_y_grad", []> {
@@ -6083,6 +8657,10 @@ def OneFlow_XdivyYGradOp : OneFlow_BaseOp<"xdivy_y_grad", []> {
   let output = (outs
     AnyType:$dy
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "dz"}; }
+    static std::vector<std::string> outputOrder() const { return {"dy"}; }
+  }];
 }
 
 def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", []> {
@@ -6093,6 +8671,10 @@ def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", []> {
   let output = (outs
     AnyType:$z
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() const { return {"z"}; }
+  }];
 }
 
 def OneFlow_XlogyXGradOp : OneFlow_BaseOp<"xlogy_x_grad", []> {
@@ -6104,6 +8686,10 @@ def OneFlow_XlogyXGradOp : OneFlow_BaseOp<"xlogy_x_grad", []> {
   let output = (outs
     AnyType:$dx
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "dz"}; }
+    static std::vector<std::string> outputOrder() const { return {"dx"}; }
+  }];
 }
 
 def OneFlow_XlogyYGradOp : OneFlow_BaseOp<"xlogy_y_grad", []> {
@@ -6115,6 +8701,10 @@ def OneFlow_XlogyYGradOp : OneFlow_BaseOp<"xlogy_y_grad", []> {
   let output = (outs
     AnyType:$dy
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"x", "y", "dz"}; }
+    static std::vector<std::string> outputOrder() const { return {"dy"}; }
+  }];
 }
 
 def OneFlow_ZeroLikeOp : OneFlow_BaseOp<"zero_like", []> {
@@ -6124,5 +8714,9 @@ def OneFlow_ZeroLikeOp : OneFlow_BaseOp<"zero_like", []> {
   let output = (outs
     AnyType:$out
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() const { return {"like"}; }
+    static std::vector<std::string> outputOrder() const { return {"out"}; }
+  }];
 }
 

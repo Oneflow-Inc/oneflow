@@ -144,8 +144,9 @@ std::string GetBaseOp(const std::string& op_name) {
 }
 
 bool ShouldGenEmptyBody(const std::string& op_name) {
-  return IsInvolutionOp(op_name) || IsIdempotentOp(op_name) || IsPoolOp(op_name)
-         || IsConvOp(op_name);
+  return false;
+  // return IsInvolutionOp(op_name) || IsIdempotentOp(op_name) || IsPoolOp(op_name)
+  //        || IsConvOp(op_name);
 }
 
 void PrintArgDef(const UserOpDef_ArgDef& arg_def) {
@@ -171,11 +172,33 @@ bool HasMultipleVariadic(
   return num_variadic_op > 1;
 }
 
+std::string GetOperandOrder(
+    const ::google::protobuf::RepeatedPtrField< ::oneflow::UserOpDef_ArgDef>& arg_defs) {
+  std::string ret = "{";
+  for (auto it = arg_defs.begin(); it != arg_defs.end(); ++it) {
+    ret += ("\"" + it->name() + "\"");
+    if (std::next(it) != arg_defs.end()) { ret += ", "; }
+  }
+  ret += "}";
+  return ret;
+}
+
+void PrintExtraClassDeclaration(const oneflow::UserOpDef& op_def) {
+  std::cout << "  let extraClassDeclaration = [{"
+            << "\n";
+  std::cout << "    static std::vector<std::string> inputOrder() const { return "
+            << GetOperandOrder(op_def.input()) << "; }\n";
+  std::cout << "    static std::vector<std::string> outputOrder() const { return "
+            << GetOperandOrder(op_def.output()) << "; }\n";
+  std::cout << "  }];"
+            << "\n";
+}
+
 void PrintTraitAttrs(const oneflow::UserOpDef& op_def) {
   const bool need_operand_segment_sizes = HasMultipleVariadic(op_def.input());
   const bool need_result_segment_sizes = HasMultipleVariadic(op_def.output());
   if (need_operand_segment_sizes || need_result_segment_sizes) {
-    std::cout << "  let input = (ins"
+    std::cout << "  let trait_attrs = (ins"
               << "\n";
     if (need_operand_segment_sizes) {
       std::cout << "    I32ElementsAttr:$operand_segment_sizes"
@@ -225,11 +248,11 @@ void PrintBody(const oneflow::UserOpDef& op_def) {
     std::cout << "  );"
               << "\n";
   }
-  std::cout << "}"
-            << "\n";
-
   // trait attrs
   PrintTraitAttrs(op_def);
+  PrintExtraClassDeclaration(op_def);
+  std::cout << "}"
+            << "\n";
 }
 
 std::string GetOpClassName(const std::string& op_name) {
