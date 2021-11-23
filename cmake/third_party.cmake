@@ -35,7 +35,7 @@ if (WITH_TENSORRT)
 endif()
 
 include(hwloc)
-if (BUILD_ONEDNN)
+if (WITH_ONEDNN)
   include(oneDNN)
 endif()
 
@@ -143,7 +143,7 @@ set(oneflow_third_party_libs
     ${FLATBUFFERS_STATIC_LIBRARIES}
     ${LZ4_STATIC_LIBRARIES}
 )
-if (BUILD_ONEDNN)
+if (WITH_ONEDNN)
   set(oneflow_third_party_libs ${oneflow_third_party_libs} ${ONEDNN_STATIC_LIBRARIES})
 endif()
 
@@ -174,7 +174,7 @@ set(oneflow_third_party_dependencies
   lz4_copy_libs_to_destination
   lz4_copy_headers_to_destination
 )
-if (BUILD_ONEDNN)
+if (WITH_ONEDNN)
   list(APPEND oneflow_third_party_dependencies onednn)
 endif()
 
@@ -208,7 +208,7 @@ list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS
     ${FLATBUFFERS_INCLUDE_DIR}
     ${LZ4_INCLUDE_DIR}
 )
-if (BUILD_ONEDNN)
+if (WITH_ONEDNN)
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${ONEDNN_INCLUDE_DIR})
 endif()
 
