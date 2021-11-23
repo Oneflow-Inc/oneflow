@@ -17,8 +17,6 @@ import unittest
 import oneflow as flow
 from oneflow.nn.parallel import DistributedDataParallel as ddp
 import oneflow.unittest
-import numpy as np
-import os
 from collections import OrderedDict
 from test_util import GenArgDict
 
