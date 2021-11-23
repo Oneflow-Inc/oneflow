@@ -19,14 +19,6 @@ namespace oneflow {
 
 namespace ep {
 
-void Device::CreateEvents(Event** events, size_t count) {
-  for (size_t i = 0; i < count; ++i) { events[i] = this->CreateEvent(); }
-}
-
-void Device::DestroyEvents(Event** events, size_t count) {
-  for (size_t i = 0; i < count; ++i) { this->DestroyEvent(events[i]); }
-}
-
 Event* Device::CreateEvent() {
   Event* event = nullptr;
   this->CreateEvents(&event, 1);
