@@ -172,7 +172,13 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
         [](const std::string& lib_path) { MutSharedLibPaths()->insert(lib_path); });
 #endif  // WITH_MLIR
   m.def("gen_ods", []() {
-    for (const auto& kv : user_op::UserOpRegistryMgr::Get().GetAllOpRegistryResults()) {
+    using K = std::string;
+    using V = user_op::OpRegistryResult;
+    std::map<K, V> sorted{};
+    auto unordered = user_op::UserOpRegistryMgr::Get().GetAllOpRegistryResults();
+    std::transform(unordered.begin(), unordered.end(), std::inserter(sorted, sorted.end()),
+                   [](const std::pair<K, V>& p) { return p; });
+    for (const auto& kv : sorted) {
       const oneflow::user_op::OpRegistryResult& r = kv.second;
       std::cout << "def OneFlow_" << convertToCamelFromSnakeCase(kv.first, true)
                 << "Op : " << GetBaseOp(r.op_type_name) << "<\"" << kv.first << "\", []> ";
