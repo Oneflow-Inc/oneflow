@@ -13,21 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/range_kernel_util.h"
+#ifndef ONEFLOW_CORE_COMMON_INTRUSIVE_ATTRIBUTE_H_
+#define ONEFLOW_CORE_COMMON_INTRUSIVE_ATTRIBUTE_H_
 
-namespace oneflow {
+#include <gtest/gtest.h>
 
-namespace user_op {
-template<typename T>
-struct RangeFunctor<DeviceType::kCPU, T> final {
-  void operator()(DeviceCtx* ctx, const T start, const T delta, const int64_t range_elem_cnt,
-                  T* out) {
-    DoRange<T>(start, delta, range_elem_cnt, out);
-  }
-};
+#define INTRUSIVE_PREDICT_TRUE GOOGLE_PREDICT_TRUE
+#define INTRUSIVE_PREDICT_FALSE GOOGLE_PREDICT_FALSE
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_RANGE_FUNCTOR, (DeviceType::kCPU),
-                                 RANGE_DATA_TYPE_SEQ);
-
-}  // namespace user_op
-}  // namespace oneflow
+#endif  // ONEFLOW_CORE_COMMON_INTRUSIVE_ATTRIBUTE_H_

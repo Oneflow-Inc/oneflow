@@ -55,7 +55,7 @@ class SparseCrossEntropyKernel final : public user_op::OpKernel {
     const int64_t lower_bound = 0;
     const int64_t depth = ctx->Attr<int64_t>("depth");
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeEntropy(
-        ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
+        ctx->stream(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
         label->dptr<K>(), out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -100,10 +100,10 @@ class SparseCrossEntropyMsKernel final : public user_op::OpKernel {
       CHECK_EQ(num_classes, kernel_state->upper() - kernel_state->lower());
       lower_bound = kernel_state->lower();
     }
-    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
+    Memset<device_type>(ctx->stream(), out->mut_dptr(), 0,
                         out->shape().elem_cnt() * GetSizeOfDataType(out->data_type()));
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeEntropy(
-        ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
+        ctx->stream(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
         label->dptr<K>(), out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -156,10 +156,10 @@ class SparseCrossEntropyGradKernel final : public user_op::OpKernel {
     const int64_t depth = ctx->Attr<int64_t>("depth");
     size_t prediction_diff_bytes_size =
         prediction_diff->shape().elem_cnt() * GetSizeOfDataType(prediction_diff->data_type());
-    Memset<device_type>(ctx->device_ctx(), prediction_diff->mut_dptr<T>(), 0,
+    Memset<device_type>(ctx->stream(), prediction_diff->mut_dptr<T>(), 0,
                         prediction_diff_bytes_size);
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiff(
-        ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
+        ctx->stream(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
         label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -207,10 +207,10 @@ class SparseCrossEntropyMsGradKernel final : public user_op::OpKernel {
     }
     size_t prediction_diff_bytes_size =
         prediction_diff->shape().elem_cnt() * GetSizeOfDataType(prediction_diff->data_type());
-    Memset<device_type>(ctx->device_ctx(), prediction_diff->mut_dptr<T>(), 0,
+    Memset<device_type>(ctx->stream(), prediction_diff->mut_dptr<T>(), 0,
                         prediction_diff_bytes_size);
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiff(
-        ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
+        ctx->stream(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
         label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

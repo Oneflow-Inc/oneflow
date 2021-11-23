@@ -93,7 +93,7 @@ class ReflectionPad2dKernel final : public OpKernel {
     y->shape().ToDimVector(&y_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
 
-    ReflectionPad2dFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper, n_batch,
+    ReflectionPad2dFunctor<device_type, IN_T>()(ctx->stream(), src, dest, index_helper, n_batch,
                                                 n_channel, y_height, y_width, x_height, x_width,
                                                 pad_left, pad_top);
   }
@@ -135,11 +135,11 @@ class ReflectionPad2dGradKernel final : public OpKernel {
     NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
 
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
-    Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
+    Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
-    ReflectionPad2dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
-                                                    n_batch, n_channel, dy_height, dy_width,
-                                                    dx_height, dx_width, pad_left, pad_top);
+    ReflectionPad2dGradFunctor<device_type, IN_T>()(ctx->stream(), src, dest, index_helper, n_batch,
+                                                    n_channel, dy_height, dy_width, dx_height,
+                                                    dx_width, pad_left, pad_top);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -199,9 +199,9 @@ class ReplicationPad2dKernel final : public OpKernel {
     y->shape().ToDimVector(&y_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
 
-    ReplicationPad2dFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
-                                                 n_batch, n_channel, y_height, y_width, x_height,
-                                                 x_width, pad_left, pad_top);
+    ReplicationPad2dFunctor<device_type, IN_T>()(ctx->stream(), src, dest, index_helper, n_batch,
+                                                 n_channel, y_height, y_width, x_height, x_width,
+                                                 pad_left, pad_top);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -241,9 +241,9 @@ class ReplicationPad2dGradKernel final : public OpKernel {
     NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
 
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
-    Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
+    Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
-    ReplicationPad2dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
+    ReplicationPad2dGradFunctor<device_type, IN_T>()(ctx->stream(), src, dest, index_helper,
                                                      n_batch, n_channel, dy_height, dy_width,
                                                      dx_height, dx_width, pad_left, pad_top);
   }
@@ -307,7 +307,7 @@ class ConstantPad2dKernel final : public OpKernel {
     y->shape().ToDimVector(&y_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
 
-    ConstantPad2dFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper, n_batch,
+    ConstantPad2dFunctor<device_type, IN_T>()(ctx->stream(), src, dest, index_helper, n_batch,
                                               n_channel, y_height, y_width, x_height, x_width,
                                               pad_left, pad_top, constant_value);
   }
@@ -349,11 +349,11 @@ class ConstantPad2dGradKernel final : public OpKernel {
     NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
 
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
-    Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
+    Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
-    ConstantPad2dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
-                                                  n_batch, n_channel, dy_height, dy_width,
-                                                  dx_height, dx_width, pad_left, pad_top);
+    ConstantPad2dGradFunctor<device_type, IN_T>()(ctx->stream(), src, dest, index_helper, n_batch,
+                                                  n_channel, dy_height, dy_width, dx_height,
+                                                  dx_width, pad_left, pad_top);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

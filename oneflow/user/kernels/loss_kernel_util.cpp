@@ -20,9 +20,8 @@ namespace loss {
 
 template<DeviceType device_type, typename T>
 RETURN_VOID_IF_CPU(device_type)
-ApplyLossReductionIfNeed(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* out,
+ApplyLossReductionIfNeed(ep::Stream* /*stream*/, int64_t elem_cnt, const T* tmp_out, T* out,
                          const ReductionType reduction_type) {
-  (void)ctx;
   if (reduction_type == ReductionType::kNone) { return; }
   if ((reduction_type != ReductionType::kMean) && (reduction_type != ReductionType::kSum)) {
     UNIMPLEMENTED();
@@ -35,7 +34,7 @@ ApplyLossReductionIfNeed(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* 
 
 #define SPECIALIZE_APPLY_LOSS_REDUCTION(device_type, dtype)                              \
   template RETURN_VOID_IF_CPU(device_type) ApplyLossReductionIfNeed<device_type, dtype>( \
-      DeviceCtx * ctx, int64_t elem_cnt, const dtype* tmp_out, dtype* out,               \
+      ep::Stream * stream, int64_t elem_cnt, const dtype* tmp_out, dtype* out,           \
       const ReductionType reduction_type);
 
 SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kCPU, float)

@@ -13,16 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_STREAM_STREAM_CONTEXT_ADAPTER_H_
-#define ONEFLOW_CORE_STREAM_STREAM_CONTEXT_ADAPTER_H_
-
-#include "oneflow/core/stream/include/stream_context.h"
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/user/kernels/arange_kernel_util.h"
 
 namespace oneflow {
 
-StreamContext* NewStreamContextAdapter(DeviceCtx* ctx);
+namespace user_op {
+template<typename T>
+struct ArangeFunctor<DeviceType::kCPU, T> final {
+  void operator()(ep::Stream* stream, const T start, const T delta, const int64_t arange_elem_cnt,
+                  T* out) {
+    DoArange<T>(start, delta, arange_elem_cnt, out);
+  }
+};
 
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_ARANGE_FUNCTOR, (DeviceType::kCPU),
+                                 ARANGE_DATA_TYPE_SEQ);
+
+}  // namespace user_op
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_STREAM_STREAM_CONTEXT_ADAPTER_H_

@@ -24,7 +24,7 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-void MaskAndScale(DeviceCtx* ctx, const int64_t n, float scale, const T* x, const int8_t* mask,
+void MaskAndScale(ep::Stream* stream, const int64_t n, float scale, const T* x, const int8_t* mask,
                   T* y) {
   for (int64_t i = 0; i < n; ++i) { y[i] = x[i] * static_cast<T>(mask[i]) * scale; }
 }
@@ -115,7 +115,7 @@ class DropoutGradKernelCPU final : public user_op::OpKernel {
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const float scale = ctx->Attr<float>("scale");
-    MaskAndScale<T>(ctx->device_ctx(), dy->shape().elem_cnt(), scale, dy->dptr<T>(),
+    MaskAndScale<T>(ctx->stream(), dy->shape().elem_cnt(), scale, dy->dptr<T>(),
                     mask->dptr<int8_t>(), dx->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

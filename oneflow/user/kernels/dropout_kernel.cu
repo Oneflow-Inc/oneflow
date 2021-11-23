@@ -15,13 +15,13 @@ limitations under the License.
 */
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
-#include "oneflow/core/kernel/random_generator.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -569,7 +569,7 @@ class DropoutGradKernelGPU final : public user_op::OpKernel, public user_op::Cud
     const int64_t elem_cnt = dy->shape().elem_cnt();
     OF_CUDA_CHECK((cuda::elementwise::Binary(MaskAndScaleFunctor<T>(scale), elem_cnt,
                                              dx->mut_dptr<T>(), dy->dptr<T>(), mask->dptr<int8_t>(),
-                                             ctx->device_ctx()->cuda_stream())));
+                                             ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
