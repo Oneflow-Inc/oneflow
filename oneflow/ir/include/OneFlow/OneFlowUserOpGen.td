@@ -5,9 +5,6 @@ def OneFlow_ZeroLikeOp : OneFlow_BaseOp<"zero_like", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_WhereScalarYOp : OneFlow_BaseOp<"where_scalar_y", []> {
   let input = (ins
@@ -285,9 +282,6 @@ def OneFlow_TfPreluGradOp : OneFlow_BaseOp<"tf_prelu_grad", []> {
     AnyType:$dx,
     AnyType:$alpha_diff
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_CpuOnlyReluTestOp : OneFlow_BaseOp<"cpu_only_relu_test", []> {
   let input = (ins
@@ -296,9 +290,6 @@ def OneFlow_CpuOnlyReluTestOp : OneFlow_BaseOp<"cpu_only_relu_test", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_TestUserOpAttrAutoTypeOp : OneFlow_BaseOp<"test_user_op_attr_auto_type", []> {
   let input = (ins
@@ -328,14 +319,9 @@ def OneFlow_TestListDataTypeAndListShapeAndListStringAttrOp : OneFlow_BaseOp<"Te
 }
 
 def OneFlow_TestDynamicSourceOp : OneFlow_BaseOp<"TestDynamicSource", []> {
-  let input = (ins
-  );
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_TestMultiInputGradOp : OneFlow_BaseOp<"TestMultiInputGrad", []> {
   let input = (ins
@@ -347,9 +333,6 @@ def OneFlow_TestMultiInputGradOp : OneFlow_BaseOp<"TestMultiInputGrad", []> {
     AnyType:$x1_diff,
     AnyType:$x2_diff
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_TestMultiInputOp : OneFlow_BaseOp<"TestMultiInput", []> {
   let input = (ins
@@ -359,13 +342,8 @@ def OneFlow_TestMultiInputOp : OneFlow_BaseOp<"TestMultiInput", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_TestSourceMultiGpuFixedOutNumOp : OneFlow_BaseOp<"TestSourceMultiGpuFixedOutNum", []> {
-  let input = (ins
-  );
   let output = (outs
     AnyType:$out
   );
@@ -381,9 +359,6 @@ def OneFlow_CcreluOp : OneFlow_BaseOp<"ccrelu", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_TensorBufferToListOfTensorsOp : OneFlow_BaseOp<"tensor_buffer_to_list_of_tensors", []> {
   let input = (ins
@@ -418,11 +393,6 @@ def OneFlow_SummaryWriteImageOp : OneFlow_BaseOp<"summary_write_image", []> {
     AnyType:$step,
     AnyType:$tag
   );
-  let output = (outs
-  );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SspVariableProxyOp : OneFlow_BaseOp<"ssp_variable_proxy", []> {
   let input = (ins
@@ -513,9 +483,6 @@ def OneFlow_SoftsignGradOp : OneFlow_BaseOp<"softsign_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SoftsignOp : OneFlow_BaseOp<"softsign", []> {
   let input = (ins
@@ -524,9 +491,6 @@ def OneFlow_SoftsignOp : OneFlow_BaseOp<"softsign", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SoftmaxGradOp : OneFlow_BaseOp<"softmax_grad", []> {
   let input = (ins
@@ -536,9 +500,6 @@ def OneFlow_SoftmaxGradOp : OneFlow_BaseOp<"softmax_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_UpsampleOp : OneFlow_BaseOp<"upsample", []> {
   let input = (ins
@@ -565,9 +526,6 @@ def OneFlow_SoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"softmax_cross_entropy_gr
   let output = (outs
     AnyType:$prediction_diff
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", []> {
   let input = (ins
@@ -605,11 +563,6 @@ def OneFlow_SummaryWriteHistogramOp : OneFlow_BaseOp<"summary_write_histogram", 
     AnyType:$step,
     AnyType:$tag
   );
-  let output = (outs
-  );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SliceOp : OneFlow_BaseOp<"slice", []> {
   let input = (ins
@@ -633,9 +586,6 @@ def OneFlow_SiluGradOp : OneFlow_BaseOp<"silu_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SigmoidGradOp : OneFlow_BaseOp<"sigmoid_grad", []> {
   let input = (ins
@@ -645,13 +595,8 @@ def OneFlow_SigmoidGradOp : OneFlow_BaseOp<"sigmoid_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_TestRandomSourceOp : OneFlow_BaseOp<"TestRandomSource", []> {
-  let input = (ins
-  );
   let output = (outs
     AnyType:$out
   );
@@ -667,9 +612,6 @@ def OneFlow_SigmoidOp : OneFlow_BaseOp<"sigmoid", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SigmoidCrossEntropyOp : OneFlow_BaseOp<"sigmoid_cross_entropy", []> {
   let input = (ins
@@ -679,9 +621,6 @@ def OneFlow_SigmoidCrossEntropyOp : OneFlow_BaseOp<"sigmoid_cross_entropy", []> 
   let output = (outs
     AnyType:$loss
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_WhereOp : OneFlow_BaseOp<"where", []> {
   let input = (ins
@@ -692,9 +631,6 @@ def OneFlow_WhereOp : OneFlow_BaseOp<"where", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SeluGradOp : OneFlow_BaseOp<"selu_grad", []> {
   let input = (ins
@@ -704,9 +640,6 @@ def OneFlow_SeluGradOp : OneFlow_BaseOp<"selu_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SeluOp : OneFlow_BaseOp<"selu", []> {
   let input = (ins
@@ -715,9 +648,6 @@ def OneFlow_SeluOp : OneFlow_BaseOp<"selu", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SiluOp : OneFlow_BaseOp<"silu", []> {
   let input = (ins
@@ -726,9 +656,6 @@ def OneFlow_SiluOp : OneFlow_BaseOp<"silu", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ScalarPowGradOp : OneFlow_BaseOp<"scalar_pow_grad", []> {
   let input = (ins
@@ -834,9 +761,6 @@ def OneFlow_TfPreluOp : OneFlow_BaseOp<"tf_prelu", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", []> {
   let input = (ins
@@ -845,9 +769,6 @@ def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ReduceMaxOp : OneFlow_BaseOp<"reduce_max", []> {
   let input = (ins
@@ -1187,9 +1108,6 @@ def OneFlow_DistributedPartialFcSampleDisableBoxingOp : OneFlow_BaseOp<"distribu
     AnyType:$boxing_disabled_sampled_weight_diff,
     AnyType:$boxing_disabled_sampled_label
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_PreluGradOp : OneFlow_BaseOp<"prelu_grad", []> {
   let input = (ins
@@ -1201,9 +1119,6 @@ def OneFlow_PreluGradOp : OneFlow_BaseOp<"prelu_grad", []> {
     AnyType:$dx,
     AnyType:$alpha_diff
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_DistributedPartialFcSampleOp : OneFlow_BaseOp<"distributed_partial_fc_sample", []> {
   let input = (ins
@@ -1229,9 +1144,6 @@ def OneFlow_CcreluGradOp : OneFlow_BaseOp<"ccrelu_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ParallelCastOp : OneFlow_BaseOp<"parallel_cast", []> {
   let input = (ins
@@ -1337,9 +1249,6 @@ def OneFlow_ReluGradOp : OneFlow_IdempotentBaseOp<"relu_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ReflectionPad2dGradOp : OneFlow_BaseOp<"reflection_pad2d_grad", []> {
   let input = (ins
@@ -1409,8 +1318,6 @@ def OneFlow_PadOp : OneFlow_BaseOp<"pad", []> {
 }
 
 def OneFlow_RecvOp : OneFlow_BaseOp<"recv", []> {
-  let input = (ins
-  );
   let output = (outs
     AnyType:$out
   );
@@ -1427,16 +1334,12 @@ def OneFlow_SendOp : OneFlow_BaseOp<"send", []> {
   let input = (ins
     AnyType:$in
   );
-  let output = (outs
-  );
   let attrs = (ins
     SI64Attr:$dst_process_id
   );
 }
 
 def OneFlow_OfrecordImageClassificationReaderOp : OneFlow_BaseOp<"ofrecord_image_classification_reader", []> {
-  let input = (ins
-  );
   let output = (outs
     AnyType:$image,
     AnyType:$label
@@ -1478,9 +1381,6 @@ def OneFlow_SoftmaxOp : OneFlow_BaseOp<"softmax", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ScalarLogicalNotEqualOp : OneFlow_BaseOp<"scalar_logical_not_equal", []> {
   let input = (ins
@@ -1619,9 +1519,6 @@ def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_CudnnFusedNormalizationAddReluOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu", []> {
   let input = (ins
@@ -1734,9 +1631,6 @@ def OneFlow_TensorScatterNdUpdateOp : OneFlow_BaseOp<"tensor_scatter_nd_update",
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_GatherNdOp : OneFlow_BaseOp<"gather_nd", []> {
   let input = (ins
@@ -1746,9 +1640,6 @@ def OneFlow_GatherNdOp : OneFlow_BaseOp<"gather_nd", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", []> {
   let input = (ins
@@ -1770,9 +1661,6 @@ def OneFlow__ncclLogicalAllGatherOp : OneFlow_BaseOp<"_nccl_logical_all_gather",
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ScalarFmodOp : OneFlow_BaseOp<"scalar_fmod", []> {
   let input = (ins
@@ -1796,9 +1684,6 @@ def OneFlow__ncclLogicalReduceScatterOp : OneFlow_BaseOp<"_nccl_logical_reduce_s
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow__ncclLogical_2DSameDim0All2allOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all2all", []> {
   let input = (ins
@@ -1832,9 +1717,6 @@ def OneFlow__ncclLogical_2DSameDim0AllGatherOp : OneFlow_BaseOp<"_nccl_logical_2
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow__ncclLogical_2DSameDim0AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_reduce", []> {
   let input = (ins
@@ -1843,13 +1725,8 @@ def OneFlow__ncclLogical_2DSameDim0AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_GenTensorBufferOp : OneFlow_BaseOp<"gen_tensor_buffer", []> {
-  let input = (ins
-  );
   let output = (outs
     AnyType:$out
   );
@@ -1884,9 +1761,6 @@ def OneFlow_MultiplyOp : OneFlow_BaseOp<"multiply", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_UpsampleBicubic_2dGradOp : OneFlow_BaseOp<"upsample_bicubic_2d_grad", []> {
   let input = (ins
@@ -1934,8 +1808,6 @@ def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", []> {
     AnyType:$skip_if,
     AnyType:$mean_square,
     AnyType:$mean_gradient
-  );
-  let output = (outs
   );
   let attrs = (ins
     F32Attr:$learning_rate_val,
@@ -1988,8 +1860,6 @@ def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", []> {
     AnyType:$v,
     AnyType:$max_v
   );
-  let output = (outs
-  );
   let attrs = (ins
     F32Attr:$learning_rate_val,
     F32Attr:$bias_correction1_val,
@@ -2013,8 +1883,6 @@ def OneFlow_IndexedSlicesSgdUpdateOp : OneFlow_BaseOp<"indexed_slices_sgd_update
     AnyType:$model_diff_values,
     AnyType:$learning_rate
   );
-  let output = (outs
-  );
   let attrs = (ins
     F32Attr:$weight_decay
   );
@@ -2027,8 +1895,6 @@ def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", []> {
     AnyType:$learning_rate,
     AnyType:$scale_by_tensor,
     AnyType:$skip_if
-  );
-  let output = (outs
   );
   let attrs = (ins
     F32Attr:$learning_rate_val,
@@ -2047,9 +1913,6 @@ def OneFlow_MishGradOp : OneFlow_BaseOp<"mish_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_UpsampleNearest_3dOp : OneFlow_BaseOp<"upsample_nearest_3d", []> {
   let input = (ins
@@ -2074,9 +1937,6 @@ def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_MinMaxObserverOp : OneFlow_BaseOp<"min_max_observer", []> {
   let input = (ins
@@ -2174,9 +2034,6 @@ def OneFlow_TanhOp : OneFlow_BaseOp<"tanh", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_TanGradOp : OneFlow_BaseOp<"tan_grad", []> {
   let input = (ins
@@ -2186,9 +2043,6 @@ def OneFlow_TanGradOp : OneFlow_BaseOp<"tan_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_TanOp : OneFlow_BaseOp<"tan", []> {
   let input = (ins
@@ -2197,9 +2051,6 @@ def OneFlow_TanOp : OneFlow_BaseOp<"tan", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SquareGradOp : OneFlow_BaseOp<"square_grad", []> {
   let input = (ins
@@ -2209,9 +2060,6 @@ def OneFlow_SquareGradOp : OneFlow_BaseOp<"square_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SoftplusGradOp : OneFlow_BaseOp<"softplus_grad", []> {
   let input = (ins
@@ -2221,9 +2069,6 @@ def OneFlow_SoftplusGradOp : OneFlow_BaseOp<"softplus_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SinhGradOp : OneFlow_BaseOp<"sinh_grad", []> {
   let input = (ins
@@ -2233,9 +2078,6 @@ def OneFlow_SinhGradOp : OneFlow_BaseOp<"sinh_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SinhOp : OneFlow_BaseOp<"sinh", []> {
   let input = (ins
@@ -2244,9 +2086,6 @@ def OneFlow_SinhOp : OneFlow_BaseOp<"sinh", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SortOp : OneFlow_BaseOp<"sort", []> {
   let input = (ins
@@ -2268,9 +2107,6 @@ def OneFlow_SinGradOp : OneFlow_BaseOp<"sin_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_GenerateRandomBatchPermutationIndicesOp : OneFlow_BaseOp<"generate_random_batch_permutation_indices", []> {
   let input = (ins
@@ -2293,9 +2129,6 @@ def OneFlow_PowYGradOp : OneFlow_BaseOp<"pow_y_grad", []> {
   let output = (outs
     AnyType:$dy
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_GeluOp : OneFlow_BaseOp<"gelu", []> {
   let input = (ins
@@ -2304,9 +2137,6 @@ def OneFlow_GeluOp : OneFlow_BaseOp<"gelu", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_HierarchicalParallelCastOp : OneFlow_BaseOp<"hierarchical_parallel_cast", []> {
   let input = (ins
@@ -2343,8 +2173,6 @@ def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", []> {
     AnyType:$momentum,
     AnyType:$scale_by_tensor,
     AnyType:$skip_if
-  );
-  let output = (outs
   );
   let attrs = (ins
     F64Attr:$scale,
@@ -2427,9 +2255,6 @@ def OneFlow__ncclLogicalAllReduceOp : OneFlow_BaseOp<"_nccl_logical_all_reduce",
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_FusedBiasAddGeluGradOp : OneFlow_BaseOp<"fused_bias_add_gelu_grad", []> {
   let input = (ins
@@ -2452,9 +2277,6 @@ def OneFlow_SqrtOp : OneFlow_BaseOp<"sqrt", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_HardswishGradOp : OneFlow_BaseOp<"hardswish_grad", []> {
   let input = (ins
@@ -2464,9 +2286,6 @@ def OneFlow_HardswishGradOp : OneFlow_BaseOp<"hardswish_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_EagerNcclReduceScatterOp : OneFlow_BaseOp<"eager_nccl_reduce_scatter", []> {
   let input = (ins
@@ -2526,8 +2345,6 @@ def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", []> {
     AnyType:$scale_by_tensor,
     AnyType:$skip_if
   );
-  let output = (outs
-  );
   let attrs = (ins
     F32Attr:$beta1,
     F32Attr:$beta2,
@@ -2547,9 +2364,6 @@ def OneFlow_TanhGradOp : OneFlow_BaseOp<"tanh_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_CoshGradOp : OneFlow_BaseOp<"cosh_grad", []> {
   let input = (ins
@@ -2559,9 +2373,6 @@ def OneFlow_CoshGradOp : OneFlow_BaseOp<"cosh_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_FlipGradOp : OneFlow_BaseOp<"flip_grad", []> {
   let input = (ins
@@ -2609,9 +2420,6 @@ def OneFlow_BroadcastDivGradOp : OneFlow_BaseOp<"broadcast_div_grad", []> {
   let output = (outs
     AnyType:$dy
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", []> {
   let input = (ins
@@ -2637,9 +2445,6 @@ def OneFlow_NegativeOp : OneFlow_InvolutionBaseOp<"negative", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ScatterNdOp : OneFlow_BaseOp<"scatter_nd", []> {
   let input = (ins
@@ -2671,8 +2476,6 @@ def OneFlow_FakeQuantizationOp : OneFlow_BaseOp<"fake_quantization", []> {
 }
 
 def OneFlow_EyeOp : OneFlow_BaseOp<"eye", []> {
-  let input = (ins
-  );
   let output = (outs
     AnyType:$out
   );
@@ -2722,8 +2525,6 @@ def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", []> {
     AnyType:$train_step,
     AnyType:$sum
   );
-  let output = (outs
-  );
   let attrs = (ins
     SI32Attr:$train_step_val,
     F32Attr:$learning_rate_val,
@@ -2764,16 +2565,11 @@ def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", []> {
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", []> {
   let input = (ins
     AnyType:$ref,
     AnyType:$value
-  );
-  let output = (outs
   );
   let attrs = (ins
     SI64ArrayAttr:$start,
@@ -2799,8 +2595,6 @@ def OneFlow_SamePaddingOp : OneFlow_BaseOp<"same_padding", []> {
 }
 
 def OneFlow_RandpermOp : OneFlow_BaseOp<"randperm", []> {
-  let input = (ins
-  );
   let output = (outs
     AnyType:$out
   );
@@ -2823,8 +2617,6 @@ def OneFlow_ExpandDimsOp : OneFlow_BaseOp<"expand_dims", []> {
 }
 
 def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", []> {
-  let input = (ins
-  );
   let output = (outs
     AnyType:$out
   );
@@ -2856,9 +2648,6 @@ def OneFlow_CosGradOp : OneFlow_BaseOp<"cos_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_CastToStaticShapeOp : OneFlow_BaseOp<"cast_to_static_shape", []> {
   let input = (ins
@@ -2867,9 +2656,6 @@ def OneFlow_CastToStaticShapeOp : OneFlow_BaseOp<"cast_to_static_shape", []> {
   let output = (outs
     AnyType:$output
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", []> {
   let input = (ins
@@ -2879,8 +2665,6 @@ def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", []> {
     AnyType:$learning_rate,
     AnyType:$scale_by_tensor,
     AnyType:$skip_if
-  );
-  let output = (outs
   );
   let attrs = (ins
     F32Attr:$learning_rate_val,
@@ -2899,9 +2683,6 @@ def OneFlow_AmpWhiteIdentityOp : OneFlow_BaseOp<"amp_white_identity", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SoftplusOp : OneFlow_BaseOp<"softplus", []> {
   let input = (ins
@@ -2910,9 +2691,6 @@ def OneFlow_SoftplusOp : OneFlow_BaseOp<"softplus", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_EluOp : OneFlow_BaseOp<"elu", []> {
   let input = (ins
@@ -2934,9 +2712,6 @@ def OneFlow_ElementwiseMinimumOp : OneFlow_BaseOp<"elementwise_minimum", []> {
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", []> {
   let input = (ins
@@ -2963,9 +2738,6 @@ def OneFlow_ElementwiseMinimumBackwardOp : OneFlow_BaseOp<"elementwise_minimum_b
     AnyType:$dx,
     AnyType:$dy
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_GridSampleOp : OneFlow_BaseOp<"grid_sample", []> {
   let input = (ins
@@ -2990,9 +2762,6 @@ def OneFlow_ElementwiseMaximumOp : OneFlow_BaseOp<"elementwise_maximum", []> {
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_EagerSToBOp : OneFlow_BaseOp<"eager_s_to_b", []> {
   let input = (ins
@@ -3019,9 +2788,6 @@ def OneFlow_ElementwiseMaximumBackwardOp : OneFlow_BaseOp<"elementwise_maximum_b
     AnyType:$dx,
     AnyType:$dy
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_EagerPToBOp : OneFlow_BaseOp<"eager_p_to_b", []> {
   let input = (ins
@@ -3092,9 +2858,6 @@ def OneFlow_BroadcastAddOp : OneFlow_BaseOp<"broadcast_add", []> {
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_UpsampleNearest_3dGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad", []> {
   let input = (ins
@@ -3133,9 +2896,6 @@ def OneFlow_ImageFlipOp : OneFlow_BaseOp<"image_flip", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_FlipOp : OneFlow_BaseOp<"flip", []> {
   let input = (ins
@@ -3195,8 +2955,6 @@ def OneFlow_ScalarLogicalAndOp : OneFlow_BaseOp<"scalar_logical_and", []> {
 }
 
 def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", []> {
-  let input = (ins
-  );
   let output = (outs
     AnyType:$out
   );
@@ -3215,8 +2973,6 @@ def OneFlow_DynamicLossScaleScheduleOp : OneFlow_BaseOp<"dynamic_loss_scale_sche
     AnyType:$count_not_finite,
     AnyType:$loss_scale,
     AnyType:$good_step_counter
-  );
-  let output = (outs
   );
   let attrs = (ins
     SI64Attr:$increment_period,
@@ -3289,9 +3045,6 @@ def OneFlow_Expm1GradOp : OneFlow_BaseOp<"expm1_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_TensorBufferToListOfTensorsV2Op : OneFlow_BaseOp<"tensor_buffer_to_list_of_tensors_v2", []> {
   let input = (ins
@@ -3308,8 +3061,6 @@ def OneFlow_TensorBufferToListOfTensorsV2Op : OneFlow_BaseOp<"tensor_buffer_to_l
 }
 
 def OneFlow_UniformIntOp : OneFlow_BaseOp<"uniform_int", []> {
-  let input = (ins
-  );
   let output = (outs
     AnyType:$out
   );
@@ -3344,9 +3095,6 @@ def OneFlow_XdivyXGradOp : OneFlow_BaseOp<"xdivy_x_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_AsinOp : OneFlow_BaseOp<"asin", []> {
   let input = (ins
@@ -3355,9 +3103,6 @@ def OneFlow_AsinOp : OneFlow_BaseOp<"asin", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_DimScatterUpdateOp : OneFlow_BaseOp<"dim_scatter_update", []> {
   let input = (ins
@@ -3429,9 +3174,6 @@ def OneFlow_ErfcOp : OneFlow_BaseOp<"erfc", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_DimScatterMulScalarOp : OneFlow_BaseOp<"dim_scatter_mul_scalar", []> {
   let input = (ins
@@ -3507,9 +3249,6 @@ def OneFlow_AbsOp : OneFlow_IdempotentBaseOp<"abs", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_FusedCastScaleOp : OneFlow_BaseOp<"fused_cast_scale", []> {
   let input = (ins
@@ -3584,8 +3323,6 @@ def OneFlow_CopyOp : OneFlow_BaseOp<"copy", []> {
 }
 
 def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", []> {
-  let input = (ins
-  );
   let output = (outs
     AnyType:$out
   );
@@ -3624,9 +3361,6 @@ def OneFlow_LogGradOp : OneFlow_BaseOp<"log_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_Log1pGradOp : OneFlow_BaseOp<"log1p_grad", []> {
   let input = (ins
@@ -3636,9 +3370,6 @@ def OneFlow_Log1pGradOp : OneFlow_BaseOp<"log1p_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ScalarLogicalEqualOp : OneFlow_BaseOp<"scalar_logical_equal", []> {
   let input = (ins
@@ -3694,9 +3425,6 @@ def OneFlow_BroadcastGreaterOp : OneFlow_BaseOp<"broadcast_greater", []> {
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ScatterNdLikeOp : OneFlow_BaseOp<"scatter_nd_like", []> {
   let input = (ins
@@ -3707,9 +3435,6 @@ def OneFlow_ScatterNdLikeOp : OneFlow_BaseOp<"scatter_nd_like", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ExpandOp : OneFlow_BaseOp<"expand", []> {
   let input = (ins
@@ -3731,9 +3456,6 @@ def OneFlow_MultiCountNotFiniteOp : OneFlow_BaseOp<"multi_count_not_finite", []>
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_FlattenOp : OneFlow_BaseOp<"flatten", []> {
   let input = (ins
@@ -3756,9 +3478,6 @@ def OneFlow_BroadcastLogicalXorOp : OneFlow_BaseOp<"broadcast_logical_xor", []> 
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_CountNotFiniteOp : OneFlow_BaseOp<"count_not_finite", []> {
   let input = (ins
@@ -3767,9 +3486,6 @@ def OneFlow_CountNotFiniteOp : OneFlow_BaseOp<"count_not_finite", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_AdaptiveAvgPool3dGradOp : OneFlow_BaseOp<"adaptive_avg_pool3d_grad", []> {
   let input = (ins
@@ -3785,8 +3501,6 @@ def OneFlow_AdaptiveAvgPool3dGradOp : OneFlow_BaseOp<"adaptive_avg_pool3d_grad",
 }
 
 def OneFlow_UniformOp : OneFlow_BaseOp<"uniform", []> {
-  let input = (ins
-  );
   let output = (outs
     AnyType:$out
   );
@@ -3894,9 +3608,6 @@ def OneFlow_AcoshOp : OneFlow_BaseOp<"acosh", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", []> {
   let input = (ins
@@ -3905,9 +3616,6 @@ def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_DimScatterUpdateScalarOp : OneFlow_BaseOp<"dim_scatter_update_scalar", []> {
   let input = (ins
@@ -3956,13 +3664,8 @@ def OneFlow_SqrtGradOp : OneFlow_BaseOp<"sqrt_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_NormalOp : OneFlow_BaseOp<"normal", []> {
-  let input = (ins
-  );
   let output = (outs
     AnyType:$out
   );
@@ -4042,11 +3745,6 @@ def OneFlow_SummaryWriteScalarOp : OneFlow_BaseOp<"summary_write_scalar", []> {
     AnyType:$step,
     AnyType:$tag
   );
-  let output = (outs
-  );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_NarrowGradOp : OneFlow_BaseOp<"narrow_grad", []> {
   let input = (ins
@@ -4208,9 +3906,6 @@ def OneFlow__ncclLogical_2DSameDim1AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_Expm1Op : OneFlow_BaseOp<"expm1", []> {
   let input = (ins
@@ -4219,9 +3914,6 @@ def OneFlow_Expm1Op : OneFlow_BaseOp<"expm1", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_BatchMatmulOp : OneFlow_BaseOp<"batch_matmul", []> {
   let input = (ins
@@ -4247,9 +3939,6 @@ def OneFlow_NegativeGradOp : OneFlow_BaseOp<"negative_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ConcatOp : OneFlow_BaseOp<"concat", []> {
   let input = (ins
@@ -4273,9 +3962,6 @@ def OneFlow_ObjectSegmentationPolygonFlipOp : OneFlow_BaseOp<"object_segmentatio
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SigmoidV2GradOp : OneFlow_BaseOp<"sigmoid_v2_grad", []> {
   let input = (ins
@@ -4285,9 +3971,6 @@ def OneFlow_SigmoidV2GradOp : OneFlow_BaseOp<"sigmoid_v2_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_BroadcastLessEqualOp : OneFlow_BaseOp<"broadcast_less_equal", []> {
   let input = (ins
@@ -4297,9 +3980,6 @@ def OneFlow_BroadcastLessEqualOp : OneFlow_BaseOp<"broadcast_less_equal", []> {
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_AdaptiveAvgPool3dOp : OneFlow_BaseOp<"adaptive_avg_pool3d", []> {
   let input = (ins
@@ -4333,9 +4013,6 @@ def OneFlow_MultiSquareSumOp : OneFlow_BaseOp<"multi_square_sum", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_CudnnFusedNormalizationAddReluGradOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu_grad", []> {
   let input = (ins
@@ -4400,11 +4077,6 @@ def OneFlow_AssignIfOp : OneFlow_BaseOp<"assign_if", []> {
     AnyType:$value,
     AnyType:$condition
   );
-  let output = (outs
-  );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ScalarLogicalLessOp : OneFlow_BaseOp<"scalar_logical_less", []> {
   let input = (ins
@@ -4429,9 +4101,6 @@ def OneFlow_ScalarAddByTensorOp : OneFlow_BaseOp<"scalar_add_by_tensor", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_IndexedSlicesReduceSumOp : OneFlow_BaseOp<"indexed_slices_reduce_sum", []> {
   let input = (ins
@@ -4443,9 +4112,6 @@ def OneFlow_IndexedSlicesReduceSumOp : OneFlow_BaseOp<"indexed_slices_reduce_sum
     AnyType:$y_values,
     AnyType:$num_unique
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ConstantPad1dOp : OneFlow_BaseOp<"constant_pad1d", []> {
   let input = (ins
@@ -4468,9 +4134,6 @@ def OneFlow_ArgmaxOp : OneFlow_BaseOp<"argmax", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_EagerNaiveSToSOp : OneFlow_BaseOp<"eager_naive_s_to_s", []> {
   let input = (ins
@@ -4495,9 +4158,6 @@ def OneFlow_MishOp : OneFlow_BaseOp<"mish", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_BroadcastLogicalAndOp : OneFlow_BaseOp<"broadcast_logical_and", []> {
   let input = (ins
@@ -4507,9 +4167,6 @@ def OneFlow_BroadcastLogicalAndOp : OneFlow_BaseOp<"broadcast_logical_and", []> 
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ConvBiasGradOp : OneFlow_BaseOp<"conv_bias_grad", []> {
   let input = (ins
@@ -4590,9 +4247,6 @@ def OneFlow_BroadcastFloorModOp : OneFlow_BaseOp<"broadcast_floor_mod", []> {
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ScalarLogicalGreaterEqualOp : OneFlow_BaseOp<"scalar_logical_greater_equal", []> {
   let input = (ins
@@ -4630,18 +4284,8 @@ def OneFlow_BatchGatherOp : OneFlow_BaseOp<"batch_gather", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_FlushSummaryWriterOp : OneFlow_BaseOp<"flush_summary_writer", []> {
-  let input = (ins
-  );
-  let output = (outs
-  );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_EagerNcclReduceOp : OneFlow_BaseOp<"eager_nccl_reduce", []> {
   let input = (ins
@@ -4663,9 +4307,6 @@ def OneFlow_SquareOp : OneFlow_BaseOp<"square", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ConvFilterGradOp : OneFlow_BaseOp<"conv_filter_grad", []> {
   let input = (ins
@@ -4691,11 +4332,6 @@ def OneFlow_SummaryWritePbOp : OneFlow_BaseOp<"summary_write_pb", []> {
     AnyType:$in,
     AnyType:$step
   );
-  let output = (outs
-  );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_DimScatterAddLikeOp : OneFlow_BaseOp<"dim_scatter_add_like", []> {
   let input = (ins
@@ -4736,8 +4372,6 @@ def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_upda
     AnyType:$v,
     AnyType:$max_v
   );
-  let output = (outs
-  );
   let attrs = (ins
     F32Attr:$learning_rate_val,
     F32Attr:$beta1,
@@ -4757,9 +4391,6 @@ def OneFlow_AbsGradOp : OneFlow_BaseOp<"abs_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_GridSampleGradOp : OneFlow_BaseOp<"grid_sample_grad", []> {
   let input = (ins
@@ -4786,9 +4417,6 @@ def OneFlow_ReciprocalGradOp : OneFlow_BaseOp<"reciprocal_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_CastToTickOp : OneFlow_BaseOp<"cast_to_tick", []> {
   let input = (ins
@@ -4797,9 +4425,6 @@ def OneFlow_CastToTickOp : OneFlow_BaseOp<"cast_to_tick", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_RoundOp : OneFlow_IdempotentBaseOp<"round", []> {
   let input = (ins
@@ -4808,9 +4433,6 @@ def OneFlow_RoundOp : OneFlow_IdempotentBaseOp<"round", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", []> {
   let input = (ins
@@ -4853,13 +4475,8 @@ def OneFlow_BroadcastMaximumOp : OneFlow_BaseOp<"broadcast_maximum", []> {
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_COCOReaderOp : OneFlow_BaseOp<"COCOReader", []> {
-  let input = (ins
-  );
   let output = (outs
     AnyType:$image,
     AnyType:$image_id,
@@ -4945,9 +4562,6 @@ def OneFlow_HardsigmoidGradOp : OneFlow_BaseOp<"hardsigmoid_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_RsqrtGradOp : OneFlow_BaseOp<"rsqrt_grad", []> {
   let input = (ins
@@ -4957,9 +4571,6 @@ def OneFlow_RsqrtGradOp : OneFlow_BaseOp<"rsqrt_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_UpsampleBicubic_2dOp : OneFlow_BaseOp<"upsample_bicubic_2d", []> {
   let input = (ins
@@ -4983,9 +4594,6 @@ def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", []> {
   let input = (ins
@@ -4995,9 +4603,6 @@ def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_EagerNcclAllGatherOp : OneFlow_BaseOp<"eager_nccl_all_gather", []> {
   let input = (ins
@@ -5018,9 +4623,6 @@ def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ArgSortOp : OneFlow_BaseOp<"arg_sort", []> {
   let input = (ins
@@ -5077,9 +4679,6 @@ def OneFlow_AcosGradOp : OneFlow_BaseOp<"acos_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_TestMultiOutputOrderOp : OneFlow_BaseOp<"TestMultiOutputOrder", []> {
   let input = (ins
@@ -5089,9 +4688,6 @@ def OneFlow_TestMultiOutputOrderOp : OneFlow_BaseOp<"TestMultiOutputOrder", []> 
     AnyType:$out1,
     AnyType:$out2
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_MegatronGptMmapDataLoaderOp : OneFlow_BaseOp<"megatron_gpt_mmap_data_loader", []> {
   let input = (ins
@@ -5116,14 +4712,9 @@ def OneFlow_MegatronGptMmapDataLoaderOp : OneFlow_BaseOp<"megatron_gpt_mmap_data
 }
 
 def OneFlow_TestSourceOp : OneFlow_BaseOp<"TestSource", []> {
-  let input = (ins
-  );
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_Maxpool_1dGradOp : OneFlow_BaseOp<"maxpool_1d_grad", []> {
   let input = (ins
@@ -5156,9 +4747,6 @@ def OneFlow_BroadcastPowYGradOp : OneFlow_BaseOp<"broadcast_pow_y_grad", []> {
   let output = (outs
     AnyType:$dy
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_GeluGradOp : OneFlow_BaseOp<"gelu_grad", []> {
   let input = (ins
@@ -5168,9 +4756,6 @@ def OneFlow_GeluGradOp : OneFlow_BaseOp<"gelu_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ImageNormalizeOp : OneFlow_BaseOp<"image_normalize", []> {
   let input = (ins
@@ -5192,9 +4777,6 @@ def OneFlow_LogicalNotOp : OneFlow_BaseOp<"logical_not", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_CtcLossGradOp : OneFlow_BaseOp<"ctc_loss_grad", []> {
   let input = (ins
@@ -5241,9 +4823,6 @@ def OneFlow_BroadcastPowXGradOp : OneFlow_BaseOp<"broadcast_pow_x_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momentum_update", []> {
   let input = (ins
@@ -5252,8 +4831,6 @@ def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momen
     AnyType:$model_diff_values,
     AnyType:$learning_rate,
     AnyType:$momentum
-  );
-  let output = (outs
   );
   let attrs = (ins
     F32Attr:$beta,
@@ -5380,11 +4957,6 @@ def OneFlow_AssignOp : OneFlow_BaseOp<"assign", []> {
     AnyType:$ref,
     AnyType:$value
   );
-  let output = (outs
-  );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_Atan2XGradOp : OneFlow_BaseOp<"atan2_x_grad", []> {
   let input = (ins
@@ -5395,9 +4967,6 @@ def OneFlow_Atan2XGradOp : OneFlow_BaseOp<"atan2_x_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ErfGradOp : OneFlow_BaseOp<"erf_grad", []> {
   let input = (ins
@@ -5407,9 +4976,6 @@ def OneFlow_ErfGradOp : OneFlow_BaseOp<"erf_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_InTopKOp : OneFlow_BaseOp<"in_top_k", []> {
   let input = (ins
@@ -5468,9 +5034,6 @@ def OneFlow_SquareSumOp : OneFlow_BaseOp<"square_sum", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SoftmaxCrossEntropyOp : OneFlow_BaseOp<"softmax_cross_entropy", []> {
   let input = (ins
@@ -5481,9 +5044,6 @@ def OneFlow_SoftmaxCrossEntropyOp : OneFlow_BaseOp<"softmax_cross_entropy", []> 
     AnyType:$prob,
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_BroadcastGreaterEqualOp : OneFlow_BaseOp<"broadcast_greater_equal", []> {
   let input = (ins
@@ -5493,13 +5053,8 @@ def OneFlow_BroadcastGreaterEqualOp : OneFlow_BaseOp<"broadcast_greater_equal", 
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ArangeOp : OneFlow_BaseOp<"arange", []> {
-  let input = (ins
-  );
   let output = (outs
     AnyType:$out
   );
@@ -5523,9 +5078,6 @@ def OneFlow_Atan2Op : OneFlow_BaseOp<"atan2", []> {
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_XlogyXGradOp : OneFlow_BaseOp<"xlogy_x_grad", []> {
   let input = (ins
@@ -5536,9 +5088,6 @@ def OneFlow_XlogyXGradOp : OneFlow_BaseOp<"xlogy_x_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", []> {
   let input = (ins
@@ -5560,9 +5109,6 @@ def OneFlow_FloorOp : OneFlow_IdempotentBaseOp<"floor", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ScalarFloordivOp : OneFlow_BaseOp<"scalar_floordiv", []> {
   let input = (ins
@@ -5585,11 +5131,6 @@ def OneFlow_AssignIfNotOp : OneFlow_BaseOp<"assign_if_not", []> {
     AnyType:$value,
     AnyType:$condition
   );
-  let output = (outs
-  );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_CropMirrorNormalizeFromUint8Op : OneFlow_BaseOp<"crop_mirror_normalize_from_uint8", []> {
   let input = (ins
@@ -5634,9 +5175,6 @@ def OneFlow_AsinhGradOp : OneFlow_BaseOp<"asinh_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_TensorScatterNdAddOp : OneFlow_BaseOp<"tensor_scatter_nd_add", []> {
   let input = (ins
@@ -5647,9 +5185,6 @@ def OneFlow_TensorScatterNdAddOp : OneFlow_BaseOp<"tensor_scatter_nd_add", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_CastLikeOp : OneFlow_BaseOp<"cast_like", []> {
   let input = (ins
@@ -5659,9 +5194,6 @@ def OneFlow_CastLikeOp : OneFlow_BaseOp<"cast_like", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_Conv1dOp : OneFlow_BaseOp<"conv1d", []> {
   let input = (ins
@@ -5692,9 +5224,6 @@ def OneFlow_PreluOp : OneFlow_BaseOp<"prelu", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ObjectBboxScaleOp : OneFlow_BaseOp<"object_bbox_scale", []> {
   let input = (ins
@@ -5704,9 +5233,6 @@ def OneFlow_ObjectBboxScaleOp : OneFlow_BaseOp<"object_bbox_scale", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", []> {
   let input = (ins
@@ -5763,9 +5289,6 @@ def OneFlow_HierarchicalParallelCastLikeOp : OneFlow_BaseOp<"hierarchical_parall
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_IdentityOp : OneFlow_BaseOp<"identity", []> {
   let input = (ins
@@ -5774,9 +5297,6 @@ def OneFlow_IdentityOp : OneFlow_BaseOp<"identity", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_HardswishOp : OneFlow_BaseOp<"hardswish", []> {
   let input = (ins
@@ -5785,9 +5305,6 @@ def OneFlow_HardswishOp : OneFlow_BaseOp<"hardswish", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ImageBatchAlignOp : OneFlow_BaseOp<"image_batch_align", []> {
   let input = (ins
@@ -5813,9 +5330,6 @@ def OneFlow_ObjectBboxFlipOp : OneFlow_BaseOp<"object_bbox_flip", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ReciprocalNoNanOp : OneFlow_BaseOp<"reciprocal_no_nan", []> {
   let input = (ins
@@ -5824,9 +5338,6 @@ def OneFlow_ReciprocalNoNanOp : OneFlow_BaseOp<"reciprocal_no_nan", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ObjectSegmentationPolygonScaleOp : OneFlow_BaseOp<"object_segmentation_polygon_scale", []> {
   let input = (ins
@@ -5836,9 +5347,6 @@ def OneFlow_ObjectSegmentationPolygonScaleOp : OneFlow_BaseOp<"object_segmentati
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SigmoidCrossEntropyGradOp : OneFlow_BaseOp<"sigmoid_cross_entropy_grad", []> {
   let input = (ins
@@ -5849,9 +5357,6 @@ def OneFlow_SigmoidCrossEntropyGradOp : OneFlow_BaseOp<"sigmoid_cross_entropy_gr
   let output = (outs
     AnyType:$prediction_diff
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ScalarDivByTensorOp : OneFlow_BaseOp<"scalar_div_by_tensor", []> {
   let input = (ins
@@ -5861,9 +5366,6 @@ def OneFlow_ScalarDivByTensorOp : OneFlow_BaseOp<"scalar_div_by_tensor", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ObjectSegmentationPolygonToMaskOp : OneFlow_BaseOp<"object_segmentation_polygon_to_mask", []> {
   let input = (ins
@@ -5874,9 +5376,6 @@ def OneFlow_ObjectSegmentationPolygonToMaskOp : OneFlow_BaseOp<"object_segmentat
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_FloordivYGradOp : OneFlow_BaseOp<"floordiv_y_grad", []> {
   let input = (ins
@@ -5887,13 +5386,8 @@ def OneFlow_FloordivYGradOp : OneFlow_BaseOp<"floordiv_y_grad", []> {
   let output = (outs
     AnyType:$dy
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_CoinFlipOp : OneFlow_BaseOp<"coin_flip", []> {
-  let input = (ins
-  );
   let output = (outs
     AnyType:$out
   );
@@ -5956,9 +5450,6 @@ def OneFlow_LogOp : OneFlow_BaseOp<"log", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", []> {
   let input = (ins
@@ -5989,9 +5480,6 @@ def OneFlow_BroadcastSubOp : OneFlow_BaseOp<"broadcast_sub", []> {
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", []> {
   let input = (ins
@@ -6017,9 +5505,6 @@ def OneFlow_AtanhOp : OneFlow_BaseOp<"atanh", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_LayerNormParamGradOp : OneFlow_BaseOp<"layer_norm_param_grad", []> {
   let input = (ins
@@ -6046,9 +5531,6 @@ def OneFlow_ScalarSubByTensorOp : OneFlow_BaseOp<"scalar_sub_by_tensor", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_LogSoftmaxOp : OneFlow_BaseOp<"log_softmax", []> {
   let input = (ins
@@ -6057,13 +5539,8 @@ def OneFlow_LogSoftmaxOp : OneFlow_BaseOp<"log_softmax", []> {
   let output = (outs
     AnyType:$prob
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_OneRecReaderOp : OneFlow_BaseOp<"OneRecReader", []> {
-  let input = (ins
-  );
   let output = (outs
     AnyType:$out
   );
@@ -6102,9 +5579,6 @@ def OneFlow_CosOp : OneFlow_BaseOp<"cos", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_LogSigmoidGradOp : OneFlow_BaseOp<"log_sigmoid_grad", []> {
   let input = (ins
@@ -6114,9 +5588,6 @@ def OneFlow_LogSigmoidGradOp : OneFlow_BaseOp<"log_sigmoid_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_BroadcastDivOp : OneFlow_BaseOp<"broadcast_div", []> {
   let input = (ins
@@ -6126,9 +5597,6 @@ def OneFlow_BroadcastDivOp : OneFlow_BaseOp<"broadcast_div", []> {
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_L2NormalizeOp : OneFlow_BaseOp<"l2_normalize", []> {
   let input = (ins
@@ -6152,9 +5620,6 @@ def OneFlow_BroadcastEqualOp : OneFlow_BaseOp<"broadcast_equal", []> {
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ErfOp : OneFlow_BaseOp<"erf", []> {
   let input = (ins
@@ -6163,15 +5628,8 @@ def OneFlow_ErfOp : OneFlow_BaseOp<"erf", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_CreateSummaryWriterOp : OneFlow_BaseOp<"create_summary_writer", []> {
-  let input = (ins
-  );
-  let output = (outs
-  );
   let attrs = (ins
     StrAttr:$logdir
   );
@@ -6184,9 +5642,6 @@ def OneFlow_Log1pOp : OneFlow_BaseOp<"log1p", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ScalarLogicalGreaterOp : OneFlow_BaseOp<"scalar_logical_greater", []> {
   let input = (ins
@@ -6211,9 +5666,6 @@ def OneFlow_BroadcastMinimumOp : OneFlow_BaseOp<"broadcast_minimum", []> {
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_BroadcastFmodOp : OneFlow_BaseOp<"broadcast_fmod", []> {
   let input = (ins
@@ -6223,9 +5675,6 @@ def OneFlow_BroadcastFmodOp : OneFlow_BaseOp<"broadcast_fmod", []> {
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ScalarAddOp : OneFlow_BaseOp<"scalar_add", []> {
   let input = (ins
@@ -6269,9 +5718,6 @@ def OneFlow_BroadcastPowOp : OneFlow_BaseOp<"broadcast_pow", []> {
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_BroadcastNotEqualOp : OneFlow_BaseOp<"broadcast_not_equal", []> {
   let input = (ins
@@ -6281,9 +5727,6 @@ def OneFlow_BroadcastNotEqualOp : OneFlow_BaseOp<"broadcast_not_equal", []> {
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", []> {
   let input = (ins
@@ -6292,9 +5735,6 @@ def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_BroadcastLessOp : OneFlow_BaseOp<"broadcast_less", []> {
   let input = (ins
@@ -6304,9 +5744,6 @@ def OneFlow_BroadcastLessOp : OneFlow_BaseOp<"broadcast_less", []> {
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ImageRandomCropOp : OneFlow_BaseOp<"image_random_crop", []> {
   let input = (ins
@@ -6332,9 +5769,6 @@ def OneFlow_BroadcastLogicalOrOp : OneFlow_BaseOp<"broadcast_logical_or", []> {
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_PowOp : OneFlow_BaseOp<"pow", []> {
   let input = (ins
@@ -6344,9 +5778,6 @@ def OneFlow_PowOp : OneFlow_BaseOp<"pow", []> {
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_CeilOp : OneFlow_IdempotentBaseOp<"ceil", []> {
   let input = (ins
@@ -6355,9 +5786,6 @@ def OneFlow_CeilOp : OneFlow_IdempotentBaseOp<"ceil", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_Atan2YGradOp : OneFlow_BaseOp<"atan2_y_grad", []> {
   let input = (ins
@@ -6368,9 +5796,6 @@ def OneFlow_Atan2YGradOp : OneFlow_BaseOp<"atan2_y_grad", []> {
   let output = (outs
     AnyType:$dy
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_AvgPool_2dOp : OneFlow_BaseOp<"avg_pool_2d", []> {
   let input = (ins
@@ -6421,9 +5846,6 @@ def OneFlow_PowXGradOp : OneFlow_BaseOp<"pow_x_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_FloordivOp : OneFlow_BaseOp<"floordiv", []> {
   let input = (ins
@@ -6433,9 +5855,6 @@ def OneFlow_FloordivOp : OneFlow_BaseOp<"floordiv", []> {
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_FusedScaleTrilOp : OneFlow_BaseOp<"fused_scale_tril", []> {
   let input = (ins
@@ -6464,9 +5883,6 @@ def OneFlow_FloordivXGradOp : OneFlow_BaseOp<"floordiv_x_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_XdivyYGradOp : OneFlow_BaseOp<"xdivy_y_grad", []> {
   let input = (ins
@@ -6477,9 +5893,6 @@ def OneFlow_XdivyYGradOp : OneFlow_BaseOp<"xdivy_y_grad", []> {
   let output = (outs
     AnyType:$dy
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SamePaddingGradOp : OneFlow_BaseOp<"same_padding_grad", []> {
   let input = (ins
@@ -6507,9 +5920,6 @@ def OneFlow_XlogyYGradOp : OneFlow_BaseOp<"xlogy_y_grad", []> {
   let output = (outs
     AnyType:$dy
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_LgammaOp : OneFlow_BaseOp<"lgamma", []> {
   let input = (ins
@@ -6518,9 +5928,6 @@ def OneFlow_LgammaOp : OneFlow_BaseOp<"lgamma", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_AcosOp : OneFlow_BaseOp<"acos", []> {
   let input = (ins
@@ -6529,9 +5936,6 @@ def OneFlow_AcosOp : OneFlow_BaseOp<"acos", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_TensorToTensorBufferOp : OneFlow_BaseOp<"tensor_to_tensor_buffer", []> {
   let input = (ins
@@ -6584,9 +5988,6 @@ def OneFlow_LogSoftmaxGradOp : OneFlow_BaseOp<"log_softmax_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_AcoshGradOp : OneFlow_BaseOp<"acosh_grad", []> {
   let input = (ins
@@ -6596,9 +5997,6 @@ def OneFlow_AcoshGradOp : OneFlow_BaseOp<"acosh_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_AsinhOp : OneFlow_BaseOp<"asinh", []> {
   let input = (ins
@@ -6607,9 +6005,6 @@ def OneFlow_AsinhOp : OneFlow_BaseOp<"asinh", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_AsinGradOp : OneFlow_BaseOp<"asin_grad", []> {
   let input = (ins
@@ -6619,9 +6014,6 @@ def OneFlow_AsinGradOp : OneFlow_BaseOp<"asin_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_AtanOp : OneFlow_BaseOp<"atan", []> {
   let input = (ins
@@ -6630,9 +6022,6 @@ def OneFlow_AtanOp : OneFlow_BaseOp<"atan", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_Conv2dOp : OneFlow_BaseOp<"conv2d", []> {
   let input = (ins
@@ -6663,9 +6052,6 @@ def OneFlow_ReciprocalNoNanGradOp : OneFlow_BaseOp<"reciprocal_no_nan_grad", []>
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_CeluOp : OneFlow_BaseOp<"celu", []> {
   let input = (ins
@@ -6700,9 +6086,6 @@ def OneFlow_XdivyOp : OneFlow_BaseOp<"xdivy", []> {
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_AtanGradOp : OneFlow_BaseOp<"atan_grad", []> {
   let input = (ins
@@ -6712,9 +6095,6 @@ def OneFlow_AtanGradOp : OneFlow_BaseOp<"atan_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_DimScatterAddScalarOp : OneFlow_BaseOp<"dim_scatter_add_scalar", []> {
   let input = (ins
@@ -6738,9 +6118,6 @@ def OneFlow_AtanhGradOp : OneFlow_BaseOp<"atanh_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_HardsigmoidOp : OneFlow_BaseOp<"hardsigmoid", []> {
   let input = (ins
@@ -6749,9 +6126,6 @@ def OneFlow_HardsigmoidOp : OneFlow_BaseOp<"hardsigmoid", []> {
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_CeilGradOp : OneFlow_BaseOp<"ceil_grad", []> {
   let input = (ins
@@ -6761,9 +6135,6 @@ def OneFlow_CeilGradOp : OneFlow_BaseOp<"ceil_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_TriuOp : OneFlow_BaseOp<"triu", []> {
   let input = (ins
@@ -6784,9 +6155,6 @@ def OneFlow_RintOp : OneFlow_IdempotentBaseOp<"rint", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_AdaptiveAvgPool2dOp : OneFlow_BaseOp<"adaptive_avg_pool2d", []> {
   let input = (ins
@@ -6807,9 +6175,6 @@ def OneFlow_CoshOp : OneFlow_BaseOp<"cosh", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_UpsampleBilinear_2dGradOp : OneFlow_BaseOp<"upsample_bilinear_2d_grad", []> {
   let input = (ins
@@ -6849,9 +6214,6 @@ def OneFlow_ExpOp : OneFlow_BaseOp<"exp", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_NvtxEndOp : OneFlow_BaseOp<"nvtx_end", []> {
   let input = (ins
@@ -6873,9 +6235,6 @@ def OneFlow_RoundGradOp : OneFlow_BaseOp<"round_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_WhereScalarXyOp : OneFlow_BaseOp<"where_scalar_xy", []> {
   let input = (ins
@@ -6918,9 +6277,6 @@ def OneFlow_BroadcastMulOp : OneFlow_BaseOp<"broadcast_mul", []> {
   let output = (outs
     AnyType:$z
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ExpGradOp : OneFlow_BaseOp<"exp_grad", []> {
   let input = (ins
@@ -6930,9 +6286,6 @@ def OneFlow_ExpGradOp : OneFlow_BaseOp<"exp_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_LogicalSliceOp : OneFlow_BaseOp<"logical_slice", []> {
   let input = (ins
@@ -6956,9 +6309,6 @@ def OneFlow_ErfcGradOp : OneFlow_BaseOp<"erfc_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_FloorGradOp : OneFlow_BaseOp<"floor_grad", []> {
   let input = (ins
@@ -6968,9 +6318,6 @@ def OneFlow_FloorGradOp : OneFlow_BaseOp<"floor_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_ReduceMaxDeviceStageGradOp : OneFlow_BaseOp<"reduce_max_device_stage_grad", []> {
   let input = (ins
@@ -6994,9 +6341,6 @@ def OneFlow_LgammaGradOp : OneFlow_BaseOp<"lgamma_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_Maxpool_3dOp : OneFlow_BaseOp<"maxpool_3d", []> {
   let input = (ins
@@ -7024,9 +6368,6 @@ def OneFlow_LogSigmoidOp : OneFlow_BaseOp<"log_sigmoid", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_RintGradOp : OneFlow_BaseOp<"rint_grad", []> {
   let input = (ins
@@ -7036,9 +6377,6 @@ def OneFlow_RintGradOp : OneFlow_BaseOp<"rint_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_AffineGridOp : OneFlow_BaseOp<"affine_grid", []> {
   let input = (ins
@@ -7060,9 +6398,6 @@ def OneFlow_RsqrtOp : OneFlow_BaseOp<"rsqrt", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SigmoidV2Op : OneFlow_BaseOp<"sigmoid_v2", []> {
   let input = (ins
@@ -7071,9 +6406,6 @@ def OneFlow_SigmoidV2Op : OneFlow_BaseOp<"sigmoid_v2", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SignGradOp : OneFlow_BaseOp<"sign_grad", []> {
   let input = (ins
@@ -7083,9 +6415,6 @@ def OneFlow_SignGradOp : OneFlow_BaseOp<"sign_grad", []> {
   let output = (outs
     AnyType:$dx
   );
-  let attrs = (ins
-  );
-}
 
 def OneFlow_SinOp : OneFlow_BaseOp<"sin", []> {
   let input = (ins
@@ -7094,7 +6423,4 @@ def OneFlow_SinOp : OneFlow_BaseOp<"sin", []> {
   let output = (outs
     AnyType:$y
   );
-  let attrs = (ins
-  );
-}
 

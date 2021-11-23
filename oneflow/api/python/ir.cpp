@@ -106,34 +106,40 @@ void PrintOne(const oneflow::UserOpDef& op_def) {
   // TODO: handle in out size/optional
   // TODO: handle "," in last element
   // inputs
-  std::cout << "  let input = (ins"
-            << "\n";
-  for (auto it = op_def.input().begin(); it != op_def.input().end(); ++it) {
-    std::cout << "    AnyType:$" << it->name() << (std::next(it) == op_def.input().end() ? "" : ",")
+  if (op_def.input().size()) {
+    std::cout << "  let input = (ins"
+              << "\n";
+    for (auto it = op_def.input().begin(); it != op_def.input().end(); ++it) {
+      std::cout << "    AnyType:$" << it->name()
+                << (std::next(it) == op_def.input().end() ? "" : ",") << "\n";
+    }
+    std::cout << "  );"
               << "\n";
   }
-  std::cout << "  );"
-            << "\n";
   // outputs
-  std::cout << "  let output = (outs"
-            << "\n";
-  for (auto it = op_def.output().begin(); it != op_def.output().end(); ++it) {
-    std::cout << "    AnyType:$" << it->name()
-              << (std::next(it) == op_def.output().end() ? "" : ",") << "\n";
+  if (op_def.output().size()) {
+    std::cout << "  let output = (outs"
+              << "\n";
+    for (auto it = op_def.output().begin(); it != op_def.output().end(); ++it) {
+      std::cout << "    AnyType:$" << it->name()
+                << (std::next(it) == op_def.output().end() ? "" : ",") << "\n";
+    }
+    std::cout << "  );"
+              << "\n";
   }
-  std::cout << "  );"
-            << "\n";
   // attrs
-  std::cout << "  let attrs = (ins"
-            << "\n";
-  for (auto it = op_def.attr().begin(); it != op_def.attr().end(); ++it) {
-    std::cout << "    " << GetMLIRAttrType(it->type()) << ":$" << it->name()
-              << (std::next(it) == op_def.attr().end() ? "" : ",") << "\n";
+  if (op_def.attr().size()) {
+    std::cout << "  let attrs = (ins"
+              << "\n";
+    for (auto it = op_def.attr().begin(); it != op_def.attr().end(); ++it) {
+      std::cout << "    " << GetMLIRAttrType(it->type()) << ":$" << it->name()
+                << (std::next(it) == op_def.attr().end() ? "" : ",") << "\n";
+    }
+    std::cout << "  );"
+              << "\n";
+    std::cout << "}"
+              << "\n";
   }
-  std::cout << "  );"
-            << "\n";
-  std::cout << "}"
-            << "\n";
 }
 
 }  // namespace
