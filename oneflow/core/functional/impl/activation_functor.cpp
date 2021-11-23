@@ -149,8 +149,7 @@ class ReLU6Functor {
       op_ = CHECK_JUST(one::OpBuilder("hardtanh").Input("in").Output("out").Build());
     }
     Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool inplace) const{
-      // ASSERT_FALSE(inplace);
-      CHECK_OR_RETURN(inplace==false) << "nn.functional.relu6 does not support inplace now";
+      CHECK_OR_RETURN(!inplace) << "nn.functional.relu6 does not support inplace now";
       MutableAttrMap attrs;
       JUST(attrs.SetAttr<double>("min_val", 0.0));
       JUST(attrs.SetAttr<double>("max_val", 6.0));
