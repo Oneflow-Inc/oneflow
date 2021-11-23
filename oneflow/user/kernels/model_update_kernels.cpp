@@ -702,7 +702,7 @@ class LambUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     const float bias_correction2_val = ctx->Attr<float>("bias_correction2_val");
     const float* bias_correction2_ptr = nullptr;
     if (ctx->has_input("bias_correction2", 0)) {
-      const user_op::Tensor* bias_correction2 = ctx->Tensor4ArgNameAndIndex("bias_correction1", 0);
+      const user_op::Tensor* bias_correction2 = ctx->Tensor4ArgNameAndIndex("bias_correction2", 0);
       CHECK_EQ(bias_correction2->shape().elem_cnt(), 1);
       bias_correction2_ptr = bias_correction2->dptr<float>();
     }

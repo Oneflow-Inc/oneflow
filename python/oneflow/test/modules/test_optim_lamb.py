@@ -157,7 +157,7 @@ class TestLamb(flow.unittest.TestCase):
         arg_dict["betas"] = [(0.99, 0.9)]
         arg_dict["weight_decay"] = [0.001, 0.1]
         arg_dict["eps"] = [1e-8, 1e-6]
-        arg_dict["do_bias_correction"] = [True]
+        arg_dict["do_bias_correction"] = [True, False]
         arg_dict["adam_w_mode"] = [True, False]
         # NOTE(Lxy): max_norm = -1 means no clip grad
         arg_dict["clip_grad_max_norm"] = [-1, 0.0, 0.5, 1.0]

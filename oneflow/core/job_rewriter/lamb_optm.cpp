@@ -46,10 +46,12 @@ class BiasCorrectionFactorState final : public JobPassState {
   public:
     BiasCorrectionFactorState() {}
     ~BiasCorrectionFactorState() override = default;
-    
-    std::string GetLbn(float beta, std::string bias_correction_name, ParallelConf parallel_conf, const std::function<std::string(float beta_val, std::string op_name)>& BiasCorrectionFactorStateOp);
-  
-  private:
+
+    std::string GetLbn(float beta, std::string bias_correction_name, ParallelConf parallel_conf,
+                       const std::function<std::string(float beta_val, std::string op_name)>&
+                           BiasCorrectionFactorStateOp);
+
+   private:
     HashMap<BiasCorrectionFactorCacheKey, std::string> key2lbn_;
 };
 

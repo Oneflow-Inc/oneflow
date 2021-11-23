@@ -242,17 +242,16 @@ class LAMB(Optimizer):
             beta1 = param_group["betas"][0]
             beta2 = param_group["betas"][1]
             do_bias_correction = param_group["do_bias_correction"]
-
             epsilon = param_group["eps"]
 
             optimizer_conf.set_base_learning_rate(lr)
-
-            self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
 
             optimizer_conf.mutable_lamb_conf().set_beta1(beta1)
             optimizer_conf.mutable_lamb_conf().set_beta2(beta2)
             optimizer_conf.mutable_lamb_conf().set_epsilon(epsilon)
             optimizer_conf.mutable_lamb_conf().set_do_bias_correction(do_bias_correction)
+
+            self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
 
             if adam_w_mode:
                 optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(weight_decay)

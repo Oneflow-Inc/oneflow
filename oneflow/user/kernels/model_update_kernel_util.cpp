@@ -290,6 +290,7 @@ void LambUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   if (bias_correction1_ptr != nullptr) { bias_correction1_val = *bias_correction1_ptr; }
   if (bias_correction2_ptr != nullptr) { bias_correction2_val = *bias_correction2_ptr; }
+
   FOR_RANGE(int64_t, i, 0, n) {
     LambGradFunctor<T, G>()(model_diff + i, adam_diff + i, model + i, m + i, v + i, scale, l1, l2,
                             beta1, beta2, epsilon, do_bias_correction, bias_correction1_val,

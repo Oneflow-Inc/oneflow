@@ -33,7 +33,6 @@ def compare_with_numpy_lamb(
     weight_decay,
     eps,
     do_bias_correction,
-    amsgrad,
     adam_w_mode,
     clip_grad_max_norm,
     clip_grad_norm_type,
@@ -66,9 +65,8 @@ def compare_with_numpy_lamb(
         "betas": betas,
         "eps": eps,
         "weight_decay": weight_decay,
-        "amsgrad": amsgrad,
         "adam_w_mode": adam_w_mode,
-        # "do_bias_correction": do_bias_correction,
+        "do_bias_correction": do_bias_correction,
     }
 
     if clip_grad_max_norm != -1:
@@ -129,8 +127,8 @@ def compare_with_numpy_lamb(
             bias_correction2 = 1.0
 
             if do_bias_correction:
-                bias_correction1 = 1.0 - np.power(beta1, step)
-                bias_correction2 = 1.0 - np.power(beta2, step)
+                bias_correction1 = 1.0 - np.power(beta1, step + 1)
+                bias_correction2 = 1.0 - np.power(beta2, step + 1)
 
             m = beta1 * mt + (1 - beta1) * grad
             v = beta2 * vt + (1 - beta2) * grad * grad
@@ -170,8 +168,7 @@ class TestLamb(flow.unittest.TestCase):
         arg_dict["betas"] = [(0.99, 0.9)]
         arg_dict["weight_decay"] = [0.001, 0.1]
         arg_dict["eps"] = [1e-8, 1e-6]
-        arg_dict["do_bias_correction"] = [False]
-        arg_dict["amsgrad"] = [False]
+        arg_dict["do_bias_correction"] = [True, False]
         arg_dict["adam_w_mode"] = [True, False]
         # NOTE(Lxy): max_norm = -1 means no clip grad
         # nn.Graph only support `clip_grad_max_norm == 1.0` and `clip_grad_norm_type == 2.0`
