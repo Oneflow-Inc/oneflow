@@ -45,7 +45,7 @@ class CpuStreamContext : public StreamContext, public KernelObserverProvider {
 
 CpuStreamContext::CpuStreamContext() : stream_(nullptr) {
   device_ = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCPU, 0);
-  stream_ = device_->CreateStream();
+  stream_ = device_->CreateStream();  // NOLINT
   std::vector<std::shared_ptr<KernelObserver>> kernel_observers;
   if (ParseBooleanFromEnv("ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS", false)) {
     kernel_observers.emplace_back(new CpuCheckNumericsKernelObserver());
