@@ -784,14 +784,7 @@ def OneFlow_TfPreluOp : OneFlow_BaseOp<"tf_prelu", []> {
   );
 }
 
-def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", []> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-}
+def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", []> {}
 
 def OneFlow_ReduceMaxOp : OneFlow_BaseOp<"reduce_max", []> {
   let input = (ins
@@ -1267,15 +1260,7 @@ def OneFlow_ReplicationPad2dOp : OneFlow_BaseOp<"replication_pad2d", []> {
   );
 }
 
-def OneFlow_ReluGradOp : OneFlow_IdempotentBaseOp<"relu_grad", []> {
-  let input = (ins
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-}
+def OneFlow_ReluGradOp : OneFlow_IdempotentBaseOp<"relu_grad", []> {}
 
 def OneFlow_ReflectionPad2dGradOp : OneFlow_BaseOp<"reflection_pad2d_grad", []> {
   let input = (ins
@@ -1540,14 +1525,7 @@ def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", []> {
   );
 }
 
-def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", []> {
-  let input = (ins
-    AnyType:$like
-  );
-  let output = (outs
-    AnyType:$out
-  );
-}
+def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", []> {}
 
 def OneFlow_CudnnFusedNormalizationAddReluOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu", []> {
   let input = (ins
@@ -2492,14 +2470,7 @@ def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", []> {
   );
 }
 
-def OneFlow_NegativeOp : OneFlow_InvolutionBaseOp<"negative", []> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-}
+def OneFlow_NegativeOp : OneFlow_InvolutionBaseOp<"negative", []> {}
 
 def OneFlow_ScatterNdOp : OneFlow_BaseOp<"scatter_nd", []> {
   let input = (ins
@@ -3312,14 +3283,7 @@ def OneFlow_MaxPool_1dGradOp : OneFlow_BaseOp<"max_pool_1d_grad", []> {
   );
 }
 
-def OneFlow_AbsOp : OneFlow_IdempotentBaseOp<"abs", []> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-}
+def OneFlow_AbsOp : OneFlow_IdempotentBaseOp<"abs", []> {}
 
 def OneFlow_FusedCastScaleOp : OneFlow_BaseOp<"fused_cast_scale", []> {
   let input = (ins
@@ -3688,14 +3652,7 @@ def OneFlow_AcoshOp : OneFlow_BaseOp<"acosh", []> {
   );
 }
 
-def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", []> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-}
+def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", []> {}
 
 def OneFlow_DimScatterUpdateScalarOp : OneFlow_BaseOp<"dim_scatter_update_scalar", []> {
   let input = (ins
@@ -4529,14 +4486,7 @@ def OneFlow_CastToTickOp : OneFlow_BaseOp<"cast_to_tick", []> {
   );
 }
 
-def OneFlow_RoundOp : OneFlow_IdempotentBaseOp<"round", []> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-}
+def OneFlow_RoundOp : OneFlow_IdempotentBaseOp<"round", []> {}
 
 def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", []> {
   let input = (ins
@@ -5227,14 +5177,7 @@ def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", []> {
   );
 }
 
-def OneFlow_FloorOp : OneFlow_IdempotentBaseOp<"floor", []> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-}
+def OneFlow_FloorOp : OneFlow_IdempotentBaseOp<"floor", []> {}
 
 def OneFlow_ScalarFloordivOp : OneFlow_BaseOp<"scalar_floordiv", []> {
   let input = (ins
@@ -5885,14 +5828,7 @@ def OneFlow_BroadcastNotEqualOp : OneFlow_BaseOp<"broadcast_not_equal", []> {
   );
 }
 
-def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", []> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-}
+def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", []> {}
 
 def OneFlow_BroadcastLessOp : OneFlow_BaseOp<"broadcast_less", []> {
   let input = (ins
@@ -5940,14 +5876,7 @@ def OneFlow_PowOp : OneFlow_BaseOp<"pow", []> {
   );
 }
 
-def OneFlow_CeilOp : OneFlow_IdempotentBaseOp<"ceil", []> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-}
+def OneFlow_CeilOp : OneFlow_IdempotentBaseOp<"ceil", []> {}
 
 def OneFlow_Atan2YGradOp : OneFlow_BaseOp<"atan2_y_grad", []> {
   let input = (ins
@@ -6329,14 +6258,7 @@ def OneFlow_TriuOp : OneFlow_BaseOp<"triu", []> {
   );
 }
 
-def OneFlow_RintOp : OneFlow_IdempotentBaseOp<"rint", []> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-}
+def OneFlow_RintOp : OneFlow_IdempotentBaseOp<"rint", []> {}
 
 def OneFlow_AdaptiveAvgPool2dOp : OneFlow_BaseOp<"adaptive_avg_pool2d", []> {
   let input = (ins
