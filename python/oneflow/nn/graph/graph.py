@@ -449,7 +449,9 @@ class Graph(object):
             )
             t0 = time.clock()
             eager_outputs = self._build_graph(*args)
-            self._print(0, 0, self._shallow_repr() + " end building graph.")
+            t1 = time.clock()
+            self._print(0, 0, self._shallow_repr() + " end building graph."+ '\n' +
+            "build graph consumes time:" + str(t1-t0) + 's')
         except:
             self._print(
                 2,
@@ -465,17 +467,18 @@ class Graph(object):
             self._print(
                 0,
                 0,
-                self._shallow_repr() + " start compiling plan and init graph runtime."," "
+                self._shallow_repr() + " start compiling plan and init graph runtime.",
             )
+            t2 = time.clock()
             self._c_nn_graph.complie_and_init_runtime()
-            t1 = time.clock()
-            cost_time_str = str(t1 - t0)
+            t3 = time.clock()
             self._print(
                 0,
                 0,
-                self._shallow_repr() + " end compiling plan and init graph rumtime." + '\n' + 
-                    "from build graph to complie and init Runtime the end consumes time:" + 
-                     cost_time_str + 's',
+                self._shallow_repr() + " end compiling plan and init graph rumtime." + '\n'
+                 + "complie and init Runtime consumes time:" + str(t3-t2) + 's' + '\n' 
+                 + "from build graph to complie and init Runtime the end consumes time:" 
+                 + str(t3-t0) + 's' + '\n'
             )
         except:
             self._print(
