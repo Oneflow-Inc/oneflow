@@ -312,7 +312,7 @@ class SmoothL1LossGradFunctor {
                            const std::shared_ptr<one::Tensor>& target, const float& beta) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("beta", beta));
-    // JUST(attrs.SetAttr<std::string>("reduction", reduction));
+
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, input, target}, attrs);
   }
 
@@ -336,7 +336,7 @@ class KLDivLossGradFunctor {
                            const bool log_target) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("log_target", log_target));
-    // JUST(attrs.SetAttr<std::string>("reduction", reduction));
+
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, target, dy}, attrs);
   }
 
@@ -371,7 +371,7 @@ class NllLossGradFunctor {
                            const int64_t ignore_index) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
-    // JUST(attrs.SetAttr<std::string>("reduction", reduction));
+
     if (weight) {
       return OpInterpUtil::Dispatch<one::Tensor>(
           *op_weight_, {input, target, total_weight, JUST(weight), dy}, attrs);
@@ -407,7 +407,7 @@ class BinaryCrossEntropyLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight) const {
     MutableAttrMap attrs;
-    // JUST(attrs.SetAttr<std::string>("reduction", reduction));
+
     if (weight) {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_weight_, {input, target, JUST(weight), dy},
                                                  attrs);
@@ -459,7 +459,7 @@ class BinaryCrossEntropyWithLogitsLossGradFunctor {
                            const Optional<one::Tensor>& weight,
                            const Optional<one::Tensor>& pos_weight) const {
     MutableAttrMap attrs;
-    // JUST(attrs.SetAttr<std::string>("reduction", reduction));
+
     JUST(attrs.SetAttr<bool>("has_pos_weight", pos_weight.has_value()));
 
     if (weight) {

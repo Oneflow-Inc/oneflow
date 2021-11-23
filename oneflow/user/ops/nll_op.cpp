@@ -33,8 +33,6 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(weight_desc.shape(), Shape({input_desc.shape().At(1)}));
   }
 
-  // JUST(CheckLossReductionAndInferOutputTenserDesc(ctx, "out", input_desc.is_dynamic(),
-  //                                                 target_desc.shape()));
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
   *out_desc->mut_is_dynamic() = input_desc.is_dynamic();
   *out_desc->mut_shape() = target_desc.shape();
@@ -72,7 +70,6 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(weight_desc.is_dynamic(), input_desc.is_dynamic());
     CHECK_EQ_OR_RETURN(weight_desc.shape(), Shape({input_desc.shape().At(1)}));
   }
-  // JUST(CheckLossReductionAndCheckInputTenserDesc(ctx, "dy", target_desc.shape()));
 
   user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
   *dx_desc->mut_is_dynamic() = input_desc.is_dynamic();
@@ -98,7 +95,6 @@ REGISTER_USER_OP("nll")
     .Output("out")
     .Output("total_weight")
     .Attr<int64_t>("ignore_index")
-    // .Attr<std::string>("reduction")
     .SetTensorDescInferFn(InferTensorDescFn)
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
@@ -108,7 +104,7 @@ REGISTER_USER_OP("nll")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn(InferDataType)
-    .SetGetSbpFn(GenLossForwardDefaultGetSbpFnNew([](user_op::UserOpSbpSignatureBuilder& builder) {
+    .SetGetSbpFn(GenLossForwardDefaultGetSbpFn([](user_op::UserOpSbpSignatureBuilder& builder) {
       builder.PartialSum(user_op::OpArg("total_weight", 0));
     }));
 
@@ -120,10 +116,9 @@ REGISTER_USER_OP("nll_grad")
     .Input("dy")
     .Output("dx")
     .Attr<int64_t>("ignore_index")
-    // .Attr<std::string>("reduction")
     .SetTensorDescInferFn(InferGradTensorDescFn)
     .SetDataTypeInferFn(InferGradDataType)
-    .SetGetSbpFn(GenLossBackwardDefaultGetSbpFnNew([](user_op::UserOpSbpSignatureBuilder& builder) {
+    .SetGetSbpFn(GenLossBackwardDefaultGetSbpFn([](user_op::UserOpSbpSignatureBuilder& builder) {
       builder.PartialSum(user_op::OpArg("total_weight", 0));
     }));
 
@@ -138,7 +133,6 @@ REGISTER_USER_OP_GRAD("nll").SetGenBackwardOpConfFn(
             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
             .Output("dx")
             .Attr("ignore_index", op.attr<int64_t>("ignore_index"));
-        // .Attr("reduction", op.attr<std::string>("reduction"));
         if (op.user_op_conf().has_input("weight", 0)) {
           builder.Input("weight", op.input("weight", 0));
         }

@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -482,7 +481,6 @@ class SmoothL1LossFunctor : LossFunctorBase {
                            const std::string& reduction) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("beta", beta));
-    // JUST(attrs.SetAttr<std::string>("reduction", reduction));
     return apply_reduction(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs), reduction);
   }
 
@@ -501,7 +499,6 @@ class KLDivLossFunctor : public LossFunctorBase {
                            const std::string& reduction) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("log_target", log_target));
-    // JUST(attrs.SetAttr<std::string>("reduction", reduction));
     return apply_reduction(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs), reduction);
   }
 
@@ -593,7 +590,6 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
                            const Optional<one::Tensor>& pos_weight,
                            const std::string& reduction) const {
     MutableAttrMap attrs;
-    // JUST(attrs.SetAttr<std::string>("reduction", reduction));
     JUST(attrs.SetAttr<bool>("has_pos_weight", pos_weight.has_value()));
 
     std::shared_ptr<Tensor> out;
@@ -654,7 +650,6 @@ class NllLossFunctor {
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
-    // JUST(attrs.SetAttr<std::string>("reduction", reduction));
 
     std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
     input_perm[input_perm.size() - 1] = 1;
@@ -674,7 +669,6 @@ class NllLossFunctor {
     } else {
       kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {input_, target_}, attrs));
     }
-    // if (reduction == "none") { result = JUST(functional::Reshape(result, *target_shape)); }
     result = JUST(functional::Reshape(kernel_result->at(0), *target_shape));
     if (reduction == "none") { return result; }
 
@@ -683,7 +677,6 @@ class NllLossFunctor {
     if (reduction == "sum") { return result; }
 
     return functional::Div(result, kernel_result->at(1));
-    // return result;
   }
 
  private:
@@ -719,7 +712,6 @@ class CrossEntropyFunctor {
     const auto& target_shape = target->shape();
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
-    // JUST(attrs.SetAttr<std::string>("reduction", reduction));
 
     std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
     input_perm[input_perm.size() - 1] = 1;
@@ -743,7 +735,6 @@ class CrossEntropyFunctor {
     } else {
       kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_nll_, {input_, target_}, attrs));
     }
-    // if (reduction == "none") { result = JUST(functional::Reshape(result, *target_shape)); }
     result = JUST(functional::Reshape(kernel_result->at(0), *target_shape));
     if (reduction == "none") { return result; }
 
@@ -751,7 +742,6 @@ class CrossEntropyFunctor {
     if (reduction == "sum") { return result; }
 
     return functional::Div(result, kernel_result->at(1));
-    // return result;
   }
 
  private:

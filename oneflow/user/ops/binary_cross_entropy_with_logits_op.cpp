@@ -38,8 +38,6 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
   *out_desc->mut_is_dynamic() = input_desc.is_dynamic();
   *out_desc->mut_shape() = input_desc.shape();
-  // JUST(CheckLossReductionAndInferOutputTenserDesc(ctx, "out", input_desc.is_dynamic(),
-  //                                                 input_desc.shape()));
 
   return Maybe<void>::Ok();
 }
@@ -78,7 +76,6 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(pos_weight_desc.shape(),
                        Shape({input_desc.shape().At(input_desc.shape().NumAxes() - 1)}));
   }
-  // JUST(CheckLossReductionAndCheckInputTenserDesc(ctx, "dy", target_desc.shape()));
 
   user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
   *dx_desc->mut_is_dynamic() = input_desc.is_dynamic();
@@ -111,7 +108,6 @@ REGISTER_USER_OP("binary_cross_entropy_with_logits")
     .OptionalInput("pos_weight")
     .Output("out")
     .Attr<bool>("has_pos_weight")
-    // .Attr<std::string>("reduction")
     .SetTensorDescInferFn(InferTensorDescFn)
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
@@ -121,7 +117,7 @@ REGISTER_USER_OP("binary_cross_entropy_with_logits")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn(InferDataType)
-    .SetGetSbpFn(GenLossForwardDefaultGetSbpFnNew([](user_op::UserOpSbpSignatureBuilder& builder) {
+    .SetGetSbpFn(GenLossForwardDefaultGetSbpFn([](user_op::UserOpSbpSignatureBuilder& builder) {
       builder.Broadcast(user_op::OpArg("pos_weight", 0));
     }));
 
@@ -133,10 +129,9 @@ REGISTER_USER_OP("binary_cross_entropy_with_logits_grad")
     .Input("dy")
     .Output("dx")
     .Attr<bool>("has_pos_weight")
-    // .Attr<std::string>("reduction")
     .SetTensorDescInferFn(InferGradTensorDescFn)
     .SetDataTypeInferFn(InferGradDataType)
-    .SetGetSbpFn(GenLossBackwardDefaultGetSbpFnNew([](user_op::UserOpSbpSignatureBuilder& builder) {
+    .SetGetSbpFn(GenLossBackwardDefaultGetSbpFn([](user_op::UserOpSbpSignatureBuilder& builder) {
       builder.Broadcast(user_op::OpArg("pos_weight", 0));
     }));
 
@@ -150,7 +145,6 @@ REGISTER_USER_OP_GRAD("binary_cross_entropy_with_logits")
             .Input("target", op.input("target", 0))
             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
             .Output("dx");
-        // .Attr("reduction", op.attr<std::string>("reduction"));
         if (op.user_op_conf().has_input("weight", 0)) {
           builder.Input("weight", op.input("weight", 0));
         }

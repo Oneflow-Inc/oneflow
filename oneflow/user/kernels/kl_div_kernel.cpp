@@ -43,7 +43,6 @@ void ComputeKLDivGradOut(int64_t elem_cnt, const T* input, const T* target, cons
     const T dy_val = dy[i];
     dx[i] =
         log_target ? (-std::exp(target[i]) * dy_val) : (target[i] > 0 ? -target[i] * dy_val : 0);
-    // if (reduction_type == ReductionType::kMean) { dx[i] /= elem_cnt; };
   }
 }
 

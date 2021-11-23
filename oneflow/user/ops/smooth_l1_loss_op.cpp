@@ -50,7 +50,6 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   const auto& dy_desc = ctx->InputTensorDesc("dy", 0);
   CHECK_EQ_OR_RETURN(input_desc.is_dynamic(), target_desc.is_dynamic());
   CHECK_EQ_OR_RETURN(input_desc.shape(), target_desc.shape());
-  // JUST(CheckLossReductionAndCheckInputTenserDesc(ctx, "dy", target_desc.shape()));
   CHECK_EQ_OR_RETURN(dy_desc.shape(), target_desc.shape());
 
   CHECK_GE_OR_RETURN(ctx->Attr<float>("beta"), 0);
@@ -77,7 +76,6 @@ REGISTER_USER_OP("smooth_l1_loss")
     .Input("input")
     .Input("target")
     .Output("out")
-    // .Attr<std::string>("reduction")
     .Attr<float>("beta")
     .SetTensorDescInferFn(InferTensorDescFn)
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
@@ -93,13 +91,6 @@ REGISTER_USER_OP("smooth_l1_loss")
       const auto reduction = ctx->Attr<std::string>("reduction");
       FOR_RANGE(int64_t, i, 0, input_shape.NumAxes()) {
         ctx->NewBuilder().Split(ctx->inputs(), i).Split(user_op::OpArg("out", 0), i).Build();
-        // auto builder = ctx->NewBuilder().Split(ctx->inputs(), i);
-        // if (reduction != "none") {
-        //   builder.Broadcast(user_op::OpArg("out", 0));
-        // } else {
-        //   builder.Split(user_op::OpArg("out", 0), i);
-        // }
-        // builder.Build();
       }
       return Maybe<void>::Ok();
     });
@@ -109,7 +100,6 @@ REGISTER_USER_OP("smooth_l1_loss_grad")
     .Input("target")
     .Input("dy")
     .Output("dx")
-    // .Attr<std::string>("reduction")
     .Attr<float>("beta")
     .SetTensorDescInferFn(InferGradTensorDescFn)
     .SetDataTypeInferFn(InferGradDataType)
@@ -123,16 +113,6 @@ REGISTER_USER_OP("smooth_l1_loss_grad")
             .Split(user_op::OpArg("dx", 0), i)
             .Split(user_op::OpArg("dy", 0), i)
             .Build();
-        // auto builder = ctx->NewBuilder()
-        //                    .Split(user_op::OpArg("input", 0), i)
-        //                    .Split(user_op::OpArg("target", 0), i)
-        //                    .Split(user_op::OpArg("dx", 0), i);
-        // if (dy_shape.NumAxes() == 0) {
-        //   builder.Broadcast(user_op::OpArg("dy", 0));
-        // } else {
-        //   builder.Split(user_op::OpArg("dy", 0), i);
-        // }
-        // builder.Build();
       }
       return Maybe<void>::Ok();
     });
@@ -148,7 +128,6 @@ REGISTER_USER_OP_GRAD("smooth_l1_loss")
                 .Input("input", op.input("input", 0))
                 .Input("target", op.input("target", 0))
                 .Output("dx")
-                // .Attr("reduction", op.attr<std::string>("reduction"))
                 .Attr("beta", op.attr<float>("beta"))
                 .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "input", 0);

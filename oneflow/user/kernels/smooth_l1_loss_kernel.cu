@@ -75,7 +75,6 @@ __global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, float inv_elem_cnt, con
     }
     const T dy_val = dy[i];
     dx_val = dx_val * dy_val;
-    // if (reduction_type == ReductionType::kMean) { dx_val *= inv_elem_cnt; };
     dx[i] = dx_val;
   }
 }
@@ -104,7 +103,6 @@ __global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, float inv_elem_cnt, con
     }
     const half dy_val = dy[i];
     dx_val = __hmul(dx_val, dy_val);
-    // if (reduction_type == ReductionType::kMean) { dx_val = __hmul(dx_val, half_inv_elem_cnt); };
     dx[i] = dx_val;
   }
 #else

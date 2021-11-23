@@ -73,7 +73,6 @@ __global__ void ComputeKLDivGradOut(int64_t elem_cnt, float inv_elem_cnt, const 
     const T dy_val = dy[i];
     T dx_val;
     dx_val = log_target ? -exp(target_val) * dy_val : target_val > 0 ? -target_val * dy_val : 0;
-    // if (reduction_type == ReductionType::kMean) { dx_val *= inv_elem_cnt; }
     dx[i] = dx_val;
   }
 }
@@ -92,7 +91,6 @@ __global__ void ComputeKLDivGradOut(int64_t elem_cnt, float inv_elem_cnt, const 
     dx_val = log_target
                  ? __hneg(__hmul(hexp(target_val), dy_val))
                  : (__hgt(target_val, zero_val) ? __hneg(__hmul(target_val, dy_val)) : zero_val);
-    // if (reduction_type == ReductionType::kMean) { dx_val = __hmul(dx_val, half_inv_elem_cnt); }
     dx[i] = dx_val;
   }
 #else

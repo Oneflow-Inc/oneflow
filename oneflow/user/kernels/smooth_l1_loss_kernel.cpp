@@ -48,7 +48,6 @@ void ComputeSmoothL1GradOut(int64_t elem_cnt, const T* input, const T* target, c
     }
     const T dy_val = dy[i];
     dx[i] = dx[i] * dy_val;
-    // if (reduction_type == ReductionType::kMean) { dx[i] /= elem_cnt; };
   }
 }
 

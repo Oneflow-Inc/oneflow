@@ -76,7 +76,6 @@ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, const T* input
     }
 
     if (weight != nullptr) { dx[i] *= weight[i]; }
-    // if (reduction_type == ReductionType::kMean) { dx[i] /= elem_cnt; }
   }
 }
 
@@ -93,21 +92,15 @@ class BinaryCrossEntropyWithLogitsKernel final : public user_op::OpKernel {
     const auto* target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
     auto* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     auto* tmp_buffer_blob = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    // const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
 
     const int64_t elem_cnt = input_blob->shape().elem_cnt();
 
     const T* input = input_blob->dptr<T>();
     const T* target = target_blob->dptr<T>();
     T* out = out_blob->mut_dptr<T>();
-    // T* tmp_buffer = tmp_buffer_blob->mut_dptr<T>();
-    // T* tmp_out = tmp_buffer;
 
     const T* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
-    // const T* pos_weight = ctx->has_input("pos_weight", 0)
-    //                           ? ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->dptr<T>()
-    //                           : nullptr;
 
     T* pos_weight_processed = nullptr;
 
@@ -125,9 +118,6 @@ class BinaryCrossEntropyWithLogitsKernel final : public user_op::OpKernel {
     }
     ComputeBinaryCrossEntropyWithLogitsOut(elem_cnt, input, target, out, weight,
                                            pos_weight_processed);
-
-    // ApplyLossReductionIfNeed<DeviceType::kCPU, T>(ctx->device_ctx(), elem_cnt, tmp_out, out,
-    //                                               reduction);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -146,7 +136,6 @@ class BinaryCrossEntropyWithLogitsGradKernel final : public user_op::OpKernel {
     const auto* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     auto* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
     auto* tmp_buffer_blob = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    // const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
 
     const int64_t elem_cnt = input_blob->shape().elem_cnt();
 
@@ -154,12 +143,9 @@ class BinaryCrossEntropyWithLogitsGradKernel final : public user_op::OpKernel {
     const T* input = input_blob->dptr<T>();
     const T* target = target_blob->dptr<T>();
     T* dx = dx_blob->mut_dptr<T>();
-    // T* tmp_buffer = tmp_buffer_blob->mut_dptr<T>();
     const T* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
-    // const T* pos_weight = ctx->has_input("pos_weight", 0)
-    //                           ? ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->dptr<T>()
-    //                           : nullptr;
+
     T* pos_weight_processed = nullptr;
 
     if (ctx->Attr<bool>("has_pos_weight")) {
