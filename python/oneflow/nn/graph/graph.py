@@ -16,6 +16,7 @@ limitations under the License.
 from collections import OrderedDict
 from functools import partial
 from typing import Dict, Optional, Union, List
+import time
 
 import oneflow
 import oneflow._oneflow_internal
@@ -34,7 +35,7 @@ from oneflow.nn.graph.util import add_indent, seq_to_func_return, sys_exc_error_
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 from oneflow.nn.optimizer.optimizer import Optimizer
-import time
+
 
 
 class Graph(object):
@@ -464,6 +465,7 @@ class Graph(object):
                 + sys_exc_error_msg(),
             )
             raise
+
         # Complie graph to execution plan and init Runtime
         try:
             self._print(
@@ -477,7 +479,7 @@ class Graph(object):
             self._print(
                 0,
                 0,
-                self._shallow_repr() + " end compiling plan and init graph rumtime." + '\n'
+                self._shallow_repr() + " end compiling plan and init graph runtime." + '\n'
                  + "complie and init Runtime consumes time:" + str(t3-t2) + 's' + '\n' 
                  + "from build graph to complie and init Runtime the end consumes time:" 
                  + str(t3-t0) + 's' + '\n',
@@ -494,6 +496,7 @@ class Graph(object):
                 sys_exc_error_msg()
             )
             raise
+
         self._is_compiled = True
         return eager_outputs
 
@@ -503,6 +506,7 @@ class Graph(object):
         # Get config form GraphConfig
         self._outputs_buffer_size = self.config._outputs_buffer_size
         self._generate_config_proto()
+
         with graph_build_util.graph_build_context(self.config.proto, session):
             # Deal with inputs
             self._print(0, 1, self._shallow_repr() + " start building graph inputs.")
@@ -789,6 +793,7 @@ class Graph(object):
                 mapped_args.append(seq_args)
             else:
                 self._io_item_check(arg, None, io_type, idx)
+
         return mapped_args
 
     def _empty_like_io(self, io_type, *args):
@@ -803,7 +808,9 @@ class Graph(object):
                     )
                 else:
                     eager_out = oneflow.empty(shape, dtype=dtype, device=t.device)
+
             return eager_out
+
         return self._mapping_io(io_type, func, *args)
 
     def _copy_io(self, io_type, *args):
@@ -811,6 +818,7 @@ class Graph(object):
             with oneflow._oneflow_internal.lazy_mode.guard(False):
                 build_arg = tensor.to(copy=True)
                 return build_arg
+
         return self._mapping_io(io_type, func, *args)
 
     def _flatten_io(self, io_type, *args):
@@ -1007,4 +1015,5 @@ class Graph(object):
 
 if __name__ == "__main__":
     import doctest
+    
     doctest.testmod(raise_on_error=True)
