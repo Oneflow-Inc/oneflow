@@ -18,7 +18,6 @@ limitations under the License.
 #include <pybind11/functional.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
 
 namespace py = pybind11;
@@ -39,20 +38,12 @@ std::shared_ptr<one::OpBuilder> OpBuilder_Output(const std::shared_ptr<one::OpBu
   return builder;
 }
 
-std::shared_ptr<one::OpBuilder> OpBuilder_Attr(const std::shared_ptr<one::OpBuilder>& builder,
-                                               const std::string& attr_name,
-                                               const cfg::AttrValue& attr_value) {
-  builder->MaybeAttr(attr_name, attr_value).GetOrThrow();
-  return builder;
-}
-
 ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py::class_<one::OpBuilder, std::shared_ptr<one::OpBuilder>>(m, "OpBuilder")
       .def(py::init<const std::string&>())
       .def(py::init<const std::string&, const std::string&>())
       .def("input", &OpBuilder_Input)
       .def("output", &OpBuilder_Output)
-      .def("attr", &OpBuilder_Attr)
       .def("build", [](const std::shared_ptr<one::OpBuilder>& builder) {
         return builder->Build().GetPtrOrThrow();
       });
