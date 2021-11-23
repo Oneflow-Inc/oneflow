@@ -429,16 +429,16 @@ class ConcatFunctor {
       }
     }
 
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("axis", axis));
-    JUST(attrs.SetAttr<int64_t>("max_dim_size", max_dim_size));
+    auto op_schema = std::make_shared<ConcatOpSchema>();
+    op_schema->axis = axis;
+    op_schema->max_dim_size = max_dim_size;
     TensorTuple outputs;
     for (int i = 0; i < inputs.size(); i += kMaxInputCount) {
       size_t size = (i + kMaxInputCount) < inputs.size() ? kMaxInputCount : inputs.size() - i;
       TensorTuple partial_inputs(size);
       for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
-      outputs.push_back(
-          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
+      outputs.push_back(JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs,
+                                                            OpExprInterpContext(op_schema))));
     }
     if (outputs.size() == 1) { return outputs.at(0); }
     return this->operator()(outputs, axis);
@@ -524,9 +524,9 @@ class ExpandDimsFunctor {
         << " Dimension out of range, expected to be in range of [" << -(ndim + 1) << ", " << ndim
         << "], but got: " << dim;
     if (dim < 0) { expand_dim = dim + ndim + 1; }
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("axis", expand_dim));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+    auto op_schema = std::make_shared<ExpandDimsOpSchema>();
+    op_schema->axis = expand_dim;
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, OpExprInterpContext(op_schema));
   }
 
  private:

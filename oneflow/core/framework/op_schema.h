@@ -187,6 +187,59 @@ class ReduceMinOpSchema : public ReduceOpSchema {};
 class ReduceMaxOpSchema : public ReduceOpSchema {};
 class ReduceSumOpSchema : public ReduceOpSchema {};
 
+class ConcatOpSchema : public OpSchema {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "axis")) {
+      return (const void*)&axis;
+    } else if (!strcmp(attr_name, "max_dim_size")) {
+      return (const void*)&max_dim_size;
+    } else {
+      return Error::RuntimeError() << "Concat op has no attribute named " << attr_name;
+    }
+  }
+
+ public:
+  int64_t axis;
+  int64_t max_dim_size;
+};
+
+class ExpandDimsOpSchema : public OpSchema {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "axis")) {
+      return (const void*)&axis;
+    } else {
+      return Error::RuntimeError() << "ExpandDims op has no attribute named " << attr_name;
+    }
+  }
+
+ public:
+  int32_t axis;
+};
+
+class MatMulOpSchema : public OpSchema {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "transpose_a")) {
+      return (const void*)&transpose_a;
+    } else if (!strcmp(attr_name, "transpose_b")) {
+      return (const void*)&transpose_b;
+    } else if (!strcmp(attr_name, "alpha")) {
+      return (const void*)&alpha;
+    } else {
+      return Error::RuntimeError() << "MatMul op has no attribute named " << attr_name;
+    }
+  }
+
+ public:
+  bool transpose_a;
+  bool transpose_b;
+  double alpha;
+};
+
+class BatchMatMulOpSchema : public MatMulOpSchema {};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_OP_SCHEMA_H_

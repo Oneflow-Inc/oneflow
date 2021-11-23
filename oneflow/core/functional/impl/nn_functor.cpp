@@ -205,19 +205,21 @@ class MatMulFunctor {
     CHECK_GE_OR_RETURN(a_shape->NumAxes(), 2) << "Tensor a's dim should >= 2";
     CHECK_GE_OR_RETURN(b_shape->NumAxes(), 2) << "Tensor b's dim should >= 2";
 
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
-    JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
-    JUST(attrs.SetAttr<double>("alpha", alpha));
+    auto op_schema = std::make_shared<MatMulOpSchema>();
+    op_schema->transpose_a = transpose_a;
+    op_schema->transpose_b = transpose_b;
+    op_schema->alpha = alpha;
     if (a_shape->NumAxes() != b_shape->NumAxes()) {
       CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 2)
           << "Not support number of dimensions of a being less than number of dimensions of b!";
-      return OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {a, b}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {a, b},
+                                            OpExprInterpContext(op_schema));
     }
     if (a_shape->NumAxes() > 2) {
-      return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b},
+                                            OpExprInterpContext(op_schema));
     }
-    return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, OpExprInterpContext(op_schema));
   }
 
  private:
@@ -240,11 +242,12 @@ class BatchMatMulFunctor {
     CHECK_GE_OR_RETURN(a_shape->NumAxes(), 3) << "Tensor a's dim should >= 3";
     CHECK_GE_OR_RETURN(b_shape->NumAxes(), 3) << "Tensor b's dim should >= 3";
 
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
-    JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
-    JUST(attrs.SetAttr<double>("alpha", alpha));
-    return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b}, attrs);
+    auto op_schema = std::make_shared<BatchMatMulOpSchema>();
+    op_schema->transpose_a = transpose_a;
+    op_schema->transpose_b = transpose_b;
+    op_schema->alpha = alpha;
+    return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b},
+                                          OpExprInterpContext(op_schema));
   }
 
  private:
