@@ -116,6 +116,10 @@ bool ShouldGenEmptyBody(const std::string& op_name) {
   }
 }
 
+void PrintArgDef(const UserOpDef_ArgDef& arg_def) {
+  std::cout << "    AnyType:$" << arg_def.name();
+}
+
 void PrintBody(const oneflow::UserOpDef& op_def) {
   // TODO: handle in out size/optional
   // TODO: handle "," in last element
@@ -126,8 +130,8 @@ void PrintBody(const oneflow::UserOpDef& op_def) {
     std::cout << "  let input = (ins"
               << "\n";
     for (auto it = op_def.input().begin(); it != op_def.input().end(); ++it) {
-      std::cout << "    AnyType:$" << it->name()
-                << (std::next(it) == op_def.input().end() ? "" : ",") << "\n";
+      PrintArgDef(*it);
+      std::cout << (std::next(it) == op_def.input().end() ? "" : ",") << "\n";
     }
     std::cout << "  );"
               << "\n";
@@ -137,8 +141,8 @@ void PrintBody(const oneflow::UserOpDef& op_def) {
     std::cout << "  let output = (outs"
               << "\n";
     for (auto it = op_def.output().begin(); it != op_def.output().end(); ++it) {
-      std::cout << "    AnyType:$" << it->name()
-                << (std::next(it) == op_def.output().end() ? "" : ",") << "\n";
+      PrintArgDef(*it);
+      std::cout << (std::next(it) == op_def.output().end() ? "" : ",") << "\n";
     }
     std::cout << "  );"
               << "\n";
