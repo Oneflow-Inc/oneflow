@@ -1447,77 +1447,11 @@ def OneFlow_ConstantPad3dGradOp : OneFlow_BaseOp<"constant_pad3d_grad", []> {
   );
 }
 
-def OneFlow_Conv1dOp : OneFlow_BaseOp<"conv1d", []> {
-  let input = (ins
-    AnyType:$in,
-    AnyType:$weight,
-    Optional<AnyType>:$bias,
-    Optional<AnyType>:$bias_multiplier
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    SI32Attr:$filters,
-    SI32ArrayAttr:$padding_before,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$strides,
-    SI32ArrayAttr:$dilation_rate,
-    SI32Attr:$groups
-  );
-}
-  let input = (ins
-    I32ElementsAttr:$operand_segment_sizes
-  );
+def OneFlow_Conv1DOp : OneFlow_ConvolutionBaseOp<"conv1d", []> {}
 
-def OneFlow_Conv2dOp : OneFlow_BaseOp<"conv2d", []> {
-  let input = (ins
-    AnyType:$in,
-    AnyType:$weight,
-    Optional<AnyType>:$bias,
-    Optional<AnyType>:$bias_multiplier
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    SI32Attr:$filters,
-    SI32ArrayAttr:$padding_before,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$strides,
-    SI32ArrayAttr:$dilation_rate,
-    SI32Attr:$groups
-  );
-}
-  let input = (ins
-    I32ElementsAttr:$operand_segment_sizes
-  );
+def OneFlow_Conv2DOp : OneFlow_ConvolutionBaseOp<"conv2d", []> {}
 
-def OneFlow_Conv3dOp : OneFlow_BaseOp<"conv3d", []> {
-  let input = (ins
-    AnyType:$in,
-    AnyType:$weight,
-    Optional<AnyType>:$bias,
-    Optional<AnyType>:$bias_multiplier
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    SI32Attr:$filters,
-    SI32ArrayAttr:$padding_before,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$strides,
-    SI32ArrayAttr:$dilation_rate,
-    SI32Attr:$groups
-  );
-}
-  let input = (ins
-    I32ElementsAttr:$operand_segment_sizes
-  );
+def OneFlow_Conv3DOp : OneFlow_ConvolutionBaseOp<"conv3d", []> {}
 
 def OneFlow_ConvBiasGradOp : OneFlow_BaseOp<"conv_bias_grad", []> {
   let input = (ins

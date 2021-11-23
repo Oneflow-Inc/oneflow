@@ -104,20 +104,11 @@ bool IsPoolOp(const std::string& op_name) {
   return (op_name.rfind("avg", 0) == 0 || op_name.rfind("max", 0) == 0)
          && op_name.find("pool") != std::string::npos;
 }
+bool IsConvOp(const std::string& op_name) {
+  return op_name.rfind("conv", 0) == 0 && op_name.find("grad") == std::string::npos;
+}
 bool IsGradOp(const std::string& op_name) { return op_name.find("grad") != std::string::npos; }
 bool IsLazyPoolOp(const std::string& op_name) { return op_name.find("_pool") != std::string::npos; }
-std::string GetBaseOp(const std::string& op_name) {
-  if (IsInvolutionOp(op_name)) {
-    return "OneFlow_InvolutionBaseOp";
-  } else if (IsIdempotentOp(op_name)) {
-    return "OneFlow_IdempotentBaseOp";
-  } else if (IsPoolOp(op_name)) {
-    return "OneFlow_" + std::string(IsLazyPoolOp(op_name) ? "Lazy" : "Eager") + "Pool"
-           + std::string(IsGradOp(op_name) ? "Grad" : "") + "BaseOp";
-  } else {
-    return "OneFlow_BaseOp";
-  }
-}
 
 std::string GetPoolOpClassName(const std::string& op_name) {
   std::string ret((IsLazyPoolOp(op_name) ? "Lazy" : "Eager")
@@ -129,8 +120,32 @@ std::string GetPoolOpClassName(const std::string& op_name) {
   return ret;
 }
 
+std::string GetConvOpClassName(const std::string& op_name) {
+  std::string ret(convertToCamelFromSnakeCase(op_name, true));
+  ret = std::regex_replace(ret, std::regex("1d"), "1D");
+  ret = std::regex_replace(ret, std::regex("2d"), "2D");
+  ret = std::regex_replace(ret, std::regex("3d"), "3D");
+  return ret;
+}
+
+std::string GetBaseOp(const std::string& op_name) {
+  if (IsInvolutionOp(op_name)) {
+    return "OneFlow_InvolutionBaseOp";
+  } else if (IsIdempotentOp(op_name)) {
+    return "OneFlow_IdempotentBaseOp";
+  } else if (IsConvOp(op_name)) {
+    return "OneFlow_ConvolutionBaseOp";
+  } else if (IsPoolOp(op_name)) {
+    return "OneFlow_" + std::string(IsLazyPoolOp(op_name) ? "Lazy" : "Eager") + "Pool"
+           + std::string(IsGradOp(op_name) ? "Grad" : "") + "BaseOp";
+  } else {
+    return "OneFlow_BaseOp";
+  }
+}
+
 bool ShouldGenEmptyBody(const std::string& op_name) {
-  return IsInvolutionOp(op_name) || IsIdempotentOp(op_name) || IsPoolOp(op_name);
+  return IsInvolutionOp(op_name) || IsIdempotentOp(op_name) || IsPoolOp(op_name)
+         || IsConvOp(op_name);
 }
 
 void PrintArgDef(const UserOpDef_ArgDef& arg_def) {
@@ -220,6 +235,8 @@ void PrintBody(const oneflow::UserOpDef& op_def) {
 std::string GetOpClassName(const std::string& op_name) {
   if (IsPoolOp(op_name)) {
     return GetPoolOpClassName(op_name);
+  } else if (IsConvOp(op_name)) {
+    return GetConvOpClassName(op_name);
   } else {
     return convertToCamelFromSnakeCase(op_name, true);
   }
