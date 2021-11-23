@@ -117,7 +117,15 @@ bool ShouldGenEmptyBody(const std::string& op_name) {
 }
 
 void PrintArgDef(const UserOpDef_ArgDef& arg_def) {
-  std::cout << "    AnyType:$" << arg_def.name();
+  std::cout << "    ";
+  if (arg_def.is_optional()) { std::cout << "Optional<"; }
+  std::cout << "AnyType";
+  if (arg_def.is_optional()) { std::cout << ">"; }
+  std::cout << ":$" << arg_def.name();
+  if (arg_def.num() > 1) {}
+  if (arg_def.num_as_min()) {
+    // TODO: add verifier
+  }
 }
 
 void PrintBody(const oneflow::UserOpDef& op_def) {

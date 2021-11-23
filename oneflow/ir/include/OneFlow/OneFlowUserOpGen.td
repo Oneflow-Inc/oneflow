@@ -340,10 +340,10 @@ def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", []> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
-    AnyType:$learning_rate,
-    AnyType:$scale_by_tensor,
-    AnyType:$skip_if,
-    AnyType:$train_step,
+    Optional<AnyType>:$learning_rate,
+    Optional<AnyType>:$scale_by_tensor,
+    Optional<AnyType>:$skip_if,
+    Optional<AnyType>:$train_step,
     AnyType:$sum
   );
   let attrs = (ins
@@ -374,11 +374,11 @@ def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", []> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
-    AnyType:$learning_rate,
-    AnyType:$scale_by_tensor,
-    AnyType:$skip_if,
-    AnyType:$bias_correction1,
-    AnyType:$bias_correction2,
+    Optional<AnyType>:$learning_rate,
+    Optional<AnyType>:$scale_by_tensor,
+    Optional<AnyType>:$skip_if,
+    Optional<AnyType>:$bias_correction1,
+    Optional<AnyType>:$bias_correction2,
     AnyType:$m,
     AnyType:$v,
     AnyType:$max_v
@@ -941,7 +941,7 @@ def OneFlow_BatchMatmulOp : OneFlow_BaseOp<"batch_matmul", []> {
   let input = (ins
     AnyType:$a,
     AnyType:$b,
-    AnyType:$_add_to_output
+    Optional<AnyType>:$_add_to_output
   );
   let output = (outs
     AnyType:$out
@@ -984,7 +984,7 @@ def OneFlow_BinaryCrossEntropyOp : OneFlow_BaseOp<"binary_cross_entropy", []> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
-    AnyType:$weight
+    Optional<AnyType>:$weight
   );
   let output = (outs
     AnyType:$out
@@ -998,7 +998,7 @@ def OneFlow_BinaryCrossEntropyGradOp : OneFlow_BaseOp<"binary_cross_entropy_grad
   let input = (ins
     AnyType:$input,
     AnyType:$target,
-    AnyType:$weight,
+    Optional<AnyType>:$weight,
     AnyType:$dy
   );
   let output = (outs
@@ -1013,8 +1013,8 @@ def OneFlow_BinaryCrossEntropyWithLogitsOp : OneFlow_BaseOp<"binary_cross_entrop
   let input = (ins
     AnyType:$input,
     AnyType:$target,
-    AnyType:$weight,
-    AnyType:$pos_weight
+    Optional<AnyType>:$weight,
+    Optional<AnyType>:$pos_weight
   );
   let output = (outs
     AnyType:$out
@@ -1029,8 +1029,8 @@ def OneFlow_BinaryCrossEntropyWithLogitsGradOp : OneFlow_BaseOp<"binary_cross_en
   let input = (ins
     AnyType:$input,
     AnyType:$target,
-    AnyType:$weight,
-    AnyType:$pos_weight,
+    Optional<AnyType>:$weight,
+    Optional<AnyType>:$pos_weight,
     AnyType:$dy
   );
   let output = (outs
@@ -1190,7 +1190,7 @@ def OneFlow_BroadcastMatmulOp : OneFlow_BaseOp<"broadcast_matmul", []> {
   let input = (ins
     AnyType:$a,
     AnyType:$b,
-    AnyType:$_add_to_output
+    Optional<AnyType>:$_add_to_output
   );
   let output = (outs
     AnyType:$out
@@ -1206,7 +1206,7 @@ def OneFlow_BroadcastMatmulGradBOp : OneFlow_BaseOp<"broadcast_matmul_grad_b", [
   let input = (ins
     AnyType:$a,
     AnyType:$b,
-    AnyType:$_add_to_output
+    Optional<AnyType>:$_add_to_output
   );
   let output = (outs
     AnyType:$out
@@ -1643,8 +1643,8 @@ def OneFlow_Conv1dOp : OneFlow_BaseOp<"conv1d", []> {
   let input = (ins
     AnyType:$in,
     AnyType:$weight,
-    AnyType:$bias,
-    AnyType:$bias_multiplier
+    Optional<AnyType>:$bias,
+    Optional<AnyType>:$bias_multiplier
   );
   let output = (outs
     AnyType:$out
@@ -1664,8 +1664,8 @@ def OneFlow_Conv2dOp : OneFlow_BaseOp<"conv2d", []> {
   let input = (ins
     AnyType:$in,
     AnyType:$weight,
-    AnyType:$bias,
-    AnyType:$bias_multiplier
+    Optional<AnyType>:$bias,
+    Optional<AnyType>:$bias_multiplier
   );
   let output = (outs
     AnyType:$out
@@ -1685,8 +1685,8 @@ def OneFlow_Conv3dOp : OneFlow_BaseOp<"conv3d", []> {
   let input = (ins
     AnyType:$in,
     AnyType:$weight,
-    AnyType:$bias,
-    AnyType:$bias_multiplier
+    Optional<AnyType>:$bias,
+    Optional<AnyType>:$bias_multiplier
   );
   let output = (outs
     AnyType:$out
@@ -1720,7 +1720,7 @@ def OneFlow_ConvDataGradOp : OneFlow_BaseOp<"conv_data_grad", []> {
     AnyType:$dy,
     AnyType:$filter,
     AnyType:$x_like,
-    AnyType:$_add_to_output
+    Optional<AnyType>:$_add_to_output
   );
   let output = (outs
     AnyType:$dx
@@ -1833,7 +1833,7 @@ def OneFlow_CreateSummaryWriterOp : OneFlow_BaseOp<"create_summary_writer", []> 
 def OneFlow_CropMirrorNormalizeFromTensorbufferOp : OneFlow_BaseOp<"crop_mirror_normalize_from_tensorbuffer", []> {
   let input = (ins
     AnyType:$in,
-    AnyType:$mirror
+    Optional<AnyType>:$mirror
   );
   let output = (outs
     AnyType:$out
@@ -1854,7 +1854,7 @@ def OneFlow_CropMirrorNormalizeFromTensorbufferOp : OneFlow_BaseOp<"crop_mirror_
 def OneFlow_CropMirrorNormalizeFromUint8Op : OneFlow_BaseOp<"crop_mirror_normalize_from_uint8", []> {
   let input = (ins
     AnyType:$in,
-    AnyType:$mirror
+    Optional<AnyType>:$mirror
   );
   let output = (outs
     AnyType:$out
@@ -1927,17 +1927,17 @@ def OneFlow_CtcLossGradOp : OneFlow_BaseOp<"ctc_loss_grad", []> {
 def OneFlow_CudnnFusedNormalizationAddReluOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu", []> {
   let input = (ins
     AnyType:$x,
-    AnyType:$addend,
-    AnyType:$moving_mean,
-    AnyType:$moving_variance,
+    Optional<AnyType>:$addend,
+    Optional<AnyType>:$moving_mean,
+    Optional<AnyType>:$moving_variance,
     AnyType:$gamma,
     AnyType:$beta
   );
   let output = (outs
     AnyType:$y,
     AnyType:$reserve_space,
-    AnyType:$mean,
-    AnyType:$inv_variance
+    Optional<AnyType>:$mean,
+    Optional<AnyType>:$inv_variance
   );
   let attrs = (ins
     SI32Attr:$axis,
@@ -1961,7 +1961,7 @@ def OneFlow_CudnnFusedNormalizationAddReluGradOp : OneFlow_BaseOp<"cudnn_fused_n
     AnyType:$gamma_diff,
     AnyType:$beta_diff,
     AnyType:$dx,
-    AnyType:$addend_diff
+    Optional<AnyType>:$addend_diff
   );
   let attrs = (ins
     SI32Attr:$axis,
@@ -2196,7 +2196,7 @@ def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", []> {
   let input = (ins
     AnyType:$in,
     AnyType:$mask,
-    AnyType:$_add_to_output
+    Optional<AnyType>:$_add_to_output
   );
   let output = (outs
     AnyType:$out
@@ -2414,8 +2414,8 @@ def OneFlow_ElementwiseMaximumBackwardOp : OneFlow_BaseOp<"elementwise_maximum_b
     AnyType:$y
   );
   let output = (outs
-    AnyType:$dx,
-    AnyType:$dy
+    Optional<AnyType>:$dx,
+    Optional<AnyType>:$dy
   );
 }
 
@@ -2436,8 +2436,8 @@ def OneFlow_ElementwiseMinimumBackwardOp : OneFlow_BaseOp<"elementwise_minimum_b
     AnyType:$y
   );
   let output = (outs
-    AnyType:$dx,
-    AnyType:$dy
+    Optional<AnyType>:$dx,
+    Optional<AnyType>:$dy
   );
 }
 
@@ -2751,7 +2751,7 @@ def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale"
     AnyType:$a,
     AnyType:$b,
     AnyType:$mask,
-    AnyType:$_add_to_output
+    Optional<AnyType>:$_add_to_output
   );
   let output = (outs
     AnyType:$out
@@ -3199,8 +3199,8 @@ def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_upda
     AnyType:$model_diff_indices,
     AnyType:$model_diff_values,
     AnyType:$learning_rate,
-    AnyType:$bias_correction1,
-    AnyType:$bias_correction2,
+    Optional<AnyType>:$bias_correction1,
+    Optional<AnyType>:$bias_correction2,
     AnyType:$m,
     AnyType:$v,
     AnyType:$max_v
@@ -3335,8 +3335,8 @@ def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", []> {
     AnyType:$model,
     AnyType:$model_diff,
     AnyType:$learning_rate,
-    AnyType:$scale_by_tensor,
-    AnyType:$skip_if
+    Optional<AnyType>:$scale_by_tensor,
+    Optional<AnyType>:$skip_if
   );
   let attrs = (ins
     F32Attr:$beta1,
@@ -3355,8 +3355,8 @@ def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", []> {
     AnyType:$model_diff,
     AnyType:$learning_rate,
     AnyType:$momentum,
-    AnyType:$scale_by_tensor,
-    AnyType:$skip_if
+    Optional<AnyType>:$scale_by_tensor,
+    Optional<AnyType>:$skip_if
   );
   let attrs = (ins
     F64Attr:$scale,
@@ -3372,14 +3372,14 @@ def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", []> {
 def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", []> {
   let input = (ins
     AnyType:$x,
-    AnyType:$beta,
-    AnyType:$gamma
+    Optional<AnyType>:$beta,
+    Optional<AnyType>:$gamma
   );
   let output = (outs
     AnyType:$y,
     AnyType:$mean,
     AnyType:$inv_variance,
-    AnyType:$normalized
+    Optional<AnyType>:$normalized
   );
   let attrs = (ins
     BoolAttr:$center,
@@ -3396,7 +3396,7 @@ def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", []> {
     AnyType:$x,
     AnyType:$mean,
     AnyType:$inv_variance,
-    AnyType:$_add_to_output
+    Optional<AnyType>:$_add_to_output
   );
   let output = (outs
     AnyType:$dx
@@ -3410,14 +3410,14 @@ def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", []> {
 def OneFlow_LayerNormParamGradOp : OneFlow_BaseOp<"layer_norm_param_grad", []> {
   let input = (ins
     AnyType:$dy,
-    AnyType:$normalized,
-    AnyType:$gamma
+    Optional<AnyType>:$normalized,
+    Optional<AnyType>:$gamma
   );
   let output = (outs
-    AnyType:$normalized_diff,
-    AnyType:$beta_diff,
-    AnyType:$gamma_diff,
-    AnyType:$reduce_buf
+    Optional<AnyType>:$normalized_diff,
+    Optional<AnyType>:$beta_diff,
+    Optional<AnyType>:$gamma_diff,
+    Optional<AnyType>:$reduce_buf
   );
   let attrs = (ins
     SI64Attr:$begin_params_axis
@@ -3599,7 +3599,7 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", []> {
   let input = (ins
     AnyType:$a,
     AnyType:$b,
-    AnyType:$_add_to_output
+    Optional<AnyType>:$_add_to_output
   );
   let output = (outs
     AnyType:$out
@@ -3847,7 +3847,7 @@ def OneFlow_Maxpool_3dGradOp : OneFlow_BaseOp<"maxpool_3d_grad", []> {
 
 def OneFlow_MegatronGptMmapDataLoaderOp : OneFlow_BaseOp<"megatron_gpt_mmap_data_loader", []> {
   let input = (ins
-    AnyType:$iteration
+    Optional<AnyType>:$iteration
   );
   let output = (outs
     AnyType:$out
@@ -3919,9 +3919,9 @@ def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", []> {
     AnyType:$model,
     AnyType:$model_diff,
     AnyType:$momentum,
-    AnyType:$learning_rate,
-    AnyType:$scale_by_tensor,
-    AnyType:$skip_if
+    Optional<AnyType>:$learning_rate,
+    Optional<AnyType>:$scale_by_tensor,
+    Optional<AnyType>:$skip_if
   );
   let attrs = (ins
     F32Attr:$learning_rate_val,
@@ -4027,7 +4027,7 @@ def OneFlow_NllOp : OneFlow_BaseOp<"nll", []> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
-    AnyType:$weight
+    Optional<AnyType>:$weight
   );
   let output = (outs
     AnyType:$out,
@@ -4044,7 +4044,7 @@ def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", []> {
     AnyType:$input,
     AnyType:$target,
     AnyType:$total_weight,
-    AnyType:$weight,
+    Optional<AnyType>:$weight,
     AnyType:$dy
   );
   let output = (outs
@@ -4085,16 +4085,16 @@ def OneFlow_NormalOp : OneFlow_BaseOp<"normal", []> {
 def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", []> {
   let input = (ins
     AnyType:$x,
-    AnyType:$moving_mean,
-    AnyType:$moving_variance,
+    Optional<AnyType>:$moving_mean,
+    Optional<AnyType>:$moving_variance,
     AnyType:$gamma,
     AnyType:$beta,
-    AnyType:$_add_to_output
+    Optional<AnyType>:$_add_to_output
   );
   let output = (outs
     AnyType:$y,
-    AnyType:$mean,
-    AnyType:$inv_variance
+    Optional<AnyType>:$mean,
+    Optional<AnyType>:$inv_variance
   );
   let attrs = (ins
     SI32Attr:$axis,
@@ -4107,17 +4107,17 @@ def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", []> {
 def OneFlow_NormalizationAddReluOp : OneFlow_BaseOp<"normalization_add_relu", []> {
   let input = (ins
     AnyType:$x,
-    AnyType:$addend,
-    AnyType:$moving_mean,
-    AnyType:$moving_variance,
+    Optional<AnyType>:$addend,
+    Optional<AnyType>:$moving_mean,
+    Optional<AnyType>:$moving_variance,
     AnyType:$gamma,
     AnyType:$beta
   );
   let output = (outs
     AnyType:$y,
     AnyType:$reserve_space,
-    AnyType:$mean,
-    AnyType:$inv_variance
+    Optional<AnyType>:$mean,
+    Optional<AnyType>:$inv_variance
   );
   let attrs = (ins
     SI32Attr:$axis,
@@ -4142,7 +4142,7 @@ def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_
     AnyType:$gamma_diff,
     AnyType:$beta_diff,
     AnyType:$dx,
-    AnyType:$addend_diff
+    Optional<AnyType>:$addend_diff
   );
   let attrs = (ins
     SI32Attr:$axis,
@@ -4867,11 +4867,11 @@ def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", []> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
-    AnyType:$learning_rate,
-    AnyType:$scale_by_tensor,
-    AnyType:$skip_if,
+    Optional<AnyType>:$learning_rate,
+    Optional<AnyType>:$scale_by_tensor,
+    Optional<AnyType>:$skip_if,
     AnyType:$mean_square,
-    AnyType:$mean_gradient
+    Optional<AnyType>:$mean_gradient
   );
   let attrs = (ins
     F32Attr:$learning_rate_val,
@@ -5284,9 +5284,9 @@ def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", []> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
-    AnyType:$learning_rate,
-    AnyType:$scale_by_tensor,
-    AnyType:$skip_if
+    Optional<AnyType>:$learning_rate,
+    Optional<AnyType>:$scale_by_tensor,
+    Optional<AnyType>:$skip_if
   );
   let attrs = (ins
     F32Attr:$learning_rate_val,
