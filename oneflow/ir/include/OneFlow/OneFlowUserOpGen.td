@@ -357,6 +357,9 @@ def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", []> {
     F32Attr:$epsilon
   );
 }
+  let input = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
 
 def OneFlow_AdamBiasCorrectionFactorOp : OneFlow_BaseOp<"adam_bias_correction_factor", []> {
   let input = (ins
@@ -398,6 +401,9 @@ def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", []> {
     BoolAttr:$do_bias_correction
   );
 }
+  let input = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
 
 def OneFlow_AdaptiveAvgPool1dOp : OneFlow_BaseOp<"adaptive_avg_pool1d", []> {
   let input = (ins
@@ -1024,6 +1030,9 @@ def OneFlow_BinaryCrossEntropyWithLogitsOp : OneFlow_BaseOp<"binary_cross_entrop
     StrAttr:$reduction
   );
 }
+  let input = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
 
 def OneFlow_BinaryCrossEntropyWithLogitsGradOp : OneFlow_BaseOp<"binary_cross_entropy_with_logits_grad", []> {
   let input = (ins
@@ -1041,6 +1050,9 @@ def OneFlow_BinaryCrossEntropyWithLogitsGradOp : OneFlow_BaseOp<"binary_cross_en
     StrAttr:$reduction
   );
 }
+  let input = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
 
 def OneFlow_BroadcastAddOp : OneFlow_BaseOp<"broadcast_add", []> {
   let input = (ins
@@ -1659,6 +1671,9 @@ def OneFlow_Conv1dOp : OneFlow_BaseOp<"conv1d", []> {
     SI32Attr:$groups
   );
 }
+  let input = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
 
 def OneFlow_Conv2dOp : OneFlow_BaseOp<"conv2d", []> {
   let input = (ins
@@ -1680,6 +1695,9 @@ def OneFlow_Conv2dOp : OneFlow_BaseOp<"conv2d", []> {
     SI32Attr:$groups
   );
 }
+  let input = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
 
 def OneFlow_Conv3dOp : OneFlow_BaseOp<"conv3d", []> {
   let input = (ins
@@ -1701,6 +1719,9 @@ def OneFlow_Conv3dOp : OneFlow_BaseOp<"conv3d", []> {
     SI32Attr:$groups
   );
 }
+  let input = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
 
 def OneFlow_ConvBiasGradOp : OneFlow_BaseOp<"conv_bias_grad", []> {
   let input = (ins
@@ -1945,6 +1966,10 @@ def OneFlow_CudnnFusedNormalizationAddReluOp : OneFlow_BaseOp<"cudnn_fused_norma
     F32Attr:$momentum
   );
 }
+  let input = (ins
+    I32ElementsAttr:$operand_segment_sizes,
+    I32ElementsAttr:$result_segment_sizes
+  );
 
 def OneFlow_CudnnFusedNormalizationAddReluGradOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu_grad", []> {
   let input = (ins
@@ -2418,6 +2443,9 @@ def OneFlow_ElementwiseMaximumBackwardOp : OneFlow_BaseOp<"elementwise_maximum_b
     Optional<AnyType>:$dy
   );
 }
+  let input = (ins
+    I32ElementsAttr:$result_segment_sizes
+  );
 
 def OneFlow_ElementwiseMinimumOp : OneFlow_BaseOp<"elementwise_minimum", []> {
   let input = (ins
@@ -2440,6 +2468,9 @@ def OneFlow_ElementwiseMinimumBackwardOp : OneFlow_BaseOp<"elementwise_minimum_b
     Optional<AnyType>:$dy
   );
 }
+  let input = (ins
+    I32ElementsAttr:$result_segment_sizes
+  );
 
 def OneFlow_EluOp : OneFlow_BaseOp<"elu", []> {
   let input = (ins
@@ -3215,6 +3246,9 @@ def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_upda
     BoolAttr:$do_bias_correction
   );
 }
+  let input = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
 
 def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momentum_update", []> {
   let input = (ins
@@ -3348,6 +3382,9 @@ def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", []> {
     F32Attr:$weight_decay
   );
 }
+  let input = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
 
 def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", []> {
   let input = (ins
@@ -3368,6 +3405,9 @@ def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", []> {
     F32Attr:$weight_decay
   );
 }
+  let input = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
 
 def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", []> {
   let input = (ins
@@ -3389,6 +3429,9 @@ def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", []> {
     F64Attr:$epsilon
   );
 }
+  let input = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
 
 def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", []> {
   let input = (ins
@@ -3423,6 +3466,10 @@ def OneFlow_LayerNormParamGradOp : OneFlow_BaseOp<"layer_norm_param_grad", []> {
     SI64Attr:$begin_params_axis
   );
 }
+  let input = (ins
+    I32ElementsAttr:$operand_segment_sizes,
+    I32ElementsAttr:$result_segment_sizes
+  );
 
 def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", []> {
   let input = (ins
@@ -3932,6 +3979,9 @@ def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", []> {
     F32Attr:$weight_decay
   );
 }
+  let input = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
 
 def OneFlow_MovingAverageMinMaxObserverOp : OneFlow_BaseOp<"moving_average_min_max_observer", []> {
   let input = (ins
@@ -4103,6 +4153,10 @@ def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", []> {
     F32Attr:$momentum
   );
 }
+  let input = (ins
+    I32ElementsAttr:$operand_segment_sizes,
+    I32ElementsAttr:$result_segment_sizes
+  );
 
 def OneFlow_NormalizationAddReluOp : OneFlow_BaseOp<"normalization_add_relu", []> {
   let input = (ins
@@ -4126,6 +4180,10 @@ def OneFlow_NormalizationAddReluOp : OneFlow_BaseOp<"normalization_add_relu", []
     F32Attr:$momentum
   );
 }
+  let input = (ins
+    I32ElementsAttr:$operand_segment_sizes,
+    I32ElementsAttr:$result_segment_sizes
+  );
 
 def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_grad", []> {
   let input = (ins
@@ -4884,6 +4942,9 @@ def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", []> {
     F32Attr:$weight_decay
   );
 }
+  let input = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
 
 def OneFlow_RollOp : OneFlow_BaseOp<"roll", []> {
   let input = (ins
@@ -5296,6 +5357,9 @@ def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", []> {
     F32Attr:$weight_decay
   );
 }
+  let input = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
 
 def OneFlow_SigmoidOp : OneFlow_BaseOp<"sigmoid", []> {
   let input = (ins

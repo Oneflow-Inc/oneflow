@@ -129,6 +129,32 @@ void PrintArgDef(const UserOpDef_ArgDef& arg_def) {
   }
 }
 
+bool HasMultipleVariadic(
+    const ::google::protobuf::RepeatedPtrField< ::oneflow::UserOpDef_ArgDef>& arg_defs) {
+  uint32_t num_variadic_op = 0;
+  for (const auto& arg_def : arg_defs) {
+    if (arg_def.is_optional()) { num_variadic_op += 1; }
+    if (arg_def.num_as_min()) { num_variadic_op += 1; }
+  }
+  return num_variadic_op > 1;
+}
+
+void PrintTraitAttrs(const oneflow::UserOpDef& op_def) {
+  const bool need_operand_segment_sizes = HasMultipleVariadic(op_def.input());
+  const bool need_result_segment_sizes = HasMultipleVariadic(op_def.output());
+  if (need_operand_segment_sizes || need_result_segment_sizes) {
+    std::cout << "  let input = (ins"
+              << "\n";
+    if (need_operand_segment_sizes) {
+      std::cout << "    I32ElementsAttr:$operand_segment_sizes"
+                << (need_result_segment_sizes ? ",\n" : "\n");
+    }
+    if (need_result_segment_sizes) { std::cout << "    I32ElementsAttr:$result_segment_sizes\n"; }
+    std::cout << "  );"
+              << "\n";
+  }
+}
+
 void PrintBody(const oneflow::UserOpDef& op_def) {
   // TODO: handle in out size/optional
   // TODO: handle "," in last element
@@ -169,6 +195,9 @@ void PrintBody(const oneflow::UserOpDef& op_def) {
   }
   std::cout << "}"
             << "\n";
+
+  // trait attrs
+  PrintTraitAttrs(op_def);
 }
 
 }  // namespace
