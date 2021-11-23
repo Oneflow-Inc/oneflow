@@ -294,7 +294,7 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
       const oneflow::user_op::OpRegistryResult& r = kv.second;
       auto op_class_name = GetOpClassName(kv.first);
       std::cout << "def OneFlow_" << op_class_name << "Op : " << GetBaseOp(r.op_type_name) << "<\""
-                << kv.first << "\", []> ";
+                << kv.first << "\", []> ";  // TODO: add traits
       const oneflow::UserOpDef& op_def = r.op_def;
       if (ShouldGenEmptyBody(r.op_type_name)) {
         std::cout << "{}\n";
