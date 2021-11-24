@@ -169,9 +169,13 @@ bool IsUpsampleOp(const std::string& op_name) {
 bool IsBroadcastOp(const std::string& op_name) {
   return (op_name.find("broadcast") != std::string::npos);
 }
+bool IsIdentityOp(const std::string& op_name) {
+  return (op_name.find("identity") != std::string::npos);
+}
 bool IsScalarOp(const std::string& op_name) {
   return (op_name.rfind("scalar_", 0) == 0 || op_name.find("by_scalar") != std::string::npos);
 }
+bool IsImageOp(const std::string& op_name) { return (op_name.find("image") != std::string::npos); }
 bool IsSoftmaxOp(const std::string& op_name) {
   return (op_name.find("softmax") != std::string::npos);
 }
@@ -191,6 +195,7 @@ bool IsIndicesOp(const std::string& op_name) {
           || op_name.find("gather") != std::string::npos
           || op_name.find("slice") != std::string::npos
           || op_name.find("segment_sum") != std::string::npos
+          || op_name.find("top_k") != std::string::npos
           || op_name.find("scatter") != std::string::npos);
 }
 bool IsNormalizationOp(const std::string& op_name) {
@@ -415,6 +420,7 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
     std::string group_name = "MISC";
     const oneflow::user_op::OpRegistryResult& r = kv.second;
     if (ShouldGenBaseClass(r.op_type_name)) { group_name = "BASE"; }
+    if (IsImageOp(r.op_type_name)) { group_name = "Image"; }
     if (IsPaddingOp(r.op_type_name)) { group_name = "PADDING"; }
     if (IsIndicesOp(r.op_type_name)) { group_name = "Indices"; }
     if (IsBroadcastOp(r.op_type_name)) { group_name = "Broadcast"; }
@@ -434,6 +440,7 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
     if (IsTrigonometric(r.op_type_name)) { group_name = "TRIGONOMETRIC"; }
     if (IsIdempotentOp(r.op_type_name)) { group_name = "IDEMPOTENT"; }
     if (IsInvolutionOp(r.op_type_name)) { group_name = "INVOLUTION"; }
+    if (IsIdentityOp(r.op_type_name)) { group_name = "Identity"; }
     if (IsFusedOp(r.op_type_name)) { group_name = "Fused"; }
     if (IsEagerOp(r.op_type_name)) { group_name = "eager"; }
     if (IsDatasetOp(r.op_type_name)) { group_name = "DATASET"; }
