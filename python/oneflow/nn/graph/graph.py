@@ -37,8 +37,6 @@ from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 from oneflow.nn.optimizer.optimizer import Optimizer
 
 
-
-
 class Graph(object):
     r"""Base class for training or evaluating a neural network in graph mode.
 
@@ -453,9 +451,15 @@ class Graph(object):
             t0 = time.clock()
             eager_outputs = self._build_graph(*args)
             t1 = time.clock()
-            self._print(0, 0, self._shallow_repr()  + "time consumed to complete build graph:"
-            +str(round(t1-t0,2)) + 's' + '\n',
-         )
+            self._print(
+                0,
+                0,
+                self._shallow_repr()
+                + " done! cost time:"
+                + str(round(t1 - t0, 2))
+                + "s"
+                + "\n",
+            )
         except:
             self._print(
                 2,
@@ -472,7 +476,7 @@ class Graph(object):
             self._print(
                 0,
                 0,
-                self._shallow_repr() + " start compiling plan and init graph runtime.",
+                self._shallow_repr() + " start compiling plan and init graph runtime:",
             )
             t2 = time.clock()
             self._c_nn_graph.complie_and_init_runtime()
@@ -480,10 +484,15 @@ class Graph(object):
             self._print(
                 0,
                 0,
-                self._shallow_repr()  + "time consumed to complete plan and init graph runtime:" 
-                + str(round(t3-t2,2)) + 's' + '\n' 
-                + "the total time consumed to complete build graph and compiling plan and init graph runtime:" 
-                + str(round(t3-t0,2)) + 's' + '\n',
+                self._shallow_repr()
+                + " done! cost time :"
+                + str(round(t3 - t2, 2))
+                + "s"
+                + "\n"
+                + "the total time consumed to complete build graph and compiling plan and init graph runtime:"
+                + str(round(t3 - t0, 2))
+                + "s"
+                + "\n",
             )
         except:
             self._print(
@@ -492,9 +501,9 @@ class Graph(object):
                 "[ERROR]"
                 + self._shallow_repr()
                 + " compiling plan or initialing graph runtime got error : "
-                +sys_exc_error_msg(),
-                + " compiling plan or initialing graph runtime got error : ",
-                sys_exc_error_msg()
+                + sys_exc_error_msg(),
+                +" compiling plan or initialing graph runtime got error : ",
+                sys_exc_error_msg(),
             )
             raise
 
@@ -1016,5 +1025,5 @@ class Graph(object):
 
 if __name__ == "__main__":
     import doctest
-    
+
     doctest.testmod(raise_on_error=True)

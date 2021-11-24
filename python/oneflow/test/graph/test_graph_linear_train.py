@@ -96,7 +96,7 @@ def _test_linear_train_graph(test_case, device):
                 return out
 
         linear_t_g = LinearTrainGraph()
-        linear_t_g.debug(0, 0, True)
+       
 
         def one_iter():
             of_graph_out = linear_t_g(x)
