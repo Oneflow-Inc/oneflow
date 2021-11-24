@@ -20,6 +20,7 @@ from oneflow.framework.unittest import (
     skip_unless_1n1d,
     skip_unless_1n2d,
     skip_unless_1n4d,
+    skip_unless_1n8d,
     skip_unless_2n1d,
     skip_unless_2n2d,
     skip_unless_2n4d,
