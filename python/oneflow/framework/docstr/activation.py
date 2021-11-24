@@ -116,7 +116,7 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.nn.functional.log_softmax,
+    oneflow._C.log_softmax,
     r"""
     log_softmax(x: Tensor, dim: int) -> Tensor 
 
