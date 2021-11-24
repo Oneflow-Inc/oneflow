@@ -26,6 +26,9 @@ limitations under the License.
 
 namespace {
 using namespace oneflow;
+using K = std::string;
+using V = user_op::OpRegistryResult;
+
 // from llvm
 std::string convertToCamelFromSnakeCase(const std::string& input, bool capitalizeFirst) {
   if (input.empty()) return "";
@@ -105,11 +108,59 @@ bool IsPoolOp(const std::string& op_name) {
   return (op_name.rfind("avg", 0) == 0 || op_name.rfind("max", 0) == 0)
          && op_name.find("pool") != std::string::npos;
 }
+bool IsAnyPoolOp(const std::string& op_name) { return op_name.find("pool") != std::string::npos; }
+bool IsAnyConvOp(const std::string& op_name) { return op_name.find("conv") != std::string::npos; }
 bool IsConvOp(const std::string& op_name) {
   return op_name.rfind("conv", 0) == 0 && op_name.find("grad") == std::string::npos;
 }
 
 bool IsLazyPoolOp(const std::string& op_name) { return op_name.find("_pool") != std::string::npos; }
+bool IsNCCLOp(const std::string& op_name) { return op_name.find("nccl") != std::string::npos; }
+bool IsOptimizerOp(const std::string& op_name) {
+  return op_name.find("update") != std::string::npos
+         && op_name.find("scatter") == std::string::npos;
+}
+bool IsTrigonometric(const std::string& op_name) {
+  return (op_name.find("sin") != std::string::npos || op_name.find("cos") != std::string::npos
+          || op_name.find("tan") != std::string::npos)
+         && op_name.find("constant") == std::string::npos;
+}
+bool IsTestOp(const std::string& op_name) {
+  return (op_name.find("test") != std::string::npos || op_name.find("Test") != std::string::npos
+          || op_name.find("ccrelu") != std::string::npos);
+}
+bool IsPaddingOp(const std::string& op_name) { return (op_name.find("pad") != std::string::npos); }
+bool IsDatasetOp(const std::string& op_name) {
+  return (op_name.find("reader") != std::string::npos || op_name.find("Reader") != std::string::npos
+          || op_name.find("decoder") != std::string::npos);
+}
+bool IsUpsampleOp(const std::string& op_name) {
+  return (op_name.find("upsample") != std::string::npos);
+}
+bool IsBroadcastOp(const std::string& op_name) {
+  return (op_name.find("broadcast") != std::string::npos);
+}
+bool IsScalarOp(const std::string& op_name) {
+  return (op_name.rfind("scalar_", 0) == 0 || op_name.find("by_scalar") != std::string::npos);
+}
+bool IsSoftmaxOp(const std::string& op_name) {
+  return (op_name.find("softmax") != std::string::npos);
+}
+bool IsFusedOp(const std::string& op_name) { return (op_name.find("fused") != std::string::npos); }
+bool IsReduceOp(const std::string& op_name) {
+  return (op_name.find("reduce") != std::string::npos);
+}
+bool IsReshapeOp(const std::string& op_name) {
+  return (op_name.find("reshape") != std::string::npos);
+}
+bool IsLossOp(const std::string& op_name) { return (op_name.find("loss") != std::string::npos); }
+bool IsIndicesOp(const std::string& op_name) {
+  return (op_name.find("arg") != std::string::npos || op_name.find("where") != std::string::npos
+          || op_name.find("gather") != std::string::npos
+          || op_name.find("slice") != std::string::npos
+          || op_name.find("segment_sum") != std::string::npos
+          || op_name.find("scatter") != std::string::npos);
+}
 
 std::string PostProcessClassName(const std::string& op_name) {
   std::string ret = op_name;
@@ -170,7 +221,7 @@ void PrintArgDef(const UserOpDef_ArgDef& arg_def) {
 }
 
 bool HasMultipleVariadic(
-    const ::google::protobuf::RepeatedPtrField< ::oneflow::UserOpDef_ArgDef>& arg_defs) {
+    const ::google::protobuf::RepeatedPtrField<::oneflow::UserOpDef_ArgDef>& arg_defs) {
   uint32_t num_variadic_op = 0;
   for (const auto& arg_def : arg_defs) {
     if (arg_def.is_optional()) { num_variadic_op += 1; }
@@ -180,7 +231,7 @@ bool HasMultipleVariadic(
 }
 
 std::string GetOperandOrder(
-    const ::google::protobuf::RepeatedPtrField< ::oneflow::UserOpDef_ArgDef>& arg_defs) {
+    const ::google::protobuf::RepeatedPtrField<::oneflow::UserOpDef_ArgDef>& arg_defs) {
   std::string ret = "{";
   for (auto it = arg_defs.begin(); it != arg_defs.end(); ++it) {
     ret += ("\"" + it->name() + "\"");
@@ -302,6 +353,58 @@ std::string GetTraits(const oneflow::UserOpDef& op_def) {
   return ret;
 }
 
+bool IsReferencedByOtherDefinitions(const std::string& op_name) {
+  return ShouldGenBaseClass(op_name);
+}
+
+void PrintODSFromOpRegistryResults(const std::map<K, V>& results) {
+  for (const auto& kv : results) {
+    if (kv.first == "mlir_jit") continue;
+    const oneflow::user_op::OpRegistryResult& r = kv.second;
+    auto op_class_name = GetOpClassName(kv.first);
+    std::cout << (ShouldGenBaseClass(r.op_type_name) ? "class" : "def") << " OneFlow_"
+              << op_class_name << "Op : " << GetBaseOp(r.op_type_name) << "<\"" << kv.first
+              << "\", [" + GetTraits(r.op_def) + "]> ";  // TODO: add traits
+    if (ShouldGenEmptyBody(r.op_type_name)) {
+      std::cout << "{}\n";
+    } else {
+      PrintBody(r);
+    }
+    std::cout << "\n";
+  }
+}
+
+void GroupOpRegistryResults(const std::map<K, V>& results,
+                            std::map<std::string, std::map<K, V>>& groups) {
+  for (const auto& kv : results) {
+    std::string group_name = "MISC";
+    const oneflow::user_op::OpRegistryResult& r = kv.second;
+    if (ShouldGenBaseClass(r.op_type_name)) { group_name = "BASE"; }
+    if (IsSoftmaxOp(r.op_type_name)) { group_name = "Softmax"; }
+    if (IsNCCLOp(r.op_type_name)) { group_name = "NCCL"; }
+    if (IsAnyConvOp(r.op_type_name)) { group_name = "CONV"; }
+    if (IsAnyPoolOp(r.op_type_name)) { group_name = "POOL"; }
+    if (IsIdempotentOp(r.op_type_name)) { group_name = "IDEMPOTENT"; }
+    if (IsInvolutionOp(r.op_type_name)) { group_name = "INVOLUTION"; }
+    if (IsTrigonometric(r.op_type_name)) { group_name = "TRIGONOMETRIC"; }
+    if (IsOptimizerOp(r.op_type_name)) { group_name = "OPTIMIZER"; }
+    if (IsDatasetOp(r.op_type_name)) { group_name = "DATASET"; }
+    if (IsTestOp(r.op_type_name)) { group_name = "TEST"; }
+    if (IsPaddingOp(r.op_type_name)) { group_name = "PADDING"; }
+    if (IsUpsampleOp(r.op_type_name)) { group_name = "UPSAMPLE"; }
+    if (IsIndicesOp(r.op_type_name)) { group_name = "Indices"; }
+    if (IsBroadcastOp(r.op_type_name)) { group_name = "Broadcast"; }
+    if (IsScalarOp(r.op_type_name)) { group_name = "Scalar"; }
+    if (IsFusedOp(r.op_type_name)) { group_name = "Fused"; }
+    if (IsReduceOp(r.op_type_name)) { group_name = "reduce"; }
+    if (IsReshapeOp(r.op_type_name)) { group_name = "reshape"; }
+    if (IsLossOp(r.op_type_name)) { group_name = "loss"; }
+    group_name = "GET_ONEFLOW_" + group_name + "_OP_DEFINITIONS";
+    std::transform(group_name.begin(), group_name.end(), group_name.begin(), ::toupper);
+    groups[group_name].insert({kv.first, kv.second});
+  }
+}
+
 }  // namespace
 
 namespace oneflow {
@@ -314,23 +417,22 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
   m.def("gen_ods", []() {
     using K = std::string;
     using V = user_op::OpRegistryResult;
+
     std::map<K, V> sorted{};
     auto unordered = user_op::UserOpRegistryMgr::Get().GetAllOpRegistryResults();
     std::transform(unordered.begin(), unordered.end(), std::inserter(sorted, sorted.end()),
                    [](const std::pair<K, V>& p) { return p; });
-    for (const auto& kv : sorted) {
-      if (kv.first == "mlir_jit") continue;
-      const oneflow::user_op::OpRegistryResult& r = kv.second;
-      auto op_class_name = GetOpClassName(kv.first);
-      std::cout << (ShouldGenBaseClass(r.op_type_name) ? "class" : "def") << " OneFlow_"
-                << op_class_name << "Op : " << GetBaseOp(r.op_type_name) << "<\"" << kv.first
-                << "\", [" + GetTraits(r.op_def) + "]> ";  // TODO: add traits
-      if (ShouldGenEmptyBody(r.op_type_name)) {
-        std::cout << "{}\n";
-      } else {
-        PrintBody(r);
-      }
-      std::cout << "\n";
+    std::map<std::string, std::map<K, V>> groups;
+    GroupOpRegistryResults(sorted, groups);
+    for (const auto& kv : groups) {
+      const auto& group_name = kv.first;
+      std::cout << "// "
+                << "Total: " << kv.second.size() << "\n";
+      std::cout << "#ifndef " << group_name << "\n";
+      std::cout << "#define " << group_name << "\n\n";
+      auto results = kv.second;
+      PrintODSFromOpRegistryResults(results);
+      std::cout << "#endif  // " << group_name << "\n\n";
     }
   });
 }
