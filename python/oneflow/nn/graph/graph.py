@@ -38,6 +38,7 @@ from oneflow.nn.optimizer.optimizer import Optimizer
 
 
 
+
 class Graph(object):
     r"""Base class for training or evaluating a neural network in graph mode.
 
@@ -374,7 +375,7 @@ class Graph(object):
         if s_level >= self._debug_min_s_level:
             if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
                 print(msg)
-             
+
     @property
     def _config_proto(self):
         return self.config.proto
@@ -452,8 +453,8 @@ class Graph(object):
             t0 = time.clock()
             eager_outputs = self._build_graph(*args)
             t1 = time.clock()
-            self._print(0, 0, self._shallow_repr() + " end building graph." + "cost time by build graph:" +
-            str(t1-t0) + 's' + '\n',
+            self._print(0, 0, self._shallow_repr()  + "time consumed to complete build graph:"
+            +str(round(t1-t0,2)) + 's' + '\n',
          )
         except:
             self._print(
@@ -479,10 +480,10 @@ class Graph(object):
             self._print(
                 0,
                 0,
-                self._shallow_repr() + " end compiling plan and init graph runtime." + '\n'
-                 + "complie and init Runtime consumes time:" + str(t3-t2) + 's' + '\n' 
-                 + "from build graph to complie and init Runtime the end consumes time:" 
-                 + str(t3-t0) + 's' + '\n',
+                self._shallow_repr()  + "time consumed to complete plan and init graph runtime:" 
+                + str(round(t3-t2,2)) + 's' + '\n' 
+                + "the total time consumed to complete build graph and compiling plan and init graph runtime:" 
+                + str(round(t3-t0,2)) + 's' + '\n',
             )
         except:
             self._print(
