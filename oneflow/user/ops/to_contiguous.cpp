@@ -22,16 +22,16 @@ namespace oneflow {
 namespace {
 
 REGISTER_USER_OP("to_contiguous")
-    .Input("input")
-    .Output("output")
+    .Input("in")
+    .Output("out")
     .Attr<std::vector<int64_t>>("stride")
     .Attr<int64_t>("storage_offset")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputShape("output", 0) = ctx->InputShape("input", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("output", 0) = ctx->InputDType("input", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

@@ -53,8 +53,8 @@ class ToContiguousKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("input", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("output", 0);
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     const ShapeView& in_shape = in->shape();
     CHECK_EQ(out->shape(), in_shape);
@@ -77,7 +77,7 @@ class ToContiguousKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("to_contiguous")                          \
       .SetCreateFn<ToContiguousKernel<device_type, T>>()         \
       .SetIsMatchedHob((user_op::HobDeviceType() == device_type) \
-                       && (user_op::HobDataType("input", 0) == GetDataType<T>::value));
+                       && (user_op::HobDataType("in", 0) == GetDataType<T>::value));
 
 #define REGISTER_TO_CONTIGUOUS_CPU_KERNEL(T) REGISTER_TO_CONTIGUOUS_KERNEL(DeviceType::kCPU, T)
 #define REGISTER_TO_CONTIGUOUS_GPU_KERNEL(T) REGISTER_TO_CONTIGUOUS_KERNEL(DeviceType::kGPU, T)

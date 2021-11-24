@@ -91,6 +91,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<TensorArg> current_grad() const = 0;
   virtual Maybe<Tensor> detach() const = 0;
   virtual Maybe<Tensor> clone() const = 0;
+  virtual std::shared_ptr<Tensor> contiguous() const = 0;
 
   // Setters for autograd
   virtual Maybe<void> set_requires_grad(bool requires_grad) = 0;
@@ -191,6 +192,9 @@ class StaticZerosTensor final : public Tensor {
   Maybe<TensorArg> current_grad() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Tensor> detach() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Tensor> clone() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  std::shared_ptr<Tensor> contiguous() const override {
+    return std::const_pointer_cast<Tensor>(shared_from_this());
+  }
 
   // Setters for autograd
   Maybe<void> set_requires_grad(bool requires_grad) override {
@@ -334,6 +338,7 @@ class Parameter final : public TensorIf<Parameter> {
   Maybe<TensorArg> current_grad() const override { return tensor_->current_grad(); }
   Maybe<Tensor> detach() const override { return tensor_->detach(); }
   Maybe<Tensor> clone() const override { return tensor_->clone(); }
+  std::shared_ptr<Tensor> contiguous() const override;
 
   Maybe<void> set_requires_grad(bool requires_grad) override {
     return tensor_->set_requires_grad(requires_grad);
@@ -415,6 +420,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return false; }
   bool is_cuda() const override;
+  std::shared_ptr<Tensor> contiguous() const override;
 
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
   Maybe<Tensor> data() override {
@@ -522,6 +528,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
     return impl_->cur_rank_phy_tensor();
   }
   bool is_cuda() const override;
+  std::shared_ptr<Tensor> contiguous() const override;
   Maybe<Tensor> data() override {
     OF_LOG_ONCE(LOG(WARNING) << "You shouldn't call `.data` for a ConsistentTensor.");
     return std::static_pointer_cast<Tensor>(shared_from_this());
