@@ -132,6 +132,7 @@ bool IsPoolOp(const std::string& op_name) {
   return (op_name.rfind("avg", 0) == 0 || op_name.rfind("max", 0) == 0)
          && op_name.find("pool") != std::string::npos;
 }
+bool IsEagerOp(const std::string& op_name) { return (op_name.rfind("eager", 0) == 0); }
 bool IsAnyPoolOp(const std::string& op_name) { return op_name.find("pool") != std::string::npos; }
 bool IsAnyConvOp(const std::string& op_name) { return op_name.find("conv") != std::string::npos; }
 bool IsConvOp(const std::string& op_name) {
@@ -154,8 +155,12 @@ bool IsTestOp(const std::string& op_name) {
           || op_name.find("ccrelu") != std::string::npos);
 }
 bool IsPaddingOp(const std::string& op_name) { return (op_name.find("pad") != std::string::npos); }
+bool IsCrossEntropyOp(const std::string& op_name) {
+  return (op_name.find("cross_entropy") != std::string::npos);
+}
 bool IsDatasetOp(const std::string& op_name) {
   return (op_name.find("reader") != std::string::npos || op_name.find("Reader") != std::string::npos
+          || op_name.find("loader") != std::string::npos
           || op_name.find("decoder") != std::string::npos);
 }
 bool IsUpsampleOp(const std::string& op_name) {
@@ -170,7 +175,10 @@ bool IsScalarOp(const std::string& op_name) {
 bool IsSoftmaxOp(const std::string& op_name) {
   return (op_name.find("softmax") != std::string::npos);
 }
-bool IsFusedOp(const std::string& op_name) { return (op_name.find("fused") != std::string::npos); }
+bool IsFusedOp(const std::string& op_name) {
+  return (op_name.find("fused") != std::string::npos
+          || op_name.find("add_relu") != std::string::npos);
+}
 bool IsReduceOp(const std::string& op_name) {
   return (op_name.find("reduce") != std::string::npos);
 }
@@ -411,11 +419,11 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
     if (IsIndicesOp(r.op_type_name)) { group_name = "Indices"; }
     if (IsBroadcastOp(r.op_type_name)) { group_name = "Broadcast"; }
     if (IsScalarOp(r.op_type_name)) { group_name = "Scalar"; }
-    if (IsFusedOp(r.op_type_name)) { group_name = "Fused"; }
     if (IsReduceOp(r.op_type_name)) { group_name = "reduce"; }
     if (IsReshapeOp(r.op_type_name)) { group_name = "reshape"; }
     if (IsLossOp(r.op_type_name)) { group_name = "loss"; }
     if (IsNormalizationOp(r.op_type_name)) { group_name = "Normalization"; }
+    if (IsCrossEntropyOp(r.op_type_name)) { group_name = "Cross_Entropy"; }
     if (IsMathOp(r.op_type_name)) { group_name = "math"; }
     if (IsSoftmaxOp(r.op_type_name)) { group_name = "Softmax"; }
     if (IsNCCLOp(r.op_type_name)) { group_name = "NCCL"; }
@@ -426,6 +434,8 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
     if (IsTrigonometric(r.op_type_name)) { group_name = "TRIGONOMETRIC"; }
     if (IsIdempotentOp(r.op_type_name)) { group_name = "IDEMPOTENT"; }
     if (IsInvolutionOp(r.op_type_name)) { group_name = "INVOLUTION"; }
+    if (IsFusedOp(r.op_type_name)) { group_name = "Fused"; }
+    if (IsEagerOp(r.op_type_name)) { group_name = "eager"; }
     if (IsDatasetOp(r.op_type_name)) { group_name = "DATASET"; }
     if (IsTestOp(r.op_type_name)) { group_name = "TEST"; }
     group_name = "GET_ONEFLOW_" + group_name + "_OP_DEFINITIONS";
