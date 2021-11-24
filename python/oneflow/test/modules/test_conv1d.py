@@ -455,7 +455,7 @@ class TestConv1d(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(n=300)
+    @autotest(n=30)
     def test_conv1d_group_with_random_data(test_case):
         channels = 720  # lcm(1, 2, 3, 4, 5, 6)
         m = torch.nn.Conv1d(
@@ -469,9 +469,12 @@ class TestConv1d(flow.unittest.TestCase):
             padding_mode=constant("zeros") | nothing(),
         )
         m.train(random())
+
         device = random_device()
         m.to(device)
+        m.pytorch.to("cuda")
         x = random_pytorch_tensor(ndim=3, dim1=channels).to(device)
+        x.pytorch = x.pytorch.to("cuda")
         y = m(x)
         return y
 

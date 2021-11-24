@@ -101,13 +101,13 @@ class ColBufWriter {
  protected:
   const T* src_ptr_;
   T* dst_ptr_;
-  int64_t c_size_;
-  int64_t id_size_;
-  int64_t ih_size_;
-  int64_t iw_size_;
-  int64_t od_size_;
-  int64_t oh_size_;
-  int64_t ow_size_;
+  int64_t c_size_ = 0;
+  int64_t id_size_ = 0;
+  int64_t ih_size_ = 0;
+  int64_t iw_size_ = 0;
+  int64_t od_size_ = 0;
+  int64_t oh_size_ = 0;
+  int64_t ow_size_ = 0;
 };
 
 template<typename T>
@@ -165,14 +165,18 @@ template<typename T>
 class ColBufUtil final {
  public:
   ColBufUtil(const ShapeView& in_shape, const ShapeView& out_shape, int32_t dhw_offset,
-             const int32_t* strides, const int32_t* dilation_rate, const int32_t* padding_before)
-      : strides_(strides), dilation_rate_(dilation_rate), padding_before_(padding_before) {
-    id_num_ = in_shape.At(dhw_offset);
-    ih_num_ = in_shape.At(dhw_offset + 1);
-    iw_num_ = in_shape.At(dhw_offset + 2);
-    od_num_ = out_shape.At(dhw_offset);
-    oh_num_ = out_shape.At(dhw_offset + 1);
-    ow_num_ = out_shape.At(dhw_offset + 2);
+             const int32_t* strides, const int32_t* dilation_rate, const int32_t* padding_before,
+             const int32_t id_num, const int32_t ih_num, const int32_t iw_num, const int32_t od_num,
+             const int32_t oh_num, const int32_t ow_num)
+      : strides_(strides),
+        dilation_rate_(dilation_rate),
+        padding_before_(padding_before),
+        id_num_(id_num),
+        ih_num_(ih_num),
+        iw_num_(iw_num),
+        od_num_(od_num),
+        oh_num_(oh_num),
+        ow_num_(ow_num) {
     if (dhw_offset == 2) {
       dhw_valid_func_ = &ColBufWriter<T>::CDHWWrite;
     } else {
@@ -208,16 +212,16 @@ class ColBufUtil final {
   }
 
  private:
+  const int32_t* strides_;
+  const int32_t* dilation_rate_;
+  const int32_t* padding_before_;
+  DHWValidFunc<T> dhw_valid_func_;
   int64_t id_num_;
   int64_t ih_num_;
   int64_t iw_num_;
   int64_t od_num_;
   int64_t oh_num_;
   int64_t ow_num_;
-  const int32_t* strides_;
-  const int32_t* dilation_rate_;
-  const int32_t* padding_before_;
-  DHWValidFunc<T> dhw_valid_func_;
 };
 
 template<typename T>
@@ -227,7 +231,9 @@ struct ConvKernelUtil final {
                           const ShapeView& weight_shape, const ShapeView& out_shape,
                           const int32_t* strides, const int32_t* dilation_rate,
                           const int32_t* padding_before, T* col_buf_ptr) {
-    ColBufUtil<T> col_buf_util(in_shape, out_shape, 2, strides, dilation_rate, padding_before);
+    ColBufUtil<T> col_buf_util(in_shape, out_shape, 2, strides, dilation_rate, padding_before,
+                               in_shape.At(2), in_shape.At(3), in_shape.At(4), out_shape.At(2),
+                               out_shape.At(3), out_shape.At(4));
     Im2ColWriter<T> col_buf_writer(in_dptr, col_buf_ptr, in_shape.Count(2), in_shape.Count(3),
                                    in_shape.Count(4), 1, out_shape.Count(3), out_shape.Count(4), 1);
     DoNCDWHFunc(weight_shape, col_buf_util, &col_buf_writer);
@@ -237,7 +243,9 @@ struct ConvKernelUtil final {
                           const ShapeView& weight_shape, const ShapeView& out_shape,
                           const int32_t* strides, const int32_t* dilation_rate,
                           const int32_t* padding_before, T* col_buf_ptr) {
-    ColBufUtil<T> col_buf_util(in_shape, out_shape, 1, strides, dilation_rate, padding_before);
+    ColBufUtil<T> col_buf_util(in_shape, out_shape, 1, strides, dilation_rate, padding_before,
+                               in_shape.At(1), in_shape.At(2), in_shape.At(3), out_shape.At(1),
+                               out_shape.At(2), out_shape.At(3));
     Im2ColWriter<T> col_buf_writer(in_dptr, col_buf_ptr, in_shape.Count(2), in_shape.Count(2),
                                    in_shape.Count(3), in_shape.Count(4), out_shape.Count(2, 4),
                                    out_shape.Count(3, 4), 1);
@@ -248,7 +256,9 @@ struct ConvKernelUtil final {
                           const ShapeView& weight_shape, const ShapeView& out_shape,
                           const int32_t* strides, const int32_t* dilation_rate,
                           const int32_t* padding_before, T* in_diff_ptr) {
-    ColBufUtil<T> col_buf_util(in_shape, out_shape, 2, strides, dilation_rate, padding_before);
+    ColBufUtil<T> col_buf_util(in_shape, out_shape, 2, strides, dilation_rate, padding_before,
+                               in_shape.At(2), in_shape.At(3), in_shape.At(4), out_shape.At(2),
+                               out_shape.At(3), out_shape.At(4));
     Col2ImWriter<T> col_buf_writer(col_buf_ptr, in_diff_ptr, in_shape.Count(2), in_shape.Count(3),
                                    in_shape.Count(4), 1, out_shape.Count(3), out_shape.Count(4), 1);
     DoNCDWHFunc(weight_shape, col_buf_util, &col_buf_writer);
@@ -258,7 +268,9 @@ struct ConvKernelUtil final {
                           const ShapeView& weight_shape, const ShapeView& out_shape,
                           const int32_t* strides, const int32_t* dilation_rate,
                           const int32_t* padding_before, T* in_diff_ptr) {
-    ColBufUtil<T> col_buf_util(in_shape, out_shape, 1, strides, dilation_rate, padding_before);
+    ColBufUtil<T> col_buf_util(in_shape, out_shape, 1, strides, dilation_rate, padding_before,
+                               in_shape.At(1), in_shape.At(2), in_shape.At(3), out_shape.At(1),
+                               out_shape.At(2), out_shape.At(3));
     Col2ImWriter<T> col_buf_writer(col_buf_ptr, in_diff_ptr, in_shape.Count(2), in_shape.Count(2),
                                    in_shape.Count(3), in_shape.Count(4), out_shape.Count(2, 4),
                                    out_shape.Count(3, 4), 1);
@@ -295,9 +307,9 @@ struct ConvKernelUtil final {
 
 template<typename T>
 struct ConvOpKernelState final : public user_op::OpKernelState {
-  Im2ColFunc<T> im2col_func_;
-  Col2ImFunc<T> col2im_func_;
-  GemmFunc<T> forward_func_;
+  Im2ColFunc<T> im2col_func_ = ConvKernelUtil<T>::NCDHWIm2Col;
+  Col2ImFunc<T> col2im_func_ = ConvKernelUtil<T>::NCDHWCol2Im;
+  GemmFunc<T> forward_func_ = Gemm4ChannelLast;
 
   Shape in_5d_shape_;
   Shape out_5d_shape_;
@@ -307,10 +319,10 @@ struct ConvOpKernelState final : public user_op::OpKernelState {
   std::vector<int32_t> dilation_rate_3d_;
   std::vector<int32_t> padding_before_3d_;
 
-  enum CBLAS_TRANSPOSE is_out_diff_need_trans_;
-  int32_t idx_offset_;
-  bool is_dynamic_;
-  int32_t groups;
+  enum CBLAS_TRANSPOSE is_out_diff_need_trans_ = CblasNoTrans;
+  int32_t idx_offset_ = 0;
+  bool is_dynamic_ = false;
+  int32_t groups = 1;
 
   void Update(const ShapeView& x_shape, const ShapeView& out_shape) {
     auto Gen5DShape = [](const ShapeView& shape, int32_t idx_offset) -> Shape {
@@ -389,7 +401,6 @@ template<typename T>
 void InitBiasMulBuf(T* dptr, int64_t num) {
   for (int64_t i = 0; i < num; ++i) { dptr[i] = 1; }
 }
-
 template<typename T, size_t NDims>
 class ConvCpuKernel final : public user_op::OpKernel {
  public:
