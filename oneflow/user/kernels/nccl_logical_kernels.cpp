@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/ep/include/primitive/permute.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
 
@@ -84,7 +85,8 @@ class NcclLogicalAllReduceKernel final : public user_op::OpKernel {
     CHECK_EQ(in->data_type(), out->data_type());
     OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
                                 GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
-                                nccl_comm->comm(), ctx->device_ctx()->cuda_stream()));
+                                nccl_comm->comm(),
+                                ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -110,7 +112,8 @@ class NcclLogicalReduceScatterKernel final : public user_op::OpKernel {
     CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt() * num_ranks);
     OF_NCCL_CHECK(ncclReduceScatter(in->dptr(), out->mut_dptr(), out->shape().elem_cnt(),
                                     GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
-                                    nccl_comm->comm(), ctx->device_ctx()->cuda_stream()));
+                                    nccl_comm->comm(),
+                                    ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -136,7 +139,7 @@ class NcclLogicalAllGatherKernel final : public user_op::OpKernel {
     CHECK_EQ(in->shape().elem_cnt() * num_ranks, out->shape().elem_cnt());
     OF_NCCL_CHECK(ncclAllGather(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
                                 GetNcclDataType(in->data_type()), nccl_comm->comm(),
-                                ctx->device_ctx()->cuda_stream()));
+                                ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -176,7 +179,7 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
     CHECK_EQ(in->shape().elem_cnt() * num_ranks, out->shape().elem_cnt());
     OF_NCCL_CHECK(ncclAllGather(in->dptr(), unpack_from_ptr, in->shape().elem_cnt(),
                                 GetNcclDataType(in->data_type()), nccl_comm->comm(),
-                                ctx->device_ctx()->cuda_stream()));
+                                ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
 
     CHECK_GT(in_split_axis, 0);
     // NOTE(chengcheng): Do unpack.
@@ -280,11 +283,11 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
         OF_NCCL_CHECK(ncclSend(reinterpret_cast<const void*>(
                                    reinterpret_cast<const char*>(pack_to_ptr) + j * chunk_size),
                                elem_per_chunk, GetNcclDataType(in->data_type()), j, comm,
-                               ctx->device_ctx()->cuda_stream()));
+                               ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
         OF_NCCL_CHECK(ncclRecv(
             reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr) + j * chunk_size),
             elem_per_chunk, GetNcclDataType(in->data_type()), j, nccl_comm->comm(),
-            ctx->device_ctx()->cuda_stream()));
+            ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
       }
       OF_NCCL_CHECK(ncclGroupEnd());
     }
@@ -338,12 +341,12 @@ REGISTER_USER_KERNEL("_nccl_logical_all_gather")
     .SetCreateFn<NcclLogicalAllGatherKernel>()
     .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
 
-#define REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(dtype)                                  \
-  REGISTER_USER_KERNEL("_nccl_logical_all_gather_noncontinuous")                        \
-      .SetCreateFn<NcclLogicalAllGatherNoncontinuous<dtype>>()                          \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(dtype)                                   \
+  REGISTER_USER_KERNEL("_nccl_logical_all_gather_noncontinuous")                         \
+      .SetCreateFn<NcclLogicalAllGatherNoncontinuous<dtype>>()                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                    \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferAllGatherNoncontinuousKernelTmpBufferSize);
 
 REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(int8_t)
@@ -353,12 +356,12 @@ REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(float)
 REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(double)
 REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(float16)
 
-#define REGISTER_S2S_KERNEL(dtype)                                                      \
-  REGISTER_USER_KERNEL("_nccl_logical_s2s")                                             \
-      .SetCreateFn<NcclLogicalS2SKernel<dtype>>()                                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_S2S_KERNEL(dtype)                                                       \
+  REGISTER_USER_KERNEL("_nccl_logical_s2s")                                              \
+      .SetCreateFn<NcclLogicalS2SKernel<dtype>>()                                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                    \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferS2SKernelTmpBufferSize);
 
 REGISTER_S2S_KERNEL(int8_t)

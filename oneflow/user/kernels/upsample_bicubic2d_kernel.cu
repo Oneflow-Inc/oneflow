@@ -151,13 +151,13 @@ class UpsampleBicubic2dGPUKernel final : public user_op::OpKernel {
 
     if (in_height == out_height && in_width == out_width) {
       Memcpy<DeviceType::kGPU>(
-          ctx->device_ctx(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
+          ctx->stream(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
           x_tensor->shape().elem_cnt() * GetSizeOfDataType(x_tensor->data_type()));
     } else {
       const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
       const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
 
-      RUN_CUDA_KERNEL((UpsampleBicubic2dForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+      RUN_CUDA_KERNEL((UpsampleBicubic2dForward<T>), ctx->stream(), elem_cnt, elem_cnt,
                       x_tensor->dptr<T>(), nbatch, channels, in_height, in_width, out_height,
                       out_width, scale_height, scale_width, align_corners, y_tensor->mut_dptr<T>());
     }
@@ -175,7 +175,7 @@ class UpsampleBicubic2dGradGPUKernel final : public user_op::OpKernel {
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0,
+    Memset<DeviceType::kGPU>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
                              dx_tensor->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const float height_scale = ctx->Attr<float>("height_scale");
@@ -192,13 +192,13 @@ class UpsampleBicubic2dGradGPUKernel final : public user_op::OpKernel {
 
     if (in_height == out_height && in_width == out_width) {
       Memcpy<DeviceType::kGPU>(
-          ctx->device_ctx(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
+          ctx->stream(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
           dy_tensor->shape().elem_cnt() * GetSizeOfDataType(dy_tensor->data_type()));
     } else {
       const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
       const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
 
-      RUN_CUDA_KERNEL((UpsampleBicubic2dBackward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+      RUN_CUDA_KERNEL((UpsampleBicubic2dBackward<T>), ctx->stream(), elem_cnt, elem_cnt,
                       dy_tensor->dptr<T>(), nbatch, channels, in_height, in_width, out_height,
                       out_width, scale_height, scale_width, align_corners,
                       dx_tensor->mut_dptr<T>());
@@ -207,15 +207,15 @@ class UpsampleBicubic2dGradGPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UPSAMPLE_BICUBIC_GPU_KERNEL(dtype)                                    \
-  REGISTER_USER_KERNEL("upsample_bicubic_2d")                                          \
-      .SetCreateFn<UpsampleBicubic2dGPUKernel<dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("upsample_bicubic_2d_grad")                                     \
-      .SetCreateFn<UpsampleBicubic2dGradGPUKernel<dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_UPSAMPLE_BICUBIC_GPU_KERNEL(dtype)                                     \
+  REGISTER_USER_KERNEL("upsample_bicubic_2d")                                           \
+      .SetCreateFn<UpsampleBicubic2dGPUKernel<dtype>>()                                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("upsample_bicubic_2d_grad")                                      \
+      .SetCreateFn<UpsampleBicubic2dGradGPUKernel<dtype>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_UPSAMPLE_BICUBIC_GPU_KERNEL(float)
 REGISTER_UPSAMPLE_BICUBIC_GPU_KERNEL(double)

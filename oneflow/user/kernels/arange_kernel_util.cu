@@ -15,31 +15,31 @@ limitations under the License.
 */
 #ifdef WITH_CUDA
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/range_kernel_util.h"
+#include "oneflow/user/kernels/arange_kernel_util.h"
 
 namespace oneflow {
 
 namespace user_op {
 
 template<typename T>
-__global__ void RangeForwardGpuKernel(const T start, const T delta, const int64_t range_elem_cnt,
-                                      T* out) {
+__global__ void ArangeForwardGpuKernel(const T start, const T delta, const int64_t arange_elem_cnt,
+                                       T* out) {
   // Use Loop to set the value
-  DoRange<T>(start, delta, range_elem_cnt, out);
+  DoArange<T>(start, delta, arange_elem_cnt, out);
 }
 
 template<typename T>
-struct RangeFunctor<DeviceType::kGPU, T> final {
-  void operator()(DeviceCtx* ctx, const T start, const T delta, const int64_t range_elem_cnt,
+struct ArangeFunctor<DeviceType::kGPU, T> final {
+  void operator()(ep::Stream* stream, const T start, const T delta, const int64_t arange_elem_cnt,
                   T* out) {
-    // The thread num is set as range_elem_cnt
-    RUN_CUDA_KERNEL((RangeForwardGpuKernel<T>), ctx, range_elem_cnt, start, delta, range_elem_cnt,
-                    out);
+    // The thread num is set as arange_elem_cnt
+    RUN_CUDA_KERNEL((ArangeForwardGpuKernel<T>), stream, arange_elem_cnt, start, delta,
+                    arange_elem_cnt, out);
   }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_RANGE_FUNCTOR, (DeviceType::kGPU),
-                                 RANGE_DATA_TYPE_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_ARANGE_FUNCTOR, (DeviceType::kGPU),
+                                 ARANGE_DATA_TYPE_SEQ);
 }  // namespace user_op
 }  // namespace oneflow
 

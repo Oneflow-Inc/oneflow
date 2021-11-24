@@ -310,6 +310,10 @@ def _acos(self):
     return flow.acos(self)
 
 
+def _arccos(self):
+    return flow.arccos(self)
+
+
 def _acosh(self):
     return flow.acosh(self)
 
@@ -556,6 +560,10 @@ def _roll(self, shifts, dims=None):
     return flow.roll(self, shifts=shifts, dims=dims)
 
 
+def _bmm(self, other):
+    return flow.bmm(self, other)
+
+
 def _len(self):
     if self.dim() == 0:
         raise TypeError("len() of a 0-d tensor")
@@ -693,6 +701,10 @@ def _format(self, format_spec):
     return object.__format__(self, format_spec)
 
 
+def _to(self, *args, **kwargs):
+    return flow._C.to(self, *args, **kwargs)
+
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)
@@ -754,6 +766,7 @@ def RegisterMethods():
     Tensor.argmax = _argmax
     Tensor.argmin = _argmin
     Tensor.acos = _acos
+    Tensor.arccos = _arccos
     Tensor.acosh = _acosh
     Tensor.arccosh = _arccosh
     Tensor.atanh = _atanh
@@ -822,11 +835,13 @@ def RegisterMethods():
     Tensor.log_softmax = _log_softmax
     Tensor.logical_not = _not
     Tensor.roll = _roll
+    Tensor.bmm = _bmm
     Tensor.squeeze = _squeeze
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
     Tensor.permute = _permute
+    Tensor.to = _to
 
 
 def register_tensor_op(op_name):
