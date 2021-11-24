@@ -53,9 +53,9 @@ struct DeviceAdd {
 class MaxPoolingParams3D {
  public:
   MaxPoolingParams3D(const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
-                  const std::vector<int32_t>& padding, const std::vector<int32_t>& kernel_size,
-                  const std::vector<int32_t>& stride, const std::vector<int32_t>& dilation,
-                  const bool return_indices, const bool ceil_mode);
+                     const std::vector<int32_t>& padding, const std::vector<int32_t>& kernel_size,
+                     const std::vector<int32_t>& stride, const std::vector<int32_t>& dilation,
+                     const bool return_indices, const bool ceil_mode);
   ~MaxPoolingParams3D() = default;
 
   const std::string& data_format() const { return data_format_; }

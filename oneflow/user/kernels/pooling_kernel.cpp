@@ -35,7 +35,7 @@ std::shared_ptr<PoolingOpKernelState> DoCreateOpKernelState(user_op::KernelCompu
   const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
 
   MaxPoolingParams3D params_3d = MaxPoolingParams3D(dim, x_shape, data_format, padding, kernel_size,
-                                              stride, dilation, return_indices, ceil_mode);
+                                                    stride, dilation, return_indices, ceil_mode);
   std::shared_ptr<PoolingOpKernelState> state(new PoolingOpKernelState(params_3d));
   return state;
 }
