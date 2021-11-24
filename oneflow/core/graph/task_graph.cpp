@@ -267,7 +267,8 @@ Maybe<void> MakeGetterTaskNode4MachineId7ThrdId(
   }
   *Getter = [machine_id2task_node](int64_t mchn_id, int64_t thrd_id) -> Maybe<CompTaskNode*> {
     const auto& iter = machine_id2task_node->find(mchn_id);
-    CHECK_OR_RETURN(iter != machine_id2task_node->end());
+    CHECK_OR_RETURN(iter != machine_id2task_node->end())
+        << " CCLOG: ERROR! machine id is " << mchn_id;
     return iter->second;
   };
   return Maybe<void>::Ok();

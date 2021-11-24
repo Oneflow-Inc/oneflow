@@ -74,11 +74,13 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       resource.set_machine_num(GlobalProcessCtx::NodeSize());
       const int32_t gpu_device_num = GetGpuDeviceNum();
       resource.set_gpu_device_num(gpu_device_num);
-      if (gpu_device_num == 0) {
-        resource.set_cpu_device_num(GlobalProcessCtx::NumOfProcessPerNode());
-      } else {
-        resource.set_cpu_device_num(gpu_device_num);
-      }
+      // NOTE(chengcheng):
+      //   In some corner case, even if the machine has GPUs, the user also wants to simulate
+      //   multiple pure CPU process groups. At this time, the cpu_device_num will exceed the
+      //   gpu_device_num, which is NumOfProcessPerNode
+      const int32_t cpu_device_num =
+          std::max(gpu_device_num, static_cast<int32_t>(GlobalProcessCtx::NumOfProcessPerNode()));
+      resource.set_cpu_device_num(cpu_device_num);
     }
 
     // NOTE(chengcheng): detele first because in EnvGlobalObjectScope has created ResourceDesc.
