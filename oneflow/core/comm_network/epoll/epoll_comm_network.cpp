@@ -142,7 +142,7 @@ void* EpollCommNet::DeSerialDataToToken(char* data, size_t* size) {
   out.write(addr,sizeof(void*));//data的内容为token地址
   out.close();
 
-  char ** addrs = &addr;
+  char ** addrs =reinterpret_cast<char**>(addr);
   char * token = * addrs;
   std::cout<<"EpollCommNet::DeSerialDataToToken token:"<<reinterpret_cast<uint64_t>(token) << std::endl << std::endl;
   token_mutex_.unlock();
