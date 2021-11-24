@@ -193,12 +193,19 @@ std::string GetOperandOrder(
 void PrintExtraClassDeclaration(const oneflow::UserOpDef& op_def) {
   std::cout << "  let extraClassDeclaration = [{"
             << "\n";
-  std::cout << "    static std::vector<std::string> inputOrder() const { return "
+  std::cout << "    static std::vector<std::string> inputOrder() { return "
             << GetOperandOrder(op_def.input()) << "; }\n";
-  std::cout << "    static std::vector<std::string> outputOrder() const { return "
+  std::cout << "    static std::vector<std::string> outputOrder() { return "
             << GetOperandOrder(op_def.output()) << "; }\n";
   std::cout << "  }];"
             << "\n";
+}
+
+void PrintHasCanonicalizer(const std::string& op_name) {
+  if (op_name == "add_n") {
+    std::cout << "  let hasCanonicalizer = 1;"
+              << "\n";
+  }
 }
 
 void PrintTraitAttrs(const oneflow::UserOpDef& op_def) {
@@ -217,7 +224,8 @@ void PrintTraitAttrs(const oneflow::UserOpDef& op_def) {
   }
 }
 
-void PrintBody(const oneflow::UserOpDef& op_def) {
+void PrintBody(const oneflow::user_op::OpRegistryResult& r) {
+  const oneflow::UserOpDef& op_def = r.op_def;
   // TODO: handle in out size/optional
   // TODO: handle "," in last element
   std::cout << "{"
@@ -258,6 +266,7 @@ void PrintBody(const oneflow::UserOpDef& op_def) {
   // trait attrs
   PrintTraitAttrs(op_def);
   PrintExtraClassDeclaration(op_def);
+  PrintHasCanonicalizer(r.op_type_name);
   std::cout << "}"
             << "\n";
 }
@@ -272,6 +281,19 @@ std::string GetOpClassName(const std::string& op_name) {
     ret = convertToCamelFromSnakeCase(op_name, true);
   }
   return PostProcessClassName(ret);
+}
+
+std::string GetTraits(const oneflow::UserOpDef& op_def) {
+  std::string ret{};
+  const bool need_operand_segment_sizes = HasMultipleVariadic(op_def.input());
+  const bool need_result_segment_sizes = HasMultipleVariadic(op_def.output());
+  if (need_operand_segment_sizes) { ret += "AttrSizedOperandSegments"; }
+
+  if (need_result_segment_sizes) {
+    if (ret != "") ret += ", ";
+    ret += "AttrSizedResultSegments";
+  }
+  return ret;
 }
 
 }  // namespace
@@ -291,15 +313,16 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
     std::transform(unordered.begin(), unordered.end(), std::inserter(sorted, sorted.end()),
                    [](const std::pair<K, V>& p) { return p; });
     for (const auto& kv : sorted) {
+      if (kv.first == "mlir_jit") continue;
       const oneflow::user_op::OpRegistryResult& r = kv.second;
       auto op_class_name = GetOpClassName(kv.first);
       std::cout << "def OneFlow_" << op_class_name << "Op : " << GetBaseOp(r.op_type_name) << "<\""
-                << kv.first << "\", []> ";  // TODO: add traits
+                << kv.first << "\", [" + GetTraits(r.op_def) + "]> ";  // TODO: add traits
       const oneflow::UserOpDef& op_def = r.op_def;
       if (ShouldGenEmptyBody(r.op_type_name)) {
         std::cout << "{}\n";
       } else {
-        PrintBody(op_def);
+        PrintBody(r);
       }
       std::cout << "\n";
     }
