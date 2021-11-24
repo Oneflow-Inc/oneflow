@@ -905,6 +905,10 @@ class SliceBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
                            const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
+    if (x->is_eager() && x->is_local()) {
+      // return ToContiguous(JUST(view::Slice(x, start, stop, step)));
+      return view::Slice(x, start, stop, step);
+    }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
