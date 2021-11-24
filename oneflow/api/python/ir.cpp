@@ -380,18 +380,7 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
     std::string group_name = "MISC";
     const oneflow::user_op::OpRegistryResult& r = kv.second;
     if (ShouldGenBaseClass(r.op_type_name)) { group_name = "BASE"; }
-    if (IsSoftmaxOp(r.op_type_name)) { group_name = "Softmax"; }
-    if (IsNCCLOp(r.op_type_name)) { group_name = "NCCL"; }
-    if (IsAnyConvOp(r.op_type_name)) { group_name = "CONV"; }
-    if (IsAnyPoolOp(r.op_type_name)) { group_name = "POOL"; }
-    if (IsIdempotentOp(r.op_type_name)) { group_name = "IDEMPOTENT"; }
-    if (IsInvolutionOp(r.op_type_name)) { group_name = "INVOLUTION"; }
-    if (IsTrigonometric(r.op_type_name)) { group_name = "TRIGONOMETRIC"; }
-    if (IsOptimizerOp(r.op_type_name)) { group_name = "OPTIMIZER"; }
-    if (IsDatasetOp(r.op_type_name)) { group_name = "DATASET"; }
-    if (IsTestOp(r.op_type_name)) { group_name = "TEST"; }
     if (IsPaddingOp(r.op_type_name)) { group_name = "PADDING"; }
-    if (IsUpsampleOp(r.op_type_name)) { group_name = "UPSAMPLE"; }
     if (IsIndicesOp(r.op_type_name)) { group_name = "Indices"; }
     if (IsBroadcastOp(r.op_type_name)) { group_name = "Broadcast"; }
     if (IsScalarOp(r.op_type_name)) { group_name = "Scalar"; }
@@ -399,6 +388,17 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
     if (IsReduceOp(r.op_type_name)) { group_name = "reduce"; }
     if (IsReshapeOp(r.op_type_name)) { group_name = "reshape"; }
     if (IsLossOp(r.op_type_name)) { group_name = "loss"; }
+    if (IsSoftmaxOp(r.op_type_name)) { group_name = "Softmax"; }
+    if (IsNCCLOp(r.op_type_name)) { group_name = "NCCL"; }
+    if (IsAnyConvOp(r.op_type_name)) { group_name = "CONV"; }
+    if (IsAnyPoolOp(r.op_type_name)) { group_name = "POOL"; }
+    if (IsUpsampleOp(r.op_type_name)) { group_name = "UPSAMPLE"; }
+    if (IsOptimizerOp(r.op_type_name)) { group_name = "OPTIMIZER"; }
+    if (IsTrigonometric(r.op_type_name)) { group_name = "TRIGONOMETRIC"; }
+    if (IsIdempotentOp(r.op_type_name)) { group_name = "IDEMPOTENT"; }
+    if (IsInvolutionOp(r.op_type_name)) { group_name = "INVOLUTION"; }
+    if (IsDatasetOp(r.op_type_name)) { group_name = "DATASET"; }
+    if (IsTestOp(r.op_type_name)) { group_name = "TEST"; }
     group_name = "GET_ONEFLOW_" + group_name + "_OP_DEFINITIONS";
     std::transform(group_name.begin(), group_name.end(), group_name.begin(), ::toupper);
     groups[group_name].insert({kv.first, kv.second});
