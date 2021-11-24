@@ -126,7 +126,7 @@ char* EpollCommNet::SerialTokenToData(void* token, size_t* size) {
 
 void* EpollCommNet::DeSerialDataToToken(char* data, size_t* size) {
   char* token = (char*)malloc(sizeof(void*));
-  std::memcpy(token, data, sizeof(void*));
+  std::memcpy(&token, data, sizeof(void*));
   *size = sizeof(void*);
 
   token_mutex_.lock();
