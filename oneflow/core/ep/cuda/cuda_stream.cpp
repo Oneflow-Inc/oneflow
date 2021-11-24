@@ -30,9 +30,10 @@ namespace {
 
 constexpr size_t kDefaultWorkspaceSize = 4 * 1024 * 1024;  // 4M
 
-void SetAffinityByDevice(int64_t dev_id) {
-  auto node_device_desc =
-      Global<device::NodeDeviceDescriptorManager>::Get()->GetLocalNodeDeviceDescriptor();
+void SetAffinityByDevice(int dev_id) {
+  auto node_device_desc_mgr = Global<device::NodeDeviceDescriptorManager>::Get();
+  if (node_device_desc_mgr == nullptr) { return; }
+  auto node_device_desc = node_device_desc_mgr->GetLocalNodeDeviceDescriptor();
   auto cuda_device = std::dynamic_pointer_cast<const device::CudaDeviceDescriptor>(
       node_device_desc->GetDevice(device::kCudaDeviceDescriptorClassName, dev_id));
   if (!cuda_device) { return; }
