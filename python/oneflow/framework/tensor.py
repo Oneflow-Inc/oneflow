@@ -310,6 +310,10 @@ def _acos(self):
     return flow.acos(self)
 
 
+def _arccos(self):
+    return flow.arccos(self)
+
+
 def _acosh(self):
     return flow.acosh(self)
 
@@ -762,6 +766,7 @@ def RegisterMethods():
     Tensor.argmax = _argmax
     Tensor.argmin = _argmin
     Tensor.acos = _acos
+    Tensor.arccos = _arccos
     Tensor.acosh = _acosh
     Tensor.arccosh = _arccosh
     Tensor.atanh = _atanh
