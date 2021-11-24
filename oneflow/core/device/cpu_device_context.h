@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/device/event_record.h"
 #include "oneflow/core/vm/cpu_allocator.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
-#include "oneflow/core/ep/cpu/cpu_stream.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
 
