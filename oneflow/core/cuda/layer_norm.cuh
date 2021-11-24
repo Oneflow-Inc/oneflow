@@ -34,7 +34,7 @@ __inline__ __device__ T Div(T a, T b);
 
 template<>
 __inline__ __device__ float Div<float>(float a, float b) {
-#ifdef OF_SOFTMAX_USE_FAST_MATH
+#ifdef OF_LAYER_NORM_USE_FAST_MATH
   return __fdividef(a, b);
 #else
   return a / b;
@@ -44,6 +44,23 @@ __inline__ __device__ float Div<float>(float a, float b) {
 template<>
 __inline__ __device__ double Div<double>(double a, double b) {
   return a / b;
+}
+
+template<typename T>
+__inline__ __device__ T Rsqrt(T x);
+
+template<>
+__inline__ __device__ float Rsqrt<float>(float x) {
+#ifdef OF_LAYER_NORM_USE_FAST_MATH
+  return __frsqrt_rn(x);
+#else
+  return rsqrt(x);
+#endif
+}
+
+template<>
+__inline__ __device__ double Rsqrt<double>(double x) {
+  return rsqrt(x);
 }
 
 template<class Func>
@@ -238,9 +255,9 @@ __global__ void LayerNormWarpImpl(LOAD load, STORE store, const int64_t rows, co
   constexpr int num_packs = cols_per_thread / pack_size;
   assert(cols <= cols_per_thread * thread_group_width);
   ComputeType buf[rows_per_access][cols_per_thread];
-  const int global_thread_group_id = blockIdx.x * blockDim.y + threadIdx.y;
-  const int num_global_thread_group = gridDim.x * blockDim.y;
-  const int lane_id = threadIdx.x;
+  const int64_t global_thread_group_id = blockIdx.x * blockDim.y + threadIdx.y;
+  const int64_t num_global_thread_group = gridDim.x * blockDim.y;
+  const int64_t lane_id = threadIdx.x;
   for (int64_t row = global_thread_group_id * rows_per_access; row < rows;
        row += num_global_thread_group * rows_per_access) {
     ComputeType thread_mean[rows_per_access];
@@ -282,7 +299,7 @@ __global__ void LayerNormWarpImpl(LOAD load, STORE store, const int64_t rows, co
       ComputeType row_mean = warp_mean[row_id];
       ComputeType row_variance =
           max(Div(warp_m2[row_id], warp_count[row_id]), static_cast<ComputeType>(0.0));
-      ComputeType row_inv_var = rsqrt(row_variance + static_cast<ComputeType>(epsilon));
+      ComputeType row_inv_var = Rsqrt(row_variance + static_cast<ComputeType>(epsilon));
       if (lane_id == 0) {
         mean[global_row_id] = row_mean;
         inv_variance[global_row_id] = row_inv_var;
@@ -562,7 +579,7 @@ __global__ void LayerNormBlockSMemImpl(LOAD load, STORE store, const int64_t row
     WelfordBlockAllReduce<ComputeType>(thread_mean, thread_m2, thread_count, &row_mean, &row_m2,
                                        &row_count);
     ComputeType row_variance = max(Div(row_m2, row_count), static_cast<ComputeType>(0.0));
-    ComputeType row_inv_var = rsqrt(row_variance + static_cast<ComputeType>(epsilon));
+    ComputeType row_inv_var = Rsqrt(row_variance + static_cast<ComputeType>(epsilon));
     if (threadIdx.x == 0) {
       mean[row] = row_mean;
       inv_variance[row] = row_inv_var;
@@ -718,7 +735,7 @@ __global__ void LayerNormBlockUncachedImpl(LOAD load, STORE store, const int64_t
     WelfordBlockAllReduce<ComputeType>(thread_mean, thread_m2, thread_count, &row_mean, &row_m2,
                                        &row_count);
     ComputeType row_variance = max(Div(row_m2, row_count), static_cast<ComputeType>(0.0));
-    ComputeType row_inv_var = rsqrt(row_variance + static_cast<ComputeType>(epsilon));
+    ComputeType row_inv_var = Rsqrt(row_variance + static_cast<ComputeType>(epsilon));
     if (threadIdx.x == 0) {
       mean[row] = row_mean;
       inv_variance[row] = row_inv_var;
