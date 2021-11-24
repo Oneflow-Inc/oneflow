@@ -61,30 +61,29 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   return BasicView(input, target_shape, target_stride, storage_offset);
 }
 
-Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,  const Stride& target_stride,
-                        int64_t storage_offset){
-       storage_offset = storage_offset + JUST(JUST(input->AsMirroredTensor())->storage_offset());
-      // TODO(): Check shape compatible.
-      auto device = JUST(input->device());
-      auto tensor_meta = std::make_shared<MirroredTensorMeta>(
-          std::make_shared<Shape>(target_shape), input->dtype()->data_type(), device,
-          std::make_shared<Stride>(target_stride), storage_offset);
+Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
+                        const Stride& target_stride, int64_t storage_offset) {
+  storage_offset = storage_offset + JUST(JUST(input->AsMirroredTensor())->storage_offset());
+  // TODO(): Check shape compatible.
+  auto device = JUST(input->device());
+  auto tensor_meta = std::make_shared<MirroredTensorMeta>(
+      std::make_shared<Shape>(target_shape), input->dtype()->data_type(), device,
+      std::make_shared<Stride>(target_stride), storage_offset);
 
-      JUST(input->has_eager_blob_object());
-      // new output tensor
-      const auto& blob_object = JUST(input->eager_blob_object());
-      auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(
-          tensor_meta, JUST(input->tensor_storage()), input->requires_grad(),
-          /*is_leaf=*/!input->requires_grad());
-      JUST(tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object())));
-      std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
-      // run tensor view instruction
-      JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-        return builder->TensorView(JUST(input->AsMirroredTensor()), JUST(output->AsMirroredTensor()));
-      }));
-      return output;
+  JUST(input->has_eager_blob_object());
+  // new output tensor
+  const auto& blob_object = JUST(input->eager_blob_object());
+  auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(
+      tensor_meta, JUST(input->tensor_storage()), input->requires_grad(),
+      /*is_leaf=*/!input->requires_grad());
+  JUST(tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object())));
+  std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
+  // run tensor view instruction
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    return builder->TensorView(JUST(input->AsMirroredTensor()), JUST(output->AsMirroredTensor()));
+  }));
+  return output;
 }
-
 
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) {
   if (!(input->is_eager() && input->is_local())) {
