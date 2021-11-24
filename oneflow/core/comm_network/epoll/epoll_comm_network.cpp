@@ -24,6 +24,8 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include <netinet/tcp.h>
 
+#include <fstream>
+
 namespace oneflow {
 
 namespace {
@@ -103,6 +105,21 @@ void EpollCommNet::SendMsg(int64_t dst_machine_id, void* data, size_t size) {
 char* EpollCommNet::SerialTokenToData(void* token, size_t* size) {
   char* data = (char*)malloc(sizeof(void*));
   std::memcpy(data, &token, sizeof(void*));
+
+  token_mutex_.lock();
+  std::string dir= "/home/shixiaoxiang/token/token1";
+  std::string path = dir + "SerialTokenToData_" + std::to_string(num_token_);
+  num_token_++;
+  std::ofstream out;
+  out.open(path,std::ofstream::out | std::ofstream::binary);
+  if(!out.is_open()) {
+      return nullptr;
+  }
+  char * data1 = reinterpret_cast<char*>(&token);
+  out.write(  data1,sizeof(void*));//将token所在地址为1234，然后data1为指向token的指针，集data1的内容是token 
+  out.close();
+  token_mutex_.unlock();
+
   *size = sizeof(void*);
   return data;
 }
@@ -111,6 +128,20 @@ void* EpollCommNet::DeSerialDataToToken(char* data, size_t* size) {
   char* token = (char*)malloc(sizeof(void*));
   std::memcpy(token, data, sizeof(void*));
   *size = sizeof(void*);
+
+  token_mutex_.lock();
+  std::string dir= "/home/shixiaoxiang/token/token1/";
+  std::string path = dir + "DeSerialDataToToken_" + std::to_string(num_token_);
+  num_token_++;
+  std::ofstream out;
+  out.open(path,std::ofstream::out | std::ofstream::binary);
+  if(!out.is_open()) {
+      return nullptr;
+  }
+  out.write(  token,sizeof(void*));//data的内容为token地址
+  out.close();
+  token_mutex_.unlock();
+
   return token;
 }
 
