@@ -10,12 +10,12 @@ def BnOrderOpInterface : OpInterface<"BnOrder"> {
 
   let methods = [
     StaticInterfaceMethod<"Get ibn",
-                    "void", "inputOrder", (ins), [{
-        return ConcreteOp::inputOrderFull();
+        "std::vector<std::string>", "inputOrder", (ins), [{
+        return ConcreteOp::inputOrder();
     }]>,
     StaticInterfaceMethod<"Get obn",
-                    "void", "outputOrder", (ins), [{
-        return ConcreteOp::outputOrderFull();
+        "std::vector<std::string>", "outputOrder", (ins), [{
+        return ConcreteOp::outputOrder();
     }]>
   ];
 }

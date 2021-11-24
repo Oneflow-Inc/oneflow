@@ -258,13 +258,17 @@ def OneFlow_NormalizationAddReluOp : OneFlow_NormalizationAddReluBaseOp {
   ];
 }
 
-def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect]> {
+def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let summary = "";
   let input = (ins
     AnyType:$in0,
     AnyType:$in1
   );
   let output = (outs AnyType:$out);
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
 }
 
 // JIT ops

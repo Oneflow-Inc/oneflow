@@ -421,6 +421,7 @@ LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op
   if (auto shapeOp = dyn_cast<BnOrder>(op)) {
     shapeOp.inputOrder();
   } else {
+    op->dump();
     op->emitError("bn order not found");
     return failure();
   }

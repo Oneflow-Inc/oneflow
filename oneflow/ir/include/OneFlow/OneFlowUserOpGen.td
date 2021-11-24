@@ -1,4 +1,4 @@
-def OneFlow_COCOReaderOp : OneFlow_BaseOp<"COCOReader", []> {
+def OneFlow_COCOReaderOp : OneFlow_BaseOp<"COCOReader", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let output = (outs
     AnyType:$image,
     AnyType:$image_id,
@@ -26,7 +26,7 @@ def OneFlow_COCOReaderOp : OneFlow_BaseOp<"COCOReader", []> {
   }];
 }
 
-def OneFlow_CategoricalOrdinalEncodeOp : OneFlow_BaseOp<"CategoricalOrdinalEncode", []> {
+def OneFlow_CategoricalOrdinalEncodeOp : OneFlow_BaseOp<"CategoricalOrdinalEncode", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$table,
     AnyType:$size,
@@ -44,7 +44,7 @@ def OneFlow_CategoricalOrdinalEncodeOp : OneFlow_BaseOp<"CategoricalOrdinalEncod
   }];
 }
 
-def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", []> {
+def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -66,7 +66,7 @@ def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", []> {
   }];
 }
 
-def OneFlow_OneRecReaderOp : OneFlow_BaseOp<"OneRecReader", []> {
+def OneFlow_OneRecReaderOp : OneFlow_BaseOp<"OneRecReader", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -86,7 +86,7 @@ def OneFlow_OneRecReaderOp : OneFlow_BaseOp<"OneRecReader", []> {
   }];
 }
 
-def OneFlow_TestDataTypeAttrOp : OneFlow_BaseOp<"TestDataTypeAttr", []> {
+def OneFlow_TestDataTypeAttrOp : OneFlow_BaseOp<"TestDataTypeAttr", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -102,7 +102,7 @@ def OneFlow_TestDataTypeAttrOp : OneFlow_BaseOp<"TestDataTypeAttr", []> {
   }];
 }
 
-def OneFlow_TestDynamicSourceOp : OneFlow_BaseOp<"TestDynamicSource", []> {
+def OneFlow_TestDynamicSourceOp : OneFlow_BaseOp<"TestDynamicSource", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -112,7 +112,7 @@ def OneFlow_TestDynamicSourceOp : OneFlow_BaseOp<"TestDynamicSource", []> {
   }];
 }
 
-def OneFlow_TestListDataTypeAndListShapeAndListStringAttrOp : OneFlow_BaseOp<"TestListDataTypeAndListShapeAndListStringAttr", []> {
+def OneFlow_TestListDataTypeAndListShapeAndListStringAttrOp : OneFlow_BaseOp<"TestListDataTypeAndListShapeAndListStringAttr", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -130,7 +130,7 @@ def OneFlow_TestListDataTypeAndListShapeAndListStringAttrOp : OneFlow_BaseOp<"Te
   }];
 }
 
-def OneFlow_TestMultiInputOp : OneFlow_BaseOp<"TestMultiInput", []> {
+def OneFlow_TestMultiInputOp : OneFlow_BaseOp<"TestMultiInput", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x1,
     AnyType:$x2
@@ -144,7 +144,7 @@ def OneFlow_TestMultiInputOp : OneFlow_BaseOp<"TestMultiInput", []> {
   }];
 }
 
-def OneFlow_TestMultiInputGradOp : OneFlow_BaseOp<"TestMultiInputGrad", []> {
+def OneFlow_TestMultiInputGradOp : OneFlow_BaseOp<"TestMultiInputGrad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x1,
     AnyType:$x2,
@@ -160,7 +160,7 @@ def OneFlow_TestMultiInputGradOp : OneFlow_BaseOp<"TestMultiInputGrad", []> {
   }];
 }
 
-def OneFlow_TestMultiOutputOrderOp : OneFlow_BaseOp<"TestMultiOutputOrder", []> {
+def OneFlow_TestMultiOutputOrderOp : OneFlow_BaseOp<"TestMultiOutputOrder", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -174,7 +174,7 @@ def OneFlow_TestMultiOutputOrderOp : OneFlow_BaseOp<"TestMultiOutputOrder", []> 
   }];
 }
 
-def OneFlow_TestRandomSourceOp : OneFlow_BaseOp<"TestRandomSource", []> {
+def OneFlow_TestRandomSourceOp : OneFlow_BaseOp<"TestRandomSource", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -187,7 +187,7 @@ def OneFlow_TestRandomSourceOp : OneFlow_BaseOp<"TestRandomSource", []> {
   }];
 }
 
-def OneFlow_TestReshapeOp : OneFlow_BaseOp<"TestReshape", []> {
+def OneFlow_TestReshapeOp : OneFlow_BaseOp<"TestReshape", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -203,7 +203,7 @@ def OneFlow_TestReshapeOp : OneFlow_BaseOp<"TestReshape", []> {
   }];
 }
 
-def OneFlow_TestSourceOp : OneFlow_BaseOp<"TestSource", []> {
+def OneFlow_TestSourceOp : OneFlow_BaseOp<"TestSource", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -213,7 +213,7 @@ def OneFlow_TestSourceOp : OneFlow_BaseOp<"TestSource", []> {
   }];
 }
 
-def OneFlow_TestSourceMultiGpuFixedOutNumOp : OneFlow_BaseOp<"TestSourceMultiGpuFixedOutNum", []> {
+def OneFlow_TestSourceMultiGpuFixedOutNumOp : OneFlow_BaseOp<"TestSourceMultiGpuFixedOutNum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -226,7 +226,7 @@ def OneFlow_TestSourceMultiGpuFixedOutNumOp : OneFlow_BaseOp<"TestSourceMultiGpu
   }];
 }
 
-def OneFlow__ncclLogical_2DSameDim0All2allOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all2all", []> {
+def OneFlow__ncclLogical_2DSameDim0All2allOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all2all", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -243,7 +243,7 @@ def OneFlow__ncclLogical_2DSameDim0All2allOp : OneFlow_BaseOp<"_nccl_logical_2D_
   }];
 }
 
-def OneFlow__ncclLogical_2DSameDim0AllGatherOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_gather", []> {
+def OneFlow__ncclLogical_2DSameDim0AllGatherOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_gather", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -256,7 +256,7 @@ def OneFlow__ncclLogical_2DSameDim0AllGatherOp : OneFlow_BaseOp<"_nccl_logical_2
   }];
 }
 
-def OneFlow__ncclLogical_2DSameDim0AllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_gather_noncontinuous", []> {
+def OneFlow__ncclLogical_2DSameDim0AllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_gather_noncontinuous", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -272,7 +272,7 @@ def OneFlow__ncclLogical_2DSameDim0AllGatherNoncontinuousOp : OneFlow_BaseOp<"_n
   }];
 }
 
-def OneFlow__ncclLogical_2DSameDim0AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_reduce", []> {
+def OneFlow__ncclLogical_2DSameDim0AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_reduce", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -285,7 +285,7 @@ def OneFlow__ncclLogical_2DSameDim0AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2
   }];
 }
 
-def OneFlow__ncclLogical_2DSameDim1AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim1_all_reduce", []> {
+def OneFlow__ncclLogical_2DSameDim1AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim1_all_reduce", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -298,7 +298,7 @@ def OneFlow__ncclLogical_2DSameDim1AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2
   }];
 }
 
-def OneFlow__ncclLogicalAllGatherOp : OneFlow_BaseOp<"_nccl_logical_all_gather", []> {
+def OneFlow__ncclLogicalAllGatherOp : OneFlow_BaseOp<"_nccl_logical_all_gather", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -311,7 +311,7 @@ def OneFlow__ncclLogicalAllGatherOp : OneFlow_BaseOp<"_nccl_logical_all_gather",
   }];
 }
 
-def OneFlow__ncclLogicalAllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical_all_gather_noncontinuous", []> {
+def OneFlow__ncclLogicalAllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical_all_gather_noncontinuous", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -327,7 +327,7 @@ def OneFlow__ncclLogicalAllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical
   }];
 }
 
-def OneFlow__ncclLogicalAllReduceOp : OneFlow_BaseOp<"_nccl_logical_all_reduce", []> {
+def OneFlow__ncclLogicalAllReduceOp : OneFlow_BaseOp<"_nccl_logical_all_reduce", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -340,7 +340,7 @@ def OneFlow__ncclLogicalAllReduceOp : OneFlow_BaseOp<"_nccl_logical_all_reduce",
   }];
 }
 
-def OneFlow__ncclLogicalReduceScatterOp : OneFlow_BaseOp<"_nccl_logical_reduce_scatter", []> {
+def OneFlow__ncclLogicalReduceScatterOp : OneFlow_BaseOp<"_nccl_logical_reduce_scatter", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -353,7 +353,7 @@ def OneFlow__ncclLogicalReduceScatterOp : OneFlow_BaseOp<"_nccl_logical_reduce_s
   }];
 }
 
-def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", []> {
+def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -370,7 +370,7 @@ def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", []> {
   }];
 }
 
-def OneFlow_AbsOp : OneFlow_IdempotentBaseOp<"abs", []> {
+def OneFlow_AbsOp : OneFlow_IdempotentBaseOp<"abs", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -383,7 +383,7 @@ def OneFlow_AbsOp : OneFlow_IdempotentBaseOp<"abs", []> {
   }];
 }
 
-def OneFlow_AbsGradOp : OneFlow_BaseOp<"abs_grad", []> {
+def OneFlow_AbsGradOp : OneFlow_BaseOp<"abs_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -397,7 +397,7 @@ def OneFlow_AbsGradOp : OneFlow_BaseOp<"abs_grad", []> {
   }];
 }
 
-def OneFlow_AccOp : OneFlow_BaseOp<"acc", []> {
+def OneFlow_AccOp : OneFlow_BaseOp<"acc", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -413,7 +413,7 @@ def OneFlow_AccOp : OneFlow_BaseOp<"acc", []> {
   }];
 }
 
-def OneFlow_AcosOp : OneFlow_BaseOp<"acos", []> {
+def OneFlow_AcosOp : OneFlow_BaseOp<"acos", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -426,7 +426,7 @@ def OneFlow_AcosOp : OneFlow_BaseOp<"acos", []> {
   }];
 }
 
-def OneFlow_AcosGradOp : OneFlow_BaseOp<"acos_grad", []> {
+def OneFlow_AcosGradOp : OneFlow_BaseOp<"acos_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -440,7 +440,7 @@ def OneFlow_AcosGradOp : OneFlow_BaseOp<"acos_grad", []> {
   }];
 }
 
-def OneFlow_AcoshOp : OneFlow_BaseOp<"acosh", []> {
+def OneFlow_AcoshOp : OneFlow_BaseOp<"acosh", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -453,7 +453,7 @@ def OneFlow_AcoshOp : OneFlow_BaseOp<"acosh", []> {
   }];
 }
 
-def OneFlow_AcoshGradOp : OneFlow_BaseOp<"acosh_grad", []> {
+def OneFlow_AcoshGradOp : OneFlow_BaseOp<"acosh_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -467,7 +467,7 @@ def OneFlow_AcoshGradOp : OneFlow_BaseOp<"acosh_grad", []> {
   }];
 }
 
-def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", [AttrSizedOperandSegments]> {
+def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -496,7 +496,7 @@ def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", [AttrSizedOperand
   }];
 }
 
-def OneFlow_AdamBiasCorrectionFactorOp : OneFlow_BaseOp<"adam_bias_correction_factor", []> {
+def OneFlow_AdamBiasCorrectionFactorOp : OneFlow_BaseOp<"adam_bias_correction_factor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$train_step
   );
@@ -512,7 +512,7 @@ def OneFlow_AdamBiasCorrectionFactorOp : OneFlow_BaseOp<"adam_bias_correction_fa
   }];
 }
 
-def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", [AttrSizedOperandSegments]> {
+def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -548,7 +548,7 @@ def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", [AttrSizedOperandSegmen
   }];
 }
 
-def OneFlow_AdaptiveAvgPool1DOp : OneFlow_BaseOp<"adaptive_avg_pool1d", []> {
+def OneFlow_AdaptiveAvgPool1DOp : OneFlow_BaseOp<"adaptive_avg_pool1d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -564,7 +564,7 @@ def OneFlow_AdaptiveAvgPool1DOp : OneFlow_BaseOp<"adaptive_avg_pool1d", []> {
   }];
 }
 
-def OneFlow_AdaptiveAvgPool1DGradOp : OneFlow_BaseOp<"adaptive_avg_pool1d_grad", []> {
+def OneFlow_AdaptiveAvgPool1DGradOp : OneFlow_BaseOp<"adaptive_avg_pool1d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -581,7 +581,7 @@ def OneFlow_AdaptiveAvgPool1DGradOp : OneFlow_BaseOp<"adaptive_avg_pool1d_grad",
   }];
 }
 
-def OneFlow_AdaptiveAvgPool2DOp : OneFlow_BaseOp<"adaptive_avg_pool2d", []> {
+def OneFlow_AdaptiveAvgPool2DOp : OneFlow_BaseOp<"adaptive_avg_pool2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -597,7 +597,7 @@ def OneFlow_AdaptiveAvgPool2DOp : OneFlow_BaseOp<"adaptive_avg_pool2d", []> {
   }];
 }
 
-def OneFlow_AdaptiveAvgPool2DGradOp : OneFlow_BaseOp<"adaptive_avg_pool2d_grad", []> {
+def OneFlow_AdaptiveAvgPool2DGradOp : OneFlow_BaseOp<"adaptive_avg_pool2d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -614,7 +614,7 @@ def OneFlow_AdaptiveAvgPool2DGradOp : OneFlow_BaseOp<"adaptive_avg_pool2d_grad",
   }];
 }
 
-def OneFlow_AdaptiveAvgPool3DOp : OneFlow_BaseOp<"adaptive_avg_pool3d", []> {
+def OneFlow_AdaptiveAvgPool3DOp : OneFlow_BaseOp<"adaptive_avg_pool3d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -630,7 +630,7 @@ def OneFlow_AdaptiveAvgPool3DOp : OneFlow_BaseOp<"adaptive_avg_pool3d", []> {
   }];
 }
 
-def OneFlow_AdaptiveAvgPool3DGradOp : OneFlow_BaseOp<"adaptive_avg_pool3d_grad", []> {
+def OneFlow_AdaptiveAvgPool3DGradOp : OneFlow_BaseOp<"adaptive_avg_pool3d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -647,7 +647,7 @@ def OneFlow_AdaptiveAvgPool3DGradOp : OneFlow_BaseOp<"adaptive_avg_pool3d_grad",
   }];
 }
 
-def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", []> {
+def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     Variadic<AnyType>:$in
   );
@@ -661,7 +661,7 @@ def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", []> {
   let hasCanonicalizer = 1;
 }
 
-def OneFlow_AffineGridOp : OneFlow_BaseOp<"affine_grid", []> {
+def OneFlow_AffineGridOp : OneFlow_BaseOp<"affine_grid", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$theta
   );
@@ -678,7 +678,7 @@ def OneFlow_AffineGridOp : OneFlow_BaseOp<"affine_grid", []> {
   }];
 }
 
-def OneFlow_AffineGridGradOp : OneFlow_BaseOp<"affine_grid_grad", []> {
+def OneFlow_AffineGridGradOp : OneFlow_BaseOp<"affine_grid_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dgrid
   );
@@ -695,7 +695,7 @@ def OneFlow_AffineGridGradOp : OneFlow_BaseOp<"affine_grid_grad", []> {
   }];
 }
 
-def OneFlow_AmpWhiteIdentityOp : OneFlow_BaseOp<"amp_white_identity", []> {
+def OneFlow_AmpWhiteIdentityOp : OneFlow_BaseOp<"amp_white_identity", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -708,7 +708,7 @@ def OneFlow_AmpWhiteIdentityOp : OneFlow_BaseOp<"amp_white_identity", []> {
   }];
 }
 
-def OneFlow_ArangeOp : OneFlow_BaseOp<"arange", []> {
+def OneFlow_ArangeOp : OneFlow_BaseOp<"arange", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -728,7 +728,7 @@ def OneFlow_ArangeOp : OneFlow_BaseOp<"arange", []> {
   }];
 }
 
-def OneFlow_ArgSortOp : OneFlow_BaseOp<"arg_sort", []> {
+def OneFlow_ArgSortOp : OneFlow_BaseOp<"arg_sort", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -744,7 +744,7 @@ def OneFlow_ArgSortOp : OneFlow_BaseOp<"arg_sort", []> {
   }];
 }
 
-def OneFlow_ArgmaxOp : OneFlow_BaseOp<"argmax", []> {
+def OneFlow_ArgmaxOp : OneFlow_BaseOp<"argmax", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -757,7 +757,7 @@ def OneFlow_ArgmaxOp : OneFlow_BaseOp<"argmax", []> {
   }];
 }
 
-def OneFlow_ArgwhereOp : OneFlow_BaseOp<"argwhere", []> {
+def OneFlow_ArgwhereOp : OneFlow_BaseOp<"argwhere", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input
   );
@@ -774,7 +774,7 @@ def OneFlow_ArgwhereOp : OneFlow_BaseOp<"argwhere", []> {
   }];
 }
 
-def OneFlow_AsinOp : OneFlow_BaseOp<"asin", []> {
+def OneFlow_AsinOp : OneFlow_BaseOp<"asin", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -787,7 +787,7 @@ def OneFlow_AsinOp : OneFlow_BaseOp<"asin", []> {
   }];
 }
 
-def OneFlow_AsinGradOp : OneFlow_BaseOp<"asin_grad", []> {
+def OneFlow_AsinGradOp : OneFlow_BaseOp<"asin_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -801,7 +801,7 @@ def OneFlow_AsinGradOp : OneFlow_BaseOp<"asin_grad", []> {
   }];
 }
 
-def OneFlow_AsinhOp : OneFlow_BaseOp<"asinh", []> {
+def OneFlow_AsinhOp : OneFlow_BaseOp<"asinh", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -814,7 +814,7 @@ def OneFlow_AsinhOp : OneFlow_BaseOp<"asinh", []> {
   }];
 }
 
-def OneFlow_AsinhGradOp : OneFlow_BaseOp<"asinh_grad", []> {
+def OneFlow_AsinhGradOp : OneFlow_BaseOp<"asinh_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -828,7 +828,7 @@ def OneFlow_AsinhGradOp : OneFlow_BaseOp<"asinh_grad", []> {
   }];
 }
 
-def OneFlow_AssignOp : OneFlow_BaseOp<"assign", []> {
+def OneFlow_AssignOp : OneFlow_BaseOp<"assign", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$ref,
     AnyType:$value
@@ -839,7 +839,7 @@ def OneFlow_AssignOp : OneFlow_BaseOp<"assign", []> {
   }];
 }
 
-def OneFlow_AssignIfOp : OneFlow_BaseOp<"assign_if", []> {
+def OneFlow_AssignIfOp : OneFlow_BaseOp<"assign_if", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$ref,
     AnyType:$value,
@@ -851,7 +851,7 @@ def OneFlow_AssignIfOp : OneFlow_BaseOp<"assign_if", []> {
   }];
 }
 
-def OneFlow_AssignIfNotOp : OneFlow_BaseOp<"assign_if_not", []> {
+def OneFlow_AssignIfNotOp : OneFlow_BaseOp<"assign_if_not", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$ref,
     AnyType:$value,
@@ -863,7 +863,7 @@ def OneFlow_AssignIfNotOp : OneFlow_BaseOp<"assign_if_not", []> {
   }];
 }
 
-def OneFlow_AtanOp : OneFlow_BaseOp<"atan", []> {
+def OneFlow_AtanOp : OneFlow_BaseOp<"atan", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -876,7 +876,7 @@ def OneFlow_AtanOp : OneFlow_BaseOp<"atan", []> {
   }];
 }
 
-def OneFlow_Atan2Op : OneFlow_BaseOp<"atan2", []> {
+def OneFlow_Atan2Op : OneFlow_BaseOp<"atan2", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -890,7 +890,7 @@ def OneFlow_Atan2Op : OneFlow_BaseOp<"atan2", []> {
   }];
 }
 
-def OneFlow_Atan2XGradOp : OneFlow_BaseOp<"atan2_x_grad", []> {
+def OneFlow_Atan2XGradOp : OneFlow_BaseOp<"atan2_x_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -905,7 +905,7 @@ def OneFlow_Atan2XGradOp : OneFlow_BaseOp<"atan2_x_grad", []> {
   }];
 }
 
-def OneFlow_Atan2YGradOp : OneFlow_BaseOp<"atan2_y_grad", []> {
+def OneFlow_Atan2YGradOp : OneFlow_BaseOp<"atan2_y_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -920,7 +920,7 @@ def OneFlow_Atan2YGradOp : OneFlow_BaseOp<"atan2_y_grad", []> {
   }];
 }
 
-def OneFlow_AtanGradOp : OneFlow_BaseOp<"atan_grad", []> {
+def OneFlow_AtanGradOp : OneFlow_BaseOp<"atan_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -934,7 +934,7 @@ def OneFlow_AtanGradOp : OneFlow_BaseOp<"atan_grad", []> {
   }];
 }
 
-def OneFlow_AtanhOp : OneFlow_BaseOp<"atanh", []> {
+def OneFlow_AtanhOp : OneFlow_BaseOp<"atanh", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -947,7 +947,7 @@ def OneFlow_AtanhOp : OneFlow_BaseOp<"atanh", []> {
   }];
 }
 
-def OneFlow_AtanhGradOp : OneFlow_BaseOp<"atanh_grad", []> {
+def OneFlow_AtanhGradOp : OneFlow_BaseOp<"atanh_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -961,7 +961,7 @@ def OneFlow_AtanhGradOp : OneFlow_BaseOp<"atanh_grad", []> {
   }];
 }
 
-def OneFlow_LazyAvgPool1DOp : OneFlow_LazyPoolBaseOp<"avg_pool_1d", []> {
+def OneFlow_LazyAvgPool1DOp : OneFlow_LazyPoolBaseOp<"avg_pool_1d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -983,7 +983,7 @@ def OneFlow_LazyAvgPool1DOp : OneFlow_LazyPoolBaseOp<"avg_pool_1d", []> {
   }];
 }
 
-def OneFlow_LazyAvgPool1DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_1d_grad", []> {
+def OneFlow_LazyAvgPool1DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_1d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -1007,7 +1007,7 @@ def OneFlow_LazyAvgPool1DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_1d_grad",
   }];
 }
 
-def OneFlow_LazyAvgPool2DOp : OneFlow_LazyPoolBaseOp<"avg_pool_2d", []> {
+def OneFlow_LazyAvgPool2DOp : OneFlow_LazyPoolBaseOp<"avg_pool_2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -1029,53 +1029,7 @@ def OneFlow_LazyAvgPool2DOp : OneFlow_LazyPoolBaseOp<"avg_pool_2d", []> {
   }];
 }
 
-def OneFlow_LazyAvgPool2DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_2d_grad", []> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
-
-def OneFlow_LazyAvgPool3DOp : OneFlow_LazyPoolBaseOp<"avg_pool_3d", []> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
-  }];
-}
-
-def OneFlow_LazyAvgPool3DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_3d_grad", []> {
+def OneFlow_LazyAvgPool2DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_2d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -1099,7 +1053,53 @@ def OneFlow_LazyAvgPool3DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_3d_grad",
   }];
 }
 
-def OneFlow_EagerAvgPool1DOp : OneFlow_EagerPoolBaseOp<"avgpool_1d", []> {
+def OneFlow_LazyAvgPool3DOp : OneFlow_LazyPoolBaseOp<"avg_pool_3d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let attrs = (ins
+    StrAttr:$padding,
+    SI32ArrayAttr:$padding_before,
+    SI32ArrayAttr:$padding_after,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$pool_size,
+    SI32ArrayAttr:$strides,
+    BoolAttr:$ceil_mode
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x"}; }
+    static std::vector<std::string> outputOrder() { return {"y"}; }
+  }];
+}
+
+def OneFlow_LazyAvgPool3DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_3d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    StrAttr:$padding,
+    SI32ArrayAttr:$padding_before,
+    SI32ArrayAttr:$padding_after,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$pool_size,
+    SI32ArrayAttr:$strides,
+    BoolAttr:$ceil_mode
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x", "y", "dy"}; }
+    static std::vector<std::string> outputOrder() { return {"dx"}; }
+  }];
+}
+
+def OneFlow_EagerAvgPool1DOp : OneFlow_EagerPoolBaseOp<"avgpool_1d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -1121,7 +1121,7 @@ def OneFlow_EagerAvgPool1DOp : OneFlow_EagerPoolBaseOp<"avgpool_1d", []> {
   }];
 }
 
-def OneFlow_EagerAvgPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_1d_grad", []> {
+def OneFlow_EagerAvgPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_1d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -1145,7 +1145,7 @@ def OneFlow_EagerAvgPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_1d_grad"
   }];
 }
 
-def OneFlow_EagerAvgPool2DOp : OneFlow_EagerPoolBaseOp<"avgpool_2d", []> {
+def OneFlow_EagerAvgPool2DOp : OneFlow_EagerPoolBaseOp<"avgpool_2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -1167,7 +1167,7 @@ def OneFlow_EagerAvgPool2DOp : OneFlow_EagerPoolBaseOp<"avgpool_2d", []> {
   }];
 }
 
-def OneFlow_EagerAvgPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_2d_grad", []> {
+def OneFlow_EagerAvgPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_2d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -1191,7 +1191,7 @@ def OneFlow_EagerAvgPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_2d_grad"
   }];
 }
 
-def OneFlow_EagerAvgPool3DOp : OneFlow_EagerPoolBaseOp<"avgpool_3d", []> {
+def OneFlow_EagerAvgPool3DOp : OneFlow_EagerPoolBaseOp<"avgpool_3d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -1213,7 +1213,7 @@ def OneFlow_EagerAvgPool3DOp : OneFlow_EagerPoolBaseOp<"avgpool_3d", []> {
   }];
 }
 
-def OneFlow_EagerAvgPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_3d_grad", []> {
+def OneFlow_EagerAvgPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_3d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -1237,7 +1237,7 @@ def OneFlow_EagerAvgPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_3d_grad"
   }];
 }
 
-def OneFlow_BatchGatherOp : OneFlow_BaseOp<"batch_gather", []> {
+def OneFlow_BatchGatherOp : OneFlow_BaseOp<"batch_gather", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$indices
@@ -1251,7 +1251,7 @@ def OneFlow_BatchGatherOp : OneFlow_BaseOp<"batch_gather", []> {
   }];
 }
 
-def OneFlow_BatchMatmulOp : OneFlow_BaseOp<"batch_matmul", []> {
+def OneFlow_BatchMatmulOp : OneFlow_BaseOp<"batch_matmul", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b,
@@ -1271,7 +1271,7 @@ def OneFlow_BatchMatmulOp : OneFlow_BaseOp<"batch_matmul", []> {
   }];
 }
 
-def OneFlow_BernoulliOp : OneFlow_BaseOp<"bernoulli", []> {
+def OneFlow_BernoulliOp : OneFlow_BaseOp<"bernoulli", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1289,7 +1289,7 @@ def OneFlow_BernoulliOp : OneFlow_BaseOp<"bernoulli", []> {
   }];
 }
 
-def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", []> {
+def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b
@@ -1306,7 +1306,7 @@ def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", []> {
   }];
 }
 
-def OneFlow_BinaryCrossEntropyOp : OneFlow_BaseOp<"binary_cross_entropy", []> {
+def OneFlow_BinaryCrossEntropyOp : OneFlow_BaseOp<"binary_cross_entropy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -1324,7 +1324,7 @@ def OneFlow_BinaryCrossEntropyOp : OneFlow_BaseOp<"binary_cross_entropy", []> {
   }];
 }
 
-def OneFlow_BinaryCrossEntropyGradOp : OneFlow_BaseOp<"binary_cross_entropy_grad", []> {
+def OneFlow_BinaryCrossEntropyGradOp : OneFlow_BaseOp<"binary_cross_entropy_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -1343,7 +1343,7 @@ def OneFlow_BinaryCrossEntropyGradOp : OneFlow_BaseOp<"binary_cross_entropy_grad
   }];
 }
 
-def OneFlow_BinaryCrossEntropyWithLogitsOp : OneFlow_BaseOp<"binary_cross_entropy_with_logits", [AttrSizedOperandSegments]> {
+def OneFlow_BinaryCrossEntropyWithLogitsOp : OneFlow_BaseOp<"binary_cross_entropy_with_logits", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -1366,7 +1366,7 @@ def OneFlow_BinaryCrossEntropyWithLogitsOp : OneFlow_BaseOp<"binary_cross_entrop
   }];
 }
 
-def OneFlow_BinaryCrossEntropyWithLogitsGradOp : OneFlow_BaseOp<"binary_cross_entropy_with_logits_grad", [AttrSizedOperandSegments]> {
+def OneFlow_BinaryCrossEntropyWithLogitsGradOp : OneFlow_BaseOp<"binary_cross_entropy_with_logits_grad", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -1390,7 +1390,7 @@ def OneFlow_BinaryCrossEntropyWithLogitsGradOp : OneFlow_BaseOp<"binary_cross_en
   }];
 }
 
-def OneFlow_BroadcastAddOp : OneFlow_BaseOp<"broadcast_add", []> {
+def OneFlow_BroadcastAddOp : OneFlow_BaseOp<"broadcast_add", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -1404,7 +1404,7 @@ def OneFlow_BroadcastAddOp : OneFlow_BaseOp<"broadcast_add", []> {
   }];
 }
 
-def OneFlow_BroadcastDivOp : OneFlow_BaseOp<"broadcast_div", []> {
+def OneFlow_BroadcastDivOp : OneFlow_BaseOp<"broadcast_div", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -1418,7 +1418,7 @@ def OneFlow_BroadcastDivOp : OneFlow_BaseOp<"broadcast_div", []> {
   }];
 }
 
-def OneFlow_BroadcastDivGradOp : OneFlow_BaseOp<"broadcast_div_grad", []> {
+def OneFlow_BroadcastDivGradOp : OneFlow_BaseOp<"broadcast_div_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$y,
     AnyType:$z,
@@ -1433,7 +1433,7 @@ def OneFlow_BroadcastDivGradOp : OneFlow_BaseOp<"broadcast_div_grad", []> {
   }];
 }
 
-def OneFlow_BroadcastEqualOp : OneFlow_BaseOp<"broadcast_equal", []> {
+def OneFlow_BroadcastEqualOp : OneFlow_BaseOp<"broadcast_equal", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -1447,7 +1447,7 @@ def OneFlow_BroadcastEqualOp : OneFlow_BaseOp<"broadcast_equal", []> {
   }];
 }
 
-def OneFlow_BroadcastFloorModOp : OneFlow_BaseOp<"broadcast_floor_mod", []> {
+def OneFlow_BroadcastFloorModOp : OneFlow_BaseOp<"broadcast_floor_mod", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -1461,7 +1461,7 @@ def OneFlow_BroadcastFloorModOp : OneFlow_BaseOp<"broadcast_floor_mod", []> {
   }];
 }
 
-def OneFlow_BroadcastFmodOp : OneFlow_BaseOp<"broadcast_fmod", []> {
+def OneFlow_BroadcastFmodOp : OneFlow_BaseOp<"broadcast_fmod", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -1475,7 +1475,7 @@ def OneFlow_BroadcastFmodOp : OneFlow_BaseOp<"broadcast_fmod", []> {
   }];
 }
 
-def OneFlow_BroadcastGreaterOp : OneFlow_BaseOp<"broadcast_greater", []> {
+def OneFlow_BroadcastGreaterOp : OneFlow_BaseOp<"broadcast_greater", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -1489,7 +1489,7 @@ def OneFlow_BroadcastGreaterOp : OneFlow_BaseOp<"broadcast_greater", []> {
   }];
 }
 
-def OneFlow_BroadcastGreaterEqualOp : OneFlow_BaseOp<"broadcast_greater_equal", []> {
+def OneFlow_BroadcastGreaterEqualOp : OneFlow_BaseOp<"broadcast_greater_equal", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -1503,7 +1503,7 @@ def OneFlow_BroadcastGreaterEqualOp : OneFlow_BaseOp<"broadcast_greater_equal", 
   }];
 }
 
-def OneFlow_BroadcastLessOp : OneFlow_BaseOp<"broadcast_less", []> {
+def OneFlow_BroadcastLessOp : OneFlow_BaseOp<"broadcast_less", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -1517,7 +1517,7 @@ def OneFlow_BroadcastLessOp : OneFlow_BaseOp<"broadcast_less", []> {
   }];
 }
 
-def OneFlow_BroadcastLessEqualOp : OneFlow_BaseOp<"broadcast_less_equal", []> {
+def OneFlow_BroadcastLessEqualOp : OneFlow_BaseOp<"broadcast_less_equal", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -1531,7 +1531,7 @@ def OneFlow_BroadcastLessEqualOp : OneFlow_BaseOp<"broadcast_less_equal", []> {
   }];
 }
 
-def OneFlow_BroadcastLikeOp : OneFlow_BaseOp<"broadcast_like", []> {
+def OneFlow_BroadcastLikeOp : OneFlow_BaseOp<"broadcast_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$like
@@ -1548,7 +1548,7 @@ def OneFlow_BroadcastLikeOp : OneFlow_BaseOp<"broadcast_like", []> {
   }];
 }
 
-def OneFlow_BroadcastLogicalAndOp : OneFlow_BaseOp<"broadcast_logical_and", []> {
+def OneFlow_BroadcastLogicalAndOp : OneFlow_BaseOp<"broadcast_logical_and", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -1562,7 +1562,7 @@ def OneFlow_BroadcastLogicalAndOp : OneFlow_BaseOp<"broadcast_logical_and", []> 
   }];
 }
 
-def OneFlow_BroadcastLogicalOrOp : OneFlow_BaseOp<"broadcast_logical_or", []> {
+def OneFlow_BroadcastLogicalOrOp : OneFlow_BaseOp<"broadcast_logical_or", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -1576,7 +1576,7 @@ def OneFlow_BroadcastLogicalOrOp : OneFlow_BaseOp<"broadcast_logical_or", []> {
   }];
 }
 
-def OneFlow_BroadcastLogicalXorOp : OneFlow_BaseOp<"broadcast_logical_xor", []> {
+def OneFlow_BroadcastLogicalXorOp : OneFlow_BaseOp<"broadcast_logical_xor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -1590,7 +1590,7 @@ def OneFlow_BroadcastLogicalXorOp : OneFlow_BaseOp<"broadcast_logical_xor", []> 
   }];
 }
 
-def OneFlow_BroadcastMatmulOp : OneFlow_BaseOp<"broadcast_matmul", []> {
+def OneFlow_BroadcastMatmulOp : OneFlow_BaseOp<"broadcast_matmul", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b,
@@ -1610,7 +1610,7 @@ def OneFlow_BroadcastMatmulOp : OneFlow_BaseOp<"broadcast_matmul", []> {
   }];
 }
 
-def OneFlow_BroadcastMatmulGradBOp : OneFlow_BaseOp<"broadcast_matmul_grad_b", []> {
+def OneFlow_BroadcastMatmulGradBOp : OneFlow_BaseOp<"broadcast_matmul_grad_b", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b,
@@ -1628,7 +1628,7 @@ def OneFlow_BroadcastMatmulGradBOp : OneFlow_BaseOp<"broadcast_matmul_grad_b", [
   }];
 }
 
-def OneFlow_BroadcastMaximumOp : OneFlow_BaseOp<"broadcast_maximum", []> {
+def OneFlow_BroadcastMaximumOp : OneFlow_BaseOp<"broadcast_maximum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -1642,7 +1642,7 @@ def OneFlow_BroadcastMaximumOp : OneFlow_BaseOp<"broadcast_maximum", []> {
   }];
 }
 
-def OneFlow_BroadcastMinimumOp : OneFlow_BaseOp<"broadcast_minimum", []> {
+def OneFlow_BroadcastMinimumOp : OneFlow_BaseOp<"broadcast_minimum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -1656,7 +1656,7 @@ def OneFlow_BroadcastMinimumOp : OneFlow_BaseOp<"broadcast_minimum", []> {
   }];
 }
 
-def OneFlow_BroadcastMulOp : OneFlow_BaseOp<"broadcast_mul", []> {
+def OneFlow_BroadcastMulOp : OneFlow_BaseOp<"broadcast_mul", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -1670,7 +1670,7 @@ def OneFlow_BroadcastMulOp : OneFlow_BaseOp<"broadcast_mul", []> {
   }];
 }
 
-def OneFlow_BroadcastNotEqualOp : OneFlow_BaseOp<"broadcast_not_equal", []> {
+def OneFlow_BroadcastNotEqualOp : OneFlow_BaseOp<"broadcast_not_equal", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -1684,7 +1684,7 @@ def OneFlow_BroadcastNotEqualOp : OneFlow_BaseOp<"broadcast_not_equal", []> {
   }];
 }
 
-def OneFlow_BroadcastPowOp : OneFlow_BaseOp<"broadcast_pow", []> {
+def OneFlow_BroadcastPowOp : OneFlow_BaseOp<"broadcast_pow", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -1698,7 +1698,7 @@ def OneFlow_BroadcastPowOp : OneFlow_BaseOp<"broadcast_pow", []> {
   }];
 }
 
-def OneFlow_BroadcastPowXGradOp : OneFlow_BaseOp<"broadcast_pow_x_grad", []> {
+def OneFlow_BroadcastPowXGradOp : OneFlow_BaseOp<"broadcast_pow_x_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -1714,7 +1714,7 @@ def OneFlow_BroadcastPowXGradOp : OneFlow_BaseOp<"broadcast_pow_x_grad", []> {
   }];
 }
 
-def OneFlow_BroadcastPowYGradOp : OneFlow_BaseOp<"broadcast_pow_y_grad", []> {
+def OneFlow_BroadcastPowYGradOp : OneFlow_BaseOp<"broadcast_pow_y_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -1730,7 +1730,7 @@ def OneFlow_BroadcastPowYGradOp : OneFlow_BaseOp<"broadcast_pow_y_grad", []> {
   }];
 }
 
-def OneFlow_BroadcastSubOp : OneFlow_BaseOp<"broadcast_sub", []> {
+def OneFlow_BroadcastSubOp : OneFlow_BaseOp<"broadcast_sub", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -1744,7 +1744,7 @@ def OneFlow_BroadcastSubOp : OneFlow_BaseOp<"broadcast_sub", []> {
   }];
 }
 
-def OneFlow_CastOp : OneFlow_BaseOp<"cast", []> {
+def OneFlow_CastOp : OneFlow_BaseOp<"cast", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1760,7 +1760,7 @@ def OneFlow_CastOp : OneFlow_BaseOp<"cast", []> {
   }];
 }
 
-def OneFlow_CastLikeOp : OneFlow_BaseOp<"cast_like", []> {
+def OneFlow_CastLikeOp : OneFlow_BaseOp<"cast_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$dtype_like
@@ -1774,7 +1774,7 @@ def OneFlow_CastLikeOp : OneFlow_BaseOp<"cast_like", []> {
   }];
 }
 
-def OneFlow_CastToStaticShapeOp : OneFlow_BaseOp<"cast_to_static_shape", []> {
+def OneFlow_CastToStaticShapeOp : OneFlow_BaseOp<"cast_to_static_shape", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input
   );
@@ -1787,7 +1787,7 @@ def OneFlow_CastToStaticShapeOp : OneFlow_BaseOp<"cast_to_static_shape", []> {
   }];
 }
 
-def OneFlow_CastToTickOp : OneFlow_BaseOp<"cast_to_tick", []> {
+def OneFlow_CastToTickOp : OneFlow_BaseOp<"cast_to_tick", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1800,7 +1800,7 @@ def OneFlow_CastToTickOp : OneFlow_BaseOp<"cast_to_tick", []> {
   }];
 }
 
-def OneFlow_CcreluOp : OneFlow_BaseOp<"ccrelu", []> {
+def OneFlow_CcreluOp : OneFlow_BaseOp<"ccrelu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1813,7 +1813,7 @@ def OneFlow_CcreluOp : OneFlow_BaseOp<"ccrelu", []> {
   }];
 }
 
-def OneFlow_CcreluGradOp : OneFlow_BaseOp<"ccrelu_grad", []> {
+def OneFlow_CcreluGradOp : OneFlow_BaseOp<"ccrelu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$y,
     AnyType:$dy
@@ -1827,7 +1827,7 @@ def OneFlow_CcreluGradOp : OneFlow_BaseOp<"ccrelu_grad", []> {
   }];
 }
 
-def OneFlow_CeilOp : OneFlow_IdempotentBaseOp<"ceil", []> {
+def OneFlow_CeilOp : OneFlow_IdempotentBaseOp<"ceil", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -1840,7 +1840,7 @@ def OneFlow_CeilOp : OneFlow_IdempotentBaseOp<"ceil", []> {
   }];
 }
 
-def OneFlow_CeilGradOp : OneFlow_BaseOp<"ceil_grad", []> {
+def OneFlow_CeilGradOp : OneFlow_BaseOp<"ceil_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -1854,7 +1854,7 @@ def OneFlow_CeilGradOp : OneFlow_BaseOp<"ceil_grad", []> {
   }];
 }
 
-def OneFlow_CeluOp : OneFlow_BaseOp<"celu", []> {
+def OneFlow_CeluOp : OneFlow_BaseOp<"celu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1870,7 +1870,7 @@ def OneFlow_CeluOp : OneFlow_BaseOp<"celu", []> {
   }];
 }
 
-def OneFlow_CeluGradOp : OneFlow_BaseOp<"celu_grad", []> {
+def OneFlow_CeluGradOp : OneFlow_BaseOp<"celu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -1887,7 +1887,7 @@ def OneFlow_CeluGradOp : OneFlow_BaseOp<"celu_grad", []> {
   }];
 }
 
-def OneFlow_ClipByScalarOp : OneFlow_BaseOp<"clip_by_scalar", []> {
+def OneFlow_ClipByScalarOp : OneFlow_BaseOp<"clip_by_scalar", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -1906,7 +1906,7 @@ def OneFlow_ClipByScalarOp : OneFlow_BaseOp<"clip_by_scalar", []> {
   }];
 }
 
-def OneFlow_ClipByScalarGradOp : OneFlow_BaseOp<"clip_by_scalar_grad", []> {
+def OneFlow_ClipByScalarGradOp : OneFlow_BaseOp<"clip_by_scalar_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -1926,7 +1926,7 @@ def OneFlow_ClipByScalarGradOp : OneFlow_BaseOp<"clip_by_scalar_grad", []> {
   }];
 }
 
-def OneFlow_ClipByScalarMaxOp : OneFlow_BaseOp<"clip_by_scalar_max", []> {
+def OneFlow_ClipByScalarMaxOp : OneFlow_BaseOp<"clip_by_scalar_max", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -1943,7 +1943,7 @@ def OneFlow_ClipByScalarMaxOp : OneFlow_BaseOp<"clip_by_scalar_max", []> {
   }];
 }
 
-def OneFlow_ClipByScalarMaxGradOp : OneFlow_BaseOp<"clip_by_scalar_max_grad", []> {
+def OneFlow_ClipByScalarMaxGradOp : OneFlow_BaseOp<"clip_by_scalar_max_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -1961,7 +1961,7 @@ def OneFlow_ClipByScalarMaxGradOp : OneFlow_BaseOp<"clip_by_scalar_max_grad", []
   }];
 }
 
-def OneFlow_ClipByScalarMinOp : OneFlow_BaseOp<"clip_by_scalar_min", []> {
+def OneFlow_ClipByScalarMinOp : OneFlow_BaseOp<"clip_by_scalar_min", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -1978,7 +1978,7 @@ def OneFlow_ClipByScalarMinOp : OneFlow_BaseOp<"clip_by_scalar_min", []> {
   }];
 }
 
-def OneFlow_ClipByScalarMinGradOp : OneFlow_BaseOp<"clip_by_scalar_min_grad", []> {
+def OneFlow_ClipByScalarMinGradOp : OneFlow_BaseOp<"clip_by_scalar_min_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -1996,7 +1996,7 @@ def OneFlow_ClipByScalarMinGradOp : OneFlow_BaseOp<"clip_by_scalar_min_grad", []
   }];
 }
 
-def OneFlow_CoinFlipOp : OneFlow_BaseOp<"coin_flip", []> {
+def OneFlow_CoinFlipOp : OneFlow_BaseOp<"coin_flip", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -2013,7 +2013,7 @@ def OneFlow_CoinFlipOp : OneFlow_BaseOp<"coin_flip", []> {
   }];
 }
 
-def OneFlow_CombinedMarginLossOp : OneFlow_BaseOp<"combined_margin_loss", []> {
+def OneFlow_CombinedMarginLossOp : OneFlow_BaseOp<"combined_margin_loss", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$label
@@ -2034,7 +2034,7 @@ def OneFlow_CombinedMarginLossOp : OneFlow_BaseOp<"combined_margin_loss", []> {
   }];
 }
 
-def OneFlow_CombinedMarginLossGradOp : OneFlow_BaseOp<"combined_margin_loss_grad", []> {
+def OneFlow_CombinedMarginLossGradOp : OneFlow_BaseOp<"combined_margin_loss_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$label,
@@ -2055,7 +2055,7 @@ def OneFlow_CombinedMarginLossGradOp : OneFlow_BaseOp<"combined_margin_loss_grad
   }];
 }
 
-def OneFlow_ConcatOp : OneFlow_BaseOp<"concat", []> {
+def OneFlow_ConcatOp : OneFlow_BaseOp<"concat", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     Variadic<AnyType>:$in
   );
@@ -2072,7 +2072,7 @@ def OneFlow_ConcatOp : OneFlow_BaseOp<"concat", []> {
   }];
 }
 
-def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", []> {
+def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -2090,7 +2090,7 @@ def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", []> {
   }];
 }
 
-def OneFlow_ConstantPad1DOp : OneFlow_BaseOp<"constant_pad1d", []> {
+def OneFlow_ConstantPad1DOp : OneFlow_BaseOp<"constant_pad1d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -2108,7 +2108,7 @@ def OneFlow_ConstantPad1DOp : OneFlow_BaseOp<"constant_pad1d", []> {
   }];
 }
 
-def OneFlow_ConstantPad1DGradOp : OneFlow_BaseOp<"constant_pad1d_grad", []> {
+def OneFlow_ConstantPad1DGradOp : OneFlow_BaseOp<"constant_pad1d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -2126,7 +2126,7 @@ def OneFlow_ConstantPad1DGradOp : OneFlow_BaseOp<"constant_pad1d_grad", []> {
   }];
 }
 
-def OneFlow_ConstantPad2DOp : OneFlow_BaseOp<"constant_pad2d", []> {
+def OneFlow_ConstantPad2DOp : OneFlow_BaseOp<"constant_pad2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -2144,7 +2144,7 @@ def OneFlow_ConstantPad2DOp : OneFlow_BaseOp<"constant_pad2d", []> {
   }];
 }
 
-def OneFlow_ConstantPad2DGradOp : OneFlow_BaseOp<"constant_pad2d_grad", []> {
+def OneFlow_ConstantPad2DGradOp : OneFlow_BaseOp<"constant_pad2d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -2162,7 +2162,7 @@ def OneFlow_ConstantPad2DGradOp : OneFlow_BaseOp<"constant_pad2d_grad", []> {
   }];
 }
 
-def OneFlow_ConstantPad3DOp : OneFlow_BaseOp<"constant_pad3d", []> {
+def OneFlow_ConstantPad3DOp : OneFlow_BaseOp<"constant_pad3d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -2180,7 +2180,7 @@ def OneFlow_ConstantPad3DOp : OneFlow_BaseOp<"constant_pad3d", []> {
   }];
 }
 
-def OneFlow_ConstantPad3DGradOp : OneFlow_BaseOp<"constant_pad3d_grad", []> {
+def OneFlow_ConstantPad3DGradOp : OneFlow_BaseOp<"constant_pad3d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -2198,7 +2198,7 @@ def OneFlow_ConstantPad3DGradOp : OneFlow_BaseOp<"constant_pad3d_grad", []> {
   }];
 }
 
-def OneFlow_Conv1DOp : OneFlow_ConvolutionBaseOp<"conv1d", [AttrSizedOperandSegments]> {
+def OneFlow_Conv1DOp : OneFlow_ConvolutionBaseOp<"conv1d", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$weight,
@@ -2226,7 +2226,7 @@ def OneFlow_Conv1DOp : OneFlow_ConvolutionBaseOp<"conv1d", [AttrSizedOperandSegm
   }];
 }
 
-def OneFlow_Conv2DOp : OneFlow_ConvolutionBaseOp<"conv2d", [AttrSizedOperandSegments]> {
+def OneFlow_Conv2DOp : OneFlow_ConvolutionBaseOp<"conv2d", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$weight,
@@ -2254,7 +2254,7 @@ def OneFlow_Conv2DOp : OneFlow_ConvolutionBaseOp<"conv2d", [AttrSizedOperandSegm
   }];
 }
 
-def OneFlow_Conv3DOp : OneFlow_ConvolutionBaseOp<"conv3d", [AttrSizedOperandSegments]> {
+def OneFlow_Conv3DOp : OneFlow_ConvolutionBaseOp<"conv3d", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$weight,
@@ -2282,7 +2282,7 @@ def OneFlow_Conv3DOp : OneFlow_ConvolutionBaseOp<"conv3d", [AttrSizedOperandSegm
   }];
 }
 
-def OneFlow_ConvBiasGradOp : OneFlow_BaseOp<"conv_bias_grad", []> {
+def OneFlow_ConvBiasGradOp : OneFlow_BaseOp<"conv_bias_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -2299,7 +2299,7 @@ def OneFlow_ConvBiasGradOp : OneFlow_BaseOp<"conv_bias_grad", []> {
   }];
 }
 
-def OneFlow_ConvDataGradOp : OneFlow_BaseOp<"conv_data_grad", []> {
+def OneFlow_ConvDataGradOp : OneFlow_BaseOp<"conv_data_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$filter,
@@ -2324,7 +2324,7 @@ def OneFlow_ConvDataGradOp : OneFlow_BaseOp<"conv_data_grad", []> {
   }];
 }
 
-def OneFlow_ConvFilterGradOp : OneFlow_BaseOp<"conv_filter_grad", []> {
+def OneFlow_ConvFilterGradOp : OneFlow_BaseOp<"conv_filter_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -2347,7 +2347,7 @@ def OneFlow_ConvFilterGradOp : OneFlow_BaseOp<"conv_filter_grad", []> {
   }];
 }
 
-def OneFlow_CopyOp : OneFlow_BaseOp<"copy", []> {
+def OneFlow_CopyOp : OneFlow_BaseOp<"copy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2364,7 +2364,7 @@ def OneFlow_CopyOp : OneFlow_BaseOp<"copy", []> {
   }];
 }
 
-def OneFlow_CosOp : OneFlow_BaseOp<"cos", []> {
+def OneFlow_CosOp : OneFlow_BaseOp<"cos", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -2377,7 +2377,7 @@ def OneFlow_CosOp : OneFlow_BaseOp<"cos", []> {
   }];
 }
 
-def OneFlow_CosGradOp : OneFlow_BaseOp<"cos_grad", []> {
+def OneFlow_CosGradOp : OneFlow_BaseOp<"cos_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -2391,7 +2391,7 @@ def OneFlow_CosGradOp : OneFlow_BaseOp<"cos_grad", []> {
   }];
 }
 
-def OneFlow_CoshOp : OneFlow_BaseOp<"cosh", []> {
+def OneFlow_CoshOp : OneFlow_BaseOp<"cosh", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -2404,7 +2404,7 @@ def OneFlow_CoshOp : OneFlow_BaseOp<"cosh", []> {
   }];
 }
 
-def OneFlow_CoshGradOp : OneFlow_BaseOp<"cosh_grad", []> {
+def OneFlow_CoshGradOp : OneFlow_BaseOp<"cosh_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -2418,7 +2418,7 @@ def OneFlow_CoshGradOp : OneFlow_BaseOp<"cosh_grad", []> {
   }];
 }
 
-def OneFlow_CountNotFiniteOp : OneFlow_BaseOp<"count_not_finite", []> {
+def OneFlow_CountNotFiniteOp : OneFlow_BaseOp<"count_not_finite", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -2431,7 +2431,7 @@ def OneFlow_CountNotFiniteOp : OneFlow_BaseOp<"count_not_finite", []> {
   }];
 }
 
-def OneFlow_CpuOnlyReluTestOp : OneFlow_BaseOp<"cpu_only_relu_test", []> {
+def OneFlow_CpuOnlyReluTestOp : OneFlow_BaseOp<"cpu_only_relu_test", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2444,7 +2444,7 @@ def OneFlow_CpuOnlyReluTestOp : OneFlow_BaseOp<"cpu_only_relu_test", []> {
   }];
 }
 
-def OneFlow_CreateSummaryWriterOp : OneFlow_BaseOp<"create_summary_writer", []> {
+def OneFlow_CreateSummaryWriterOp : OneFlow_BaseOp<"create_summary_writer", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let attrs = (ins
     StrAttr:$logdir
   );
@@ -2454,7 +2454,7 @@ def OneFlow_CreateSummaryWriterOp : OneFlow_BaseOp<"create_summary_writer", []> 
   }];
 }
 
-def OneFlow_CropMirrorNormalizeFromTensorbufferOp : OneFlow_BaseOp<"crop_mirror_normalize_from_tensorbuffer", []> {
+def OneFlow_CropMirrorNormalizeFromTensorbufferOp : OneFlow_BaseOp<"crop_mirror_normalize_from_tensorbuffer", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     Optional<AnyType>:$mirror
@@ -2479,7 +2479,7 @@ def OneFlow_CropMirrorNormalizeFromTensorbufferOp : OneFlow_BaseOp<"crop_mirror_
   }];
 }
 
-def OneFlow_CropMirrorNormalizeFromUint8Op : OneFlow_BaseOp<"crop_mirror_normalize_from_uint8", []> {
+def OneFlow_CropMirrorNormalizeFromUint8Op : OneFlow_BaseOp<"crop_mirror_normalize_from_uint8", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     Optional<AnyType>:$mirror
@@ -2504,7 +2504,7 @@ def OneFlow_CropMirrorNormalizeFromUint8Op : OneFlow_BaseOp<"crop_mirror_normali
   }];
 }
 
-def OneFlow_CtcGreedyDecoderOp : OneFlow_BaseOp<"ctc_greedy_decoder", []> {
+def OneFlow_CtcGreedyDecoderOp : OneFlow_BaseOp<"ctc_greedy_decoder", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$log_probs,
     AnyType:$input_lengths
@@ -2522,7 +2522,7 @@ def OneFlow_CtcGreedyDecoderOp : OneFlow_BaseOp<"ctc_greedy_decoder", []> {
   }];
 }
 
-def OneFlow_CtcLossOp : OneFlow_BaseOp<"ctc_loss", []> {
+def OneFlow_CtcLossOp : OneFlow_BaseOp<"ctc_loss", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$log_probs,
     AnyType:$targets,
@@ -2544,7 +2544,7 @@ def OneFlow_CtcLossOp : OneFlow_BaseOp<"ctc_loss", []> {
   }];
 }
 
-def OneFlow_CtcLossGradOp : OneFlow_BaseOp<"ctc_loss_grad", []> {
+def OneFlow_CtcLossGradOp : OneFlow_BaseOp<"ctc_loss_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$grad_out,
     AnyType:$log_probs,
@@ -2568,7 +2568,7 @@ def OneFlow_CtcLossGradOp : OneFlow_BaseOp<"ctc_loss_grad", []> {
   }];
 }
 
-def OneFlow_CudnnFusedNormalizationAddReluOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu", [AttrSizedOperandSegments, AttrSizedResultSegments]> {
+def OneFlow_CudnnFusedNormalizationAddReluOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu", [AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     Optional<AnyType>:$addend,
@@ -2598,7 +2598,7 @@ def OneFlow_CudnnFusedNormalizationAddReluOp : OneFlow_BaseOp<"cudnn_fused_norma
   }];
 }
 
-def OneFlow_CudnnFusedNormalizationAddReluGradOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu_grad", []> {
+def OneFlow_CudnnFusedNormalizationAddReluGradOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy,
@@ -2625,7 +2625,7 @@ def OneFlow_CudnnFusedNormalizationAddReluGradOp : OneFlow_BaseOp<"cudnn_fused_n
   }];
 }
 
-def OneFlow_Deconv1DOp : OneFlow_BaseOp<"deconv1d", []> {
+def OneFlow_Deconv1DOp : OneFlow_BaseOp<"deconv1d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$weight
@@ -2649,7 +2649,7 @@ def OneFlow_Deconv1DOp : OneFlow_BaseOp<"deconv1d", []> {
   }];
 }
 
-def OneFlow_Deconv2DOp : OneFlow_BaseOp<"deconv2d", []> {
+def OneFlow_Deconv2DOp : OneFlow_BaseOp<"deconv2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$weight
@@ -2673,7 +2673,7 @@ def OneFlow_Deconv2DOp : OneFlow_BaseOp<"deconv2d", []> {
   }];
 }
 
-def OneFlow_Deconv3DOp : OneFlow_BaseOp<"deconv3d", []> {
+def OneFlow_Deconv3DOp : OneFlow_BaseOp<"deconv3d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$weight
@@ -2697,7 +2697,7 @@ def OneFlow_Deconv3DOp : OneFlow_BaseOp<"deconv3d", []> {
   }];
 }
 
-def OneFlow_DiagOp : OneFlow_BaseOp<"diag", []> {
+def OneFlow_DiagOp : OneFlow_BaseOp<"diag", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2713,7 +2713,7 @@ def OneFlow_DiagOp : OneFlow_BaseOp<"diag", []> {
   }];
 }
 
-def OneFlow_DiagGradOp : OneFlow_BaseOp<"diag_grad", []> {
+def OneFlow_DiagGradOp : OneFlow_BaseOp<"diag_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$in
@@ -2730,7 +2730,7 @@ def OneFlow_DiagGradOp : OneFlow_BaseOp<"diag_grad", []> {
   }];
 }
 
-def OneFlow_DimGatherOp : OneFlow_BaseOp<"dim_gather", []> {
+def OneFlow_DimGatherOp : OneFlow_BaseOp<"dim_gather", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$index
@@ -2747,7 +2747,7 @@ def OneFlow_DimGatherOp : OneFlow_BaseOp<"dim_gather", []> {
   }];
 }
 
-def OneFlow_DimScatterAddOp : OneFlow_BaseOp<"dim_scatter_add", []> {
+def OneFlow_DimScatterAddOp : OneFlow_BaseOp<"dim_scatter_add", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$index,
@@ -2765,7 +2765,7 @@ def OneFlow_DimScatterAddOp : OneFlow_BaseOp<"dim_scatter_add", []> {
   }];
 }
 
-def OneFlow_DimScatterAddLikeOp : OneFlow_BaseOp<"dim_scatter_add_like", []> {
+def OneFlow_DimScatterAddLikeOp : OneFlow_BaseOp<"dim_scatter_add_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$like,
     AnyType:$index,
@@ -2783,7 +2783,7 @@ def OneFlow_DimScatterAddLikeOp : OneFlow_BaseOp<"dim_scatter_add_like", []> {
   }];
 }
 
-def OneFlow_DimScatterAddScalarOp : OneFlow_BaseOp<"dim_scatter_add_scalar", []> {
+def OneFlow_DimScatterAddScalarOp : OneFlow_BaseOp<"dim_scatter_add_scalar", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$index
@@ -2801,7 +2801,7 @@ def OneFlow_DimScatterAddScalarOp : OneFlow_BaseOp<"dim_scatter_add_scalar", []>
   }];
 }
 
-def OneFlow_DimScatterMulOp : OneFlow_BaseOp<"dim_scatter_mul", []> {
+def OneFlow_DimScatterMulOp : OneFlow_BaseOp<"dim_scatter_mul", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$index,
@@ -2819,7 +2819,7 @@ def OneFlow_DimScatterMulOp : OneFlow_BaseOp<"dim_scatter_mul", []> {
   }];
 }
 
-def OneFlow_DimScatterMulScalarOp : OneFlow_BaseOp<"dim_scatter_mul_scalar", []> {
+def OneFlow_DimScatterMulScalarOp : OneFlow_BaseOp<"dim_scatter_mul_scalar", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$index
@@ -2837,7 +2837,7 @@ def OneFlow_DimScatterMulScalarOp : OneFlow_BaseOp<"dim_scatter_mul_scalar", []>
   }];
 }
 
-def OneFlow_DimScatterUpdateOp : OneFlow_BaseOp<"dim_scatter_update", []> {
+def OneFlow_DimScatterUpdateOp : OneFlow_BaseOp<"dim_scatter_update", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$index,
@@ -2855,7 +2855,7 @@ def OneFlow_DimScatterUpdateOp : OneFlow_BaseOp<"dim_scatter_update", []> {
   }];
 }
 
-def OneFlow_DimScatterUpdateScalarOp : OneFlow_BaseOp<"dim_scatter_update_scalar", []> {
+def OneFlow_DimScatterUpdateScalarOp : OneFlow_BaseOp<"dim_scatter_update_scalar", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$index
@@ -2873,7 +2873,7 @@ def OneFlow_DimScatterUpdateScalarOp : OneFlow_BaseOp<"dim_scatter_update_scalar
   }];
 }
 
-def OneFlow_DistributedPartialFcSampleOp : OneFlow_BaseOp<"distributed_partial_fc_sample", []> {
+def OneFlow_DistributedPartialFcSampleOp : OneFlow_BaseOp<"distributed_partial_fc_sample", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$weight,
     AnyType:$label
@@ -2893,7 +2893,7 @@ def OneFlow_DistributedPartialFcSampleOp : OneFlow_BaseOp<"distributed_partial_f
   }];
 }
 
-def OneFlow_DistributedPartialFcSampleDisableBoxingOp : OneFlow_BaseOp<"distributed_partial_fc_sample_disable_boxing", []> {
+def OneFlow_DistributedPartialFcSampleDisableBoxingOp : OneFlow_BaseOp<"distributed_partial_fc_sample_disable_boxing", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$sampled_weight_diff,
     AnyType:$sampled_label
@@ -2908,7 +2908,7 @@ def OneFlow_DistributedPartialFcSampleDisableBoxingOp : OneFlow_BaseOp<"distribu
   }];
 }
 
-def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", []> {
+def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$mask,
@@ -2926,7 +2926,7 @@ def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", []> {
   }];
 }
 
-def OneFlow_DropoutGradOp : OneFlow_BaseOp<"dropout_grad", []> {
+def OneFlow_DropoutGradOp : OneFlow_BaseOp<"dropout_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$mask
@@ -2943,7 +2943,7 @@ def OneFlow_DropoutGradOp : OneFlow_BaseOp<"dropout_grad", []> {
   }];
 }
 
-def OneFlow_DynamicLossScaleScheduleOp : OneFlow_BaseOp<"dynamic_loss_scale_schedule", []> {
+def OneFlow_DynamicLossScaleScheduleOp : OneFlow_BaseOp<"dynamic_loss_scale_schedule", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$count_not_finite,
     AnyType:$loss_scale,
@@ -2959,7 +2959,7 @@ def OneFlow_DynamicLossScaleScheduleOp : OneFlow_BaseOp<"dynamic_loss_scale_sche
   }];
 }
 
-def OneFlow_EagerBToSOp : OneFlow_BaseOp<"eager_b_to_s", []> {
+def OneFlow_EagerBToSOp : OneFlow_BaseOp<"eager_b_to_s", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2978,7 +2978,7 @@ def OneFlow_EagerBToSOp : OneFlow_BaseOp<"eager_b_to_s", []> {
   }];
 }
 
-def OneFlow_EagerNaiveSToSOp : OneFlow_BaseOp<"eager_naive_s_to_s", []> {
+def OneFlow_EagerNaiveSToSOp : OneFlow_BaseOp<"eager_naive_s_to_s", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2998,7 +2998,7 @@ def OneFlow_EagerNaiveSToSOp : OneFlow_BaseOp<"eager_naive_s_to_s", []> {
   }];
 }
 
-def OneFlow_EagerNcclAllGatherOp : OneFlow_BaseOp<"eager_nccl_all_gather", []> {
+def OneFlow_EagerNcclAllGatherOp : OneFlow_BaseOp<"eager_nccl_all_gather", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -3014,7 +3014,7 @@ def OneFlow_EagerNcclAllGatherOp : OneFlow_BaseOp<"eager_nccl_all_gather", []> {
   }];
 }
 
-def OneFlow_EagerNcclAllReduceOp : OneFlow_BaseOp<"eager_nccl_all_reduce", []> {
+def OneFlow_EagerNcclAllReduceOp : OneFlow_BaseOp<"eager_nccl_all_reduce", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -3031,7 +3031,7 @@ def OneFlow_EagerNcclAllReduceOp : OneFlow_BaseOp<"eager_nccl_all_reduce", []> {
   }];
 }
 
-def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", []> {
+def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -3048,7 +3048,7 @@ def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", []> {
   }];
 }
 
-def OneFlow_EagerNcclReduceOp : OneFlow_BaseOp<"eager_nccl_reduce", []> {
+def OneFlow_EagerNcclReduceOp : OneFlow_BaseOp<"eager_nccl_reduce", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -3065,7 +3065,7 @@ def OneFlow_EagerNcclReduceOp : OneFlow_BaseOp<"eager_nccl_reduce", []> {
   }];
 }
 
-def OneFlow_EagerNcclReduceScatterOp : OneFlow_BaseOp<"eager_nccl_reduce_scatter", []> {
+def OneFlow_EagerNcclReduceScatterOp : OneFlow_BaseOp<"eager_nccl_reduce_scatter", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -3082,7 +3082,7 @@ def OneFlow_EagerNcclReduceScatterOp : OneFlow_BaseOp<"eager_nccl_reduce_scatter
   }];
 }
 
-def OneFlow_EagerNcclS2sOp : OneFlow_BaseOp<"eager_nccl_s2s", []> {
+def OneFlow_EagerNcclS2sOp : OneFlow_BaseOp<"eager_nccl_s2s", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -3100,7 +3100,7 @@ def OneFlow_EagerNcclS2sOp : OneFlow_BaseOp<"eager_nccl_s2s", []> {
   }];
 }
 
-def OneFlow_EagerPToBOp : OneFlow_BaseOp<"eager_p_to_b", []> {
+def OneFlow_EagerPToBOp : OneFlow_BaseOp<"eager_p_to_b", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -3118,7 +3118,7 @@ def OneFlow_EagerPToBOp : OneFlow_BaseOp<"eager_p_to_b", []> {
   }];
 }
 
-def OneFlow_EagerPToSOp : OneFlow_BaseOp<"eager_p_to_s", []> {
+def OneFlow_EagerPToSOp : OneFlow_BaseOp<"eager_p_to_s", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -3137,7 +3137,7 @@ def OneFlow_EagerPToSOp : OneFlow_BaseOp<"eager_p_to_s", []> {
   }];
 }
 
-def OneFlow_EagerSToBOp : OneFlow_BaseOp<"eager_s_to_b", []> {
+def OneFlow_EagerSToBOp : OneFlow_BaseOp<"eager_s_to_b", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -3156,7 +3156,7 @@ def OneFlow_EagerSToBOp : OneFlow_BaseOp<"eager_s_to_b", []> {
   }];
 }
 
-def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", []> {
+def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -3173,7 +3173,7 @@ def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", []> 
   }];
 }
 
-def OneFlow_ElementwiseMaximumOp : OneFlow_BaseOp<"elementwise_maximum", []> {
+def OneFlow_ElementwiseMaximumOp : OneFlow_BaseOp<"elementwise_maximum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -3187,7 +3187,7 @@ def OneFlow_ElementwiseMaximumOp : OneFlow_BaseOp<"elementwise_maximum", []> {
   }];
 }
 
-def OneFlow_ElementwiseMaximumBackwardOp : OneFlow_BaseOp<"elementwise_maximum_backward", [AttrSizedResultSegments]> {
+def OneFlow_ElementwiseMaximumBackwardOp : OneFlow_BaseOp<"elementwise_maximum_backward", [AttrSizedResultSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dz,
     AnyType:$x,
@@ -3206,7 +3206,7 @@ def OneFlow_ElementwiseMaximumBackwardOp : OneFlow_BaseOp<"elementwise_maximum_b
   }];
 }
 
-def OneFlow_ElementwiseMinimumOp : OneFlow_BaseOp<"elementwise_minimum", []> {
+def OneFlow_ElementwiseMinimumOp : OneFlow_BaseOp<"elementwise_minimum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -3220,7 +3220,7 @@ def OneFlow_ElementwiseMinimumOp : OneFlow_BaseOp<"elementwise_minimum", []> {
   }];
 }
 
-def OneFlow_ElementwiseMinimumBackwardOp : OneFlow_BaseOp<"elementwise_minimum_backward", [AttrSizedResultSegments]> {
+def OneFlow_ElementwiseMinimumBackwardOp : OneFlow_BaseOp<"elementwise_minimum_backward", [AttrSizedResultSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dz,
     AnyType:$x,
@@ -3239,7 +3239,7 @@ def OneFlow_ElementwiseMinimumBackwardOp : OneFlow_BaseOp<"elementwise_minimum_b
   }];
 }
 
-def OneFlow_EluOp : OneFlow_BaseOp<"elu", []> {
+def OneFlow_EluOp : OneFlow_BaseOp<"elu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -3255,7 +3255,7 @@ def OneFlow_EluOp : OneFlow_BaseOp<"elu", []> {
   }];
 }
 
-def OneFlow_EluGradOp : OneFlow_BaseOp<"elu_grad", []> {
+def OneFlow_EluGradOp : OneFlow_BaseOp<"elu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3272,7 +3272,7 @@ def OneFlow_EluGradOp : OneFlow_BaseOp<"elu_grad", []> {
   }];
 }
 
-def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", []> {
+def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -3287,7 +3287,7 @@ def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", []> {
   }];
 }
 
-def OneFlow_ErfOp : OneFlow_BaseOp<"erf", []> {
+def OneFlow_ErfOp : OneFlow_BaseOp<"erf", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3300,7 +3300,7 @@ def OneFlow_ErfOp : OneFlow_BaseOp<"erf", []> {
   }];
 }
 
-def OneFlow_ErfGradOp : OneFlow_BaseOp<"erf_grad", []> {
+def OneFlow_ErfGradOp : OneFlow_BaseOp<"erf_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3314,7 +3314,7 @@ def OneFlow_ErfGradOp : OneFlow_BaseOp<"erf_grad", []> {
   }];
 }
 
-def OneFlow_ErfcOp : OneFlow_BaseOp<"erfc", []> {
+def OneFlow_ErfcOp : OneFlow_BaseOp<"erfc", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3327,7 +3327,7 @@ def OneFlow_ErfcOp : OneFlow_BaseOp<"erfc", []> {
   }];
 }
 
-def OneFlow_ErfcGradOp : OneFlow_BaseOp<"erfc_grad", []> {
+def OneFlow_ErfcGradOp : OneFlow_BaseOp<"erfc_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3341,7 +3341,7 @@ def OneFlow_ErfcGradOp : OneFlow_BaseOp<"erfc_grad", []> {
   }];
 }
 
-def OneFlow_ExpOp : OneFlow_BaseOp<"exp", []> {
+def OneFlow_ExpOp : OneFlow_BaseOp<"exp", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3354,7 +3354,7 @@ def OneFlow_ExpOp : OneFlow_BaseOp<"exp", []> {
   }];
 }
 
-def OneFlow_ExpGradOp : OneFlow_BaseOp<"exp_grad", []> {
+def OneFlow_ExpGradOp : OneFlow_BaseOp<"exp_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3368,7 +3368,7 @@ def OneFlow_ExpGradOp : OneFlow_BaseOp<"exp_grad", []> {
   }];
 }
 
-def OneFlow_ExpandOp : OneFlow_BaseOp<"expand", []> {
+def OneFlow_ExpandOp : OneFlow_BaseOp<"expand", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -3385,7 +3385,7 @@ def OneFlow_ExpandOp : OneFlow_BaseOp<"expand", []> {
   }];
 }
 
-def OneFlow_ExpandDimsOp : OneFlow_BaseOp<"expand_dims", []> {
+def OneFlow_ExpandDimsOp : OneFlow_BaseOp<"expand_dims", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -3401,7 +3401,7 @@ def OneFlow_ExpandDimsOp : OneFlow_BaseOp<"expand_dims", []> {
   }];
 }
 
-def OneFlow_ExpandGradOp : OneFlow_BaseOp<"expand_grad", []> {
+def OneFlow_ExpandGradOp : OneFlow_BaseOp<"expand_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -3418,7 +3418,7 @@ def OneFlow_ExpandGradOp : OneFlow_BaseOp<"expand_grad", []> {
   }];
 }
 
-def OneFlow_Expm1Op : OneFlow_BaseOp<"expm1", []> {
+def OneFlow_Expm1Op : OneFlow_BaseOp<"expm1", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3431,7 +3431,7 @@ def OneFlow_Expm1Op : OneFlow_BaseOp<"expm1", []> {
   }];
 }
 
-def OneFlow_Expm1GradOp : OneFlow_BaseOp<"expm1_grad", []> {
+def OneFlow_Expm1GradOp : OneFlow_BaseOp<"expm1_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3445,7 +3445,7 @@ def OneFlow_Expm1GradOp : OneFlow_BaseOp<"expm1_grad", []> {
   }];
 }
 
-def OneFlow_EyeOp : OneFlow_BaseOp<"eye", []> {
+def OneFlow_EyeOp : OneFlow_BaseOp<"eye", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -3461,7 +3461,7 @@ def OneFlow_EyeOp : OneFlow_BaseOp<"eye", []> {
   }];
 }
 
-def OneFlow_FakeQuantizationOp : OneFlow_BaseOp<"fake_quantization", []> {
+def OneFlow_FakeQuantizationOp : OneFlow_BaseOp<"fake_quantization", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$scale,
@@ -3481,7 +3481,7 @@ def OneFlow_FakeQuantizationOp : OneFlow_BaseOp<"fake_quantization", []> {
   }];
 }
 
-def OneFlow_FlattenOp : OneFlow_BaseOp<"flatten", []> {
+def OneFlow_FlattenOp : OneFlow_BaseOp<"flatten", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -3498,7 +3498,7 @@ def OneFlow_FlattenOp : OneFlow_BaseOp<"flatten", []> {
   }];
 }
 
-def OneFlow_FlipOp : OneFlow_BaseOp<"flip", []> {
+def OneFlow_FlipOp : OneFlow_BaseOp<"flip", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3514,7 +3514,7 @@ def OneFlow_FlipOp : OneFlow_BaseOp<"flip", []> {
   }];
 }
 
-def OneFlow_FlipGradOp : OneFlow_BaseOp<"flip_grad", []> {
+def OneFlow_FlipGradOp : OneFlow_BaseOp<"flip_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -3530,7 +3530,7 @@ def OneFlow_FlipGradOp : OneFlow_BaseOp<"flip_grad", []> {
   }];
 }
 
-def OneFlow_FloorOp : OneFlow_IdempotentBaseOp<"floor", []> {
+def OneFlow_FloorOp : OneFlow_IdempotentBaseOp<"floor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3543,7 +3543,7 @@ def OneFlow_FloorOp : OneFlow_IdempotentBaseOp<"floor", []> {
   }];
 }
 
-def OneFlow_FloorGradOp : OneFlow_BaseOp<"floor_grad", []> {
+def OneFlow_FloorGradOp : OneFlow_BaseOp<"floor_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3557,7 +3557,7 @@ def OneFlow_FloorGradOp : OneFlow_BaseOp<"floor_grad", []> {
   }];
 }
 
-def OneFlow_FloordivOp : OneFlow_BaseOp<"floordiv", []> {
+def OneFlow_FloordivOp : OneFlow_BaseOp<"floordiv", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -3571,7 +3571,7 @@ def OneFlow_FloordivOp : OneFlow_BaseOp<"floordiv", []> {
   }];
 }
 
-def OneFlow_FloordivXGradOp : OneFlow_BaseOp<"floordiv_x_grad", []> {
+def OneFlow_FloordivXGradOp : OneFlow_BaseOp<"floordiv_x_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -3586,7 +3586,7 @@ def OneFlow_FloordivXGradOp : OneFlow_BaseOp<"floordiv_x_grad", []> {
   }];
 }
 
-def OneFlow_FloordivYGradOp : OneFlow_BaseOp<"floordiv_y_grad", []> {
+def OneFlow_FloordivYGradOp : OneFlow_BaseOp<"floordiv_y_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -3601,14 +3601,14 @@ def OneFlow_FloordivYGradOp : OneFlow_BaseOp<"floordiv_y_grad", []> {
   }];
 }
 
-def OneFlow_FlushSummaryWriterOp : OneFlow_BaseOp<"flush_summary_writer", []> {
+def OneFlow_FlushSummaryWriterOp : OneFlow_BaseOp<"flush_summary_writer", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let extraClassDeclaration = [{
     static std::vector<std::string> inputOrder() { return {}; }
     static std::vector<std::string> outputOrder() { return {}; }
   }];
 }
 
-def OneFlow_FoldOp : OneFlow_BaseOp<"fold", []> {
+def OneFlow_FoldOp : OneFlow_BaseOp<"fold", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3628,7 +3628,7 @@ def OneFlow_FoldOp : OneFlow_BaseOp<"fold", []> {
   }];
 }
 
-def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", []> {
+def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b
@@ -3645,7 +3645,7 @@ def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", []> {
   }];
 }
 
-def OneFlow_FusedBiasAddGeluGradOp : OneFlow_BaseOp<"fused_bias_add_gelu_grad", []> {
+def OneFlow_FusedBiasAddGeluGradOp : OneFlow_BaseOp<"fused_bias_add_gelu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b,
@@ -3663,7 +3663,7 @@ def OneFlow_FusedBiasAddGeluGradOp : OneFlow_BaseOp<"fused_bias_add_gelu_grad", 
   }];
 }
 
-def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale", []> {
+def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b,
@@ -3683,7 +3683,7 @@ def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale"
   }];
 }
 
-def OneFlow_FusedCastScaleOp : OneFlow_BaseOp<"fused_cast_scale", []> {
+def OneFlow_FusedCastScaleOp : OneFlow_BaseOp<"fused_cast_scale", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$scale_by_tensor
@@ -3700,7 +3700,7 @@ def OneFlow_FusedCastScaleOp : OneFlow_BaseOp<"fused_cast_scale", []> {
   }];
 }
 
-def OneFlow_FusedScaleTrilOp : OneFlow_BaseOp<"fused_scale_tril", []> {
+def OneFlow_FusedScaleTrilOp : OneFlow_BaseOp<"fused_scale_tril", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -3722,7 +3722,7 @@ def OneFlow_FusedScaleTrilOp : OneFlow_BaseOp<"fused_scale_tril", []> {
   }];
 }
 
-def OneFlow_FusedSelfAttentionQueryMulKeyAndValueOp : OneFlow_BaseOp<"fused_self_attention_query_mul_key_and_value", []> {
+def OneFlow_FusedSelfAttentionQueryMulKeyAndValueOp : OneFlow_BaseOp<"fused_self_attention_query_mul_key_and_value", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$hidden_states
   );
@@ -3740,7 +3740,7 @@ def OneFlow_FusedSelfAttentionQueryMulKeyAndValueOp : OneFlow_BaseOp<"fused_self
   }];
 }
 
-def OneFlow_FusedSelfAttentionQueryMulKeyAndValueGradOp : OneFlow_BaseOp<"fused_self_attention_query_mul_key_and_value_grad", []> {
+def OneFlow_FusedSelfAttentionQueryMulKeyAndValueGradOp : OneFlow_BaseOp<"fused_self_attention_query_mul_key_and_value_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$query_mul_key_grad,
     AnyType:$value_grad,
@@ -3758,7 +3758,7 @@ def OneFlow_FusedSelfAttentionQueryMulKeyAndValueGradOp : OneFlow_BaseOp<"fused_
   }];
 }
 
-def OneFlow_FusedTrilScaleSoftmaxMaskScaleOp : OneFlow_BaseOp<"fused_tril_scale_softmax_mask_scale", []> {
+def OneFlow_FusedTrilScaleSoftmaxMaskScaleOp : OneFlow_BaseOp<"fused_tril_scale_softmax_mask_scale", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$mask
@@ -3779,7 +3779,7 @@ def OneFlow_FusedTrilScaleSoftmaxMaskScaleOp : OneFlow_BaseOp<"fused_tril_scale_
   }];
 }
 
-def OneFlow_FusedTrilScaleSoftmaxMaskScaleGradOp : OneFlow_BaseOp<"fused_tril_scale_softmax_mask_scale_grad", []> {
+def OneFlow_FusedTrilScaleSoftmaxMaskScaleGradOp : OneFlow_BaseOp<"fused_tril_scale_softmax_mask_scale_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$softmax_y,
     AnyType:$dy,
@@ -3799,7 +3799,7 @@ def OneFlow_FusedTrilScaleSoftmaxMaskScaleGradOp : OneFlow_BaseOp<"fused_tril_sc
   }];
 }
 
-def OneFlow_GatherOp : OneFlow_BaseOp<"gather", []> {
+def OneFlow_GatherOp : OneFlow_BaseOp<"gather", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$indices
@@ -3816,7 +3816,7 @@ def OneFlow_GatherOp : OneFlow_BaseOp<"gather", []> {
   }];
 }
 
-def OneFlow_GatherNdOp : OneFlow_BaseOp<"gather_nd", []> {
+def OneFlow_GatherNdOp : OneFlow_BaseOp<"gather_nd", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$params,
     AnyType:$indices
@@ -3830,7 +3830,7 @@ def OneFlow_GatherNdOp : OneFlow_BaseOp<"gather_nd", []> {
   }];
 }
 
-def OneFlow_GeluOp : OneFlow_BaseOp<"gelu", []> {
+def OneFlow_GeluOp : OneFlow_BaseOp<"gelu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -3843,7 +3843,7 @@ def OneFlow_GeluOp : OneFlow_BaseOp<"gelu", []> {
   }];
 }
 
-def OneFlow_GeluGradOp : OneFlow_BaseOp<"gelu_grad", []> {
+def OneFlow_GeluGradOp : OneFlow_BaseOp<"gelu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3857,7 +3857,7 @@ def OneFlow_GeluGradOp : OneFlow_BaseOp<"gelu_grad", []> {
   }];
 }
 
-def OneFlow_GenTensorBufferOp : OneFlow_BaseOp<"gen_tensor_buffer", []> {
+def OneFlow_GenTensorBufferOp : OneFlow_BaseOp<"gen_tensor_buffer", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -3874,7 +3874,7 @@ def OneFlow_GenTensorBufferOp : OneFlow_BaseOp<"gen_tensor_buffer", []> {
   }];
 }
 
-def OneFlow_GenerateRandomBatchPermutationIndicesOp : OneFlow_BaseOp<"generate_random_batch_permutation_indices", []> {
+def OneFlow_GenerateRandomBatchPermutationIndicesOp : OneFlow_BaseOp<"generate_random_batch_permutation_indices", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3890,7 +3890,7 @@ def OneFlow_GenerateRandomBatchPermutationIndicesOp : OneFlow_BaseOp<"generate_r
   }];
 }
 
-def OneFlow_GridSampleOp : OneFlow_BaseOp<"grid_sample", []> {
+def OneFlow_GridSampleOp : OneFlow_BaseOp<"grid_sample", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$grid
@@ -3909,7 +3909,7 @@ def OneFlow_GridSampleOp : OneFlow_BaseOp<"grid_sample", []> {
   }];
 }
 
-def OneFlow_GridSampleGradOp : OneFlow_BaseOp<"grid_sample_grad", []> {
+def OneFlow_GridSampleGradOp : OneFlow_BaseOp<"grid_sample_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$doutput,
     AnyType:$input,
@@ -3930,7 +3930,7 @@ def OneFlow_GridSampleGradOp : OneFlow_BaseOp<"grid_sample_grad", []> {
   }];
 }
 
-def OneFlow_HardsigmoidOp : OneFlow_BaseOp<"hardsigmoid", []> {
+def OneFlow_HardsigmoidOp : OneFlow_BaseOp<"hardsigmoid", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -3943,7 +3943,7 @@ def OneFlow_HardsigmoidOp : OneFlow_BaseOp<"hardsigmoid", []> {
   }];
 }
 
-def OneFlow_HardsigmoidGradOp : OneFlow_BaseOp<"hardsigmoid_grad", []> {
+def OneFlow_HardsigmoidGradOp : OneFlow_BaseOp<"hardsigmoid_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3957,7 +3957,7 @@ def OneFlow_HardsigmoidGradOp : OneFlow_BaseOp<"hardsigmoid_grad", []> {
   }];
 }
 
-def OneFlow_HardswishOp : OneFlow_BaseOp<"hardswish", []> {
+def OneFlow_HardswishOp : OneFlow_BaseOp<"hardswish", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -3970,7 +3970,7 @@ def OneFlow_HardswishOp : OneFlow_BaseOp<"hardswish", []> {
   }];
 }
 
-def OneFlow_HardswishGradOp : OneFlow_BaseOp<"hardswish_grad", []> {
+def OneFlow_HardswishGradOp : OneFlow_BaseOp<"hardswish_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3984,7 +3984,7 @@ def OneFlow_HardswishGradOp : OneFlow_BaseOp<"hardswish_grad", []> {
   }];
 }
 
-def OneFlow_HardtanhOp : OneFlow_BaseOp<"hardtanh", []> {
+def OneFlow_HardtanhOp : OneFlow_BaseOp<"hardtanh", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4001,7 +4001,7 @@ def OneFlow_HardtanhOp : OneFlow_BaseOp<"hardtanh", []> {
   }];
 }
 
-def OneFlow_HardtanhGradOp : OneFlow_BaseOp<"hardtanh_grad", []> {
+def OneFlow_HardtanhGradOp : OneFlow_BaseOp<"hardtanh_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$y,
     AnyType:$dy
@@ -4019,7 +4019,7 @@ def OneFlow_HardtanhGradOp : OneFlow_BaseOp<"hardtanh_grad", []> {
   }];
 }
 
-def OneFlow_HierarchicalParallelCastOp : OneFlow_BaseOp<"hierarchical_parallel_cast", []> {
+def OneFlow_HierarchicalParallelCastOp : OneFlow_BaseOp<"hierarchical_parallel_cast", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4037,7 +4037,7 @@ def OneFlow_HierarchicalParallelCastOp : OneFlow_BaseOp<"hierarchical_parallel_c
   }];
 }
 
-def OneFlow_HierarchicalParallelCastLikeOp : OneFlow_BaseOp<"hierarchical_parallel_cast_like", []> {
+def OneFlow_HierarchicalParallelCastLikeOp : OneFlow_BaseOp<"hierarchical_parallel_cast_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$like
@@ -4051,7 +4051,7 @@ def OneFlow_HierarchicalParallelCastLikeOp : OneFlow_BaseOp<"hierarchical_parall
   }];
 }
 
-def OneFlow_IdentityOp : OneFlow_BaseOp<"identity", []> {
+def OneFlow_IdentityOp : OneFlow_BaseOp<"identity", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4064,7 +4064,7 @@ def OneFlow_IdentityOp : OneFlow_BaseOp<"identity", []> {
   }];
 }
 
-def OneFlow_IdentityBufferOp : OneFlow_BaseOp<"identity_buffer", []> {
+def OneFlow_IdentityBufferOp : OneFlow_BaseOp<"identity_buffer", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4080,7 +4080,7 @@ def OneFlow_IdentityBufferOp : OneFlow_BaseOp<"identity_buffer", []> {
   }];
 }
 
-def OneFlow_ImageBatchAlignOp : OneFlow_BaseOp<"image_batch_align", []> {
+def OneFlow_ImageBatchAlignOp : OneFlow_BaseOp<"image_batch_align", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4099,7 +4099,7 @@ def OneFlow_ImageBatchAlignOp : OneFlow_BaseOp<"image_batch_align", []> {
   }];
 }
 
-def OneFlow_ImageDecodeOp : OneFlow_BaseOp<"image_decode", []> {
+def OneFlow_ImageDecodeOp : OneFlow_BaseOp<"image_decode", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4116,7 +4116,7 @@ def OneFlow_ImageDecodeOp : OneFlow_BaseOp<"image_decode", []> {
   }];
 }
 
-def OneFlow_ImageFlipOp : OneFlow_BaseOp<"image_flip", []> {
+def OneFlow_ImageFlipOp : OneFlow_BaseOp<"image_flip", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$flip_code
@@ -4130,7 +4130,7 @@ def OneFlow_ImageFlipOp : OneFlow_BaseOp<"image_flip", []> {
   }];
 }
 
-def OneFlow_ImageNormalizeOp : OneFlow_BaseOp<"image_normalize", []> {
+def OneFlow_ImageNormalizeOp : OneFlow_BaseOp<"image_normalize", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4147,7 +4147,7 @@ def OneFlow_ImageNormalizeOp : OneFlow_BaseOp<"image_normalize", []> {
   }];
 }
 
-def OneFlow_ImageRandomCropOp : OneFlow_BaseOp<"image_random_crop", []> {
+def OneFlow_ImageRandomCropOp : OneFlow_BaseOp<"image_random_crop", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4167,7 +4167,7 @@ def OneFlow_ImageRandomCropOp : OneFlow_BaseOp<"image_random_crop", []> {
   }];
 }
 
-def OneFlow_ImageResizeKeepAspectRatioOp : OneFlow_BaseOp<"image_resize_keep_aspect_ratio", []> {
+def OneFlow_ImageResizeKeepAspectRatioOp : OneFlow_BaseOp<"image_resize_keep_aspect_ratio", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4189,7 +4189,7 @@ def OneFlow_ImageResizeKeepAspectRatioOp : OneFlow_BaseOp<"image_resize_keep_asp
   }];
 }
 
-def OneFlow_ImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", []> {
+def OneFlow_ImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4210,7 +4210,7 @@ def OneFlow_ImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", []> {
   }];
 }
 
-def OneFlow_ImageTargetResizeOp : OneFlow_BaseOp<"image_target_resize", []> {
+def OneFlow_ImageTargetResizeOp : OneFlow_BaseOp<"image_target_resize", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4229,7 +4229,7 @@ def OneFlow_ImageTargetResizeOp : OneFlow_BaseOp<"image_target_resize", []> {
   }];
 }
 
-def OneFlow_InTopKOp : OneFlow_BaseOp<"in_top_k", []> {
+def OneFlow_InTopKOp : OneFlow_BaseOp<"in_top_k", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$targets,
     AnyType:$predictions
@@ -4246,7 +4246,7 @@ def OneFlow_InTopKOp : OneFlow_BaseOp<"in_top_k", []> {
   }];
 }
 
-def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_update", [AttrSizedOperandSegments]> {
+def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff_indices,
@@ -4276,7 +4276,7 @@ def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_upda
   }];
 }
 
-def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momentum_update", []> {
+def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momentum_update", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff_indices,
@@ -4294,7 +4294,7 @@ def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momen
   }];
 }
 
-def OneFlow_IndexedSlicesReduceSumOp : OneFlow_BaseOp<"indexed_slices_reduce_sum", []> {
+def OneFlow_IndexedSlicesReduceSumOp : OneFlow_BaseOp<"indexed_slices_reduce_sum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x_indices,
     AnyType:$x_values
@@ -4310,7 +4310,7 @@ def OneFlow_IndexedSlicesReduceSumOp : OneFlow_BaseOp<"indexed_slices_reduce_sum
   }];
 }
 
-def OneFlow_IndexedSlicesSgdUpdateOp : OneFlow_BaseOp<"indexed_slices_sgd_update", []> {
+def OneFlow_IndexedSlicesSgdUpdateOp : OneFlow_BaseOp<"indexed_slices_sgd_update", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff_indices,
@@ -4326,7 +4326,7 @@ def OneFlow_IndexedSlicesSgdUpdateOp : OneFlow_BaseOp<"indexed_slices_sgd_update
   }];
 }
 
-def OneFlow_KlDivLossOp : OneFlow_BaseOp<"kl_div_loss", []> {
+def OneFlow_KlDivLossOp : OneFlow_BaseOp<"kl_div_loss", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target
@@ -4344,7 +4344,7 @@ def OneFlow_KlDivLossOp : OneFlow_BaseOp<"kl_div_loss", []> {
   }];
 }
 
-def OneFlow_KlDivLossGradOp : OneFlow_BaseOp<"kl_div_loss_grad", []> {
+def OneFlow_KlDivLossGradOp : OneFlow_BaseOp<"kl_div_loss_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -4363,7 +4363,7 @@ def OneFlow_KlDivLossGradOp : OneFlow_BaseOp<"kl_div_loss_grad", []> {
   }];
 }
 
-def OneFlow_L1L2RegularizeGradientOp : OneFlow_BaseOp<"l1_l2_regularize_gradient", []> {
+def OneFlow_L1L2RegularizeGradientOp : OneFlow_BaseOp<"l1_l2_regularize_gradient", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff
@@ -4381,7 +4381,7 @@ def OneFlow_L1L2RegularizeGradientOp : OneFlow_BaseOp<"l1_l2_regularize_gradient
   }];
 }
 
-def OneFlow_L2NormalizeOp : OneFlow_BaseOp<"l2_normalize", []> {
+def OneFlow_L2NormalizeOp : OneFlow_BaseOp<"l2_normalize", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4399,7 +4399,7 @@ def OneFlow_L2NormalizeOp : OneFlow_BaseOp<"l2_normalize", []> {
   }];
 }
 
-def OneFlow_L2NormalizeGradOp : OneFlow_BaseOp<"l2_normalize_grad", []> {
+def OneFlow_L2NormalizeGradOp : OneFlow_BaseOp<"l2_normalize_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$y,
@@ -4418,7 +4418,7 @@ def OneFlow_L2NormalizeGradOp : OneFlow_BaseOp<"l2_normalize_grad", []> {
   }];
 }
 
-def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", [AttrSizedOperandSegments]> {
+def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$m,
     AnyType:$v,
@@ -4448,7 +4448,7 @@ def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", [AttrSizedOperandSegmen
   }];
 }
 
-def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", [AttrSizedOperandSegments]> {
+def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -4475,7 +4475,7 @@ def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", [AttrSizedOperandSegmen
   }];
 }
 
-def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", [AttrSizedOperandSegments]> {
+def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     Optional<AnyType>:$beta,
@@ -4503,7 +4503,7 @@ def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", [AttrSizedOperandSegments
   }];
 }
 
-def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", []> {
+def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x,
@@ -4524,7 +4524,7 @@ def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", []> {
   }];
 }
 
-def OneFlow_LayerNormParamGradOp : OneFlow_BaseOp<"layer_norm_param_grad", [AttrSizedOperandSegments, AttrSizedResultSegments]> {
+def OneFlow_LayerNormParamGradOp : OneFlow_BaseOp<"layer_norm_param_grad", [AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     Optional<AnyType>:$normalized,
@@ -4549,7 +4549,7 @@ def OneFlow_LayerNormParamGradOp : OneFlow_BaseOp<"layer_norm_param_grad", [Attr
   }];
 }
 
-def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", []> {
+def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4565,7 +4565,7 @@ def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", []> {
   }];
 }
 
-def OneFlow_LeakyReluGradOp : OneFlow_BaseOp<"leaky_relu_grad", []> {
+def OneFlow_LeakyReluGradOp : OneFlow_BaseOp<"leaky_relu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -4582,7 +4582,7 @@ def OneFlow_LeakyReluGradOp : OneFlow_BaseOp<"leaky_relu_grad", []> {
   }];
 }
 
-def OneFlow_LgammaOp : OneFlow_BaseOp<"lgamma", []> {
+def OneFlow_LgammaOp : OneFlow_BaseOp<"lgamma", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4595,7 +4595,7 @@ def OneFlow_LgammaOp : OneFlow_BaseOp<"lgamma", []> {
   }];
 }
 
-def OneFlow_LgammaGradOp : OneFlow_BaseOp<"lgamma_grad", []> {
+def OneFlow_LgammaGradOp : OneFlow_BaseOp<"lgamma_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -4609,7 +4609,7 @@ def OneFlow_LgammaGradOp : OneFlow_BaseOp<"lgamma_grad", []> {
   }];
 }
 
-def OneFlow_LogOp : OneFlow_BaseOp<"log", []> {
+def OneFlow_LogOp : OneFlow_BaseOp<"log", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4622,7 +4622,7 @@ def OneFlow_LogOp : OneFlow_BaseOp<"log", []> {
   }];
 }
 
-def OneFlow_Log1pOp : OneFlow_BaseOp<"log1p", []> {
+def OneFlow_Log1pOp : OneFlow_BaseOp<"log1p", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4635,7 +4635,7 @@ def OneFlow_Log1pOp : OneFlow_BaseOp<"log1p", []> {
   }];
 }
 
-def OneFlow_Log1pGradOp : OneFlow_BaseOp<"log1p_grad", []> {
+def OneFlow_Log1pGradOp : OneFlow_BaseOp<"log1p_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -4649,7 +4649,7 @@ def OneFlow_Log1pGradOp : OneFlow_BaseOp<"log1p_grad", []> {
   }];
 }
 
-def OneFlow_LogGradOp : OneFlow_BaseOp<"log_grad", []> {
+def OneFlow_LogGradOp : OneFlow_BaseOp<"log_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -4663,7 +4663,7 @@ def OneFlow_LogGradOp : OneFlow_BaseOp<"log_grad", []> {
   }];
 }
 
-def OneFlow_LogSigmoidOp : OneFlow_BaseOp<"log_sigmoid", []> {
+def OneFlow_LogSigmoidOp : OneFlow_BaseOp<"log_sigmoid", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4676,7 +4676,7 @@ def OneFlow_LogSigmoidOp : OneFlow_BaseOp<"log_sigmoid", []> {
   }];
 }
 
-def OneFlow_LogSigmoidGradOp : OneFlow_BaseOp<"log_sigmoid_grad", []> {
+def OneFlow_LogSigmoidGradOp : OneFlow_BaseOp<"log_sigmoid_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -4690,7 +4690,7 @@ def OneFlow_LogSigmoidGradOp : OneFlow_BaseOp<"log_sigmoid_grad", []> {
   }];
 }
 
-def OneFlow_LogSoftmaxOp : OneFlow_BaseOp<"log_softmax", []> {
+def OneFlow_LogSoftmaxOp : OneFlow_BaseOp<"log_softmax", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4703,7 +4703,7 @@ def OneFlow_LogSoftmaxOp : OneFlow_BaseOp<"log_softmax", []> {
   }];
 }
 
-def OneFlow_LogSoftmaxGradOp : OneFlow_BaseOp<"log_softmax_grad", []> {
+def OneFlow_LogSoftmaxGradOp : OneFlow_BaseOp<"log_softmax_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$prob,
     AnyType:$dy
@@ -4717,7 +4717,7 @@ def OneFlow_LogSoftmaxGradOp : OneFlow_BaseOp<"log_softmax_grad", []> {
   }];
 }
 
-def OneFlow_LogicalNotOp : OneFlow_BaseOp<"logical_not", []> {
+def OneFlow_LogicalNotOp : OneFlow_BaseOp<"logical_not", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4730,7 +4730,7 @@ def OneFlow_LogicalNotOp : OneFlow_BaseOp<"logical_not", []> {
   }];
 }
 
-def OneFlow_LogicalSliceOp : OneFlow_BaseOp<"logical_slice", []> {
+def OneFlow_LogicalSliceOp : OneFlow_BaseOp<"logical_slice", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4748,7 +4748,7 @@ def OneFlow_LogicalSliceOp : OneFlow_BaseOp<"logical_slice", []> {
   }];
 }
 
-def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", []> {
+def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$ref,
     AnyType:$value
@@ -4764,7 +4764,7 @@ def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", []> {
   }];
 }
 
-def OneFlow_MaskedFillOp : OneFlow_BaseOp<"masked_fill", []> {
+def OneFlow_MaskedFillOp : OneFlow_BaseOp<"masked_fill", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$mask
@@ -4784,7 +4784,7 @@ def OneFlow_MaskedFillOp : OneFlow_BaseOp<"masked_fill", []> {
   }];
 }
 
-def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", []> {
+def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b,
@@ -4804,7 +4804,7 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", []> {
   }];
 }
 
-def OneFlow_LazyMaxPool1DOp : OneFlow_LazyPoolBaseOp<"max_pool_1d", []> {
+def OneFlow_LazyMaxPool1DOp : OneFlow_LazyPoolBaseOp<"max_pool_1d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4826,7 +4826,7 @@ def OneFlow_LazyMaxPool1DOp : OneFlow_LazyPoolBaseOp<"max_pool_1d", []> {
   }];
 }
 
-def OneFlow_LazyMaxPool1DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_1d_grad", []> {
+def OneFlow_LazyMaxPool1DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_1d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -4850,7 +4850,7 @@ def OneFlow_LazyMaxPool1DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_1d_grad",
   }];
 }
 
-def OneFlow_LazyMaxPool2DOp : OneFlow_LazyPoolBaseOp<"max_pool_2d", []> {
+def OneFlow_LazyMaxPool2DOp : OneFlow_LazyPoolBaseOp<"max_pool_2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4872,7 +4872,7 @@ def OneFlow_LazyMaxPool2DOp : OneFlow_LazyPoolBaseOp<"max_pool_2d", []> {
   }];
 }
 
-def OneFlow_LazyMaxPool2DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_2d_grad", []> {
+def OneFlow_LazyMaxPool2DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_2d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -4896,7 +4896,7 @@ def OneFlow_LazyMaxPool2DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_2d_grad",
   }];
 }
 
-def OneFlow_LazyMaxPool3DOp : OneFlow_LazyPoolBaseOp<"max_pool_3d", []> {
+def OneFlow_LazyMaxPool3DOp : OneFlow_LazyPoolBaseOp<"max_pool_3d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4918,7 +4918,7 @@ def OneFlow_LazyMaxPool3DOp : OneFlow_LazyPoolBaseOp<"max_pool_3d", []> {
   }];
 }
 
-def OneFlow_LazyMaxPool3DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_3d_grad", []> {
+def OneFlow_LazyMaxPool3DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_3d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -4942,7 +4942,7 @@ def OneFlow_LazyMaxPool3DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_3d_grad",
   }];
 }
 
-def OneFlow_EagerMaxPool1DOp : OneFlow_EagerPoolBaseOp<"maxpool_1d", []> {
+def OneFlow_EagerMaxPool1DOp : OneFlow_EagerPoolBaseOp<"maxpool_1d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4965,7 +4965,7 @@ def OneFlow_EagerMaxPool1DOp : OneFlow_EagerPoolBaseOp<"maxpool_1d", []> {
   }];
 }
 
-def OneFlow_EagerMaxPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_1d_grad", []> {
+def OneFlow_EagerMaxPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_1d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -4990,7 +4990,7 @@ def OneFlow_EagerMaxPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_1d_grad"
   }];
 }
 
-def OneFlow_EagerMaxPool2DOp : OneFlow_EagerPoolBaseOp<"maxpool_2d", []> {
+def OneFlow_EagerMaxPool2DOp : OneFlow_EagerPoolBaseOp<"maxpool_2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -5013,7 +5013,7 @@ def OneFlow_EagerMaxPool2DOp : OneFlow_EagerPoolBaseOp<"maxpool_2d", []> {
   }];
 }
 
-def OneFlow_EagerMaxPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_2d_grad", []> {
+def OneFlow_EagerMaxPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_2d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -5038,7 +5038,7 @@ def OneFlow_EagerMaxPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_2d_grad"
   }];
 }
 
-def OneFlow_EagerMaxPool3DOp : OneFlow_EagerPoolBaseOp<"maxpool_3d", []> {
+def OneFlow_EagerMaxPool3DOp : OneFlow_EagerPoolBaseOp<"maxpool_3d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -5061,7 +5061,7 @@ def OneFlow_EagerMaxPool3DOp : OneFlow_EagerPoolBaseOp<"maxpool_3d", []> {
   }];
 }
 
-def OneFlow_EagerMaxPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_3d_grad", []> {
+def OneFlow_EagerMaxPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_3d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -5086,7 +5086,7 @@ def OneFlow_EagerMaxPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_3d_grad"
   }];
 }
 
-def OneFlow_MegatronGptMmapDataLoaderOp : OneFlow_BaseOp<"megatron_gpt_mmap_data_loader", []> {
+def OneFlow_MegatronGptMmapDataLoaderOp : OneFlow_BaseOp<"megatron_gpt_mmap_data_loader", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     Optional<AnyType>:$iteration
   );
@@ -5112,7 +5112,7 @@ def OneFlow_MegatronGptMmapDataLoaderOp : OneFlow_BaseOp<"megatron_gpt_mmap_data
   }];
 }
 
-def OneFlow_MinMaxObserverOp : OneFlow_BaseOp<"min_max_observer", []> {
+def OneFlow_MinMaxObserverOp : OneFlow_BaseOp<"min_max_observer", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5132,7 +5132,7 @@ def OneFlow_MinMaxObserverOp : OneFlow_BaseOp<"min_max_observer", []> {
   }];
 }
 
-def OneFlow_MishOp : OneFlow_BaseOp<"mish", []> {
+def OneFlow_MishOp : OneFlow_BaseOp<"mish", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5145,7 +5145,7 @@ def OneFlow_MishOp : OneFlow_BaseOp<"mish", []> {
   }];
 }
 
-def OneFlow_MishGradOp : OneFlow_BaseOp<"mish_grad", []> {
+def OneFlow_MishGradOp : OneFlow_BaseOp<"mish_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -5159,7 +5159,7 @@ def OneFlow_MishGradOp : OneFlow_BaseOp<"mish_grad", []> {
   }];
 }
 
-def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", [AttrSizedOperandSegments]> {
+def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -5185,7 +5185,7 @@ def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", [AttrSizedOpera
   }];
 }
 
-def OneFlow_MovingAverageMinMaxObserverOp : OneFlow_BaseOp<"moving_average_min_max_observer", []> {
+def OneFlow_MovingAverageMinMaxObserverOp : OneFlow_BaseOp<"moving_average_min_max_observer", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$current_train_step,
@@ -5210,7 +5210,7 @@ def OneFlow_MovingAverageMinMaxObserverOp : OneFlow_BaseOp<"moving_average_min_m
   }];
 }
 
-def OneFlow_MultiCountNotFiniteOp : OneFlow_BaseOp<"multi_count_not_finite", []> {
+def OneFlow_MultiCountNotFiniteOp : OneFlow_BaseOp<"multi_count_not_finite", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     Variadic<AnyType>:$x
   );
@@ -5223,7 +5223,7 @@ def OneFlow_MultiCountNotFiniteOp : OneFlow_BaseOp<"multi_count_not_finite", []>
   }];
 }
 
-def OneFlow_MultiSquareSumOp : OneFlow_BaseOp<"multi_square_sum", []> {
+def OneFlow_MultiSquareSumOp : OneFlow_BaseOp<"multi_square_sum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     Variadic<AnyType>:$x
   );
@@ -5236,7 +5236,7 @@ def OneFlow_MultiSquareSumOp : OneFlow_BaseOp<"multi_square_sum", []> {
   }];
 }
 
-def OneFlow_MultiplyOp : OneFlow_BaseOp<"multiply", []> {
+def OneFlow_MultiplyOp : OneFlow_BaseOp<"multiply", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -5250,7 +5250,7 @@ def OneFlow_MultiplyOp : OneFlow_BaseOp<"multiply", []> {
   }];
 }
 
-def OneFlow_NarrowOp : OneFlow_BaseOp<"narrow", []> {
+def OneFlow_NarrowOp : OneFlow_BaseOp<"narrow", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5268,7 +5268,7 @@ def OneFlow_NarrowOp : OneFlow_BaseOp<"narrow", []> {
   }];
 }
 
-def OneFlow_NarrowGradOp : OneFlow_BaseOp<"narrow_grad", []> {
+def OneFlow_NarrowGradOp : OneFlow_BaseOp<"narrow_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$like
@@ -5287,7 +5287,7 @@ def OneFlow_NarrowGradOp : OneFlow_BaseOp<"narrow_grad", []> {
   }];
 }
 
-def OneFlow_NegativeOp : OneFlow_InvolutionBaseOp<"negative", []> {
+def OneFlow_NegativeOp : OneFlow_InvolutionBaseOp<"negative", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -5300,7 +5300,7 @@ def OneFlow_NegativeOp : OneFlow_InvolutionBaseOp<"negative", []> {
   }];
 }
 
-def OneFlow_NegativeGradOp : OneFlow_BaseOp<"negative_grad", []> {
+def OneFlow_NegativeGradOp : OneFlow_BaseOp<"negative_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -5314,7 +5314,7 @@ def OneFlow_NegativeGradOp : OneFlow_BaseOp<"negative_grad", []> {
   }];
 }
 
-def OneFlow_NllOp : OneFlow_BaseOp<"nll", []> {
+def OneFlow_NllOp : OneFlow_BaseOp<"nll", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -5334,7 +5334,7 @@ def OneFlow_NllOp : OneFlow_BaseOp<"nll", []> {
   }];
 }
 
-def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", []> {
+def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -5355,7 +5355,7 @@ def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", []> {
   }];
 }
 
-def OneFlow_NmsOp : OneFlow_BaseOp<"nms", []> {
+def OneFlow_NmsOp : OneFlow_BaseOp<"nms", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5372,7 +5372,7 @@ def OneFlow_NmsOp : OneFlow_BaseOp<"nms", []> {
   }];
 }
 
-def OneFlow_NormalOp : OneFlow_BaseOp<"normal", []> {
+def OneFlow_NormalOp : OneFlow_BaseOp<"normal", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -5389,7 +5389,7 @@ def OneFlow_NormalOp : OneFlow_BaseOp<"normal", []> {
   }];
 }
 
-def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [AttrSizedOperandSegments, AttrSizedResultSegments]> {
+def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     Optional<AnyType>:$moving_mean,
@@ -5419,7 +5419,7 @@ def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [AttrSizedOperandS
   }];
 }
 
-class OneFlow_NormalizationAddReluBaseOp : OneFlow_BaseOp<"normalization_add_relu", [AttrSizedOperandSegments, AttrSizedResultSegments]> {
+class OneFlow_NormalizationAddReluBaseOp : OneFlow_BaseOp<"normalization_add_relu", [AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     Optional<AnyType>:$addend,
@@ -5450,7 +5450,7 @@ class OneFlow_NormalizationAddReluBaseOp : OneFlow_BaseOp<"normalization_add_rel
   }];
 }
 
-def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_grad", []> {
+def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy,
@@ -5477,7 +5477,7 @@ def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_
   }];
 }
 
-def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", []> {
+def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy,
@@ -5500,7 +5500,7 @@ def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", []> {
   }];
 }
 
-def OneFlow_NvtxEndOp : OneFlow_BaseOp<"nvtx_end", []> {
+def OneFlow_NvtxEndOp : OneFlow_BaseOp<"nvtx_end", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5516,7 +5516,7 @@ def OneFlow_NvtxEndOp : OneFlow_BaseOp<"nvtx_end", []> {
   }];
 }
 
-def OneFlow_NvtxStartOp : OneFlow_BaseOp<"nvtx_start", []> {
+def OneFlow_NvtxStartOp : OneFlow_BaseOp<"nvtx_start", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5532,7 +5532,7 @@ def OneFlow_NvtxStartOp : OneFlow_BaseOp<"nvtx_start", []> {
   }];
 }
 
-def OneFlow_ObjectBboxFlipOp : OneFlow_BaseOp<"object_bbox_flip", []> {
+def OneFlow_ObjectBboxFlipOp : OneFlow_BaseOp<"object_bbox_flip", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$bbox,
     AnyType:$image_size,
@@ -5547,7 +5547,7 @@ def OneFlow_ObjectBboxFlipOp : OneFlow_BaseOp<"object_bbox_flip", []> {
   }];
 }
 
-def OneFlow_ObjectBboxScaleOp : OneFlow_BaseOp<"object_bbox_scale", []> {
+def OneFlow_ObjectBboxScaleOp : OneFlow_BaseOp<"object_bbox_scale", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$bbox,
     AnyType:$scale
@@ -5561,7 +5561,7 @@ def OneFlow_ObjectBboxScaleOp : OneFlow_BaseOp<"object_bbox_scale", []> {
   }];
 }
 
-def OneFlow_ObjectSegmentationPolygonFlipOp : OneFlow_BaseOp<"object_segmentation_polygon_flip", []> {
+def OneFlow_ObjectSegmentationPolygonFlipOp : OneFlow_BaseOp<"object_segmentation_polygon_flip", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$poly,
     AnyType:$image_size,
@@ -5576,7 +5576,7 @@ def OneFlow_ObjectSegmentationPolygonFlipOp : OneFlow_BaseOp<"object_segmentatio
   }];
 }
 
-def OneFlow_ObjectSegmentationPolygonScaleOp : OneFlow_BaseOp<"object_segmentation_polygon_scale", []> {
+def OneFlow_ObjectSegmentationPolygonScaleOp : OneFlow_BaseOp<"object_segmentation_polygon_scale", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$poly,
     AnyType:$scale
@@ -5590,7 +5590,7 @@ def OneFlow_ObjectSegmentationPolygonScaleOp : OneFlow_BaseOp<"object_segmentati
   }];
 }
 
-def OneFlow_ObjectSegmentationPolygonToMaskOp : OneFlow_BaseOp<"object_segmentation_polygon_to_mask", []> {
+def OneFlow_ObjectSegmentationPolygonToMaskOp : OneFlow_BaseOp<"object_segmentation_polygon_to_mask", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$poly,
     AnyType:$poly_index,
@@ -5605,7 +5605,7 @@ def OneFlow_ObjectSegmentationPolygonToMaskOp : OneFlow_BaseOp<"object_segmentat
   }];
 }
 
-def OneFlow_OfrecordBytesDecoderOp : OneFlow_BaseOp<"ofrecord_bytes_decoder", []> {
+def OneFlow_OfrecordBytesDecoderOp : OneFlow_BaseOp<"ofrecord_bytes_decoder", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5621,7 +5621,7 @@ def OneFlow_OfrecordBytesDecoderOp : OneFlow_BaseOp<"ofrecord_bytes_decoder", []
   }];
 }
 
-def OneFlow_OfrecordImageClassificationReaderOp : OneFlow_BaseOp<"ofrecord_image_classification_reader", []> {
+def OneFlow_OfrecordImageClassificationReaderOp : OneFlow_BaseOp<"ofrecord_image_classification_reader", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let output = (outs
     AnyType:$image,
     AnyType:$label
@@ -5648,7 +5648,7 @@ def OneFlow_OfrecordImageClassificationReaderOp : OneFlow_BaseOp<"ofrecord_image
   }];
 }
 
-def OneFlow_OfrecordImageDecoderOp : OneFlow_BaseOp<"ofrecord_image_decoder", []> {
+def OneFlow_OfrecordImageDecoderOp : OneFlow_BaseOp<"ofrecord_image_decoder", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5665,7 +5665,7 @@ def OneFlow_OfrecordImageDecoderOp : OneFlow_BaseOp<"ofrecord_image_decoder", []
   }];
 }
 
-def OneFlow_OfrecordImageDecoderRandomCropOp : OneFlow_BaseOp<"ofrecord_image_decoder_random_crop", []> {
+def OneFlow_OfrecordImageDecoderRandomCropOp : OneFlow_BaseOp<"ofrecord_image_decoder_random_crop", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5687,7 +5687,7 @@ def OneFlow_OfrecordImageDecoderRandomCropOp : OneFlow_BaseOp<"ofrecord_image_de
   }];
 }
 
-def OneFlow_OfrecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", []> {
+def OneFlow_OfrecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5707,7 +5707,7 @@ def OneFlow_OfrecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", []> {
   }];
 }
 
-def OneFlow_OneHotOp : OneFlow_BaseOp<"one_hot", []> {
+def OneFlow_OneHotOp : OneFlow_BaseOp<"one_hot", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$indices
   );
@@ -5728,7 +5728,7 @@ def OneFlow_OneHotOp : OneFlow_BaseOp<"one_hot", []> {
   }];
 }
 
-def OneFlow_OnerecDecoderOp : OneFlow_BaseOp<"onerec_decoder", []> {
+def OneFlow_OnerecDecoderOp : OneFlow_BaseOp<"onerec_decoder", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5751,7 +5751,7 @@ def OneFlow_OnerecDecoderOp : OneFlow_BaseOp<"onerec_decoder", []> {
   }];
 }
 
-def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", []> {
+def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$like
   );
@@ -5764,7 +5764,7 @@ def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", []> {
   }];
 }
 
-def OneFlow_PackOp : OneFlow_BaseOp<"pack", []> {
+def OneFlow_PackOp : OneFlow_BaseOp<"pack", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5780,7 +5780,7 @@ def OneFlow_PackOp : OneFlow_BaseOp<"pack", []> {
   }];
 }
 
-def OneFlow_PadOp : OneFlow_BaseOp<"pad", []> {
+def OneFlow_PadOp : OneFlow_BaseOp<"pad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -5799,7 +5799,7 @@ def OneFlow_PadOp : OneFlow_BaseOp<"pad", []> {
   }];
 }
 
-def OneFlow_PadGradOp : OneFlow_BaseOp<"pad_grad", []> {
+def OneFlow_PadGradOp : OneFlow_BaseOp<"pad_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -5818,7 +5818,7 @@ def OneFlow_PadGradOp : OneFlow_BaseOp<"pad_grad", []> {
   }];
 }
 
-def OneFlow_ParallelCastOp : OneFlow_BaseOp<"parallel_cast", []> {
+def OneFlow_ParallelCastOp : OneFlow_BaseOp<"parallel_cast", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5835,7 +5835,7 @@ def OneFlow_ParallelCastOp : OneFlow_BaseOp<"parallel_cast", []> {
   }];
 }
 
-def OneFlow_PowOp : OneFlow_BaseOp<"pow", []> {
+def OneFlow_PowOp : OneFlow_BaseOp<"pow", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -5849,7 +5849,7 @@ def OneFlow_PowOp : OneFlow_BaseOp<"pow", []> {
   }];
 }
 
-def OneFlow_PowXGradOp : OneFlow_BaseOp<"pow_x_grad", []> {
+def OneFlow_PowXGradOp : OneFlow_BaseOp<"pow_x_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -5864,7 +5864,7 @@ def OneFlow_PowXGradOp : OneFlow_BaseOp<"pow_x_grad", []> {
   }];
 }
 
-def OneFlow_PowYGradOp : OneFlow_BaseOp<"pow_y_grad", []> {
+def OneFlow_PowYGradOp : OneFlow_BaseOp<"pow_y_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -5879,7 +5879,7 @@ def OneFlow_PowYGradOp : OneFlow_BaseOp<"pow_y_grad", []> {
   }];
 }
 
-def OneFlow_PreluOp : OneFlow_BaseOp<"prelu", []> {
+def OneFlow_PreluOp : OneFlow_BaseOp<"prelu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$alpha
@@ -5893,7 +5893,7 @@ def OneFlow_PreluOp : OneFlow_BaseOp<"prelu", []> {
   }];
 }
 
-def OneFlow_PreluGradOp : OneFlow_BaseOp<"prelu_grad", []> {
+def OneFlow_PreluGradOp : OneFlow_BaseOp<"prelu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x,
@@ -5909,7 +5909,7 @@ def OneFlow_PreluGradOp : OneFlow_BaseOp<"prelu_grad", []> {
   }];
 }
 
-def OneFlow_QuantizationOp : OneFlow_BaseOp<"quantization", []> {
+def OneFlow_QuantizationOp : OneFlow_BaseOp<"quantization", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$scale,
@@ -5929,7 +5929,7 @@ def OneFlow_QuantizationOp : OneFlow_BaseOp<"quantization", []> {
   }];
 }
 
-def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", []> {
+def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$like
   );
@@ -5946,7 +5946,7 @@ def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", []> {
   }];
 }
 
-def OneFlow_RandpermOp : OneFlow_BaseOp<"randperm", []> {
+def OneFlow_RandpermOp : OneFlow_BaseOp<"randperm", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -5960,7 +5960,7 @@ def OneFlow_RandpermOp : OneFlow_BaseOp<"randperm", []> {
   }];
 }
 
-def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", []> {
+def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -5973,7 +5973,7 @@ def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", []> {
   }];
 }
 
-def OneFlow_ReciprocalGradOp : OneFlow_BaseOp<"reciprocal_grad", []> {
+def OneFlow_ReciprocalGradOp : OneFlow_BaseOp<"reciprocal_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -5987,7 +5987,7 @@ def OneFlow_ReciprocalGradOp : OneFlow_BaseOp<"reciprocal_grad", []> {
   }];
 }
 
-def OneFlow_ReciprocalNoNanOp : OneFlow_BaseOp<"reciprocal_no_nan", []> {
+def OneFlow_ReciprocalNoNanOp : OneFlow_BaseOp<"reciprocal_no_nan", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -6000,7 +6000,7 @@ def OneFlow_ReciprocalNoNanOp : OneFlow_BaseOp<"reciprocal_no_nan", []> {
   }];
 }
 
-def OneFlow_ReciprocalNoNanGradOp : OneFlow_BaseOp<"reciprocal_no_nan_grad", []> {
+def OneFlow_ReciprocalNoNanGradOp : OneFlow_BaseOp<"reciprocal_no_nan_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -6014,7 +6014,7 @@ def OneFlow_ReciprocalNoNanGradOp : OneFlow_BaseOp<"reciprocal_no_nan_grad", []>
   }];
 }
 
-def OneFlow_RecvOp : OneFlow_BaseOp<"recv", []> {
+def OneFlow_RecvOp : OneFlow_BaseOp<"recv", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -6031,7 +6031,7 @@ def OneFlow_RecvOp : OneFlow_BaseOp<"recv", []> {
   }];
 }
 
-def OneFlow_ReduceAllOp : OneFlow_BaseOp<"reduce_all", []> {
+def OneFlow_ReduceAllOp : OneFlow_BaseOp<"reduce_all", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input_tensor
   );
@@ -6048,7 +6048,7 @@ def OneFlow_ReduceAllOp : OneFlow_BaseOp<"reduce_all", []> {
   }];
 }
 
-def OneFlow_ReduceAnyOp : OneFlow_BaseOp<"reduce_any", []> {
+def OneFlow_ReduceAnyOp : OneFlow_BaseOp<"reduce_any", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input_tensor
   );
@@ -6065,7 +6065,7 @@ def OneFlow_ReduceAnyOp : OneFlow_BaseOp<"reduce_any", []> {
   }];
 }
 
-def OneFlow_ReduceMaxOp : OneFlow_BaseOp<"reduce_max", []> {
+def OneFlow_ReduceMaxOp : OneFlow_BaseOp<"reduce_max", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input_tensor
   );
@@ -6082,7 +6082,7 @@ def OneFlow_ReduceMaxOp : OneFlow_BaseOp<"reduce_max", []> {
   }];
 }
 
-def OneFlow_ReduceMaxDeviceStageOp : OneFlow_BaseOp<"reduce_max_device_stage", []> {
+def OneFlow_ReduceMaxDeviceStageOp : OneFlow_BaseOp<"reduce_max_device_stage", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6100,7 +6100,7 @@ def OneFlow_ReduceMaxDeviceStageOp : OneFlow_BaseOp<"reduce_max_device_stage", [
   }];
 }
 
-def OneFlow_ReduceMaxDeviceStageGradOp : OneFlow_BaseOp<"reduce_max_device_stage_grad", []> {
+def OneFlow_ReduceMaxDeviceStageGradOp : OneFlow_BaseOp<"reduce_max_device_stage_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$out_diff,
     AnyType:$mask,
@@ -6118,7 +6118,7 @@ def OneFlow_ReduceMaxDeviceStageGradOp : OneFlow_BaseOp<"reduce_max_device_stage
   }];
 }
 
-def OneFlow_ReduceMaxGlobalStageOp : OneFlow_BaseOp<"reduce_max_global_stage", []> {
+def OneFlow_ReduceMaxGlobalStageOp : OneFlow_BaseOp<"reduce_max_global_stage", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$device_count
@@ -6137,7 +6137,7 @@ def OneFlow_ReduceMaxGlobalStageOp : OneFlow_BaseOp<"reduce_max_global_stage", [
   }];
 }
 
-def OneFlow_ReduceMaxGlobalStageGradOp : OneFlow_BaseOp<"reduce_max_global_stage_grad", []> {
+def OneFlow_ReduceMaxGlobalStageGradOp : OneFlow_BaseOp<"reduce_max_global_stage_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$out_diff,
     AnyType:$mask,
@@ -6156,7 +6156,7 @@ def OneFlow_ReduceMaxGlobalStageGradOp : OneFlow_BaseOp<"reduce_max_global_stage
   }];
 }
 
-def OneFlow_ReduceMinOp : OneFlow_BaseOp<"reduce_min", []> {
+def OneFlow_ReduceMinOp : OneFlow_BaseOp<"reduce_min", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input_tensor
   );
@@ -6173,7 +6173,7 @@ def OneFlow_ReduceMinOp : OneFlow_BaseOp<"reduce_min", []> {
   }];
 }
 
-def OneFlow_ReduceMinDeviceStageOp : OneFlow_BaseOp<"reduce_min_device_stage", []> {
+def OneFlow_ReduceMinDeviceStageOp : OneFlow_BaseOp<"reduce_min_device_stage", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6191,7 +6191,7 @@ def OneFlow_ReduceMinDeviceStageOp : OneFlow_BaseOp<"reduce_min_device_stage", [
   }];
 }
 
-def OneFlow_ReduceMinDeviceStageGradOp : OneFlow_BaseOp<"reduce_min_device_stage_grad", []> {
+def OneFlow_ReduceMinDeviceStageGradOp : OneFlow_BaseOp<"reduce_min_device_stage_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$out_diff,
     AnyType:$mask,
@@ -6209,7 +6209,7 @@ def OneFlow_ReduceMinDeviceStageGradOp : OneFlow_BaseOp<"reduce_min_device_stage
   }];
 }
 
-def OneFlow_ReduceMinGlobalStageOp : OneFlow_BaseOp<"reduce_min_global_stage", []> {
+def OneFlow_ReduceMinGlobalStageOp : OneFlow_BaseOp<"reduce_min_global_stage", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$device_count
@@ -6228,7 +6228,7 @@ def OneFlow_ReduceMinGlobalStageOp : OneFlow_BaseOp<"reduce_min_global_stage", [
   }];
 }
 
-def OneFlow_ReduceMinGlobalStageGradOp : OneFlow_BaseOp<"reduce_min_global_stage_grad", []> {
+def OneFlow_ReduceMinGlobalStageGradOp : OneFlow_BaseOp<"reduce_min_global_stage_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$out_diff,
     AnyType:$mask,
@@ -6247,7 +6247,7 @@ def OneFlow_ReduceMinGlobalStageGradOp : OneFlow_BaseOp<"reduce_min_global_stage
   }];
 }
 
-def OneFlow_ReduceProdOp : OneFlow_BaseOp<"reduce_prod", []> {
+def OneFlow_ReduceProdOp : OneFlow_BaseOp<"reduce_prod", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input_tensor
   );
@@ -6264,7 +6264,7 @@ def OneFlow_ReduceProdOp : OneFlow_BaseOp<"reduce_prod", []> {
   }];
 }
 
-def OneFlow_ReduceSumOp : OneFlow_BaseOp<"reduce_sum", []> {
+def OneFlow_ReduceSumOp : OneFlow_BaseOp<"reduce_sum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input_tensor
   );
@@ -6281,7 +6281,7 @@ def OneFlow_ReduceSumOp : OneFlow_BaseOp<"reduce_sum", []> {
   }];
 }
 
-def OneFlow_ReduceSumLikeOp : OneFlow_BaseOp<"reduce_sum_like", []> {
+def OneFlow_ReduceSumLikeOp : OneFlow_BaseOp<"reduce_sum_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$like
@@ -6298,7 +6298,7 @@ def OneFlow_ReduceSumLikeOp : OneFlow_BaseOp<"reduce_sum_like", []> {
   }];
 }
 
-def OneFlow_ReflectionPad2DOp : OneFlow_BaseOp<"reflection_pad2d", []> {
+def OneFlow_ReflectionPad2DOp : OneFlow_BaseOp<"reflection_pad2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -6314,7 +6314,7 @@ def OneFlow_ReflectionPad2DOp : OneFlow_BaseOp<"reflection_pad2d", []> {
   }];
 }
 
-def OneFlow_ReflectionPad2DGradOp : OneFlow_BaseOp<"reflection_pad2d_grad", []> {
+def OneFlow_ReflectionPad2DGradOp : OneFlow_BaseOp<"reflection_pad2d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -6330,7 +6330,7 @@ def OneFlow_ReflectionPad2DGradOp : OneFlow_BaseOp<"reflection_pad2d_grad", []> 
   }];
 }
 
-def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", []> {
+def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6343,7 +6343,7 @@ def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", []> {
   }];
 }
 
-def OneFlow_ReluGradOp : OneFlow_BaseOp<"relu_grad", []> {
+def OneFlow_ReluGradOp : OneFlow_BaseOp<"relu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$y,
     AnyType:$dy
@@ -6357,7 +6357,7 @@ def OneFlow_ReluGradOp : OneFlow_BaseOp<"relu_grad", []> {
   }];
 }
 
-def OneFlow_RepeatOp : OneFlow_BaseOp<"repeat", []> {
+def OneFlow_RepeatOp : OneFlow_BaseOp<"repeat", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6373,7 +6373,7 @@ def OneFlow_RepeatOp : OneFlow_BaseOp<"repeat", []> {
   }];
 }
 
-def OneFlow_ReplicationPad2DOp : OneFlow_BaseOp<"replication_pad2d", []> {
+def OneFlow_ReplicationPad2DOp : OneFlow_BaseOp<"replication_pad2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -6389,7 +6389,7 @@ def OneFlow_ReplicationPad2DOp : OneFlow_BaseOp<"replication_pad2d", []> {
   }];
 }
 
-def OneFlow_ReplicationPad2DGradOp : OneFlow_BaseOp<"replication_pad2d_grad", []> {
+def OneFlow_ReplicationPad2DGradOp : OneFlow_BaseOp<"replication_pad2d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -6405,7 +6405,7 @@ def OneFlow_ReplicationPad2DGradOp : OneFlow_BaseOp<"replication_pad2d_grad", []
   }];
 }
 
-def OneFlow_ReshapeOp : OneFlow_BaseOp<"reshape", []> {
+def OneFlow_ReshapeOp : OneFlow_BaseOp<"reshape", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6421,7 +6421,7 @@ def OneFlow_ReshapeOp : OneFlow_BaseOp<"reshape", []> {
   }];
 }
 
-def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", []> {
+def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$like
@@ -6435,7 +6435,7 @@ def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", []> {
   }];
 }
 
-def OneFlow_RintOp : OneFlow_IdempotentBaseOp<"rint", []> {
+def OneFlow_RintOp : OneFlow_IdempotentBaseOp<"rint", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -6448,7 +6448,7 @@ def OneFlow_RintOp : OneFlow_IdempotentBaseOp<"rint", []> {
   }];
 }
 
-def OneFlow_RintGradOp : OneFlow_BaseOp<"rint_grad", []> {
+def OneFlow_RintGradOp : OneFlow_BaseOp<"rint_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -6462,7 +6462,7 @@ def OneFlow_RintGradOp : OneFlow_BaseOp<"rint_grad", []> {
   }];
 }
 
-def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", [AttrSizedOperandSegments]> {
+def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -6491,7 +6491,7 @@ def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", [AttrSizedOperand
   }];
 }
 
-def OneFlow_RollOp : OneFlow_BaseOp<"roll", []> {
+def OneFlow_RollOp : OneFlow_BaseOp<"roll", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6508,7 +6508,7 @@ def OneFlow_RollOp : OneFlow_BaseOp<"roll", []> {
   }];
 }
 
-def OneFlow_RoundOp : OneFlow_IdempotentBaseOp<"round", []> {
+def OneFlow_RoundOp : OneFlow_IdempotentBaseOp<"round", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -6521,7 +6521,7 @@ def OneFlow_RoundOp : OneFlow_IdempotentBaseOp<"round", []> {
   }];
 }
 
-def OneFlow_RoundGradOp : OneFlow_BaseOp<"round_grad", []> {
+def OneFlow_RoundGradOp : OneFlow_BaseOp<"round_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -6535,7 +6535,7 @@ def OneFlow_RoundGradOp : OneFlow_BaseOp<"round_grad", []> {
   }];
 }
 
-def OneFlow_RsqrtOp : OneFlow_BaseOp<"rsqrt", []> {
+def OneFlow_RsqrtOp : OneFlow_BaseOp<"rsqrt", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -6548,7 +6548,7 @@ def OneFlow_RsqrtOp : OneFlow_BaseOp<"rsqrt", []> {
   }];
 }
 
-def OneFlow_RsqrtGradOp : OneFlow_BaseOp<"rsqrt_grad", []> {
+def OneFlow_RsqrtGradOp : OneFlow_BaseOp<"rsqrt_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -6562,7 +6562,7 @@ def OneFlow_RsqrtGradOp : OneFlow_BaseOp<"rsqrt_grad", []> {
   }];
 }
 
-def OneFlow_SamePaddingOp : OneFlow_BaseOp<"same_padding", []> {
+def OneFlow_SamePaddingOp : OneFlow_BaseOp<"same_padding", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -6582,7 +6582,7 @@ def OneFlow_SamePaddingOp : OneFlow_BaseOp<"same_padding", []> {
   }];
 }
 
-def OneFlow_SamePaddingGradOp : OneFlow_BaseOp<"same_padding_grad", []> {
+def OneFlow_SamePaddingGradOp : OneFlow_BaseOp<"same_padding_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x_like,
     AnyType:$dy
@@ -6603,7 +6603,7 @@ def OneFlow_SamePaddingGradOp : OneFlow_BaseOp<"same_padding_grad", []> {
   }];
 }
 
-def OneFlow_ScalarAddOp : OneFlow_BaseOp<"scalar_add", []> {
+def OneFlow_ScalarAddOp : OneFlow_BaseOp<"scalar_add", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6622,7 +6622,7 @@ def OneFlow_ScalarAddOp : OneFlow_BaseOp<"scalar_add", []> {
   }];
 }
 
-def OneFlow_ScalarAddByTensorOp : OneFlow_BaseOp<"scalar_add_by_tensor", []> {
+def OneFlow_ScalarAddByTensorOp : OneFlow_BaseOp<"scalar_add_by_tensor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$scalar
@@ -6636,7 +6636,7 @@ def OneFlow_ScalarAddByTensorOp : OneFlow_BaseOp<"scalar_add_by_tensor", []> {
   }];
 }
 
-def OneFlow_ScalarDivByTensorOp : OneFlow_BaseOp<"scalar_div_by_tensor", []> {
+def OneFlow_ScalarDivByTensorOp : OneFlow_BaseOp<"scalar_div_by_tensor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$scalar
@@ -6650,7 +6650,7 @@ def OneFlow_ScalarDivByTensorOp : OneFlow_BaseOp<"scalar_div_by_tensor", []> {
   }];
 }
 
-def OneFlow_ScalarFloordivOp : OneFlow_BaseOp<"scalar_floordiv", []> {
+def OneFlow_ScalarFloordivOp : OneFlow_BaseOp<"scalar_floordiv", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6669,7 +6669,7 @@ def OneFlow_ScalarFloordivOp : OneFlow_BaseOp<"scalar_floordiv", []> {
   }];
 }
 
-def OneFlow_ScalarFmodOp : OneFlow_BaseOp<"scalar_fmod", []> {
+def OneFlow_ScalarFmodOp : OneFlow_BaseOp<"scalar_fmod", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6688,7 +6688,7 @@ def OneFlow_ScalarFmodOp : OneFlow_BaseOp<"scalar_fmod", []> {
   }];
 }
 
-def OneFlow_ScalarLogicalAndOp : OneFlow_BaseOp<"scalar_logical_and", []> {
+def OneFlow_ScalarLogicalAndOp : OneFlow_BaseOp<"scalar_logical_and", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6707,7 +6707,7 @@ def OneFlow_ScalarLogicalAndOp : OneFlow_BaseOp<"scalar_logical_and", []> {
   }];
 }
 
-def OneFlow_ScalarLogicalEqualOp : OneFlow_BaseOp<"scalar_logical_equal", []> {
+def OneFlow_ScalarLogicalEqualOp : OneFlow_BaseOp<"scalar_logical_equal", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6726,7 +6726,7 @@ def OneFlow_ScalarLogicalEqualOp : OneFlow_BaseOp<"scalar_logical_equal", []> {
   }];
 }
 
-def OneFlow_ScalarLogicalGreaterOp : OneFlow_BaseOp<"scalar_logical_greater", []> {
+def OneFlow_ScalarLogicalGreaterOp : OneFlow_BaseOp<"scalar_logical_greater", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6745,7 +6745,7 @@ def OneFlow_ScalarLogicalGreaterOp : OneFlow_BaseOp<"scalar_logical_greater", []
   }];
 }
 
-def OneFlow_ScalarLogicalGreaterEqualOp : OneFlow_BaseOp<"scalar_logical_greater_equal", []> {
+def OneFlow_ScalarLogicalGreaterEqualOp : OneFlow_BaseOp<"scalar_logical_greater_equal", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6764,7 +6764,7 @@ def OneFlow_ScalarLogicalGreaterEqualOp : OneFlow_BaseOp<"scalar_logical_greater
   }];
 }
 
-def OneFlow_ScalarLogicalLessOp : OneFlow_BaseOp<"scalar_logical_less", []> {
+def OneFlow_ScalarLogicalLessOp : OneFlow_BaseOp<"scalar_logical_less", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6783,7 +6783,7 @@ def OneFlow_ScalarLogicalLessOp : OneFlow_BaseOp<"scalar_logical_less", []> {
   }];
 }
 
-def OneFlow_ScalarLogicalLessEqualOp : OneFlow_BaseOp<"scalar_logical_less_equal", []> {
+def OneFlow_ScalarLogicalLessEqualOp : OneFlow_BaseOp<"scalar_logical_less_equal", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6802,7 +6802,7 @@ def OneFlow_ScalarLogicalLessEqualOp : OneFlow_BaseOp<"scalar_logical_less_equal
   }];
 }
 
-def OneFlow_ScalarLogicalNotEqualOp : OneFlow_BaseOp<"scalar_logical_not_equal", []> {
+def OneFlow_ScalarLogicalNotEqualOp : OneFlow_BaseOp<"scalar_logical_not_equal", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6821,7 +6821,7 @@ def OneFlow_ScalarLogicalNotEqualOp : OneFlow_BaseOp<"scalar_logical_not_equal",
   }];
 }
 
-def OneFlow_ScalarLogicalOrOp : OneFlow_BaseOp<"scalar_logical_or", []> {
+def OneFlow_ScalarLogicalOrOp : OneFlow_BaseOp<"scalar_logical_or", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6840,7 +6840,7 @@ def OneFlow_ScalarLogicalOrOp : OneFlow_BaseOp<"scalar_logical_or", []> {
   }];
 }
 
-def OneFlow_ScalarLogicalXorOp : OneFlow_BaseOp<"scalar_logical_xor", []> {
+def OneFlow_ScalarLogicalXorOp : OneFlow_BaseOp<"scalar_logical_xor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6859,7 +6859,7 @@ def OneFlow_ScalarLogicalXorOp : OneFlow_BaseOp<"scalar_logical_xor", []> {
   }];
 }
 
-def OneFlow_ScalarMulOp : OneFlow_BaseOp<"scalar_mul", []> {
+def OneFlow_ScalarMulOp : OneFlow_BaseOp<"scalar_mul", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6878,7 +6878,7 @@ def OneFlow_ScalarMulOp : OneFlow_BaseOp<"scalar_mul", []> {
   }];
 }
 
-def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", []> {
+def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$scalar
@@ -6892,7 +6892,7 @@ def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", []> {
   }];
 }
 
-def OneFlow_ScalarPowOp : OneFlow_BaseOp<"scalar_pow", []> {
+def OneFlow_ScalarPowOp : OneFlow_BaseOp<"scalar_pow", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6911,7 +6911,7 @@ def OneFlow_ScalarPowOp : OneFlow_BaseOp<"scalar_pow", []> {
   }];
 }
 
-def OneFlow_ScalarPowGradOp : OneFlow_BaseOp<"scalar_pow_grad", []> {
+def OneFlow_ScalarPowGradOp : OneFlow_BaseOp<"scalar_pow_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -6931,7 +6931,7 @@ def OneFlow_ScalarPowGradOp : OneFlow_BaseOp<"scalar_pow_grad", []> {
   }];
 }
 
-def OneFlow_ScalarSubByTensorOp : OneFlow_BaseOp<"scalar_sub_by_tensor", []> {
+def OneFlow_ScalarSubByTensorOp : OneFlow_BaseOp<"scalar_sub_by_tensor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$scalar
@@ -6945,7 +6945,7 @@ def OneFlow_ScalarSubByTensorOp : OneFlow_BaseOp<"scalar_sub_by_tensor", []> {
   }];
 }
 
-def OneFlow_ScatterNdOp : OneFlow_BaseOp<"scatter_nd", []> {
+def OneFlow_ScatterNdOp : OneFlow_BaseOp<"scatter_nd", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$indices,
     AnyType:$updates
@@ -6962,7 +6962,7 @@ def OneFlow_ScatterNdOp : OneFlow_BaseOp<"scatter_nd", []> {
   }];
 }
 
-def OneFlow_ScatterNdLikeOp : OneFlow_BaseOp<"scatter_nd_like", []> {
+def OneFlow_ScatterNdLikeOp : OneFlow_BaseOp<"scatter_nd_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$like,
     AnyType:$indices,
@@ -6977,7 +6977,7 @@ def OneFlow_ScatterNdLikeOp : OneFlow_BaseOp<"scatter_nd_like", []> {
   }];
 }
 
-def OneFlow_SeluOp : OneFlow_BaseOp<"selu", []> {
+def OneFlow_SeluOp : OneFlow_BaseOp<"selu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6990,7 +6990,7 @@ def OneFlow_SeluOp : OneFlow_BaseOp<"selu", []> {
   }];
 }
 
-def OneFlow_SeluGradOp : OneFlow_BaseOp<"selu_grad", []> {
+def OneFlow_SeluGradOp : OneFlow_BaseOp<"selu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7004,7 +7004,7 @@ def OneFlow_SeluGradOp : OneFlow_BaseOp<"selu_grad", []> {
   }];
 }
 
-def OneFlow_SendOp : OneFlow_BaseOp<"send", []> {
+def OneFlow_SendOp : OneFlow_BaseOp<"send", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7017,7 +7017,7 @@ def OneFlow_SendOp : OneFlow_BaseOp<"send", []> {
   }];
 }
 
-def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", [AttrSizedOperandSegments]> {
+def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -7041,7 +7041,7 @@ def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", [AttrSizedOperandSegments
   }];
 }
 
-def OneFlow_SigmoidOp : OneFlow_BaseOp<"sigmoid", []> {
+def OneFlow_SigmoidOp : OneFlow_BaseOp<"sigmoid", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7054,7 +7054,7 @@ def OneFlow_SigmoidOp : OneFlow_BaseOp<"sigmoid", []> {
   }];
 }
 
-def OneFlow_SigmoidCrossEntropyOp : OneFlow_BaseOp<"sigmoid_cross_entropy", []> {
+def OneFlow_SigmoidCrossEntropyOp : OneFlow_BaseOp<"sigmoid_cross_entropy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label
@@ -7068,7 +7068,7 @@ def OneFlow_SigmoidCrossEntropyOp : OneFlow_BaseOp<"sigmoid_cross_entropy", []> 
   }];
 }
 
-def OneFlow_SigmoidCrossEntropyGradOp : OneFlow_BaseOp<"sigmoid_cross_entropy_grad", []> {
+def OneFlow_SigmoidCrossEntropyGradOp : OneFlow_BaseOp<"sigmoid_cross_entropy_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$loss_diff,
@@ -7083,7 +7083,7 @@ def OneFlow_SigmoidCrossEntropyGradOp : OneFlow_BaseOp<"sigmoid_cross_entropy_gr
   }];
 }
 
-def OneFlow_SigmoidGradOp : OneFlow_BaseOp<"sigmoid_grad", []> {
+def OneFlow_SigmoidGradOp : OneFlow_BaseOp<"sigmoid_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$y,
     AnyType:$dy
@@ -7097,7 +7097,7 @@ def OneFlow_SigmoidGradOp : OneFlow_BaseOp<"sigmoid_grad", []> {
   }];
 }
 
-def OneFlow_SigmoidV2Op : OneFlow_BaseOp<"sigmoid_v2", []> {
+def OneFlow_SigmoidV2Op : OneFlow_BaseOp<"sigmoid_v2", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7110,7 +7110,7 @@ def OneFlow_SigmoidV2Op : OneFlow_BaseOp<"sigmoid_v2", []> {
   }];
 }
 
-def OneFlow_SigmoidV2GradOp : OneFlow_BaseOp<"sigmoid_v2_grad", []> {
+def OneFlow_SigmoidV2GradOp : OneFlow_BaseOp<"sigmoid_v2_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7124,7 +7124,7 @@ def OneFlow_SigmoidV2GradOp : OneFlow_BaseOp<"sigmoid_v2_grad", []> {
   }];
 }
 
-def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", []> {
+def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7137,7 +7137,7 @@ def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", []> {
   }];
 }
 
-def OneFlow_SignGradOp : OneFlow_BaseOp<"sign_grad", []> {
+def OneFlow_SignGradOp : OneFlow_BaseOp<"sign_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7151,7 +7151,7 @@ def OneFlow_SignGradOp : OneFlow_BaseOp<"sign_grad", []> {
   }];
 }
 
-def OneFlow_SiluOp : OneFlow_BaseOp<"silu", []> {
+def OneFlow_SiluOp : OneFlow_BaseOp<"silu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7164,7 +7164,7 @@ def OneFlow_SiluOp : OneFlow_BaseOp<"silu", []> {
   }];
 }
 
-def OneFlow_SiluGradOp : OneFlow_BaseOp<"silu_grad", []> {
+def OneFlow_SiluGradOp : OneFlow_BaseOp<"silu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7178,7 +7178,7 @@ def OneFlow_SiluGradOp : OneFlow_BaseOp<"silu_grad", []> {
   }];
 }
 
-def OneFlow_SinOp : OneFlow_BaseOp<"sin", []> {
+def OneFlow_SinOp : OneFlow_BaseOp<"sin", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7191,7 +7191,7 @@ def OneFlow_SinOp : OneFlow_BaseOp<"sin", []> {
   }];
 }
 
-def OneFlow_SinGradOp : OneFlow_BaseOp<"sin_grad", []> {
+def OneFlow_SinGradOp : OneFlow_BaseOp<"sin_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7205,7 +7205,7 @@ def OneFlow_SinGradOp : OneFlow_BaseOp<"sin_grad", []> {
   }];
 }
 
-def OneFlow_SinhOp : OneFlow_BaseOp<"sinh", []> {
+def OneFlow_SinhOp : OneFlow_BaseOp<"sinh", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7218,7 +7218,7 @@ def OneFlow_SinhOp : OneFlow_BaseOp<"sinh", []> {
   }];
 }
 
-def OneFlow_SinhGradOp : OneFlow_BaseOp<"sinh_grad", []> {
+def OneFlow_SinhGradOp : OneFlow_BaseOp<"sinh_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7232,7 +7232,7 @@ def OneFlow_SinhGradOp : OneFlow_BaseOp<"sinh_grad", []> {
   }];
 }
 
-def OneFlow_SliceOp : OneFlow_BaseOp<"slice", []> {
+def OneFlow_SliceOp : OneFlow_BaseOp<"slice", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7250,7 +7250,7 @@ def OneFlow_SliceOp : OneFlow_BaseOp<"slice", []> {
   }];
 }
 
-def OneFlow_SliceGradOp : OneFlow_BaseOp<"slice_grad", []> {
+def OneFlow_SliceGradOp : OneFlow_BaseOp<"slice_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$like
@@ -7269,7 +7269,7 @@ def OneFlow_SliceGradOp : OneFlow_BaseOp<"slice_grad", []> {
   }];
 }
 
-def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", []> {
+def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$update
@@ -7288,7 +7288,7 @@ def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", []> {
   }];
 }
 
-def OneFlow_SmoothL1LossOp : OneFlow_BaseOp<"smooth_l1_loss", []> {
+def OneFlow_SmoothL1LossOp : OneFlow_BaseOp<"smooth_l1_loss", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target
@@ -7306,7 +7306,7 @@ def OneFlow_SmoothL1LossOp : OneFlow_BaseOp<"smooth_l1_loss", []> {
   }];
 }
 
-def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", []> {
+def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -7325,7 +7325,7 @@ def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", []> {
   }];
 }
 
-def OneFlow_SoftmaxOp : OneFlow_BaseOp<"softmax", []> {
+def OneFlow_SoftmaxOp : OneFlow_BaseOp<"softmax", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7338,7 +7338,7 @@ def OneFlow_SoftmaxOp : OneFlow_BaseOp<"softmax", []> {
   }];
 }
 
-def OneFlow_SoftmaxCrossEntropyOp : OneFlow_BaseOp<"softmax_cross_entropy", []> {
+def OneFlow_SoftmaxCrossEntropyOp : OneFlow_BaseOp<"softmax_cross_entropy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label
@@ -7353,7 +7353,7 @@ def OneFlow_SoftmaxCrossEntropyOp : OneFlow_BaseOp<"softmax_cross_entropy", []> 
   }];
 }
 
-def OneFlow_SoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"softmax_cross_entropy_grad", []> {
+def OneFlow_SoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"softmax_cross_entropy_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$label,
@@ -7368,7 +7368,7 @@ def OneFlow_SoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"softmax_cross_entropy_gr
   }];
 }
 
-def OneFlow_SoftmaxGradOp : OneFlow_BaseOp<"softmax_grad", []> {
+def OneFlow_SoftmaxGradOp : OneFlow_BaseOp<"softmax_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$y,
     AnyType:$dy
@@ -7382,7 +7382,7 @@ def OneFlow_SoftmaxGradOp : OneFlow_BaseOp<"softmax_grad", []> {
   }];
 }
 
-def OneFlow_SoftplusOp : OneFlow_BaseOp<"softplus", []> {
+def OneFlow_SoftplusOp : OneFlow_BaseOp<"softplus", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7395,7 +7395,7 @@ def OneFlow_SoftplusOp : OneFlow_BaseOp<"softplus", []> {
   }];
 }
 
-def OneFlow_SoftplusGradOp : OneFlow_BaseOp<"softplus_grad", []> {
+def OneFlow_SoftplusGradOp : OneFlow_BaseOp<"softplus_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7409,7 +7409,7 @@ def OneFlow_SoftplusGradOp : OneFlow_BaseOp<"softplus_grad", []> {
   }];
 }
 
-def OneFlow_SoftsignOp : OneFlow_BaseOp<"softsign", []> {
+def OneFlow_SoftsignOp : OneFlow_BaseOp<"softsign", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7422,7 +7422,7 @@ def OneFlow_SoftsignOp : OneFlow_BaseOp<"softsign", []> {
   }];
 }
 
-def OneFlow_SoftsignGradOp : OneFlow_BaseOp<"softsign_grad", []> {
+def OneFlow_SoftsignGradOp : OneFlow_BaseOp<"softsign_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7436,7 +7436,7 @@ def OneFlow_SoftsignGradOp : OneFlow_BaseOp<"softsign_grad", []> {
   }];
 }
 
-def OneFlow_SortOp : OneFlow_BaseOp<"sort", []> {
+def OneFlow_SortOp : OneFlow_BaseOp<"sort", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7452,7 +7452,7 @@ def OneFlow_SortOp : OneFlow_BaseOp<"sort", []> {
   }];
 }
 
-def OneFlow_SparseCrossEntropyOp : OneFlow_BaseOp<"sparse_cross_entropy", []> {
+def OneFlow_SparseCrossEntropyOp : OneFlow_BaseOp<"sparse_cross_entropy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label
@@ -7469,7 +7469,7 @@ def OneFlow_SparseCrossEntropyOp : OneFlow_BaseOp<"sparse_cross_entropy", []> {
   }];
 }
 
-def OneFlow_SparseCrossEntropyGradOp : OneFlow_BaseOp<"sparse_cross_entropy_grad", []> {
+def OneFlow_SparseCrossEntropyGradOp : OneFlow_BaseOp<"sparse_cross_entropy_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label,
@@ -7487,7 +7487,7 @@ def OneFlow_SparseCrossEntropyGradOp : OneFlow_BaseOp<"sparse_cross_entropy_grad
   }];
 }
 
-def OneFlow_SparseCrossEntropyMsOp : OneFlow_BaseOp<"sparse_cross_entropy_ms", []> {
+def OneFlow_SparseCrossEntropyMsOp : OneFlow_BaseOp<"sparse_cross_entropy_ms", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label
@@ -7504,7 +7504,7 @@ def OneFlow_SparseCrossEntropyMsOp : OneFlow_BaseOp<"sparse_cross_entropy_ms", [
   }];
 }
 
-def OneFlow_SparseCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_cross_entropy_ms_grad", []> {
+def OneFlow_SparseCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_cross_entropy_ms_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label,
@@ -7522,7 +7522,7 @@ def OneFlow_SparseCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_cross_entropy_ms
   }];
 }
 
-def OneFlow_SparseSoftmaxCrossEntropyOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy", []> {
+def OneFlow_SparseSoftmaxCrossEntropyOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label
@@ -7540,7 +7540,7 @@ def OneFlow_SparseSoftmaxCrossEntropyOp : OneFlow_BaseOp<"sparse_softmax_cross_e
   }];
 }
 
-def OneFlow_SparseSoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_grad", []> {
+def OneFlow_SparseSoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$label,
     AnyType:$dy,
@@ -7558,7 +7558,7 @@ def OneFlow_SparseSoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"sparse_softmax_cro
   }];
 }
 
-def OneFlow_SparseSoftmaxCrossEntropyMsOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_ms", []> {
+def OneFlow_SparseSoftmaxCrossEntropyMsOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_ms", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label
@@ -7576,7 +7576,7 @@ def OneFlow_SparseSoftmaxCrossEntropyMsOp : OneFlow_BaseOp<"sparse_softmax_cross
   }];
 }
 
-def OneFlow_SparseSoftmaxCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_ms_grad", []> {
+def OneFlow_SparseSoftmaxCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_ms_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$label,
     AnyType:$dy,
@@ -7594,7 +7594,7 @@ def OneFlow_SparseSoftmaxCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_softmax_c
   }];
 }
 
-def OneFlow_SplitLikeOp : OneFlow_BaseOp<"split_like", []> {
+def OneFlow_SplitLikeOp : OneFlow_BaseOp<"split_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     Variadic<AnyType>:$like
@@ -7611,7 +7611,7 @@ def OneFlow_SplitLikeOp : OneFlow_BaseOp<"split_like", []> {
   }];
 }
 
-def OneFlow_SqrtOp : OneFlow_BaseOp<"sqrt", []> {
+def OneFlow_SqrtOp : OneFlow_BaseOp<"sqrt", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7624,7 +7624,7 @@ def OneFlow_SqrtOp : OneFlow_BaseOp<"sqrt", []> {
   }];
 }
 
-def OneFlow_SqrtGradOp : OneFlow_BaseOp<"sqrt_grad", []> {
+def OneFlow_SqrtGradOp : OneFlow_BaseOp<"sqrt_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7638,7 +7638,7 @@ def OneFlow_SqrtGradOp : OneFlow_BaseOp<"sqrt_grad", []> {
   }];
 }
 
-def OneFlow_SquareOp : OneFlow_BaseOp<"square", []> {
+def OneFlow_SquareOp : OneFlow_BaseOp<"square", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7651,7 +7651,7 @@ def OneFlow_SquareOp : OneFlow_BaseOp<"square", []> {
   }];
 }
 
-def OneFlow_SquareGradOp : OneFlow_BaseOp<"square_grad", []> {
+def OneFlow_SquareGradOp : OneFlow_BaseOp<"square_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7665,7 +7665,7 @@ def OneFlow_SquareGradOp : OneFlow_BaseOp<"square_grad", []> {
   }];
 }
 
-def OneFlow_SquareSumOp : OneFlow_BaseOp<"square_sum", []> {
+def OneFlow_SquareSumOp : OneFlow_BaseOp<"square_sum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7678,7 +7678,7 @@ def OneFlow_SquareSumOp : OneFlow_BaseOp<"square_sum", []> {
   }];
 }
 
-def OneFlow_SqueezeOp : OneFlow_BaseOp<"squeeze", []> {
+def OneFlow_SqueezeOp : OneFlow_BaseOp<"squeeze", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7694,7 +7694,7 @@ def OneFlow_SqueezeOp : OneFlow_BaseOp<"squeeze", []> {
   }];
 }
 
-def OneFlow_SspVariableProxyOp : OneFlow_BaseOp<"ssp_variable_proxy", []> {
+def OneFlow_SspVariableProxyOp : OneFlow_BaseOp<"ssp_variable_proxy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$var
   );
@@ -7711,7 +7711,7 @@ def OneFlow_SspVariableProxyOp : OneFlow_BaseOp<"ssp_variable_proxy", []> {
   }];
 }
 
-def OneFlow_SummaryWriteHistogramOp : OneFlow_BaseOp<"summary_write_histogram", []> {
+def OneFlow_SummaryWriteHistogramOp : OneFlow_BaseOp<"summary_write_histogram", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$step,
@@ -7723,7 +7723,7 @@ def OneFlow_SummaryWriteHistogramOp : OneFlow_BaseOp<"summary_write_histogram", 
   }];
 }
 
-def OneFlow_SummaryWriteImageOp : OneFlow_BaseOp<"summary_write_image", []> {
+def OneFlow_SummaryWriteImageOp : OneFlow_BaseOp<"summary_write_image", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$step,
@@ -7735,7 +7735,7 @@ def OneFlow_SummaryWriteImageOp : OneFlow_BaseOp<"summary_write_image", []> {
   }];
 }
 
-def OneFlow_SummaryWritePbOp : OneFlow_BaseOp<"summary_write_pb", []> {
+def OneFlow_SummaryWritePbOp : OneFlow_BaseOp<"summary_write_pb", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$step
@@ -7746,7 +7746,7 @@ def OneFlow_SummaryWritePbOp : OneFlow_BaseOp<"summary_write_pb", []> {
   }];
 }
 
-def OneFlow_SummaryWriteScalarOp : OneFlow_BaseOp<"summary_write_scalar", []> {
+def OneFlow_SummaryWriteScalarOp : OneFlow_BaseOp<"summary_write_scalar", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$step,
@@ -7758,7 +7758,7 @@ def OneFlow_SummaryWriteScalarOp : OneFlow_BaseOp<"summary_write_scalar", []> {
   }];
 }
 
-def OneFlow_TanOp : OneFlow_BaseOp<"tan", []> {
+def OneFlow_TanOp : OneFlow_BaseOp<"tan", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7771,7 +7771,7 @@ def OneFlow_TanOp : OneFlow_BaseOp<"tan", []> {
   }];
 }
 
-def OneFlow_TanGradOp : OneFlow_BaseOp<"tan_grad", []> {
+def OneFlow_TanGradOp : OneFlow_BaseOp<"tan_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7785,7 +7785,7 @@ def OneFlow_TanGradOp : OneFlow_BaseOp<"tan_grad", []> {
   }];
 }
 
-def OneFlow_TanhOp : OneFlow_BaseOp<"tanh", []> {
+def OneFlow_TanhOp : OneFlow_BaseOp<"tanh", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7798,7 +7798,7 @@ def OneFlow_TanhOp : OneFlow_BaseOp<"tanh", []> {
   }];
 }
 
-def OneFlow_TanhGradOp : OneFlow_BaseOp<"tanh_grad", []> {
+def OneFlow_TanhGradOp : OneFlow_BaseOp<"tanh_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7812,7 +7812,7 @@ def OneFlow_TanhGradOp : OneFlow_BaseOp<"tanh_grad", []> {
   }];
 }
 
-def OneFlow_TensorBufferToListOfTensorsOp : OneFlow_BaseOp<"tensor_buffer_to_list_of_tensors", []> {
+def OneFlow_TensorBufferToListOfTensorsOp : OneFlow_BaseOp<"tensor_buffer_to_list_of_tensors", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7830,7 +7830,7 @@ def OneFlow_TensorBufferToListOfTensorsOp : OneFlow_BaseOp<"tensor_buffer_to_lis
   }];
 }
 
-def OneFlow_TensorBufferToListOfTensorsV2Op : OneFlow_BaseOp<"tensor_buffer_to_list_of_tensors_v2", []> {
+def OneFlow_TensorBufferToListOfTensorsV2Op : OneFlow_BaseOp<"tensor_buffer_to_list_of_tensors_v2", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7848,7 +7848,7 @@ def OneFlow_TensorBufferToListOfTensorsV2Op : OneFlow_BaseOp<"tensor_buffer_to_l
   }];
 }
 
-def OneFlow_TensorBufferToTensorOp : OneFlow_BaseOp<"tensor_buffer_to_tensor", []> {
+def OneFlow_TensorBufferToTensorOp : OneFlow_BaseOp<"tensor_buffer_to_tensor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7865,7 +7865,7 @@ def OneFlow_TensorBufferToTensorOp : OneFlow_BaseOp<"tensor_buffer_to_tensor", [
   }];
 }
 
-def OneFlow_TensorScatterNdAddOp : OneFlow_BaseOp<"tensor_scatter_nd_add", []> {
+def OneFlow_TensorScatterNdAddOp : OneFlow_BaseOp<"tensor_scatter_nd_add", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$params,
     AnyType:$updates,
@@ -7880,7 +7880,7 @@ def OneFlow_TensorScatterNdAddOp : OneFlow_BaseOp<"tensor_scatter_nd_add", []> {
   }];
 }
 
-def OneFlow_TensorScatterNdUpdateOp : OneFlow_BaseOp<"tensor_scatter_nd_update", []> {
+def OneFlow_TensorScatterNdUpdateOp : OneFlow_BaseOp<"tensor_scatter_nd_update", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$params,
     AnyType:$updates,
@@ -7895,7 +7895,7 @@ def OneFlow_TensorScatterNdUpdateOp : OneFlow_BaseOp<"tensor_scatter_nd_update",
   }];
 }
 
-def OneFlow_TensorToTensorBufferOp : OneFlow_BaseOp<"tensor_to_tensor_buffer", []> {
+def OneFlow_TensorToTensorBufferOp : OneFlow_BaseOp<"tensor_to_tensor_buffer", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7911,7 +7911,7 @@ def OneFlow_TensorToTensorBufferOp : OneFlow_BaseOp<"tensor_to_tensor_buffer", [
   }];
 }
 
-def OneFlow_TestUserOpAttrAutoTypeOp : OneFlow_BaseOp<"test_user_op_attr_auto_type", []> {
+def OneFlow_TestUserOpAttrAutoTypeOp : OneFlow_BaseOp<"test_user_op_attr_auto_type", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7928,7 +7928,7 @@ def OneFlow_TestUserOpAttrAutoTypeOp : OneFlow_BaseOp<"test_user_op_attr_auto_ty
   }];
 }
 
-def OneFlow_TfPreluOp : OneFlow_BaseOp<"tf_prelu", []> {
+def OneFlow_TfPreluOp : OneFlow_BaseOp<"tf_prelu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$alpha
@@ -7942,7 +7942,7 @@ def OneFlow_TfPreluOp : OneFlow_BaseOp<"tf_prelu", []> {
   }];
 }
 
-def OneFlow_TfPreluGradOp : OneFlow_BaseOp<"tf_prelu_grad", []> {
+def OneFlow_TfPreluGradOp : OneFlow_BaseOp<"tf_prelu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x,
@@ -7958,7 +7958,7 @@ def OneFlow_TfPreluGradOp : OneFlow_BaseOp<"tf_prelu_grad", []> {
   }];
 }
 
-def OneFlow_TopKOp : OneFlow_BaseOp<"top_k", []> {
+def OneFlow_TopKOp : OneFlow_BaseOp<"top_k", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7975,7 +7975,7 @@ def OneFlow_TopKOp : OneFlow_BaseOp<"top_k", []> {
   }];
 }
 
-def OneFlow_TransposeOp : OneFlow_BaseOp<"transpose", []> {
+def OneFlow_TransposeOp : OneFlow_BaseOp<"transpose", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$input
   );
@@ -7991,7 +7991,7 @@ def OneFlow_TransposeOp : OneFlow_BaseOp<"transpose", []> {
   }];
 }
 
-def OneFlow_TrilOp : OneFlow_BaseOp<"tril", []> {
+def OneFlow_TrilOp : OneFlow_BaseOp<"tril", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8010,7 +8010,7 @@ def OneFlow_TrilOp : OneFlow_BaseOp<"tril", []> {
   }];
 }
 
-def OneFlow_TriuOp : OneFlow_BaseOp<"triu", []> {
+def OneFlow_TriuOp : OneFlow_BaseOp<"triu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8026,7 +8026,7 @@ def OneFlow_TriuOp : OneFlow_BaseOp<"triu", []> {
   }];
 }
 
-def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", []> {
+def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     Variadic<AnyType>:$in
   );
@@ -8039,7 +8039,7 @@ def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", []> {
   }];
 }
 
-def OneFlow_UnfoldOp : OneFlow_BaseOp<"unfold", []> {
+def OneFlow_UnfoldOp : OneFlow_BaseOp<"unfold", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8059,7 +8059,7 @@ def OneFlow_UnfoldOp : OneFlow_BaseOp<"unfold", []> {
   }];
 }
 
-def OneFlow_UnfoldTensorOp : OneFlow_BaseOp<"unfold_tensor", []> {
+def OneFlow_UnfoldTensorOp : OneFlow_BaseOp<"unfold_tensor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8077,7 +8077,7 @@ def OneFlow_UnfoldTensorOp : OneFlow_BaseOp<"unfold_tensor", []> {
   }];
 }
 
-def OneFlow_UnfoldTensorGradOp : OneFlow_BaseOp<"unfold_tensor_grad", []> {
+def OneFlow_UnfoldTensorGradOp : OneFlow_BaseOp<"unfold_tensor_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -8096,7 +8096,7 @@ def OneFlow_UnfoldTensorGradOp : OneFlow_BaseOp<"unfold_tensor_grad", []> {
   }];
 }
 
-def OneFlow_UniformOp : OneFlow_BaseOp<"uniform", []> {
+def OneFlow_UniformOp : OneFlow_BaseOp<"uniform", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -8113,7 +8113,7 @@ def OneFlow_UniformOp : OneFlow_BaseOp<"uniform", []> {
   }];
 }
 
-def OneFlow_UniformIntOp : OneFlow_BaseOp<"uniform_int", []> {
+def OneFlow_UniformIntOp : OneFlow_BaseOp<"uniform_int", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -8130,7 +8130,7 @@ def OneFlow_UniformIntOp : OneFlow_BaseOp<"uniform_int", []> {
   }];
 }
 
-def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", []> {
+def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8149,7 +8149,7 @@ def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", []> {
   }];
 }
 
-def OneFlow_UnpackOp : OneFlow_BaseOp<"unpack", []> {
+def OneFlow_UnpackOp : OneFlow_BaseOp<"unpack", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8165,7 +8165,7 @@ def OneFlow_UnpackOp : OneFlow_BaseOp<"unpack", []> {
   }];
 }
 
-def OneFlow_UnsortedBatchSegmentSumOp : OneFlow_BaseOp<"unsorted_batch_segment_sum", []> {
+def OneFlow_UnsortedBatchSegmentSumOp : OneFlow_BaseOp<"unsorted_batch_segment_sum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$data,
     AnyType:$segment_ids
@@ -8182,7 +8182,7 @@ def OneFlow_UnsortedBatchSegmentSumOp : OneFlow_BaseOp<"unsorted_batch_segment_s
   }];
 }
 
-def OneFlow_UnsortedSegmentSumOp : OneFlow_BaseOp<"unsorted_segment_sum", []> {
+def OneFlow_UnsortedSegmentSumOp : OneFlow_BaseOp<"unsorted_segment_sum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$data,
     AnyType:$segment_ids
@@ -8200,7 +8200,7 @@ def OneFlow_UnsortedSegmentSumOp : OneFlow_BaseOp<"unsorted_segment_sum", []> {
   }];
 }
 
-def OneFlow_UnsortedSegmentSumLikeOp : OneFlow_BaseOp<"unsorted_segment_sum_like", []> {
+def OneFlow_UnsortedSegmentSumLikeOp : OneFlow_BaseOp<"unsorted_segment_sum_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$data,
     AnyType:$segment_ids,
@@ -8218,7 +8218,7 @@ def OneFlow_UnsortedSegmentSumLikeOp : OneFlow_BaseOp<"unsorted_segment_sum_like
   }];
 }
 
-def OneFlow_UpsampleOp : OneFlow_BaseOp<"upsample", []> {
+def OneFlow_UpsampleOp : OneFlow_BaseOp<"upsample", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8238,7 +8238,7 @@ def OneFlow_UpsampleOp : OneFlow_BaseOp<"upsample", []> {
   }];
 }
 
-def OneFlow_UpsampleBicubic2DOp : OneFlow_BaseOp<"upsample_bicubic_2d", []> {
+def OneFlow_UpsampleBicubic2DOp : OneFlow_BaseOp<"upsample_bicubic_2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8257,7 +8257,7 @@ def OneFlow_UpsampleBicubic2DOp : OneFlow_BaseOp<"upsample_bicubic_2d", []> {
   }];
 }
 
-def OneFlow_UpsampleBicubic2DGradOp : OneFlow_BaseOp<"upsample_bicubic_2d_grad", []> {
+def OneFlow_UpsampleBicubic2DGradOp : OneFlow_BaseOp<"upsample_bicubic_2d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -8277,7 +8277,7 @@ def OneFlow_UpsampleBicubic2DGradOp : OneFlow_BaseOp<"upsample_bicubic_2d_grad",
   }];
 }
 
-def OneFlow_UpsampleBilinear2DOp : OneFlow_BaseOp<"upsample_bilinear_2d", []> {
+def OneFlow_UpsampleBilinear2DOp : OneFlow_BaseOp<"upsample_bilinear_2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8296,7 +8296,7 @@ def OneFlow_UpsampleBilinear2DOp : OneFlow_BaseOp<"upsample_bilinear_2d", []> {
   }];
 }
 
-def OneFlow_UpsampleBilinear2DGradOp : OneFlow_BaseOp<"upsample_bilinear_2d_grad", []> {
+def OneFlow_UpsampleBilinear2DGradOp : OneFlow_BaseOp<"upsample_bilinear_2d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -8316,7 +8316,7 @@ def OneFlow_UpsampleBilinear2DGradOp : OneFlow_BaseOp<"upsample_bilinear_2d_grad
   }];
 }
 
-def OneFlow_UpsampleGradOp : OneFlow_BaseOp<"upsample_grad", []> {
+def OneFlow_UpsampleGradOp : OneFlow_BaseOp<"upsample_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -8337,7 +8337,7 @@ def OneFlow_UpsampleGradOp : OneFlow_BaseOp<"upsample_grad", []> {
   }];
 }
 
-def OneFlow_UpsampleLinear1DOp : OneFlow_BaseOp<"upsample_linear_1d", []> {
+def OneFlow_UpsampleLinear1DOp : OneFlow_BaseOp<"upsample_linear_1d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8355,7 +8355,7 @@ def OneFlow_UpsampleLinear1DOp : OneFlow_BaseOp<"upsample_linear_1d", []> {
   }];
 }
 
-def OneFlow_UpsampleLinear1DGradOp : OneFlow_BaseOp<"upsample_linear_1d_grad", []> {
+def OneFlow_UpsampleLinear1DGradOp : OneFlow_BaseOp<"upsample_linear_1d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -8374,7 +8374,7 @@ def OneFlow_UpsampleLinear1DGradOp : OneFlow_BaseOp<"upsample_linear_1d_grad", [
   }];
 }
 
-def OneFlow_UpsampleNearest1DOp : OneFlow_BaseOp<"upsample_nearest_1d", []> {
+def OneFlow_UpsampleNearest1DOp : OneFlow_BaseOp<"upsample_nearest_1d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8391,7 +8391,7 @@ def OneFlow_UpsampleNearest1DOp : OneFlow_BaseOp<"upsample_nearest_1d", []> {
   }];
 }
 
-def OneFlow_UpsampleNearest1DGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad", []> {
+def OneFlow_UpsampleNearest1DGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -8409,7 +8409,7 @@ def OneFlow_UpsampleNearest1DGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad",
   }];
 }
 
-def OneFlow_UpsampleNearest2DOp : OneFlow_BaseOp<"upsample_nearest_2d", []> {
+def OneFlow_UpsampleNearest2DOp : OneFlow_BaseOp<"upsample_nearest_2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8427,7 +8427,7 @@ def OneFlow_UpsampleNearest2DOp : OneFlow_BaseOp<"upsample_nearest_2d", []> {
   }];
 }
 
-def OneFlow_UpsampleNearest2DGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad", []> {
+def OneFlow_UpsampleNearest2DGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -8446,7 +8446,7 @@ def OneFlow_UpsampleNearest2DGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad",
   }];
 }
 
-def OneFlow_UpsampleNearest3DOp : OneFlow_BaseOp<"upsample_nearest_3d", []> {
+def OneFlow_UpsampleNearest3DOp : OneFlow_BaseOp<"upsample_nearest_3d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8465,7 +8465,7 @@ def OneFlow_UpsampleNearest3DOp : OneFlow_BaseOp<"upsample_nearest_3d", []> {
   }];
 }
 
-def OneFlow_UpsampleNearest3DGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad", []> {
+def OneFlow_UpsampleNearest3DGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -8485,7 +8485,7 @@ def OneFlow_UpsampleNearest3DGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad",
   }];
 }
 
-def OneFlow_UpsampleTrilinear3DOp : OneFlow_BaseOp<"upsample_trilinear_3d", []> {
+def OneFlow_UpsampleTrilinear3DOp : OneFlow_BaseOp<"upsample_trilinear_3d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8505,7 +8505,7 @@ def OneFlow_UpsampleTrilinear3DOp : OneFlow_BaseOp<"upsample_trilinear_3d", []> 
   }];
 }
 
-def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_grad", []> {
+def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -8526,7 +8526,7 @@ def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_gr
   }];
 }
 
-def OneFlow_WhereOp : OneFlow_BaseOp<"where", []> {
+def OneFlow_WhereOp : OneFlow_BaseOp<"where", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$condition,
     AnyType:$x,
@@ -8541,7 +8541,7 @@ def OneFlow_WhereOp : OneFlow_BaseOp<"where", []> {
   }];
 }
 
-def OneFlow_WhereScalarXOp : OneFlow_BaseOp<"where_scalar_x", []> {
+def OneFlow_WhereScalarXOp : OneFlow_BaseOp<"where_scalar_x", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$condition,
     AnyType:$y
@@ -8561,7 +8561,7 @@ def OneFlow_WhereScalarXOp : OneFlow_BaseOp<"where_scalar_x", []> {
   }];
 }
 
-def OneFlow_WhereScalarXyOp : OneFlow_BaseOp<"where_scalar_xy", []> {
+def OneFlow_WhereScalarXyOp : OneFlow_BaseOp<"where_scalar_xy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$condition
   );
@@ -8584,7 +8584,7 @@ def OneFlow_WhereScalarXyOp : OneFlow_BaseOp<"where_scalar_xy", []> {
   }];
 }
 
-def OneFlow_WhereScalarYOp : OneFlow_BaseOp<"where_scalar_y", []> {
+def OneFlow_WhereScalarYOp : OneFlow_BaseOp<"where_scalar_y", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$condition,
     AnyType:$x
@@ -8604,7 +8604,7 @@ def OneFlow_WhereScalarYOp : OneFlow_BaseOp<"where_scalar_y", []> {
   }];
 }
 
-def OneFlow_XdivyOp : OneFlow_BaseOp<"xdivy", []> {
+def OneFlow_XdivyOp : OneFlow_BaseOp<"xdivy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -8618,7 +8618,7 @@ def OneFlow_XdivyOp : OneFlow_BaseOp<"xdivy", []> {
   }];
 }
 
-def OneFlow_XdivyXGradOp : OneFlow_BaseOp<"xdivy_x_grad", []> {
+def OneFlow_XdivyXGradOp : OneFlow_BaseOp<"xdivy_x_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -8633,7 +8633,7 @@ def OneFlow_XdivyXGradOp : OneFlow_BaseOp<"xdivy_x_grad", []> {
   }];
 }
 
-def OneFlow_XdivyYGradOp : OneFlow_BaseOp<"xdivy_y_grad", []> {
+def OneFlow_XdivyYGradOp : OneFlow_BaseOp<"xdivy_y_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -8648,7 +8648,7 @@ def OneFlow_XdivyYGradOp : OneFlow_BaseOp<"xdivy_y_grad", []> {
   }];
 }
 
-def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", []> {
+def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -8662,7 +8662,7 @@ def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", []> {
   }];
 }
 
-def OneFlow_XlogyXGradOp : OneFlow_BaseOp<"xlogy_x_grad", []> {
+def OneFlow_XlogyXGradOp : OneFlow_BaseOp<"xlogy_x_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -8677,7 +8677,7 @@ def OneFlow_XlogyXGradOp : OneFlow_BaseOp<"xlogy_x_grad", []> {
   }];
 }
 
-def OneFlow_XlogyYGradOp : OneFlow_BaseOp<"xlogy_y_grad", []> {
+def OneFlow_XlogyYGradOp : OneFlow_BaseOp<"xlogy_y_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -8692,7 +8692,7 @@ def OneFlow_XlogyYGradOp : OneFlow_BaseOp<"xlogy_y_grad", []> {
   }];
 }
 
-def OneFlow_ZeroLikeOp : OneFlow_BaseOp<"zero_like", []> {
+def OneFlow_ZeroLikeOp : OneFlow_BaseOp<"zero_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$like
   );
