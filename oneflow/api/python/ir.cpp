@@ -96,6 +96,30 @@ const std::set<std::string>& GetInvolutionOps() {
   static std::set<std::string> ret{"reciprocal", "negative"};
   return ret;
 }
+
+const std::set<std::string>& GetMathOps() {
+  static std::set<std::string> ret{"abs",         "acos",
+                                   "acosh",       "asin",
+                                   "asinh",       "atan",
+                                   "atanh",       "ceil",
+                                   "cos",         "cosh",
+                                   "erf",         "erfc",
+                                   "exp",         "expm1",
+                                   "floor",       "lgamma",
+                                   "log",         "log1p",
+                                   "log_sigmoid", "negative",
+                                   "reciprocal",  "reciprocal_no_nan",
+                                   "rint",        "round",
+                                   "rsqrt",       "sigmoid_v2",
+                                   "sign",        "sin",
+                                   "sinh",        "softplus",
+                                   "sqrt",        "square",
+                                   "tan",         "tanh"};
+  return ret;
+}
+bool IsMathOp(const std::string& op_name) {
+  return GetMathOps().find(op_name) != GetMathOps().end();
+}
 bool IsGradOp(const std::string& op_name) { return op_name.find("grad") != std::string::npos; }
 bool IsInvolutionOp(const std::string& op_name) {
   return GetInvolutionOps().find(op_name) != GetInvolutionOps().end() && !IsGradOp(op_name);
@@ -388,6 +412,7 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
     if (IsReduceOp(r.op_type_name)) { group_name = "reduce"; }
     if (IsReshapeOp(r.op_type_name)) { group_name = "reshape"; }
     if (IsLossOp(r.op_type_name)) { group_name = "loss"; }
+    if (IsMathOp(r.op_type_name)) { group_name = "math"; }
     if (IsSoftmaxOp(r.op_type_name)) { group_name = "Softmax"; }
     if (IsNCCLOp(r.op_type_name)) { group_name = "NCCL"; }
     if (IsAnyConvOp(r.op_type_name)) { group_name = "CONV"; }
