@@ -60,7 +60,7 @@ std::string DebugName(Instruction* instruction) {
 }  // namespace
 
 void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
-  OF_PROFILER_RANGE_GUARD("R:" + DebugName(instruction));
+  OF_PROFILER_RANGE_PUSH("R:" + DebugName(instruction));
   auto* access_list = instruction->mut_access_list();
   auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
   INTRUSIVE_FOR_EACH(access, access_list) {
@@ -83,16 +83,18 @@ void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
     out_edges->Erase(out_edge);
     out_instruction->mut_in_edges()->Erase(out_edge);
     if (Dispatchable(out_instruction)) {
-      OF_PROFILER_RANGE_GUARD("E:" + DebugName(out_instruction));
+      OF_PROFILER_RANGE_PUSH("E:" + DebugName(out_instruction));
       mut_ready_instruction_list()->PushBack(out_instruction);
+      OF_PROFILER_RANGE_POP();
     }
   }
   instruction->mut_stream()->DeleteInstruction(mut_lively_instruction_list()->Erase(instruction));
+  OF_PROFILER_RANGE_POP();
 }
 
 // Handle pending instructions, and try schedule them to ready list.
 void VirtualMachineEngine::HandlePending() {
-  OF_PROFILER_RANGE_GUARD("HandlePending");
+  OF_PROFILER_RANGE_PUSH("HandlePending");
   InstructionMsgList tmp_pending_msg_list;
   // MoveTo is under a lock.
   mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
@@ -104,7 +106,7 @@ void VirtualMachineEngine::HandlePending() {
       MakeInstructions(instr_msg, /*out*/ &new_instruction_list);
     }
   }
-  OF_PROFILER_RANGE_GUARD("ConsumeMirroredObjects");
+  OF_PROFILER_RANGE_PUSH("ConsumeMirroredObjects");
   INTRUSIVE_FOR_EACH_PTR(instruction, &new_instruction_list) {
     ConsumeMirroredObjects(mut_id2logical_object(), instruction);
     if (likely(Dispatchable(instruction))) {
@@ -112,6 +114,8 @@ void VirtualMachineEngine::HandlePending() {
       new_instruction_list.Erase(instruction);
     }
   }
+  OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_POP();
 }
 
 // Collect ready instructions onto ready_instruction_list_
@@ -493,7 +497,7 @@ bool VirtualMachineEngine::Dispatchable(Instruction* instruction) const {
 
 // Dispatch ready instructions and put prescheduled instructions onto ready_instruction_list_.
 void VirtualMachineEngine::DispatchAndPrescheduleInstructions() {
-  OF_PROFILER_RANGE_GUARD("DispatchAndPrescheduleInstructions");
+  OF_PROFILER_RANGE_PUSH("DispatchAndPrescheduleInstructions");
   ReadyInstructionList tmp_ready_instruction_list;
   mut_ready_instruction_list()->MoveTo(&tmp_ready_instruction_list);
   INTRUSIVE_FOR_EACH(instruction, &tmp_ready_instruction_list) {
@@ -508,10 +512,11 @@ void VirtualMachineEngine::DispatchAndPrescheduleInstructions() {
       }
     }
   }
+  OF_PROFILER_RANGE_POP();
 }
 
 void VirtualMachineEngine::DispatchInstruction(Instruction* instruction) {
-  OF_PROFILER_RANGE_GUARD("D:" + DebugName(instruction));
+  OF_PROFILER_RANGE_PUSH("D:" + DebugName(instruction));
   auto* stream = instruction->mut_stream();
   stream->mut_launching_instruction_list()->PushBack(instruction);
   if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
@@ -527,6 +532,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction) {
     src_instruction->mut_out_edges()->Erase(edge);
     instruction->mut_in_edges()->Erase(edge);
   }
+  OF_PROFILER_RANGE_POP();
 }
 
 void VirtualMachineEngine::__Init__(const VmDesc& vm_desc) {
@@ -688,7 +694,7 @@ void VirtualMachineEngine::TryRunBarrierInstruction() {
   if (likely(sequnential_instruction != mut_lively_instruction_list()->Begin())) { return; }
   // All instructions before `sequnential_instruction` are handled now, it's time to handle
   // `sequnential_instruction`.
-  OF_PROFILER_RANGE_GUARD("RunBarrierInstruction");
+  OF_PROFILER_RANGE_PUSH("RunBarrierInstruction");
   const auto& instr_type_id = sequnential_instruction->instr_msg().instr_type_id();
   const auto& instruction_type = instr_type_id.instruction_type();
   CHECK(instruction_type.IsFrontSequential());
@@ -697,6 +703,7 @@ void VirtualMachineEngine::TryRunBarrierInstruction() {
   stream_type.Run(this, sequnential_instruction);
   mut_barrier_instruction_list()->Erase(sequnential_instruction);
   mut_lively_instruction_list()->Erase(sequnential_instruction);
+  OF_PROFILER_RANGE_POP();
 }
 
 void VirtualMachineEngine::TryDeleteLogicalObjects() {

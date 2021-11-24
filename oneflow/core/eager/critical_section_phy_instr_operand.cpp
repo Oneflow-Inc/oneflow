@@ -49,10 +49,5 @@ void CriticalSectionBeginPhyInstrOperand::ForEachMutMirroredObject(
   DoEach(local_dep_object_->mut_mirrored_object());
 }
 
-void CriticalSectionEndPhyInstrOperand::ForEachMutMirroredObject(
-    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-  DoEach(CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object());
-}
-
 }  // namespace vm
 }  // namespace oneflow
