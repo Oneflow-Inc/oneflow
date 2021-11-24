@@ -13,11 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <algorithm>
 #include <array>
 #include <cstdint>
+#include <random>
+#include <thread>
+#include <vector>
 #include <gtest/gtest.h>
 #include "oneflow/api/cpp/api.h"
-#include "oneflow/api/cpp/dtype.h"
 
 namespace oneflow_api {
 namespace {
@@ -27,6 +30,33 @@ class EnvScope {  // NOLINT
   EnvScope() { initialize(); }
   ~EnvScope() { release(); }
 };
+
+std::mt19937 rng(std::random_device{}());
+
+Shape randomShape() {
+  std::uniform_int_distribution<> dist_ndim(1, 4), dist_dims(16, 64);
+  std::vector<std::int64_t> dims(dist_ndim(rng), 0);
+  for (auto& x : dims) { x = dist_dims(rng); }
+  return Shape(dims);
+}
+
+template<typename T>
+std::vector<T> randomData(size_t size) {
+  std::uniform_int_distribution<> dist(-100, 100);
+  std::vector<T> data(size);
+  for (auto& x : data) { x = static_cast<T>(dist(rng)); }
+  return data;
+}
+
+template<typename T>
+std::vector<T> relu(const std::vector<T>& data) {
+  std::vector<T> result(data.begin(), data.end());
+  T zero = static_cast<T>(0);
+  for (auto& x : result) {
+    if (x < zero) { x = zero; }
+  }
+  return result;
+}
 
 }  // namespace
 
@@ -51,7 +81,7 @@ TEST(Api, tensor) {
   EnvScope scope;
 
   const auto device = Device("cpu");
-  const auto shape = Shape({16, 8, 224, 224});
+  const auto shape = randomShape();
   const auto dtype = DType::kDouble;
 
   Tensor tensor;
@@ -83,30 +113,45 @@ TEST(Api, tensor_from_and_to_blob) {
 TEST(Api, tensor_zeros) {
   EnvScope scope;
 
-  std::array<float, 8> data{}, target_data{};
-  target_data.fill(0);
+  const auto shape = randomShape();
 
-  Tensor tensor({2, 2, 2}, Device("cpu"), DType::kFloat);
+  std::vector<float> data(shape.Count(0)), target_data(shape.Count(0));
+
+  Tensor tensor(shape, Device("cpu"), DType::kFloat);
   tensor.zeros_();
-
   tensor.copy_to(data.data());
+
+  std::fill(target_data.begin(), target_data.end(), 0);
 
   ASSERT_EQ(data, target_data);
 }
 
-TEST(Api, nn) {
+TEST(Api, nn_relu) {
   EnvScope scope;
 
-  std::array<float, 8> data{-3, -2, -1, 0, 1, 2, 3, 4};
-  std::array<float, 8> target_data{0, 0, 0, 0, 1, 2, 3, 4};
-  std::array<float, 8> result_data{};
+  const auto testRelu = []() {
+    const auto shape = randomShape();
+    const auto data = randomData<float>(shape.Count(0));
+    const auto target_data = relu(data);
+    std::vector<float> result(shape.Count(0));
 
-  auto tensor = Tensor::from_blob(data.data(), {2, 2, 2}, Device("cpu"), DType::kFloat);
-  auto result = nn::relu(tensor);
+    auto tensor = Tensor::from_blob(data.data(), shape, Device("cpu"), DType::kFloat);
+    auto result_tensor = nn::relu(tensor);
 
-  result.copy_to(result_data.data());
+    result_tensor.copy_to(result.data());
 
-  ASSERT_EQ(result_data, target_data);
+    ASSERT_EQ(result, target_data);
+  };
+
+  testRelu();
+
+  std::vector<std::thread> threads;
+  std::uniform_int_distribution<> dist(8, 32);
+  int n_threads = dist(rng);
+
+  for (int i = 0; i < n_threads; ++i) { threads.emplace_back(std::thread(testRelu)); }
+
+  for (auto& x : threads) { x.join(); }
 }
 
 }  // namespace oneflow_api

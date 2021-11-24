@@ -48,7 +48,7 @@ class Tensor final {
   template<typename T>
   void copy_to(T* blob);
 
-  static Tensor from_blob(void* blob, const Shape& shape, const Device& device, const DType& dtype);
+  static Tensor from_blob(const void* blob, const Shape& shape, const Device& device, const DType& dtype);
 
  private:
   std::shared_ptr<oneflow::one::Tensor> tensor_ = nullptr;

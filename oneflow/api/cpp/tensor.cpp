@@ -68,7 +68,8 @@ void Tensor::zeros_() {
   }).GetOrThrow();
 }
 
-Tensor Tensor::from_blob(void* blob, const Shape& shape, const Device& device, const DType& dtype) {
+Tensor Tensor::from_blob(const void* blob, const Shape& shape, const Device& device,
+                         const DType& dtype) {
   Tensor tensor(shape, device, dtype);
   std::shared_ptr<of::one::MirroredTensor> local_tensor =
       tensor.tensor_->AsMirroredTensor().GetPtrOrThrow();
@@ -76,7 +77,7 @@ Tensor Tensor::from_blob(void* blob, const Shape& shape, const Device& device, c
     return builder->AccessBlobByCallback(
         local_tensor,
         [blob, shape, dtype](uint64_t ofblob_ptr) {
-          CHECK_JUST(of::OfBlobCopyBuffer<char>::From(ofblob_ptr, static_cast<char*>(blob),
+          CHECK_JUST(of::OfBlobCopyBuffer<char>::From(ofblob_ptr, static_cast<const char*>(blob),
                                                       shape.Count(0) * getDTypeSize(dtype)));
         },
         "mut");
