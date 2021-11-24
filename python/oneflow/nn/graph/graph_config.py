@@ -145,6 +145,15 @@ class GraphConfig(object):
         """
         self.proto.mutable_xrt_config().set_use_openvino(value)
 
+    def enable_cudnn_conv_heuristic_search_algo(self, mode: bool = True):
+        """ Whether enable cudnn conv operatioin to use heuristic search algorithm.
+    
+        Args:
+            mode (bool, optional): Whether enable cudnn conv operatioin to use heuristic
+                                   search algorithm. Default is True.
+        """
+        self.proto.set_cudnn_conv_heuristic_search_algo(mode)
+
     def _generate_optimizer_and_variable_configs(
         self, opt_dict: OptDict = None, variables_conf: OrderedDict = None,
     ):
