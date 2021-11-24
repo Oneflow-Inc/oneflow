@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/to_string.h"
@@ -462,6 +463,22 @@ Maybe<void> Operator::GetSbpSignaturesIf(
       .Broadcast(input_bns())
       .Broadcast(output_bns())
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> Operator::GetNdSbpSignaturesIf(
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& ndsbp_sig_list) const {
+  // Get 1D sbp signature list
+  cfg::SbpSignatureList sbp_sig_list;
+  JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &sbp_sig_list));
+
+  int32_t sbp_dimension = parallel_desc.hierarchy()->NumAxes();
+  cfg::NdSbpSignature nd_sbp_sig;
+  ResizeNdSbpSignature(nd_sbp_sig, sbp_dimension);
+  // ND sbp signature list would be direct product of 1D sbp signatures
+  DFS_SetNdSbpSignature(nd_sbp_sig, 0, sbp_dimension, ndsbp_sig_list, &sbp_sig_list);
+
   return Maybe<void>::Ok();
 }
 
