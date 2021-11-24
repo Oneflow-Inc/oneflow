@@ -13,19 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_OP_SCHEMA_H_
-#define ONEFLOW_CORE_FRAMEWORK_OP_SCHEMA_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_OP_INTERP_CTX_H_
+#define ONEFLOW_CORE_FRAMEWORK_OP_INTERP_CTX_H_
 
 #include <string>
 #include <vector>
 
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/framework/attr_value.h"
+#include "oneflow/core/framework/op_kernel.h"
 
 namespace oneflow {
 
-class OpSchema {
+class OpInterpCtx {
  public:
   template<typename T>
   Maybe<const T&> GetAttr(const char* attr_name) const {
@@ -33,9 +33,22 @@ class OpSchema {
   }
 
   virtual Maybe<const void*> GetAttr(const char* attr_name) const = 0;
+
+ public:
+  Optional<Symbol<Device>> device;               // for local op
+  Optional<Symbol<ParallelDesc>> parallel_desc;  // for consistent op
+  Optional<Symbol<cfg::NdSbp>> nd_sbp;           // for consistent op
+  Optional<user_op::OpKernelState> state;
 };
 
-class ConstantOpSchema : public OpSchema {
+class DefaultOpInterpCtx : public OpInterpCtx {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    return Error::RuntimeError() << "Should not access attribute for `DefaultOpInterpCtx`.";
+  }
+};
+
+class ConstantOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "shape")) {
@@ -64,7 +77,7 @@ class ConstantOpSchema : public OpSchema {
   std::vector<std::string> nd_sbp;
 };
 
-class ReshapeOpSchema : public OpSchema {
+class ReshapeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "shape")) {
@@ -78,7 +91,7 @@ class ReshapeOpSchema : public OpSchema {
   Shape shape;
 };
 
-class CastOpSchema : public OpSchema {
+class CastOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "dtype")) {
@@ -92,7 +105,7 @@ class CastOpSchema : public OpSchema {
   DataType dtype;
 };
 
-class ScalarLogicalOpSchema : public OpSchema {
+class ScalarLogicalOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "float_operand")) {
@@ -115,7 +128,7 @@ class ScalarLogicalOpSchema : public OpSchema {
   bool has_int_operand;
 };
 
-class ArgWhereOpSchema : public OpSchema {
+class ArgWhereOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "dtype")) {
@@ -129,7 +142,7 @@ class ArgWhereOpSchema : public OpSchema {
   DataType dtype;
 };
 
-class SliceOpSchema : public OpSchema {
+class SliceOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "start")) {
@@ -149,7 +162,7 @@ class SliceOpSchema : public OpSchema {
   std::vector<int64_t> step;
 };
 
-class FlattenOpSchema : public OpSchema {
+class FlattenOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "start_dim")) {
@@ -166,7 +179,7 @@ class FlattenOpSchema : public OpSchema {
   int32_t end_dim;
 };
 
-class ReduceOpSchema : public OpSchema {
+class ReduceOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "axis")) {
@@ -183,11 +196,11 @@ class ReduceOpSchema : public OpSchema {
   bool keepdims;
 };
 
-class ReduceMinOpSchema : public ReduceOpSchema {};
-class ReduceMaxOpSchema : public ReduceOpSchema {};
-class ReduceSumOpSchema : public ReduceOpSchema {};
+class ReduceMinOpInterpCtx : public ReduceOpInterpCtx {};
+class ReduceMaxOpInterpCtx : public ReduceOpInterpCtx {};
+class ReduceSumOpInterpCtx : public ReduceOpInterpCtx {};
 
-class ConcatOpSchema : public OpSchema {
+class ConcatOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "axis")) {
@@ -204,7 +217,7 @@ class ConcatOpSchema : public OpSchema {
   int64_t max_dim_size;
 };
 
-class ExpandDimsOpSchema : public OpSchema {
+class ExpandDimsOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "axis")) {
@@ -218,7 +231,7 @@ class ExpandDimsOpSchema : public OpSchema {
   int32_t axis;
 };
 
-class MatMulOpSchema : public OpSchema {
+class MatMulOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "transpose_a")) {
@@ -238,8 +251,12 @@ class MatMulOpSchema : public OpSchema {
   double alpha;
 };
 
-class BatchMatMulOpSchema : public MatMulOpSchema {};
+class BatchMatMulOpInterpCtx : public MatMulOpInterpCtx {};
+
+class BernoulliOpInterpCtx : public OpInterpCtx {
+ public:
+};
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_OP_SCHEMA_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_OP_INTERP_CTX_H_

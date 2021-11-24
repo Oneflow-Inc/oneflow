@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_UTIL_H_
 #define ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_UTIL_H_
 
-#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/op_arg_util.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -32,36 +31,27 @@ namespace one {
 class OpInterpUtil {
  public:
   template<typename T>
-  static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs, const AttrMap& attrs) {
-    return Dispatch<T>(op_expr, inputs, OpExprInterpContext(attrs));
-  }
-
-  template<typename T>
   static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs) {
-    return Dispatch<T>(op_expr, inputs, OpExprInterpContext(AttrMap{}));
+    return Dispatch<T>(op_expr, inputs, std::make_shared<DefaultOpInterpCtx>());
   }
 
   template<typename T>
   static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
-                           const OpExprInterpContext& ctx);
-
-  static Maybe<void> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
-                              TensorTuple* outputs, const AttrMap& attrs) {
-    return Dispatch(op_expr, inputs, outputs, OpExprInterpContext(attrs));
-  }
+                           const std::shared_ptr<OpInterpCtx>& ctx);
 
   static Maybe<void> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
                               TensorTuple* outputs) {
-    return Dispatch(op_expr, inputs, outputs, OpExprInterpContext(AttrMap{}));
+    return Dispatch(op_expr, inputs, outputs, std::make_shared<DefaultOpInterpCtx>());
   }
 
   static Maybe<void> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
-                              TensorTuple* outputs, const OpExprInterpContext& ctx);
+                              TensorTuple* outputs, const std::shared_ptr<OpInterpCtx>& ctx);
 
   static Maybe<cfg::OpAttribute> AddOpAndInferOpAttribute(const OperatorConf& op_conf,
                                                           const bool is_mirrored_strategy_enabled);
 
-  static Maybe<OperatorConf> GenBuiltinOpConf(const BuiltinOpExpr& op_expr, const AttrMap& attrs);
+  static Maybe<OperatorConf> GenBuiltinOpConf(const BuiltinOpExpr& op_expr,
+                                              const std::shared_ptr<OpInterpCtx>& ctx);
 
   static Maybe<Tensor> BuildTensor(
       const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,

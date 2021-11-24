@@ -65,19 +65,20 @@ std::string ErrorString4Inputs(const TensorTuple& inputs, const OpExpr& op_expr)
   return error_str.str();
 }
 
-Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExprInterpContext& ctx,
+Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs,
+                                          const std::shared_ptr<OpInterpCtx>& ctx,
                                           const OpExpr& op_expr) {
   static const auto& g_lazy_interpreter = BuildLazyInterpreter();
   static const auto& g_eager_consistent_interpreter = BuildEagerInterpreter(/*is_mirrored=*/false);
   static const auto& g_eager_mirrored_interpreter = BuildEagerInterpreter(/*is_mirrored=*/true);
   if (!LazyMode::is_enabled()) {
     if (inputs.empty()) {
-      if (ctx.parallel_desc.has_value()) {
-        JUST(ctx.nd_sbp);
-        CHECK_OR_RETURN(!ctx.device.has_value());
+      if (ctx->parallel_desc.has_value()) {
+        JUST(ctx->nd_sbp);
+        CHECK_OR_RETURN(!ctx->device.has_value());
         return g_eager_consistent_interpreter;
       } else {
-        CHECK_OR_RETURN(!ctx.nd_sbp.has_value());
+        CHECK_OR_RETURN(!ctx->nd_sbp.has_value());
         return g_eager_mirrored_interpreter;
       }
     } else {
@@ -126,7 +127,7 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExp
 
 template<>
 /* static */ Maybe<TensorTuple> OpInterpUtil::Dispatch<TensorTuple>(
-    const OpExpr& op_expr, const TensorTuple& inputs, const OpExprInterpContext& ctx) {
+    const OpExpr& op_expr, const TensorTuple& inputs, const std::shared_ptr<OpInterpCtx>& ctx) {
   auto outputs = std::make_shared<TensorTuple>(op_expr.output_size());
   JUST(Dispatch(op_expr, inputs, outputs.get(), ctx));
   return outputs;
@@ -135,13 +136,13 @@ template<>
 template<>
 /* static */ Maybe<Tensor> OpInterpUtil::Dispatch<Tensor>(const OpExpr& op_expr,
                                                           const TensorTuple& inputs,
-                                                          const OpExprInterpContext& ctx) {
+                                                          const std::shared_ptr<OpInterpCtx>& ctx) {
   return JUST(Dispatch<TensorTuple>(op_expr, inputs, ctx))->at(0);
 }
 
 /* static */ Maybe<void> OpInterpUtil::Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
                                                 TensorTuple* outputs,
-                                                const OpExprInterpContext& ctx) {
+                                                const std::shared_ptr<OpInterpCtx>& ctx) {
   return JUST(GetInterpreter(inputs, ctx, op_expr))->Apply(op_expr, inputs, outputs, ctx);
 }
 
@@ -158,8 +159,8 @@ template<>
   return std::make_shared<cfg::OpAttribute>(*op_attribute);
 }
 
-/* static */ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(const BuiltinOpExpr& op_expr,
-                                                                const AttrMap& attrs) {
+/* static */ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(
+    const BuiltinOpExpr& op_expr, const std::shared_ptr<OpInterpCtx>& ctx) {
   auto op_conf = std::make_shared<OperatorConf>();
   JUST(op_expr.BuildOpConf(op_conf.get(), attrs));
   return op_conf;

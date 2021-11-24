@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/id_util.h"
-#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -262,8 +261,8 @@ class SendFunctor {
  public:
   SendFunctor() { op_expr_ = CHECK_JUST(one::OpBuilder("send").Input("in").Build()); }
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& x, int64_t dst, bool send_meta) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("dst_process_id", dst));
+    auto ctx = std::make_shared<SendOpInterpCtx>();
+    ctx->dst_process_id = dst;
     if (send_meta) {
       std::shared_ptr<FlatShape> flat_shape = JUST(FlatShape::New(*x->shape()));
       JUST(ccl::Send<DeviceType::kCPU>(flat_shape.get(), sizeof(*flat_shape), DataType::kChar, dst,
@@ -276,7 +275,7 @@ class SendFunctor {
       JUST(ccl::Send<DeviceType::kCPU>(&device_type, sizeof(device_type), DataType::kChar, dst,
                                        nullptr));
     }
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_expr_, {x}, attrs));
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_expr_, {x}, ctx));
     return Maybe<void>::Ok();
   }
 
@@ -291,8 +290,8 @@ class RecvFunctor {
                            const Optional<Symbol<DType>>& optional_dtype,
                            const Optional<Symbol<Device>>& optional_device,
                            const Optional<one::Tensor>& out) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("src_process_id", src));
+    auto ctx = std::make_shared<RecvOpInterpCtx>();
+    ctx->src_process_id = src;
     Shape shape;
     DataType data_type = DataType::kInvalidDataType;
     Symbol<Device> device;
@@ -317,23 +316,21 @@ class RecvFunctor {
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "All or none of shape, dtype and device should have value.";
     }
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", data_type));
-    JUST(attrs.SetAttr<std::string>("device_type", device->type()));
-    JUST(attrs.SetAttr<int64_t>("device_id", device->device_id()));
-
-    OpExprInterpContext op_expr_interp_context(attrs, device);
-
+    ctx->shape = shape;
+    ctx->dtype = data_type;
+    ctx->device_type = device->type();
+    ctx->device_id = device->device_id();
+    ctx->device = device;
     if (out.has_value()) {
       std::shared_ptr<one::Tensor> out_tensor = JUST(out);
       Symbol<Device> out_tensor_device = JUST(out_tensor->device());
       CHECK_OR_RETURN(out_tensor_device == device);
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = out_tensor;
-      JUST(OpInterpUtil::Dispatch(*op_expr_, {}, outputs.get(), op_expr_interp_context));
+      JUST(OpInterpUtil::Dispatch(*op_expr_, {}, outputs.get(), ctx));
       return outputs->at(0);
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_expr_, {}, op_expr_interp_context);
+    return OpInterpUtil::Dispatch<Tensor>(*op_expr_, {}, ctx);
   }
 
  private:

@@ -40,16 +40,17 @@ Maybe<one::Tensor> ReinterpterConsistentTensor(const std::shared_ptr<one::Tensor
                                                Symbol<ParallelDesc> parallel_desc,
                                                Symbol<cfg::NdSbp> nd_sbp) {
   const auto& op = JUST(GetLocalToConsistentOpExpr());
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<Shape>("shape", shape));
-  JUST(attrs.SetAttr<DataType>("dtype", tensor->dtype()->data_type()));
+  auto ctx = std::make_shared<CastToConsistentOpInterpCtx>();
+  ctx->shape = shape;
+  ctx->dtype = tensor->dtype()->data_type();
+  ctx->parallel_desc = parallel_desc;
+  ctx->nd_sbp = nd_sbp;
   const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
   std::shared_ptr<Shape> pyhsical_shape =
       JUST(GetPhysicalShape(shape, *nd_sbp, *parallel_desc, JUST(*parallel_id)));
   std::shared_ptr<one::Tensor> x = JUST(tensor->cur_rank_phy_tensor());
   if (*x->shape() != *pyhsical_shape) { x = JUST(one::functional::Reshape(x, *pyhsical_shape)); }
-  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(
-      *op, {x}, one::OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
+  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op, {x}, ctx));
 }
 
 Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input,

@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 #include "oneflow/core/common/scalar.h"
-#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -30,7 +29,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/functional/tensor_processor.h"
 
-#include "oneflow/core/framework/op_schema.h"
+#include "oneflow/core/framework/op_interp_ctx.h"
 
 namespace oneflow {
 namespace one {
@@ -82,13 +81,13 @@ class ScalarMathBaseFunctor {
     if (std::dynamic_pointer_cast<StaticZerosTensor>(x) && op_->op_type_name() == "scalar_mul") {
       return x;
     }
-    MutableAttrMap attrs;
+    auto ctx = std::make_shared<ScalarMathOpInterpCtx>();
     TensorProcessor tensor_processor;
     Symbol<DType> lowest_dtype;
     if (scalar.IsFloatingPoint()) {
-      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
-      JUST(attrs.SetAttr<bool>("has_float_operand", true));
-      JUST(attrs.SetAttr<bool>("has_int_operand", false));
+      ctx->float_operand = JUST(scalar.As<double>());
+      ctx->has_float_operand = true;
+      ctx->has_int_operand = false;
       // Only promote type to Float32 when tensor is Int type but scalar is float type.
       if (DType::priority_order[x->dtype()->data_type()]
           < DType::priority_order[DType::Float16()->data_type()]) {
@@ -97,9 +96,9 @@ class ScalarMathBaseFunctor {
         lowest_dtype = x->dtype();
       }
     } else if (scalar.IsIntegral()) {
-      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
-      JUST(attrs.SetAttr<bool>("has_float_operand", false));
-      JUST(attrs.SetAttr<bool>("has_int_operand", true));
+      ctx->int_operand = JUST(scalar.As<int64_t>());
+      ctx->has_float_operand = false;
+      ctx->has_int_operand = true;
       lowest_dtype = x->dtype();
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
@@ -112,10 +111,10 @@ class ScalarMathBaseFunctor {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), ctx));
       return outputs->at(0);
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, casted_vec, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, casted_vec, ctx);
     }
   }
 
@@ -188,19 +187,19 @@ class ScalarPowGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& dy, const Scalar& scalar) const {
-    MutableAttrMap attrs;
+    auto ctx = std::make_shared<ScalarPowGradOpInterpCtx>();
     if (scalar.IsFloatingPoint()) {
-      JUST(attrs.SetAttr<bool>("has_float_operand", true));
-      JUST(attrs.SetAttr<bool>("has_int_operand", false));
-      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
+      ctx->has_float_operand = true;
+      ctx->has_int_operand = false;
+      ctx->float_operand = JUST(scalar.As<double>());
     } else if (scalar.IsIntegral()) {
-      JUST(attrs.SetAttr<bool>("has_float_operand", false));
-      JUST(attrs.SetAttr<bool>("has_int_operand", true));
-      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
+      ctx->has_float_operand = false;
+      ctx->has_int_operand = true;
+      ctx->int_operand = JUST(scalar.As<int64_t>());
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarPowGrad should be float or int.";
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, dy}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, dy}, ctx);
   }
 
  private:
@@ -225,16 +224,16 @@ class ReduceMaxFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
-    auto op_schema = std::make_shared<ReduceMaxOpSchema>();
+    auto ctx = std::make_shared<ReduceMaxOpInterpCtx>();
     if (axis.empty()) {
       std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-      op_schema->axis = reduce_axis;
+      ctx->axis = reduce_axis;
     } else {
-      op_schema->axis = axis;
+      ctx->axis = axis;
     }
-    op_schema->keepdims = keepdims;
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, OpExprInterpContext(op_schema));
+    ctx->keepdims = keepdims;
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
  private:
@@ -249,16 +248,16 @@ class ReduceMinFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
-    auto op_schema = std::make_shared<ReduceMinOpSchema>();
+    auto ctx = std::make_shared<ReduceMinOpInterpCtx>();
     if (axis.empty()) {
       std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-      op_schema->axis = reduce_axis;
+      ctx->axis = reduce_axis;
     } else {
-      op_schema->axis = axis;
+      ctx->axis = axis;
     }
-    op_schema->keepdims = keepdims;
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, OpExprInterpContext(op_schema));
+    ctx->keepdims = keepdims;
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, std::make_shared<OpInterpCtx>(ctx));
   }
 
  private:
@@ -273,19 +272,19 @@ class ReduceSumFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
-    auto op_schema = std::make_shared<ReduceSumOpSchema>();
+    auto ctx = std::make_shared<ReduceSumOpInterpCtx>();
     if (axis.empty()) {
       std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-      op_schema->axis = reduce_axis;
+      ctx->axis = reduce_axis;
     } else {
-      op_schema->axis = axis;
+      ctx->axis = axis;
     }
-    op_schema->keepdims = keepdims;
+    ctx->keepdims = keepdims;
     TensorProcessor tensor_processor;
     JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, OpExprInterpContext(op_schema));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, std::make_shared<OpInterpCtx>(ctx));
   }
 
  private:
@@ -304,9 +303,9 @@ class ReduceDeviceStageBaseFunctor {
                            .Build())) {}
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in,
                                 const std::vector<int32_t>& axis) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in}, attrs);
+    auto ctx = std::make_shared<ReduceDeviceStageOpInterpCtx>();
+    ctx->axis = axis;
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in}, ctx);
   }
   virtual ~ReduceDeviceStageBaseFunctor() = default;
 
@@ -328,9 +327,9 @@ class ReduceDeviceStageGradBaseFunctor {
                            const std::shared_ptr<one::Tensor>& mask,
                            const std::shared_ptr<one::Tensor>& count,
                            const std::vector<int32_t>& axis) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, count}, attrs);
+    auto ctx = std::make_shared<ReduceDeviceStageGradOpInterpCtx>();
+    ctx->axis = axis;
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, count}, ctx);
   }
   virtual ~ReduceDeviceStageGradBaseFunctor() = default;
 
@@ -375,10 +374,10 @@ class ReduceGlobalStageBaseFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in,
                                 const std::shared_ptr<one::Tensor>& device_count,
                                 const std::vector<int32_t>& axis, const bool& keepdims) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in, device_count}, attrs);
+    auto ctx = std::make_shared<ReduceGlobalStageOpInterpCtx>();
+    ctx->axis = axis;
+    ctx->keepdims = keepdims;
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in, device_count}, ctx);
   }
   virtual ~ReduceGlobalStageBaseFunctor() = default;
 
@@ -400,10 +399,10 @@ class ReduceGlobalStageGradBaseFunctor {
                            const std::shared_ptr<one::Tensor>& mask,
                            const std::shared_ptr<one::Tensor>& device_count,
                            const std::vector<int32_t>& axis, const bool& keepdims) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, device_count}, attrs);
+    auto ctx = std::make_shared<ReduceGlobalStageGradOpInterpCtx>();
+    ctx->axis = axis;
+    ctx->keepdims = keepdims;
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, device_count}, ctx);
   }
   virtual ~ReduceGlobalStageGradBaseFunctor() = default;
 
@@ -464,16 +463,16 @@ class ReduceProdFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
-    MutableAttrMap attrs;
+    auto ctx = std::make_shared<ReduceProdOpInterpCtx>();
     if (axis.empty()) {
       std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
+      ctx->axis = reduce_axis;
     } else {
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+      ctx->axis = axis;
     }
-    JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    ctx->keepdims = keepdims;
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
  private:
@@ -487,9 +486,7 @@ class TransposeFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::vector<int32_t>& permute) const {
-    MutableAttrMap attrs;
     CHECK_EQ_OR_RETURN(input->ndim(), permute.size()) << "number of dims don't match in permute";
-    JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
     int32_t ndims = input->shape()->NumAxes();
     for (int i = 0; i < permute.size(); i++) {
       int32_t dim = permute.at(i);
@@ -501,7 +498,9 @@ class TransposeFunctor {
           << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
           << ndims << " ] but got " << ndims;
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+    auto ctx = std::make_shared<TransposeOpInterpCtx>();
+    ctx->perm = permute;
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, ctx);
   }
 
  private:
@@ -514,12 +513,11 @@ class EyeFunctor {
   Maybe<Tensor> operator()(const Scalar& n, const Optional<Scalar>& m,
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("n", JUST(n.As<int64_t>())));
-    JUST(attrs.SetAttr<int64_t>("m", JUST(m.value_or(n).As<int64_t>())));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype ? JUST(dtype)->data_type() : DataType::kFloat));
-    OpExprInterpContext ctx(attrs);
-    ctx.device = device;
+    auto ctx = std::make_shared<EyeOpInterpCtx>();
+    ctx->n = JUST(n.As<int64_t>());
+    ctx->m = JUST(m.value_or(n).As<int64_t>());
+    ctx->dtype = dtype ? JUST(dtype)->data_type() : DataType::kFloat;
+    ctx->device = device;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }
 
@@ -534,21 +532,13 @@ class ConsistentEyeFunctor {
                            const Optional<Symbol<DType>>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("n", JUST(n.As<int64_t>())));
-    JUST(attrs.SetAttr<int64_t>("m", JUST(m.value_or(n).As<int64_t>())));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype ? JUST(dtype)->data_type() : DataType::kFloat));
-    if (LazyMode::is_enabled()) {
-      std::vector<std::string> nd_sbp(sbp_tuple.size());
-      {
-        for (int i = 0; i < sbp_tuple.size(); ++i) {
-          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
-        }
-      }
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
-    }
-    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
+    auto ctx = std::make_shared<EyeOpInterpCtx>();
+    ctx->n = JUST(n.As<int64_t>());
+    ctx->m = JUST(m.value_or(n).As<int64_t>());
+    ctx->dtype = dtype ? JUST(dtype)->data_type() : DataType::kFloat;
+    ctx->parallel_desc = placement;
+    ctx->nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }
 
  private:
@@ -562,7 +552,6 @@ class Transpose2dimFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t dim0,
                            const int32_t dim1) const {
-    MutableAttrMap attrs;
     const int64_t ndim = x->shape()->NumAxes();
     std::vector<int32_t> permute;
     int32_t dim_0 = dim0;
@@ -578,8 +567,9 @@ class Transpose2dimFunctor {
     for (int32_t i = 0; i < ndim; ++i) { permute.push_back(i); }
     std::swap(permute[dim_0], permute[dim_1]);
 
-    JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    auto ctx = std::make_shared<Transpose2dimOpInterpCtx>();
+    ctx->perm = permute;
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
  private:
@@ -592,20 +582,19 @@ class ArangeFunctor {
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
-    MutableAttrMap attrs;
+    auto ctx = std::make_shared<ArangeOpInterpCtx>();
     const DataType range_dtype = dtype->data_type();
-    JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
+    ctx->dtype = range_dtype;
     if (IsIntegralDataType(range_dtype)) {
-      JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
-      JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
-      JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+      ctx->integer_start = JUST(start.As<int64_t>());
+      ctx->integer_limit = JUST(limit.As<int64_t>());
+      ctx->integer_delta = JUST(delta.As<int64_t>());
     } else {
-      JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
-      JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
-      JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+      ctx->float_start = JUST(start.As<double>());
+      ctx->float_limit = JUST(limit.As<double>());
+      ctx->float_delta = JUST(delta.As<double>());
     }
-    OpExprInterpContext ctx(attrs);
-    ctx.device = device;
+    ctx->device = device;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }
 
@@ -627,30 +616,22 @@ class ConsistentArangeFunctor {
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Symbol<DType>& dtype, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
-    MutableAttrMap attrs;
+    auto ctx = std::make_shared<ArangeOpInterpCtx>();
     const DataType range_dtype = dtype->data_type();
-    JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
+    ctx->dtype = range_dtype;
     if (IsIntegralDataType(range_dtype)) {
-      JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
-      JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
-      JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+      ctx->integer_start = JUST(start.As<int64_t>());
+      ctx->integer_limit = JUST(limit.As<int64_t>());
+      ctx->integer_delta = JUST(delta.As<int64_t>());
     } else {
-      JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
-      JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
-      JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+      ctx->float_start = JUST(start.As<double>());
+      ctx->float_limit = JUST(limit.As<double>());
+      ctx->float_delta = JUST(delta.As<double>());
     }
-
-    if (LazyMode::is_enabled()) {
-      std::vector<std::string> nd_sbp(sbp_tuple.size());
-      {
-        for (int i = 0; i < sbp_tuple.size(); ++i) {
-          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
-        }
-      }
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
-    }
-    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
+    ctx->parallel_desc = placement;
+    ctx->nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {},
+                                          std::make_shared<OpInterpCtx>(attrs, placement, nd_sbp));
   }
 
  private:
@@ -673,11 +654,9 @@ class CastFunctor {
                            const Symbol<DType>& dtype) const {
     if (x->dtype() == dtype) { return x; }
 
-    // MutableAttrMap attrs;
-    // JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    auto schema = std::make_shared<CastOpSchema>();
-    schema->dtype = dtype->data_type();
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, OpExprInterpContext(schema));
+    auto ctx = std::make_shared<CastOpInterpCtx>();
+    ctx->dtype = dtype->data_type();
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx;
   }
 
  private:
@@ -695,28 +674,28 @@ class ClampFunctor {
                            const Optional<Scalar>& max) const {
     CHECK_OR_RETURN(min.has_value() || max.has_value())
         << "Requires one of argument `min` and `max` at least in clip.";
-    MutableAttrMap attrs;
+    auto ctx = std::make_shared<ClampOpInterpCtx>();
     if (IsFloatingDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
         const auto& min_val = JUST(min);
-        JUST(attrs.SetAttr<double>("floating_min", JUST(min_val->As<double>())));
-        JUST(attrs.SetAttr<int64_t>("integral_min", 0));
+        ctx->floating_min = JUST(min_val->As<double>());
+        ctx->integral_min = 0;
       }
       if (max.has_value()) {
         const auto& max_val = JUST(max);
-        JUST(attrs.SetAttr<double>("floating_max", JUST(max_val->As<double>())));
-        JUST(attrs.SetAttr<int64_t>("integral_max", 0));
+        ctx->floating_max = JUST(max_val->As<double>());
+        ctx->integral_max = 0;
       }
     } else if (IsIntegralDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
         const auto& min_val = JUST(min);
-        JUST(attrs.SetAttr<double>("floating_min", 0));
-        JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min_val->As<int64_t>())));
+        ctx->floating_min = 0;
+        ctx->integral_min = JUST(min_val->As<int64_t>());
       }
       if (max.has_value()) {
         const auto& max_val = JUST(max);
-        JUST(attrs.SetAttr<double>("floating_max", 0));
-        JUST(attrs.SetAttr<int64_t>("integral_max", JUST(max_val->As<int64_t>())));
+        ctx->floating_max = 0;
+        ctx->integral_max = JUST(max_val->As<int64_t>());
       }
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
@@ -729,7 +708,7 @@ class ClampFunctor {
     } else {
       op = clip_op_.get();
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op, {x}, ctx);
   }
 
  private:
@@ -1123,28 +1102,28 @@ class ClampGradFunctor {
                            const Optional<Scalar>& max) const {
     CHECK_OR_RETURN(min.has_value() || max.has_value())
         << "Requires one of argument `min` and `max` at least in clip_grad.";
-    MutableAttrMap attrs;
+    auto ctx = std::make_shared<ClampGradOpInterpCtx>();
     if (IsFloatingDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
         const auto& min_val = JUST(min);
-        JUST(attrs.SetAttr<double>("floating_min", JUST(min_val->As<double>())));
-        JUST(attrs.SetAttr<int64_t>("integral_min", 0));
+        ctx->floating_min = JUST(min_val->As<double>());
+        ctx->integral_min = 0;
       }
       if (max.has_value()) {
         const auto& max_val = JUST(max);
-        JUST(attrs.SetAttr<double>("floating_max", JUST(max_val->As<double>())));
-        JUST(attrs.SetAttr<int64_t>("integral_max", 0));
+        ctx->floating_max = JUST(max_val->As<double>());
+        ctx->integral_max = 0;
       }
     } else if (IsIntegralDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
         const auto& min_val = JUST(min);
-        JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min_val->As<int64_t>())));
-        JUST(attrs.SetAttr<double>("floating_min", 0));
+        ctx->integral_min = JUST(min_val->As<int64_t>());
+        ctx->floating_min = 0;
       }
       if (max.has_value()) {
         const auto& max_val = JUST(max);
-        JUST(attrs.SetAttr<double>("floating_max", 0));
-        JUST(attrs.SetAttr<int64_t>("integral_max", JUST(max_val->As<int64_t>())));
+        ctx->floating_max = 0;
+        ctx->integral_max = JUST(max_val->As<int64_t>());
       }
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
@@ -1157,7 +1136,7 @@ class ClampGradFunctor {
     } else {
       op = clip_op_.get();
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op, {dy, x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op, {dy, x}, ctx);
   }
 
  private:
@@ -1171,15 +1150,15 @@ class SelectTopNFunctor {
   SelectTopNFunctor() { op_ = CHECK_JUST(one::SelectTopNOpExpr::New()); }
 
   Maybe<TensorTuple> operator()(const TensorTuple& inputs, int32_t n) const {
-    MutableAttrMap attr;
-    JUST(attr.SetAttr<int32_t>("top_n", n));
+    auto ctx = std::make_shared<SelectTopNOpInterpCtx>();
+    ctx->top_n = n;
     std::vector<bool> require_grad(n);
     std::vector<bool> is_leaf(n);
     for (int i = 0; i < n; ++i) {
       is_leaf.at(i) = (inputs.at(i)->is_leaf());
       require_grad.at(i) = (inputs.at(i)->requires_grad());
     }
-    const auto& output = JUST(OpInterpUtil::Dispatch<one::TensorTuple>(*op_, inputs, attr));
+    const auto& output = JUST(OpInterpUtil::Dispatch<one::TensorTuple>(*op_, inputs, ctx));
     for (int i = 0; i < n; ++i) {
       inputs.at(i)->set_is_leaf(is_leaf.at(i));
       JUST(inputs.at(i)->set_requires_grad(require_grad.at(i)));
@@ -1245,22 +1224,22 @@ class ScalarLogicalBaseFunctor {
   virtual ~ScalarLogicalBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
     const DataType dtype = x->dtype()->data_type();
-    auto op_schema = std::make_shared<ScalarLogicalOpSchema>();
+    auto ctx = std::make_shared<ScalarLogicalOpInterpCtx>();
 
     if (IsFloatingDataType(dtype)) {
-      op_schema->float_operand = JUST(scalar.As<double>());
-      op_schema->has_float_operand = true;
-      op_schema->has_int_operand = false;
+      ctx->float_operand = JUST(scalar.As<double>());
+      ctx->has_float_operand = true;
+      ctx->has_int_operand = false;
     } else if (IsIntegralDataType(dtype) || dtype == DataType::kUInt8) {
-      op_schema->int_operand = JUST(scalar.As<int64_t>());
-      op_schema->has_float_operand = false;
-      op_schema->has_int_operand = true;
+      ctx->int_operand = JUST(scalar.As<int64_t>());
+      ctx->has_float_operand = false;
+      ctx->has_int_operand = true;
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
                                   << " should be float or int.";
     }
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, OpExprInterpContext(op_schema));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
  private:

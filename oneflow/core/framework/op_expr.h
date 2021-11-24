@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
@@ -29,7 +28,7 @@ limitations under the License.
 #include "oneflow/core/framework/arg_tuple.h"
 #include "oneflow/core/autograd/autograd_function.h"
 
-#include "oneflow/core/framework/op_schema.h"
+#include "oneflow/core/framework/op_interp_ctx.h"
 
 namespace oneflow {
 namespace one {
@@ -77,7 +76,8 @@ class BuiltinOpExpr : public OpExpr {
     return output_arg_tuple_->indexed_arg_name_and_index();
   }
 
-  virtual Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrMap& attrs) const = 0;
+  virtual Maybe<void> BuildOpConf(OperatorConf* op_conf,
+                                  const std::shared_ptr<const OpInterpCtx>& ctx) const = 0;
 
  protected:
   std::string op_name_;
@@ -108,7 +108,8 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
 
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
-  Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrMap& attrs) const override;
+  Maybe<void> BuildOpConf(OperatorConf* op_conf,
+                          const std::shared_ptr<const OpInterpCtx>& ctx) const override;
 
  protected:
   explicit BuiltinOpExprImpl(const std::string& op_name, ProtoType&& op_proto,
@@ -132,41 +133,31 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
                                const std::vector<std::string>& indexed_ibns,
                                const std::vector<std::string>& indexed_obns);
 
-  const AttrMap& base_attrs() const { return base_attrs_; }
-
   Maybe<StatefulLocalOpKernel> MutKernel4Device(Symbol<Device> device) const;
 
   bool has_device_infer_fn() const { return static_cast<bool>(device_infer_fn_); }
   const user_op::DeviceInferFn& device_infer_fn() const { return device_infer_fn_; }
 
   Maybe<void> InferPhysicalShapeAndDType(
-      const AttrMap& attrs, const std::string& device_tag,
-      const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
-      const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
-
-  Maybe<void> InferPhysicalShapeAndDType(
-      const std::shared_ptr<const OpSchema>& op_schema, const std::string& device_tag,
+      const std::shared_ptr<const OpInterpCtx>& op_interp_ctx, const std::string& device_tag,
       const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
       const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
 
   Maybe<void> InferLogicalShapeAndDType(
-      const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc,
+      const std::shared_ptr<const OpInterpCtx>& op_interp_ctx, Symbol<ParallelDesc> parallel_desc,
       const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
       const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
-  Maybe<Symbol<Device>> InferDevices(const AttrMap& attrs, const TensorTuple& inputs,
-                                     TensorTuple* outputs) const;
-  Maybe<Symbol<Device>> InferDevices(const std::shared_ptr<const OpSchema>& op_schema,
+  Maybe<Symbol<Device>> InferDevices(const std::shared_ptr<const OpInterpCtx>& op_interp_ctx,
                                      const TensorTuple& inputs, TensorTuple* outputs) const;
   ConsistentTensorInferCache* mut_consistent_tensor_infer_cache() const {
     return consistent_tensor_infer_cache_.get();
   }
 
  private:
-  UserOpExpr(const std::string& op_name, UserOpConf&& proto, const AttrMap& base_attrs,
+  UserOpExpr(const std::string& op_name, UserOpConf&& proto,
              const std::vector<std::string>& indexed_ibns,
              const std::vector<std::string>& indexed_obns);
   Maybe<void> Init(const std::shared_ptr<const UserOpExpr>& self);
-  AttrMap base_attrs_;
   user_op::TensorDescInferFn shape_infer_fn_;
   user_op::DataTypeInferFn dtype_infer_fn_;
   user_op::DeviceInferFn device_infer_fn_;

@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
-#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
@@ -96,12 +95,12 @@ DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(DistributeAddOpConf, false);
 #undef DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE
 
 template<>
-Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                       const AttrMap& attrs) const {
+Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(
+    OperatorConf* op_conf, const std::shared_ptr<const OpInterpCtx>& ctx) const {
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_user_conf()) = op_proto_;
   auto* user_op_conf = op_conf->mutable_user_conf();
-  for (const auto& it : attrs) {
+  for (const auto& it : ctx->GetAttrs()) {
     AttrValue attr_val;
     JUST(user_op::AttrValueUtil::ToProtoAttrValue(*it.second, &attr_val));
     (*(user_op_conf->mutable_attr()))[it.first] = attr_val;
@@ -147,24 +146,13 @@ namespace {
 
 class UserOpExprInferContext : public user_op::InferContext {
  public:
-  UserOpExprInferContext(const UserOpExpr* user_op_expr, const AttrMap& attrs,
-                         const std::string& device_tag,
-                         const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
-                         const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex)
-      : user_op_expr_(user_op_expr),
-        composed_attrs_(attrs, user_op_expr->base_attrs()),
-        device_tag_(device_tag),
-        tensor_meta4input_index_(TensorMeta4InputIndex),
-        tensor_meta4output_index_(TensorMeta4OutputIndex) {}
-
   UserOpExprInferContext(const UserOpExpr* user_op_expr,
-                         const std::shared_ptr<const OpSchema>& op_schema,
+                         const std::shared_ptr<const OpInterpCtx>& op_interp_ctx,
                          const std::string& device_tag,
                          const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
                          const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex)
       : user_op_expr_(user_op_expr),
-        composed_attrs_(AttrMap{}),
-        op_schema_(op_schema),
+        op_interp_ctx_(op_interp_ctx),
         device_tag_(device_tag),
         tensor_meta4input_index_(TensorMeta4InputIndex),
         tensor_meta4output_index_(TensorMeta4OutputIndex) {}
@@ -275,12 +263,10 @@ class UserOpExprInferContext : public user_op::InferContext {
 
  private:
   const void* Attr4Name(const std::string& attr_name) const override {
-    // return composed_attrs_.Attr4Name(attr_name);
-    return CHECK_JUST(op_schema_->GetAttr(attr_name.data()));
+    return CHECK_JUST(op_interp_ctx_->GetAttr(attr_name.data()));
   }
   const UserOpExpr* user_op_expr_;
-  const ComposedAttrMap composed_attrs_;
-  const std::shared_ptr<const OpSchema> op_schema_;
+  const std::shared_ptr<const OpInterpCtx> op_interp_ctx_;
   const std::string& device_tag_;
   const std::function<const TensorMeta*(int32_t)>& tensor_meta4input_index_;
   const std::function<TensorMeta*(int32_t)>& tensor_meta4output_index_;
@@ -319,10 +305,11 @@ class UserOpExprPhysicalInferContext final : public UserOpExprInferContext {
 class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
  public:
   UserOpExprLogicalInferContext(
-      const UserOpExpr* user_op_expr, const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc,
+      const UserOpExpr* user_op_expr, const std::shared_ptr<const OpInterpCtx>& op_interp_ctx,
+      Symbol<ParallelDesc> parallel_desc,
       const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
       const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex)
-      : UserOpExprInferContext(user_op_expr, attrs, parallel_desc->device_tag(),
+      : UserOpExprInferContext(user_op_expr, op_interp_ctx, parallel_desc->device_tag(),
                                TensorMeta4InputIndex, TensorMeta4OutputIndex),
         parallel_desc_(parallel_desc) {
     const auto& opt_parallel_id = CHECK_JUST(GetParallelId4CurrentProcessCtx(parallel_desc_));
@@ -366,19 +353,11 @@ class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
 
 class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
  public:
-  UserOpExprDeviceInferContext(const UserOpExpr* user_op_expr, const AttrMap& attrs,
-                               const TensorTuple& input_tensors, TensorTuple* output_tensors)
-      : user_op_expr_(user_op_expr),
-        composed_attrs_(attrs, user_op_expr->base_attrs()),
-        input_tensors_(&input_tensors),
-        output_tensors_(output_tensors) {}
-
   UserOpExprDeviceInferContext(const UserOpExpr* user_op_expr,
-                               const std::shared_ptr<const OpSchema>& op_schema,
+                               const std::shared_ptr<const OpInterpCtx>& op_interp_ctx,
                                const TensorTuple& input_tensors, TensorTuple* output_tensors)
       : user_op_expr_(user_op_expr),
-        composed_attrs_(AttrMap{}),
-        op_schema_(op_schema),
+        op_interp_ctx_(op_interp_ctx),
         input_tensors_(&input_tensors),
         output_tensors_(output_tensors) {}
 
@@ -408,23 +387,20 @@ class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
 
  private:
   const void* Attr4Name(const std::string& attr_name) const override {
-    // return composed_attrs_.Attr4Name(attr_name);
-    return CHECK_JUST(op_schema_->GetAttr(attr_name.data()));
+    return CHECK_JUST(op_interp_ctx_->GetAttr(attr_name.data()));
   }
   const UserOpExpr* user_op_expr_;
-  const ComposedAttrMap composed_attrs_;
-  const std::shared_ptr<const OpSchema> op_schema_;
+  const std::shared_ptr<const OpInterpCtx> op_interp_ctx_;
   const TensorTuple* input_tensors_;
   TensorTuple* output_tensors_;
 };
 
 }  // namespace
 
-UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto, const AttrMap& base_attrs,
+UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto,
                        const std::vector<std::string>& indexed_ibns,
                        const std::vector<std::string>& indexed_obns)
-    : BuiltinOpExprImpl<UserOpConf>(op_name, std::move(proto), indexed_ibns, indexed_obns),
-      base_attrs_(base_attrs) {}
+    : BuiltinOpExprImpl<UserOpConf>(op_name, std::move(proto), indexed_ibns, indexed_obns) {}
 
 Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   const auto* registry =
@@ -443,29 +419,17 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
                                                const std::vector<std::string>& indexed_ibns,
                                                const std::vector<std::string>& indexed_obns) {
   JUST(AddAttrDefaultValueAndCheckValid(&op_proto));
-  AttrMap base_attrs = MakeAttrMapFromUserOpConf(op_proto);
   std::shared_ptr<UserOpExpr> op_expr(
-      new UserOpExpr(op_name, std::move(op_proto), base_attrs, indexed_ibns, indexed_obns));
+      new UserOpExpr(op_name, std::move(op_proto), indexed_ibns, indexed_obns));
   JUST(op_expr->Init(op_expr));
   return op_expr;
 }
 
 Maybe<void> UserOpExpr::InferPhysicalShapeAndDType(
-    const AttrMap& attrs, const std::string& device_tag,
+    const std::shared_ptr<const OpInterpCtx>& op_interp_ctx, const std::string& device_tag,
     const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
     const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const {
-  UserOpExprPhysicalInferContext infer_ctx(this, attrs, device_tag, TensorMeta4InputIndex,
-                                           TensorMeta4OutputIndex);
-  JUST(shape_infer_fn_(&infer_ctx));
-  JUST(dtype_infer_fn_(&infer_ctx));
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> UserOpExpr::InferPhysicalShapeAndDType(
-    const std::shared_ptr<const OpSchema>& op_schema, const std::string& device_tag,
-    const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
-    const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const {
-  UserOpExprPhysicalInferContext infer_ctx(this, op_schema, device_tag, TensorMeta4InputIndex,
+  UserOpExprPhysicalInferContext infer_ctx(this, op_interp_ctx, device_tag, TensorMeta4InputIndex,
                                            TensorMeta4OutputIndex);
   JUST(shape_infer_fn_(&infer_ctx));
   JUST(dtype_infer_fn_(&infer_ctx));
@@ -473,29 +437,21 @@ Maybe<void> UserOpExpr::InferPhysicalShapeAndDType(
 }
 
 Maybe<void> UserOpExpr::InferLogicalShapeAndDType(
-    const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc,
+    const std::shared_ptr<const OpInterpCtx>& op_interp_ctx, Symbol<ParallelDesc> parallel_desc,
     const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
     const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const {
-  UserOpExprLogicalInferContext infer_ctx(this, attrs, parallel_desc, TensorMeta4InputIndex,
+  UserOpExprLogicalInferContext infer_ctx(this, op_interp_ctx, parallel_desc, TensorMeta4InputIndex,
                                           TensorMeta4OutputIndex);
   JUST(shape_infer_fn_(&infer_ctx));
   JUST(dtype_infer_fn_(&infer_ctx));
   return Maybe<void>::Ok();
 }
 
-Maybe<Symbol<Device>> UserOpExpr::InferDevices(const AttrMap& attrs,
-                                               const TensorTuple& input_tensors,
-                                               TensorTuple* output_tensors) const {
+Maybe<Symbol<Device>> UserOpExpr::InferDevices(
+    const std::shared_ptr<const OpInterpCtx>& op_interp_ctx, const TensorTuple& input_tensors,
+    TensorTuple* output_tensors) const {
   CHECK_OR_RETURN(static_cast<bool>(device_infer_fn_));
-  UserOpExprDeviceInferContext device_infer_ctx(this, attrs, input_tensors, output_tensors);
-  return TRY(device_infer_fn_(&device_infer_ctx));
-}
-
-Maybe<Symbol<Device>> UserOpExpr::InferDevices(const std::shared_ptr<const OpSchema>& op_schema,
-                                               const TensorTuple& input_tensors,
-                                               TensorTuple* output_tensors) const {
-  CHECK_OR_RETURN(static_cast<bool>(device_infer_fn_));
-  UserOpExprDeviceInferContext device_infer_ctx(this, op_schema, input_tensors, output_tensors);
+  UserOpExprDeviceInferContext device_infer_ctx(this, op_interp_ctx, input_tensors, output_tensors);
   return TRY(device_infer_fn_(&device_infer_ctx));
 }
 
@@ -527,9 +483,8 @@ CastFromConsistentOpExpr::CastFromConsistentOpExpr(const std::string& op_name)
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<FeedInputOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                            const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+Maybe<void> BuiltinOpExprImpl<FeedInputOpConf>::BuildOpConf(
+    OperatorConf* op_conf, const std::shared_ptr<const OpInterpCtx>& ctx) const {
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_feed_input_conf()) = op_proto_;
   return Maybe<void>::Ok();
@@ -541,9 +496,8 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<FeedInputOpConf>::GetOrCreateOpGradCl
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<FeedVariableOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                               const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+Maybe<void> BuiltinOpExprImpl<FeedVariableOpConf>::BuildOpConf(
+    OperatorConf* op_conf, const std::shared_ptr<const OpInterpCtx>& ctx) const {
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_feed_variable_conf()) = op_proto_;
   return Maybe<void>::Ok();
@@ -555,9 +509,8 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<FeedVariableOpConf>::GetOrCreateOpGra
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<FetchOutputOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                              const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+Maybe<void> BuiltinOpExprImpl<FetchOutputOpConf>::BuildOpConf(
+    OperatorConf* op_conf, const std::shared_ptr<const OpInterpCtx>& ctx) const {
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_fetch_output_conf()) = op_proto_;
   return Maybe<void>::Ok();
@@ -570,8 +523,7 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<FetchOutputOpConf>::GetOrCreateOpGrad
 
 template<>
 Maybe<void> BuiltinOpExprImpl<ImageDecoderRandomCropResizeOpConf>::BuildOpConf(
-    OperatorConf* op_conf, const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+    OperatorConf* op_conf, const std::shared_ptr<const OpInterpCtx>& ctx) const {
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_image_decoder_random_crop_resize_conf()) = op_proto_;
   return Maybe<void>::Ok();
@@ -584,9 +536,8 @@ BuiltinOpExprImpl<ImageDecoderRandomCropResizeOpConf>::GetOrCreateOpGradClosure(
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<VariableOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                           const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+Maybe<void> BuiltinOpExprImpl<VariableOpConf>::BuildOpConf(
+    OperatorConf* op_conf, const std::shared_ptr<const OpInterpCtx>& ctx) const {
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_variable_conf()) = op_proto_;
   return Maybe<void>::Ok();
@@ -598,9 +549,8 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<VariableOpConf>::GetOrCreateOpGradClo
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<CastToMirroredOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                                 const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+Maybe<void> BuiltinOpExprImpl<CastToMirroredOpConf>::BuildOpConf(
+    OperatorConf* op_conf, const std::shared_ptr<const OpInterpCtx>& ctx) const {
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_cast_to_mirrored_conf()) = op_proto_;
   return Maybe<void>::Ok();
@@ -612,9 +562,8 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastToMirroredOpConf>::GetOrCreateOpG
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<CastFromMirroredOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                                   const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+Maybe<void> BuiltinOpExprImpl<CastFromMirroredOpConf>::BuildOpConf(
+    OperatorConf* op_conf, const std::shared_ptr<const OpInterpCtx>& ctx) const {
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_cast_from_mirrored_conf()) = op_proto_;
   return Maybe<void>::Ok();
@@ -654,9 +603,8 @@ Maybe<OpExprGradClosure> CastFromConsistentOpExpr::GetOrCreateOpGradClosure() co
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<DistributeSplitOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                                  const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+Maybe<void> BuiltinOpExprImpl<DistributeSplitOpConf>::BuildOpConf(
+    OperatorConf* op_conf, const std::shared_ptr<const OpInterpCtx>& ctx) const {
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_distribute_split_conf()) = op_proto_;
   return Maybe<void>::Ok();
@@ -669,9 +617,8 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<DistributeSplitOpConf>::GetOrCreateOp
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<DistributeCloneOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                                  const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+Maybe<void> BuiltinOpExprImpl<DistributeCloneOpConf>::BuildOpConf(
+    OperatorConf* op_conf, const std::shared_ptr<const OpInterpCtx>& ctx) const {
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_distribute_clone_conf()) = op_proto_;
   return Maybe<void>::Ok();
@@ -684,9 +631,8 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<DistributeCloneOpConf>::GetOrCreateOp
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<DistributeConcatOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                                   const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+Maybe<void> BuiltinOpExprImpl<DistributeConcatOpConf>::BuildOpConf(
+    OperatorConf* op_conf, const std::shared_ptr<const OpInterpCtx>& ctx) const {
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_distribute_concat_conf()) = op_proto_;
   return Maybe<void>::Ok();
@@ -699,9 +645,8 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<DistributeConcatOpConf>::GetOrCreateO
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<DistributeAddOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                                const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+Maybe<void> BuiltinOpExprImpl<DistributeAddOpConf>::BuildOpConf(
+    OperatorConf* op_conf, const std::shared_ptr<const OpInterpCtx>& ctx) const {
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_distribute_add_conf()) = op_proto_;
   return Maybe<void>::Ok();

@@ -162,11 +162,11 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
  public:
   explicit LocalUserKernelRegContext(const std::string& device_tag,
                                      const user_op::UserOpConfWrapper* user_op_conf,
-                                     const std::shared_ptr<const OpSchema>* op_schema,
+                                     const std::shared_ptr<const OpInterpCtx>* op_interp_ctx,
                                      const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                      const std::shared_ptr<const ArgTuple>& output_arg_tuple)
       : user_op_conf_(user_op_conf),
-        op_schema_(op_schema),
+        op_interp_ctx_(op_interp_ctx),
         base_ctx_(device_tag, input_arg_tuple, output_arg_tuple) {}
   ~LocalUserKernelRegContext() = default;
 
@@ -189,11 +189,11 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
 
  private:
   const user_op::UserOpConfWrapper* user_op_conf_;
-  const std::shared_ptr<const OpSchema>* op_schema_;
+  const std::shared_ptr<const OpInterpCtx>* op_interp_ctx_;
   LocalUserKernelBaseContext base_ctx_;
 
   const void* Attr4Name(const std::string& attr_name) const override {
-    return CHECK_JUST((*op_schema_)->GetAttr(attr_name.data()));
+    return CHECK_JUST((*op_interp_ctx_)->GetAttr(attr_name.data()));
   }
 };
 
@@ -206,11 +206,11 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
       const std::shared_ptr<const ArgTuple>& output_arg_tuple, EagerBlobObjectListRawPtr inputs,
       EagerBlobObjectListRawPtr outputs,
       ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
-      const std::shared_ptr<const OpSchema>* op_schema)
+      const std::shared_ptr<const OpInterpCtx>* op_interp_ctx)
       : user_op_conf_(user_op_conf),
         device_ctx_(device_ctx),
         base_ctx_(device_tag, input_arg_tuple, output_arg_tuple),
-        op_schema_(op_schema) {
+        op_interp_ctx_(op_interp_ctx) {
     base_ctx_.Update(inputs, outputs, consistent_tensor_infer_result);
   }
   ~LocalUserKernelInitContext() override = default;
@@ -252,7 +252,7 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
 
  private:
   const void* Attr4Name(const std::string& attr_name) const override {
-    return CHECK_JUST((*op_schema_)->GetAttr(attr_name.data()));
+    return CHECK_JUST((*op_interp_ctx_)->GetAttr(attr_name.data()));
   }
 
   const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
@@ -260,16 +260,16 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
   const user_op::UserOpConfWrapper* user_op_conf_;
   DeviceCtx* device_ctx_;
   LocalUserKernelBaseContext base_ctx_;
-  const std::shared_ptr<const OpSchema>* op_schema_;
+  const std::shared_ptr<const OpInterpCtx>* op_interp_ctx_;
 };
 
 LocalUserOpInferContext::LocalUserOpInferContext(
     const user_op::UserOpConfWrapper* user_op_conf,
-    const std::shared_ptr<const OpSchema>* op_schema,
+    const std::shared_ptr<const OpInterpCtx>* op_interp_ctx,
     const std::shared_ptr<const ArgTuple>& input_arg_tuple,
     const std::shared_ptr<const ArgTuple>& output_arg_tuple)
     : user_op_conf_(user_op_conf),
-      op_schema_(op_schema),
+      op_interp_ctx_(op_interp_ctx),
       zero_copy_base_ctx_(input_arg_tuple, output_arg_tuple) {}
 
 user_op::TensorDesc* LocalUserOpInferContext::TensorDesc4ArgNameAndIndex(
@@ -286,11 +286,11 @@ void LocalUserOpInferContext::Update(
 LocalUserKernelComputeContext::LocalUserKernelComputeContext(
     DeviceCtx* device_ctx, const std::string& device_tag,
     const user_op::UserOpConfWrapper* user_op_conf,
-    const std::shared_ptr<const OpSchema>* op_schema,
+    const std::shared_ptr<const OpInterpCtx>* op_interp_ctx,
     const std::shared_ptr<const ArgTuple>& input_arg_tuple,
     const std::shared_ptr<const ArgTuple>& output_arg_tuple, vm::EagerBlobObject* tmp_buffer)
     : user_op_conf_(user_op_conf),
-      op_schema_(op_schema),
+      op_interp_ctx_(op_interp_ctx),
       device_ctx_(device_ctx),
       base_ctx_(device_tag, input_arg_tuple, output_arg_tuple, tmp_buffer) {}
 
@@ -376,8 +376,8 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
   opkernel->op_conf_ = op_conf;
   opkernel->user_op_conf_.reset(new user_op::UserOpConfWrapper(op_conf));
   opkernel->device_ = device;
-  opkernel->op_schema_for_scheduler_thread_.reset(new std::shared_ptr<const OpSchema>());
-  opkernel->op_schema_for_main_thread_.reset(new std::shared_ptr<const OpSchema>());
+  opkernel->op_interp_ctx_for_scheduler_thread_.reset(new std::shared_ptr<const OpInterpCtx>());
+  opkernel->op_interp_ctx_for_main_thread_.reset(new std::shared_ptr<const OpInterpCtx>());
 
   opkernel->input_arg_tuple_ = input_arg_tuple;
   opkernel->output_arg_tuple_ = output_arg_tuple;
@@ -390,14 +390,14 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
   const std::string& device_tag = op_conf->device_tag();
   const user_op::UserOpConfWrapper* user_op_conf = opkernel->user_op_conf_.get();
   opkernel->op_infer_ctx_for_scheduler_thread_.reset(
-      new LocalUserOpInferContext(user_op_conf, opkernel->op_schema_for_scheduler_thread_.get(),
+      new LocalUserOpInferContext(user_op_conf, opkernel->op_interp_ctx_for_scheduler_thread_.get(),
                                   input_arg_tuple, output_arg_tuple));
   opkernel->compute_ctx_.reset(new LocalUserKernelComputeContext(
-      nullptr, device_tag, user_op_conf, opkernel->op_schema_for_scheduler_thread_.get(),
+      nullptr, device_tag, user_op_conf, opkernel->op_interp_ctx_for_scheduler_thread_.get(),
       input_arg_tuple, output_arg_tuple, opkernel->mut_temp_blob_object()));
-  opkernel->reg_ctx_.reset(new LocalUserKernelRegContext(device_tag, user_op_conf,
-                                                         opkernel->op_schema_for_main_thread_.get(),
-                                                         input_arg_tuple, output_arg_tuple));
+  opkernel->reg_ctx_.reset(new LocalUserKernelRegContext(
+      device_tag, user_op_conf, opkernel->op_interp_ctx_for_main_thread_.get(), input_arg_tuple,
+      output_arg_tuple));
   const auto* op_reg_val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(user_op_conf->op_type_name());
   CHECK_NOTNULL_OR_RETURN(op_reg_val);
@@ -474,7 +474,7 @@ void StatefulLocalOpKernel::TryInitOpKernelState(
 
   LocalUserKernelInitContext init_ctx(
       device_ctx, op_conf_->device_tag(), user_op_conf_.get(), input_arg_tuple_, output_arg_tuple_,
-      inputs, outputs, consistent_tensor_infer_result, op_schema_for_scheduler_thread());
+      inputs, outputs, consistent_tensor_infer_result, op_interp_ctx_for_scheduler_thread());
   auto created_state = op_kernel->CreateOpKernelState(&init_ctx);
   op_kernel_state_map_.emplace(op_kernel, created_state);
   *state = created_state.get();

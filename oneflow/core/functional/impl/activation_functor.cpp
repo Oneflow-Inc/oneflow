@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
-#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -44,7 +43,7 @@ class ReluFunctor {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), AttrMap{}));
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get()));
       return outputs->at(0);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
@@ -115,10 +114,10 @@ class HardTanhFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& min_val,
                            const double& max_val) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("min_val", min_val));
-    JUST(attrs.SetAttr<double>("max_val", max_val));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    auto ctx = std::make_shared<HardTanhOpInterpCtx>();
+    ctx->min_val = min_val;
+    ctx->max_val = max_val;
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, ctx);
   }
 
  private:
@@ -133,10 +132,10 @@ class HardTanhGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& dy, const double& min_val,
                            const double& max_val) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("min_val", min_val));
-    JUST(attrs.SetAttr<double>("max_val", max_val));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {y, dy}, attrs);
+    auto ctx = std::make_shared<HardTanhGradOpInterpCtx>();
+    ctx->min_val = min_val;
+    ctx->max_val = max_val;
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {y, dy}, ctx);
   }
 
  private:
@@ -147,9 +146,9 @@ class EluFunctor {
  public:
   EluFunctor() { op_ = CHECK_JUST(one::OpBuilder("elu").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& alpha) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    auto ctx = std::make_shared<EluOpInterpCtx>();
+    ctx->alpha = alpha;
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, ctx);
   }
 
  private:
@@ -163,9 +162,9 @@ class EluGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& dy, const double& alpha) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
+    auto ctx = std::make_shared<EluGradOpInterpCtx>();
+    ctx->alpha = alpha;
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, ctx);
   }
 
  private:
@@ -177,16 +176,16 @@ class CeluFunctor {
   CeluFunctor() { op_ = CHECK_JUST(one::OpBuilder("celu").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& alpha,
                            bool inplace) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("alpha", alpha));
+    auto ctx = std::make_shared<CeluOpInterpCtx>();
+    ctx->alpha = alpha;
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), ctx));
       return outputs->at(0);
     } else {
-      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, ctx);
     }
   }
 
@@ -201,9 +200,9 @@ class CeluGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& dy, const double& alpha) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
+    auto ctx = std::make_shared<CeluOpInterpCtx>();
+    ctx->alpha = alpha;
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, ctx);
   }
 
  private:
@@ -255,7 +254,7 @@ class HardSigmoidFunctor {
       JUST(CheckInplaceValid(input));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = input;
-      JUST(OpInterpUtil::Dispatch(*op_, {input}, outputs.get(), AttrMap{}));
+      JUST(OpInterpUtil::Dispatch(*op_, {input}, outputs.get()));
       return outputs->at(0);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {input});
@@ -367,9 +366,9 @@ class LeakyReluFunctor {
     op_ = CHECK_JUST(one::OpBuilder("leaky_relu").Input("x").Output("y").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& alpha) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<float>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    auto ctx = std::make_shared<LeakyReluOpInterpCtx>();
+    ctx->alpha = alpha;
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, ctx);
   }
 
  private:
@@ -383,9 +382,9 @@ class LeakyReluGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& dy, const float& alpha) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<float>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
+    auto ctx = std::make_shared<LeakyReluGradOpInterpCtx>();
+    ctx->alpha = alpha;
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, ctx);
   }
 
  private:

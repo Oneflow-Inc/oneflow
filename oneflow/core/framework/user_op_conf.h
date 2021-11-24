@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
-#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
@@ -82,7 +81,6 @@ class UserOpConfWrapper final {
   friend class UserOpConfWrapperBuilder;
 
   std::shared_ptr<const OperatorConf> op_conf_;
-  AttrMap attrs_;
 };
 
 using UserOpInputGradGetFn = std::function<const std::string&()>;

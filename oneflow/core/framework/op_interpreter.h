@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_H_
 #define ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_H_
 
-#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -35,74 +34,17 @@ class NdSbp;
 
 namespace one {
 
-struct OpExprInterpContext {
-  OpExprInterpContext(const AttrMap& attrs_arg) : attrs(attrs_arg) {}
-  OpExprInterpContext(const AttrMap& attrs_arg, Symbol<Device> device_arg)
-      : attrs(attrs_arg), device(device_arg) {}
-  OpExprInterpContext(const AttrMap& attrs_arg, std::shared_ptr<user_op::OpKernelState> state_arg)
-      : attrs(attrs_arg), state(state_arg) {}
-  OpExprInterpContext(const AttrMap& attrs_arg, Symbol<Device> device_arg,
-                      std::shared_ptr<user_op::OpKernelState> state_arg)
-      : attrs(attrs_arg), device(device_arg), state(state_arg) {}
-  OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg)
-      : attrs(attrs_arg), parallel_desc(parallel_desc_arg) {}
-  OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg,
-                      Symbol<cfg::NdSbp> nd_sbp_arg)
-      : attrs(attrs_arg), parallel_desc(parallel_desc_arg), nd_sbp(nd_sbp_arg) {}
-  OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg,
-                      Symbol<cfg::NdSbp> nd_sbp_arg,
-                      std::shared_ptr<user_op::OpKernelState> state_arg)
-      : attrs(attrs_arg), parallel_desc(parallel_desc_arg), nd_sbp(nd_sbp_arg), state(state_arg) {}
-
-  OpExprInterpContext(const std::shared_ptr<const OpSchema>& op_schema_arg)
-      : op_schema(op_schema_arg) {}
-  OpExprInterpContext(const std::shared_ptr<const OpSchema>& op_schema_arg,
-                      Symbol<Device> device_arg)
-      : op_schema(op_schema_arg), device(device_arg) {}
-  OpExprInterpContext(const std::shared_ptr<const OpSchema>& op_schema_arg,
-                      std::shared_ptr<user_op::OpKernelState> state_arg)
-      : op_schema(op_schema_arg), state(state_arg) {}
-  OpExprInterpContext(const std::shared_ptr<const OpSchema>& op_schema_arg,
-                      Symbol<Device> device_arg, std::shared_ptr<user_op::OpKernelState> state_arg)
-      : op_schema(op_schema_arg), device(device_arg), state(state_arg) {}
-  OpExprInterpContext(const std::shared_ptr<const OpSchema>& op_schema_arg,
-                      Symbol<ParallelDesc> parallel_desc_arg)
-      : op_schema(op_schema_arg), parallel_desc(parallel_desc_arg) {}
-  OpExprInterpContext(const std::shared_ptr<const OpSchema>& op_schema_arg,
-                      Symbol<ParallelDesc> parallel_desc_arg, Symbol<cfg::NdSbp> nd_sbp_arg)
-      : op_schema(op_schema_arg), parallel_desc(parallel_desc_arg), nd_sbp(nd_sbp_arg) {}
-  OpExprInterpContext(const std::shared_ptr<const OpSchema>& op_schema_arg,
-                      Symbol<ParallelDesc> parallel_desc_arg, Symbol<cfg::NdSbp> nd_sbp_arg,
-                      std::shared_ptr<user_op::OpKernelState> state_arg)
-      : op_schema(op_schema_arg),
-        parallel_desc(parallel_desc_arg),
-        nd_sbp(nd_sbp_arg),
-        state(state_arg) {}
-
-  AttrMap attrs;
-  std::shared_ptr<const OpSchema> op_schema;
-  Optional<Symbol<Device>> device;               // for local op
-  Optional<Symbol<ParallelDesc>> parallel_desc;  // for consistent op
-  Optional<Symbol<cfg::NdSbp>> nd_sbp;           // for consistent op
-  std::shared_ptr<user_op::OpKernelState> state;
-};
-
 class OpExprInterpreter {
  public:
   OpExprInterpreter() = default;
   virtual ~OpExprInterpreter() = default;
 
-  Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple* outputs,
-                    const AttrMap& attrs) const {
-    return Apply(op, inputs, outputs, OpExprInterpContext(attrs));
-  }
-
   Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple* outputs) const {
-    return Apply(op, inputs, outputs, AttrMap{});
+    return Apply(op, inputs, outputs, std::make_shared<DefaultOpInterpCtx>());
   }
 
   virtual Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple* outputs,
-                            const OpExprInterpContext& ctx) const = 0;
+                            const std::shared_ptr<OpInterpCtx>& ctx) const = 0;
 };
 
 #define FOR_EACH_BUILTIN_OPS(_macro) \
@@ -119,15 +61,17 @@ class OpExprInterpreter {
   _macro(DistributeConcatOp);        \
   _macro(DistributeAddOp);
 
-#define DECLARE_NORMAL_APPLY_FUNC(op_type)                                               \
-  virtual Maybe<void> ApplyImpl(const op_type##Expr& op_expr, const TensorTuple& inputs, \
-                                TensorTuple* outputs, const OpExprInterpContext& ctx) const
+#define DECLARE_NORMAL_APPLY_FUNC(op_type)                                                     \
+  virtual Maybe<void> ApplyImpl(const op_type##Expr& op_expr, const TensorTuple& inputs,       \
+                                TensorTuple* outputs, const std::shared_ptr<OpInterpCtx>& ctx) \
+      const
 
 #define DECLARE_PURE_VIRTUAL_APPLY_FUNC(op_type) DECLARE_NORMAL_APPLY_FUNC(op_type) = 0;
 
-#define DECLARE_OVERRIDE_APPLY_FUNC(op_type)                                     \
-  Maybe<void> ApplyImpl(const op_type##Expr& op_expr, const TensorTuple& inputs, \
-                        TensorTuple* outputs, const OpExprInterpContext& ctx) const override;
+#define DECLARE_OVERRIDE_APPLY_FUNC(op_type)                                           \
+  Maybe<void> ApplyImpl(const op_type##Expr& op_expr, const TensorTuple& inputs,       \
+                        TensorTuple* outputs, const std::shared_ptr<OpInterpCtx>& ctx) \
+      const override;
 
 class LazyInterpreter : public OpExprInterpreter {
  public:
@@ -135,12 +79,7 @@ class LazyInterpreter : public OpExprInterpreter {
   virtual ~LazyInterpreter() = default;
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
-                    const AttrMap& attrs) const {
-    return Apply(op_expr, inputs, outputs, OpExprInterpContext(attrs));
-  }
-
-  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
-                    const OpExprInterpContext& ctx) const override;
+                    const std::shared_ptr<OpInterpCtx>& ctx) const override;
 
  private:
   DECLARE_NORMAL_APPLY_FUNC(UserOp);
@@ -158,12 +97,7 @@ class EagerInterpreter : public OpExprInterpreter {
   virtual ~EagerInterpreter() = default;
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
-                    const AttrMap& attrs) const {
-    return Apply(op_expr, inputs, outputs, OpExprInterpContext(attrs));
-  }
-
-  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
-                    const OpExprInterpContext& ctx) const override;
+                    const std::shared_ptr<OpInterpCtx>& ctx) const override;
 
  private:
   FOR_EACH_BUILTIN_OPS(DECLARE_PURE_VIRTUAL_APPLY_FUNC);
@@ -200,17 +134,12 @@ class AutogradInterpreter {
 
   virtual ~AutogradInterpreter() = default;
 
-  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
-                    const AttrMap& attrs) const {
-    return Apply(op_expr, inputs, outputs, OpExprInterpContext(attrs));
-  }
-
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs) const {
-    return Apply(op_expr, inputs, outputs, OpExprInterpContext(AttrMap{}));
+    return Apply(op_expr, inputs, outputs, std::make_shared<DefaultOpInterpCtx>());
   }
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
-                    const OpExprInterpContext& ctx) const;
+                    const std::shared_ptr<OpInterpCtx>& ctx) const;
 
  private:
   std::shared_ptr<OpExprInterpreter> internal_;

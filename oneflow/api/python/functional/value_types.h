@@ -28,7 +28,6 @@ limitations under the License.
 namespace oneflow {
 class Scalar;
 class Shape;
-class AttrMap;
 
 template<typename T>
 class Symbol;
@@ -96,7 +95,6 @@ enum ValueType : int {
   kTENSOR_TUPLE_MAYBE,
   kATTR,
   kATTR_REF,
-  kATTR_MAP,
   kDTYPE,
   kSHAPE,
   kGENERATOR,
@@ -152,7 +150,6 @@ VALUE_TYPE_OF_IMPL(std::shared_ptr<one::TensorTuple>, kTENSOR_TUPLE_REF);
 VALUE_TYPE_OF_IMPL(Maybe<one::TensorTuple>, kTENSOR_TUPLE_MAYBE);
 VALUE_TYPE_OF_IMPL(cfg::AttrValue, kATTR);
 VALUE_TYPE_OF_IMPL(std::shared_ptr<cfg::AttrValue>, kATTR_REF);
-VALUE_TYPE_OF_IMPL(AttrMap, kATTR_MAP);
 VALUE_TYPE_OF_IMPL(Symbol<DType>, kDTYPE);
 VALUE_TYPE_OF_IMPL(Shape, kSHAPE);
 VALUE_TYPE_OF_IMPL(one::Generator, kGENERATOR);

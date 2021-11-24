@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -50,14 +49,12 @@ class BernoulliFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Symbol<DType>& dtype,
                            const Optional<one::Generator>& generator) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap bernoulli_attrs;
-    JUST(bernoulli_attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    JUST(bernoulli_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
-
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-
-    return OpInterpUtil::Dispatch<Tensor>(*bernoulli_op_, {x},
-                                          OpExprInterpContext(bernoulli_attrs, distribution_state));
+    auto ctx = std::make_shared<BernoulliOpInterpCtx>();
+    ctx->dtype = dtype->data_type();
+    ctx->seed = gen->current_seed();
+    ctx->state = distribution_state;
+    return OpInterpUtil::Dispatch<Tensor>(*bernoulli_op_, {x}, ctx);
   }
 
  private:
@@ -78,19 +75,17 @@ class RandFunctor {
         OF_UNIMPLEMENTED() << "Only support float and double in rand().";
       }
     }
-
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("low", 0));
-    JUST(attrs.SetAttr<double>("high", 1));
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
-
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
-    OpExprInterpContext ctx(attrs, distribution_state);
-    ctx.device = device;
+    auto ctx = std::make_shared<RandOpInterpCtx>();
+    ctx->low = 0;
+    ctx->high = 1;
+    ctx->shape = shape;
+    ctx->dtype = dtype_val;
+    ctx->seed = gen->current_seed();
+    ctx->device = device;
+    ctx->state = distribution_state;
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;
@@ -117,21 +112,20 @@ class ConsistentRandFunctor {
     }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("low", 0));
-    JUST(attrs.SetAttr<double>("high", 1));
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
-
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
+    auto ctx = std::make_shared<RandOpInterpCtx>();
+    ctx->low = 0;
+    ctx->high = 1;
+    ctx->shape = shape;
+    ctx->dtype = dtype_val;
+    ctx->seed = gen->current_seed();
+    ctx->state = distribution_state;
+    ctx->parallel_desc = placement;
+
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    if (!JUST(IsMultiClient())) {
-      JUST(attrs.SetAttr<std::string>("nd_sbp", nd_sbp->DebugString()));
-    }
-    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
+    ctx->nd_sbp = nd_sbp;
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }
@@ -154,17 +148,16 @@ class RandNFunctor {
     }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("mean", 0));
-    JUST(attrs.SetAttr<double>("std", 1));
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
-
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
-    OpExprInterpContext ctx(attrs, distribution_state);
-    ctx.device = device;
+    auto ctx = std::make_shared<RandNOpInterpCtx>();
+    ctx->mean = 0;
+    ctx->std = 1;
+    ctx->shape = shape;
+    ctx->dtype = dtype_val;
+    ctx->seed = gen->current_seed();
+    ctx->state = distribution_state;
+    ctx->device = device;
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;
@@ -189,21 +182,19 @@ class ConsistentRandNFunctor {
     }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("mean", 0));
-    JUST(attrs.SetAttr<double>("std", 1));
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
-
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
+    auto ctx = std::make_shared<RandNOpInterpCtx>();
+    ctx->mean = 0;
+    ctx->std = 1;
+    ctx->shape = shape;
+    ctx->dtype = dtype_val;
+    ctx->seed = gen->current_seed();
+    ctx->state = distribution_state;
+    ctx->parallel_desc = placement;
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    if (!JUST(IsMultiClient())) {
-      JUST(attrs.SetAttr<std::string>("nd_sbp", nd_sbp->DebugString()));
-    }
-    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
+    ctx->nd_sbp = nd_sbp;
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }
@@ -225,18 +216,15 @@ class RandIntFunctor {
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<int64_t>("low", low));
-    JUST(attrs.SetAttr<int64_t>("high", high));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
-
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-
-    OpExprInterpContext ctx(attrs, distribution_state);
-    ctx.device = device;
-
+    auto ctx = std::make_shared<RandIntOpInterpCtx>();
+    ctx->shape = shape;
+    ctx->low = low;
+    ctx->high = high;
+    ctx->dtype = dtype_val;
+    ctx->seed = gen->current_seed();
+    ctx->state = distribution_state;
+    ctx->device = device;
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;
@@ -273,29 +261,19 @@ class ConsistentRandIntFunctor {
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<int64_t>("low", low));
-    JUST(attrs.SetAttr<int64_t>("high", high));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
-
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
-    if (LazyMode::is_enabled()) {
-      std::vector<std::string> nd_sbp(sbp_tuple.size());
-      {
-        for (int i = 0; i < sbp_tuple.size(); ++i) {
-          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
-        }
-      }
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
-    }
+    auto ctx = std::make_shared<RandIntOpInterpCtx>();
+    ctx->shape = shape;
+    ctx->low = low;
+    ctx->high = high;
+    ctx->dtype = dtype_val;
+    ctx->seed = gen->current_seed();
+    ctx->state = distribution_state;
+    ctx->parallel_desc = placement;
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-
-    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
-
+    ctx->nd_sbp = nd_sbp;
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }
@@ -324,13 +302,11 @@ class RandPermFunctor {
                            const Symbol<DType>& dtype, const Optional<Symbol<Device>>& device,
                            const bool& requires_grad) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("n", n));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
-
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-
-    OpExprInterpContext ctx(attrs, distribution_state);
+    auto ctx = std::make_shared<RandPermOpInterpCtx>();
+    ctx->n = n;
+    ctx->seed = gen->current_seed();
+    ctx->state = distribution_state;
     ctx.device = device;
 
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*randperm_op_, {}, ctx));
@@ -352,25 +328,17 @@ class ConsistentRandPermFunctor {
                            const Optional<one::Generator>& generator, const Symbol<DType>& dtype,
                            const bool& requires_grad) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("n", n));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
-
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    auto ctx = std::make_shared<RandPermOpInterpCtx>();
+    ctx->n = n;
+    ctx->seed = gen->current_seed();
+    ctx->state = distribution_state;
+    ctx->parallel_desc = placement;
 
-    if (LazyMode::is_enabled()) {
-      std::vector<std::string> nd_sbp(sbp_tuple.size());
-      {
-        for (int i = 0; i < sbp_tuple.size(); ++i) {
-          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
-        }
-      }
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
-    }
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *randperm_op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
+    ctx->nd_sbp = nd_sbp;
 
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*randperm_op_, {}, ctx);
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }

@@ -28,7 +28,8 @@ namespace oneflow {
 namespace one {
 
 Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
-                                   TensorTuple* outputs, const OpExprInterpContext& ctx) const {
+                                   TensorTuple* outputs,
+                                   const std::shared_ptr<OpInterpCtx>& ctx) const {
 #define APPLY_IF(op_type)                                              \
   if (const auto* op = dynamic_cast<const op_type##Expr*>(&op_expr)) { \
     return ApplyImpl(*op, inputs, outputs, ctx);                       \
@@ -48,7 +49,8 @@ Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inp
 }
 
 Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
-                                    TensorTuple* outputs, const OpExprInterpContext& ctx) const {
+                                    TensorTuple* outputs,
+                                    const std::shared_ptr<OpInterpCtx>& ctx) const {
 #define APPLY_IF(op_type)                                              \
   if (const auto* op = dynamic_cast<const op_type##Expr*>(&op_expr)) { \
     return ApplyImpl(*op, inputs, outputs, ctx);                       \
@@ -74,7 +76,8 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& in
 }
 
 Maybe<void> EagerInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const TensorTuple& inputs,
-                                        TensorTuple* outputs, const OpExprInterpContext&) const {
+                                        TensorTuple* outputs,
+                                        const std::shared_ptr<OpInterpCtx>&) const {
   // Must reset ctx in each forward
   op_expr.reset_state();
   std::shared_ptr<FunctionAutoGradCaptureState> ctx = op_expr.state();
@@ -83,7 +86,8 @@ Maybe<void> EagerInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const Ten
 }
 
 Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
-                                       TensorTuple* outputs, const OpExprInterpContext& ctx) const {
+                                       TensorTuple* outputs,
+                                       const std::shared_ptr<OpInterpCtx>& ctx) const {
   bool requires_grad = false;
   if (autograd::GradMode::is_enabled() && !JUST(op_expr.IsGradDisabled())) {
     requires_grad =
