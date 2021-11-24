@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/vm/tensor_view_operand.h"
 
 namespace oneflow {
 namespace vm {
@@ -118,6 +119,20 @@ Maybe<void> LazyReferenceInstructionType::Run(vm::Instruction* instruction) cons
   return Maybe<void>::Ok();
 }
 
+void TensorViewInstructionType::Compute(vm::Instruction* instruction) const {
+  const vm::InstructionMsg& instr_msg = instruction->instr_msg();
+  const auto& phy_instr_operand = instr_msg.phy_instr_operand();
+  CHECK(static_cast<bool>(phy_instr_operand));
+  const auto* ptr = dynamic_cast<const vm::TensorViewOperand*>(phy_instr_operand.get());
+  CHECK_NOTNULL(ptr);
+  DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
+  OfBlob input_ofblob(device_ctx, ptr->eager_blob_object()->mut_blob());
+  OfBlob view_ofblob(device_ctx, ptr->view_eager_blob_object()->mut_blob());
+
+  void* input_ptr = input_ofblob.mut_blob()->mut_dptr();
+  view_ofblob.mut_blob()->reset_dptr(static_cast<char*>(input_ptr));
+}
+
 void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) const {
   const vm::InstructionMsg& instr_msg = instruction->instr_msg();
   const auto& phy_instr_operand = instr_msg.phy_instr_operand();
@@ -136,8 +151,8 @@ class TouchInstructionType : public vm::InstructionType {
   ~TouchInstructionType() = default;
   using stream_type = vm::ControlStreamType;
 
-  void Infer(VirtualMachine* vm, Instruction* instruction) const override { UNIMPLEMENTED(); }
-  void Compute(VirtualMachine* vm, Instruction* instruction) const override {
+  void Infer(VirtualMachineEngine* vm, Instruction* instruction) const override { UNIMPLEMENTED(); }
+  void Compute(VirtualMachineEngine* vm, Instruction* instruction) const override {
     // do nothing
   }
   void Infer(Instruction*) const override { UNIMPLEMENTED(); }

@@ -116,16 +116,9 @@ REGISTER_USER_OP("binary_cross_entropy_with_logits")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn(InferDataType)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("input", 0), 0)
-          .Split(user_op::OpArg("target", 0), 0)
-          .Broadcast(user_op::OpArg("weight", 0))
-          .Broadcast(user_op::OpArg("pos_weight", 0))
-          .Split(user_op::OpArg("out", 0), 0)
-          .Build();
-      return Maybe<void>::Ok();
-    });
+    .SetGetSbpFn(GenLossForwardDefaultGetSbpFn([](user_op::UserOpSbpSignatureBuilder& builder) {
+      builder.Broadcast(user_op::OpArg("pos_weight", 0));
+    }));
 
 REGISTER_USER_OP("binary_cross_entropy_with_logits_grad")
     .Input("input")
@@ -138,17 +131,9 @@ REGISTER_USER_OP("binary_cross_entropy_with_logits_grad")
     .Attr<std::string>("reduction")
     .SetTensorDescInferFn(InferGradTensorDescFn)
     .SetDataTypeInferFn(InferGradDataType)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("input", 0), 0)
-          .Split(user_op::OpArg("target", 0), 0)
-          .Broadcast(user_op::OpArg("weight", 0))
-          .Broadcast(user_op::OpArg("pos_weight", 0))
-          .Split(user_op::OpArg("dy", 0), 0)
-          .Split(user_op::OpArg("dx", 0), 0)
-          .Build();
-      return Maybe<void>::Ok();
-    });
+    .SetGetSbpFn(GenLossBackwardDefaultGetSbpFn([](user_op::UserOpSbpSignatureBuilder& builder) {
+      builder.Broadcast(user_op::OpArg("pos_weight", 0));
+    }));
 
 REGISTER_USER_OP_GRAD("binary_cross_entropy_with_logits")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,

@@ -19,15 +19,15 @@ namespace oneflow {
 
 template<typename T, typename K>
 struct TwoStageReduceKernelUtil<DeviceType::kCPU, T, K> {
-  static void Divide(DeviceCtx* ctx, const int64_t n, const T* x, const K* count, T* y) {
+  static void Divide(ep::Stream* stream, const int64_t n, const T* x, const K* count, T* y) {
     FOR_RANGE(int64_t, i, 0, n) { y[i] = x[i] / count[i]; }
   }
 
-  static void Mask(DeviceCtx* ctx, const int64_t n, const T* x, const K* mask, T* y) {
+  static void Mask(ep::Stream* stream, const int64_t n, const T* x, const K* mask, T* y) {
     FOR_RANGE(int64_t, i, 0, n) { y[i] = static_cast<T>(mask[i]) * x[i]; }
   }
 
-  static void Scale(DeviceCtx* ctx, const int64_t n, const T* x, const K* scale, T* y) {
+  static void Scale(ep::Stream* stream, const int64_t n, const T* x, const K* scale, T* y) {
     FOR_RANGE(int64_t, i, 0, n) { y[i] = x[i] * scale[i]; }
   }
 };

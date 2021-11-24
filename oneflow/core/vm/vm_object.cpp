@@ -36,14 +36,6 @@ void RwMutexedObjectAccess::__Init__(Instruction* instruction, MirroredObject* m
   mut_mirrored_object_id()->CopyFrom(mirrored_object->mirrored_object_id());
 }
 
-bool RwMutexedObjectAccess::is_const_operand() const {
-  return kConstOperandAccess == access_type();
-}
-
-bool RwMutexedObjectAccess::is_mut_operand() const {
-  return kMutableOperandAccess == access_type();
-}
-
 void MirroredObject::__Init__(LogicalObject* logical_object, int64_t global_device_id) {
   __Init__();
   mut_mirrored_object_id()->__Init__(logical_object->logical_object_id(), global_device_id);

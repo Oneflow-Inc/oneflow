@@ -25,7 +25,7 @@ namespace oneflow {
 
 class Device;
 
-// Helps VirtualMachine building instruction edges
+// Helps VirtualMachineEngine building instruction edges
 class LocalDepObject final : public intrusive::Base {
  public:
   // Getters

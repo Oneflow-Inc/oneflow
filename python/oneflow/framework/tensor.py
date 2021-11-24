@@ -310,6 +310,10 @@ def _acos(self):
     return flow.acos(self)
 
 
+def _arccos(self):
+    return flow.arccos(self)
+
+
 def _acosh(self):
     return flow.acosh(self)
 
@@ -458,6 +462,14 @@ def _maximum(self, y):
     return flow.maximum(self, y)
 
 
+def _negative(self):
+    return flow._C.negative(self)
+
+
+def _neg(self):
+    return flow._C.negative(self)
+
+
 def _rsqrt(self):
     return flow.rsqrt(self)
 
@@ -480,6 +492,10 @@ def _std(self, dim=None, unbiased=True, keepdim=False):
 
 def _squeeze(self, dim=None):
     return flow._C.squeeze(self, dim=dim)
+
+
+def _unfold(self, dimension, size, step):
+    return flow._C.unfold_tensor(self, dimension=dimension, size=size, step=step)
 
 
 def _narrow(self, dimension, start, length):
@@ -542,6 +558,16 @@ def _argmin(self, dim=None, keepdim=None):
 
 def _roll(self, shifts, dims=None):
     return flow.roll(self, shifts=shifts, dims=dims)
+
+
+def _bmm(self, other):
+    return flow.bmm(self, other)
+
+
+def _len(self):
+    if self.dim() == 0:
+        raise TypeError("len() of a 0-d tensor")
+    return self.shape[0]
 
 
 def _uniform(self, a=0, b=1):
@@ -628,7 +654,7 @@ def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
 
 def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
     if random_seed is None:
-        random_seed = flow.default_generator().seed()
+        random_seed = flow.default_generator.seed()
     shape = tuple(tensor.shape)
     initializer = initializer_util.GetInitializer(initializer_conf, random_seed, shape)
 
@@ -675,6 +701,10 @@ def _format(self, format_spec):
     return object.__format__(self, format_spec)
 
 
+def _to(self, *args, **kwargs):
+    return flow._C.to(self, *args, **kwargs)
+
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)
@@ -718,6 +748,7 @@ def RegisterMethods():
     Tensor.__pow__ = _pow
     Tensor.__format__ = _format
     Tensor.__floordiv__ = _floor_divide
+    Tensor.__len__ = _len
     Tensor.uniform_ = _uniform
     Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform
@@ -735,6 +766,7 @@ def RegisterMethods():
     Tensor.argmax = _argmax
     Tensor.argmin = _argmin
     Tensor.acos = _acos
+    Tensor.arccos = _arccos
     Tensor.acosh = _acosh
     Tensor.arccosh = _arccosh
     Tensor.atanh = _atanh
@@ -747,6 +779,8 @@ def RegisterMethods():
     Tensor.ge = _ge
     Tensor.gelu = _gelu
     Tensor.mish = _mish
+    Tensor.negative = _negative
+    Tensor.neg = _neg
     Tensor.sigmoid = _sigmoid
     Tensor.tanh = _tanh
     Tensor.silu = _silu
@@ -801,10 +835,13 @@ def RegisterMethods():
     Tensor.log_softmax = _log_softmax
     Tensor.logical_not = _not
     Tensor.roll = _roll
+    Tensor.bmm = _bmm
     Tensor.squeeze = _squeeze
+    Tensor.unfold = _unfold
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
     Tensor.permute = _permute
+    Tensor.to = _to
 
 
 def register_tensor_op(op_name):
