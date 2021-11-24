@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/user/kernels/scalar_math_kernels.h"
 #include "oneflow/user/kernels/elementwise_xpu_kernel.cuh"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -35,19 +36,20 @@ struct UnaryByScalarFunctor<Op, float16> {
 
 template<template<typename> class BIN_OP, typename T>
 struct ScalarMathFunctor<DeviceType::kGPU, BIN_OP, T> final {
-  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const T scalar, const T* in, T* out) {
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, const T scalar, const T* in, T* out) {
     OF_CUDA_CHECK(cuda::elementwise::Unary(UnaryByScalarFunctor<BIN_OP, T>(scalar), elem_cnt, out,
-                                           in, ctx->cuda_stream()));
+                                           in, stream->As<ep::CudaStream>()->cuda_stream()));
   }
 };
 
 template<template<typename> class BIN_OP>
 struct ScalarMathFunctor<DeviceType::kGPU, BIN_OP, float16> final {
-  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, float16 scalar, const float16* in,
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, float16 scalar, const float16* in,
                   float16* out) {
     OF_CUDA_CHECK(cuda::elementwise::Unary(
         UnaryByScalarFunctor<BIN_OP, float16>(float16_2half(scalar)), elem_cnt,
-        reinterpret_cast<half*>(out), reinterpret_cast<const half*>(in), ctx->cuda_stream()));
+        reinterpret_cast<half*>(out), reinterpret_cast<const half*>(in),
+        stream->As<ep::CudaStream>()->cuda_stream()));
   }
 };
 
@@ -102,9 +104,9 @@ class GpuScalarPowGradKernel final : public user_op::OpKernel {
       UNIMPLEMENTED();
     }
     const int32_t elem_cnt = x_tensor->shape().elem_cnt();
-    OF_CUDA_CHECK((oneflow::cuda::elementwise::Binary(ScalarPowGradFunctor<T>(scalar_operand),
-                                                      elem_cnt, dx_ptr, x_ptr, dy_ptr,
-                                                      ctx->device_ctx()->cuda_stream())));
+    OF_CUDA_CHECK((oneflow::cuda::elementwise::Binary(
+        ScalarPowGradFunctor<T>(scalar_operand), elem_cnt, dx_ptr, x_ptr, dy_ptr,
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

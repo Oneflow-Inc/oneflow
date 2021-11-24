@@ -42,9 +42,8 @@ OpKernelRegistry& OpKernelRegistry::SetInplaceProposalFn(InplaceProposalFn fn) {
 Maybe<OpKernelRegistry&> OpKernelRegistry::Finish() {
   CHECK_OR_RETURN(result_.create_fn != nullptr)
       << "No Create function for " << result_.op_type_name;
-  if (result_.infer_tmp_size_fn == nullptr) {
-    result_.infer_tmp_size_fn = TmpSizeInferFnUtil::ZeroTmpSize;
-  }
+  result_.need_temp_storage = (result_.infer_tmp_size_fn != nullptr);
+  if (!result_.need_temp_storage) { result_.infer_tmp_size_fn = TmpSizeInferFnUtil::ZeroTmpSize; }
   if (result_.inplace_proposal_fn == nullptr) {
     result_.inplace_proposal_fn = [](const InferContext&, AddInplaceArgPair) {
       return Maybe<void>::Ok();

@@ -128,7 +128,7 @@ OF_DEVICE_FUNC bool FoldIndexTransform(const FoldParams<INDEX_T, NDIM, SDIM>& pa
 
 template<DeviceType device_type, typename T, typename INDEX_T, int NDIM, int SDIM>
 struct FoldKernelUtil {
-  static void Forward(DeviceCtx* ctx, const void* params, const T* input_ptr, T* output_ptr);
+  static void Forward(ep::Stream* stream, const void* params, const T* input_ptr, T* output_ptr);
 };
 
 #define SPATIAL_NDIM_SEQ OF_PP_MAKE_TUPLE_SEQ(1) OF_PP_MAKE_TUPLE_SEQ(2) OF_PP_MAKE_TUPLE_SEQ(3)
