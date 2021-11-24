@@ -142,7 +142,7 @@ bool IsConvOp(const std::string& op_name) {
 bool IsLazyPoolOp(const std::string& op_name) { return op_name.find("_pool") != std::string::npos; }
 bool IsNCCLOp(const std::string& op_name) { return op_name.find("nccl") != std::string::npos; }
 bool IsOptimizerOp(const std::string& op_name) {
-  return op_name.find("update") != std::string::npos
+  return (op_name.find("update") != std::string::npos || op_name.find("adam") != std::string::npos)
          && op_name.find("scatter") == std::string::npos;
 }
 bool IsTrigonometric(const std::string& op_name) {
@@ -155,9 +155,16 @@ bool IsTestOp(const std::string& op_name) {
           || op_name.find("ccrelu") != std::string::npos);
 }
 bool IsPaddingOp(const std::string& op_name) { return (op_name.find("pad") != std::string::npos); }
+bool IsAssignOp(const std::string& op_name) {
+  return (op_name.find("assign") != std::string::npos);
+}
 bool IsCrossEntropyOp(const std::string& op_name) {
   return (op_name.find("cross_entropy") != std::string::npos);
 }
+bool IsMatmulOp(const std::string& op_name) {
+  return (op_name.find("matmul") != std::string::npos || op_name.find("fc") != std::string::npos);
+}
+
 bool IsDatasetOp(const std::string& op_name) {
   return (op_name.find("reader") != std::string::npos || op_name.find("Reader") != std::string::npos
           || op_name.find("loader") != std::string::npos
@@ -436,6 +443,7 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
     if (IsAnyConvOp(r.op_type_name)) { group_name = "CONV"; }
     if (IsAnyPoolOp(r.op_type_name)) { group_name = "POOL"; }
     if (IsUpsampleOp(r.op_type_name)) { group_name = "UPSAMPLE"; }
+    if (IsAssignOp(r.op_type_name)) { group_name = "assign"; }
     if (IsOptimizerOp(r.op_type_name)) { group_name = "OPTIMIZER"; }
     if (IsTrigonometric(r.op_type_name)) { group_name = "TRIGONOMETRIC"; }
     if (IsIdempotentOp(r.op_type_name)) { group_name = "IDEMPOTENT"; }
@@ -444,6 +452,7 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
     if (IsFusedOp(r.op_type_name)) { group_name = "Fused"; }
     if (IsEagerOp(r.op_type_name)) { group_name = "eager"; }
     if (IsDatasetOp(r.op_type_name)) { group_name = "DATASET"; }
+    if (IsMatmulOp(r.op_type_name)) { group_name = "matmul"; }
     if (IsTestOp(r.op_type_name)) { group_name = "TEST"; }
     group_name = "GET_ONEFLOW_" + group_name + "_OP_DEFINITIONS";
     std::transform(group_name.begin(), group_name.end(), group_name.begin(), ::toupper);
