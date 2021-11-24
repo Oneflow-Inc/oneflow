@@ -49,7 +49,7 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
   HashMap<int, SocketHelper*> sockfd2helper_;
 
   std::mutex token_mutex_;
-  size_t num_token_ = 0; 
+  size_t num_token_ = 0;
 };
 
 }  // namespace oneflow
