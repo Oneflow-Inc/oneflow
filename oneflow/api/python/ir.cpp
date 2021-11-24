@@ -433,6 +433,7 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
     const oneflow::user_op::OpRegistryResult& r = kv.second;
     if (ShouldGenBaseClass(r.op_type_name)) { group_name = "BASE"; }
     if (IsImageOp(r.op_type_name)) { group_name = "Image"; }
+    if (IsMathOp(r.op_type_name)) { group_name = "math"; }
     if (IsPaddingOp(r.op_type_name)) { group_name = "PADDING"; }
     if (IsIndicesOp(r.op_type_name)) { group_name = "Indices"; }
     if (IsBroadcastOp(r.op_type_name)) { group_name = "Broadcast"; }
@@ -442,7 +443,6 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
     if (IsLossOp(r.op_type_name)) { group_name = "loss"; }
     if (IsNormalizationOp(r.op_type_name)) { group_name = "Normalization"; }
     if (IsCrossEntropyOp(r.op_type_name)) { group_name = "Cross_Entropy"; }
-    if (IsMathOp(r.op_type_name)) { group_name = "math"; }
     if (IsSoftmaxOp(r.op_type_name)) { group_name = "Softmax"; }
     if (IsNCCLOp(r.op_type_name)) { group_name = "NCCL"; }
     if (IsAnyConvOp(r.op_type_name)) { group_name = "CONV"; }
