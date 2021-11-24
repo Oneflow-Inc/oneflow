@@ -35,7 +35,7 @@ void CriticalSectionEndPhyInstrOperand::ForEachMirroredObject(
 namespace {
 
 Maybe<LocalDepObject*> RawCriticalSectionLocalDepObject() {
-  return JUST(Device::New("critical_section"))->mut_schedule_local_dep_object();
+  return JUST(Device::New("critical_section", 0))->mut_schedule_local_dep_object();
 }
 
 constexpr auto* CriticalSectionLocalDepObject =
