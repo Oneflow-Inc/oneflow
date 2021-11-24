@@ -46,7 +46,8 @@ __inline__ __device__ double Div<double>(double a, double b) {
   return a / b;
 }
 
-inline cudaError_t GetNumBlocks(int64_t block_size, int64_t max_blocks, int64_t waves,
+template<class Func>
+inline cudaError_t GetNumBlocks(Func func, int64_t block_size, size_t dynamic_smem_size, int64_t max_blocks, int64_t waves,
                                 int* num_blocks) {
   int dev;
   {
@@ -58,13 +59,13 @@ inline cudaError_t GetNumBlocks(int64_t block_size, int64_t max_blocks, int64_t 
     cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
     if (err != cudaSuccess) { return err; }
   }
-  int tpm;
+  int max_active_blocks;
   {
-    cudaError_t err = cudaDeviceGetAttribute(&tpm, cudaDevAttrMaxThreadsPerMultiProcessor, dev);
-    if (err != cudaSuccess) { return err; }
+    cudaError_t err =
+        cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks, func, block_size, dynamic_smem_size);
   }
   *num_blocks =
-      std::max<int>(1, std::min<int64_t>(max_blocks, sm_count * tpm / block_size * waves));
+      std::max<int>(1, std::min<int64_t>(max_blocks, sm_count * max_active_blocks * waves));
   return cudaSuccess;
 }
 
@@ -133,7 +134,7 @@ inline __device__ void WelfordCombine(T val, T* mean, T* m2, T* count) {
   // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
   *count += 1;
   T delta1 = val - *mean;
-  *mean += Div(delta1, static_cast<T>(*count));
+  *mean += Div(delta1, *count);
   T delta2 = val - *mean;
   *m2 += delta1 * delta2;
 }
@@ -142,7 +143,7 @@ template<typename T>
 inline __device__ void WelfordCombine(T b_mean, T b_m2, T b_count, T* mean, T* m2, T* count) {
   if (b_count == 0) { return; }
   T new_count = *count + b_count;
-  T nb_over_n = Div(static_cast<T>(b_count), static_cast<T>(new_count));
+  T nb_over_n = Div(b_count, new_count);
   T delta = b_mean - *mean;
   *mean += delta * nb_over_n;
   *m2 += b_m2 + delta * delta * (*count) * nb_over_n;
@@ -207,7 +208,7 @@ __inline__ __device__ void WelfordBlockAllReduce(T thread_mean, T thread_m2, T t
     } else {
       warp_mean = static_cast<T>(0);
       warp_m2 = static_cast<T>(0);
-      warp_count = 0;
+      warp_count = static_cast<T>(0);
     }
     __syncwarp();
     T block_mean = 0;
@@ -314,7 +315,10 @@ inline cudaError_t LaunchLayerNormWarpImpl(cudaStream_t stream, LOAD load, STORE
   const int64_t num_blocks = (rows + rows_per_block - 1) / rows_per_block;
   int grid_dim_x;
   {
-    cudaError_t err = GetNumBlocks(block_size, num_blocks, waves, &grid_dim_x);
+    cudaError_t err =
+        GetNumBlocks(LayerNormWarpImpl<LOAD, STORE, ComputeType, pack_size, cols_per_thread,
+                                       thread_group_width, rows_per_access, padding>,
+                     block_size, 0, num_blocks, waves, &grid_dim_x);
     if (err != cudaSuccess) { return err; }
   }
   LayerNormWarpImpl<LOAD, STORE, ComputeType, pack_size, cols_per_thread, thread_group_width,
@@ -557,7 +561,7 @@ __global__ void LayerNormBlockSMemImpl(LOAD load, STORE store, const int64_t row
     WelfordBlockAllReduce<ComputeType>(thread_mean, thread_m2, thread_count, &row_mean, &row_m2,
                                        &row_count);
     ComputeType row_variance =
-        max(Div(row_m2, static_cast<ComputeType>(row_count)), static_cast<ComputeType>(0.0));
+        max(Div(row_m2, row_count), static_cast<ComputeType>(0.0));
     ComputeType row_inv_var = rsqrt(row_variance + static_cast<ComputeType>(epsilon));
     if (threadIdx.x == 0) {
       mean[row] = row_mean;
@@ -582,7 +586,9 @@ inline cudaError_t LaunchLayerNormBlockSMemImpl(cudaStream_t stream, LOAD load, 
   constexpr int waves = 32;
   int grid_dim_x;
   {
-    cudaError_t err = GetNumBlocks(block_size, rows, waves, &grid_dim_x);
+    cudaError_t err =
+        GetNumBlocks(LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size>,
+                     block_size, smem, rows, waves, &grid_dim_x);
     if (err != cudaSuccess) { return err; }
   }
   LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size>
@@ -737,7 +743,9 @@ inline cudaError_t LaunchLayerNormBlockUncachedImpl(cudaStream_t stream, LOAD lo
   constexpr int waves = 32;
   int grid_dim_x;
   {
-    cudaError_t err = GetNumBlocks(block_size, rows, waves, &grid_dim_x);
+    cudaError_t err =
+        GetNumBlocks(LayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, pack_size, block_size>,
+                     block_size, 0, rows, waves, &grid_dim_x);
     if (err != cudaSuccess) { return err; }
   }
   LayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, pack_size, block_size>
