@@ -3,6 +3,7 @@
 
 include "OneFlowDialect.td"
 include "OneFlowEnums.td"
+include "OneFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Pass/PassBase.td"
 include "mlir/Interfaces/CallInterfaces.td"
@@ -275,7 +276,7 @@ def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", []> {
   );
 }
 
-def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", []>  {
+def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]>  {
   let summary = "";
   let input = (ins
     AnyType:$a,
@@ -286,6 +287,10 @@ def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", []>  {
     SI32Attr:$axis
   );
   let hasCanonicalizer = 1;
+  let extraClassDeclaration = [{
+    static void inputOrderFull() { };
+    static void outputOrderFull() { };
+  }];
 }
 
 def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", []>  {

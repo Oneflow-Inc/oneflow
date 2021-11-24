@@ -494,3 +494,4 @@ void NormalizationAddReluOp::build(::mlir::OpBuilder& odsBuilder, ::mlir::Operat
 
 #define GET_OP_CLASSES
 #include "OneFlow/OneFlowOps.cpp.inc"
+#include "OneFlow/OneFlowInterfaces.cpp.inc"

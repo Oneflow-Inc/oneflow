@@ -24,6 +24,7 @@ limitations under the License.
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
 
+#include "OneFlow/OneFlowInterfaces.h.inc"
 #include "OneFlow/OneFlowEnums.h.inc"
 
 namespace mlir {

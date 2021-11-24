@@ -418,6 +418,12 @@ LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf)
 
 LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
                                   ::oneflow::UserOpConf* user_conf) {
+  if (auto shapeOp = dyn_cast<BnOrder>(op)) {
+    shapeOp.inputOrder();
+  } else {
+    op->emitError("bn order not found");
+    return failure();
+  }
   const std::string op_name = user_op_adaptor.op_name().getValue().str();
   int32_t input_idx = 0;
   if (auto keys = user_op_adaptor.input_lbn_segment_keys()) {
