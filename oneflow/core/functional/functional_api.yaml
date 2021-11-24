@@ -1377,8 +1377,12 @@
     ]
   bind_python: True
 
+# - name: "dropout"
+#   signature: "TensorTuple (Tensor x, Float p=0.5, Bool training=True, Generator generator=None) => Dropout"
+#   bind_python: True
+
 - name: "dropout"
-  signature: "TensorTuple (Tensor x, Float p=0.5, Bool training=True, Generator generator=None) => Dropout"
+  signature: "Tensor (Tensor x, Tensor addend=None, Float p=0.5, Bool training=True, Generator generator=None) => Dropout"
   bind_python: True
 
 - name: "dropout_grad"

@@ -1420,25 +1420,42 @@ class DropoutFunctor {
   DropoutFunctor() {
     dropout_op_ =
         CHECK_JUST(one::OpBuilder("dropout").Input("in").Output("out").Output("mask").Build());
+    dropout_addend_op_ = CHECK_JUST(one::OpBuilder("dropout")
+                                        .Input("in")
+                                        .Input("_add_to_output")
+                                        .Output("out")
+                                        .Output("mask")
+                                        .Build());
+    add_op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build());
   }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
-                                const bool& training,
-                                const Optional<one::Generator>& generator) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<one::Tensor>& addend, const float& p,
+                           const bool& training, const Optional<one::Generator>& generator) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
-
     MutableAttrMap dropout_attrs;
-    if (!training) {
-      return TensorTuple({x});
+    JUST(dropout_attrs.SetAttr<float>("rate", p));
+    if (addend) {
+      if (!training) {
+        return OpInterpUtil::Dispatch<one::Tensor>(*add_op_, {x, JUST(addend)});
+      } else {
+        return OpInterpUtil::Dispatch<Tensor>(*dropout_addend_op_, {x, JUST(addend)},
+                                              OpExprInterpContext(dropout_attrs, dropout_state));
+      }
     } else {
-      JUST(dropout_attrs.SetAttr<float>("rate", p));
-      return OpInterpUtil::Dispatch<TensorTuple>(*dropout_op_, {x},
-                                                 OpExprInterpContext(dropout_attrs, dropout_state));
+      if (!training) {
+        return x;
+      } else {
+        return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {x},
+                                              OpExprInterpContext(dropout_attrs, dropout_state));
+      }
     }
   }
 
  private:
   std::shared_ptr<OpExpr> dropout_op_;
+  std::shared_ptr<OpExpr> dropout_addend_op_;
+  std::shared_ptr<OpExpr> add_op_;
 };
 
 class DropoutGradFunctor {
@@ -1451,7 +1468,6 @@ class DropoutGradFunctor {
                            const std::shared_ptr<one::Tensor>& mask, const float& scale) const {
     MutableAttrMap dropout_grad_attrs;
     JUST(dropout_grad_attrs.SetAttr<float>("scale", scale));
-
     return OpInterpUtil::Dispatch<Tensor>(*dropout_grad_op_, {dy, mask}, dropout_grad_attrs);
   }
 
