@@ -223,6 +223,55 @@ TEST(Just, WithMsg) {
   ASSERT_EXIT(CHECK_JUST(i(10.234)), testing::KilledBySignal(SIGABRT), R"(input value 53)");
 }
 
-TEST(Just, JustOpt) {}
+TEST(Just, JustOpt) {
+  auto f = [](int x) -> Optional<int> {
+    if (x > 10) return NullOpt;
 
-TEST(Just, NoStack) {}
+    return x + 1;
+  };
+
+  auto g = [&f](int x) -> Optional<int> { return JUST_OPT(f(x)) * 2; };
+
+  ASSERT_EQ(CHECK_JUST(g(2)), 6);
+  ASSERT_FALSE(g(11));
+
+  auto h = [&](int x) -> Optional<int> {
+    if (x == 10) return NullOpt;
+
+    return JUST_OPT(g(x)) + JUST_OPT(f(x + 2));
+  };
+
+  ASSERT_FALSE(h(10));
+  ASSERT_FALSE(h(9));
+  ASSERT_EQ(h(8), 29);
+}
+
+TEST(Just, NoStack) {
+  using Error = simple::NoStackError<std::string>;
+  using MaybeInt = Maybe<int, Error>;
+
+  auto f = [](int x) -> MaybeInt {
+    if (x > 10 || x < 0) { return Error{"not in range"}; }
+
+    return x + 10;
+  };
+
+  auto g = [&f](int x) -> MaybeInt {
+    if (x == 15) { return Error{"invalid value"}; }
+
+    return JUST(f(x)) * 2;
+  };
+
+  auto h = [&g](int x) -> MaybeInt { return JUST(g(x)) + 2; };
+
+  ASSERT_EQ(CHECK_JUST(h(0)), 22);
+
+  ASSERT_DEATH(  // NOLINT(cppcoreguidelines-avoid-goto)
+      CHECK_JUST(h(11)), R"(not in range)");
+
+  ASSERT_DEATH(  // NOLINT(cppcoreguidelines-avoid-goto)
+      CHECK_JUST(h(15)), R"(invalid value)");
+
+  ASSERT_EQ(details::JustPrivateScope::StackedError(h(12)).StackSize(), 0);
+  ASSERT_EQ(details::JustPrivateScope::StackedError(h(15)).StackSize(), 0);
+}

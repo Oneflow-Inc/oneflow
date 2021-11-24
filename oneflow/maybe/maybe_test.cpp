@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include <gtest/gtest.h>
+#include "oneflow/maybe/error.h"
 #include "oneflow/maybe/maybe.h"
 
 using namespace oneflow::maybe;
@@ -140,4 +141,15 @@ TEST(Maybe, PtrError) {
   ASSERT_EQ(details::MaybePrivateScope::StackedError(c)->Error(), "test");
 }
 
-TEST(Maybe, NoStack) {}
+TEST(Maybe, NoStack) {
+  using Error = simple::NoStackError<std::string>;
+  Maybe<int, Error> a{1}, b{a}, c{InPlaceError, "hello"}, d{c};
+
+  ASSERT_TRUE(a);
+  ASSERT_TRUE(b);
+  ASSERT_FALSE(c);
+  ASSERT_FALSE(d);
+
+  a = c;
+  ASSERT_FALSE(a);
+}

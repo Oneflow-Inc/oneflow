@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/maybe/variant.h"
 #include "oneflow/maybe/optional.h"
 #include "oneflow/maybe/error.h"
+#include "oneflow/maybe/config.h"
 
 namespace oneflow {
 
@@ -173,7 +174,38 @@ struct Maybe : private details::MaybeStorage<T, E> {
   using Base::Base;
 
   bool IsOk() const { return Base::IsOk(); }
+  bool IsErr() const { return !Base::IsOk(); }
   explicit operator bool() const { return IsOk(); }
+
+  decltype(auto) GetStackedError() & {
+    OF_MAYBE_ASSERT(IsErr());
+    return StackedError();
+  }
+
+  decltype(auto) GetStackedError() const& {
+    OF_MAYBE_ASSERT(IsErr());
+    return StackedError();
+  }
+
+  decltype(auto) GetStackedError() && {
+    OF_MAYBE_ASSERT(IsErr());
+    return std::move(*this).StackedError();
+  }
+
+  decltype(auto) GetError() & {
+    OF_MAYBE_ASSERT(IsErr());
+    return Error();
+  }
+
+  decltype(auto) GetError() const& {
+    OF_MAYBE_ASSERT(IsErr());
+    return Error();
+  }
+
+  decltype(auto) GetError() && {
+    OF_MAYBE_ASSERT(IsErr());
+    return std::move(*this).Error();
+  }
 };
 
 }  // namespace maybe
