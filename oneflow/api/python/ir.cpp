@@ -297,6 +297,8 @@ std::string GetTraits(const oneflow::UserOpDef& op_def) {
     if (ret != "") ret += ", ";
     ret += "AttrSizedResultSegments";
   }
+  if (ret != "") ret += ", ";
+  ret += "DeclareOpInterfaceMethods<BnOrderOpInterface>";
   return ret;
 }
 
