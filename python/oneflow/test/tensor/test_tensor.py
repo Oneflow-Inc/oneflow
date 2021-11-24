@@ -588,6 +588,14 @@ class TestTensor(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     @autotest()
+    def test_arccos_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(low=2, high=3).to(device)
+        y = x.arccos()
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest()
     def test_arccosh_tensor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(low=2, high=3).to(device)
