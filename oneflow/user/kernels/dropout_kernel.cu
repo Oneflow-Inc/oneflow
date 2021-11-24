@@ -49,62 +49,7 @@ union RandPack4 {
 #define RETURN_VOID_IF_FLOAT typename std::enable_if_t<std::is_same<T, float>::value, void>
 #define RETURN_VOID_IF_DOUBLE typename std::enable_if_t<std::is_same<T, double>::value, void>
 
-template<typename T, bool tail>
-__global__ RETURN_VOID_IF_FLOAT MaskAndScaleGpu(uint64_t seed,
-                                                one::CUDAGeneratorState* cuda_gen_state,
-                                                uint64_t counter_offset, const int64_t elem_cnt,
-                                                float rate, float scale, int64_t n_tail, const T* x,
-                                                int8_t* mask, T* y, const T* tail_x,
-                                                int8_t* tail_mask, T* tail_y) {
-  int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandStatePhilox4_32_10_t state;
-  curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
-  using LoadT =
-      typename std::aligned_storage<sizeof(T) * PackFloatSize, sizeof(T) * PackFloatSize>::type;
-  using MaskT = typename std::aligned_storage<sizeof(int8_t) * PackFloatSize,
-                                              sizeof(int8_t) * PackFloatSize>::type;
-  RandPack4 rand_uniform_pack4;
-
-  for (int64_t linear_index = global_thread_id * PackFloatSize; linear_index < elem_cnt;
-       linear_index += gridDim.x * blockDim.x * PackFloatSize) {
-    rand_uniform_pack4.storage = curand_uniform4(&state);
-
-    const LoadT* x_load = reinterpret_cast<const LoadT*>(x + linear_index);
-    cuda::elementwise::Pack<T, PackFloatSize> x_vec;
-    x_vec.storage = *x_load;
-
-    int8_t mask_vec[PackFloatSize];
-    T y_vec[PackFloatSize];
-#pragma unroll
-    for (int i = 0; i < PackFloatSize; i++) {
-      rand_uniform_pack4.elem[i] = rand_uniform_pack4.elem[i] > rate;
-      mask_vec[i] = rand_uniform_pack4.elem[i];
-      y_vec[i] = x_vec.elem[i] * mask_vec[i] * scale;
-    }
-
-    *(reinterpret_cast<LoadT*>(y + linear_index)) = *reinterpret_cast<LoadT*>(y_vec);
-    *(reinterpret_cast<MaskT*>(mask + linear_index)) = *reinterpret_cast<MaskT*>(mask_vec);
-  }
-
-  if (tail && global_thread_id < n_tail) {
-    float rand_uniform = curand_uniform(&state);
-    rand_uniform = rand_uniform > rate;
-    tail_mask[global_thread_id] = rand_uniform;
-    tail_y[global_thread_id] = tail_x[global_thread_id] * rand_uniform * scale;
-  }
-
-  __syncthreads();
-
-  if (threadIdx.x == 0) {
-    int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
-    if (new_counter == gridDim.x) {
-      cuda_gen_state->dev_counter = 0;               // reset counter to zero
-      cuda_gen_state->dev_offset += counter_offset;  // maintain the state of generator's dev_offset
-    }
-  }
-}
-
-template<typename T, bool tail>
+template<typename T, bool tail, bool hasAddend>
 __global__ RETURN_VOID_IF_FLOAT MaskAndScaleAddGpu(
     uint64_t seed, one::CUDAGeneratorState* cuda_gen_state, uint64_t counter_offset,
     const int64_t elem_cnt, float rate, float scale, int64_t n_tail, const T* x, int8_t* mask,
@@ -125,18 +70,22 @@ __global__ RETURN_VOID_IF_FLOAT MaskAndScaleAddGpu(
     const LoadT* x_load = reinterpret_cast<const LoadT*>(x + linear_index);
     cuda::elementwise::Pack<T, PackFloatSize> x_vec;
     x_vec.storage = *x_load;
-
-    const LoadT* addend_load = reinterpret_cast<const LoadT*>(&addend[linear_index]);
+    
     cuda::elementwise::Pack<T, PackFloatSize> addend_vec;
-    addend_vec.storage = *addend_load;
+    if(hasAddend){
+      const LoadT* addend_load = reinterpret_cast<const LoadT*>(&addend[linear_index]);
+      addend_vec.storage = *addend_load;
+    }
 
     int8_t mask_vec[PackFloatSize];
     T y_vec[PackFloatSize];
 #pragma unroll
     for (int i = 0; i < PackFloatSize; i++) {
-      rand_uniform_pack4.elem[i] = rand_uniform_pack4.elem[i] > rate;
-      mask_vec[i] = rand_uniform_pack4.elem[i];
-      y_vec[i] = x_vec.elem[i] * mask_vec[i] * scale + addend_vec.elem[i];
+      mask_vec[i] = rand_uniform_pack4.elem[i] > rate;
+      y_vec[i] = x_vec.elem[i] * mask_vec[i] * scale;
+      if(hasAddend){
+        y_vec[i] += addend_vec.elem[i];
+      }
     }
 
     *(reinterpret_cast<LoadT*>(y + linear_index)) = *reinterpret_cast<LoadT*>(y_vec);
@@ -144,11 +93,15 @@ __global__ RETURN_VOID_IF_FLOAT MaskAndScaleAddGpu(
   }
 
   if (tail && global_thread_id < n_tail) {
-    float rand_uniform = curand_uniform(&state);
-    rand_uniform = rand_uniform > rate;
-    tail_mask[global_thread_id] = rand_uniform;
-    tail_y[global_thread_id] =
-        tail_x[global_thread_id] * rand_uniform * scale + tail_addend[global_thread_id];
+    const float rand_uniform = curand_uniform(&state);
+    const int8_t mask = rand_uniform > rate;
+    tail_mask[global_thread_id] = mask;
+    float tmp_tail_out = tail_x[global_thread_id] * mask * scale; 
+    if(hasAddend){
+      tail_y[global_thread_id] = tmp_tail_out + tail_addend[global_thread_id];
+    }else{
+      tail_y[global_thread_id] = tmp_tail_out;
+    }
   }
 
   __syncthreads();
@@ -162,71 +115,7 @@ __global__ RETURN_VOID_IF_FLOAT MaskAndScaleAddGpu(
   }
 }
 
-template<typename T, bool tail>
-__global__ RETURN_VOID_IF_HALF MaskAndScaleGpu(uint64_t seed,
-                                               one::CUDAGeneratorState* cuda_gen_state,
-                                               uint64_t counter_offset, const int64_t elem_cnt,
-                                               float rate, float scale, int64_t n_tail, const T* x,
-                                               int8_t* mask, T* y, const T* tail_x,
-                                               int8_t* tail_mask, T* tail_y) {
-  int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandStatePhilox4_32_10_t state;
-  curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
-  using LoadT =
-      typename std::aligned_storage<sizeof(half) * PackHalfSize, sizeof(half) * PackHalfSize>::type;
-  using MaskT = typename std::aligned_storage<sizeof(int8_t) * PackHalfSize,
-                                              sizeof(int8_t) * PackHalfSize>::type;
-
-  RandPack4 rand_uniform_pack4;
-  half2 h2_scale = __float2half2_rn(scale);
-  for (int64_t linear_index = global_thread_id * PackHalfSize; linear_index < elem_cnt;
-       linear_index += gridDim.x * blockDim.x * PackHalfSize) {
-    rand_uniform_pack4.storage = curand_uniform4(&state);
-    const LoadT* x_load = reinterpret_cast<const LoadT*>(x + linear_index);
-    H2Pack x_vec{};
-    x_vec.storage = *x_load;
-
-    int8_t mask_vec[PackHalfSize];
-    half2 y_vec[PackHalf2Size];
-    half2 one_or_zero_h2[PackHalf2Size];
-
-    mask_vec[0] = rand_uniform_pack4.elem[0] > rate;
-    one_or_zero_h2[0].x = mask_vec[0];
-    mask_vec[1] = rand_uniform_pack4.elem[1] > rate;
-    one_or_zero_h2[0].y = mask_vec[1];
-    y_vec[0] = __hmul2(__hmul2(x_vec.h2[0], one_or_zero_h2[0]), h2_scale);
-
-    mask_vec[2] = rand_uniform_pack4.elem[2] > rate;
-    one_or_zero_h2[1].x = mask_vec[2];
-    mask_vec[3] = rand_uniform_pack4.elem[3] > rate;
-    one_or_zero_h2[1].y = mask_vec[3];
-    y_vec[1] = __hmul2(__hmul2(x_vec.h2[1], one_or_zero_h2[1]), h2_scale);
-
-    *(reinterpret_cast<LoadT*>(y + linear_index)) = *reinterpret_cast<LoadT*>(y_vec);
-    *(reinterpret_cast<MaskT*>(mask + linear_index)) = *reinterpret_cast<MaskT*>(mask_vec);
-  }
-
-  if (tail && global_thread_id < n_tail) {
-    half half_scale = __float2half_rn(scale);
-    float rand_uniform = curand_uniform(&state);
-    rand_uniform = rand_uniform > rate;
-    tail_mask[global_thread_id] = rand_uniform;
-    tail_y[global_thread_id] =
-        tail_x[global_thread_id] * static_cast<half>(rand_uniform) * half_scale;
-  }
-
-  __syncthreads();
-
-  if (threadIdx.x == 0) {
-    int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
-    if (new_counter == gridDim.x) {
-      cuda_gen_state->dev_counter = 0;               // reset counter to zero
-      cuda_gen_state->dev_offset += counter_offset;  // maintain the state of generator's dev_offset
-    }
-  }
-}
-
-template<typename T, bool tail>
+template<typename T, bool tail, bool hasAddend>
 __global__ RETURN_VOID_IF_HALF MaskAndScaleAddGpu(
     uint64_t seed, one::CUDAGeneratorState* cuda_gen_state, uint64_t counter_offset,
     const int64_t elem_cnt, float rate, float scale, int64_t n_tail, const T* x, int8_t* mask,
@@ -248,9 +137,11 @@ __global__ RETURN_VOID_IF_HALF MaskAndScaleAddGpu(
     H2Pack x_vec{};
     x_vec.storage = *x_load;
 
-    const LoadT* addend_load = reinterpret_cast<const LoadT*>(&addend[linear_index]);
     H2Pack addend_vec{};
-    addend_vec.storage = *addend_load;
+    if(hasAddend){
+      const LoadT* addend_load = reinterpret_cast<const LoadT*>(&addend[linear_index]);
+      addend_vec.storage = *addend_load;
+    }
 
     int8_t mask_vec[PackHalfSize];
     half2 y_vec[PackHalf2Size];
@@ -260,15 +151,18 @@ __global__ RETURN_VOID_IF_HALF MaskAndScaleAddGpu(
     one_or_zero_h2[0].x = mask_vec[0];
     mask_vec[1] = rand_uniform_pack4.elem[1] > rate;
     one_or_zero_h2[0].y = mask_vec[1];
-    y_vec[0] =
-        __hadd2(__hmul2(__hmul2(x_vec.h2[0], one_or_zero_h2[0]), h2_scale), addend_vec.h2[0]);
+    y_vec[0] = __hmul2(__hmul2(x_vec.h2[0], one_or_zero_h2[0]), h2_scale);
 
     mask_vec[2] = rand_uniform_pack4.elem[2] > rate;
     one_or_zero_h2[1].x = mask_vec[2];
     mask_vec[3] = rand_uniform_pack4.elem[3] > rate;
     one_or_zero_h2[1].y = mask_vec[3];
-    y_vec[1] =
-        __hadd2(__hmul2(__hmul2(x_vec.h2[1], one_or_zero_h2[1]), h2_scale), addend_vec.h2[0]);
+    y_vec[1] = __hmul2(__hmul2(x_vec.h2[1], one_or_zero_h2[1]), h2_scale);
+    
+    if(hasAddend){
+      y_vec[0] = __hadd2(y_vec[0], addend_vec.h2[0]);
+      y_vec[1] = __hadd2(y_vec[1], addend_vec.h2[1]);
+    }
 
     *(reinterpret_cast<LoadT*>(y + linear_index)) = *reinterpret_cast<LoadT*>(y_vec);
     *(reinterpret_cast<MaskT*>(mask + linear_index)) = *reinterpret_cast<MaskT*>(mask_vec);
@@ -276,12 +170,15 @@ __global__ RETURN_VOID_IF_HALF MaskAndScaleAddGpu(
 
   if (tail && global_thread_id < n_tail) {
     half half_scale = __float2half_rn(scale);
-    float rand_uniform = curand_uniform(&state);
-    rand_uniform = rand_uniform > rate;
-    tail_mask[global_thread_id] = rand_uniform;
-    tail_y[global_thread_id] =
-        tail_x[global_thread_id] * static_cast<half>(rand_uniform) * half_scale
-        + tail_addend[global_thread_id];
+    const float rand_uniform = curand_uniform(&state);
+    const int8_t mask = rand_uniform > rate; 
+    tail_mask[global_thread_id] = mask; 
+    half tmp_tail_out = tail_x[global_thread_id] * static_cast<half>(mask) * half_scale;
+    if(hasAddend){
+      tail_y[global_thread_id] = tmp_tail_out + tail_addend[global_thread_id];
+    }else{
+      tail_y[global_thread_id] = tmp_tail_out;
+    }
   }
 
   __syncthreads();
@@ -294,68 +191,7 @@ __global__ RETURN_VOID_IF_HALF MaskAndScaleAddGpu(
   }
 }
 
-template<typename T, bool tail>
-__global__ RETURN_VOID_IF_DOUBLE MaskAndScaleGpu(uint64_t seed,
-                                                 one::CUDAGeneratorState* cuda_gen_state,
-                                                 uint64_t counter_offset, const int64_t elem_cnt,
-                                                 float rate, float scale, int64_t n_tail,
-                                                 const T* x, int8_t* mask, T* y, const T* tail_x,
-                                                 int8_t* tail_mask, T* tail_y) {
-  int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandStatePhilox4_32_10_t state;
-  curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
-  using LoadT = typename std::aligned_storage<sizeof(double) * PackDoubleSize,
-                                              sizeof(double) * PackDoubleSize>::type;
-  using MaskT = typename std::aligned_storage<sizeof(int8_t) * PackDoubleSize,
-                                              sizeof(int8_t) * PackDoubleSize>::type;
-  RandPack4 rand_uniform_pack4;
-  bool grid_loop_rand_state = 0;
-
-  for (int64_t linear_index = global_thread_id * PackDoubleSize; linear_index < elem_cnt;
-       linear_index += gridDim.x * blockDim.x * PackDoubleSize) {
-    if (grid_loop_rand_state == 0) {
-      rand_uniform_pack4.storage = curand_uniform4(&state);
-    } else {
-      // Use the last two random numbers we generated in previous iteration.
-      rand_uniform_pack4.elem[0] = rand_uniform_pack4.elem[2];
-      rand_uniform_pack4.elem[1] = rand_uniform_pack4.elem[3];
-      grid_loop_rand_state ^= 1;
-    }
-    const LoadT* x_load = reinterpret_cast<const LoadT*>(x + linear_index);
-    cuda::elementwise::Pack<double, PackDoubleSize> x_vec;
-    x_vec.storage = *x_load;
-
-    int8_t mask_vec[PackDoubleSize];
-    double y_vec[PackDoubleSize];
-#pragma unroll
-    for (int i = 0; i < 2; i++) {
-      rand_uniform_pack4.elem[i] = rand_uniform_pack4.elem[i] > rate;
-      mask_vec[i] = rand_uniform_pack4.elem[i];
-      y_vec[i] = x_vec.elem[i] * mask_vec[i] * scale;
-    }
-
-    *(reinterpret_cast<LoadT*>(y + linear_index)) = *reinterpret_cast<LoadT*>(y_vec);
-    *(reinterpret_cast<MaskT*>(mask + linear_index)) = *reinterpret_cast<MaskT*>(mask_vec);
-  }
-
-  if (tail && global_thread_id < n_tail) {
-    float rand_uniform = curand_uniform(&state);
-    rand_uniform = rand_uniform > rate;
-    tail_mask[global_thread_id] = rand_uniform;
-    tail_y[global_thread_id] = tail_x[global_thread_id] * rand_uniform * scale;
-  }
-
-  __syncthreads();
-  if (threadIdx.x == 0) {
-    int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
-    if (new_counter == gridDim.x) {
-      cuda_gen_state->dev_counter = 0;               // reset counter to zero
-      cuda_gen_state->dev_offset += counter_offset;  // maintain the state of generator's dev_offset
-    }
-  }
-}
-
-template<typename T, bool tail>
+template<typename T, bool tail, bool hasAddend>
 __global__ RETURN_VOID_IF_DOUBLE MaskAndScaleAddGpu(
     uint64_t seed, one::CUDAGeneratorState* cuda_gen_state, uint64_t counter_offset,
     const int64_t elem_cnt, float rate, float scale, int64_t n_tail, const T* x, int8_t* mask,
@@ -385,29 +221,36 @@ __global__ RETURN_VOID_IF_DOUBLE MaskAndScaleAddGpu(
     cuda::elementwise::Pack<double, PackDoubleSize> x_vec;
     x_vec.storage = *x_load;
 
-    const LoadT* addend_load = reinterpret_cast<const LoadT*>(&addend[linear_index]);
     cuda::elementwise::Pack<double, PackDoubleSize> addend_vec;
-    addend_vec.storage = *addend_load;
-
+    if(hasAddend){
+      const LoadT* addend_load = reinterpret_cast<const LoadT*>(&addend[linear_index]);
+      addend_vec.storage = *addend_load;
+    }
+    
     int8_t mask_vec[PackDoubleSize];
     double y_vec[PackDoubleSize];
 #pragma unroll
     for (int i = 0; i < PackDoubleSize; i++) {
-      rand_uniform_pack4.elem[i] = rand_uniform_pack4.elem[i] > rate;
-      mask_vec[i] = rand_uniform_pack4.elem[i];
-      y_vec[i] = x_vec.elem[i] * mask_vec[i] * scale + addend_vec.elem[i];
+      mask_vec[i] = rand_uniform_pack4.elem[i] > rate;
+      y_vec[i] = x_vec.elem[i] * mask_vec[i] * scale;
+      if(hasAddend){
+        y_vec[i] += addend_vec.elem[i];
+      }
     }
-
     *(reinterpret_cast<LoadT*>(y + linear_index)) = *reinterpret_cast<LoadT*>(y_vec);
     *(reinterpret_cast<MaskT*>(mask + linear_index)) = *reinterpret_cast<MaskT*>(mask_vec);
   }
 
   if (tail && global_thread_id < n_tail) {
-    float rand_uniform = curand_uniform(&state);
-    rand_uniform = rand_uniform > rate;
-    tail_mask[global_thread_id] = rand_uniform;
-    tail_y[global_thread_id] =
-        tail_x[global_thread_id] * rand_uniform * scale + tail_addend[global_thread_id];
+    const float rand_uniform = curand_uniform(&state);
+    const int8_t mask = rand_uniform > rate;
+    tail_mask[global_thread_id] = mask;
+    double tmp_tail_out = tail_x[global_thread_id] * mask * scale;
+    if(hasAddend){
+      tail_y[global_thread_id] = tmp_tail_out + tail_addend[global_thread_id];
+    }else{
+      tail_y[global_thread_id] = tmp_tail_out;
+    }
   }
 
   __syncthreads();
@@ -430,32 +273,8 @@ unsigned int ComputeGridSize(const int32_t block_size, const int64_t elem_cnt) {
   return grid_size;
 }
 
-template<typename T>
-void MaskAndScale(DeviceCtx* ctx, uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
-                  const int64_t elem_cnt, float rate, float scale, const T* x, int8_t* mask, T* y) {
-  unsigned int grid_size = ComputeGridSize<4>(kBlockSize, elem_cnt);
-  constexpr int pack_size = cuda::elementwise::PackSize<T>();
-  const int64_t pack_num = elem_cnt / pack_size;
-  const int64_t tail_offset = pack_num * pack_size;
-  const int64_t n_tail = pack_num - tail_offset;
-  const bool tail = n_tail > 0 ? true : false;
-  uint64_t counter_offset = 0;
-  if (tail) {
-    // If tail, we need generate randnum one more time, so here we add another `1`.
-    counter_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize + 1;
-    MaskAndScaleGpu<T, true><<<grid_size, kBlockSize, 0, ctx->cuda_stream()>>>(
-        seed, cuda_gen_state, counter_offset, elem_cnt, rate, scale, n_tail, x, mask, y,
-        (x + tail_offset), (mask + tail_offset), (y + tail_offset));
-  } else {
-    counter_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize;
-    MaskAndScaleGpu<T, false><<<grid_size, kBlockSize, 0, ctx->cuda_stream()>>>(
-        seed, cuda_gen_state, counter_offset, elem_cnt, rate, scale, n_tail, x, mask, y,
-        (x + tail_offset), (mask + tail_offset), (y + tail_offset));
-  }
-}
-
-template<typename T>
-void MaskAndScaleAdd(DeviceCtx* ctx, uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
+template<typename T, bool hasAddend>
+void DispatchTail(DeviceCtx* ctx, uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                      const int64_t elem_cnt, float rate, float scale, const T* x, int8_t* mask,
                      const T* addend, T* y) {
   unsigned int grid_size = ComputeGridSize<4>(kBlockSize, elem_cnt);
@@ -468,12 +287,12 @@ void MaskAndScaleAdd(DeviceCtx* ctx, uint64_t seed, one::CUDAGeneratorState* cud
   if (tail) {
     // If tail, we need generate randnum one more time, so here we add another `1`.
     counter_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize + 1;
-    MaskAndScaleAddGpu<T, true><<<grid_size, kBlockSize, 0, ctx->cuda_stream()>>>(
+    MaskAndScaleAddGpu<T, true, hasAddend><<<grid_size, kBlockSize, 0, ctx->cuda_stream()>>>(
         seed, cuda_gen_state, counter_offset, elem_cnt, rate, scale, n_tail, x, mask, addend, y,
         (x + tail_offset), (mask + tail_offset), (addend + tail_offset), (y + tail_offset));
   } else {
     counter_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize;
-    MaskAndScaleAddGpu<T, false><<<grid_size, kBlockSize, 0, ctx->cuda_stream()>>>(
+    MaskAndScaleAddGpu<T, false, hasAddend><<<grid_size, kBlockSize, 0, ctx->cuda_stream()>>>(
         seed, cuda_gen_state, counter_offset, elem_cnt, rate, scale, n_tail, x, mask, addend, y,
         (x + tail_offset), (mask + tail_offset), (addend + tail_offset), (y + tail_offset));
   }
@@ -521,12 +340,13 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
 
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* addend = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
-      MaskAndScaleAdd<T>(ctx->device_ctx(), seed, cuda_gen_state, in->shape().elem_cnt(), rate,
+      DispatchTail<T, true>(ctx->device_ctx(), seed, cuda_gen_state, in->shape().elem_cnt(), rate,
                          scale, in->dptr<T>(), mask->mut_dptr<int8_t>(), addend->dptr<T>(),
                          out->mut_dptr<T>());
     } else {
-      MaskAndScale<T>(ctx->device_ctx(), seed, cuda_gen_state, in->shape().elem_cnt(), rate, scale,
-                      in->dptr<T>(), mask->mut_dptr<int8_t>(), out->mut_dptr<T>());
+      DispatchTail<T, false>(ctx->device_ctx(), seed, cuda_gen_state, in->shape().elem_cnt(), rate,
+                         scale, in->dptr<T>(), mask->mut_dptr<int8_t>(), nullptr,
+                         out->mut_dptr<T>());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
