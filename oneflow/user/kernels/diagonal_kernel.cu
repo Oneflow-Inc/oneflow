@@ -48,7 +48,7 @@ struct DiagonalFunctor<DeviceType::kGPU, T> final {
   void operator()(DeviceCtx* ctx, T* out_buf, const T* in_buf, int32_t size, int32_t dim1,
                   int32_t dim2) {
     if (size * dim2 > 0) {
-      forward_diagonal_kernel<<<BlocksNum4ThreadsNum(size * dim2), kCudaThreadsNumPerBlock, 0,
+      forward_diagonal_kernel<T><<<BlocksNum4ThreadsNum(size * dim2), kCudaThreadsNumPerBlock, 0,
                                 ctx->cuda_stream()>>>(out_buf, in_buf, size, dim1, dim2);
     }
   }
@@ -59,7 +59,7 @@ struct DiagonalGradFunctor<DeviceType::kGPU, T> final {
   void operator()(DeviceCtx* ctx, T* dx_buf, const T* dy_buf, int32_t size, int32_t dim1,
                   int32_t dim2) {
     if (size * dim2 > 0) {
-      backward_diagonal_kernel<<<BlocksNum4ThreadsNum(size * dim2), kCudaThreadsNumPerBlock, 0,
+      backward_diagonal_kernel<T><<<BlocksNum4ThreadsNum(size * dim2), kCudaThreadsNumPerBlock, 0,
                                  ctx->cuda_stream()>>>(dx_buf, dy_buf, size, dim1, dim2);
     }
   }
