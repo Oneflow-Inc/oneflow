@@ -658,6 +658,7 @@ def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", []> {
     static std::vector<std::string> inputOrder() { return {"in"}; }
     static std::vector<std::string> outputOrder() { return {"out"}; }
   }];
+  let hasCanonicalizer = 1;
 }
 
 def OneFlow_AffineGridOp : OneFlow_BaseOp<"affine_grid", []> {
@@ -5418,7 +5419,7 @@ def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [AttrSizedOperandS
   }];
 }
 
-def OneFlow_NormalizationAddReluOp : OneFlow_BaseOp<"normalization_add_relu", [AttrSizedOperandSegments, AttrSizedResultSegments]> {
+class OneFlow_NormalizationAddReluBaseOp : OneFlow_BaseOp<"normalization_add_relu", [AttrSizedOperandSegments, AttrSizedResultSegments]> {
   let input = (ins
     AnyType:$x,
     Optional<AnyType>:$addend,
@@ -6342,7 +6343,7 @@ def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", []> {
   }];
 }
 
-def OneFlow_ReluGradOp : OneFlow_IdempotentBaseOp<"relu_grad", []> {
+def OneFlow_ReluGradOp : OneFlow_BaseOp<"relu_grad", []> {
   let input = (ins
     AnyType:$y,
     AnyType:$dy
