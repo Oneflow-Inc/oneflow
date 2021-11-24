@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -1622,10 +1623,11 @@ class OneHotFunctor {
     } else {
       JUST(attrs.SetAttr<int64_t>("depth", num_classes));
     }
+    // Refer to: https://github.com/Oneflow-Inc/oneflow/pull/5315/files#r755823506
     bool is_on_value_double = on_value.IsFloatingPoint();
     bool is_off_value_double = off_value.IsFloatingPoint();
     if (is_on_value_double || is_off_value_double) {
-      JUST(attrs.SetAttr<DataType>("dtype", kDouble));
+      JUST(attrs.SetAttr<DataType>("dtype", kFloat));
       JUST(attrs.SetAttr<double>("floating_on_value", JUST(on_value.As<double>())));
       JUST(attrs.SetAttr<double>("floating_off_value", JUST(off_value.As<double>())));
       JUST(attrs.SetAttr<int64_t>("integer_on_value", 0));
