@@ -26,7 +26,7 @@ template<typename T>
 struct OfBlobCopyBuffer {
   static Maybe<void> From(uint64_t of_blob_ptr, const T* buf_ptr, size_t size) {
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    of_blob->AutoMemCopyFrom<T>(buf_ptr, size);
+    of_blob->AutoMemCopyFromUnSafe<T>(buf_ptr, size);
     return Maybe<void>::Ok();
   }
 

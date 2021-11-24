@@ -68,17 +68,16 @@ void Tensor::zeros_() {
   }).GetOrThrow();
 }
 
-template<typename T>
-Tensor Tensor::from_blob(const T* blob, const Shape& shape, const Device& device,
-                         const DType& dtype) {
+Tensor Tensor::from_blob(void* blob, const Shape& shape, const Device& device, const DType& dtype) {
   Tensor tensor(shape, device, dtype);
   std::shared_ptr<of::one::MirroredTensor> local_tensor =
       tensor.tensor_->AsMirroredTensor().GetPtrOrThrow();
   of::PhysicalRun([&](of::InstructionsBuilder* builder) -> of::Maybe<void> {
     return builder->AccessBlobByCallback(
         local_tensor,
-        [blob, shape](uint64_t ofblob_ptr) {
-          CHECK_JUST(of::OfBlobCopyBuffer<T>::From(ofblob_ptr, blob, shape.Count(0)));
+        [blob, shape, dtype](uint64_t ofblob_ptr) {
+          CHECK_JUST(of::OfBlobCopyBuffer<char>::From(ofblob_ptr, static_cast<char*>(blob),
+                                                      shape.Count(0) * getDTypeSize(dtype)));
         },
         "mut");
   }).GetOrThrow();
@@ -86,10 +85,10 @@ Tensor Tensor::from_blob(const T* blob, const Shape& shape, const Device& device
 }
 
 template<typename T>
-void Tensor::to_blob(const Tensor& tensor, T* blob) {
+void Tensor::copy_to(T* blob) {
   std::shared_ptr<of::one::MirroredTensor> local_tensor =
-      tensor.tensor_->AsMirroredTensor().GetPtrOrThrow();
-  const auto shape = tensor.shape();
+      tensor_->AsMirroredTensor().GetPtrOrThrow();
+  const auto shape = this->shape();
 
   const auto& Callback =
       std::make_shared<std::function<void(uint64_t)>>([blob, shape](uint64_t ofblob_ptr) {
@@ -115,15 +114,12 @@ void Tensor::to_blob(const Tensor& tensor, T* blob) {
 
 const std::shared_ptr<oneflow::one::Tensor>& Tensor::internal_tensor() const { return tensor_; }
 
-#define REGISTER_FROM_BLOB_AND_TO_BLOB(cpp_dtype)                                         \
-  template Tensor Tensor::from_blob<cpp_dtype>(const cpp_dtype* blob, const Shape& shape, \
-                                               const Device& device, const DType& dtype); \
-  template void Tensor::to_blob<cpp_dtype>(const Tensor& tensor, cpp_dtype* blob);
+#define REGISTER_TO_BLOB(cpp_dtype) template void Tensor::copy_to<cpp_dtype>(cpp_dtype * blob);
 
-REGISTER_FROM_BLOB_AND_TO_BLOB(float)
-REGISTER_FROM_BLOB_AND_TO_BLOB(double)
-REGISTER_FROM_BLOB_AND_TO_BLOB(int8_t)
-REGISTER_FROM_BLOB_AND_TO_BLOB(int32_t)
-REGISTER_FROM_BLOB_AND_TO_BLOB(int64_t)
+REGISTER_TO_BLOB(float)
+REGISTER_TO_BLOB(double)
+REGISTER_TO_BLOB(int8_t)
+REGISTER_TO_BLOB(int32_t)
+REGISTER_TO_BLOB(int64_t)
 
 }  // namespace oneflow_api

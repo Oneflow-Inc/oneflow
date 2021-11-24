@@ -23,7 +23,9 @@ limitations under the License.
 
 namespace oneflow {
 namespace one {
+
 class Tensor;
+
 }
 
 }  // namespace oneflow
@@ -41,14 +43,12 @@ class Tensor final {
 
   void zeros_();
 
-  template<typename T>
-  static Tensor from_blob(const T* blob, const Shape& shape, const Device& device,
-                          const DType& dtype);
-
-  template<typename T>
-  static void to_blob(const Tensor& tensor, T* blob);
-
   const std::shared_ptr<oneflow::one::Tensor>& internal_tensor() const;
+
+  template<typename T>
+  void copy_to(T* blob);
+
+  static Tensor from_blob(void* blob, const Shape& shape, const Device& device, const DType& dtype);
 
  private:
   std::shared_ptr<oneflow::one::Tensor> tensor_ = nullptr;

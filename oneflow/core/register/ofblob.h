@@ -43,7 +43,11 @@ class OfBlob final {
   template<typename T>
   void AutoMemCopyTo(T* ptr, int64_t len) const;
   template<typename T>
+  void AutoMemCopyToUnSafe(T* ptr, int64_t len) const;
+  template<typename T>
   void AutoMemCopyFrom(const T* ptr, int64_t len) const;
+  template<typename T>
+  void AutoMemCopyFromUnSafe(const T* ptr, int64_t len) const;
   void AsyncAutoMemset(const char value) const;
 
   Blob* mut_blob() { return blob_; }
@@ -85,12 +89,25 @@ void OfBlob::AutoMemCopyTo(T* ptr, int64_t len) const {
 }
 
 template<typename T>
+void OfBlob::AutoMemCopyToUnSafe(T* ptr, int64_t len) const {
+  SyncAutoMemcpy(device_ctx_->stream(), ptr, static_cast<const T*>(blob_->dptr()), len * sizeof(T),
+                 mem_case_, blob_->mem_case());
+}
+
+template<typename T>
 void OfBlob::AutoMemCopyFrom(const T* ptr, int64_t len) const {
   blob_->blob_access_checker()->CheckBodyMutable();
   CHECK_EQ(blob_->shape().elem_cnt(), len);
   CHECK(blob_->data_type() == GetDataType<T>::value);
   SyncAutoMemcpy(device_ctx_->stream(), blob_->mut_dptr(), ptr, len * sizeof(T), blob_->mem_case(),
                  mem_case_);
+}
+
+template<typename T>
+void OfBlob::AutoMemCopyFromUnSafe(const T* ptr, int64_t len) const {
+  blob_->blob_access_checker()->CheckBodyMutable();
+  SyncAutoMemcpy(device_ctx_->stream(), static_cast<T*>(blob_->mut_dptr()), ptr, len * sizeof(T),
+                 blob_->mem_case(), mem_case_);
 }
 
 inline void OfBlob::AsyncAutoMemset(const char value) const {
