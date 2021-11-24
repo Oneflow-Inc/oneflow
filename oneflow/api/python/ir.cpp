@@ -185,6 +185,9 @@ bool IsIndicesOp(const std::string& op_name) {
           || op_name.find("segment_sum") != std::string::npos
           || op_name.find("scatter") != std::string::npos);
 }
+bool IsNormalizationOp(const std::string& op_name) {
+  return (op_name.find("norm") != std::string::npos);
+}
 
 std::string PostProcessClassName(const std::string& op_name) {
   std::string ret = op_name;
@@ -412,6 +415,7 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
     if (IsReduceOp(r.op_type_name)) { group_name = "reduce"; }
     if (IsReshapeOp(r.op_type_name)) { group_name = "reshape"; }
     if (IsLossOp(r.op_type_name)) { group_name = "loss"; }
+    if (IsNormalizationOp(r.op_type_name)) { group_name = "Normalization"; }
     if (IsMathOp(r.op_type_name)) { group_name = "math"; }
     if (IsSoftmaxOp(r.op_type_name)) { group_name = "Softmax"; }
     if (IsNCCLOp(r.op_type_name)) { group_name = "NCCL"; }
