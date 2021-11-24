@@ -64,8 +64,7 @@ Maybe<Tensor> MirroredTensor::detach() const {
 Maybe<Tensor> MirroredTensor::clone() const {
   const auto& device_type = JUST(this->device())->type();
   int64_t device_id = JUST(this->device())->device_id();
-  std::shared_ptr<MirroredTensor> input =
-      std::const_pointer_cast<MirroredTensor>(shared_from_this());
+  std::shared_ptr<Tensor> input = std::const_pointer_cast<Tensor>(shared_from_this());
   return JUST(functional::Copy(input, device_type, device_id));
 }
 
