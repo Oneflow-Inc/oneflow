@@ -286,7 +286,6 @@ class LayerNormAffineFunctor {
                          .Output("y")
                          .Output("mean")
                          .Output("inv_variance")
-                         .Output("normalized")
                          .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
