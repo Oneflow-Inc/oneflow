@@ -19,7 +19,7 @@ namespace oneflow {
 
 struct PoolingOpKernelState final : public user_op::OpKernelState {
   MaxPoolingParams3D params_3d;
-  PoolingOpKernelState(MaxPoolingParams3D params_3d) : params_3d(params_3d) {}
+  explicit PoolingOpKernelState(const MaxPoolingParams3D& params_3d) : params_3d(params_3d) {}
   const MaxPoolingParams3D& GetParams3D() { return params_3d; }
 };
 

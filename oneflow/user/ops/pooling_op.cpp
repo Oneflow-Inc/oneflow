@@ -164,7 +164,7 @@ GenBackwardOpConfFn MaxPoolMakeBackwardOpConfFn(const std::string& mode, const i
 }
 
 GenBackwardOpConfFn AvgPoolMakeBackwardOpConfFn(const int32_t dim) {
-  return [dim](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) -> Maybe<void> {
+  return [dim](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {
     if (op.NeedGenGradTensor4OpInput("x", 0)) {
       user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
       user_op::UserOpConfWrapper grad_op =
