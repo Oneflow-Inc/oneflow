@@ -160,21 +160,6 @@ class ReLU6Functor {
     std::shared_ptr<OpExpr> op_;
 };
 
-class ReLU6GradFunctor{
-  public:
-    ReLU6GradFunctor() {
-      op_ = CHECK_JUST(one::OpBuilder("hardtanh_grad").Input("y").Input("dy").Output("dx").Build());
-    }
-    Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
-                           const std::shared_ptr<one::Tensor>& dy) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("min_val", 0.0));
-    JUST(attrs.SetAttr<double>("max_val", 6.0));
-  }
-  private:
-    std::shared_ptr<OpExpr> op_;
-};
-
 class EluFunctor {
  public:
   EluFunctor() { op_ = CHECK_JUST(one::OpBuilder("elu").Input("in").Output("out").Build()); }
