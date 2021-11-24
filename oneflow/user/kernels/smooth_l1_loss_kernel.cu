@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/loss_kernel_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 namespace user_op {
@@ -121,8 +122,8 @@ class SmoothL1LossKernel : public SimpleLossKernel<DeviceType::kGPU, T, SmoothL1
                   const T* target, T* out) const {
     const float beta = ctx->Attr<float>("beta");
     ComputeSmoothL1Out<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                         ctx->device_ctx()->cuda_stream()>>>(elem_cnt, input, target, out, beta,
-                                                             static_cast<float>(1.0 / beta));
+                         ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+        elem_cnt, input, target, out, beta, static_cast<float>(1.0 / beta));
   }
 };
 
@@ -134,7 +135,7 @@ class SmoothL1LossGradKernel
                   const T* target, const T* dy, T* dx, const ReductionType reduction) const {
     const float beta = ctx->Attr<float>("beta");
     ComputeSmoothL1GradOut<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                             ctx->device_ctx()->cuda_stream()>>>(
+                             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         elem_cnt, static_cast<float>(1.0 / elem_cnt), input, target, dy, dx, reduction, beta,
         static_cast<float>(1.0 / beta));
   }
