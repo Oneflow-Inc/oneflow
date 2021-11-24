@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/diag_kernel.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 namespace {
@@ -34,28 +35,32 @@ __global__ void matrix_diagonal_kernel(T* out_buf, const T* in_buf, int32_t size
 
 template<typename T>
 struct DiagFunctor<DeviceType::kGPU, T> final {
-  void operator()(DeviceCtx* ctx, T* out_buf, const T* in_buf, int32_t size, int32_t stride,
+  void operator()(ep::Stream* stream, T* out_buf, const T* in_buf, int32_t size, int32_t stride,
                   int32_t in_dim) {
     if (in_dim == 1) {
       vector_diagonal_kernel<<<BlocksNum4ThreadsNum(size * size), kCudaThreadsNumPerBlock, 0,
-                               ctx->cuda_stream()>>>(out_buf, in_buf, size, stride);
+                               stream->As<ep::CudaStream>()->cuda_stream()>>>(out_buf, in_buf, size,
+                                                                              stride);
     } else {
       matrix_diagonal_kernel<<<BlocksNum4ThreadsNum(size * size), kCudaThreadsNumPerBlock, 0,
-                               ctx->cuda_stream()>>>(out_buf, in_buf, size, stride);
+                               stream->As<ep::CudaStream>()->cuda_stream()>>>(out_buf, in_buf, size,
+                                                                              stride);
     }
   }
 };
 
 template<typename T>
 struct DiagGradFunctor<DeviceType::kGPU, T> final {
-  void operator()(DeviceCtx* ctx, T* dx_buf, const T* dy_buf, int32_t dx_cnt, int32_t dy_cnt,
+  void operator()(ep::Stream* stream, T* dx_buf, const T* dy_buf, int32_t dx_cnt, int32_t dy_cnt,
                   int32_t stride, int32_t in_dim) {
     if (in_dim == 1) {
       matrix_diagonal_kernel<<<BlocksNum4ThreadsNum(dx_cnt), kCudaThreadsNumPerBlock, 0,
-                               ctx->cuda_stream()>>>(dx_buf, dy_buf, dx_cnt, stride);
+                               stream->As<ep::CudaStream>()->cuda_stream()>>>(dx_buf, dy_buf,
+                                                                              dx_cnt, stride);
     } else {
       vector_diagonal_kernel<<<BlocksNum4ThreadsNum(dy_cnt), kCudaThreadsNumPerBlock, 0,
-                               ctx->cuda_stream()>>>(dx_buf, dy_buf, dy_cnt, stride);
+                               stream->As<ep::CudaStream>()->cuda_stream()>>>(dx_buf, dy_buf,
+                                                                              dy_cnt, stride);
     }
   }
 };

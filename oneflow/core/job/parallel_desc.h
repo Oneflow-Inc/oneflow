@@ -94,6 +94,8 @@ class ParallelDesc final {
   bool operator==(const ParallelDesc& rhs) const { return Equals(rhs); }
   bool operator!=(const ParallelDesc& rhs) const { return !(*this == rhs); }
   bool Equals(const ParallelDesc* rhs) const { return Equals(*rhs); }
+  const std::vector<int64_t>& parallel_id2machine_id() const { return parallel_id2machine_id_; }
+  const std::vector<int64_t>& parallel_id2device_id() const { return parallel_id2device_id_; }
   Maybe<int64_t> MachineId4ParallelId(int64_t parallel_id) const;
   Maybe<int64_t> DeviceId4ParallelId(int64_t parallel_id) const;
   Maybe<int64_t> ParallelId4MachineDeviceId(int64_t machine_id, int64_t device_id) const;
@@ -126,8 +128,8 @@ class ParallelDesc final {
       machine_id2sorted_dev_phy_ids_;
   int64_t parallel_num_;
   int64_t device_num_of_each_machine_;
-  HashMap<int64_t, int64_t> parallel_id2machine_id_;
-  HashMap<int64_t, int64_t> parallel_id2device_id_;
+  std::vector<int64_t> parallel_id2machine_id_;
+  std::vector<int64_t> parallel_id2device_id_;
   HashMap<int64_t, HashMap<int64_t, int64_t>> machine_id2device_id2parallel_id_;
   // TODO(lixinqi): merge cfg_parallel_conf_ and parallel_conf_ after cfg::ParallelConf taken as the
   // constructor argument

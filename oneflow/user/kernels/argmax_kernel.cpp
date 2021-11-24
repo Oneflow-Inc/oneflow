@@ -56,8 +56,8 @@ class CpuArgMaxKernel final : public user_op::OpKernel {
 
 #define REGISTER_CPU_ARGMAX_KERNEL(dtype)                                               \
   REGISTER_USER_KERNEL("argmax").SetCreateFn<CpuArgMaxKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == "cpu")                                                \
-      & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
+      (user_op::HobDeviceType() == DeviceType::kCPU)                                    \
+      && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_ARGMAX_KERNEL(float)
 REGISTER_CPU_ARGMAX_KERNEL(double)
