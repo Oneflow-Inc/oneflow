@@ -17,7 +17,7 @@ import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
-    oneflow._C.prelu,
+    oneflow.nn.functional.prelu,
     """
     prelu(x: Tensor, alpha: Tensor) -> Tensor  
 
@@ -102,7 +102,7 @@ add_docstr(
 
 
 add_docstr(
-    oneflow._C.softmax,
+    oneflow.nn.functional.softmax,
     r"""
     softmax(x: Tensor, dim: int) -> Tensor 
 
@@ -116,7 +116,7 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow._C.log_softmax,
+    oneflow.nn.functional.log_softmax,
     r"""
     log_softmax(x: Tensor, dim: int) -> Tensor 
 
@@ -158,7 +158,7 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow._C.logsigmoid,
+    oneflow.nn.functional.logsigmoid,
     r"""
     logsigmoid(x: Tensor) -> Tensor 
 
@@ -188,7 +188,7 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow._C.softsign,
+    oneflow.nn.functional.softsign,
     r"""
     softsign(x: Tensor) -> Tensor 
 
@@ -279,7 +279,7 @@ add_docstr(
 
 
 add_docstr(
-    oneflow._C.hardsigmoid,
+    oneflow.nn.functional.hardsigmoid,
     """
     hardsigmoid(x: Tensor)-> Tensor
 
@@ -297,7 +297,7 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow._C.hardswish,
+    oneflow.nn.functional.hardswish,
     """
     hardswish(x: Tensor)-> Tensor
 
@@ -344,7 +344,7 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow._C.hardtanh,
+    oneflow.nn.functional.hardtanh,
     """
     hardtanh(input, min_val=-1., max_val=1.) -> Tensor
 
@@ -354,7 +354,7 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow._C.relu6,
+    oneflow.nn.functional.relu6,
     """relu6(input, inplace=False) -> Tensor
 
     Applies the element-wise function :math:`\text{ReLU6}(x) = \min(\max(0,x), 6)`.
@@ -363,7 +363,7 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow._C.leaky_relu,
+    oneflow.nn.functional.leaky_relu,
     """
     leaky_relu(x: Tensor,  alpha :Float) -> Tensor
 
@@ -375,7 +375,7 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow._C.elu,
+    oneflow.nn.functional.elu,
     """
     elu(x: Tensor, alpha :Float) -> Tensor
 
@@ -422,7 +422,7 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow._C.glu,
+    oneflow.nn.functional.glu,
     """
     glu(input: Tensor, dim: int) -> Tensor 
 
@@ -454,7 +454,7 @@ add_docstr(
 
 
 add_docstr(
-    oneflow._C.celu,
+    oneflow.nn.functional.celu,
     r"""
     celu(x: Tensor, alpha: Float=1.0, inplace: bool=False) -> Tensor
 
