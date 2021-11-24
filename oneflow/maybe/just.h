@@ -45,10 +45,10 @@ struct IsOptional : std::false_type {};
 template<typename T>
 struct IsOptional<Optional<T>> : std::true_type {};
 
-// user should provide which error will be returned while an optional has no value
+// user should provide which error will be returned while an optional (or pointers) has no value
 // and is used in JUST or CHECK_JUST;
-// if not provided, then JUST(_MSG) and CHECK_JUST(_MSG) cannot be used for Optional
-// i.e. `struct JustConfig { static SomeError OptionalValueNotFoundError() { ... } }`
+// if not provided, then JUST(_MSG) and CHECK_JUST(_MSG) cannot be used for Optional (or pointers)
+// i.e. `struct JustConfig { static SomeError ValueNotFoundError(auto&&) { ... } }`
 struct JustConfig;
 
 namespace details {
@@ -64,9 +64,9 @@ struct JustPrivateScope {
     return std::forward<T>(v).StackedError();
   }
 
-  template<typename T, std::enable_if_t<IsOptional<RemoveCVRef<T>>::value, int> = 0>
+  template<typename T, std::enable_if_t<!IsMaybe<RemoveCVRef<T>>::value, int> = 0>
   static decltype(auto) StackedError(T&& v) {
-    return DependentName<JustConfig, T>::OptionalValueNotFoundError();
+    return DependentName<JustConfig, T>::ValueNotFoundError(std::forward<T>(v));
   }
 };
 
@@ -91,9 +91,15 @@ template<typename T, typename... Args>
   Traits::Abort(std::forward<T>(v));
 }
 
-template<typename T>
+template<typename T, std::enable_if_t<IsMaybe<T>::value || IsOptional<T>::value, int> = 0>
 auto JustGetValue(T&& v) -> RemoveRValRef<decltype(JustPrivateScope::Value(std::forward<T>(v)))> {
   return JustPrivateScope::Value(std::forward<T>(v));
+}
+
+template<typename T, std::enable_if_t<!(IsMaybe<T>::value || IsOptional<T>::value), int> = 0>
+auto JustGetValue(T&& v)
+    -> RemoveRValRef<decltype(DependentName<JustConfig, T>::Value(std::forward<T>(v)))> {
+  return DependentName<JustConfig, T>::Value(std::forward<T>(v));
 }
 
 }  // namespace details

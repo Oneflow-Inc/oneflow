@@ -163,7 +163,15 @@ namespace oneflow {
 namespace maybe {
 
 struct JustConfig {
-  static simple::StackedError<std::string> OptionalValueNotFoundError() { return {"not found"}; }
+  template<typename T>
+  static simple::StackedError<std::string> ValueNotFoundError(T&&) {
+    return {"not found"};
+  }
+
+  template<typename T>
+  static decltype(auto) Value(T&& v) {
+    return *v;
+  }
 };
 
 }  // namespace maybe
@@ -177,6 +185,26 @@ TEST(Just, Optional) {
 
   auto f = [](const Optional<int>& x) -> MaybeInt {
     if (x == 1) return Error("hello");
+
+    return JUST(x) + 1;
+  };
+
+  ASSERT_DEATH(  // NOLINT(cppcoreguidelines-avoid-goto)
+      CHECK_JUST(f(a)), R"(not found.*lambda.*x.*TestBody.*f\(a\))");
+  ASSERT_DEATH(  // NOLINT(cppcoreguidelines-avoid-goto)
+      CHECK_JUST(f(b)), R"(hello.*TestBody.*f\(b\))");
+
+  ASSERT_EQ(CHECK_JUST(f(c)), 3);
+}
+
+TEST(Just, Ptr) {
+  using Error = simple::StackedError<std::string>;
+  using MaybeInt = Maybe<int, Error>;
+
+  std::shared_ptr<int> a, b(std::make_shared<int>(1)), c(std::make_shared<int>(2));
+
+  auto f = [](const std::shared_ptr<int>& x) -> MaybeInt {
+    if (JUST(x) == 1) return Error("hello");
 
     return JUST(x) + 1;
   };
