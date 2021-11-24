@@ -22,23 +22,6 @@ from oneflow.ops.transpose_util import (
 )
 
 
-class Argsort(Module):
-    def __init__(self, dim: int = -1, descending: bool = False) -> None:
-        super().__init__()
-        self.dim = dim
-        self.direction = "DESCENDING" if descending else "ASCENDING"
-
-    def forward(self, input):
-        num_dims = len(input.shape)
-        dim = self.dim if self.dim >= 0 else self.dim + num_dims
-        assert 0 <= dim < num_dims, "dim out of range"
-        if dim == num_dims - 1:
-            return flow._C.arg_sort(input, self.direction)
-        else:
-            perm = get_perm_when_transpose_axis_to_last_dim(num_dims, dim)
-            x = flow._C.transpose(input, perm=perm)
-            x = flow._C.arg_sort(x, self.direction)
-            return flow._C.transpose(x, perm=get_inversed_perm(perm))
 
 
 @register_tensor_op("argsort")
@@ -76,7 +59,18 @@ def argsort_op(input, dim: int = -1, descending: bool = False):
                 [0, 1, 0, 1, 0]], dtype=oneflow.int32)
 
     """
-    return Argsort(dim=dim, descending=descending)(input)
+    num_dims = len(input.shape)
+    dim = dim if dim >= 0 else dim + num_dims
+    direction = "DESCENDING" if descending else "ASCENDING"
+    assert 0 <= dim < num_dims, "dim out of range"
+    if dim == num_dims - 1:
+        return flow._C.arg_sort(input, direction)
+    else:
+        perm = get_perm_when_transpose_axis_to_last_dim(num_dims, dim)
+        x = flow._C.transpose(input, perm=perm)
+        x = flow._C.arg_sort(x, direction)
+        return flow._C.transpose(x, perm=get_inversed_perm(perm))
+    
 
 
 if __name__ == "__main__":
