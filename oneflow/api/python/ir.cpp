@@ -97,6 +97,8 @@ const std::set<std::string>& GetInvolutionOps() {
   return ret;
 }
 
+bool IsGradOp(const std::string& op_name) { return op_name.find("grad") != std::string::npos; }
+
 const std::set<std::string>& GetMathOps() {
   static std::set<std::string> ret{"abs",         "acos",
                                    "acosh",       "asin",
@@ -118,9 +120,12 @@ const std::set<std::string>& GetMathOps() {
   return ret;
 }
 bool IsMathOp(const std::string& op_name) {
-  return GetMathOps().find(op_name) != GetMathOps().end();
+  bool is_grad = false;
+  for (const auto& name : GetMathOps()) {
+    if (op_name.find(name) != std::string::npos && IsGradOp(op_name)) { is_grad = true; }
+  }
+  return GetMathOps().find(op_name) != GetMathOps().end() || is_grad;
 }
-bool IsGradOp(const std::string& op_name) { return op_name.find("grad") != std::string::npos; }
 bool IsInvolutionOp(const std::string& op_name) {
   return GetInvolutionOps().find(op_name) != GetInvolutionOps().end() && !IsGradOp(op_name);
 }
