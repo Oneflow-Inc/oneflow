@@ -134,6 +134,23 @@ struct MaybePrivateScope {
   static decltype(auto) StackedError(T&& m) {
     return std::forward<T>(m).StackedError();
   }
+
+  template<typename T, typename F>
+  static auto Map(T&& maybe, F&& f)
+      -> Maybe<decltype(std::forward<F>(f)(std::forward<T>(maybe).Value())),
+               typename RemoveCVRef<T>::StackedErrorType> {
+    if (maybe) { return std::forward<F>(f)(std::forward<T>(maybe).Value()); }
+
+    return std::forward<T>(maybe).StackedError();
+  }
+
+  template<typename T, typename F,
+           typename U = std::decay_t<decltype(std::declval<F>()(std::declval<T>().Value()))>>
+  static auto Bind(T&& maybe, F&& f) -> std::enable_if_t<IsMaybe<U>::value, U> {
+    if (maybe) { return std::forward<F>(f)(std::forward<T>(maybe).Value()); }
+
+    return std::forward<T>(maybe).StackedError();
+  }
 };
 
 }  // namespace details
@@ -205,6 +222,26 @@ struct Maybe : private details::MaybeStorage<T, E> {
   decltype(auto) GetError() && {
     OF_MAYBE_ASSERT(IsErr());
     return std::move(*this).Error();
+  }
+
+  template<typename F>
+  auto Map(F&& f) const& {
+    return details::MaybePrivateScope::Map(*this, std::forward<F>(f));
+  }
+
+  template<typename F>
+  auto Map(F&& f) && {
+    return details::MaybePrivateScope::Map(std::move(*this), std::forward<F>(f));
+  }
+
+  template<typename F>
+  auto Bind(F&& f) const& {
+    return details::MaybePrivateScope::Bind(*this, std::forward<F>(f));
+  }
+
+  template<typename F>
+  auto Bind(F&& f) && {
+    return details::MaybePrivateScope::Bind(std::move(*this), std::forward<F>(f));
   }
 };
 

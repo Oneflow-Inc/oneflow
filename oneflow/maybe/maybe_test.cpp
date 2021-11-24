@@ -153,3 +153,29 @@ TEST(Maybe, NoStack) {
   a = c;
   ASSERT_FALSE(a);
 }
+
+TEST(Maybe, Monadic) {
+  using Error = simple::NoStackError<std::string>;
+  Maybe<int, Error> a{1}, b{InPlaceError, "hello"};
+
+  auto x2 = [](int x) { return x * 2; };
+
+  auto x2e2 = [](int x) -> Maybe<int, Error> {
+    if (x == 4) return Error("test");
+    return x * 2;
+  };
+
+  ASSERT_EQ(CHECK_JUST(a.Map(x2).Map(x2)), 4);
+  ASSERT_FALSE(b.Map(x2).Map(x2));
+
+  a = 1;
+  ASSERT_EQ(CHECK_JUST(a.Bind(x2e2).Bind(x2e2)), 4);
+
+  a = 2;
+  ASSERT_EQ(CHECK_JUST(a.Bind(x2e2)), 4);
+  ASSERT_EQ(a.Bind(x2e2).Bind(x2e2).GetError(), "test");
+
+  a = 4;
+  ASSERT_EQ(a.Bind(x2e2).GetError(), "test");
+  ASSERT_EQ(a.Bind(x2e2).GetError(), "test");
+}
