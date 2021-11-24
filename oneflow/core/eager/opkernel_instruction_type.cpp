@@ -696,7 +696,7 @@ struct LocalCallOpKernelUtil {
     if (oneflow::DTRDebugEnabled()) {
     for (int i : operand->opkernel().input_tuple_indexes4mut_ibns()) {
       const std::string &op_type_name = operand->opkernel().op_type_name();
-      std::cout << "mutable! op: " << op_type_name << ", input " << i << std::endl;
+      std::cout << "mutable! op: " << op_type_name << ", input " << i;
       const auto& mut_input = operand->inputs()->at(i);
       if (mut_input->mem_case().has_device_cuda_mem()) {
         size_t bytes = mut_input->blob_desc().ByteSizeOfBlobBody();
@@ -708,8 +708,9 @@ struct LocalCallOpKernelUtil {
         mut_input->hash_ = x;
         mut_input->backup_data_.resize(bytes / 4);
         memcpy(mut_input->backup_data_.data(), tmp.data(), bytes);
+        std::cout << ", gpu memory." << std::endl;
       } else {
-        std::cout << "non gpu memory, op is: " << op_type_name << std::endl;
+        std::cout << ", non gpu memory." << std::endl;
       }
     }
 
@@ -841,7 +842,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
           dtr_blob_object->update_user_ops(operand);
           return Maybe<void>::Ok();
         }));
-    if (oneflow::DTRDebugEnabled()) { std::cout << "prepare ok!!!" << std::endl; }
+    // if (oneflow::DTRDebugEnabled()) { std::cout << "prepare ok!!!" << std::endl; }
     return Maybe<void>::Ok();
   }
 
