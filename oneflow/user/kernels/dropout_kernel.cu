@@ -70,9 +70,9 @@ __global__ RETURN_VOID_IF_FLOAT MaskAndScaleAddGpu(
     const LoadT* x_load = reinterpret_cast<const LoadT*>(x + linear_index);
     cuda::elementwise::Pack<T, PackFloatSize> x_vec;
     x_vec.storage = *x_load;
-    
+
     cuda::elementwise::Pack<T, PackFloatSize> addend_vec;
-    if(hasAddend){
+    if (hasAddend) {
       const LoadT* addend_load = reinterpret_cast<const LoadT*>(&addend[linear_index]);
       addend_vec.storage = *addend_load;
     }
@@ -83,9 +83,7 @@ __global__ RETURN_VOID_IF_FLOAT MaskAndScaleAddGpu(
     for (int i = 0; i < PackFloatSize; i++) {
       mask_vec[i] = rand_uniform_pack4.elem[i] > rate;
       y_vec[i] = x_vec.elem[i] * mask_vec[i] * scale;
-      if(hasAddend){
-        y_vec[i] += addend_vec.elem[i];
-      }
+      if (hasAddend) { y_vec[i] += addend_vec.elem[i]; }
     }
 
     *(reinterpret_cast<LoadT*>(y + linear_index)) = *reinterpret_cast<LoadT*>(y_vec);
@@ -96,10 +94,10 @@ __global__ RETURN_VOID_IF_FLOAT MaskAndScaleAddGpu(
     const float rand_uniform = curand_uniform(&state);
     const int8_t mask = rand_uniform > rate;
     tail_mask[global_thread_id] = mask;
-    float tmp_tail_out = tail_x[global_thread_id] * mask * scale; 
-    if(hasAddend){
+    float tmp_tail_out = tail_x[global_thread_id] * mask * scale;
+    if (hasAddend) {
       tail_y[global_thread_id] = tmp_tail_out + tail_addend[global_thread_id];
-    }else{
+    } else {
       tail_y[global_thread_id] = tmp_tail_out;
     }
   }
@@ -138,7 +136,7 @@ __global__ RETURN_VOID_IF_HALF MaskAndScaleAddGpu(
     x_vec.storage = *x_load;
 
     H2Pack addend_vec{};
-    if(hasAddend){
+    if (hasAddend) {
       const LoadT* addend_load = reinterpret_cast<const LoadT*>(&addend[linear_index]);
       addend_vec.storage = *addend_load;
     }
@@ -158,8 +156,8 @@ __global__ RETURN_VOID_IF_HALF MaskAndScaleAddGpu(
     mask_vec[3] = rand_uniform_pack4.elem[3] > rate;
     one_or_zero_h2[1].y = mask_vec[3];
     y_vec[1] = __hmul2(__hmul2(x_vec.h2[1], one_or_zero_h2[1]), h2_scale);
-    
-    if(hasAddend){
+
+    if (hasAddend) {
       y_vec[0] = __hadd2(y_vec[0], addend_vec.h2[0]);
       y_vec[1] = __hadd2(y_vec[1], addend_vec.h2[1]);
     }
@@ -171,12 +169,12 @@ __global__ RETURN_VOID_IF_HALF MaskAndScaleAddGpu(
   if (tail && global_thread_id < n_tail) {
     half half_scale = __float2half_rn(scale);
     const float rand_uniform = curand_uniform(&state);
-    const int8_t mask = rand_uniform > rate; 
-    tail_mask[global_thread_id] = mask; 
+    const int8_t mask = rand_uniform > rate;
+    tail_mask[global_thread_id] = mask;
     half tmp_tail_out = tail_x[global_thread_id] * static_cast<half>(mask) * half_scale;
-    if(hasAddend){
+    if (hasAddend) {
       tail_y[global_thread_id] = tmp_tail_out + tail_addend[global_thread_id];
-    }else{
+    } else {
       tail_y[global_thread_id] = tmp_tail_out;
     }
   }
@@ -222,20 +220,18 @@ __global__ RETURN_VOID_IF_DOUBLE MaskAndScaleAddGpu(
     x_vec.storage = *x_load;
 
     cuda::elementwise::Pack<double, PackDoubleSize> addend_vec;
-    if(hasAddend){
+    if (hasAddend) {
       const LoadT* addend_load = reinterpret_cast<const LoadT*>(&addend[linear_index]);
       addend_vec.storage = *addend_load;
     }
-    
+
     int8_t mask_vec[PackDoubleSize];
     double y_vec[PackDoubleSize];
 #pragma unroll
     for (int i = 0; i < PackDoubleSize; i++) {
       mask_vec[i] = rand_uniform_pack4.elem[i] > rate;
       y_vec[i] = x_vec.elem[i] * mask_vec[i] * scale;
-      if(hasAddend){
-        y_vec[i] += addend_vec.elem[i];
-      }
+      if (hasAddend) { y_vec[i] += addend_vec.elem[i]; }
     }
     *(reinterpret_cast<LoadT*>(y + linear_index)) = *reinterpret_cast<LoadT*>(y_vec);
     *(reinterpret_cast<MaskT*>(mask + linear_index)) = *reinterpret_cast<MaskT*>(mask_vec);
@@ -246,9 +242,9 @@ __global__ RETURN_VOID_IF_DOUBLE MaskAndScaleAddGpu(
     const int8_t mask = rand_uniform > rate;
     tail_mask[global_thread_id] = mask;
     double tmp_tail_out = tail_x[global_thread_id] * mask * scale;
-    if(hasAddend){
+    if (hasAddend) {
       tail_y[global_thread_id] = tmp_tail_out + tail_addend[global_thread_id];
-    }else{
+    } else {
       tail_y[global_thread_id] = tmp_tail_out;
     }
   }
@@ -275,8 +271,8 @@ unsigned int ComputeGridSize(const int32_t block_size, const int64_t elem_cnt) {
 
 template<typename T, bool hasAddend>
 void DispatchTail(DeviceCtx* ctx, uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
-                     const int64_t elem_cnt, float rate, float scale, const T* x, int8_t* mask,
-                     const T* addend, T* y) {
+                  const int64_t elem_cnt, float rate, float scale, const T* x, int8_t* mask,
+                  const T* addend, T* y) {
   unsigned int grid_size = ComputeGridSize<4>(kBlockSize, elem_cnt);
   constexpr int pack_size = cuda::elementwise::PackSize<T>();
   const int64_t pack_num = elem_cnt / pack_size;
@@ -341,12 +337,12 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* addend = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       DispatchTail<T, true>(ctx->device_ctx(), seed, cuda_gen_state, in->shape().elem_cnt(), rate,
-                         scale, in->dptr<T>(), mask->mut_dptr<int8_t>(), addend->dptr<T>(),
-                         out->mut_dptr<T>());
+                            scale, in->dptr<T>(), mask->mut_dptr<int8_t>(), addend->dptr<T>(),
+                            out->mut_dptr<T>());
     } else {
       DispatchTail<T, false>(ctx->device_ctx(), seed, cuda_gen_state, in->shape().elem_cnt(), rate,
-                         scale, in->dptr<T>(), mask->mut_dptr<int8_t>(), nullptr,
-                         out->mut_dptr<T>());
+                             scale, in->dptr<T>(), mask->mut_dptr<int8_t>(), nullptr,
+                             out->mut_dptr<T>());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
