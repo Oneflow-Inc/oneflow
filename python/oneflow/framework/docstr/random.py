@@ -24,8 +24,8 @@ add_docstr(
     This operator returns a Tensor with binaray random numbers (0 / 1) from a Bernoulli distribution.
 
     Args:
-        x(Tensor): the input tensor of probability values for the Bernoulli distribution
-        generator: (Generator, optional) a pseudorandom number generator for sampling
+        x (Tensor): the input tensor of probability values for the Bernoulli distribution
+        generator (Generator, optional): a pseudorandom number generator for sampling
         out (Tensor, optional): the output tensor.
 
     Shape:
