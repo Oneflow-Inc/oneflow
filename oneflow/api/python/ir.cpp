@@ -93,11 +93,12 @@ const std::set<std::string>& GetInvolutionOps() {
   static std::set<std::string> ret{"reciprocal", "negative"};
   return ret;
 }
+bool IsGradOp(const std::string& op_name) { return op_name.find("grad") != std::string::npos; }
 bool IsInvolutionOp(const std::string& op_name) {
-  return GetInvolutionOps().find(op_name) != GetInvolutionOps().end();
+  return GetInvolutionOps().find(op_name) != GetInvolutionOps().end() && !IsGradOp(op_name);
 }
 bool IsIdempotentOp(const std::string& op_name) {
-  return GetIdempotentOps().find(op_name) != GetIdempotentOps().end();
+  return GetIdempotentOps().find(op_name) != GetIdempotentOps().end() && !IsGradOp(op_name);
 }
 
 bool IsPoolOp(const std::string& op_name) {
@@ -107,7 +108,7 @@ bool IsPoolOp(const std::string& op_name) {
 bool IsConvOp(const std::string& op_name) {
   return op_name.rfind("conv", 0) == 0 && op_name.find("grad") == std::string::npos;
 }
-bool IsGradOp(const std::string& op_name) { return op_name.find("grad") != std::string::npos; }
+
 bool IsLazyPoolOp(const std::string& op_name) { return op_name.find("_pool") != std::string::npos; }
 
 std::string PostProcessClassName(const std::string& op_name) {
@@ -271,6 +272,8 @@ void PrintBody(const oneflow::user_op::OpRegistryResult& r) {
             << "\n";
 }
 
+bool ShouldGenBaseClass(const std::string& op_name) { return op_name == "normalization_add_relu"; }
+
 std::string GetOpClassName(const std::string& op_name) {
   std::string ret = "";
   if (IsPoolOp(op_name)) {
@@ -280,6 +283,7 @@ std::string GetOpClassName(const std::string& op_name) {
   } else {
     ret = convertToCamelFromSnakeCase(op_name, true);
   }
+  if (ShouldGenBaseClass(op_name)) { ret += "Base"; }
   return PostProcessClassName(ret);
 }
 
@@ -316,9 +320,9 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
       if (kv.first == "mlir_jit") continue;
       const oneflow::user_op::OpRegistryResult& r = kv.second;
       auto op_class_name = GetOpClassName(kv.first);
-      std::cout << "def OneFlow_" << op_class_name << "Op : " << GetBaseOp(r.op_type_name) << "<\""
-                << kv.first << "\", [" + GetTraits(r.op_def) + "]> ";  // TODO: add traits
-      const oneflow::UserOpDef& op_def = r.op_def;
+      std::cout << (ShouldGenBaseClass(r.op_type_name) ? "class" : "def") << " OneFlow_"
+                << op_class_name << "Op : " << GetBaseOp(r.op_type_name) << "<\"" << kv.first
+                << "\", [" + GetTraits(r.op_def) + "]> ";  // TODO: add traits
       if (ShouldGenEmptyBody(r.op_type_name)) {
         std::cout << "{}\n";
       } else {
