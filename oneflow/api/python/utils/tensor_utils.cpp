@@ -127,7 +127,7 @@ Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor) {
 
 #define MAKE_SWITCH_ENTRY(func_name, dtype) func_name<dtype>
 DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, CopyMirroredTensorFromUntypedArray, MAKE_SWITCH_ENTRY,
-                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ));
+                          MAKE_DATA_TYPE_CTRV_SEQ(POD_AND_HALF_DATA_TYPE_SEQ));
 
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                       const Optional<Symbol<Device>>& device, bool requires_grad) {
@@ -236,7 +236,7 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
   Symbol<cfg::NdSbp> broadcast_nd_sbp = JUST(CachedGetAllBroadcastNdSbp(sbp_dims));
 
   std::shared_ptr<Tensor> broadcast_tensor = JUST(functional::LocalToConsistent(
-      local_tensor, placement, *JUST(GetSbpList(broadcast_nd_sbp)), shape, dtype_));
+      local_tensor, placement, *JUST(GetSbpList(broadcast_nd_sbp)), shape, local_tensor->dtype()));
 
   std::vector<Symbol<cfg::SbpParallel>> grad_sbp_tuple;
   return JUST(functional::ToConsistent(broadcast_tensor, placement, sbp_tuple, grad_sbp_tuple));

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import oneflow
 from oneflow.compatible.single_client.framework.sysconfig import (
     get_compile_flags,
     get_include,
@@ -23,4 +24,9 @@ from oneflow.compatible.single_client.framework.sysconfig import (
     with_cuda,
     get_cuda_version,
     with_xla,
+)
+
+from oneflow._oneflow_internal.flags import (
+    with_mlir,
+    with_mlir_cuda_codegen,
 )

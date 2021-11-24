@@ -18,39 +18,46 @@ limitations under the License.
 
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/device/device_context.h"
-#include "oneflow/core/device/cuda_stream_handle.h"
+#include "oneflow/core/device/cuda_event.h"
 #include "oneflow/core/vm/cuda_host_allocator.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/common/cpp_attribute.h"
 
 namespace oneflow {
 namespace vm {
 
 #ifdef WITH_CUDA
 
-class CudaCopyD2HDeviceCtx : public DeviceCtx {
+class CudaCopyD2HDeviceCtx : public DeviceCtx, public SingleThreadQueryCudaEventProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaCopyD2HDeviceCtx);
   CudaCopyD2HDeviceCtx() = delete;
   ~CudaCopyD2HDeviceCtx() override = default;
 
   CudaCopyD2HDeviceCtx(int64_t device_id)
-      : cuda_handler_(new CudaStreamHandle(nullptr)),
+      : DeviceCtx(),
+        SingleThreadQueryCudaEventProvider(device_id),
         cuda_allocator_(std::make_unique<CudaHostAllocator>(device_id)),
         device_id_(device_id) {}
 
-  cudaStream_t cuda_stream() const override { return cuda_handler_->cuda_stream(); }
-  cublasHandle_t cublas_handle() const override { return cuda_handler_->cublas_handle(); }
-  cudnnHandle_t cudnn_handle() const override { return cuda_handler_->cudnn_handle(); }
+  cudaStream_t cuda_stream() const override { return GetOrCreateCudaStream()->cuda_stream(); }
+  cublasHandle_t cublas_handle() const override { return GetOrCreateCudaStream()->cublas_handle(); }
+  cudnnHandle_t cudnn_handle() const override { return GetOrCreateCudaStream()->cudnn_handle(); }
 
-  void SyncDevice() override { OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream())); }
-
-  void AddCallBack(std::function<void()> callback) const override { UNIMPLEMENTED(); }
+  ep::Stream* stream() override { return GetOrCreateCudaStream(); }
 
   vm::Allocator* mut_allocator() override { return cuda_allocator_.get(); }
 
   DeviceType device_type() const override { return DeviceType::kGPU; }
 
+ private:
+  ep::CudaStream* GetOrCreateCudaStream() const {
+    if (unlikely(!stream_)) { stream_.reset(new ep::CudaStream(device_id_)); }
+    return stream_.get();
+  }
+
  protected:
-  std::unique_ptr<CudaStreamHandle> cuda_handler_;
+  mutable std::unique_ptr<ep::CudaStream> stream_;
   std::unique_ptr<CudaHostAllocator> cuda_allocator_;
   int64_t device_id_;
 };

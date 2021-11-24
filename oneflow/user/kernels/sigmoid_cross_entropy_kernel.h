@@ -41,14 +41,14 @@ namespace {
 template<DeviceType device_type, template<typename, typename> class Opt, typename PredT,
          typename LabelT>
 struct ElemwiseSigmoidCrossEntropyGradFunctor final {
-  void operator()(DeviceCtx* ctx, int64_t n, PredT* prediction_diff, const PredT* prediction,
+  void operator()(ep::Stream* stream, int64_t n, PredT* prediction_diff, const PredT* prediction,
                   const LabelT* label, const PredT* loss_diff);
 };
 
 template<DeviceType device_type, template<typename, typename> class Opt, typename PredT,
          typename LabelT>
 struct ElemwiseSigmoidCrossEntropyFunctor final {
-  void operator()(DeviceCtx* ctx, int64_t n, PredT* loss, const PredT* prediction,
+  void operator()(ep::Stream* stream, int64_t n, PredT* loss, const PredT* prediction,
                   const LabelT* label);
 };
 }  // namespace
@@ -68,7 +68,7 @@ class SigmoidCrossEntropyKernel final : public user_op::OpKernel {
     user_op::Tensor* loss = ctx->Tensor4ArgNameAndIndex("loss", 0);
     const auto n = prediction->shape().elem_cnt();
     ElemwiseSigmoidCrossEntropyFunctor<device_type, Opt, PredT, LabelT>()(
-        ctx->device_ctx(), n, loss->mut_dptr<PredT>(), prediction->dptr<PredT>(),
+        ctx->stream(), n, loss->mut_dptr<PredT>(), prediction->dptr<PredT>(),
         label->dptr<LabelT>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -78,9 +78,9 @@ class SigmoidCrossEntropyKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("sigmoid_cross_entropy")                                               \
       .SetCreateFn<                                                                           \
           SigmoidCrossEntropyKernel<device_type, SigmoidCrossEntropyFunctor, dtype, ltype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type)                               \
-                       & (user_op::HobDataType("label", 0) == GetDataType<ltype>::value)      \
-                       & (user_op::HobDataType("loss", 0) == GetDataType<dtype>::value));
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type)                              \
+                       && (user_op::HobDataType("label", 0) == GetDataType<ltype>::value)     \
+                       && (user_op::HobDataType("loss", 0) == GetDataType<dtype>::value));
 
 template<DeviceType device_type, template<typename, typename> class Opt, typename PredT,
          typename LabelT>
@@ -98,7 +98,7 @@ class SigmoidCrossEntropyGradKernel final : public user_op::OpKernel {
     user_op::Tensor* prediction_diff = ctx->Tensor4ArgNameAndIndex("prediction_diff", 0);
     const int64_t n = prediction->shape().elem_cnt();
     ElemwiseSigmoidCrossEntropyGradFunctor<device_type, Opt, PredT, LabelT>()(
-        ctx->device_ctx(), n, prediction_diff->mut_dptr<PredT>(), prediction->dptr<PredT>(),
+        ctx->stream(), n, prediction_diff->mut_dptr<PredT>(), prediction->dptr<PredT>(),
         label->dptr<LabelT>(), loss_diff->dptr<PredT>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -109,9 +109,9 @@ class SigmoidCrossEntropyGradKernel final : public user_op::OpKernel {
       .SetCreateFn<SigmoidCrossEntropyGradKernel<device_type, SigmoidCrossEntropyGradFunctor, \
                                                  dtype, ltype>>()                             \
       .SetIsMatchedHob(                                                                       \
-          (user_op::HobDeviceTag() == device_type)                                            \
-          & (user_op::HobDataType("label", 0) == GetDataType<ltype>::value)                   \
-          & (user_op::HobDataType("prediction_diff", 0) == GetDataType<dtype>::value));
+          (user_op::HobDeviceType() == device_type)                                           \
+          && (user_op::HobDataType("label", 0) == GetDataType<ltype>::value)                  \
+          && (user_op::HobDataType("prediction_diff", 0) == GetDataType<dtype>::value));
 
 }  // namespace oneflow
 #endif  // ONEFLOW_USER_KERNELS_SIGMOID_CROSS_ENTROPY_KERNEL_H_

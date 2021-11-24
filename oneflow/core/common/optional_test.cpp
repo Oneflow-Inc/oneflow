@@ -118,5 +118,30 @@ TEST(Optional, optional_just_error_throw) {
       ValueNotFoundException);
 }
 
+TEST(Optional, monadic_operations) {
+  Optional<int> a(1), b, c(2);
+  ASSERT_EQ(a.map([](int x) { return x + 1; }), c);
+  ASSERT_EQ(b.map([](int x) { return x + 1; }), b);
+  ASSERT_EQ(a.map([](int x) { return std::string(x + 1, 'a'); }).map([](const auto& x) {
+    return (int)x->size();
+  }),
+            c);
+  ASSERT_EQ(a.bind([](int x) -> Optional<float> {
+               if (x < 10) {
+                 return x * 1.1;
+               } else {
+                 return NullOpt;
+               }
+             })
+                .map([](float x) { return x - 1; })
+                .map([](float x) { return std::abs(x - 0.1) < 0.001; }),
+            Optional<bool>(true));
+
+  int x = 0;
+  b.or_else([&] { x++; }).or_else([&] { x *= 2; });
+  ASSERT_EQ(x, 2);
+  ASSERT_EQ(b.or_else([] { return Optional<int>(3); }).map([](int x) { return x - 1; }), c);
+}
+
 }  // namespace test
 }  // namespace oneflow

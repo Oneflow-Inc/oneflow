@@ -16,11 +16,12 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_THREAD_THREAD_H_
 #define ONEFLOW_CORE_THREAD_THREAD_H_
 
-#include "oneflow/core/actor/actor_message_bus.h"
+#include "oneflow/core/lazy/actor/actor_message_bus.h"
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/task.pb.h"
-#include "oneflow/core/actor/actor.h"
+#include "oneflow/core/lazy/actor/actor.h"
+#include "oneflow/core/lazy/actor/actor_context.h"
 
 namespace oneflow {
 
@@ -68,7 +69,8 @@ class Thread {
 
   std::thread actor_thread_;
   Channel<ActorMsg> msg_channel_;
-  HashMap<int64_t, std::unique_ptr<ActorBase>> id2actor_ptr_;
+  HashMap<int64_t, std::pair<std::unique_ptr<ActorContext>, std::unique_ptr<ActorBase>>>
+      id2actor_ptr_;
   HashMap<int64_t, int64_t> id2job_id_;
   std::queue<ActorMsg> local_msg_queue_;
   bool local_msg_queue_enabled_;

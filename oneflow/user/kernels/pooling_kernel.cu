@@ -17,6 +17,7 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/user/kernels/pooling_kernel_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -111,75 +112,79 @@ __launch_bounds__(kBlockSize) __global__
 
 template<typename T>
 struct PoolingKernelUtil<DeviceType::kGPU, T> {
-  static void Maxpool1dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 3>& index_helper,
+  static void Maxpool1dForward(ep::Stream* stream,
+                               const NdIndexOffsetHelper<int64_t, 3>& index_helper,
                                const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const PoolingParams3D& params_3d) {
-    DoCUDAMaxPool1dForward<T>
-        <<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0, ctx->cuda_stream()>>>(
-            index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[2],
-            params_3d.num_batch(), params_3d.num_channel(), params_3d.GetXShape5D().At(4),
-            params_3d.GetYShape5D().At(4), params_3d.pooling_size_3d()[2], params_3d.stride_3d()[2],
-            params_3d.dilation_3d()[2]);
+    DoCUDAMaxPool1dForward<T><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
+                                stream->As<ep::CudaStream>()->cuda_stream()>>>(
+        index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[2],
+        params_3d.num_batch(), params_3d.num_channel(), params_3d.GetXShape5D().At(4),
+        params_3d.GetYShape5D().At(4), params_3d.pooling_size_3d()[2], params_3d.stride_3d()[2],
+        params_3d.dilation_3d()[2]);
   }
 
-  static void Maxpool1dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 3>& index_helper,
+  static void Maxpool1dBackward(ep::Stream* stream,
+                                const NdIndexOffsetHelper<int64_t, 3>& index_helper,
                                 const int64_t elem_num, const T* src, T* dest,
                                 const int64_t* indice_ptr, const PoolingParams3D& params_3d) {
-    DoCUDAMaxPool1dBackward<T>
-        <<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0, ctx->cuda_stream()>>>(
-            index_helper, elem_num, src, dest, indice_ptr, params_3d.num_batch(),
-            params_3d.num_channel(), params_3d.GetYShape5D().At(4), params_3d.GetXShape5D().At(4));
+    DoCUDAMaxPool1dBackward<T><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
+                                 stream->As<ep::CudaStream>()->cuda_stream()>>>(
+        index_helper, elem_num, src, dest, indice_ptr, params_3d.num_batch(),
+        params_3d.num_channel(), params_3d.GetYShape5D().At(4), params_3d.GetXShape5D().At(4));
   }
 
-  static void Maxpool2dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper,
+  static void Maxpool2dForward(ep::Stream* stream,
+                               const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const PoolingParams3D& params_3d) {
-    DoCUDAMaxPool2dForward<T>
-        <<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0, ctx->cuda_stream()>>>(
-            index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[1],
-            params_3d.padding()[2], params_3d.num_batch(), params_3d.num_channel(),
-            params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4),
-            params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4),
-            params_3d.pooling_size_3d()[1], params_3d.pooling_size_3d()[2],
-            params_3d.stride_3d()[1], params_3d.stride_3d()[2], params_3d.dilation_3d()[1],
-            params_3d.dilation_3d()[2]);
+    DoCUDAMaxPool2dForward<T><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
+                                stream->As<ep::CudaStream>()->cuda_stream()>>>(
+        index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[1],
+        params_3d.padding()[2], params_3d.num_batch(), params_3d.num_channel(),
+        params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4), params_3d.GetYShape5D().At(3),
+        params_3d.GetYShape5D().At(4), params_3d.pooling_size_3d()[1],
+        params_3d.pooling_size_3d()[2], params_3d.stride_3d()[1], params_3d.stride_3d()[2],
+        params_3d.dilation_3d()[1], params_3d.dilation_3d()[2]);
   }
 
-  static void Maxpool2dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper,
+  static void Maxpool2dBackward(ep::Stream* stream,
+                                const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                 const int64_t elem_num, const T* src, T* dest,
                                 const int64_t* indice_ptr, const PoolingParams3D& params_3d) {
-    DoCUDAMaxPool2dBackward<T>
-        <<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0, ctx->cuda_stream()>>>(
-            index_helper, elem_num, src, dest, indice_ptr, params_3d.num_batch(),
-            params_3d.num_channel(), params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4),
-            params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4));
+    DoCUDAMaxPool2dBackward<T><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
+                                 stream->As<ep::CudaStream>()->cuda_stream()>>>(
+        index_helper, elem_num, src, dest, indice_ptr, params_3d.num_batch(),
+        params_3d.num_channel(), params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4),
+        params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4));
   }
 
-  static void Maxpool3dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5>& index_helper,
+  static void Maxpool3dForward(ep::Stream* stream,
+                               const NdIndexOffsetHelper<int64_t, 5>& index_helper,
                                const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const PoolingParams3D& params_3d) {
-    DoCUDAMaxPool3dForward<T>
-        <<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0, ctx->cuda_stream()>>>(
-            index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[0],
-            params_3d.padding()[1], params_3d.padding()[2], params_3d.num_batch(),
-            params_3d.num_channel(), params_3d.GetXShape5D().At(2), params_3d.GetXShape5D().At(3),
-            params_3d.GetXShape5D().At(4), params_3d.GetYShape5D().At(2),
-            params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4),
-            params_3d.pooling_size_3d()[0], params_3d.pooling_size_3d()[1],
-            params_3d.pooling_size_3d()[2], params_3d.stride_3d()[0], params_3d.stride_3d()[1],
-            params_3d.stride_3d()[2], params_3d.dilation_3d()[0], params_3d.dilation_3d()[1],
-            params_3d.dilation_3d()[2]);
+    DoCUDAMaxPool3dForward<T><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
+                                stream->As<ep::CudaStream>()->cuda_stream()>>>(
+        index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[0],
+        params_3d.padding()[1], params_3d.padding()[2], params_3d.num_batch(),
+        params_3d.num_channel(), params_3d.GetXShape5D().At(2), params_3d.GetXShape5D().At(3),
+        params_3d.GetXShape5D().At(4), params_3d.GetYShape5D().At(2), params_3d.GetYShape5D().At(3),
+        params_3d.GetYShape5D().At(4), params_3d.pooling_size_3d()[0],
+        params_3d.pooling_size_3d()[1], params_3d.pooling_size_3d()[2], params_3d.stride_3d()[0],
+        params_3d.stride_3d()[1], params_3d.stride_3d()[2], params_3d.dilation_3d()[0],
+        params_3d.dilation_3d()[1], params_3d.dilation_3d()[2]);
   }
 
-  static void Maxpool3dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5>& index_helper,
+  static void Maxpool3dBackward(ep::Stream* stream,
+                                const NdIndexOffsetHelper<int64_t, 5>& index_helper,
                                 const int64_t elem_num, const T* src, T* dest,
                                 const int64_t* indice_ptr, const PoolingParams3D& params_3d) {
-    DoCUDAMaxPool3dBackward<T>
-        <<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0, ctx->cuda_stream()>>>(
-            index_helper, elem_num, src, dest, indice_ptr, params_3d.num_batch(),
-            params_3d.num_channel(), params_3d.GetYShape5D().At(2), params_3d.GetYShape5D().At(3),
-            params_3d.GetYShape5D().At(4), params_3d.GetXShape5D().At(2),
-            params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4));
+    DoCUDAMaxPool3dBackward<T><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
+                                 stream->As<ep::CudaStream>()->cuda_stream()>>>(
+        index_helper, elem_num, src, dest, indice_ptr, params_3d.num_batch(),
+        params_3d.num_channel(), params_3d.GetYShape5D().At(2), params_3d.GetYShape5D().At(3),
+        params_3d.GetYShape5D().At(4), params_3d.GetXShape5D().At(2), params_3d.GetXShape5D().At(3),
+        params_3d.GetXShape5D().At(4));
   }
 };
 
