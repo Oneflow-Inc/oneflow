@@ -287,7 +287,7 @@ def new_ones_op(
                 [1., 1.]], dtype=oneflow.float32)
     """
     if isinstance(device, str):
-         device = flow.device(device)
+        device = flow.device(device)
     if size != None:
         size = _single(size)
     new_size = size

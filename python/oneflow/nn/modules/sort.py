@@ -22,7 +22,6 @@ from oneflow.ops.transpose_util import (
 )
 
 
-
 @register_tensor_op("sort")
 def sort_op(input, dim: int = -1, descending: bool = False):
     """Sorts the elements of the input tensor along a given dimension in ascending order by value.

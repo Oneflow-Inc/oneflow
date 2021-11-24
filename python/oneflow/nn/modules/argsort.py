@@ -22,8 +22,6 @@ from oneflow.ops.transpose_util import (
 )
 
 
-
-
 @register_tensor_op("argsort")
 def argsort_op(input, dim: int = -1, descending: bool = False):
     """This operator sorts the input Tensor at specified dim and return the indices of the sorted Tensor.
@@ -70,7 +68,6 @@ def argsort_op(input, dim: int = -1, descending: bool = False):
         x = flow._C.transpose(input, perm=perm)
         x = flow._C.arg_sort(x, direction)
         return flow._C.transpose(x, perm=get_inversed_perm(perm))
-    
 
 
 if __name__ == "__main__":

@@ -207,8 +207,8 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.arccos,
     """
-     See :func:`oneflow.arccos`
-     """,
+    See :func:`oneflow.arccos`
+    """,
 )
 
 add_docstr(

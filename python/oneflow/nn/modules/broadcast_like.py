@@ -34,8 +34,6 @@ def _calc_broadcast_axes(x, like_tensor):
     return tuple(broadcast_axes)
 
 
-
-
 def broadcast_like_op(x, like_tensor, broadcast_axes: Optional[Sequence] = None):
     """This operator broadcast tensor `x` to `like_tensor` according to the broadcast_axes. 
 
