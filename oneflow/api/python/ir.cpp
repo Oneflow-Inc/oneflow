@@ -180,6 +180,7 @@ bool IsAssignOp(const std::string& op_name) {
 bool IsCrossEntropyOp(const std::string& op_name) {
   return (op_name.find("cross_entropy") != std::string::npos);
 }
+bool IsCUDAOp(const std::string& op_name) { return (op_name.find("nvtx") != std::string::npos); }
 bool IsMatmulOp(const std::string& op_name) {
   return (op_name.find("matmul") != std::string::npos || op_name.find("fc") != std::string::npos);
 }
@@ -491,6 +492,7 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
     if (IsTestOp(r.op_type_name)) { group_name = "TEST"; }
     if (IsDetectionOp(r.op_type_name)) { group_name = "Detection"; }
     if (IsSummaryOp(r.op_type_name)) { group_name = "summary"; }
+    if (IsCUDAOp(r.op_type_name)) { group_name = "cuda"; }
     group_name = "GET_ONEFLOW_" + group_name + "_OP_DEFINITIONS";
     std::transform(group_name.begin(), group_name.end(), group_name.begin(), ::toupper);
     groups[group_name].insert({kv.first, kv.second});
