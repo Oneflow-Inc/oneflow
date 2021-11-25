@@ -22,61 +22,61 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-# @flow.unittest.skip_unless_1n1d()
-# class TestAvgPoolingModule(flow.unittest.TestCase):
-#     @autotest(check_graph=False)
-#     def test_avgpool1d_with_random_data(test_case):
-#         m = torch.nn.AvgPool1d(
-#             kernel_size=random(4, 6),
-#             stride=random(1, 3) | nothing(),
-#             padding=random(1, 3) | nothing(),
-#             ceil_mode=random(),
-#             count_include_pad=random(),
-#         )
-#         m.train(random())
-#         device = random_device()
-#         m.to(device)
-#         x = random_pytorch_tensor(ndim=3, dim2=random(20, 22)).to(device)
-#         y = m(x)
-#         return y
+@flow.unittest.skip_unless_1n1d()
+class TestAvgPoolingModule(flow.unittest.TestCase):
+    @autotest()
+    def test_avgpool1d_with_random_data(test_case):
+        m = torch.nn.AvgPool1d(
+            kernel_size=random(4, 6),
+            stride=random(1, 3) | nothing(),
+            padding=random(1, 3) | nothing(),
+            ceil_mode=random(),
+            count_include_pad=random(),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=3, dim2=random(20, 22)).to(device)
+        y = m(x)
+        return y
 
-#     @autotest(check_graph=False)
-#     def test_avgpool2d_with_random_data(test_case):
-#         m = torch.nn.AvgPool2d(
-#             kernel_size=random(4, 6),
-#             stride=random(1, 3) | nothing(),
-#             padding=random(1, 3) | nothing(),
-#             ceil_mode=random(),
-#             count_include_pad=random(),
-#             divisor_override=random().to(int),
-#         )
-#         m.train(random())
-#         device = random_device()
-#         m.to(device)
-#         x = random_pytorch_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(
-#             device
-#         )
-#         y = m(x)
-#         return y
+    @autotest(check_graph=False)
+    def test_avgpool2d_with_random_data(test_case):
+        m = torch.nn.AvgPool2d(
+            kernel_size=random(4, 6),
+            stride=random(1, 3) | nothing(),
+            padding=random(1, 3) | nothing(),
+            ceil_mode=random(),
+            count_include_pad=random(),
+            divisor_override=random().to(int),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(
+            device
+        )
+        y = m(x)
+        return y
 
-#     @autotest(check_graph=False)
-#     def test_avgpool3d_with_random_data(test_case):
-#         m = torch.nn.AvgPool3d(
-#             kernel_size=random(4, 6),
-#             stride=random(1, 3) | nothing(),
-#             padding=random(1, 3) | nothing(),
-#             ceil_mode=random(),
-#             count_include_pad=random(),
-#             divisor_override=random().to(int),
-#         )
-#         m.train(random())
-#         device = random_device()
-#         m.to(device)
-#         x = random_pytorch_tensor(
-#             ndim=5, dim2=random(20, 22), dim3=random(20, 22), dim4=random(20, 22)
-#         ).to(device)
-#         y = m(x)
-#         return y
+    @autotest()
+    def test_avgpool3d_with_random_data(test_case):
+        m = torch.nn.AvgPool3d(
+            kernel_size=random(4, 6),
+            stride=random(1, 3) | nothing(),
+            padding=random(1, 3) | nothing(),
+            ceil_mode=random(),
+            count_include_pad=random(),
+            divisor_override=random().to(int),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(
+            ndim=5, dim2=random(20, 22), dim3=random(20, 22), dim4=random(20, 22)
+        ).to(device)
+        y = m(x)
+        return y
 
 
 @flow.unittest.skip_unless_1n1d()

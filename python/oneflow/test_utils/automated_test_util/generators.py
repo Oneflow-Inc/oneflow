@@ -250,6 +250,8 @@ class random(generator):
             val = random_util.choice([True, False])
         elif annotation is None:
             val = None
+        elif annotation is NoneType:
+            val = None
         else:
             raise NotImplementedError(
                 f"Not implemented annotation {annotation} in random"

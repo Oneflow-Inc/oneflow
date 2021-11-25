@@ -270,7 +270,7 @@ class TestAtan(flow.unittest.TestCase):
 @flow.unittest.skip_unless_1n1d()
 class TestTopk(flow.unittest.TestCase):
     @autotest(auto_backward=False, check_graph=False)
-    def _test_flow_topk_with_random_data(test_case):
+    def test_flow_topk_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4, dim1=8, dim2=9, dim3=10).to(device)
         y = torch.topk(

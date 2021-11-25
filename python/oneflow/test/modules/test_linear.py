@@ -160,7 +160,7 @@ def _test_linear_backward_with_bias(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestLinear(flow.unittest.TestCase):
-    def _test_linear_forward(test_case):
+    def test_linear_forward(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_linear_no_bias,
@@ -173,7 +173,7 @@ class TestLinear(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    def _test_linear_backward(test_case):
+    def test_linear_backward(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_linear_backward_with_bias]
         arg_dict["device"] = ["cpu", "cuda"]
@@ -216,7 +216,7 @@ class TestLinear(flow.unittest.TestCase):
         return y
 
     @autotest()
-    def _test_identity_with_random_data(test_case):
+    def test_identity_with_random_data(test_case):
         m = torch.nn.Identity(
             x=random().to(int),
             unused_argument1=random().to(float),

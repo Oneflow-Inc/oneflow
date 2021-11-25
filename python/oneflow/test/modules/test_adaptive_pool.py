@@ -45,7 +45,7 @@ class TestAdaptiveAvgPool(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    # @autotest(check_graph=False)
+    # @autotest()
     # def test_adaptive_avgpool2d(test_case):
     #     m = torch.nn.AdaptiveAvgPool2d(output_size=random().to(_size_2_opt_t_not_none))
     #     m.train(random())

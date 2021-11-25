@@ -105,8 +105,8 @@ class TestLess(flow.unittest.TestCase):
         y = torch.lt(x1, oneof(x2, random().to(int).to(float)))
         return y
 
-    @autotest(n=60, auto_backward=False)
-    def _test_tensor_less_with_random_data(test_case):
+    @autotest(n=60, auto_backward=False, check_graph=False)
+    def test_tensor_less_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().value().shape
         x1 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)

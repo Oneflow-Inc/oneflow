@@ -281,42 +281,42 @@ def test_softmax(batch_size: int, log_softmax: bool = False):
     return y
 
 
-# @flow.unittest.skip_unless_1n1d()
-# class TestSoftmax(flow.unittest.TestCase):
-#     @autotest(check_graph=False)
-#     def test_softmax_module_with_random_data(test_case):
-#         return test_softmax(batch_size=-1, log_softmax=False)
+@flow.unittest.skip_unless_1n1d()
+class TestSoftmax(flow.unittest.TestCase):
+    @autotest(check_graph=False)
+    def test_softmax_module_with_random_data(test_case):
+        return test_softmax(batch_size=-1, log_softmax=False)
 
-#     @autotest(check_graph=False)
-#     def test_softmax_module_with_batch_size_equal_1024(test_case):
-#         return test_softmax(batch_size=1024, log_softmax=False)
+    @autotest(check_graph=False)
+    def test_softmax_module_with_batch_size_equal_1024(test_case):
+        return test_softmax(batch_size=1024, log_softmax=False)
 
-#     @autotest(n=5,check_graph=False)
-#     def test_softmax_module_with_batch_size_equal_5120(test_case):
-#         return test_softmax(batch_size=5120, log_softmax=False)
+    @autotest(n=5, check_graph=False)
+    def test_softmax_module_with_batch_size_equal_5120(test_case):
+        return test_softmax(batch_size=5120, log_softmax=False)
 
-#     @autotest(n=2,check_graph=False)
-#     def test_softmax_module_with_batch_size_equal_10240(test_case):
-#         return test_softmax(batch_size=10240, log_softmax=False)
+    @autotest(n=2, check_graph=False)
+    def test_softmax_module_with_batch_size_equal_10240(test_case):
+        return test_softmax(batch_size=10240, log_softmax=False)
 
 
-# @flow.unittest.skip_unless_1n1d()
-# class TestLogSoftmaxModule(flow.unittest.TestCase):
-#     @autotest(check_graph=False)
-#     def test_logsoftmax_module_with_random_data(test_case):
-#         return test_softmax(batch_size=-1, log_softmax=True)
+@flow.unittest.skip_unless_1n1d()
+class TestLogSoftmaxModule(flow.unittest.TestCase):
+    @autotest(check_graph=False)
+    def test_logsoftmax_module_with_random_data(test_case):
+        return test_softmax(batch_size=-1, log_softmax=True)
 
-#     @autotest(check_graph=False)
-#     def test_softmax_module_with_batch_size_equal_1024(test_case):
-#         return test_softmax(batch_size=1024, log_softmax=True)
+    @autotest()
+    def test_softmax_module_with_batch_size_equal_1024(test_case):
+        return test_softmax(batch_size=1024, log_softmax=True)
 
-#     @autotest(n=5,check_graph=False)
-#     def test_softmax_module_with_batch_size_equal_5120(test_case):
-#         return test_softmax(batch_size=5120, log_softmax=True)
+    @autotest(n=5, check_graph=False)
+    def test_softmax_module_with_batch_size_equal_5120(test_case):
+        return test_softmax(batch_size=5120, log_softmax=True)
 
-#     @autotest(n=2,check_graph=False)
-#     def test_softmax_module_with_batch_size_equal_10240(test_case):
-#         return test_softmax(batch_size=10240, log_softmax=True)
+    @autotest(n=2, check_graph=False)
+    def test_softmax_module_with_batch_size_equal_10240(test_case):
+        return test_softmax(batch_size=10240, log_softmax=True)
 
 
 @flow.unittest.skip_unless_1n1d()

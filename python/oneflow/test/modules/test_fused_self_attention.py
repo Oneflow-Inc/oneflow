@@ -89,7 +89,7 @@ def test_fused_self_attention(test_case, batch_size, seq_len, num_heads, head_si
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestFusedSelfAttention(flow.unittest.TestCase):
-    def _test_fused_self_attention(test_case):
+    def test_fused_self_attention(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [test_fused_self_attention]
         arg_dict["batch_size"] = [1, 4, 6, 8]

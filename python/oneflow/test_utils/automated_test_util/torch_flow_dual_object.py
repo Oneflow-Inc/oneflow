@@ -554,7 +554,7 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05, check_graph=True
                 if res is not None:
                     if not isinstance(res, collections.abc.Sequence):
                         res = [res]
-                        func_outputs = res
+                    func_outputs = res
                     for x in res:
                         if auto_backward:
                             if isinstance(x.pytorch, torch_original.Tensor):
@@ -598,24 +598,29 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05, check_graph=True
                 # check graph
                 for output in func_outputs:
                     flow_tensor = output.oneflow
-                    if id(flow_tensor) in flow_res_id_eager2_graph:
-                        test_case.assertTrue(
-                            np.allclose(
-                                flow_tensor.numpy(),
-                                flow_res_id_eager2_graph[id(flow_tensor)].numpy(),
-                                rtol=rtol,
-                                atol=atol,
-                                equal_nan=True,
-                            )
-                        )
-                        if verbose:
-                            print(f"{f.__name__} test graph passed.")
-                    else:
-                        if check_graph:
+                    if isinstance(flow_tensor, flow.Tensor):
+                        if id(flow_tensor) in flow_res_id_eager2_graph:
                             test_case.assertTrue(
-                                False,
-                                f"{f.__name__} cannot find module to check graph.",
+                                np.allclose(
+                                    flow_tensor.numpy(),
+                                    flow_res_id_eager2_graph[id(flow_tensor)].numpy(),
+                                    rtol=rtol,
+                                    atol=atol,
+                                    equal_nan=True,
+                                )
                             )
+                            if verbose:
+                                print(f"{f.__name__} test graph passed.")
+                        else:
+                            if check_graph:
+                                test_case.assertTrue(
+                                    False,
+                                    f"{f.__name__} cannot find module to check graph.",
+                                )
+                    else:
+                        warnings.warn(
+                            f"some of {f.__name__} outputs fail to check graph."
+                        )
                 n -= 1
                 loop += 1
 

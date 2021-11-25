@@ -118,7 +118,7 @@ class TestPermute(flow.unittest.TestCase):
         return y
 
     @autotest(check_graph=False)
-    def P_test_permute3d_tensor_with_random_data(test_case):
+    def _test_permute3d_tensor_with_random_data(test_case):
         device = random_device()
         ndim = 3
         permute_list = [0, 1, 2]
