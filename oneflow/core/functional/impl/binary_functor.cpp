@@ -134,9 +134,9 @@ class InplaceMulFunctor {
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = x;
     if (*x->shape() == *y->shape()) {
-      JUST(OpInterpUtil::Dispatch<Tensor>(*mul_op_, input_vec, outputs.get()));
+      JUST(OpInterpUtil::Dispatch(*mul_op_, input_vec, outputs.get()));
     } else {
-      JUST(OpInterpUtil::Dispatch<Tensor>(*broadcast_mul_op_, input_vec, outputs.get()));
+      JUST(OpInterpUtil::Dispatch(*broadcast_mul_op_, input_vec, outputs.get()));
     }
     return outputs->at(0);
   }
