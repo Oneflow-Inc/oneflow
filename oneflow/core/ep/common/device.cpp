@@ -13,28 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
-#define ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
-
-#include "oneflow/core/ep/include/stream.h"
+#include "oneflow/core/ep/include/device.h"
 
 namespace oneflow {
 
 namespace ep {
 
-class CpuStream : public Stream {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CpuStream);
-  CpuStream() = default;
-  ~CpuStream() override = default;
+Event* Device::CreateEvent() {
+  Event* event = nullptr;
+  this->CreateEvents(&event, 1);
+  return event;
+}
 
-  DeviceType device_type() const override;
-  Maybe<void> Sync() override;
-  void RecordEvent(Event* event) override;
-};
+void Device::DestroyEvent(Event* event) { this->DestroyEvents(&event, 1); }
 
 }  // namespace ep
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
