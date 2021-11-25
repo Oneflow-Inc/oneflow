@@ -144,21 +144,20 @@ class HardTanhGradFunctor {
 };
 
 class ReLU6Functor {
-  public:
-    ReLU6Functor() {
-      op_ = CHECK_JUST(one::OpBuilder("hardtanh").Input("in").Output("out").Build());
+ public:
+  ReLU6Functor() { op_ = CHECK_JUST(one::OpBuilder("hardtanh").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool inplace) const {
+    if (inplace) {
+      OF_LOG_ONCE(LOG(WARNING) << "nn.functional.relu6 does not support inplace now");
     }
-    Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool inplace) const{
-      if (inplace){
-        OF_LOG_ONCE(LOG(WARNING) << "nn.functional.relu6 does not support inplace now");
-      }
-      MutableAttrMap attrs;
-      JUST(attrs.SetAttr<double>("min_val", 0.0));
-      JUST(attrs.SetAttr<double>("max_val", 6.0));
-      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
-    }
-  private:
-    std::shared_ptr<OpExpr> op_;
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("min_val", 0.0));
+    JUST(attrs.SetAttr<double>("max_val", 6.0));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class EluFunctor {
