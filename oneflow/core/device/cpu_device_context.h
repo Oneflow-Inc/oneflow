@@ -20,14 +20,19 @@ limitations under the License.
 #include "oneflow/core/device/event_record.h"
 #include "oneflow/core/vm/cpu_allocator.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
+#include "oneflow/core/ep/cpu/cpu_device.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
 class CpuDeviceCtx final : public DeviceCtx, public EventRecordProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDeviceCtx);
-  CpuDeviceCtx() = default;
-  ~CpuDeviceCtx() = default;
+  CpuDeviceCtx() {
+    device_ = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCPU, 0);
+    stream_ = device_->CreateStream();
+  }
+  ~CpuDeviceCtx() { device_->DestroyStream(stream_); }
 
   std::unique_ptr<DeviceCtx> Copy() const { return std::unique_ptr<DeviceCtx>(new CpuDeviceCtx()); }
 
@@ -35,14 +40,15 @@ class CpuDeviceCtx final : public DeviceCtx, public EventRecordProvider {
 
   DeviceType device_type() const override { return DeviceType::kCPU; }
 
-  ep::Stream* stream() override { return &stream_; }
+  ep::Stream* stream() override { return stream_; }
 
   std::shared_ptr<EventRecord> MakeEventRecord() override {
     return std::make_shared<NaiveEventRecord>();
   }
 
  private:
-  ep::CpuStream stream_;
+  std::shared_ptr<ep::Device> device_;
+  ep::Stream* stream_;
 };  // namespace oneflow
 
 }  // namespace oneflow
