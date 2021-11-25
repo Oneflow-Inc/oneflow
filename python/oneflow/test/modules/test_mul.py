@@ -122,27 +122,6 @@ def _test_mul_impl(test_case, device):
     test_case.assertTrue(np.allclose(y.grad.numpy(), x.numpy(), 1e-05, 1e-05))
 
 
-def test_inplace_mul_id(test_case, device):
-    x = flow.tensor(
-        np.random.randn(2, 3),
-        dtype=flow.float32,
-        device=flow.device(device),
-        requires_grad=False,
-    )
-    y = flow.tensor(
-        np.random.randn(2, 3),
-        dtype=flow.float32,
-        device=flow.device(device),
-        requires_grad=False,
-    )
-    id_x_before = id(x)
-    id_y_before = id(y)
-    out = x.mul_(y)
-    test_case.assertTrue(id_x_before == id(x))
-    test_case.assertTrue(id_x_before == id(out))
-    test_case.assertTrue(id_y_before == id(y))
-
-
 def inplace_mul_tensors_helper(test_case, device, arr_0, arr_y):
     pt_x = torch.tensor(
         arr_0, dtype=torch.float32, device=torch.device(device), requires_grad=True,
@@ -159,10 +138,10 @@ def inplace_mul_tensors_helper(test_case, device, arr_0, arr_y):
         arr_y, dtype=flow.float32, device=flow.device(device), requires_grad=True,
     )
     id_inpalce_x = id(of_inplace_x)
-    pt_out = pt_inplace_x.mul_(pt_y)
-    of_out = of_inplace_x.mul_(of_y)
+    pt_inplace_x.mul_(pt_y)
+    of_inplace_x.mul_(of_y)
     test_case.assertTrue(
-        np.allclose(of_out.numpy(), pt_out.clone().detach().cpu().numpy(), 1e-05, 1e-05)
+        np.allclose(of_inplace_x.numpy(), pt_inplace_x.clone().detach().cpu().numpy(), 1e-05, 1e-05)
     )
     test_case.assertTrue(id_inpalce_x == id(of_inplace_x))
     pt_inplace_x = pt_inplace_x.sum()
@@ -235,7 +214,6 @@ class TestMulModule(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_mul_impl,
             test_inplace_mul_tensors,
-            test_inplace_mul_id,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
