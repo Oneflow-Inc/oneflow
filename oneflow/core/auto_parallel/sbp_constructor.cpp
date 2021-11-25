@@ -25,17 +25,6 @@ namespace oneflow {
 
 namespace auto_parallel {
 
-namespace {
-
-void SbpSignatureToNdSbpSignature(const cfg::SbpSignature& sbp_signature,
-                                  cfg::NdSbpSignature* nd_sbp_signature) {
-  for (const auto& pair : sbp_signature.bn_in_op2sbp_parallel()) {
-    *((*nd_sbp_signature->mutable_bn_in_op2nd_sbp())[pair.first].add_sbp_parallel()) = pair.second;
-  }
-}
-
-}  // namespace
-
 Maybe<void> SbpConstructor::Init(const OpGraph& op_graph, Job* job /*Maybe not use*/) {
   JUST(InitSbpGraph(op_graph, *job));
   return Maybe<void>::Ok();
@@ -279,25 +268,16 @@ Maybe<void> SbpConstructor::CheckSbpAgreement(const Job& job) {
     CHECK_EQ_OR_RETURN(auto_parallel_sbp.bn_in_op2sbp_parallel_size(),
                        new_sbp.bn_in_op2sbp_parallel_size());
     for (const auto& iter : auto_parallel_sbp.bn_in_op2sbp_parallel()) {
-      cfg::SbpParallel new_sbp_parallel = new_sbp.bn_in_op2sbp_parallel().at(iter.first);
+      const cfg::SbpParallel& new_sbp_parallel = new_sbp.bn_in_op2sbp_parallel().at(iter.first);
+      const cfg::SbpParallel& auto_parallel_sbp = iter.second;
       // According error message, we can find op_type in op_conf.proto with type_id and locate
       // the error op type.
       const std::string& error_mgs =
           "Op: `" + op_name + "`(type_id: " + std::to_string(op_node->op().op_conf().op_type_case())
-          + ") changed sbp from " + SbpParallelToString(iter.second) + "(AutoParallel) to "
-          + SbpParallelToString(new_sbp_parallel) + "(OpGraph).";
-      if (new_sbp_parallel.has_broadcast_parallel()) {
-        CHECK_OR_RETURN(iter.second.has_broadcast_parallel()) << error_mgs;
-      } else if (new_sbp_parallel.has_partial_sum_parallel()) {
-        CHECK_OR_RETURN(iter.second.has_partial_sum_parallel()) << error_mgs;
-      } else if (new_sbp_parallel.has_split_parallel()) {
-        CHECK_OR_RETURN(iter.second.has_split_parallel()) << error_mgs;
-        CHECK_EQ_OR_RETURN(new_sbp_parallel.split_parallel().axis(),
-                           iter.second.split_parallel().axis())
-            << error_mgs;
-      } else {
-        UNIMPLEMENTED_THEN_RETURN();
-      }
+          + ") changed sbp from " + SbpParallelToString(auto_parallel_sbp) + "(AutoParallel) to "
+          + SbpParallelToString(new_sbp_parallel) + "(OpGraph) with blob_name: `" + iter.first
+          + "`.";
+      CHECK_OR_RETURN(new_sbp_parallel == auto_parallel_sbp) << error_mgs;
     }
     return Maybe<void>::Ok();
   }));
