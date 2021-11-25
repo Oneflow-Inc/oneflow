@@ -83,64 +83,6 @@ struct NdarrayReduce<
   }
 };
 
-/*template<DeviceType device_type, typename T, template<typename> class binary_func>
-struct NdarrayReduce<
-    device_type, T, binary_func,
-    typename std::enable_if<
-        std::is_same<T, typename DevDType<device_type, T>::type>::value
-        && !std::is_same<T, typename BinaryFuncTrait<binary_func, T>::return_type>::value>::type>
-    final {
-  using RetT = typename BinaryFuncTrait<binary_func, T>::return_type;
-  static void Reduce(ep::Stream* stream, const XpuVarNdarray<RetT>& origin_y,
-                     const XpuVarNdarray<const T>& origin_x, const XpuVarNdarray<T>& tmp_storage) {
-    DimVector simplified_x_dim;
-    DimVector simplified_y_dim;
-    TrySimplifyDims(origin_x.shape(), origin_y.shape(), &simplified_x_dim, &simplified_y_dim);
-    XpuVarNdarray<RetT> y(Shape(simplified_y_dim), origin_y.ptr());
-    XpuVarNdarray<const T> x(Shape(simplified_x_dim), origin_x.ptr());
-
-    CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
-    if (NdarrayNoReduce<device_type, T, binary_func>::Matched(y, x)) {
-      NdarrayNoReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
-    } else if (NdarrayScalarReduce<device_type, T, binary_func>::Matched(y, x)) {
-      NdarrayScalarReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
-    } else if (NdarrayMatrixRowReduce<device_type, T, binary_func>::Matched(y, x)) {
-      NdarrayMatrixRowReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
-    } else if (NdarrayMatrixColReduce<device_type, T, binary_func>::Matched(y, x)) {
-      NdarrayMatrixColReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
-    } else if (NdarrayXYZCubeXZReduce<device_type, T, binary_func>::Matched(y, x)) {
-      NdarrayXYZCubeXZReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
-    } else {
-      NdarrayDefaultReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
-    }
-  }
-
-  static void TrySimplifyDims(const XpuShape& x, const XpuShape& y, DimVector* simplified_x,
-                              DimVector* simplified_y) {
-    CHECK_EQ(y.NumAxes(), x.NumAxes());
-    CHECK(y.At(0) == 1 || y.At(0) == x.At(0));
-    CHECK(simplified_x->empty());
-    CHECK(simplified_y->empty());
-    simplified_x->push_back(x.At(0));
-    simplified_y->push_back(y.At(0));
-    bool prev_axis_is_reduced = (y.At(0) == 1);
-    FOR_RANGE(int, i, 1, x.NumAxes()) {
-      const int64_t x_dim = x.At(i);
-      const int64_t y_dim = y.At(i);
-      const bool cur_axis_is_reduced = (y_dim == 1);
-      CHECK(cur_axis_is_reduced || y_dim == x_dim);
-      if (cur_axis_is_reduced == prev_axis_is_reduced) {
-        simplified_x->back() *= x_dim;
-        simplified_y->back() *= y_dim;
-      } else {
-        simplified_x->push_back(x_dim);
-        simplified_y->push_back(y_dim);
-      }
-      prev_axis_is_reduced = cur_axis_is_reduced;
-    }
-  }
-};*/
-
 template<DeviceType device_type, typename T, template<typename> class binary_func>
 struct NdarrayReduce<
     device_type, T, binary_func,
