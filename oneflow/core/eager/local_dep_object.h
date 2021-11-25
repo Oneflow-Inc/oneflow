@@ -63,7 +63,6 @@ class LocalDepObject final : public intrusive::Base {
     producer_op_device_ = producer_op_device;
     return Maybe<void>::Ok();
   }
-  
 
   // methods
   static Maybe<intrusive::shared_ptr<LocalDepObject>> New(const Device& device);

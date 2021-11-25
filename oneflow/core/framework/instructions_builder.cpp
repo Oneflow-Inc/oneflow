@@ -1016,7 +1016,8 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   if (JUST(eager_blob_object->compute_local_dep_object())->last_used_device().has_value()) {
     const auto& last_used_device =
         JUST(JUST(eager_blob_object->compute_local_dep_object())->last_used_device());
-    const auto& producer_op_device = JUST(JUST(eager_blob_object->compute_local_dep_object())->producer_op_device());
+    const auto& producer_op_device =
+        JUST(JUST(eager_blob_object->compute_local_dep_object())->producer_op_device());
     if (last_used_device != producer_op_device) {
       JUST(SoftSyncStream(JUST(eager_blob_object->compute_local_dep_object()), "mut",
                           last_used_device));

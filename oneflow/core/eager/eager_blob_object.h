@@ -97,7 +97,6 @@ class EagerBlobObject final : public BlobObject {
 
   void set_storage_offset(int64_t storage_offset) { storage_offset_ = storage_offset; }
 
-
  private:
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
