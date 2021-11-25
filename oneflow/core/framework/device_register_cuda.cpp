@@ -48,7 +48,7 @@ bool GetCudnnVersionString(std::string* version) {
 }  // namespace
 
 namespace oneflow {
-void GudaDumpVersionInfo() {
+void CudaDumpVersionInfo() {
   {
     int cuda_runtime_version;
     cudaError_t err = cudaRuntimeGetVersion(&cuda_runtime_version);

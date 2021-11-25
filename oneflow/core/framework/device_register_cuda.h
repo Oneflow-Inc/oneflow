@@ -24,7 +24,7 @@ namespace oneflow {
 #ifdef WITH_CUDA
 #include <cuda_fp16.h>
 
-void GudaDumpVersionInfo();
+void CudaDumpVersionInfo();
 
 template<typename T>
 struct IsFloat16;
@@ -32,7 +32,7 @@ struct IsFloat16;
 template<>
 struct IsFloat16<half> : std::true_type {};
 
-REGISTER_DEVICE(DeviceType::kCUDA).SetDumpVersionInfoFn(GudaDumpVersionInfo).SetDeviceTag("gpu");
+REGISTER_DEVICE(DeviceType::kCUDA).SetDumpVersionInfoFn(CudaDumpVersionInfo).SetDeviceTag("gpu");
 #endif  // WITH_CUDA
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_CUDA_H_
