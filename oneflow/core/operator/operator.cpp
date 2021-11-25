@@ -458,11 +458,15 @@ Maybe<const Shape> Operator::GetInputOutputFastestTimeShape() const {
 Maybe<void> Operator::GetSbpSignaturesIf(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, cfg::SbpSignatureList* sbp_sig_list) const {
-  JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, parallel_desc, sbp_sig_list));
+  cfg::SbpSignatureList sbp_sig_candidates;
+  JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, parallel_desc, &sbp_sig_candidates));
   SbpSignatureBuilder()
       .Broadcast(input_bns())
       .Broadcast(output_bns())
-      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+      .Build(sbp_sig_candidates.mutable_sbp_signature()->Add());
+  // filter sbp signatures by logical shape
+  FilterAndCheckValidSbpSignatureListByLogicalShape(sbp_sig_candidates, LogicalBlobDesc4Ibn,
+                                                    parallel_desc, sbp_sig_list);
   return Maybe<void>::Ok();
 }
 
@@ -477,6 +481,7 @@ Maybe<void> Operator::GetNdSbpSignaturesIf(
   cfg::NdSbpSignature nd_sbp_sig;
   ResizeNdSbpSignature(nd_sbp_sig, sbp_dimension);
   // ND sbp signature list would be direct product of 1D sbp signatures
+  ndsbp_sig_list.clear();
   DFS_SetNdSbpSignature(nd_sbp_sig, 0, sbp_dimension, ndsbp_sig_list, &sbp_sig_list);
 
   return Maybe<void>::Ok();
@@ -592,7 +597,7 @@ Maybe<void> Operator::InferSbpSignature(
 
 Maybe<void> Operator::FilterAndCheckValidSbpSignatureListByLogicalShape(
     const cfg::SbpSignatureList& total_sbp_sig_list,
-    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, cfg::SbpSignatureList* valid_sbp_sig_list) const {
   auto GetOpDebugShapeStr = [&]() -> std::string {
     std::string ret = "";
@@ -601,8 +606,8 @@ Maybe<void> Operator::FilterAndCheckValidSbpSignatureListByLogicalShape(
     }
     for (const auto& ibn : input_bns()) {
       ret +=
-          (" ibn:(" + ibn + ") lbn:(" + GenLogicalBlobName(BnInOp2Lbi(ibn)) + ") logical_shape = "
-           + CHECK_JUST(SbpInferHint4Ibn(ibn))->logical_blob_desc().shape().DebugStr() + ", ");
+          (" ibn:(" + ibn + ") lbn:(" + GenLogicalBlobName(BnInOp2Lbi(ibn))
+           + ") logical_shape = " + CHECK_JUST(LogicalBlobDesc4Ibn(ibn)).shape().DebugStr() + ", ");
     }
     return ret;
   };
@@ -613,8 +618,7 @@ Maybe<void> Operator::FilterAndCheckValidSbpSignatureListByLogicalShape(
       const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(ibn);
       CHECK_OR_RETURN(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
       const cfg::SbpParallel& sbp_parallel = sbp_parallel_it->second;
-      const SbpInferHint* hint = JUST(SbpInferHint4Ibn(ibn));
-      const Shape& logical_shape = hint->logical_blob_desc().shape();
+      const Shape& logical_shape = CHECK_JUST(LogicalBlobDesc4Ibn(ibn)).shape();
       // NOTE(chengcheng): disable split when logical shape cannot split at this axis
       if (sbp_parallel.has_split_parallel()) {
         const int64_t axis = sbp_parallel.split_parallel().axis();
@@ -649,9 +653,6 @@ Maybe<void> Operator::InferSbpSignature(
   {
     cfg::SbpSignatureList total_sbp_sig_list;
     JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &total_sbp_sig_list));
-    // filter sbp signatures by logical shape
-    JUST(FilterAndCheckValidSbpSignatureListByLogicalShape(total_sbp_sig_list, SbpInferHint4Ibn,
-                                                           parallel_desc, &valid_sbp_sig_list));
   }
   // filter sbp signatures by sbp signature conf
   cfg::SbpSignatureList filtered_sbp_sigs_by_conf;
@@ -721,9 +722,6 @@ Maybe<cfg::SbpSignatureList> Operator::GetValidSbpSignatureList(
   {
     cfg::SbpSignatureList total_sbp_sig_list;
     JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &total_sbp_sig_list));
-    // Filter sbp signature by logical shape
-    JUST(FilterAndCheckValidSbpSignatureListByLogicalShape(total_sbp_sig_list, SbpInferHint4Ibn,
-                                                           parallel_desc, &valid_signature_list));
   }
   return valid_signature_list;
 }
