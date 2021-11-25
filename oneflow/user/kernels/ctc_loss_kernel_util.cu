@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/ctc_loss_kernel_util.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
