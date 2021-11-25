@@ -205,12 +205,17 @@ bool IsReshapeOp(const std::string& op_name) {
   return (op_name.find("reshape") != std::string::npos);
 }
 bool IsLossOp(const std::string& op_name) { return (op_name.find("loss") != std::string::npos); }
+bool IsDetectionOp(const std::string& op_name) {
+  return (op_name.find("top_k") != std::string::npos || op_name.find("bbox") != std::string::npos
+          || op_name.find("segmentation") != std::string::npos
+          || op_name.find("poly") != std::string::npos
+          || op_name.find("object") != std::string::npos);
+}
 bool IsIndicesOp(const std::string& op_name) {
   return (op_name.find("arg") != std::string::npos || op_name.find("where") != std::string::npos
           || op_name.find("gather") != std::string::npos
           || op_name.find("slice") != std::string::npos
           || op_name.find("segment_sum") != std::string::npos
-          || op_name.find("top_k") != std::string::npos
           || op_name.find("scatter") != std::string::npos);
 }
 bool IsNormalizationOp(const std::string& op_name) {
@@ -472,6 +477,7 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
     if (IsMatmulOp(r.op_type_name)) { group_name = "matmul"; }
     if (IsTensorBufferOp(r.op_type_name)) { group_name = "tensor_buffer"; }
     if (IsTestOp(r.op_type_name)) { group_name = "TEST"; }
+    if (IsDetectionOp(r.op_type_name)) { group_name = "Detection"; }
     group_name = "GET_ONEFLOW_" + group_name + "_OP_DEFINITIONS";
     std::transform(group_name.begin(), group_name.end(), group_name.begin(), ::toupper);
     groups[group_name].insert({kv.first, kv.second});
