@@ -17,7 +17,7 @@ limitations under the License.
 #include <curand_kernel.h>
 
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
