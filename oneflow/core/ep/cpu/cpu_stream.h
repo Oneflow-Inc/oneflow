@@ -28,8 +28,9 @@ class CpuStream : public Stream {
   CpuStream() = default;
   ~CpuStream() override = default;
 
-  DeviceType device_type() const override { return DeviceType::kCPU; }
-  Maybe<void> Sync() override { return Maybe<void>::Ok(); }
+  DeviceType device_type() const override;
+  Maybe<void> Sync() override;
+  void RecordEvent(Event* event) override;
 };
 
 }  // namespace ep
