@@ -53,7 +53,6 @@
     [
       "Tensor (Tensor input, Tensor other) => InplaceMul",
       "Tensor (Tensor input, Scalar other) => InplaceScalarMul",
-      "Tensor (Scalar input, Tensor other) => InplaceScalarMul",
     ]
   bind_python: true
 
