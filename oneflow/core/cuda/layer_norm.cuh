@@ -168,20 +168,6 @@ inline __device__ void WelfordCombine(T b_mean, T b_m2, T b_count, T* mean, T* m
 }
 
 template<typename T, int thread_group_width = kWarpSize>
-__inline__ __device__ void WelfordWarpAllReduce(T thread_mean, T thread_m2, T thread_count, T* mean,
-                                                T* m2, T* count) {
-  *mean = thread_mean;
-  *m2 = thread_m2;
-  *count = thread_count;
-  for (int mask = thread_group_width / 2; mask > 0; mask /= 2) {
-    T b_mean = __shfl_xor_sync(0xffffffff, *mean, mask);
-    T b_m2 = __shfl_xor_sync(0xffffffff, *m2, mask);
-    T b_count = __shfl_xor_sync(0xffffffff, *count, mask);
-    WelfordCombine(b_mean, b_m2, b_count, mean, m2, count);
-  }
-}
-
-template<typename T, int thread_group_width = kWarpSize>
 __inline__ __device__ void WelfordWarpReduce(T thread_mean, T thread_m2, T thread_count, T* mean,
                                              T* m2, T* count) {
   *mean = thread_mean;
@@ -193,6 +179,15 @@ __inline__ __device__ void WelfordWarpReduce(T thread_mean, T thread_m2, T threa
     T b_count = __shfl_down_sync(0xffffffff, *count, mask);
     WelfordCombine(b_mean, b_m2, b_count, mean, m2, count);
   }
+}
+
+template<typename T, int thread_group_width = kWarpSize>
+__inline__ __device__ void WelfordWarpAllReduce(T thread_mean, T thread_m2, T thread_count, T* mean,
+                                                T* m2, T* count) {
+  WelfordWarpReduce<T, thread_group_width>(thread_mean, thread_m2, thread_count, mean, m2, count);
+  *mean = __shfl_sync(0xffffffff, *mean, 0, thread_group_width);
+  *m2 = __shfl_sync(0xffffffff, *m2, 0, thread_group_width);
+  *count = __shfl_sync(0xffffffff, *count, 0, thread_group_width);
 }
 
 template<typename T>
