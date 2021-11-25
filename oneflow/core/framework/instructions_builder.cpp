@@ -793,8 +793,8 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
       parallel_desc_sym, phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   for (const auto& output : *output_eager_blob_objects) {
-    if (!output->producer_op_device().has_value()) {
-      JUST(output->init_producer_op_device(op_device));
+    if (!JUST(output->compute_local_dep_object())->producer_op_device().has_value()) {
+      JUST(JUST(output->compute_local_dep_object())->set_producer_op_device(op_device));
     }
     JUST(output->compute_local_dep_object())->set_last_used_device(op_device);
   }
@@ -1016,8 +1016,7 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   if (JUST(eager_blob_object->compute_local_dep_object())->last_used_device().has_value()) {
     const auto& last_used_device =
         JUST(JUST(eager_blob_object->compute_local_dep_object())->last_used_device());
-    const auto& producer_op_device = JUST(eager_blob_object->producer_op_device());
-
+    const auto& producer_op_device = JUST(JUST(eager_blob_object->compute_local_dep_object())->producer_op_device());
     if (last_used_device != producer_op_device) {
       JUST(SoftSyncStream(JUST(eager_blob_object->compute_local_dep_object()), "mut",
                           last_used_device));

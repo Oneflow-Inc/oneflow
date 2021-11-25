@@ -100,8 +100,8 @@ Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
         CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
           JUST(builder->ReleaseTensor(eager_blob_object, parallel_desc));
           if (JUST(eager_blob_object->compute_local_dep_object())->last_used_device().has_value()) {
-            const auto& device = JUST(eager_blob_object->producer_op_device());
             auto* local_dep_object = JUST(eager_blob_object->compute_local_dep_object());
+            const auto& device = JUST(local_dep_object->producer_op_device());
             JUST(PutLocalDepObjectToDevicePool(device, local_dep_object));
           }
           return Maybe<void>::Ok();
