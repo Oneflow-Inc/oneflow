@@ -149,8 +149,6 @@ std::function<void(void**, size_t)> GetCudaMallocHostFn(int32_t dev) {
 
 }  // namespace
 
-cudaStream_t RunCudaKernelGetStream(DeviceCtx* ctx) { return ctx->cuda_stream(); }
-
 cudaStream_t RunCudaKernelGetStream(ep::Stream* stream) {
   return stream->As<ep::CudaStream>()->cuda_stream();
 }
