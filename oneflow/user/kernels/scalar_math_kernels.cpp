@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/scalar_math_kernels.h"
-#include "oneflow/core/primitive/include/broadcast_elementwise_binary.h"
+#include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 #include "oneflow/core/common/scalar.h"
 
 namespace oneflow {
@@ -22,26 +22,26 @@ namespace oneflow {
 namespace {
 
 template<typename Context>
-std::unique_ptr<primitive::BroadcastElementwiseBinary> NewBroadcastElementwiseBinaryPrimitive(
-    Context* ctx, primitive::BinaryOp op) {
+std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> NewBroadcastElementwiseBinaryPrimitive(
+    Context* ctx, ep::primitive::BinaryOp op) {
   const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("in", 0);
   const user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("out", 0);
   const int64_t ndims = y->shape().NumAxes();
-  return primitive::NewPrimitive<primitive::BroadcastElementwiseBinaryFactory>(
+  return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
       ctx->device_type(), op, x->data_type(), y->data_type(), ndims);
 }
 
-template<primitive::BinaryOp op>
-hob::HobContextGetter<user_op::KernelRegContext, bool> BroadcastElementwiseBinaryPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>(
-      "BroadcastElementwiseBinaryPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
-        return NewBroadcastElementwiseBinaryPrimitive(&ctx, op).operator bool();
-      });
+template<ep::primitive::BinaryOp op>
+auto BroadcastElementwiseBinaryPrimitiveExists() {
+  return hob::make_custom("BroadcastElementwiseBinaryPrimitiveExists",
+                          [](const user_op::KernelRegContext& ctx) {
+                            return NewBroadcastElementwiseBinaryPrimitive(&ctx, op).operator bool();
+                          });
 }
 
 }  // namespace
 
-template<primitive::BinaryOp op>
+template<ep::primitive::BinaryOp op>
 class ScalarMathKernel final : public user_op::OpKernel {
  public:
   ScalarMathKernel() = default;
@@ -60,11 +60,11 @@ class ScalarMathKernel final : public user_op::OpKernel {
       UNIMPLEMENTED();
     }
     if (out->shape().elem_cnt() != 0) {
-      std::unique_ptr<primitive::BroadcastElementwiseBinary> primitive =
+      std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> primitive =
           NewBroadcastElementwiseBinaryPrimitive(ctx, op);
       CHECK(primitive);
-      primitive->Launch(ctx->stream_ctx(), in->shape().NumAxes(), in->shape().ptr(), in->dptr(),
-                        value, out->mut_dptr());
+      primitive->Launch(ctx->stream(), in->shape().NumAxes(), in->shape().ptr(), in->dptr(), value,
+                        out->mut_dptr());
     } else {
       // For 0-d Tensor
       return;
@@ -73,22 +73,22 @@ class ScalarMathKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define SCALAR_MATH_SEQ                                                                 \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_add", primitive::BinaryOp::kAdd)                         \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_mul", primitive::BinaryOp::kMul)                         \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_equal", primitive::BinaryOp::kEqual)             \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_not_equal", primitive::BinaryOp::kNotEqual)      \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_greater", primitive::BinaryOp::kLessThan)        \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_greater_equal", primitive::BinaryOp::kLessEqual) \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_less", primitive::BinaryOp::kGreaterThan)        \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_less_equal", primitive::BinaryOp::kGreaterEqual) \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_and", primitive::BinaryOp::kLogicalAnd)          \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_or", primitive::BinaryOp::kLogicalOr)            \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_xor", primitive::BinaryOp::kLogicalXor)
+#define SCALAR_MATH_SEQ                                                                     \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_add", ep::primitive::BinaryOp::kAdd)                         \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_mul", ep::primitive::BinaryOp::kMul)                         \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_equal", ep::primitive::BinaryOp::kEqual)             \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_not_equal", ep::primitive::BinaryOp::kNotEqual)      \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_greater", ep::primitive::BinaryOp::kLessThan)        \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_greater_equal", ep::primitive::BinaryOp::kLessEqual) \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_less", ep::primitive::BinaryOp::kGreaterThan)        \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_less_equal", ep::primitive::BinaryOp::kGreaterEqual) \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_and", ep::primitive::BinaryOp::kLogicalAnd)          \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_or", ep::primitive::BinaryOp::kLogicalOr)            \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_xor", ep::primitive::BinaryOp::kLogicalXor)
 
 #define REGISTER_UNARY_MATH_SCALAR_ELEMWISE_USER_KERNEL(op_name, binary_op)                 \
   REGISTER_USER_KERNEL(op_name).SetCreateFn<ScalarMathKernel<binary_op>>().SetIsMatchedHob( \
-      (BroadcastElementwiseBinaryPrimitiveExists<binary_op>() == true));
+      (BroadcastElementwiseBinaryPrimitiveExists<binary_op>()));
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_UNARY_MATH_SCALAR_ELEMWISE_USER_KERNEL, SCALAR_MATH_SEQ)
 
@@ -129,8 +129,8 @@ class CpuScalarPowGradKernel final : public user_op::OpKernel {
 #define REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(device, dtype)  \
   REGISTER_USER_KERNEL("scalar_pow_grad")                   \
       .SetCreateFn<CpuScalarPowGradKernel<device, dtype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)  \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, uint8_t);
 REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, int8_t);

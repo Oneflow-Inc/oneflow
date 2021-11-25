@@ -47,18 +47,6 @@ def bmm_op(input, mat2):
     return flow._C.batch_matmul(input, mat2)
 
 
-@register_tensor_op("bmm")
-def bmm_op_tensor(input, mat2):
-    """
-
-    bmm() -> Tensor
-
-    See :func:`oneflow.bmm`
-
-    """
-    return flow._C.batch_matmul(input, mat2)
-
-
 if __name__ == "__main__":
     import doctest
 

@@ -92,9 +92,9 @@ struct ClipByMinMaxGradFunctor {
 template<DeviceType device_type, typename T>
 struct ClipKernelUtil {
   template<typename F>
-  static void Forward(DeviceCtx* ctx, F clip_func, const int64_t n, const T* x, T* y);
+  static void Forward(ep::Stream* stream, F clip_func, const int64_t n, const T* x, T* y);
   template<typename F>
-  static void Backward(DeviceCtx* ctx, F clip_func, const int64_t n, const T* x, const T* dy,
+  static void Backward(ep::Stream* stream, F clip_func, const int64_t n, const T* x, const T* dy,
                        T* dx);
 };
 

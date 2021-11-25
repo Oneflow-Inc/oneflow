@@ -15,31 +15,31 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/core/primitive/include/broadcast_elementwise_binary.h"
+#include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 
 namespace oneflow {
 
 namespace {
 
 template<typename Context>
-std::unique_ptr<primitive::BroadcastElementwiseBinary> NewBroadcastElementwiseBinaryPrimitive(
-    Context* ctx, primitive::BinaryOp op) {
+std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> NewBroadcastElementwiseBinaryPrimitive(
+    Context* ctx, ep::primitive::BinaryOp op) {
   const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   const user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
   const int64_t ndims = y->shape().NumAxes();
-  return primitive::NewPrimitive<primitive::BroadcastElementwiseBinaryFactory>(
+  return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
       ctx->device_type(), op, x->data_type(), y->data_type(), ndims);
 }
 
-template<primitive::BinaryOp op>
-hob::HobContextGetter<user_op::KernelRegContext, bool> BroadcastElementwiseBinaryPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>(
-      "BroadcastElementwiseBinaryPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
-        return NewBroadcastElementwiseBinaryPrimitive(&ctx, op).operator bool();
-      });
+template<ep::primitive::BinaryOp op>
+auto BroadcastElementwiseBinaryPrimitiveExists() {
+  return hob::make_custom("BroadcastElementwiseBinaryPrimitiveExists",
+                          [](const user_op::KernelRegContext& ctx) {
+                            return NewBroadcastElementwiseBinaryPrimitive(&ctx, op).operator bool();
+                          });
 }
 
-template<primitive::BinaryOp op>
+template<ep::primitive::BinaryOp op>
 class ScalarByTensorKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ScalarByTensorKernel() = default;
@@ -52,10 +52,10 @@ class ScalarByTensorKernel final : public user_op::OpKernel, public user_op::Cud
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     int64_t elem_cnt = y->shape().elem_cnt();
     if (elem_cnt != 0) {
-      std::unique_ptr<primitive::BroadcastElementwiseBinary> primitive =
+      std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> primitive =
           NewBroadcastElementwiseBinaryPrimitive(ctx, op);
       CHECK(primitive);
-      primitive->Launch(ctx->stream_ctx(), x->shape().NumAxes(), x->shape().ptr(), x->dptr(),
+      primitive->Launch(ctx->stream(), x->shape().NumAxes(), x->shape().ptr(), x->dptr(),
                         scalar->shape().NumAxes(), scalar->shape().ptr(), scalar->dptr(),
                         y->mut_dptr());
     } else {
@@ -71,18 +71,18 @@ class ScalarByTensorKernel final : public user_op::OpKernel, public user_op::Cud
 #define REGISTER_SCALAR_BY_TENSOR_KERNEL(op_name, binary_op)                                    \
   REGISTER_USER_KERNEL(op_name)                                                                 \
       .SetCreateFn<ScalarByTensorKernel<binary_op>>()                                           \
-      .SetIsMatchedHob((BroadcastElementwiseBinaryPrimitiveExists<binary_op>() == true))        \
+      .SetIsMatchedHob(BroadcastElementwiseBinaryPrimitiveExists<binary_op>())                  \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));                          \
         return Maybe<void>::Ok();                                                               \
       });
 
-#define SCALAR_BY_TENSOR_SEQ                                              \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_add_by_tensor", primitive::BinaryOp::kAdd) \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_sub_by_tensor", primitive::BinaryOp::kSub) \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_mul_by_tensor", primitive::BinaryOp::kMul) \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_div_by_tensor", primitive::BinaryOp::kDiv)
+#define SCALAR_BY_TENSOR_SEQ                                                  \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_add_by_tensor", ep::primitive::BinaryOp::kAdd) \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_sub_by_tensor", ep::primitive::BinaryOp::kSub) \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_mul_by_tensor", ep::primitive::BinaryOp::kMul) \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_div_by_tensor", ep::primitive::BinaryOp::kDiv)
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_SCALAR_BY_TENSOR_KERNEL, SCALAR_BY_TENSOR_SEQ)
 }  // namespace oneflow

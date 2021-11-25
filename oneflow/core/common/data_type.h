@@ -29,16 +29,7 @@ limitations under the License.
 
 namespace oneflow {
 
-#if defined(WITH_CUDA)
-#define DEVICE_TYPE_SEQ                  \
-  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU) \
-  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU)
-#else
-#define DEVICE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)
-#endif
-
 // Type Trait: IsFloating
-
 template<typename T>
 struct IsFloating : std::integral_constant<bool, false> {};
 
@@ -223,6 +214,7 @@ bool IsIntegralDataType(DataType data_type);
 bool IsFloatingDataType(DataType data_type);
 bool IsSupportRequireGradDataType(DataType data_type);
 bool IsPODDataType(DataType data_type);
+bool IsPODAndHalfDataType(DataType data_type);
 bool IsIndexDataType(DataType data_type);
 size_t GetSizeOfDataType(DataType data_type);
 

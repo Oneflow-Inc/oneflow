@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include <cub/cub.cuh>
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -137,9 +138,9 @@ class GpuArgMaxKernel final : public user_op::OpKernel {
 
     ArgMax(in->dptr<T>(), instance_num, instance_size, buffer_manager.TempStoragePtr(),
            buffer_manager.TempStorageBytes(), buffer_manager.KeyValueOutPtr(),
-           ctx->device_ctx()->cuda_stream());
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream());
     WriteKeysToOutput<T><<<BlocksNum4ThreadsNum(instance_num), kCudaThreadsNumPerBlock, 0,
-                           ctx->device_ctx()->cuda_stream()>>>(
+                           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         instance_num, buffer_manager.KeyValueOutPtr(), out->mut_dptr<int64_t>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -148,8 +149,8 @@ class GpuArgMaxKernel final : public user_op::OpKernel {
 #define REGISTER_GPU_ARGMAX_KERNEL(dtype)                                                          \
   REGISTER_USER_KERNEL("argmax")                                                                   \
       .SetCreateFn<GpuArgMaxKernel<dtype>>()                                                       \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                          \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))            \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
         const Shape& in_shape = ctx->InputShape("in", 0);                                          \
         const int32_t instance_size = in_shape.dim_vec().back();                                   \

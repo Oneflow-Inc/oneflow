@@ -15,15 +15,15 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/core/primitive/include/permute.h"
+#include "oneflow/core/ep/include/primitive/permute.h"
 namespace oneflow {
 
 namespace user_op {
 
 template<typename Context>
-std::unique_ptr<primitive::Permute> NewPermutePrimitive(Context* ctx) {
+std::unique_ptr<ep::primitive::Permute> NewPermutePrimitive(Context* ctx) {
   const int64_t num_dims = ctx->TensorDesc4ArgNameAndIndex("output", 0)->shape().NumAxes();
-  return primitive::NewPrimitive<primitive::PermuteFactory>(ctx->device_type(), num_dims);
+  return ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(ctx->device_type(), num_dims);
 }
 
 class TransposeKernel final : public OpKernel, public user_op::CudaGraphSupport {
@@ -47,8 +47,8 @@ class TransposeKernel final : public OpKernel, public user_op::CudaGraphSupport 
 
     int64_t elem_cnt = tensor_out->shape().elem_cnt();
     if (elem_cnt != 0) {
-      primitive->Launch(ctx->stream_ctx(), dtype, num_dims, src_dims, tensor_in->dptr(),
-                        perm.data(), tensor_out->mut_dptr());
+      primitive->Launch(ctx->stream(), dtype, num_dims, src_dims, tensor_in->dptr(), perm.data(),
+                        tensor_out->mut_dptr());
     } else {
       // For 0-d Tensor
       return;
@@ -57,11 +57,10 @@ class TransposeKernel final : public OpKernel, public user_op::CudaGraphSupport 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> PermutePrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("PermutePrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewPermutePrimitive(&ctx).operator bool();
-                                     });
+auto PermutePrimitiveExists() {
+  return hob::make_custom("PermutePrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewPermutePrimitive(&ctx).operator bool();
+  });
 }
 
 REGISTER_USER_KERNEL("transpose")

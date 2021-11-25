@@ -29,7 +29,7 @@ class KernelContextImpl : public KernelContext, public ActorContextProvider {
   explicit KernelContextImpl(ActorContext* actor_ctx)
       : actor_ctx_(actor_ctx),
         stream_ctx_(actor_ctx->stream_ctx()),
-        device_ctx_(NewDeviceCtxAdapter(actor_ctx->stream_ctx())),
+        device_ctx_(NewDeviceCtxAdapter(actor_ctx->stream_ctx()->stream())),
         state_(nullptr),
         stream_kernel_observer_(nullptr) {
     auto* kernel_observer_provider = dynamic_cast<KernelObserverProvider*>(stream_ctx_);
@@ -39,7 +39,7 @@ class KernelContextImpl : public KernelContext, public ActorContextProvider {
   }
   ~KernelContextImpl() = default;
 
-  StreamContext* stream_ctx() const override { return stream_ctx_; }
+  ep::Stream* stream() const override { return stream_ctx_->stream(); }
 
   ActorContext* GetActorContext() const override { return actor_ctx_; }
 
