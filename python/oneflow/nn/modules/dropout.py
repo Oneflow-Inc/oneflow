@@ -94,7 +94,7 @@ class Dropout(_DropoutNd):
             generator = flow.Generator()
         self.generator = generator
 
-    def forward(self, x, addend):
+    def forward(self, x, addend=None):
         return flow._C.dropout(
             x,
             addend if addend is not None else None,
