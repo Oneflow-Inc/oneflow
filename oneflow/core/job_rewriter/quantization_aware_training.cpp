@@ -183,7 +183,8 @@ Maybe<std::string> QuantizationFormulaAttr4QatConfig(const QatConfig& qat_config
 Maybe<OpTypeSet> Int8List4QatConfig(const QatConfig& qat_config) {
   const auto target_backend = qat_config.target_backend();
   if (target_backend == "") {
-    return OpTypeSet{"add_n", "matmul", "batch_matmul", "conv2d", "avg_pool_2d", "max_pool_2d"};
+    return OpTypeSet{"add_n",  "matmul",         "batch_matmul",
+                     "conv2d", "tf_avg_pool_2d", "tf_max_pool_2d"};
   } else if (target_backend == "cambricon" || target_backend == "tensorrt") {
     return OpTypeSet{"conv2d", "matmul"};
   } else {
