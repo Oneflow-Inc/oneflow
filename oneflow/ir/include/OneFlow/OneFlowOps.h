@@ -84,5 +84,7 @@ class IsInvolutionOfIdenticalPlacement
 
 #define GET_OP_CLASSES
 #include "OneFlow/OneFlowOps.h.inc"
+#define GET_OP_CLASSES
+#include "OneFlow/OneFlow.Ops.h.inc"
 
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWOPS_H_
