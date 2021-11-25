@@ -16,6 +16,8 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/math_unary_elementwise_func.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
@@ -51,8 +53,8 @@ class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel,
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (n == 0) { return; }
     MathUnaryElementwiseForwardGpu<UnaryFunctor, T>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
-            n, x, y);
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, y);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -78,8 +80,8 @@ class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel,
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (n == 0) { return; }
     MathUnaryElementwiseBackwardGpu<UnaryFunctor, T>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
-            n, x, dy, dx);
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, dy, dx);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -127,8 +129,8 @@ class MathUnaryElementwiseGpuHalfKernel final : public user_op::OpKernel,
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (n == 0) { return; }
     MathUnaryElementwiseForwardGpu<UnaryFunctor, half>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
-            n, x, y);
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, y);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -154,8 +156,8 @@ class MathUnaryElementwiseGradGpuHalfKernel final : public user_op::OpKernel,
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (n == 0) { return; }
     MathUnaryElementwiseBackwardGpu<UnaryFunctor, half>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
-            n, x, dy, dx);
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, dy, dx);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -346,7 +346,6 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return base_ctx_.Tensor4ArgNameAndIndex(arg_name, index);
   }
-  DeviceCtx* device_ctx() override { return device_ctx_; }
   ep::Stream* stream() override {
     CHECK(device_ctx_);
     return device_ctx_->stream();
@@ -412,11 +411,12 @@ class StatefulLocalOpKernel final {
     return op_infer_ctx_for_scheduler_thread_.get();
   }
 
-  LocalUserOpInferContext* op_infer_ctx_for_main_thread() const {
-    return op_infer_ctx_for_main_thread_.get();
-  }
-
   void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
+
+  Maybe<void> ChooseOpKernel(const user_op::OpKernel** user_opkernel, bool* need_temp_storage,
+                             const AttrMap& attrs, EagerBlobObjectListRawPtr inputs,
+                             EagerBlobObjectListRawPtr outputs,
+                             ConsistentTensorInferResultRawPtr consistent_tensor_infer_result);
 
  private:
   friend struct vm::LocalCallOpKernelUtil;
@@ -441,10 +441,6 @@ class StatefulLocalOpKernel final {
 
   bool need_check_mem_case() const { return need_check_mem_case_; }
 
-  Maybe<const user_op::OpKernel*> ChooseOpKernel(
-      EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
-      ConsistentTensorInferResultRawPtr consistent_tensor_infer_result);
-
   const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
 
   std::shared_ptr<OperatorConf> op_conf_;
@@ -454,7 +450,6 @@ class StatefulLocalOpKernel final {
   Symbol<Device> device_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
   std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_scheduler_thread_;
-  std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_main_thread_;
   std::unique_ptr<LocalUserKernelComputeContext> compute_ctx_;
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
   std::shared_ptr<const ArgTuple> output_arg_tuple_;

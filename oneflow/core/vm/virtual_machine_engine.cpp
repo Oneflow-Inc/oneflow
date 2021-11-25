@@ -58,11 +58,11 @@ void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
   INTRUSIVE_FOR_EACH(access, access_list) {
     CHECK_GT(access->ref_cnt(), 1);
     access_list->Erase(access.Mutable());
-    if (access->is_mirrored_object_id_inserted()) {
+    if (unlikely(access->is_mirrored_object_id_inserted())) {
       rw_mutexed_object_accesses->Erase(access.Mutable());
     }
     auto* mirrored_object = access->mut_mirrored_object();
-    if (!access->rw_mutexed_object_access_hook().empty()) {
+    if (unlikely(!access->rw_mutexed_object_access_hook().empty())) {
       CHECK_EQ(access->mut_rw_mutexed_object(), mirrored_object->mut_rw_mutexed_object());
       mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Erase(access.Mutable());
     }
@@ -74,13 +74,13 @@ void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
     // Edges are erased only if the instruction is completed.
     out_edges->Erase(out_edge);
     out_instruction->mut_in_edges()->Erase(out_edge);
-    TryMoveFromWaitingToReady(out_instruction);
+    if (Dispatchable(out_instruction)) { mut_ready_instruction_list()->PushBack(out_instruction); }
   }
 }
 
-// Handle pending instructions, schedule them to waiting list or ready list.
-void VirtualMachineEngine::MovePendingToReadyOrWaiting() {
-  OF_PROFILER_RANGE_PUSH("MovePendingToReadyOrWaiting");
+// Handle pending instructions, and try schedule them to ready list.
+void VirtualMachineEngine::HandlePending() {
+  OF_PROFILER_RANGE_PUSH("HandlePending");
   InstructionMsgList tmp_pending_msg_list;
   // MoveTo is under a lock.
   mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
@@ -92,6 +92,7 @@ void VirtualMachineEngine::MovePendingToReadyOrWaiting() {
       MakeInstructions(instr_msg, /*out*/ &new_instruction_list);
     }
   }
+  OF_PROFILER_RANGE_PUSH("ConsumeMirroredObjects");
   INTRUSIVE_FOR_EACH_PTR(instruction, &new_instruction_list) {
     ConsumeMirroredObjects(mut_id2logical_object(), instruction);
     if (likely(Dispatchable(instruction))) {
@@ -99,7 +100,6 @@ void VirtualMachineEngine::MovePendingToReadyOrWaiting() {
       new_instruction_list.Erase(instruction);
     }
   }
-  new_instruction_list.MoveTo(mut_waiting_instruction_list());
   OF_PROFILER_RANGE_POP();
 }
 
@@ -305,42 +305,81 @@ void VirtualMachineEngine::ForEachMutMirroredObject(
   }
 }
 
-RwMutexedObjectAccess* VirtualMachineEngine::ConsumeMirroredObject(OperandAccessType access_type,
-                                                                   MirroredObject* mirrored_object,
-                                                                   Instruction* instruction) {
-  auto rw_mutexed_object_access =
-      intrusive::make_shared<RwMutexedObjectAccess>(instruction, mirrored_object, access_type);
-  instruction->mut_mirrored_object_id2access()->Insert(rw_mutexed_object_access.Mutable());
-  instruction->mut_access_list()->PushBack(rw_mutexed_object_access.Mutable());
-  mirrored_object->mut_rw_mutexed_object()->mut_access_list()->EmplaceBack(
-      std::move(rw_mutexed_object_access));
-  return rw_mutexed_object_access.Mutable();
+RwMutexedObjectAccess* VirtualMachineEngine::AccessMirroredObject(OperandAccessType access_type,
+                                                                  MirroredObject* mirrored_object,
+                                                                  Instruction* instruction) {
+  auto access = access_pool_.make_shared(instruction, mirrored_object, access_type);
+  auto* ptr = access.Mutable();
+  instruction->mut_access_list()->PushBack(ptr);
+  mirrored_object->mut_rw_mutexed_object()->mut_access_list()->EmplaceBack(std::move(access));
+  return ptr;
 }
 
-void VirtualMachineEngine::ConnectInstruction(Instruction* src_instruction,
-                                              Instruction* dst_instruction) {
-  CHECK_NE(src_instruction, dst_instruction);
-  auto edge = intrusive::make_shared<InstructionEdge>(src_instruction, dst_instruction);
+void VirtualMachineEngine::TryConnectInstruction(Instruction* src_instruction,
+                                                 Instruction* dst_instruction) {
+  if (unlikely(src_instruction == dst_instruction)) { return; }
+  if (likely(EdgeDispatchable(src_instruction, dst_instruction))) { return; }
+  auto edge = instruction_edge_pool_.make_shared(src_instruction, dst_instruction);
   src_instruction->mut_out_edges()->PushBack(edge.Mutable());
   dst_instruction->mut_in_edges()->PushBack(edge.Mutable());
+}
+
+void VirtualMachineEngine::ConnectInstructionsByWrite(RwMutexedObjectAccess* dst_access) {
+  CHECK(dst_access->is_mut_operand());
+  auto* mirrored_object = dst_access->mut_mirrored_object();
+  auto* dst_instruction = dst_access->mut_instruction();
+  auto* access_list = mirrored_object->mut_rw_mutexed_object()->mut_access_list();
+  if (likely(access_list->Begin() == dst_access)) { return; }
+  INTRUSIVE_FOR_EACH_PTR(src_access, access_list) {
+    if (unlikely(src_access == dst_access)) { break; }
+    TryConnectInstruction(src_access->mut_instruction(), dst_instruction);
+    CHECK_EQ(src_access->mut_rw_mutexed_object(), mirrored_object->mut_rw_mutexed_object());
+    access_list->Erase(src_access);
+  }
+}
+
+void VirtualMachineEngine::ConnectInstructionsByRead(RwMutexedObjectAccess* dst_access) {
+  CHECK(dst_access->is_const_operand());
+  auto* mirrored_object = dst_access->mut_mirrored_object();
+  auto* dst_instruction = dst_access->mut_instruction();
+  auto* first = mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Begin();
+  if (first->is_mut_operand()) {
+    TryConnectInstruction(first->mut_instruction(), dst_instruction);
+  } else if (first->is_const_operand()) {
+    // do nothing
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 void VirtualMachineEngine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                                                   Instruction* instruction) {
   const auto& phy_instr_operand = instruction->instr_msg().phy_instr_operand();
-  auto ConsumeConstMirroredObject = [&](MirroredObject* mirrored_object) {
-    ConsumeMirroredObject(kConstOperandAccess, mirrored_object, instruction);
-  };
-  auto ConsumeMutMirroredObject = [&](MirroredObject* mirrored_object) {
-    ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instruction);
-  };
   if (likely(phy_instr_operand)) {
-    phy_instr_operand->ForEachMut2MirroredObject(ConsumeMutMirroredObject);
-    phy_instr_operand->ForEachMutMirroredObject(ConsumeMutMirroredObject);
-    phy_instr_operand->ForEachConstMirroredObject(ConsumeConstMirroredObject);
+    // Connect instructions by write before connecting by read.
+    for (auto* mirrored_object : phy_instr_operand->output_dependences()) {
+      ConnectInstructionsByWrite(
+          AccessMirroredObject(kMutableOperandAccess, mirrored_object, instruction));
+    }
+    for (auto* mirrored_object : phy_instr_operand->input_dependences()) {
+      ConnectInstructionsByRead(
+          AccessMirroredObject(kConstOperandAccess, mirrored_object, instruction));
+    }
   } else {
+    const auto& ConsumeMirroredObject = [&](OperandAccessType access_type,
+                                            MirroredObject* mirrored_object) {
+      auto* access = AccessMirroredObject(access_type, mirrored_object, instruction);
+      instruction->mut_mirrored_object_id2access()->Insert(access);
+      return access;
+    };
+    auto ConsumeConstMirroredObject = [&](MirroredObject* mirrored_object) {
+      ConsumeMirroredObject(kConstOperandAccess, mirrored_object);
+    };
+    auto ConsumeMutMirroredObject = [&](MirroredObject* mirrored_object) {
+      ConsumeMirroredObject(kMutableOperandAccess, mirrored_object);
+    };
     auto ConsumeDelMirroredObject = [&](MirroredObject* mirrored_object) {
-      auto* access = ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instruction);
+      auto* access = ConsumeMirroredObject(kMutableOperandAccess, mirrored_object);
       CHECK(!mirrored_object->has_deleting_access());
       mirrored_object->set_deleting_access(access);
     };
@@ -395,53 +434,35 @@ void VirtualMachineEngine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_o
         // do nothing
       }
     }
-  }
-  auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
-  INTRUSIVE_UNSAFE_FOR_EACH_PTR(rw_mutexed_object_access, rw_mutexed_object_accesses) {
-    auto* mirrored_object = rw_mutexed_object_access->mut_mirrored_object();
-    if (mirrored_object->has_deleting_access()
-        && mirrored_object->mut_deleting_access() != rw_mutexed_object_access) {
-      UNIMPLEMENTED() << " accessing a deleting object "
-                      << mirrored_object->mirrored_object_id().logical_object_id_value();
-    }
-    if (mirrored_object->rw_mutexed_object().access_list().size() == 1) { continue; }
-    if (rw_mutexed_object_access->is_const_operand()) {
-      auto* first = mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Begin();
-      if (first->is_const_operand()) {
-        // do nothing
-      } else if (first->is_mut_operand()) {
-        if (first->mut_instruction() != instruction) {
-          ConnectInstruction(first->mut_instruction(), instruction);
-        }
-      } else {
-        UNIMPLEMENTED();
+    auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
+    INTRUSIVE_UNSAFE_FOR_EACH_PTR(rw_mutexed_object_access, rw_mutexed_object_accesses) {
+      auto* mirrored_object = rw_mutexed_object_access->mut_mirrored_object();
+      if (mirrored_object->has_deleting_access()
+          && mirrored_object->mut_deleting_access() != rw_mutexed_object_access) {
+        UNIMPLEMENTED() << " accessing a deleting object "
+                        << mirrored_object->mirrored_object_id().logical_object_id_value();
       }
-    } else {
-      CHECK(rw_mutexed_object_access->is_mut_operand());
-      auto* access_list = mirrored_object->mut_rw_mutexed_object()->mut_access_list();
-      INTRUSIVE_FOR_EACH_PTR(access, access_list) {
-        if (access == rw_mutexed_object_access) { break; }
-        CHECK(access->is_const_operand() || access->is_mut_operand())
-            << "access type " << access->access_type() << " not supported";
-        if (access->mut_instruction() != instruction) {
-          ConnectInstruction(access->mut_instruction(), instruction);
-        }
-        CHECK_EQ(access->mut_rw_mutexed_object(), mirrored_object->mut_rw_mutexed_object());
-        access_list->Erase(access);
+      if (mirrored_object->rw_mutexed_object().access_list().size() == 1) { continue; }
+      if (rw_mutexed_object_access->is_const_operand()) {
+        ConnectInstructionsByRead(rw_mutexed_object_access);
+      } else {
+        ConnectInstructionsByWrite(rw_mutexed_object_access);
       }
     }
   }
 }
 
+bool VirtualMachineEngine::EdgeDispatchable(const Instruction* src, const Instruction* dst) const {
+  return (&src->stream() == &dst->stream()) /* same stream*/
+         && !src->dispatched_instruction_hook().empty() /* dispatched */;
+}
+
 bool VirtualMachineEngine::Dispatchable(Instruction* instruction) const {
-  if (!instruction->dispatched_instruction_hook().empty()) { return false; }
+  if (unlikely(!instruction->dispatched_instruction_hook().empty())) { return false; }
   const auto* stream = &instruction->stream();
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_in_edges()) {
-    const auto& src_instruction = edge->src_instruction();
-    if (!(&src_instruction.stream() == stream /* same stream*/
-          && !src_instruction.dispatched_instruction_hook().empty() /* dispatched */)) {
-      return false;
-    }
+    const auto* src_instruction = &edge->src_instruction();
+    if (unlikely(!EdgeDispatchable(src_instruction, instruction))) { return false; }
   }
   return true;
 }
@@ -458,7 +479,9 @@ void VirtualMachineEngine::DispatchAndPrescheduleInstructions() {
     DispatchInstruction(instruction.Mutable());
     // preschedule instructions
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_out_edges()) {
-      TryMoveFromWaitingToReady(edge->mut_dst_instruction());
+      if (Dispatchable(edge->mut_dst_instruction())) {
+        mut_ready_instruction_list()->PushBack(edge->mut_dst_instruction());
+      }
     }
   }
   OF_PROFILER_RANGE_POP();
@@ -466,8 +489,9 @@ void VirtualMachineEngine::DispatchAndPrescheduleInstructions() {
 
 void VirtualMachineEngine::DispatchInstruction(Instruction* instruction) {
   OF_PROFILER_RANGE_PUSH(
-      "D:" + instruction->instr_msg().instr_type_name() + ":"
-      + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction));
+      "D:"
+      + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction)
+      + ":" + instruction->instr_msg().instr_type_name());
   auto* stream = instruction->mut_stream();
   stream->mut_running_instruction_list()->PushBack(instruction);
   if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
@@ -574,7 +598,7 @@ bool VirtualMachineEngine::OnSchedulerThread(const StreamType& stream_type) {
   return stream_type.OnSchedulerThread() || pthread_fork::IsForkedSubProcess();
 }
 
-// Barrier instructions wait all non-barrier instructions to be done.
+// Barrier instructions are run after all previous lively instructions.
 //
 // `instruction.lively_instruction_hook_` is linked to `vm.lively_instruction_list_` for all
 // instructions. `instruction.barrier_instruction_list_` is linked to `vm.barrier_instruction_list_`
@@ -599,10 +623,10 @@ bool VirtualMachineEngine::OnSchedulerThread(const StreamType& stream_type) {
 //                                |                               |
 //                                +-------------------------------+
 //
-// `instruction1` is a barrier instructions with barrier_instruction_hook_ linked, while
-// instruction0 is not. From the `virtual_machine`'s view, `barrier_instruction_hook_.Begin() !=
-// lively_instruction_hook_.Begin()`, so it's not the time to run barrier instruction
-// `barrier_instruction_hook_.Begin()`.
+// `instruction1` is a barrier instruction with barrier_instruction_hook_ linked, while
+// instruction0 is not. From the `virtual_machine`'s view, `barrier_instruction_list_.Begin() !=
+// lively_instruction_list_.Begin()`, so it's not the time to run barrier instruction
+// `barrier_instruction_list_.Begin()`.
 //
 //
 //  e.g. case1: run barrier instructions.
@@ -621,10 +645,10 @@ bool VirtualMachineEngine::OnSchedulerThread(const StreamType& stream_type) {
 //  |            ...            |   |            ...            |   |            ...            |
 //  +---------------------------+   +---------------------------+   +---------------------------+
 //
-// `instruction0` is a barrier instructions with barrier_instruction_hook_ linked.
-// From the `virtual_machine`'s view, `barrier_instruction_hook_.Begin() ==
-// lively_instruction_hook_.Begin()`, so it's the time to run barrier instruction
-// `barrier_instruction_hook_.Begin()`.
+// `instruction0` is a barrier instruction with barrier_instruction_hook_ linked.
+// From the `virtual_machine`'s view, `barrier_instruction_list_.Begin() ==
+// lively_instruction_list_.Begin()`, so it's the time to run barrier instruction
+// `barrier_instruction_list_.Begin()`.
 //
 //
 // With the introduction of barrier_instruction_list_/barrier_instruction_hook_, the function
@@ -632,7 +656,7 @@ bool VirtualMachineEngine::OnSchedulerThread(const StreamType& stream_type) {
 // instructions are scarcely received by vm, there is no need for vm to run
 // VirtualMachineEngine::TryRunBarrierInstruction every time VirtualMachineEngine::Schedule run. On
 // the other hand, `barrier_instruction_hook_.size() == 0` is more lightweight than
-// `lively_instruction_hook_.Begin()?->instr_msg().instr_type_id().instruction_type().IsFrontSequential()`
+// `lively_instruction_list_.Begin()?->instr_msg().instr_type_id().instruction_type().IsFrontSequential()`
 //
 void VirtualMachineEngine::TryRunBarrierInstruction() {
   auto* sequnential_instruction = mut_barrier_instruction_list()->Begin();
@@ -674,14 +698,6 @@ void VirtualMachineEngine::TryDeleteLogicalObjects() {
   }
 }
 
-void VirtualMachineEngine::TryMoveFromWaitingToReady(Instruction* instruction) {
-  if (Dispatchable(instruction)) {
-    // For memory safety, do not swap the following two lines.
-    mut_ready_instruction_list()->PushBack(instruction);
-    mut_waiting_instruction_list()->Erase(instruction);
-  }
-}
-
 void VirtualMachineEngine::Schedule() {
   // Release finished instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_active_stream_list()->size())) { ReleaseFinishedInstructions(); }
@@ -689,7 +705,7 @@ void VirtualMachineEngine::Schedule() {
   if (unlikely(mut_delete_logical_object_list()->size())) { TryDeleteLogicalObjects(); }
   // Try run the first barrier instruction.
   if (unlikely(mut_barrier_instruction_list()->size())) { TryRunBarrierInstruction(); }
-  // Handle pending instructions, schedule them to waiting list or ready list.
+  // Handle pending instructions, and try schedule them to ready list.
   // Use thread_unsafe_size to avoid acquiring mutex lock.
   // The inconsistency between pending_msg_list.list_head_.list_head_.container_ and
   // pending_msg_list.list_head_.list_head_.size_ is not a fatal error because
@@ -698,7 +714,7 @@ void VirtualMachineEngine::Schedule() {
   //  VirtualMachineEngine::Receive may be less effiencient if the thread safe version
   //  `pending_msg_list().size()` used here, because VirtualMachineEngine::Schedule is more likely
   //  to get the mutex lock.
-  if (unlikely(pending_msg_list().thread_unsafe_size())) { MovePendingToReadyOrWaiting(); }
+  if (unlikely(pending_msg_list().thread_unsafe_size())) { HandlePending(); }
   // dispatch ready instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_ready_instruction_list()->size())) { DispatchAndPrescheduleInstructions(); }
 }

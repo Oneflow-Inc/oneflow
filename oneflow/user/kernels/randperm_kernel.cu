@@ -17,13 +17,15 @@ limitations under the License.
 #include <curand_kernel.h>
 
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 #include "oneflow/user/kernels/arange_kernel_util.h"
 #include "oneflow/user/kernels/radix_sort.cuh"
 #include "oneflow/user/kernels/distributions/common.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
+
 namespace oneflow {
 __global__ void GeneKeysAndValues(const int32_t n, int32_t* values, int32_t* keys,
                                   curandState* state) {
@@ -77,7 +79,8 @@ class GpuRandPermKernel final : public user_op::OpKernel {
         reinterpret_cast<void*>(reinterpret_cast<char*>(value_base) + indices_aligned_bytes);
     size_t temp_storage_bytes = InferTempStorageForSortPairsDescending<int32_t, int32_t>(1, n);
 
-    GeneKeysAndValues<<<block_num, kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
+    GeneKeysAndValues<<<block_num, kCudaThreadsNumPerBlock, 0,
+                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         n, value_base, key_base, curand_states);
 
     auto err = cub::DeviceRadixSort::SortPairs(
@@ -90,7 +93,7 @@ class GpuRandPermKernel final : public user_op::OpKernel {
         /* num_items */ n,
         /* begin_bit */ 0,
         /* end_bit */ sizeof(int32_t) * 8,
-        /* stream */ ctx->device_ctx()->cuda_stream());
+        /* stream */ ctx->stream()->As<ep::CudaStream>()->cuda_stream());
     OF_CUDA_CHECK(err);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

@@ -82,10 +82,10 @@ void GenerateBaseGridImp<DeviceType::kGPU>::Generate2D(user_op::KernelComputeCon
                                                        bool align_corners) {
   int count = H * W;
   if (align_corners) {
-    RUN_CUDA_KERNEL((Generate2DBaseGridGPUKernel<float, true>), ctx->device_ctx(), count, count,
+    RUN_CUDA_KERNEL((Generate2DBaseGridGPUKernel<float, true>), ctx->stream(), count, count,
                     grid_ptr, H, W);
   } else {
-    RUN_CUDA_KERNEL((Generate2DBaseGridGPUKernel<float, false>), ctx->device_ctx(), count, count,
+    RUN_CUDA_KERNEL((Generate2DBaseGridGPUKernel<float, false>), ctx->stream(), count, count,
                     grid_ptr, H, W);
   }
 }
@@ -94,10 +94,10 @@ void GenerateBaseGridImp<DeviceType::kGPU>::Generate2D(user_op::KernelComputeCon
                                                        bool align_corners) {
   int count = H * W;
   if (align_corners) {
-    RUN_CUDA_KERNEL((Generate2DBaseGridGPUKernel<double, true>), ctx->device_ctx(), count, count,
+    RUN_CUDA_KERNEL((Generate2DBaseGridGPUKernel<double, true>), ctx->stream(), count, count,
                     grid_ptr, H, W);
   } else {
-    RUN_CUDA_KERNEL((Generate2DBaseGridGPUKernel<double, false>), ctx->device_ctx(), count, count,
+    RUN_CUDA_KERNEL((Generate2DBaseGridGPUKernel<double, false>), ctx->stream(), count, count,
                     grid_ptr, H, W);
   }
 }
@@ -107,10 +107,10 @@ void GenerateBaseGridImp<DeviceType::kGPU>::Generate3D(user_op::KernelComputeCon
                                                        int64_t W, bool align_corners) {
   int count = D * H;
   if (align_corners) {
-    RUN_CUDA_KERNEL((Generate3DBaseGridGPUKernel<float, true>), ctx->device_ctx(), count, count,
+    RUN_CUDA_KERNEL((Generate3DBaseGridGPUKernel<float, true>), ctx->stream(), count, count,
                     grid_ptr, D, H, W);
   } else {
-    RUN_CUDA_KERNEL((Generate3DBaseGridGPUKernel<float, false>), ctx->device_ctx(), count, count,
+    RUN_CUDA_KERNEL((Generate3DBaseGridGPUKernel<float, false>), ctx->stream(), count, count,
                     grid_ptr, D, H, W);
   }
 }
@@ -120,10 +120,10 @@ void GenerateBaseGridImp<DeviceType::kGPU>::Generate3D(user_op::KernelComputeCon
                                                        int64_t W, bool align_corners) {
   int count = D * H;
   if (align_corners) {
-    RUN_CUDA_KERNEL((Generate3DBaseGridGPUKernel<double, true>), ctx->device_ctx(), count, count,
+    RUN_CUDA_KERNEL((Generate3DBaseGridGPUKernel<double, true>), ctx->stream(), count, count,
                     grid_ptr, D, H, W);
   } else {
-    RUN_CUDA_KERNEL((Generate3DBaseGridGPUKernel<double, false>), ctx->device_ctx(), count, count,
+    RUN_CUDA_KERNEL((Generate3DBaseGridGPUKernel<double, false>), ctx->stream(), count, count,
                     grid_ptr, D, H, W);
   }
 }

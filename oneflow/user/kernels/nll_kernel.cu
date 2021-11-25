@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/user/kernels/loss_kernel_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 namespace user_op {
@@ -209,14 +210,15 @@ class NllKernel final : public user_op::OpKernel {
     T* total_weight = total_weight_blob->mut_dptr<T>();
     const T* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), total_weight, 0, sizeof(T));
+    Memset<DeviceType::kGPU>(ctx->stream(), total_weight, 0, sizeof(T));
 
     if (reduction == ReductionType::kNone) {
       ComputeNllOutNone<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
-                          ctx->device_ctx()->cuda_stream()>>>(
+                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           num_instances, num_classes, ignore_index, input, target, out, weight, total_weight);
     } else {
-      ComputeNllOutReduce<<<1, kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
+      ComputeNllOutReduce<<<1, kCudaThreadsNumPerBlock, 0,
+                            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           num_instances, num_classes, ignore_index, input, target, out, weight, total_weight,
           reduction == ReductionType::kMean);
     }
@@ -253,11 +255,10 @@ class NllGradKernel final : public user_op::OpKernel {
     const T* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
 
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), dx, 0,
-                             GetCudaAlignedSize(input_elem_cnt * sizeof(T)));
+    Memset<DeviceType::kGPU>(ctx->stream(), dx, 0, input_elem_cnt * sizeof(T));
 
     ComputeNllGradOut<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
-                        ctx->device_ctx()->cuda_stream()>>>(
+                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         num_instances, num_classes, ignore_index, target, dy, dx, weight, total_weight, reduction);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

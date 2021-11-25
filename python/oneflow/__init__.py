@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
 import sys
 import collections
 
@@ -64,6 +65,7 @@ def is_deprecated(func_or_class):
 from oneflow._C import abs
 from oneflow._C import exp
 from oneflow._C import acos
+from oneflow._C import acos as arccos
 from oneflow._C import acosh
 from oneflow._C import acosh as arccosh
 from oneflow._C import atanh
@@ -163,6 +165,7 @@ import oneflow.framework.env_util as env_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
 from oneflow.framework.multi_client_session import MultiClientSession
+from oneflow.framework.tensor_str import set_printoptions
 
 if not env_util.HasAllMultiClientEnvVars():
     env_util.SetDefaultMultiClientEnvVars()
@@ -303,6 +306,7 @@ from oneflow.nn.modules.math_ops import addmm_op as addmm
 from oneflow.nn.modules.math_ops import topk_op as topk
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
 from oneflow.nn.modules.nonzero import nonzero_op as nonzero
+from oneflow.nn.modules.nms import nms_op as nms
 from oneflow.nn.modules.numel import numel_op as numel
 from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
@@ -373,5 +377,6 @@ import oneflow.multiprocessing
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__
-    print("MLIR JIT engine will load:", oneflow_internal_path)
-    oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)
+    if os.getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"):
+        print("MLIR JIT engine will load:", oneflow_internal_path, file=sys.stderr)
+        oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)

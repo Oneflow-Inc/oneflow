@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
@@ -54,7 +55,7 @@ class GpuOneHotKernel final : public user_op::OpKernel, public user_op::CudaGrap
     const T off_value = IsFloatingDataType(dtype)
                             ? static_cast<T>(ctx->Attr<double>("floating_off_value"))
                             : static_cast<T>(ctx->Attr<int64_t>("integer_off_value"));
-    RUN_CUDA_KERNEL((OneHotEncodeGpu<T, K>), ctx->device_ctx(), num_indices * depth,
+    RUN_CUDA_KERNEL((OneHotEncodeGpu<T, K>), ctx->stream(), num_indices * depth,
                     num_indices * depth, depth, on_value, off_value, indices->dptr<K>(),
                     out->mut_dptr<T>());
   }

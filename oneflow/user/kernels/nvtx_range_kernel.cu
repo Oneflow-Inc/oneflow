@@ -65,7 +65,7 @@ class NvtxStartKernel final : public user_op::OpKernel {
     CHECK_EQ(out->shape(), in_shape);
     const DataType in_data_type = in->data_type();
     CHECK_EQ(out->data_type(), in_data_type);
-    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out->mut_dptr<void>(), in->dptr<void>(),
+    Memcpy<DeviceType::kGPU>(ctx->stream(), out->mut_dptr<void>(), in->dptr<void>(),
                              in_shape.elem_cnt() * GetSizeOfDataType(in_data_type));
 #ifdef OF_ENABLE_PROFILER
     auto* kernel_state = dynamic_cast<NvtxOpKernelState*>(state);
@@ -116,7 +116,7 @@ class NvtxEndKernel final : public user_op::OpKernel {
     nvtxRangeId_t range_id = it->second;
     mark2range_id.erase(it);
     nvtxRangeEnd(range_id);
-    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out->mut_dptr<void>(), in->dptr<void>(),
+    Memcpy<DeviceType::kGPU>(ctx->stream(), out->mut_dptr<void>(), in->dptr<void>(),
                              in_shape.elem_cnt() * GetSizeOfDataType(in_data_type));
     kernel_state->IncreaseCount();
 #endif
