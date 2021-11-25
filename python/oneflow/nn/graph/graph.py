@@ -320,7 +320,7 @@ class Graph(object):
                 assert block.type == BlockType.MODULE
                 block.debug(v_level, ranks, mode)
 
-    def save(self, path):
+    def save(self, path: str):
         r"""
         """
         if not self._is_compiled:
@@ -332,8 +332,9 @@ class Graph(object):
         else:
             os.mkdir(path)
 
+        # TODO: save model parameters
         serialized_job = str(text_format.MessageToString(self._forward_job_proto))
-        oneflow.nn.graph.SaveJobToIR(serialized_job, path)
+        oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, path)
 
 
     def __repr__(self):

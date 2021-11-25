@@ -54,6 +54,7 @@ limitations under the License.
 #include <cstdint>
 #include <google/protobuf/text_format.h>
 #include <iostream>
+#include <fstream>
 #include <iterator>
 #include <map>
 #include <new>
@@ -396,9 +397,14 @@ void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::st
     llvm::raw_string_ostream os_mlir(mlir);
     module->print(os_mlir);
     const auto& job_name = job->job_conf().job_name();
-    llvm::SmallString<256> dir(path);
-    dir.append(job_name + ".mlir");
-    job_wrapper.DumpLog(dir.str().str(), mlir);
+    std::string filename = path + "/" + job_name + ".mlir";
+    std::ofstream fs(filename, std::ios::trunc);
+    if (!fs.is_open()) {
+      llvm::errs() << "fail to open file " << filename;
+      exit(EXIT_FAILURE);
+    }
+    fs << mlir;
+    fs.close();
   } else {
     llvm::errs() << "fail to convert job to IR, job_name: " << job->job_conf().job_name();
     exit(EXIT_FAILURE);

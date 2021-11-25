@@ -69,10 +69,10 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
   m.def("AddTensorAsGraphLoss",
         [](const std::shared_ptr<one::Tensor>& t) { return AddTensorAsGraphLoss(t).GetOrThrow(); });
   m.def("SaveJobToIR",
-        [](const std::string& serialized_job, const std::string& path) -> Maybe<void> {
+        [](const std::string& serialized_job, const std::string& path) {
           Job job;
-          CHECK_OR_RETURN(TxtString2PbMessage(serialized_job, &job));
-          return SaveJobToIR(&job, path);
+          CHECK(TxtString2PbMessage(serialized_job, &job));
+          return SaveJobToIR(&job, path).GetOrThrow();;
         });
 }
 
