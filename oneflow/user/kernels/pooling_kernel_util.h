@@ -15,7 +15,7 @@ limitations under the License.
 */
 #ifndef ONEFLOW_USER_KERNELS_POOLING_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_POOLING_KERNEL_UTIL_H_
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
@@ -90,27 +90,33 @@ class PoolingParams3D {
 
 template<DeviceType device_type, typename T>
 struct PoolingKernelUtil {
-  static void Maxpool1dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 3>& index_helper,
+  static void Maxpool1dForward(ep::Stream* stream,
+                               const NdIndexOffsetHelper<int64_t, 3>& index_helper,
                                const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const PoolingParams3D& params_3d);
 
-  static void Maxpool1dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 3>& index_helper,
+  static void Maxpool1dBackward(ep::Stream* stream,
+                                const NdIndexOffsetHelper<int64_t, 3>& index_helper,
                                 const int64_t elem_num, const T* src, T* dest,
                                 const int64_t* indice_ptr, const PoolingParams3D& params_3d);
 
-  static void Maxpool2dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper,
+  static void Maxpool2dForward(ep::Stream* stream,
+                               const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const PoolingParams3D& params_3d);
 
-  static void Maxpool2dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper,
+  static void Maxpool2dBackward(ep::Stream* stream,
+                                const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                 const int64_t elem_num, const T* src, T* dest,
                                 const int64_t* indice_ptr, const PoolingParams3D& params_3d);
 
-  static void Maxpool3dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5>& index_helper,
+  static void Maxpool3dForward(ep::Stream* stream,
+                               const NdIndexOffsetHelper<int64_t, 5>& index_helper,
                                const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const PoolingParams3D& params_3d);
 
-  static void Maxpool3dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5>& index_helper,
+  static void Maxpool3dBackward(ep::Stream* stream,
+                                const NdIndexOffsetHelper<int64_t, 5>& index_helper,
                                 const int64_t elem_num, const T* src, T* dest,
                                 const int64_t* indice_ptr, const PoolingParams3D& params_3d);
 };

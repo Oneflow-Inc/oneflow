@@ -1048,6 +1048,16 @@
   signature: "Tensor (Tensor x, String device_type, Int64 device_id) => Copy"
   bind_python: True
 
+- name: "to"
+  signature: [
+    # type of device must be string for consistent tensor to perform argument validation
+    "Tensor (Tensor x, String device=None, DataType dtype=None, Bool copy=False) => To",
+    "Tensor (Tensor x, Device device=None, DataType dtype=None, Bool copy=False) => To",
+    "Tensor (Tensor x, DataType dtype=None, Bool copy=False) => To",
+    "Tensor (Tensor x, Tensor other, Bool copy=False) => To"
+  ]
+  bind_python: True
+
 - name: "flip"
   signature: "Tensor (Tensor x, Int32List dims) => Flip"
   bind_python: True
@@ -1695,6 +1705,22 @@
   signature: "Tensor (Tensor a, Tensor b, *, Float p=0.5, Int32 axis, Generator generator=None) => FusedBiasAddDropout"
   bind_python: True
 
+- name: "fused_scale_mask_softmax"
+  signature: "Tensor (Tensor x, Tensor mask, *, Float fill_value=0.0, Float scale=1.0) => FusedScaleMaskSoftmax"
+  bind_python: True
+
+- name: "fused_scale_mask_softmax_grad"
+  signature: "Tensor (Tensor y, Tensor dy, Tensor mask, Float scale=1.0) => FusedScaleMaskSoftmaxGrad"
+  bind_python: False
+
+- name: "fused_scale_mask_softmax_dropout"
+  signature: "TensorTuple (Tensor x, Tensor mask, *, Float fill_value=0.0, Float scale=1.0, Float p=0.5, Bool training=True, Generator generator=None) => FusedScaleMaskSoftmaxDropout"
+  bind_python: True
+
+- name: "fused_scale_mask_softmax_dropout_grad"
+  signature: "Tensor (Tensor softmax_y, Tensor dy, Tensor mask, Tensor dropout_mask, Float scale=1.0, Float dropout_scale=1.0) => FusedScaleMaskSoftmaxDropoutGrad"
+  bind_python: False
+
 - name: "fused_scale_tril_softmax_mask_scale"
   signature: "TensorTuple (Tensor a, *, Float p=0.5, Int64 diagonal, Float tril_scale_value, Generator generator=None) => FusedScaleTrilSoftmaxMaskScale"
   bind_python: True
@@ -1737,6 +1763,11 @@
   signature:
     "TensorTuple (Tensor sampled_weight_diff, Tensor sampled_label) => DistributedPariticalFCSampleDisableBoxing"
   bind_python: False
+
+- name: "nms"
+  signature:
+    "Tensor (Tensor x, Float iou_threshold, Int32 keep_n=-1) => Nms"
+  bind_python: True
 
 - name: "meshgrid"
   signature: "TensorTuple (TensorTuple tensors) => Meshgrid"
