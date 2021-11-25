@@ -96,7 +96,7 @@ from oneflow._C import log1p
 from oneflow._C import add
 from oneflow._C import div
 from oneflow._C import floor_divide
-from oneflow._C import mul
+from oneflow._C import mul, mul_
 from oneflow._C import negative
 from oneflow._C import negative as neg
 from oneflow._C import reciprocal

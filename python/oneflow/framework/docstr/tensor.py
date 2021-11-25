@@ -384,6 +384,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.mul_,
+    """
+    In-place version of :func`oneflow.Tensor.mul`.
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.negative,
     """
     See :func:`oneflow.negative`
