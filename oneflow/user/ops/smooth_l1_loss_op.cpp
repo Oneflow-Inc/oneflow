@@ -88,7 +88,6 @@ REGISTER_USER_OP("smooth_l1_loss")
     .SetDataTypeInferFn(InferDataType)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const auto& input_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0).shape();
-      const auto reduction = ctx->Attr<std::string>("reduction");
       FOR_RANGE(int64_t, i, 0, input_shape.NumAxes()) {
         ctx->NewBuilder().Split(ctx->inputs(), i).Split(user_op::OpArg("out", 0), i).Build();
       }
@@ -105,7 +104,6 @@ REGISTER_USER_OP("smooth_l1_loss_grad")
     .SetDataTypeInferFn(InferGradDataType)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const auto& input_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0).shape();
-      const auto& dy_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0).shape();
       FOR_RANGE(int64_t, i, 0, input_shape.NumAxes()) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("input", 0), i)
@@ -119,7 +117,7 @@ REGISTER_USER_OP("smooth_l1_loss_grad")
 
 REGISTER_USER_OP_GRAD("smooth_l1_loss")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("input", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
