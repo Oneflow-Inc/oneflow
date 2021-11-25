@@ -145,42 +145,37 @@ def test_inplace_mul_id(test_case, device):
 
 def inplace_mul_tensors_helper(test_case, device, arr_0, arr_y):
     pt_x = torch.tensor(
-        arr_0,
-        dtype=torch.float32,
-        device=torch.device(device),
-        requires_grad=True,
+        arr_0, dtype=torch.float32, device=torch.device(device), requires_grad=True,
     )
     pt_inplace_x = pt_x + 1
     pt_y = torch.tensor(
-        arr_y,
-        dtype=torch.float32,
-        device=torch.device(device),
-        requires_grad=True,
+        arr_y, dtype=torch.float32, device=torch.device(device), requires_grad=True,
     )
     of_x = flow.tensor(
-        arr_0,
-        dtype=flow.float32,
-        device=flow.device(device),
-        requires_grad=True,
+        arr_0, dtype=flow.float32, device=flow.device(device), requires_grad=True,
     )
     of_inplace_x = of_x + 1
     of_y = flow.tensor(
-        arr_y,
-        dtype=flow.float32,
-        device=flow.device(device),
-        requires_grad=True,
+        arr_y, dtype=flow.float32, device=flow.device(device), requires_grad=True,
     )
     id_inpalce_x = id(of_inplace_x)
     pt_out = pt_inplace_x.mul_(pt_y)
     of_out = of_inplace_x.mul_(of_y)
-    test_case.assertTrue(np.allclose(of_out.numpy(), pt_out.clone().detach().cpu().numpy(), 1e-05, 1e-05))
+    test_case.assertTrue(
+        np.allclose(of_out.numpy(), pt_out.clone().detach().cpu().numpy(), 1e-05, 1e-05)
+    )
     test_case.assertTrue(id_inpalce_x == id(of_inplace_x))
     pt_inplace_x = pt_inplace_x.sum()
     pt_inplace_x.backward()
     of_inplace_x = of_inplace_x.sum()
     of_inplace_x.backward()
-    test_case.assertTrue(np.allclose(pt_x.grad.cpu().numpy(), of_x.grad.numpy(), 1e-05, 1e-05))
-    test_case.assertTrue(np.allclose(pt_y.grad.cpu().numpy(), of_y.grad.numpy(), 1e-05, 1e-05))
+    test_case.assertTrue(
+        np.allclose(pt_x.grad.cpu().numpy(), of_x.grad.numpy(), 1e-05, 1e-05)
+    )
+    test_case.assertTrue(
+        np.allclose(pt_y.grad.cpu().numpy(), of_y.grad.numpy(), 1e-05, 1e-05)
+    )
+
 
 def test_inplace_mul_tensors(test_case, device):
     arr_0 = np.random.rand(3, 5)
@@ -198,10 +193,7 @@ def test_inplace_mul_tensors(test_case, device):
 def test_inplace_mul_scalar(test_case, device):
     arr = np.random.rand(2, 3, 4)
     of_x = flow.tensor(
-        arr,
-        flow.float32,
-        device=flow.device(device),
-        requires_grad=True
+        arr, flow.float32, device=flow.device(device), requires_grad=True
     )
     y = 3.25
     id_x_before = id(of_x)
@@ -210,16 +202,10 @@ def test_inplace_mul_scalar(test_case, device):
     test_case.assertTrue(np.allclose(of_x.numpy(), np.multiply(arr, y)))
 
     of_x = flow.tensor(
-        arr,
-        flow.float32,
-        device=flow.device(device),
-        requires_grad=True
+        arr, flow.float32, device=flow.device(device), requires_grad=True
     )
     pt_x = torch.tensor(
-        arr,
-        flow.float32,
-        device=torch.device(device),
-        requires_grad=True
+        arr, flow.float32, device=torch.device(device), requires_grad=True
     )
     of_inplace_x_id_before = id(of_inplace_x)
     of_inplace_x = of_x + 1
@@ -227,20 +213,30 @@ def test_inplace_mul_scalar(test_case, device):
     of_inplace_x.mul_(y)
     pt_inplace_x.mul_(y)
     test_case.assertTrue(of_inplace_x_id_before == id(of_inplace_x))
-    test_case.assertTrue(np.allclose(of_out.numpy(), pt_out.clone().detach().cpu().numpy(), 1e-05, 1e-05))
+    test_case.assertTrue(
+        np.allclose(of_out.numpy(), pt_out.clone().detach().cpu().numpy(), 1e-05, 1e-05)
+    )
     pt_inplace_x = pt_inplace_x.sum()
     pt_inplace_x.backward()
     of_inplace_x = of_inplace_x.sum()
     of_inplace_x.backward()
-    test_case.assertTrue(np.allclose(pt_x.cpu().grad.numpy(), of_x.grad.numpy(), 1e-05, 1e-05))
-    test_case.assertTrue(np.allclose(pt_y.grad.numpy(), of_y.grad.numpy(), 1e-05, 1e-05))
+    test_case.assertTrue(
+        np.allclose(pt_x.cpu().grad.numpy(), of_x.grad.numpy(), 1e-05, 1e-05)
+    )
+    test_case.assertTrue(
+        np.allclose(pt_y.grad.numpy(), of_y.grad.numpy(), 1e-05, 1e-05)
+    )
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestMulModule(flow.unittest.TestCase):
     def test_mul(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_mul_impl, test_inplace_mul_tensors, test_inplace_mul_id]
+        arg_dict["test_fun"] = [
+            _test_mul_impl,
+            test_inplace_mul_tensors,
+            test_inplace_mul_id,
+        ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
