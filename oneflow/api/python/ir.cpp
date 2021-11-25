@@ -474,6 +474,15 @@ void PrintNamesInResults(const std::map<K, V>& results) {
   std::cout << "\n";
 }
 
+void PrintGroupNames(std::map<std::string, std::map<K, V>>& groups) {
+  std::cout << "// ";
+  for (auto it = groups.begin(); it != groups.end(); ++it) {
+    std::cout << it->first;
+    if (std::next(it) != groups.end()) { std::cout << ";"; }
+  }
+  std::cout << "\n\n";
+}
+
 void GroupOpRegistryResults(const std::map<K, V>& results,
                             std::map<std::string, std::map<K, V>>& groups) {
   for (const auto& kv : results) {
@@ -515,7 +524,6 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
     if (IsCUDAOp(r.op_type_name)) { group_name = "cuda"; }
     if (IsParallelCastOp(r.op_type_name)) { group_name = "parallel_cast"; }
     if (ShouldGenBaseClass(r.op_type_name)) { group_name = "BASE"; }
-    group_name = "GET_ONEFLOW_" + group_name + "_OP_DEFINITIONS";
     std::transform(group_name.begin(), group_name.end(), group_name.begin(), ::toupper);
     groups[group_name].insert({kv.first, kv.second});
   }
@@ -540,12 +548,14 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
                    [](const std::pair<K, V>& p) { return p; });
     std::map<std::string, std::map<K, V>> groups;
     GroupOpRegistryResults(sorted, groups);
+    PrintGroupNames(groups);
     for (const auto& kv : groups) {
-      const auto& group_name = kv.first;
+      auto group_name = kv.first;
       auto results = kv.second;
       PrintNamesInResults(results);
       std::cout << "// "
                 << "Total: " << kv.second.size() << "\n";
+      group_name = "GET_ONEFLOW_" + group_name + "_OP_DEFINITIONS";
       std::cout << "#ifndef " << group_name << "\n";
       std::cout << "#define " << group_name << "\n\n";
       PrintODSFromOpRegistryResults(results);
