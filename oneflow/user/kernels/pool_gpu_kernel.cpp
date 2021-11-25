@@ -316,47 +316,47 @@ class MaxPool3DGradGpuKernel final : public user_op::OpKernel, public user_op::C
       .SetCreateFn<AvgPool1DGpuKernel<dtype>>()                                         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("avg_pool_1d_grad")                                              \
+  REGISTER_USER_KERNEL("tf_avg_pool_1d_grad")                                           \
       .SetCreateFn<AvgPool1DGradGpuKernel<dtype>>()                                     \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("avg_pool_2d")                                                   \
+  REGISTER_USER_KERNEL("tf_avg_pool_2d")                                                \
       .SetCreateFn<AvgPool2DGpuKernel<dtype>>()                                         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("avg_pool_2d_grad")                                              \
+  REGISTER_USER_KERNEL("tf_avg_pool_2d_grad")                                           \
       .SetCreateFn<AvgPool2DGradGpuKernel<dtype>>()                                     \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("avg_pool_3d")                                                   \
+  REGISTER_USER_KERNEL("tf_avg_pool_3d")                                                \
       .SetCreateFn<AvgPool3DGpuKernel<dtype>>()                                         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("avg_pool_3d_grad")                                              \
+  REGISTER_USER_KERNEL("tf_avg_pool_3d_grad")                                           \
       .SetCreateFn<AvgPool3DGradGpuKernel<dtype>>()                                     \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("max_pool_1d")                                                   \
+  REGISTER_USER_KERNEL("tf_max_pool_1d")                                                \
       .SetCreateFn<MaxPool1DGpuKernel<dtype>>()                                         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("max_pool_1d_grad")                                              \
+  REGISTER_USER_KERNEL("tf_max_pool_1d_grad")                                           \
       .SetCreateFn<MaxPool1DGradGpuKernel<dtype>>()                                     \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("max_pool_2d")                                                   \
+  REGISTER_USER_KERNEL("tf_max_pool_2d")                                                \
       .SetCreateFn<MaxPool2DGpuKernel<dtype>>()                                         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("max_pool_2d_grad")                                              \
+  REGISTER_USER_KERNEL("tf_max_pool_2d_grad")                                           \
       .SetCreateFn<MaxPool2DGradGpuKernel<dtype>>()                                     \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("max_pool_3d")                                                   \
+  REGISTER_USER_KERNEL("tf_max_pool_3d")                                                \
       .SetCreateFn<MaxPool3DGpuKernel<dtype>>()                                         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("max_pool_3d_grad")                                              \
+  REGISTER_USER_KERNEL("tf_max_pool_3d_grad")                                           \
       .SetCreateFn<MaxPool3DGradGpuKernel<dtype>>()                                     \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
