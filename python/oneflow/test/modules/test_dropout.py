@@ -37,6 +37,8 @@ def test_dropout_numpy_p0(test_case, shape, device, dtype):
     test_case.assertTrue(
         np.allclose(x_tensor.grad.numpy(), np_one_mask, atol=1e-5, rtol=1e-5)
     )
+    # if not np.allclose(x_tensor.grad.numpy(), np_one_mask, atol=1e-5, rtol=1e-5):
+    # print("shape is: {}, device is: {}, dtype is: {}".format(shape, device, dtype))
 
 
 def test_dropout_numpy_p1(test_case, shape, device, dtype):
@@ -50,6 +52,9 @@ def test_dropout_numpy_p1(test_case, shape, device, dtype):
     test_case.assertTrue(
         np.allclose(x_tensor.grad.numpy(), np_zero_mask, atol=1e-5, rtol=1e-5)
     )
+    # if not np.allclose(x_tensor.grad.numpy(), np_zero_mask, atol=1e-5, rtol=1e-5):
+    # print("shape is: {}, device is: {}, dtype is: {}".format(shape, device, dtype))
+    # x_grad_np = x_tensor.grad.numpy()
 
 
 def test_dropout_numpy_fp16_p0(test_case, shape):
@@ -180,6 +185,23 @@ def test_dropout_addend_numpy_fp16_p1(test_case, shape):
 
 @flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
+    # def test_dropout_numpy_case(test_case):
+    #     arg_dict = OrderedDict()
+    #     # arg_dict["test_fun"] = [test_dropout_numpy_p1]
+    #     arg_dict["test_fun"] = [test_dropout_numpy_p0]
+    #     # arg_dict["shape"] = [[4, 127, 256], [5, 63, 49], [7, 32, 64], [16, 1024, 1024]]
+    #     arg_dict["shape"] = [[4, 127, 256], [5, 63, 49]]
+    #     # arg_dict["shape"] = [[5, 63, 49], [7, 32, 64]]
+    #     # arg_dict["shape"] = [[64, 64], [128, 128], [256, 256], [512, 512]]
+    #     # arg_dict["shape"] = [[5, 63, 49]]
+
+    #     arg_dict["device"] = ["cuda"]
+    #     arg_dict["dtype"] = [np.float32, np.float64]
+    #     # arg_dict["dtype"] = [np.float64]
+    #     # arg_dict["dtype"] = [np.float32]
+    #     for arg in GenArgList(arg_dict):
+    #         arg[0](test_case, *arg[1:])
+
     def test_dropout_numpy_case(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [test_dropout_numpy_p0, test_dropout_numpy_p1]
