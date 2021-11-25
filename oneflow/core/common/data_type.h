@@ -202,7 +202,7 @@ struct DevDType {
 
 #if defined(WITH_CUDA)
 template<>
-struct DevDType<DeviceType::kGPU, float16> {
+struct DevDType<DeviceType::kCUDA, float16> {
   static_assert(sizeof(float16) == sizeof(half), "sizeof(float16) != sizeof(half)");
   typedef half type;
 };

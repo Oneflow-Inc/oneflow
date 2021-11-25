@@ -39,7 +39,7 @@ class CudaStreamContext : public StreamContext, public KernelObserverProvider {
   virtual ~CudaStreamContext();
 
   Maybe<void> AddCallback(std::function<void()> callback) override;
-  DeviceType device_type() const override { return DeviceType::kGPU; }
+  DeviceType device_type() const override { return DeviceType::kCUDA; }
   KernelObserver* GetKernelObserver() override;
 
   ep::Stream* stream() override;
@@ -59,7 +59,7 @@ CudaStreamContext::CudaStreamContext(int device_index)
     : stream_(nullptr), device_index_(device_index) {
   CudaCurrentDeviceGuard guard(device_index_);
   device_ = std::dynamic_pointer_cast<ep::CudaDevice>(
-      Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kGPU, device_index));
+      Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index));
   CHECK(device_);
   stream_ = dynamic_cast<ep::CudaStream*>(device_->CreateStream());
   CHECK(stream_ != nullptr);
@@ -75,7 +75,7 @@ CudaStreamContext::CudaStreamContext(int device_index)
 
   poller_thread_ = std::thread([this]() {
     stream_->OnExecutionContextSetup();
-    OF_PROFILER_NAME_THIS_HOST_THREAD("CUDA " + std::to_string(device_index_) + " Poller : ("
+    OF_PROFILER_NAME_THIS_HOST_THREAD("_cuda" + std::to_string(device_index_) + " Poller : ("
                                       + std::to_string(device_index_) + ")");
     std::pair<ep::Event*, std::function<void()>> cb_event;
     while (cb_event_chan_.Receive(&cb_event) == kChannelStatusSuccess) {
@@ -106,8 +106,8 @@ KernelObserver* CudaStreamContext::GetKernelObserver() { return kernel_observer_
 ep::Stream* CudaStreamContext::stream() { return stream_; }
 
 REGISTER_STREAM_CONTEXT_CREATOR_WITH_STREAM_ID(
-    DeviceType::kGPU, ([](const StreamId& stream_id) -> StreamContext* {
-      CHECK_EQ(stream_id.device_type(), DeviceType::kGPU);
+    DeviceType::kCUDA, ([](const StreamId& stream_id) -> StreamContext* {
+      CHECK_EQ(stream_id.device_type(), DeviceType::kCUDA);
       return new CudaStreamContext(stream_id.device_index());
     }));
 

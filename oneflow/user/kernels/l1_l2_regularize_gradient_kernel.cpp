@@ -54,8 +54,8 @@ class L1L2RegularizeGradientKernel final : public user_op::OpKernel {
 REGISTER_L1_L2_REGULARIZE_GRADIENT_KERNEL(DeviceType::kCPU, float)
 REGISTER_L1_L2_REGULARIZE_GRADIENT_KERNEL(DeviceType::kCPU, double)
 #ifdef WITH_CUDA
-REGISTER_L1_L2_REGULARIZE_GRADIENT_KERNEL(DeviceType::kGPU, float)
-REGISTER_L1_L2_REGULARIZE_GRADIENT_KERNEL(DeviceType::kGPU, double)
+REGISTER_L1_L2_REGULARIZE_GRADIENT_KERNEL(DeviceType::kCUDA, float)
+REGISTER_L1_L2_REGULARIZE_GRADIENT_KERNEL(DeviceType::kCUDA, double)
 #endif
 
 }  // namespace

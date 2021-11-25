@@ -137,10 +137,10 @@ class GpuUnfoldTensorKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UNFOLD_TENSOR_KERNEL(dtype)                          \
-  REGISTER_USER_KERNEL("unfold_tensor")                               \
-      .SetCreateFn<GpuUnfoldTensorKernel<dtype>>()                    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_UNFOLD_TENSOR_KERNEL(dtype)                           \
+  REGISTER_USER_KERNEL("unfold_tensor")                                \
+      .SetCreateFn<GpuUnfoldTensorKernel<dtype>>()                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value))
 
 REGISTER_UNFOLD_TENSOR_KERNEL(float);
@@ -203,10 +203,10 @@ class GpuUnfoldTensorGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(dtype)                     \
-  REGISTER_USER_KERNEL("unfold_tensor_grad")                          \
-      .SetCreateFn<GpuUnfoldTensorGradKernel<dtype>>()                \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(dtype)                      \
+  REGISTER_USER_KERNEL("unfold_tensor_grad")                           \
+      .SetCreateFn<GpuUnfoldTensorGradKernel<dtype>>()                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value))
 
 REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(float);
