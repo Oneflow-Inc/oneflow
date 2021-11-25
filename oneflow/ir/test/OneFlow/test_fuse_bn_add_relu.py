@@ -106,7 +106,7 @@ class TestMLIROptimizations(flow.unittest.TestCase):
         FuseBnAddReluJob(x)
 
 
-# CHECK: %y, %reserve_space, %mean, %inv_variance = "oneflow.normalization_add_relu"
+# CHECK: [[RESULT_1:%y.*]], [[RESULT_2:%reserve_space.*]], [[RESULT_2:%mean.*]], [[RESULT_2:%inv_variance.*]] = "oneflow.normalization_add_relu"
 
 if __name__ == "__main__":
     unittest.main()
