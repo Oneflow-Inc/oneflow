@@ -421,8 +421,8 @@ class SliceUpdateKernel final : public user_op::OpKernel {
 
 REGISTER_SLICE_KERNELS_WITH_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_SLICE_KERNELS_WITH_DEVICE(DeviceType::kGPU)
-REGISTER_SLICE_KERNELS(DeviceType::kGPU, float16)
+REGISTER_SLICE_KERNELS_WITH_DEVICE(DeviceType::kCUDA)
+REGISTER_SLICE_KERNELS(DeviceType::kCUDA, float16)
 #endif
 
 #define REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(dtype)               \
