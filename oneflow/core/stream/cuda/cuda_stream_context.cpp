@@ -75,7 +75,7 @@ CudaStreamContext::CudaStreamContext(int device_index)
 
   poller_thread_ = std::thread([this]() {
     stream_->OnExecutionContextSetup();
-    OF_PROFILER_NAME_THIS_HOST_THREAD("CUDA " + std::to_string(device_index_) + " Poller : ("
+    OF_PROFILER_NAME_THIS_HOST_THREAD("_cuda" + std::to_string(device_index_) + " Poller : ("
                                       + std::to_string(device_index_) + ")");
     std::pair<ep::Event*, std::function<void()>> cb_event;
     while (cb_event_chan_.Receive(&cb_event) == kChannelStatusSuccess) {
