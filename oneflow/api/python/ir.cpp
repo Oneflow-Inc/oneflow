@@ -124,12 +124,21 @@ const std::set<std::string>& GetMathOps() {
                                    "tan",         "tanh"};
   return ret;
 }
+
+const std::set<std::string>& GetOpsUsedInPatterns() {
+  static std::set<std::string> ret{"scalar_mul_by_tensor", "cast",    "tril",    "scalar_mul",
+                                   "fused_scale_tril",     "dropout", "bias_add"};
+  return ret;
+}
 bool IsMathOp(const std::string& op_name) {
   bool is_grad = false;
   for (const auto& name : GetMathOps()) {
     if (op_name.find(name) != std::string::npos && IsGradOp(op_name)) { is_grad = true; }
   }
   return GetMathOps().find(op_name) != GetMathOps().end() || is_grad;
+}
+bool IsUsedInPatterns(const std::string& op_name) {
+  return GetOpsUsedInPatterns().find(op_name) != GetOpsUsedInPatterns().end();
 }
 bool IsInvolutionOp(const std::string& op_name) {
   return GetInvolutionOps().find(op_name) != GetInvolutionOps().end() && !IsGradOp(op_name);
@@ -483,6 +492,20 @@ void PrintGroupNames(std::map<std::string, std::map<K, V>>& groups) {
   std::cout << "\n\n";
 }
 
+void PrintIncludes(std::map<std::string, std::map<K, V>>& groups) {
+  for (auto it = groups.begin(); it != groups.end(); ++it) {
+    auto group_name = it->first;
+    if (group_name == "BASE") continue;
+    if (group_name == "TEST") continue;
+    std::transform(group_name.begin(), group_name.end(), group_name.begin(), ::tolower);
+    group_name += "_ops";
+    std::cout << "// #define GET_OP_LIST\n";
+    std::cout << "// #include \"OneFlow/OneFlow." << group_name << ".cpp.inc\"\n";
+    if (std::next(it) != groups.end()) { std::cout << "// ,\n"; }
+  }
+  std::cout << "\n\n";
+}
+
 void GroupOpRegistryResults(const std::map<K, V>& results,
                             std::map<std::string, std::map<K, V>>& groups) {
   for (const auto& kv : results) {
@@ -524,6 +547,7 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
     if (IsCUDAOp(r.op_type_name)) { group_name = "cuda"; }
     if (IsParallelCastOp(r.op_type_name)) { group_name = "parallel_cast"; }
     if (ShouldGenBaseClass(r.op_type_name)) { group_name = "BASE"; }
+    // if (IsUsedInPatterns(r.op_type_name)) { group_name = "used_in_patterns"; }
     std::transform(group_name.begin(), group_name.end(), group_name.begin(), ::toupper);
     groups[group_name].insert({kv.first, kv.second});
   }
@@ -549,17 +573,27 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
     std::map<std::string, std::map<K, V>> groups;
     GroupOpRegistryResults(sorted, groups);
     PrintGroupNames(groups);
+    PrintIncludes(groups);
+    // std::cout << "#ifndef ONEFLOW_USER_OP_GEN\n";
+    // std::cout << "#define ONEFLOW_USER_OP_GEN\n\n";
     for (const auto& kv : groups) {
       auto group_name = kv.first;
       auto results = kv.second;
+      std::cout << "// Group: " << group_name << "\n";
       PrintNamesInResults(results);
       std::cout << "// "
-                << "Total: " << kv.second.size() << "\n";
-      group_name = "GET_ONEFLOW_" + group_name + "_OP_DEFINITIONS";
-      std::cout << "#ifdef " << group_name << "\n";
+                << "Total: " << kv.second.size() << "\n\n";
+      CHECK(kv.second.size()) << group_name;
+      auto get_group_by_name = "GET_ONEFLOW_" + group_name + "_OP_DEFINITIONS";
+      auto group_def_name = "ONEFLOW_" + group_name + "_OPS";
+      std::cout << "#ifdef " << get_group_by_name << "\n\n";
+      // std::cout << "#ifndef " << group_def_name << "\n\n";
+      // std::cout << "#define " << group_def_name << "\n\n";
       PrintODSFromOpRegistryResults(results);
-      std::cout << "#endif  // " << group_name << "\n\n";
+      // std::cout << "#endif // " << group_def_name << "\n\n";
+      std::cout << "#endif // " << get_group_by_name << "\n\n";
     }
+    // std::cout << "#endif // ONEFLOW_USER_OP_GEN\n";
   });
 }
 
