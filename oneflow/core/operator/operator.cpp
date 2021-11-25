@@ -599,18 +599,6 @@ Maybe<void> Operator::FilterAndCheckValidSbpSignatureListByLogicalShape(
     const cfg::SbpSignatureList& total_sbp_sig_list,
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, cfg::SbpSignatureList* valid_sbp_sig_list) const {
-  auto GetOpDebugShapeStr = [&]() -> std::string {
-    std::string ret = "";
-    if (op_conf().has_user_conf()) {
-      ret += ("op_type_name = " + op_conf().user_conf().op_type_name() + ", ");
-    }
-    for (const auto& ibn : input_bns()) {
-      ret +=
-          (" ibn:(" + ibn + ") lbn:(" + GenLogicalBlobName(BnInOp2Lbi(ibn))
-           + ") logical_shape = " + CHECK_JUST(LogicalBlobDesc4Ibn(ibn)).shape().DebugStr() + ", ");
-    }
-    return ret;
-  };
   for (const auto& sbp_signature : total_sbp_sig_list.sbp_signature()) {
     bool is_valid = true;
 
@@ -622,11 +610,6 @@ Maybe<void> Operator::FilterAndCheckValidSbpSignatureListByLogicalShape(
       // NOTE(chengcheng): disable split when logical shape cannot split at this axis
       if (sbp_parallel.has_split_parallel()) {
         const int64_t axis = sbp_parallel.split_parallel().axis();
-        CHECK_OR_RETURN(axis >= 0 && axis < logical_shape.NumAxes())
-            << "The sbp sign is ERROR because of the split axis >= shape num axes. In op: ["
-            << op_name() << "] ibn: (" << ibn << ") the split axis is = " << axis
-            << " . And the logical_shape = " << logical_shape.DebugStr()
-            << ". This Op debug str = {" << GetOpDebugShapeStr() << "}";
         if (logical_shape.At(axis) < parallel_desc.parallel_num()) {
           // NOTE(chengcheng): cannot split at this axis!
           is_valid = false;
