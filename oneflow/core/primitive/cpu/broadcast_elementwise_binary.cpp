@@ -16,7 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/primitive/include/broadcast_elementwise_binary.h"
 #include "oneflow/core/primitive/common/broadcast_elementwise_binary.h"
-#include "oneflow/core/primitive/common/binary_functor.h"
+#include "oneflow/core/primitive/cpu/binary_functor.h"
 #include "oneflow/core/primitive/cpu/type_seq.h"
 
 namespace oneflow {

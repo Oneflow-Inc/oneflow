@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/primitive/cuda/type_seq.h"
 #include "oneflow/core/stream/cuda/cuda_stream_context.h"
 #include "oneflow/core/cuda/elementwise.cuh"
-#include "oneflow/core/primitive/common/binary_functor.h"
+#include "oneflow/core/primitive/cuda/binary_functor.cuh"
 
 namespace oneflow {
 

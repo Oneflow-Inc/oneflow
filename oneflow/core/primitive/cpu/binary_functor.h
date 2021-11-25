@@ -13,44 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_PRIMITIVE_BINARY_OP_H_
-#define ONEFLOW_CORE_PRIMITIVE_BINARY_OP_H_
-
-#include "oneflow/core/primitive/include/primitive.h"
-
+#include "oneflow/core/primitive/common/binary_functor.h"
 namespace oneflow {
-
 namespace primitive {
 
-enum class BinaryOp {
-  // Math
-  kAdd,
-  kSub,
-  kMul,
-  kDiv,
-  kMax,
-  kMin,
-  kPow,
-  // Comparision
-  kEqual,
-  kNotEqual,
-  kLessThan,
-  kLessEqual,
-  kGreaterThan,
-  kGreaterEqual,
-  // Logical
-  kLogicalAnd,
-  kLogicalOr,
-  kLogicalXor,
-  // Unary Backward
-  kReluBackwardWithDyY,
-  kSigmoidBackwardWithDyY,
-  kGeluBackwardWithDyX,
+template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kPow, Src, Dst> {
+  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const { return std::pow(src0, src1); }
+};
 
+template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kPow, float16, float16> {
+  OF_DEVICE_FUNC float16 operator()(float16 src0, float16 src1) const {
+    return static_cast<float16>(std::pow(static_cast<float>(src0), static_cast<float>(src1)));
+  }
 };
 
 }  // namespace primitive
-
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_PRIMITIVE_BINARY_OP_H_

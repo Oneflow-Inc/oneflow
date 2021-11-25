@@ -245,6 +245,9 @@ void SimplifyThenLaunch(StreamContext* stream_ctx, size_t num_src0_dims, const i
   int64_t simplified_dst_dims[kMaxNumDims];
   for (int64_t i = 0; i < simplified_num_dims; ++i) {
     simplified_dst_dims[i] = std::max(simplified_src0_dims[i], simplified_src1_dims[i]);
+    // inplace check
+    if (src0 == dst) { CHECK_EQ(simplified_src0_dims[i], simplified_dst_dims[i]); }
+    if (src1 == dst) { CHECK_EQ(simplified_src1_dims[i], simplified_dst_dims[i]); }
   }
   size_t src0_pack_size = 1;
   size_t src1_pack_size = 1;
