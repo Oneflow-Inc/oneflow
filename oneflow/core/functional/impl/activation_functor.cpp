@@ -114,7 +114,7 @@ class HardTanhFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& min_val,
                            const double& max_val) const {
-    auto ctx = std::make_shared<HardTanhOpInterpCtx>();
+    auto ctx = std::make_shared<HardtanhOpInterpCtx>();
     ctx->min_val = min_val;
     ctx->max_val = max_val;
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, ctx);
@@ -132,7 +132,7 @@ class HardTanhGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& dy, const double& min_val,
                            const double& max_val) const {
-    auto ctx = std::make_shared<HardTanhGradOpInterpCtx>();
+    auto ctx = std::make_shared<HardtanhGradOpInterpCtx>();
     ctx->min_val = min_val;
     ctx->max_val = max_val;
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {y, dy}, ctx);

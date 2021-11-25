@@ -227,8 +227,9 @@ Maybe<Tensor> ConsistentToConsistent(
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   const auto& op = JUST(GetConsistentToConsistentOpExpr(grad_sbp_parallels));
   const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
-  auto ctx = std::make_shared<DefaultOpInterpCtx>() : ctx->parallel_desc = parallel_desc;
-  ctx->nd_sbp = nd_sbp;
+  auto ctx = std::make_shared<FakeOpInterpCtx>();
+  ctx->parallel_desc = parallel_desc;
+  ctx->sbp = nd_sbp;
   const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op, {consistent_tensor}, ctx));
   if (!LazyMode::is_enabled() && tensor != x && !IsConsistentTensorMetaCheckDisabled()) {
     const auto& input_consistent_id = JUST(x->transport_token());
@@ -270,11 +271,11 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
   const auto& shape = std::make_shared<Shape>();
   DataType dtype = x->dtype()->data_type();
   JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp));
-  auto ctx = std::make_shared<LocalToConsistentOpInterpCtx>();
+  auto ctx = std::make_shared<CastToConsistentOpInterpCtx>();
   ctx->shape = *shape;
   ctx->dtype = dtype;
   ctx->parallel_desc = parallel_desc;
-  ctx->nd_sbp = nd_sbp;
+  ctx->sbp = nd_sbp;
   const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op, {input}, ctx));
   return output;
 }
@@ -310,11 +311,11 @@ class LocalToConsistentFunctor {
                                     GlobalProcessCtx::LocalRank()));
     }
     Symbol<cfg::NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
-    auto ctx = std::make_shared<LocalToConsistentOpInterpCtx>();
+    auto ctx = std::make_shared<CastToConsistentOpInterpCtx>();
     ctx->shape = shape;
     ctx->dtype = dtype->data_type();
     ctx->parallel_desc = parallel_desc;
-    ctx->nd_sbp = nd_sbp;
+    ctx->sbp = nd_sbp;
     DisableCheckConsistentTensorMetaScope scope{};
     const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {input}, ctx));
     return tensor;

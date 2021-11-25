@@ -446,7 +446,7 @@ Maybe<T*> GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type
 struct LocalCallOpKernelUtil final {
   static inline Maybe<void> Compute(vm::Instruction* instruction) {
     auto* operand = LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instruction);
-    operand->mut_opkernel()->set_op_schema_for_scheduler_thread(operand->op_schema());
+    operand->mut_opkernel()->set_op_interp_ctx_for_scheduler_thread(operand->op_interp_ctx());
     DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
     if (unlikely(operand->need_temp_storage())) {
@@ -490,8 +490,8 @@ struct LocalCallOpKernelUtil final {
 
   static inline void TryInitOpKernelState(LocalCallOpKernelPhyInstrOperand* operand,
                                           DeviceCtx* device_ctx, user_op::OpKernelState** state) {
-    if (likely(operand->op_interp_ctx().state)) {
-      *state = operand->op_interp_ctx().state.get();
+    if (likely(operand->op_interp_ctx()->state)) {
+      *state = CHECK_JUST(operand->op_interp_ctx()->state).get();
       return;
     }
     operand->mut_opkernel()->TryInitOpKernelState(

@@ -75,7 +75,7 @@ class OpExprGradFunctionIf {
   // Capture forward inputs and outputs for backward.
   virtual Maybe<void> CaptureIf(AutoGradCaptureState* ctx, const TensorTuple& inputs,
                                 const TensorTuple& outputs,
-                                const std::shared_ptr<OpInterpCtx>& interp_ctx) const = 0;
+                                const std::shared_ptr<const OpInterpCtx>& interp_ctx) const = 0;
 
   virtual Maybe<void> ApplyIf(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,
                               TensorTuple* in_grads) const = 0;
@@ -90,7 +90,7 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
 
   Maybe<void> CaptureIf(AutoGradCaptureState* ctx, const TensorTuple& inputs,
                         const TensorTuple& outputs,
-                        const std::shared_ptr<OpInterpCtx>& interp_ctx) const override {
+                        const std::shared_ptr<const OpInterpCtx>& interp_ctx) const override {
     StateT* state = dynamic_cast<StateT*>(ctx);
     CHECK_NOTNULL_OR_RETURN(state);
     // Only captures detached tensor for calculating grad and set right requires_grad
@@ -117,12 +117,7 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
 
  protected:
   virtual Maybe<void> Capture(StateT* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                              const std::shared_ptr<OpInterpCtx>& interp_ctx) const {
-    return Capture(ctx, inputs, outputs, interp_ctx.attrs);
-  }
-
-  virtual Maybe<void> Capture(StateT* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                              const std::shared_ptr<OpInterpCtx>& ctx) const {
+                              const std::shared_ptr<const OpInterpCtx>& interp_ctx) const {
     UNIMPLEMENTED_THEN_RETURN();
   }
 
@@ -152,7 +147,7 @@ class FunctionOpExprGradFunction final : public OpExprGradFunctionIf {
 
   Maybe<void> CaptureIf(AutoGradCaptureState* ctx, const TensorTuple& inputs,
                         const TensorTuple& outputs,
-                        const std::shared_ptr<OpInterpCtx>& interp_ctx) const override {
+                        const std::shared_ptr<const OpInterpCtx>& interp_ctx) const override {
     // do nothing
     return Maybe<void>::Ok();
   }
@@ -185,7 +180,7 @@ class OpExprGradClosure {
   virtual ~OpExprGradClosure() = default;
 
   Maybe<void> Capture(const TensorTuple& inputs, const TensorTuple& outputs,
-                      const std::shared_ptr<OpInterpCtx>& interp_ctx) const {
+                      const std::shared_ptr<const OpInterpCtx>& interp_ctx) const {
     return impl_->CaptureIf(state_.get(), inputs, outputs, interp_ctx);
   }
 

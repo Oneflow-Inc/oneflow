@@ -69,14 +69,18 @@ size_t SrcOpConsistentTensorMetaInferArgs::hash_value() const {
 }
 
 bool ConsistentTensorMetaInferArgs::operator==(const ConsistentTensorMetaInferArgs& other) const {
-  return *(this->op_interp_ctx_) == *(other.op_interp_ctx());
-  &&this->input_consistent_tensor_metas_ == other.input_consistent_tensor_metas_;
+  // TODO(hjchen2)
+  // return *(this->op_interp_ctx_) == *(other.op_interp_ctx());
+  // && this->input_consistent_tensor_metas_ == other.input_consistent_tensor_metas_;
+  return false;
 }
 
 bool SrcOpConsistentTensorMetaInferArgs::operator==(
     const SrcOpConsistentTensorMetaInferArgs& other) const {
-  return this->attrs_ == other.attrs_ && this->parallel_desc_ == other.parallel_desc_
-         && this->nd_sbp_ == other.nd_sbp_;
+  // return *(this->op_interp_ctx_) == *(other.op_interp_ctx_) && this->parallel_desc_ ==
+  // other.parallel_desc_
+  //        && this->nd_sbp_ == other.nd_sbp_;
+  return false;
 }
 
 Maybe<void> ConsistentTensorMetaInferArgs::MakeNdSbpConstraints(
@@ -122,7 +126,7 @@ Maybe<void> ConsistentTensorMetaInferArgs::MakeNdSbpInferHints(
 }
 
 Maybe<ConsistentTensorMetaInferArgs> ConsistentTensorMetaInferArgs::New(
-    const std::shared_ptr<OpInterpCtx>& op_interp_ctx, const TensorTuple& input_tensors) {
+    const std::shared_ptr<const OpInterpCtx>& op_interp_ctx, const TensorTuple& input_tensors) {
   std::shared_ptr<ConsistentTensorMetaInferArgs> infer_args(new ConsistentTensorMetaInferArgs());
   infer_args->op_interp_ctx_ = op_interp_ctx;
   infer_args->input_consistent_tensor_metas_.resize(input_tensors.size());
@@ -131,7 +135,7 @@ Maybe<ConsistentTensorMetaInferArgs> ConsistentTensorMetaInferArgs::New(
 }
 
 Maybe<SrcOpConsistentTensorMetaInferArgs> SrcOpConsistentTensorMetaInferArgs::New(
-    const std::shared_ptr<OpInterpCtx>& op_interp_ctx) {
+    const std::shared_ptr<const OpInterpCtx>& op_interp_ctx) {
   std::shared_ptr<SrcOpConsistentTensorMetaInferArgs> infer_args(
       new SrcOpConsistentTensorMetaInferArgs());
   infer_args->op_interp_ctx_ = op_interp_ctx;
@@ -151,7 +155,8 @@ Maybe<void> ConsistentTensorMetaInferArgs::InitInputConsistentTensorMetas(
 
 namespace {
 
-Maybe<Operator> MakeOp(const UserOpExpr& user_op_expr, const std::shared_ptr<OpInterpCtx>& ctx,
+Maybe<Operator> MakeOp(const UserOpExpr& user_op_expr,
+                       const std::shared_ptr<const OpInterpCtx>& ctx,
                        const std::string& device_tag) {
   OperatorConf op_conf;
   JUST(user_op_expr.BuildOpConf(&op_conf, ctx));
@@ -180,7 +185,7 @@ class UserOpExprOpDeviceInferContext final : public user_op::DeviceInferContext 
   UserOpExprOpDeviceInferContext(const UserOpExpr* user_op_expr,
                                  const ConsistentTensorMetaInferArgs* infer_args)
       : user_op_expr_(user_op_expr),
-        composed_attrs_(infer_args->attrs(), user_op_expr->base_attrs()),
+        op_interp_ctx_(infer_args->op_interp_ctx()),
         in_tensor_devices_(user_op_expr_->input_size()),
         out_tensor_devices_(user_op_expr_->output_size()) {
     for (int i = 0; i < user_op_expr_->input_size(); ++i) {
@@ -218,11 +223,10 @@ class UserOpExprOpDeviceInferContext final : public user_op::DeviceInferContext 
 
  private:
   const void* Attr4Name(const std::string& attr_name) const override {
-    // return composed_attrs_.Attr4Name(attr_name);
-    UNIMPLEMENTED();
-    return nullptr;
+    return CHECK_JUST(op_interp_ctx_->GetAttr(attr_name.data()));
   }
   const UserOpExpr* user_op_expr_;
+  const std::shared_ptr<const OpInterpCtx> op_interp_ctx_;
   std::vector<Symbol<Device>> in_tensor_devices_;
   std::vector<Symbol<Device>> out_tensor_devices_;
 };
@@ -253,11 +257,12 @@ class UserOpExprOpDeviceInferContext final : public user_op::DeviceInferContext 
     // Infer OpArgMutConsistentTensorMeta.
     const auto& input_metas = infer_args.input_consistent_tensor_metas();
     JUST(user_op_expr.InferLogicalShapeAndDType(
-        infer_args.attrs(), parallel_desc,
+        infer_args.op_interp_ctx(), parallel_desc,
         [&](int32_t i) { return &*input_metas.at(i).tensor_meta(); },
         [&](int32_t i) { return output_mut_metas.at(i).mut_tensor_meta(); }));
   }
-  const auto& op = JUST(MakeOp(user_op_expr, infer_args.attrs(), parallel_desc->device_tag()));
+  const auto& op =
+      JUST(MakeOp(user_op_expr, infer_args.op_interp_ctx(), parallel_desc->device_tag()));
   JUST(op->FillOpParallelDesc(parallel_desc.shared_from_symbol()));
   {
     // Infer parallel distribution.
@@ -316,7 +321,7 @@ class UserOpExprOpDeviceInferContext final : public user_op::DeviceInferContext 
       return nullptr;
     };
     JUST(user_op_expr.InferLogicalShapeAndDType(
-        infer_args.attrs(), parallel_desc, GetInputTensorMeta,
+        infer_args.op_interp_ctx(), parallel_desc, GetInputTensorMeta,
         [&](int32_t i) { return output_mut_metas.at(i).mut_tensor_meta(); }));
   }
   auto result = std::make_unique<ConsistentTensorInferResult>(user_op_expr.input_size(),

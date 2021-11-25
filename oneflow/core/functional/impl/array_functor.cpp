@@ -40,7 +40,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/lazy_mode.h"
 
-#include "oneflow/core/framework/ctx.h"
+#include "oneflow/core/framework/op_interp_ctx.h"
 
 namespace oneflow {
 namespace one {
@@ -140,8 +140,7 @@ class ConsistentConstantFunctor {
       ctx->is_floating_value = true;
       ctx->floating_value = JUST(value.As<double>());
     }
-    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    ctx->nd_sbp = nd_sbp;
+    ctx->sbp = JUST(GetNdSbp(sbp_tuple));
     ctx->parallel_desc = placement;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }
@@ -198,9 +197,8 @@ class ConsistentEmptyFunctor {
     auto ctx = std::make_shared<EmptyOpInterpCtx>();
     ctx->shape = shape;
     ctx->dtype = dtype->data_type();
-    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
     ctx->parallel_desc = placement;
-    ctx->nd_sbp = nd_sbp;
+    ctx->sbp = JUST(GetNdSbp(sbp_tuple));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }
 
@@ -316,21 +314,21 @@ class WhereScalarXYFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition, const Scalar& x_scalar,
                            const Scalar& y_scalar) const {
-    auto ctx = std::make_shared<WhereScalarXYOpInterpCtx>();
+    auto ctx = std::make_shared<WhereScalarXyOpInterpCtx>();
     if (x_scalar.IsFloatingPoint() && y_scalar.IsFloatingPoint()) {
       ctx->x_float_operand = JUST(x_scalar.As<double>());
       ctx->y_float_operand = JUST(y_scalar.As<double>());
       ctx->has_x_float_operand = true;
-      ctx - has_y_float_operand = true;
-      ctx - has_x_int_operand = false;
-      ctx - has_y_int_operand = false;
+      ctx->has_y_float_operand = true;
+      ctx->has_x_int_operand = false;
+      ctx->has_y_int_operand = false;
     } else if (x_scalar.IsIntegral() && y_scalar.IsIntegral()) {
       ctx->x_float_operand = JUST(x_scalar.As<int64_t>());
       ctx->y_float_operand = JUST(y_scalar.As<int64_t>());
       ctx->has_x_float_operand = false;
-      ctx - has_y_float_operand = false;
-      ctx - has_x_int_operand = true;
-      ctx - has_y_int_operand = true;
+      ctx->has_y_float_operand = false;
+      ctx->has_x_int_operand = true;
+      ctx->has_y_int_operand = true;
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be float or int.";
     }
@@ -349,7 +347,7 @@ class ArgWhereFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
                                 const Symbol<DType>& dtype) const {
-    auto ctx = std::make_shared<ArgWhereOpInterpCtx>();
+    auto ctx = std::make_shared<ArgwhereOpInterpCtx>();
     ctx->dtype = dtype->data_type();
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, ctx);
   }
@@ -499,7 +497,7 @@ class ExpandGradFunctor {
     auto ctx = std::make_shared<ExpandGradOpInterpCtx>();
     ctx->logical_out_shape = logical_in_shape;
     ctx->logical_expand_shape = logical_expand_shape;
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, ctx);
   }
 
  private:
@@ -597,7 +595,7 @@ class DimScatterFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
                            const std::shared_ptr<one::Tensor>& src) const {
-    auto ctx = std::make_shared<DimScatterOpInterpCtx>();
+    auto ctx = std::make_shared<DimScatterUpdateOpInterpCtx>();
     ctx->dim = dim;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, ctx);
   }

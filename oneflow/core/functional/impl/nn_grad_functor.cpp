@@ -108,25 +108,45 @@ class ConvDataGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class PoolingNdGradFunctor {
+template<int Ndims, typename ContextT>
+class MaxPoolingNdGradFunctorImpl {
  public:
-  PoolingNdGradFunctor() {
-    for (const auto& mode : {"max"}) {
-      for (int ndims = 1; ndims <= 3; ++ndims) {
-        const auto& op_type_name = GetOpTypeName(mode, ndims);
-        op_expr_map_[op_type_name] = CHECK_JUST(one::OpBuilder(op_type_name)
-                                                    .Input("x")
-                                                    .Input("y")
-                                                    .Input("indice")
-                                                    .Input("dy")
-                                                    .Output("dx")
-                                                    .Build());
-      }
-    }
+  explicit MaxPoolingNdGradFunctorImpl() {
+    op_ = CHECK_JUST(one::OpBuilder("maxpool_" + std::to_string(Ndims) + "d_grad")
+                         .Input("x")
+                         .Input("y")
+                         .Input("indice")
+                         .Input("dy")
+                         .Output("dx")
+                         .Build());
   }
-  static std::string GetOpTypeName(const std::string& mode, const int32_t& ndims) {
-    return mode + "pool_" + std::to_string(ndims) + "d_grad";
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& indice,
+                           const std::shared_ptr<one::Tensor>& dy, const std::string& data_format,
+                           const std::vector<int32_t>& padding,
+                           const std::vector<int32_t>& kernel_size,
+                           const std::vector<int32_t>& stride, const std::vector<int32_t>& dilation,
+                           const bool& return_indices, const bool& ceil_mode) const override {
+    auto ctx = std::make_shared<ContextT>();
+    ctx->data_format = data_format;
+    ctx->padding = padding;
+    ctx->kernel_size = kernel_size;
+    ctx->stride = stride;
+    ctx->dilation = dilation;
+    ctx->return_indices = return_indices;
+    ctx->ceil_mode = ceil_mode;
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, y, indice, dy}, ctx);
   }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class MaxPoolingNdGradFunctor {
+ public:
+  MaxPoolingNdGradFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& indice,
@@ -136,39 +156,149 @@ class PoolingNdGradFunctor {
                            const std::vector<int32_t>& kernel_size,
                            const std::vector<int32_t>& stride, const std::vector<int32_t>& dilation,
                            const bool& return_indices, const bool& ceil_mode) const {
-    auto ctx = std::make_shared<PoolingNdGradOpInterpCtx>();
+    if (mode != "max") {
+      return Error::RuntimeError() << "Only max mode is supported for `PoolingNdGrad`.";
+    }
+    if (ndims < 1 || ndims > 3) {
+      return Error::RuntimeError()
+             << ndims << "d is not supported for `PoolingNdGrad`, and 1d, 2d or 3d is expected.";
+    }
+    if (ndims == 1) {
+      return pool1d_func_(x, y, indice, dy, data_format, padding, kernel_size, stride, dilation,
+                          return_indices, ceil_mode);
+    } else if (ndims == 2) {
+      return pool2d_func_(x, y, indice, dy, data_format, padding, kernel_size, stride, dilation,
+                          return_indices, ceil_mode);
+    } else {
+      return pool3d_func_(x, y, indice, dy, data_format, padding, kernel_size, stride, dilation,
+                          return_indices, ceil_mode);
+    }
+  }
+
+ protected:
+  MaxPoolingNdGradFunctorImpl<1, EagerMaxPool1DGradOpInterpCtx> pool1d_func_;
+  MaxPoolingNdGradFunctorImpl<2, EagerMaxPool2DGradOpInterpCtx> pool2d_func_;
+  MaxPoolingNdGradFunctorImpl<3, EagerMaxPool3DGradOpInterpCtx> pool3d_func_;
+};
+
+template<int Ndims, typename ContextT>
+class AvgPoolingNdGradFunctorImpl {
+ public:
+  AvgPoolingNdGradFunctorImpl() {
+    op_ = CHECK_JUST(one::OpBuilder("avgpool_" + std::to_string(Ndims) + "d_grad")
+                         .Input("x")
+                         .Input("y")
+                         .Input("dy")
+                         .Output("dx")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& dy, const std::string& data_format,
+                           const std::vector<int32_t>& padding,
+                           const std::vector<int32_t>& kernel_size,
+                           const std::vector<int32_t>& stride, const bool& ceil_mode,
+                           const bool& count_include_pad, const int64_t& divisor_override) const {
+    auto ctx = std::make_shared<ContextT>();
     ctx->data_format = data_format;
     ctx->padding = padding;
     ctx->kernel_size = kernel_size;
     ctx->stride = stride;
-    ctx->dilation = dilation;
-    ctx->return_indices = return_indices;
     ctx->ceil_mode = ceil_mode;
-    const auto& op_type_name = GetOpTypeName(mode, ndims);
-    const auto& it = op_expr_map_.find(op_type_name);
-    CHECK_OR_RETURN(it != op_expr_map_.end())
-        << "Encounter unsupported op " << op_type_name << " in PoolingNdGradFunctor.";
-    CHECK_NOTNULL_OR_RETURN(it->second);
-    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, y, indice, dy}, ctx);
+    ctx->count_include_pad = count_include_pad;
+    ctx->divisor_override = divisor_override;
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, y, dy}, ctx);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class AvgPoolingNdGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& dy, const int32_t& ndims,
+                           const std::string& data_format, const std::vector<int32_t>& padding,
+                           const std::vector<int32_t>& kernel_size,
+                           const std::vector<int32_t>& stride, const bool& ceil_mode,
+                           const bool& count_include_pad, const int64_t& divisor_override) const {
+    if (ndims < 1 || ndims > 3) {
+      return Error::RuntimeError()
+             << ndims << "d pooling is not supported. Only 1d, 2d or 3d is expected.";
+    }
+    if (ndims == 1) {
+      return pool1d_func_(x, y, dy, data_format, padding, kernel_size, stride, ceil_mode,
+                          count_include_pad, divisor_override);
+    } else if (ndims == 2) {
+      return pool2d_func_(x, y, dy, data_format, padding, kernel_size, stride, ceil_mode,
+                          count_include_pad, divisor_override);
+    } else {
+      return pool3d_func_(x, y, dy, data_format, padding, kernel_size, stride, ceil_mode,
+                          count_include_pad, divisor_override);
+    }
   }
 
  protected:
-  std::unordered_map<std::string, std::shared_ptr<OpExpr>> op_expr_map_;
+  AvgPoolingNdGradFunctorImpl<1, EagerAvgPool1DOpInterpCtx> pool1d_func_;
+  AvgPoolingNdGradFunctorImpl<2, EagerAvgPool2DOpInterpCtx> pool2d_func_;
+  AvgPoolingNdGradFunctorImpl<3, EagerAvgPool3DOpInterpCtx> pool3d_func_;
+};
+
+class PoolNdGradFunctorImplBase {
+ public:
+  virtual Maybe<Tensor> operator()(
+      const std::shared_ptr<one::Tensor>& x, const std::shared_ptr<one::Tensor>& y,
+      const std::shared_ptr<one::Tensor>& dy, const std::string& data_format,
+      const std::string& padding, const std::vector<int32_t>& padding_before,
+      const std::vector<int32_t>& padding_after, const std::vector<int32_t>& pool_size,
+      const std::vector<int32_t>& strides, const bool& ceil_mode) const = 0;
+};
+
+template<int Ndims, typename ContextT>
+class PoolNdGradFunctorImpl : public PoolNdGradFunctorImplBase {
+ public:
+  PoolNdGradFunctorImpl(const std::string& mode) {
+    op_ = CHECK_JUST(one::OpBuilder(mode + "_pool_" + std::to_string(Ndims) + "d_grad")
+                         .Input("x")
+                         .Input("y")
+                         .Input("dy")
+                         .Output("dx")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& dy, const std::string& data_format,
+                           const std::string& padding, const std::vector<int32_t>& padding_before,
+                           const std::vector<int32_t>& padding_after,
+                           const std::vector<int32_t>& pool_size,
+                           const std::vector<int32_t>& strides, const bool& ceil_mode) const {
+    auto ctx = std::make_shared<ContextT>();
+    ctx->data_format = data_format;
+    ctx->padding = padding;
+    ctx->padding_before = padding_before;
+    ctx->padding_after = padding_after;
+    ctx->pool_size = pool_size;
+    ctx->strides = strides;
+    ctx->ceil_mode = ceil_mode;
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, y, dy}, ctx);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class PoolNdGradFunctor {
  public:
   PoolNdGradFunctor() {
-    for (const auto& mode : {"max", "avg"}) {
-      for (int ndims = 1; ndims <= 3; ++ndims) {
-        const auto& op_type_name = GetOpTypeName(mode, ndims);
-        op_expr_map_[op_type_name] = CHECK_JUST(
-            one::OpBuilder(op_type_name).Input("x").Input("y").Input("dy").Output("dx").Build());
-      }
-    }
-  }
-  static std::string GetOpTypeName(const std::string& mode, const int32_t& ndims) {
-    return mode + "_pool_" + std::to_string(ndims) + "d_grad";
+    maxpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<1, LazyMaxPool1DGradOpInterpCtx>("max"));
+    maxpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<2, LazyMaxPool2DGradOpInterpCtx>("max"));
+    maxpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<3, LazyMaxPool3DGradOpInterpCtx>("max"));
+    avgpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<1, LazyAvgPool1DGradOpInterpCtx>("avg"));
+    avgpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<2, LazyAvgPool2DGradOpInterpCtx>("avg"));
+    avgpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<3, LazyAvgPool3DGradOpInterpCtx>("avg"));
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y,
@@ -178,53 +308,72 @@ class PoolNdGradFunctor {
                            const std::vector<int32_t>& padding_after,
                            const std::vector<int32_t>& pool_size,
                            const std::vector<int32_t>& strides, const bool& ceil_mode) const {
-    auto ctx = std::make_shared<PoolNdGradOpInterpCtx>();
-    ctx->data_format = data_format;
-    ctx->padding = padding;
-    ctx->padding_before = padding_before;
-    ctx->padding_after = padding_after;
-    ctx->pool_size = pool_size;
-    ctx->strides = strides;
-    ctx->ceil_mode = ceil_mode;
-    const auto& op_type_name = GetOpTypeName(mode, ndims);
-    const auto& it = op_expr_map_.find(op_type_name);
-    CHECK_OR_RETURN(it != op_expr_map_.end())
-        << "Encounter unsupported op " << op_type_name << " in PoolNdGradFunctor.";
-    CHECK_NOTNULL_OR_RETURN(it->second);
-    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, y, dy}, ctx);
+    if (ndims < 1 || ndims > 3) {
+      return Error::RuntimeError()
+             << ndims << "d is not supported for `PoolingNdGrad`, and 1d, 2d or 3d is expected.";
+    }
+    if (mode == "max") {
+      return (*maxpool_funcs_.at(ndims - 1))(x, y, dy, data_format, padding, padding_before,
+                                             padding_after, pool_size, strides, ceil_mode);
+    } else if (mode == "avg") {
+      return (*avgpool_funcs_.at(ndims - 1))(x, y, dy, data_format, padding, padding_before,
+                                             padding_after, pool_size, strides, ceil_mode);
+    }
+    return Error::RuntimeError()
+           << mode << " mode is not supported for `PoolingNdGrad`, and max or avg is expected.";
   }
 
  protected:
-  std::unordered_map<std::string, std::shared_ptr<OpExpr>> op_expr_map_;
+  std::vector<std::shared_ptr<PoolNdGradFunctorImplBase>> maxpool_funcs_;
+  std::vector<std::shared_ptr<PoolNdGradFunctorImplBase>> avgpool_funcs_;
+};
+
+template<int Ndims, typename ContextT>
+class AdaptiveAvgPoolNdGradFunctorImpl {
+ public:
+  AdaptiveAvgPoolNdGradFunctorImpl() {
+    op_ = CHECK_JUST(one::OpBuilder("adaptive_avg_pool" + std::to_string(Ndims) + "d_grad")
+                         .Input("x")
+                         .Input("dy")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& dy) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, dy});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class AdaptivePoolNdGradFunctor {
  public:
-  AdaptivePoolNdGradFunctor() {
-    for (const auto& mode : {"avg"}) {
-      for (int ndims = 1; ndims <= 3; ++ndims) {
-        const auto& op_type_name = GetOpTypeName(mode, ndims);
-        op_expr_map_[op_type_name] =
-            CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Input("dy").Output("dx").Build());
-      }
-    }
-  }
-  static std::string GetOpTypeName(const std::string& mode, const int32_t& ndims) {
-    return "adaptive_" + mode + "_pool" + std::to_string(ndims) + "d_grad";
-  }
+  AdaptivePoolNdGradFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& dy, const std::string& mode,
                            const int32_t& ndims) const {
-    const auto& op_type_name = GetOpTypeName(mode, ndims);
-    const auto& it = op_expr_map_.find(op_type_name);
-    CHECK_OR_RETURN(it != op_expr_map_.end())
-        << "Encounter unsupported op " << op_type_name << " in AdaptivePoolNdGradFunctor.";
-    CHECK_NOTNULL_OR_RETURN(it->second);
-    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, dy});
+    if (mode != "avg") {
+      return Error::RuntimeError() << "Only avg mode is supported for `AdaptivePoolNdGrad`.";
+    }
+    if (ndims < 1 || ndims > 3) {
+      return Error::RuntimeError()
+             << ndims
+             << "d is not supported for `AdaptivePoolNdGrad`, and 1d, 2d or 3d is expected.";
+    }
+    if (ndims == 1) {
+      return pool1d_func_(x, dy);
+    } else if (ndims == 2) {
+      return pool2d_func_(x, dy);
+    } else {
+      return pool3d_func_(x, dy);
+    }
   }
 
  protected:
-  std::unordered_map<std::string, std::shared_ptr<OpExpr>> op_expr_map_;
+  AdaptiveAvgPoolNdGradFunctorImpl<1, AdaptiveAvgPool1DOpInterpCtx> pool1d_func_;
+  AdaptiveAvgPoolNdGradFunctorImpl<2, AdaptiveAvgPool2DOpInterpCtx> pool2d_func_;
+  AdaptiveAvgPoolNdGradFunctorImpl<3, AdaptiveAvgPool3DOpInterpCtx> pool3d_func_;
 };
 
 class SparseCrossEntropyGradFunctor {
@@ -332,7 +481,7 @@ class KLDivLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target, const bool log_target,
                            const std::string& reduction) const {
-    auto ctx = std::make_shared<KLDivLossGradOpInterpCtx>();
+    auto ctx = std::make_shared<KlDivLossGradOpInterpCtx>();
     ctx->log_target = log_target;
     ctx->reduction = reduction;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, target, dy}, ctx);
@@ -405,7 +554,7 @@ class BinaryCrossEntropyLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight,
                            const std::string& reduction) const {
-    auto ctx = std::make_shared<BinaryCrossEntropyLossGradOpInterpCtx>();
+    auto ctx = std::make_shared<BinaryCrossEntropyGradOpInterpCtx>();
     ctx->reduction = reduction;
     if (weight) {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_weight_, {input, target, JUST(weight), dy},
@@ -458,7 +607,7 @@ class BinaryCrossEntropyWithLogitsLossGradFunctor {
                            const Optional<one::Tensor>& weight,
                            const Optional<one::Tensor>& pos_weight,
                            const std::string& reduction) const {
-    auto ctx = std::make_shared<BinaryCrossEntropyWithLogitsLossGradOpInterpCtx>();
+    auto ctx = std::make_shared<BinaryCrossEntropyWithLogitsGradOpInterpCtx>();
     ctx->reduction = reduction;
     ctx->has_pos_weight = pos_weight.has_value();
     if (weight) {
@@ -606,9 +755,8 @@ class PadGradFunctor {
     CHECK_LE_OR_RETURN(pad.size(), padding_size)
         << "Pad size should less than or equal to input axes * 2.";
 
-    autp ctx = std::make_shared<PadGradOpInterpCtx>();
-    ctx->padding = pad;
     if (mode == "constant") {
+      auto ctx = std::make_shared<PadGradOpInterpCtx>();
       std::vector<int64_t> pad_before(ndim, 0);
       std::vector<int64_t> pad_after(ndim, 0);
       const int64_t pad_pair = pad.size() / 2;
@@ -628,8 +776,12 @@ class PadGradFunctor {
       }
       return OpInterpUtil::Dispatch<Tensor>(*pad_grad_, {dy}, ctx);
     } else if (mode == "reflect") {
+      auto ctx = std::make_shared<ReflectionPad2DGradOpInterpCtx>();
+      ctx->padding = pad;
       return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_grad_, {dy}, ctx);
     } else if (mode == "replicate") {
+      auto ctx = std::make_shared<ReplicationPad2DGradOpInterpCtx>();
+      ctx->padding = pad;
       return OpInterpUtil::Dispatch<Tensor>(*replicate_pad_grad_, {dy}, ctx);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode
@@ -641,45 +793,6 @@ class PadGradFunctor {
   std::shared_ptr<OpExpr> pad_grad_;
   std::shared_ptr<OpExpr> reflect_pad_grad_;
   std::shared_ptr<OpExpr> replicate_pad_grad_;
-};
-
-class AvgPoolingNdGradFunctor {
- public:
-  AvgPoolingNdGradFunctor() {
-    for (int ndims = 1; ndims <= 3; ++ndims) {
-      const auto& op_type_name = GetOpTypeName(ndims);
-      op_expr_map_[op_type_name] = CHECK_JUST(
-          one::OpBuilder(op_type_name).Input("x").Input("y").Input("dy").Output("dx").Build());
-    }
-  }
-  static std::string GetOpTypeName(const int32_t& ndims) {
-    return "avgpool_" + std::to_string(ndims) + "d_grad";
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& y,
-                           const std::shared_ptr<one::Tensor>& dy, const int32_t& ndims,
-                           const std::string& data_format, const std::vector<int32_t>& padding,
-                           const std::vector<int32_t>& kernel_size,
-                           const std::vector<int32_t>& stride, const bool& ceil_mode,
-                           const bool& count_include_pad, const int64_t& divisor_override) const {
-    auto ctx = std::make_shared<AvgPoolingNdGradOpInterpCtx>();
-    ctx->data_format = data_format;
-    ctx->padding = padding;
-    ctx->kernel_size = kernel_size;
-    ctx->stride = stride;
-    ctx->ceil_mode = ceil_mode;
-    ctx->count_include_pad = count_include_pad;
-    ctx->divisor_override = divisor_override;
-    const auto& op_type_name = GetOpTypeName(ndims);
-    const auto& it = op_expr_map_.find(op_type_name);
-    CHECK_OR_RETURN(it != op_expr_map_.end())
-        << "Encounter unsupported op " << op_type_name << " in PoolingNdGradFunctor.";
-    CHECK_NOTNULL_OR_RETURN(it->second);
-    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, y, dy}, ctx);
-  }
-
- protected:
-  std::unordered_map<std::string, std::shared_ptr<OpExpr>> op_expr_map_;
 };
 
 class NormalizationGradFunctor {
@@ -782,8 +895,7 @@ class LayerNormParamGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy, const int64_t& begin_params_axis,
                            const double& epsilon) const {
     auto ctx = std::make_shared<LayerNormParamGradOpInterpCtx>();
-    ctx->begin_norm_axis = begin_norm_axis;
-    ctx->epsilon = epsilon;
+    ctx->begin_params_axis = begin_params_axis;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, ctx);
   }
 
@@ -809,8 +921,7 @@ class LayerNormAffineParamGradFunctor {
                                 const std::shared_ptr<one::Tensor>& normalized,
                                 const int64_t& begin_params_axis, const double& epsilon) const {
     auto ctx = std::make_shared<LayerNormParamGradOpInterpCtx>();
-    ctx->begin_norm_axis = begin_norm_axis;
-    ctx->epsilon = epsilon;
+    ctx->begin_params_axis = begin_params_axis;
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, gamma, normalized}, ctx);
   }
 
@@ -849,7 +960,7 @@ class FusedScaleTrilSoftmaxMaskScaleGradFunctor {
                            const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& mask, const int64_t diagonal,
                            const float tril_scale_value, const float mask_scale_value) const {
-    auto ctx = std::make_shared<FusedScaleTrilSoftmaxMaskScaleGradOpInterpCtx>();
+    auto ctx = std::make_shared<FusedTrilScaleSoftmaxMaskScaleGradOpInterpCtx>();
     ctx->diagonal = diagonal;
     ctx->tril_scale_value = tril_scale_value;
     ctx->mask_scale_value = mask_scale_value;
@@ -880,7 +991,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::CombinedMarginLossGradFunctor>("CombinedMarginLossGrad");
   m.add_functor<impl::AffineGridGradFunctor>("AffineGridGrad");
   m.add_functor<impl::GridSampleGradFunctor>("GridSampleGrad");
-  m.add_functor<impl::PoolingNdGradFunctor>("PoolingNdGrad");
+  m.add_functor<impl::MaxPoolingNdGradFunctor>("PoolingNdGrad");
   m.add_functor<impl::PadGradFunctor>("PadGrad");
   m.add_functor<impl::AvgPoolingNdGradFunctor>("AvgPoolingNdGrad");
   m.add_functor<impl::NormalizationGradFunctor>("NormalizationGrad");

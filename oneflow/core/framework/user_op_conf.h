@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/op_interp_ctx.h"
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
@@ -61,26 +62,29 @@ class UserOpConfWrapper final {
 
   template<typename T>
   const T& attr(const std::string& attr_name) const {
-    return CHECK_JUST(attrs_.GetAttr<T>(attr_name));
+    return *(reinterpret_cast<const T*>(Attr4Name(attr_name)));
   }
 
   template<typename T>
   const T& attr_or_default(const std::string& attr_name, const T& default_val) const {
-    const auto& it = attrs_.find(attr_name);
-    if (it != attrs_.end()) {
-      return CHECK_JUST(attrs_.GetAttr<T>(attr_name));
-    } else {
-      return default_val;
-    }
+    // TODO(hjchen2)
+    // const auto& it = op_interp_ctx_->find(attr_name);
+    // if (it != op_interp_ctx_->end()) {
+    //   return CHECK_JUST(op_interp_ctx_->GetAttr<T>(attr_name));
+    // } else {
+    //   return default_val;
+    // }
+    return default_val;
   }
 
-  const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const;
+  const void* Attr4Name(const std::string& attr_name) const;
 
  private:
   UserOpConfWrapper() = default;
   friend class UserOpConfWrapperBuilder;
 
   std::shared_ptr<const OperatorConf> op_conf_;
+  std::shared_ptr<const OpInterpCtx> op_interp_ctx_;
 };
 
 using UserOpInputGradGetFn = std::function<const std::string&()>;

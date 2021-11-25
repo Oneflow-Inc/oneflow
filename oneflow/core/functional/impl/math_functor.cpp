@@ -70,6 +70,7 @@ class AddNFunctor {
   std::vector<std::shared_ptr<OpExpr>> op_;
 };
 
+template<typename ContextT>
 class ScalarMathBaseFunctor {
  public:
   explicit ScalarMathBaseFunctor(std::string op_name) {
@@ -81,7 +82,7 @@ class ScalarMathBaseFunctor {
     if (std::dynamic_pointer_cast<StaticZerosTensor>(x) && op_->op_type_name() == "scalar_mul") {
       return x;
     }
-    auto ctx = std::make_shared<ScalarMathOpInterpCtx>();
+    auto ctx = std::make_shared<ContextT>();
     TensorProcessor tensor_processor;
     Symbol<DType> lowest_dtype;
     if (scalar.IsFloatingPoint()) {
@@ -122,9 +123,9 @@ class ScalarMathBaseFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ScalarAddFunctor : public ScalarMathBaseFunctor {
+class ScalarAddFunctor : public ScalarMathBaseFunctor<ScalarAddOpInterpCtx> {
  public:
-  ScalarAddFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_add") {}
+  ScalarAddFunctor() : ScalarMathBaseFunctor<ScalarAddOpInterpCtx>(/*op_name=*/"scalar_add") {}
 };
 
 class ScalarAdd2Functor {
@@ -149,9 +150,9 @@ class ScalarSub2Functor {
   }
 };
 
-class ScalarMulFunctor : public ScalarMathBaseFunctor {
+class ScalarMulFunctor : public ScalarMathBaseFunctor<ScalarMulOpInterpCtx> {
  public:
-  ScalarMulFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_mul") {}
+  ScalarMulFunctor() : ScalarMathBaseFunctor<ScalarMulOpInterpCtx>(/*op_name=*/"scalar_mul") {}
 };
 
 class ScalarMul2Functor {
@@ -175,9 +176,9 @@ class ScalarDiv2Functor {
   }
 };
 
-class ScalarPowFunctor : public ScalarMathBaseFunctor {
+class ScalarPowFunctor : public ScalarMathBaseFunctor<ScalarPowOpInterpCtx> {
  public:
-  ScalarPowFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_pow") {}
+  ScalarPowFunctor() : ScalarMathBaseFunctor<ScalarPowOpInterpCtx>(/*op_name=*/"scalar_pow") {}
 };
 
 class ScalarPowGradFunctor {
@@ -206,14 +207,15 @@ class ScalarPowGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ScalarFloorDivFunctor : public ScalarMathBaseFunctor {
+class ScalarFloorDivFunctor : public ScalarMathBaseFunctor<ScalarFloordivOpInterpCtx> {
  public:
-  ScalarFloorDivFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_floordiv") {}
+  ScalarFloorDivFunctor()
+      : ScalarMathBaseFunctor<ScalarFloordivOpInterpCtx>(/*op_name=*/"scalar_floordiv") {}
 };
 
-class ScalarFModFunctor : public ScalarMathBaseFunctor {
+class ScalarFModFunctor : public ScalarMathBaseFunctor<ScalarFmodOpInterpCtx> {
  public:
-  ScalarFModFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_fmod") {}
+  ScalarFModFunctor() : ScalarMathBaseFunctor<ScalarFmodOpInterpCtx>(/*op_name=*/"scalar_fmod") {}
 };
 
 class ReduceMaxFunctor {
@@ -284,7 +286,7 @@ class ReduceSumFunctor {
     TensorProcessor tensor_processor;
     JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, std::make_shared<OpInterpCtx>(ctx));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, ctx);
   }
 
  private:
@@ -514,8 +516,8 @@ class EyeFunctor {
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     auto ctx = std::make_shared<EyeOpInterpCtx>();
-    ctx->n = JUST(n.As<int64_t>());
-    ctx->m = JUST(m.value_or(n).As<int64_t>());
+    ctx->rows = JUST(n.As<int64_t>());
+    ctx->cols = JUST(m.value_or(n).As<int64_t>());
     ctx->dtype = dtype ? JUST(dtype)->data_type() : DataType::kFloat;
     ctx->device = device;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
@@ -533,11 +535,11 @@ class ConsistentEyeFunctor {
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     auto ctx = std::make_shared<EyeOpInterpCtx>();
-    ctx->n = JUST(n.As<int64_t>());
-    ctx->m = JUST(m.value_or(n).As<int64_t>());
+    ctx->rows = JUST(n.As<int64_t>());
+    ctx->cols = JUST(m.value_or(n).As<int64_t>());
     ctx->dtype = dtype ? JUST(dtype)->data_type() : DataType::kFloat;
     ctx->parallel_desc = placement;
-    ctx->nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    ctx->sbp = JUST(GetNdSbp(sbp_tuple));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }
 
@@ -567,7 +569,7 @@ class Transpose2dimFunctor {
     for (int32_t i = 0; i < ndim; ++i) { permute.push_back(i); }
     std::swap(permute[dim_0], permute[dim_1]);
 
-    auto ctx = std::make_shared<Transpose2dimOpInterpCtx>();
+    auto ctx = std::make_shared<TransposeOpInterpCtx>();
     ctx->perm = permute;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
@@ -629,9 +631,8 @@ class ConsistentArangeFunctor {
       ctx->float_delta = JUST(delta.As<double>());
     }
     ctx->parallel_desc = placement;
-    ctx->nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {},
-                                          std::make_shared<OpInterpCtx>(attrs, placement, nd_sbp));
+    ctx->sbp = JUST(GetNdSbp(sbp_tuple));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }
 
  private:
@@ -656,7 +657,7 @@ class CastFunctor {
 
     auto ctx = std::make_shared<CastOpInterpCtx>();
     ctx->dtype = dtype->data_type();
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx;
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
  private:

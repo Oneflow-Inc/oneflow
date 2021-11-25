@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/common/optional.h"
 
-#include "oneflow/core/framework/op_schema.h"
+#include "oneflow/core/framework/op_interp_ctx.h"
 
 namespace oneflow {
 
@@ -40,7 +40,7 @@ class OpExprInterpreter {
   virtual ~OpExprInterpreter() = default;
 
   Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple* outputs) const {
-    return Apply(op, inputs, outputs, std::make_shared<DefaultOpInterpCtx>());
+    return Apply(op, inputs, outputs, std::make_shared<FakeOpInterpCtx>());
   }
 
   virtual Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple* outputs,
@@ -135,7 +135,7 @@ class AutogradInterpreter {
   virtual ~AutogradInterpreter() = default;
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs) const {
-    return Apply(op_expr, inputs, outputs, std::make_shared<DefaultOpInterpCtx>());
+    return Apply(op_expr, inputs, outputs, std::make_shared<FakeOpInterpCtx>());
   }
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,

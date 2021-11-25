@@ -32,7 +32,7 @@ class OpInterpUtil {
  public:
   template<typename T>
   static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs) {
-    return Dispatch<T>(op_expr, inputs, std::make_shared<DefaultOpInterpCtx>());
+    return Dispatch<T>(op_expr, inputs, std::make_shared<FakeOpInterpCtx>());
   }
 
   template<typename T>
@@ -41,7 +41,7 @@ class OpInterpUtil {
 
   static Maybe<void> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
                               TensorTuple* outputs) {
-    return Dispatch(op_expr, inputs, outputs, std::make_shared<DefaultOpInterpCtx>());
+    return Dispatch(op_expr, inputs, outputs, std::make_shared<FakeOpInterpCtx>());
   }
 
   static Maybe<void> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,

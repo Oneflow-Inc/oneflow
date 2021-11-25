@@ -228,12 +228,13 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
   if (parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
   std::shared_ptr<UserOpExpr> op_expr =
       JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, src_rank));
-  auto ctx = std::make_shared<DistributedBroadcastOpInterpCtx>();
+  auto ctx = std::make_shared<EagerNcclBroadcastOpInterpCtx>();
   ctx->root = src_rank;
+  ctx->parallel_conf = PbMessage2TxtString(parallel_desc->parallel_conf());
   ctx->parallel_desc = parallel_desc;
   if (src_rank == GlobalProcessCtx::Rank() || inplace) {
     TensorTuple outputs{tensor};
-    JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs, ctx);
+    JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs, ctx));
     return tensor;
   } else {
     return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}, ctx));
@@ -299,8 +300,8 @@ Maybe<void> RawLocalToConsistent(const CastToConsistentOpExpr& op_expr, const Te
   std::shared_ptr<ConsistentTensor> consistent_tensor;
   {
     CHECK_OR_RETURN(ctx->parallel_desc.has_value());
-    CHECK_OR_RETURN(ctx->nd_sbp.has_value());
-    const auto& nd_sbp = JUST(ctx->nd_sbp);
+    CHECK_OR_RETURN(ctx->sbp.has_value());
+    const auto& nd_sbp = JUST(ctx->sbp);
     const auto& parallel_desc = JUST(ctx->parallel_desc);
     const auto& logical_shape = JUST(ctx->GetAttr<Shape>("shape"));
     DataType dtype = JUST(ctx->GetAttr<DataType>("dtype"));
@@ -339,7 +340,7 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op
     const auto& parallel_desc = JUST(ctx->parallel_desc);
     const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
     if (!parallel_id->has_value()) { return Maybe<void>::Ok(); }
-    const auto& nd_sbp = JUST(ctx->nd_sbp);
+    const auto& nd_sbp = JUST(ctx->sbp);
     const auto& tensor_meta = JUST(consistent_tensor->consistent_tensor_meta());
     const auto& local_tensor = JUST(consistent_tensor->cur_rank_phy_tensor());
     const auto& reshaped_tensor = JUST(TryReshapeTensor(local_tensor, tensor_meta));

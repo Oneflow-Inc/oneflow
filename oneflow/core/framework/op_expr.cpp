@@ -99,12 +99,13 @@ Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(
     OperatorConf* op_conf, const std::shared_ptr<const OpInterpCtx>& ctx) const {
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_user_conf()) = op_proto_;
-  auto* user_op_conf = op_conf->mutable_user_conf();
-  for (const auto& it : ctx->GetAttrs()) {
-    AttrValue attr_val;
-    JUST(user_op::AttrValueUtil::ToProtoAttrValue(*it.second, &attr_val));
-    (*(user_op_conf->mutable_attr()))[it.first] = attr_val;
-  }
+  // TODO(hjchen2)
+  // auto* user_op_conf = op_conf->mutable_user_conf();
+  // for (const auto& it : ctx->GetAttrs()) {
+  //   AttrValue attr_val;
+  //   JUST(user_op::AttrValueUtil::ToProtoAttrValue(*it.second, &attr_val));
+  //   (*(user_op_conf->mutable_attr()))[it.first] = attr_val;
+  // }
   return Maybe<void>::Ok();
 }
 

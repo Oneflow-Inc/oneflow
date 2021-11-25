@@ -25,6 +25,8 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/nd_sbp_infer_hint.h"
 
+#include "oneflow/core/framework/op_interp_ctx.h"
+
 namespace oneflow {
 
 namespace cfg {
@@ -107,8 +109,8 @@ class SrcOpConsistentTensorMetaInferArgs final {
   SrcOpConsistentTensorMetaInferArgs(SrcOpConsistentTensorMetaInferArgs&&) = default;
   ~SrcOpConsistentTensorMetaInferArgs() = default;
 
-  Symbol<ParallelDesc> parallel_desc() const { return op_interp_ctx_->parallel_desc; }
-  Symbol<cfg::NdSbp> nd_sbp() const { return op_interp_ctx_->nd_sbp; }
+  Symbol<ParallelDesc> parallel_desc() const { return CHECK_JUST(op_interp_ctx_->parallel_desc); }
+  Symbol<cfg::NdSbp> nd_sbp() const { return CHECK_JUST(op_interp_ctx_->sbp); }
   const std::shared_ptr<const OpInterpCtx>& op_interp_ctx() const { return op_interp_ctx_; }
 
   size_t hash_value() const;
@@ -116,7 +118,7 @@ class SrcOpConsistentTensorMetaInferArgs final {
   bool operator==(const SrcOpConsistentTensorMetaInferArgs& other) const;
 
   static Maybe<SrcOpConsistentTensorMetaInferArgs> New(
-      const std::shared_ptr<const OpInterpCtx> op_interp_ctx);
+      const std::shared_ptr<const OpInterpCtx>& op_interp_ctx);
 
  private:
   SrcOpConsistentTensorMetaInferArgs() = default;

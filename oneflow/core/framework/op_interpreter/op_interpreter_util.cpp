@@ -74,11 +74,11 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs,
   if (!LazyMode::is_enabled()) {
     if (inputs.empty()) {
       if (ctx->parallel_desc.has_value()) {
-        JUST(ctx->nd_sbp);
+        JUST(ctx->sbp);
         CHECK_OR_RETURN(!ctx->device.has_value());
         return g_eager_consistent_interpreter;
       } else {
-        CHECK_OR_RETURN(!ctx->nd_sbp.has_value());
+        CHECK_OR_RETURN(!ctx->sbp.has_value());
         return g_eager_mirrored_interpreter;
       }
     } else {
@@ -162,7 +162,7 @@ template<>
 /* static */ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(
     const BuiltinOpExpr& op_expr, const std::shared_ptr<OpInterpCtx>& ctx) {
   auto op_conf = std::make_shared<OperatorConf>();
-  JUST(op_expr.BuildOpConf(op_conf.get(), attrs));
+  JUST(op_expr.BuildOpConf(op_conf.get(), ctx));
   return op_conf;
 }
 

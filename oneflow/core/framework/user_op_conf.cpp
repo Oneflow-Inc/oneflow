@@ -79,11 +79,8 @@ int32_t UserOpConfWrapper::output_size(const std::string& arg_name) const {
   return it->second.s_size();
 }
 
-const std::shared_ptr<const AttrVal>& UserOpConfWrapper::Attr4Name(
-    const std::string& attr_name) const {
-  const auto& attr = attrs_.Attr4Name(attr_name);
-  CHECK(attr.get() != nullptr) << "attr_name: " << attr_name;
-  return attr;
+const void* UserOpConfWrapper::Attr4Name(const std::string& attr_name) const {
+  return CHECK_JUST(op_interp_ctx_->GetAttr(attr_name.data()));
 }
 
 #define OP_WRAPPER_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                                    \

@@ -231,7 +231,7 @@ class BatchMatMulFunctor {
     CHECK_GE_OR_RETURN(a_shape->NumAxes(), 3) << "Tensor a's dim should >= 3";
     CHECK_GE_OR_RETURN(b_shape->NumAxes(), 3) << "Tensor b's dim should >= 3";
 
-    auto ctx = std::make_shared<BatchMatMulOpInterpCtx>();
+    auto ctx = std::make_shared<BatchMatmulOpInterpCtx>();
     ctx->transpose_a = transpose_a;
     ctx->transpose_b = transpose_b;
     ctx->alpha = alpha;
@@ -297,17 +297,16 @@ class LayerNormAffineFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+template<typename ContextT>
 class PoolNDFunctor {
  public:
-  PoolNDFunctor() = default;
-  virtual ~PoolNDFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int32_t>& kernel_size,
                            const std::vector<int32_t>& strides, const std::string& padding,
                            const std::vector<int32_t>& padding_before,
                            const std::vector<int32_t>& padding_after,
                            const std::string& data_format, const bool& ceil_mode) const {
-    auto ctx = std::make_shared<PoolNDOpInterpCtx>();
+    auto ctx = std::make_shared<ContextT>();
     ctx->pool_size = kernel_size;
     ctx->strides = strides;
     ctx->padding = padding;
@@ -322,17 +321,16 @@ class PoolNDFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+template<typename ContextT>
 class PoolingNDFunctor {
  public:
-  PoolingNDFunctor() = default;
-  virtual ~PoolingNDFunctor() = default;
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
                                 const std::vector<int32_t>& kernel_size,
                                 const Optional<std::vector<int32_t>>& stride,
                                 const std::vector<int32_t>& padding,
                                 const std::vector<int32_t>& dilation, const bool& return_indices,
                                 const bool& ceil_mode, const std::string& data_format) const {
-    auto ctx = std::make_shared<PoolingNDOpInterpCtx>();
+    auto ctx = std::make_shared<ContextT>();
     ctx->data_format = data_format;
     ctx->padding = padding;
     ctx->kernel_size = kernel_size;
@@ -348,51 +346,53 @@ class PoolingNDFunctor {
   }
 
  protected:
+  PoolingNDFunctor() = default;
+  virtual ~PoolingNDFunctor() = default;
+
   std::shared_ptr<OpExpr> op_;
 };
 
-class AvgPool2DFunctor : public PoolNDFunctor {
+class AvgPool2DFunctor : public PoolNDFunctor<LazyAvgPool2DOpInterpCtx> {
  public:
   AvgPool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("avg_pool_2d").Input("x").Output("y").Build());
   }
 };
 
-class MaxPool2DFunctor : public PoolNDFunctor {
+class MaxPool2DFunctor : public PoolNDFunctor<LazyMaxPool2DOpInterpCtx> {
  public:
   MaxPool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("max_pool_2d").Input("x").Output("y").Build());
   }
 };
 
-class Maxpool1DFunctor : public PoolingNDFunctor {
+class Maxpool1DFunctor : public PoolingNDFunctor<EagerMaxPool1DOpInterpCtx> {
  public:
   Maxpool1DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("maxpool_1d").Input("x").Output("y").Output("indice").Build());
   }
 };
 
-class Maxpool2DFunctor : public PoolingNDFunctor {
+class Maxpool2DFunctor : public PoolingNDFunctor<EagerMaxPool2DOpInterpCtx> {
  public:
   Maxpool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("maxpool_2d").Input("x").Output("y").Output("indice").Build());
   }
 };
 
-class Maxpool3DFunctor : public PoolingNDFunctor {
+class Maxpool3DFunctor : public PoolingNDFunctor<EagerMaxPool3DOpInterpCtx> {
  public:
   Maxpool3DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("maxpool_3d").Input("x").Output("y").Output("indice").Build());
   }
 };
 
+template<typename ContextT>
 class AdaptivePoolNDFunctor {
  public:
-  AdaptivePoolNDFunctor() = default;
-  virtual ~AdaptivePoolNDFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int64_t>& output_size) const {
-    auto ctx = std::make_shared<AdaptivePoolNDOpInterpCtx>();
+    auto ctx = std::make_shared<ContextT>();
     ctx->output_size = output_size;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
@@ -401,21 +401,21 @@ class AdaptivePoolNDFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class AdaptiveAvgPool1DFunctor : public AdaptivePoolNDFunctor {
+class AdaptiveAvgPool1DFunctor : public AdaptivePoolNDFunctor<AdaptiveAvgPool1DOpInterpCtx> {
  public:
   AdaptiveAvgPool1DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("adaptive_avg_pool1d").Input("x").Output("y").Build());
   }
 };
 
-class AdaptiveAvgPool2DFunctor : public AdaptivePoolNDFunctor {
+class AdaptiveAvgPool2DFunctor : public AdaptivePoolNDFunctor<AdaptiveAvgPool2DOpInterpCtx> {
  public:
   AdaptiveAvgPool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("adaptive_avg_pool2d").Input("x").Output("y").Build());
   }
 };
 
-class AdaptiveAvgPool3DFunctor : public AdaptivePoolNDFunctor {
+class AdaptiveAvgPool3DFunctor : public AdaptivePoolNDFunctor<AdaptiveAvgPool3DOpInterpCtx> {
  public:
   AdaptiveAvgPool3DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("adaptive_avg_pool3d").Input("x").Output("y").Build());
@@ -487,7 +487,7 @@ class KLDivLossFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target, const bool log_target,
                            const std::string& reduction) const {
-    auto ctx = std::make_shared<KLDivLossOpInterpCtx>();
+    auto ctx = std::make_shared<KlDivLossOpInterpCtx>();
     ctx->log_target = log_target;
     ctx->reduction = reduction;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, ctx);
@@ -523,7 +523,7 @@ class NllLossFunctor {
     CHECK_LE_OR_RETURN(input_shape->NumAxes(), 5);
     CHECK_EQ_OR_RETURN(input_shape->NumAxes() - 1, target_shape->NumAxes());
 
-    auto ctx = std::make_shared<NllLossOpInterpCtx>();
+    auto ctx = std::make_shared<NllOpInterpCtx>();
     ctx->ignore_index = ignore_index;
     ctx->reduction = reduction;
 
@@ -572,7 +572,7 @@ class BinaryCrossEntropyLossFunctor {
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight,
                            const std::string& reduction) const {
-    auto ctx = std::make_shared<BinaryCrossEntropyLossOpInterpCtx>();
+    auto ctx = std::make_shared<BinaryCrossEntropyOpInterpCtx>();
     ctx->reduction = reduction;
     if (weight) {
       return OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input, target, JUST(weight)}, ctx);
@@ -618,7 +618,7 @@ class BinaryCrossEntropyWithLogitsLossFunctor {
                            const Optional<one::Tensor>& weight,
                            const Optional<one::Tensor>& pos_weight,
                            const std::string& reduction) const {
-    auto ctx = std::make_shared<BinaryCrossEntropyWithLogitsLossOpInterpCtx>();
+    auto ctx = std::make_shared<BinaryCrossEntropyWithLogitsOpInterpCtx>();
     ctx->reduction = reduction;
     ctx->has_pos_weight = pos_weight.has_value();
     if (weight) {
@@ -831,7 +831,7 @@ class SparseSoftmaxCrossEntropyFunctor {
     int64_t depth = logits->shape()->At(logits->shape()->NumAxes() - 1);
     int32_t axis = logits->shape()->NumAxes() - 1;
     auto reduce_max_device_stage_ctx = std::make_shared<ReduceMaxDeviceStageOpInterpCtx>();
-    reduce_max_device_stage_ctx->axis = axis;
+    reduce_max_device_stage_ctx->axis = {axis};
     const auto& max_device_stage = JUST(OpInterpUtil::Dispatch<TensorTuple>(
         *op_reduce_max_device_stage_, {logits}, reduce_max_device_stage_ctx));
     std::shared_ptr<Tensor> max_global_stage_input0 = max_device_stage->at(0);
@@ -873,9 +873,9 @@ class SparseSoftmaxCrossEntropyFunctor {
     std::shared_ptr<Tensor> broadcast_div_input1 = output_reduce_sum;
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
       std::vector<Symbol<cfg::SbpParallel>> empty_grad_sbp_parallels;
-      broadcast_div_input1 = JUST(functional::ToConsistent(
-          output_reduce_sum->at(0), JUST(output_reduce_sum->at(0)->parallel_desc()),
-          s0b_sbp_parallels, s0b_sbp_parallels));
+      broadcast_div_input1 =
+          JUST(functional::ToConsistent(output_reduce_sum, JUST(output_reduce_sum->parallel_desc()),
+                                        s0b_sbp_parallels, s0b_sbp_parallels));
     }
     const auto& predictions = JUST(Div(output_exp, broadcast_div_input1));
     return SparseCrossEntropyMs(predictions, label, depth);
@@ -1252,7 +1252,7 @@ class NormalizationAddReluFunctor {
                            const std::shared_ptr<one::Tensor>& beta, const int32_t& axis,
                            const float& epsilon, const float& momentum,
                            const bool& is_training) const {
-    auto ctx = std::make_shared<NormalizationAddReluOpInterpCtx>();
+    auto ctx = std::make_shared<NormalizationAddReluBaseOpInterpCtx>();
     ctx->epsilon = epsilon;
     ctx->axis = axis;
     // convert torch momentum to tensorflow momentum
@@ -1318,9 +1318,8 @@ class PadFunctor {
     CHECK_LE_OR_RETURN(ndim, 5) << "Dimension of input tensor should less than or equal to 5";
     CHECK_LE_OR_RETURN(pad.size(), 2 * ndim)
         << "Pad size should less than or equal to input axes * 2.";
-    auto ctx = std::make_shared<PadOpInterpCtx>();
-    ctx->padding = pad;
     if (mode == "constant") {
+      auto ctx = std::make_shared<PadOpInterpCtx>();
       CHECK_EQ_OR_RETURN(pad.size() % 2, 0)
           << "Length of pad must be even but instead it equals " << pad.size();
       if (IsFloatingDataType(x->dtype()->data_type())) {
@@ -1345,12 +1344,16 @@ class PadFunctor {
       return OpInterpUtil::Dispatch<Tensor>(*pad_, {x}, ctx);
 
     } else if (mode == "reflect") {
+      auto ctx = std::make_shared<ReflectionPad2DGradOpInterpCtx>();
+      ctx->padding = pad;
       const int64_t pad_h = x->shape()->dim_vec().at(2);
       const int64_t pad_w = x->shape()->dim_vec().at(3);
       CHECK_OR_RETURN(pad[2] < pad_h && pad[3] < pad_h && pad[0] < pad_w && pad[1] < pad_w)
           << "padding size should be less than the corresponding input dimension!";
       return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_, {x}, ctx);
     } else if (mode == "replicate") {
+      auto ctx = std::make_shared<ReplicationPad2DGradOpInterpCtx>();
+      ctx->padding = pad;
       return OpInterpUtil::Dispatch<Tensor>(*replicate_pad_, {x}, ctx);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode
@@ -1419,6 +1422,7 @@ class DropoutGradFunctor {
   std::shared_ptr<OpExpr> dropout_grad_op_;
 };
 
+template<typename ContextT>
 class AvgPoolingNDFunctor {
  public:
   AvgPoolingNDFunctor() = default;
@@ -1429,7 +1433,7 @@ class AvgPoolingNDFunctor {
                            const std::vector<int32_t>& padding, const bool& ceil_mode,
                            const bool& count_include_pad, const int64_t& divisor_override,
                            const std::string& data_format) const {
-    auto ctx = std::make_shared<AvgPoolingNdOpInterpCtx>();
+    auto ctx = std::make_shared<ContextT>();
     ctx->data_format = data_format;
     ctx->padding = padding;
     ctx->kernel_size = kernel_size;
@@ -1448,21 +1452,21 @@ class AvgPoolingNDFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class Avgpool1DFunctor : public AvgPoolingNDFunctor {
+class Avgpool1DFunctor : public AvgPoolingNDFunctor<EagerAvgPool1DOpInterpCtx> {
  public:
   Avgpool1DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("avgpool_1d").Input("x").Output("y").Build());
   }
 };
 
-class Avgpool2DFunctor : public AvgPoolingNDFunctor {
+class Avgpool2DFunctor : public AvgPoolingNDFunctor<EagerAvgPool2DOpInterpCtx> {
  public:
   Avgpool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("avgpool_2d").Input("x").Output("y").Build());
   }
 };
 
-class Avgpool3DFunctor : public AvgPoolingNDFunctor {
+class Avgpool3DFunctor : public AvgPoolingNDFunctor<EagerAvgPool3DOpInterpCtx> {
  public:
   Avgpool3DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("avgpool_3d").Input("x").Output("y").Build());
@@ -1508,7 +1512,6 @@ class FoldFunctor {
     // Only Support 3d tensor fold now. format is (N, C*K*K, L)
     CHECK_EQ_OR_RETURN(x_shape->NumAxes(), 3) << "Input Tensor dim should == 3";
     auto ctx = std::make_shared<FoldOpInterpCtx>();
-    ctx->data_format = data_format;
     ctx->output_size = output_size;
     ctx->kernel_size = kernel_size;
     ctx->dilation_rate = dilation_rate;
@@ -1611,7 +1614,7 @@ class FusedSelfAttentionFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& hidden_states,
                                 const int64_t& head_size, const float& alpha) const {
-    auto ctx = std::make_shared<FusedSelfAttentionOpInterpCtx>();
+    auto ctx = std::make_shared<FusedSelfAttentionQueryMulKeyAndValueOpInterpCtx>();
     ctx->head_size = head_size;
     ctx->alpha = alpha;
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {hidden_states}, ctx);
@@ -1635,7 +1638,7 @@ class FusedSelfAttentionGradFunctor {
                            const std::shared_ptr<one::Tensor>& value_grad,
                            const std::shared_ptr<one::Tensor>& hidden_states,
                            const float& alpha) const {
-    auto ctx = std::make_shared<FusedSelfAttentionGradOpInterpCtx>();
+    auto ctx = std::make_shared<FusedSelfAttentionQueryMulKeyAndValueGradOpInterpCtx>();
     ctx->alpha = alpha;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {query_mul_key_grad, value_grad, hidden_states},
                                           ctx);
@@ -1666,7 +1669,7 @@ class FusedScaleTrilSoftmaxMaskScaleFunctor {
     mask_ctx->rate = p;
     mask_ctx->seed = gen->current_seed();
     mask_ctx->state = random_mask_like_state;
-    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(*random_mask_like_op_, {x}, ctx));
+    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(*random_mask_like_op_, {x}, mask_ctx));
 
     float mask_scale_value = 1.0;
     if (p != 1.0) { mask_scale_value = 1.0 / (1.0 - p); }
@@ -1860,7 +1863,7 @@ class PartialFCSampleFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& wegiht,
                                 const std::shared_ptr<one::Tensor>& label,
                                 const int64_t& num_sample) const {
-    auto ctx = std::make_shared<PartialFCSampleOpInterpCtx>();
+    auto ctx = std::make_shared<DistributedPartialFcSampleOpInterpCtx>();
     ctx->num_sample = num_sample;
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {wegiht, label}, ctx);
   }

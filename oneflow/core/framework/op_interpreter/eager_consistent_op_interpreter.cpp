@@ -45,7 +45,7 @@ namespace {
 Maybe<Symbol<ParallelDesc>> GetParallelDesc(const TensorTuple& inputs,
                                             const std::shared_ptr<OpInterpCtx>& ctx) {
   if (!inputs.empty()) { return inputs.at(0)->parallel_desc(); }
-  return JUST(ctx.parallel_desc);
+  return JUST(ctx->parallel_desc);
 }
 
 std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_expr,
@@ -89,11 +89,11 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   const auto& parallel_desc = JUST(GetParallelDesc(inputs, ctx));
   std::shared_ptr<const ConsistentTensorInferResult> result;
   if (inputs.empty()) {
-    const auto& infer_args =
-        JUST(SrcOpConsistentTensorMetaInferArgs::New(ctx.attrs, parallel_desc, JUST(ctx.nd_sbp)));
+    ctx->parallel_desc = parallel_desc;
+    const auto& infer_args = JUST(SrcOpConsistentTensorMetaInferArgs::New(ctx));
     result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
   } else {
-    const auto& infer_args = JUST(ConsistentTensorMetaInferArgs::New(ctx.attrs, inputs));
+    const auto& infer_args = JUST(ConsistentTensorMetaInferArgs::New(ctx, inputs));
     result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
   }
   const auto& output_tensor_metas = result->output_tensor_metas();
@@ -170,11 +170,11 @@ Maybe<void> RawConsistentToConsistent(const ConsistentToConsistentOpExpr& op_exp
   CHECK_EQ_OR_RETURN(outputs->size(), 1);
   const auto& input = inputs.at(0);
   CHECK_OR_RETURN(input->is_consistent());
-  CHECK_OR_RETURN(ctx.parallel_desc.has_value());
-  CHECK_OR_RETURN(ctx.nd_sbp.has_value());
+  CHECK_OR_RETURN(ctx->parallel_desc.has_value());
+  CHECK_OR_RETURN(ctx->sbp.has_value());
   const auto& in_parallel_desc = JUST(input->parallel_desc());
-  const auto& out_nd_sbp = JUST(ctx.nd_sbp);
-  const auto& out_parallel_desc = JUST(ctx.parallel_desc);
+  const auto& out_nd_sbp = JUST(ctx->sbp);
+  const auto& out_parallel_desc = JUST(ctx->parallel_desc);
   const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(in_parallel_desc));
   const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
   const auto& tensor =
