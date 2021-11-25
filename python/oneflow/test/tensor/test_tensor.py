@@ -1596,7 +1596,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
         # x = ori_x.to_consistent(placement=placement, sbp=[flow.sbp.split(0), flow.sbp.broadcast])
 
     @flow.unittest.skip_unless_1n1d()
-    @autotest()
+    @autotest(check_graph=False)
     def test_tensor_bmm(test_case):
         t = random(1, 5)
         k = random(1, 5)

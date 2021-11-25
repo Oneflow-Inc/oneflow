@@ -619,7 +619,7 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05, check_graph=True
                                 )
                     else:
                         warnings.warn(
-                            f"some of {f.__name__} outputs fail to check graph."
+                            f"some outputs of {f.__name__} fail to check graph."
                         )
                 n -= 1
                 loop += 1

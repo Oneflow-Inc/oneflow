@@ -233,7 +233,7 @@ def _test_gru(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestRNNModule(flow.unittest.TestCase):
-    def _test_rnn(test_case):
+    def test_rnn(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_rnn, _test_lstm, _test_gru]
         arg_dict["device"] = ["cuda", "cpu"]

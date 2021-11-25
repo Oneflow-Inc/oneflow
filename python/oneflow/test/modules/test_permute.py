@@ -85,7 +85,7 @@ class TestPermute(flow.unittest.TestCase):
         return y
 
     @autotest(check_graph=False)
-    def _test_permute5d_tensor_with_random_data(test_case):
+    def test_permute5d_tensor_with_random_data(test_case):
         device = random_device()
         ndim = 5
         permute_list = [0, 1, 2, 3, 4]
@@ -102,7 +102,7 @@ class TestPermute(flow.unittest.TestCase):
         return y
 
     @autotest(check_graph=False)
-    def _test_permute4d_tensor_with_random_data(test_case):
+    def test_permute4d_tensor_with_random_data(test_case):
         device = random_device()
         ndim = 4
         permute_list = [0, 1, 2, 3]
@@ -118,7 +118,7 @@ class TestPermute(flow.unittest.TestCase):
         return y
 
     @autotest(check_graph=False)
-    def _test_permute3d_tensor_with_random_data(test_case):
+    def test_permute3d_tensor_with_random_data(test_case):
         device = random_device()
         ndim = 3
         permute_list = [0, 1, 2]
