@@ -32,6 +32,23 @@ struct ScalarPreluGradFunctor {
   OF_DEVICE_FUNC T operator()(T x, T dy, T alpha) const { return x > 0 ? dy : dy * alpha; }
 };
 
+template<>
+struct ScalarPreluFunctor<half> {
+  ScalarPreluFunctor<float> float_functor;
+  OF_DEVICE_FUNC half operator()(half x, half alpha) const {
+    return __float2half(float_functor(__half2float(x), __half2float(alpha)));
+    ;
+  }
+};
+
+template<>
+struct ScalarPreluGradFunctor<half> {
+  ScalarPreluGradFunctor<float> float_functor;
+  OF_DEVICE_FUNC half operator()(half x, half dy, half alpha) const {
+    return __float2half(float_functor(__half2float(x), __half2float(dy), __half2float(dy)));
+  }
+};
+
 template<typename T>
 __global__ void PReluForwardGpu(const int32_t elem_cnt, const int32_t alpha_size,
                                 const int32_t inner_size, const T* x, const T* alpha, T* y) {
@@ -51,7 +68,7 @@ __global__ void PReluBackwardGpu(const int32_t elem_cnt, const int32_t alpha_siz
     const T dy_i = dy[i];
     const T alpha_i = alpha[(i / inner_size) % alpha_size];
     dx[i] = x_i > 0 ? dy_i : dy_i * alpha_i;
-    alpha_diff[(i / inner_size) % alpha_size] += x_i > 0 ? 0 : dy_i * x_i;
+    alpha_diff[(i / inner_size) % alpha_size] += x_i > 0 ? static_cast<T>(0) : dy_i * x_i;
   }
 }
 
