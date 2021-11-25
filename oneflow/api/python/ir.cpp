@@ -348,6 +348,14 @@ void PrintTraitAttrs(const oneflow::UserOpDef& op_def) {
   }
 }
 
+bool IsUnaryOp(const oneflow::user_op::OpRegistryResult& r) {
+  return r.op_def.input().size() == 1 && r.op_def.output().size() == 1;
+}
+
+bool IsBinaryOp(const oneflow::user_op::OpRegistryResult& r) {
+  return r.op_def.input().size() == 2 && r.op_def.output().size() == 1;
+}
+
 void PrintBody(const oneflow::user_op::OpRegistryResult& r) {
   const oneflow::UserOpDef& op_def = r.op_def;
   // TODO: handle in out size/optional
@@ -460,7 +468,8 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
   for (const auto& kv : results) {
     std::string group_name = "MISC";
     const oneflow::user_op::OpRegistryResult& r = kv.second;
-    if (ShouldGenBaseClass(r.op_type_name)) { group_name = "BASE"; }
+    if (IsUnaryOp(r)) { group_name = "Unary"; }
+    if (IsBinaryOp(r)) { group_name = "Binary"; }
     if (IsImageOp(r.op_type_name)) { group_name = "Image"; }
     if (IsMathOp(r.op_type_name)) { group_name = "math"; }
     if (IsPaddingOp(r.op_type_name)) { group_name = "PADDING"; }
@@ -493,6 +502,7 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
     if (IsDetectionOp(r.op_type_name)) { group_name = "Detection"; }
     if (IsSummaryOp(r.op_type_name)) { group_name = "summary"; }
     if (IsCUDAOp(r.op_type_name)) { group_name = "cuda"; }
+    if (ShouldGenBaseClass(r.op_type_name)) { group_name = "BASE"; }
     group_name = "GET_ONEFLOW_" + group_name + "_OP_DEFINITIONS";
     std::transform(group_name.begin(), group_name.end(), group_name.begin(), ::toupper);
     groups[group_name].insert({kv.first, kv.second});
