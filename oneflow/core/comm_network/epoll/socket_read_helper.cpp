@@ -34,7 +34,8 @@ SocketReadHelper::SocketReadHelper(int sockfd) {
   SwitchToMsgHeadReadHandle();
 }
 
-void SocketReadHelper::RegisterMsgCallback(const std::function<void(void*, size_t)>& msghandle = nullptr) {
+void SocketReadHelper::RegisterMsgCallback(
+    const std::function<void(void*, size_t)>& msghandle = nullptr) {
   auto cb = [](void* data, size_t size) { Global<ActorMsgBus>::Get()->HandleRecvData(data, size); };
   msghandle_ = cb;
 }
@@ -117,8 +118,7 @@ void SocketReadHelper::SetStatusWhenActorMsgHeadDone() {
   size_t size = cur_msg_.actor_msg.size;
   char* data = (char*)malloc(size);
   std::memcpy(data, cur_msg_.actor_msg.data, size);
-  //Global<ActorMsgBus>::Get()->HandleRecvData(data, size);
-  msghandle_(data,size);
+  msghandle_(data, size);
   SwitchToMsgHeadReadHandle();
 }
 

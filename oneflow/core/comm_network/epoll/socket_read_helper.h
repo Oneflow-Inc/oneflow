@@ -43,7 +43,7 @@ class SocketReadHelper final {
   void SetStatusWhenMsgHeadDone();
   void SetStatusWhenMsgBodyDone();
   void SetStatusWhenActorMsgHeadDone();
-  void RegisterMsgCallback(const std::function<void(void*, size_t)>& MsgHandle );
+  void RegisterMsgCallback(const std::function<void(void*, size_t)>& MsgHandle);
 
 #define MAKE_ENTRY(x, y) void SetStatusWhen##x##MsgHeadDone();
   OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ);
