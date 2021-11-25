@@ -363,14 +363,14 @@ class PoolingNDFunctor {
 
 class TFAvgPool2DFunctor : public PoolNDFunctor {
  public:
-  AvgPool2DFunctor() {
+  TFAvgPool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("tf_avg_pool_2d").Input("x").Output("y").Build());
   }
 };
 
 class TFMaxPool2DFunctor : public PoolNDFunctor {
  public:
-  MaxPool2DFunctor() {
+  TFMaxPool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("tf_max_pool_2d").Input("x").Output("y").Build());
   }
 };
