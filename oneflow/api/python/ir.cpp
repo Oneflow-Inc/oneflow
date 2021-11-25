@@ -141,6 +141,9 @@ bool IsEagerOp(const std::string& op_name) { return (op_name.rfind("eager", 0) =
 bool IsTensorBufferOp(const std::string& op_name) {
   return op_name.find("tensor_buffer") != std::string::npos;
 }
+bool IsSummaryOp(const std::string& op_name) {
+  return op_name.find("summary") != std::string::npos;
+}
 bool IsAnyPoolOp(const std::string& op_name) { return op_name.find("pool") != std::string::npos; }
 bool IsAnyConvOp(const std::string& op_name) { return op_name.find("conv") != std::string::npos; }
 bool IsConvOp(const std::string& op_name) {
@@ -208,7 +211,7 @@ bool IsLossOp(const std::string& op_name) { return (op_name.find("loss") != std:
 bool IsDetectionOp(const std::string& op_name) {
   return (op_name.find("top_k") != std::string::npos || op_name.find("bbox") != std::string::npos
           || op_name.find("segmentation") != std::string::npos
-          || op_name.find("poly") != std::string::npos
+          || op_name.find("poly") != std::string::npos || op_name.find("nms") != std::string::npos
           || op_name.find("object") != std::string::npos);
 }
 bool IsIndicesOp(const std::string& op_name) {
@@ -478,6 +481,7 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
     if (IsTensorBufferOp(r.op_type_name)) { group_name = "tensor_buffer"; }
     if (IsTestOp(r.op_type_name)) { group_name = "TEST"; }
     if (IsDetectionOp(r.op_type_name)) { group_name = "Detection"; }
+    if (IsSummaryOp(r.op_type_name)) { group_name = "summary"; }
     group_name = "GET_ONEFLOW_" + group_name + "_OP_DEFINITIONS";
     std::transform(group_name.begin(), group_name.end(), group_name.begin(), ::toupper);
     groups[group_name].insert({kv.first, kv.second});
