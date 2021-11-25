@@ -34,15 +34,6 @@ class StreamContext {
   virtual DeviceType device_type() const = 0;
 };
 
-class StreamContextProvider {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(StreamContextProvider);
-  StreamContextProvider() = default;
-  virtual ~StreamContextProvider() = default;
-
-  virtual StreamContext* GetStreamContext() = 0;
-};
-
 #define REGISTER_STREAM_CONTEXT_CREATOR_WITH_STREAM_ID(device, creator) \
   REGISTER_CLASS_CREATOR(int, device, StreamContext, creator, const StreamId&)
 
