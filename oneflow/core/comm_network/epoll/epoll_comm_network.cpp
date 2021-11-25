@@ -113,7 +113,7 @@ void* EpollCommNet::DeSerialDataToToken(char* data, size_t* size) {
   char* addr = (char*)malloc(sizeof(void*));
   std::memcpy(addr, data, sizeof(void*));
   *size = sizeof(void*);
-  char * token = *(reinterpret_cast<char**>(addr));
+  char* token = *(reinterpret_cast<char**>(addr));
   return token;
 }
 
