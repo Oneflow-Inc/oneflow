@@ -856,6 +856,8 @@ __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_DY load_dy, STORE stor
   static_assert(kWarpSize % thread_group_width == 0, "");
   ComputeType x_buf[rows_per_access][cols_per_thread];
   ComputeType dy_buf[rows_per_access][cols_per_thread];
+  ComputeType mean_buf[rows_per_access];
+  ComputeType inv_variance_buf[rows_per_access];
   const int global_thread_group_id = blockIdx.x * blockDim.y + threadIdx.y;
   const int num_global_thread_group = gridDim.x * blockDim.y;
   const int lane_id = threadIdx.x;
@@ -865,24 +867,26 @@ __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_DY load_dy, STORE stor
     ComputeType sum_loss2[rows_per_access];
 #pragma unroll
     for (int row_id = 0; row_id < rows_per_access; ++row_id) {
+      const int global_row_id = row + row_id;
+      mean_buf[row_id] = mean[global_row_id];
+      inv_variance_buf[row_id] = inv_variance[global_row_id];
       sum_loss1[row_id] = 0;
       sum_loss2[row_id] = 0;
       ComputeType* row_x_buf = x_buf[row_id];
       ComputeType* row_dy_buf = dy_buf[row_id];
-      const ComputeType mean_val = mean[row + row_id];
-      const ComputeType inv_variance_val = inv_variance[row + row_id];
 #pragma unroll
       for (int pack_id = 0; pack_id < pack_per_thread; ++pack_id) {
         const int col = (pack_id * thread_group_width + lane_id) * pack_size;
+        const int pack_offset = pack_id * pack_size;
         if (!padding || col < cols) {
-          load_x.template load<pack_size>(row_x_buf + pack_id * pack_size, row + row_id, col);
-          load_dy.template load<pack_size>(row_dy_buf + pack_id * pack_size, row + row_id, col);
+          load_x.template load<pack_size>(row_x_buf + pack_offset, global_row_id, col);
+          load_dy.template load<pack_size>(row_dy_buf + pack_offset, global_row_id, col);
 #pragma unroll
           for (int i = 0; i < pack_size; ++i) {
-            const int col_id = pack_id * pack_size + i;
+            const int col_id = pack_offset + i;
             sum_loss1[row_id] += row_dy_buf[col_id];
-            sum_loss2[row_id] +=
-                row_dy_buf[col_id] * (row_x_buf[col_id] - mean_val) * inv_variance_val;
+            sum_loss2[row_id] += row_dy_buf[col_id] * (row_x_buf[col_id] - mean_buf[row_id])
+                                 * inv_variance_buf[row_id];
           }
         }
       }
@@ -898,23 +902,23 @@ __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_DY load_dy, STORE stor
     }
 #pragma unroll
     for (int row_id = 0; row_id < rows_per_access; ++row_id) {
+      const int global_row_id = row + row_id;
       ComputeType* row_x_buf = x_buf[row_id];
       ComputeType* row_dy_buf = dy_buf[row_id];
-      const ComputeType mean_val = mean[row + row_id];
-      const ComputeType inv_variance_val = inv_variance[row + row_id];
-      const ComputeType inv_variance_over_cols = inv_variance_val / cols;
+      const ComputeType inv_variance_over_cols =
+          inv_variance_buf[row_id] / static_cast<ComputeType>(cols);
 #pragma unroll
       for (int pack_id = 0; pack_id < pack_per_thread; ++pack_id) {
         const int col = (pack_id * thread_group_width + lane_id) * pack_size;
         if (!padding || col < cols) {
           for (int i = 0; i < pack_size; ++i) {
             const int col_id = pack_id * pack_size + i;
-            row_dy_buf[col_id] =
-                (cols * row_dy_buf[col_id] - warp_sum_loss1[row_id]
-                 - (row_x_buf[col_id] - mean_val) * inv_variance_val * warp_sum_loss2[row_id])
-                * inv_variance_over_cols;
+            row_dy_buf[col_id] = (cols * row_dy_buf[col_id] - warp_sum_loss1[row_id]
+                                  - (row_x_buf[col_id] - mean_buf[row_id])
+                                        * inv_variance_buf[row_id] * warp_sum_loss2[row_id])
+                                 * inv_variance_over_cols;
           }
-          store.template store<pack_size>(row_dy_buf + pack_id * pack_size, row + row_id, col);
+          store.template store<pack_size>(row_dy_buf + pack_id * pack_size, global_row_id, col);
         }
       }
     }
@@ -935,7 +939,10 @@ inline cudaError_t LaunchLayerNormGradWarpImpl(cudaStream_t stream, LOAD_X load_
   const int64_t num_blocks = (rows + rows_per_block - 1) / rows_per_block;
   int grid_dim_x;
   {
-    cudaError_t err = GetNumBlocks(block_size, num_blocks, waves, &grid_dim_x);
+    cudaError_t err = GetNumBlocks(
+        LayerNormGradWarpImpl<LOAD_X, LOAD_DY, STORE, ComputeType, pack_size, cols_per_thread,
+                              thread_group_width, rows_per_access, padding>,
+        block_size, 0, num_blocks, waves, &grid_dim_x);
     if (err != cudaSuccess) { return err; }
   }
   LayerNormGradWarpImpl<LOAD_X, LOAD_DY, STORE, ComputeType, pack_size, cols_per_thread,
@@ -1130,8 +1137,9 @@ __global__ void LayerNormGradBlockSMemImpl(LOAD_X load_x, LOAD_DY load_dy, STORE
       load_dy.template load<pack_size>(dy_pack, row, pack_id * pack_size);
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
-        x_buf[i * num_packs + pack_id] = x_pack[i];
-        dy_buf[i * num_packs + pack_id] = dy_pack[i];
+        const int buf_offset = i * num_packs + pack_id;
+        x_buf[buf_offset] = x_pack[i];
+        dy_buf[buf_offset] = dy_pack[i];
         const int col_id = pack_id * pack_size + i;
         sum_loss1 += dy_pack[i];
         sum_loss2 += dy_pack[i] * (x_pack[i] - mean_val) * inv_variance_val;
@@ -1144,8 +1152,9 @@ __global__ void LayerNormGradBlockSMemImpl(LOAD_X load_x, LOAD_DY load_dy, STORE
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
         const int col_id = pack_id * pack_size + i;
-        pack[i] = (cols * dy_buf[i * num_packs + pack_id] - row_sum_loss1
-                   - (x_buf[i * num_packs + pack_id] - mean_val) * inv_variance_val * row_sum_loss2)
+        const int buf_offset = i * num_packs + pack_id;
+        pack[i] = (cols * dy_buf[buf_offset] - row_sum_loss1
+                   - (x_buf[buf_offset] - mean_val) * inv_variance_val * row_sum_loss2)
                   * inv_variance_over_cols;
       }
       store.template store<pack_size>(pack, row, pack_id * pack_size);
@@ -1163,7 +1172,9 @@ inline cudaError_t LaunchLayerNormGradBlockSMemImpl(cudaStream_t stream, LOAD_X 
   constexpr int waves = 32;
   int grid_dim_x;
   {
-    cudaError_t err = GetNumBlocks(block_size, rows, waves, &grid_dim_x);
+    cudaError_t err = GetNumBlocks(
+        LayerNormGradBlockSMemImpl<LOAD_X, LOAD_DY, STORE, ComputeType, pack_size, block_size>,
+        block_size, smem, rows, waves, &grid_dim_x);
     if (err != cudaSuccess) { return err; }
   }
   LayerNormGradBlockSMemImpl<LOAD_X, LOAD_DY, STORE, ComputeType, pack_size, block_size>
@@ -1326,7 +1337,9 @@ inline cudaError_t LaunchLayerNormGradBlockUncachedImpl(cudaStream_t stream, LOA
   constexpr int waves = 32;
   int grid_dim_x;
   {
-    cudaError_t err = GetNumBlocks(block_size, rows, waves, &grid_dim_x);
+    cudaError_t err = GetNumBlocks(
+        LayerNormGradBlockUncachedImpl<LOAD_X, LOAD_DY, STORE, ComputeType, pack_size, block_size>,
+        block_size, 0, rows, waves, &grid_dim_x);
     if (err != cudaSuccess) { return err; }
   }
   LayerNormGradBlockUncachedImpl<LOAD_X, LOAD_DY, STORE, ComputeType, pack_size, block_size>
