@@ -222,8 +222,6 @@ std::string GetConvOpClassName(const std::string& op_name) {
 std::string GetBaseOp(const std::string& op_name) {
   if (IsInvolutionOp(op_name)) {
     return "OneFlow_InvolutionBaseOp";
-  } else if(IsQuantizationOp(op_name)){
-    return "OneFlow_QuantizationBaseOp";
   }
   else if (IsIdempotentOp(op_name)) {
     return "OneFlow_IdempotentBaseOp";
@@ -434,6 +432,7 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
     if (IsTrigonometric(r.op_type_name)) { group_name = "TRIGONOMETRIC"; }
     if (IsIdempotentOp(r.op_type_name)) { group_name = "IDEMPOTENT"; }
     if (IsInvolutionOp(r.op_type_name)) { group_name = "INVOLUTION"; }
+    if (IsQuantizationOp(r.op_type_name)) { group_name = "QUANTIZATION"; }
     if (IsDatasetOp(r.op_type_name)) { group_name = "DATASET"; }
     if (IsTestOp(r.op_type_name)) { group_name = "TEST"; }
     group_name = "GET_ONEFLOW_" + group_name + "_OP_DEFINITIONS";

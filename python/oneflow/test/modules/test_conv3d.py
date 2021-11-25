@@ -42,25 +42,6 @@ class TestConv3DModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(n=3000)
-    def test_conv3d_group_with_random_data(test_case):
-        channels = 720  # lcm(1, 2, 3, 4, 5, 6)
-        m = torch.nn.Conv3d(
-            in_channels=channels,
-            out_channels=channels,
-            kernel_size=random(1, 4),
-            stride=random() | nothing(),
-            padding=random(1, 3).to(int) | nothing(),
-            dilation=random(1, 5) | nothing(),
-            groups=random(1, 7),
-            padding_mode=constant("zeros") | nothing(),
-        )
-        m.train(random())
-        device = random_device()
-        m.to(device)
-        x = random_pytorch_tensor(ndim=5, dim1=channels).to(device)
-        y = m(x)
-        return y
 
 if __name__ == "__main__":
     unittest.main()
