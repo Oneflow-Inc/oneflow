@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/ep/include/event.h"
 
 namespace oneflow {
 
@@ -32,6 +33,7 @@ class Stream {
 
   virtual DeviceType device_type() const = 0;
   virtual Maybe<void> Sync() = 0;
+  virtual void RecordEvent(Event* event) = 0;
 
   virtual Maybe<void> OnExecutionContextSetup() { return Maybe<void>::Ok(); }
   virtual Maybe<void> OnExecutionContextTeardown() { return Maybe<void>::Ok(); }
