@@ -37,8 +37,9 @@ class CpuStream : public Stream {
 
   ~CpuStream() override = default;
 
-  DeviceType device_type() const override { return DeviceType::kCPU; }
-  Maybe<void> Sync() override { return Maybe<void>::Ok(); }
+  DeviceType device_type() const override;
+  Maybe<void> Sync() override;
+  void RecordEvent(Event* event) override;
 
 #ifdef WITH_ONEDNN
   dnnl::engine* onednn_engine() const { return onednn_engine_.get(); }
