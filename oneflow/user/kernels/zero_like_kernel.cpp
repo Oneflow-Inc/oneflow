@@ -40,7 +40,7 @@ class ZeroLikeKernel final : public user_op::OpKernel {
 
 REGISTER_ZERO_LIKE_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_ZERO_LIKE_KERNEL(DeviceType::kGPU)
+REGISTER_ZERO_LIKE_KERNEL(DeviceType::kCUDA)
 #endif
 
 }  // namespace oneflow
