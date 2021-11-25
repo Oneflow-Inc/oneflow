@@ -138,6 +138,9 @@ bool IsPoolOp(const std::string& op_name) {
          && op_name.find("pool") != std::string::npos;
 }
 bool IsEagerOp(const std::string& op_name) { return (op_name.rfind("eager", 0) == 0); }
+bool IsTensorBufferOp(const std::string& op_name) {
+  return op_name.find("tensor_buffer") != std::string::npos;
+}
 bool IsAnyPoolOp(const std::string& op_name) { return op_name.find("pool") != std::string::npos; }
 bool IsAnyConvOp(const std::string& op_name) { return op_name.find("conv") != std::string::npos; }
 bool IsConvOp(const std::string& op_name) {
@@ -467,6 +470,7 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
     if (IsEagerOp(r.op_type_name)) { group_name = "eager"; }
     if (IsDatasetOp(r.op_type_name)) { group_name = "DATASET"; }
     if (IsMatmulOp(r.op_type_name)) { group_name = "matmul"; }
+    if (IsTensorBufferOp(r.op_type_name)) { group_name = "tensor_buffer"; }
     if (IsTestOp(r.op_type_name)) { group_name = "TEST"; }
     group_name = "GET_ONEFLOW_" + group_name + "_OP_DEFINITIONS";
     std::transform(group_name.begin(), group_name.end(), group_name.begin(), ::toupper);
