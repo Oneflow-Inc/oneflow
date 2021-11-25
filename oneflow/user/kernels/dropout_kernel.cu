@@ -15,9 +15,7 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/device_type.h"
 #include "oneflow/core/cuda/elementwise.cuh"
-#include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
