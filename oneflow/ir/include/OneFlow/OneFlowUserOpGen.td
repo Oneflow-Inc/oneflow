@@ -1,4 +1,4 @@
-// ASSIGN;BASE;BINARY;BROADCAST;CONV;CROSS_ENTROPY;CUDA;DATASET;DETECTION;EAGER;FUSED;IDEMPOTENT;IDENTITY;IMAGE;INDICES;INVOLUTION;LOSS;MATH;MATMUL;MISC;NCCL;NORMALIZATION;OPTIMIZER;PADDING;PARALLEL_CAST;POOL;QUANTIZATION;REDUCE;RESHAPE;SCALAR;SOFTMAX;SUMMARY;TENSOR_BUFFER;TEST;TRIGONOMETRIC;UNARY;UPSAMPLE
+// ASSIGN;BASE;BINARY;BROADCAST;CONV;CROSS_ENTROPY;CUDA;DATASET;DETECTION;EAGER;FUSED;IDEMPOTENT;IDENTITY;IMAGE;INDICES;INVOLUTION;LOSS;MATH;MATMUL;MISC;NCCL;NORMALIZATION;OPTIMIZER;PADDING;PARALLEL_CAST;POOL;QUANTIZATION;REDUCE;RESHAPE;SCALAR;SOFTMAX;SUMMARY;TENSOR_BUFFER;TEST;TRIGONOMETRIC;UNARY;UPSAMPLE;USED_IN_PATTERNS
 
 // assign, assign_if, assign_if_not, logical_slice_assign
 // Total: 4
@@ -6496,8 +6496,8 @@ def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", [DeclareOpInterfaceMe
 
 #endif  // GET_ONEFLOW_RESHAPE_OP_DEFINITIONS
 
-// clip_by_scalar, clip_by_scalar_grad, clip_by_scalar_max, clip_by_scalar_max_grad, clip_by_scalar_min, clip_by_scalar_min_grad, scalar_add, scalar_add_by_tensor, scalar_div_by_tensor, scalar_floordiv, scalar_fmod, scalar_logical_and, scalar_logical_equal, scalar_logical_greater, scalar_logical_greater_equal, scalar_logical_less, scalar_logical_less_equal, scalar_logical_not_equal, scalar_logical_or, scalar_logical_xor, scalar_mul, scalar_mul_by_tensor, scalar_pow, scalar_pow_grad, scalar_sub_by_tensor
-// Total: 25
+// clip_by_scalar, clip_by_scalar_grad, clip_by_scalar_max, clip_by_scalar_max_grad, clip_by_scalar_min, clip_by_scalar_min_grad, scalar_add, scalar_add_by_tensor, scalar_div_by_tensor, scalar_floordiv, scalar_fmod, scalar_logical_and, scalar_logical_equal, scalar_logical_greater, scalar_logical_greater_equal, scalar_logical_less, scalar_logical_less_equal, scalar_logical_not_equal, scalar_logical_or, scalar_logical_xor, scalar_mul, scalar_pow, scalar_pow_grad, scalar_sub_by_tensor
+// Total: 24
 #ifdef GET_ONEFLOW_SCALAR_OP_DEFINITIONS
 def OneFlow_ClipByScalarOp : OneFlow_BaseOp<"clip_by_scalar", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
@@ -6880,20 +6880,6 @@ def OneFlow_ScalarMulOp : OneFlow_BaseOp<"scalar_mul", [DeclareOpInterfaceMethod
   let extraClassDeclaration = [{
     static std::vector<std::string> inputOrder() { return {"in"}; }
     static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$scalar
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "scalar"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
   }];
 }
 
@@ -8891,4 +8877,23 @@ def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_gr
 }
 
 #endif  // GET_ONEFLOW_UPSAMPLE_OP_DEFINITIONS
+
+// scalar_mul_by_tensor
+// Total: 1
+#ifdef GET_ONEFLOW_USED_IN_PATTERNS_OP_DEFINITIONS
+def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$scalar
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x", "scalar"}; }
+    static std::vector<std::string> outputOrder() { return {"y"}; }
+  }];
+}
+
+#endif  // GET_ONEFLOW_USED_IN_PATTERNS_OP_DEFINITIONS
 
