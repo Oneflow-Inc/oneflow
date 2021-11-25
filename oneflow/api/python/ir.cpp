@@ -97,6 +97,12 @@ const std::set<std::string>& GetInvolutionOps() {
   return ret;
 }
 
+const std::set<std::string>& GetQuantizationOps() {
+  static std::set<std::string> ret{"min_max_observer",   "moving_average_min_max_observer",
+                                   "fake_quantization", "quantization"};
+  return ret;
+}
+
 const std::set<std::string>& GetMathOps() {
   static std::set<std::string> ret{"abs",         "acos",
                                    "acosh",       "asin",
@@ -123,6 +129,9 @@ bool IsMathOp(const std::string& op_name) {
 bool IsGradOp(const std::string& op_name) { return op_name.find("grad") != std::string::npos; }
 bool IsInvolutionOp(const std::string& op_name) {
   return GetInvolutionOps().find(op_name) != GetInvolutionOps().end() && !IsGradOp(op_name);
+}
+bool IsQuantizationOp(const std::string& op_name){
+  return GetQuantizationOps().find(op_name) != GetQuantizationOps().end();
 }
 bool IsIdempotentOp(const std::string& op_name) {
   return GetIdempotentOps().find(op_name) != GetIdempotentOps().end() && !IsGradOp(op_name);
@@ -213,7 +222,10 @@ std::string GetConvOpClassName(const std::string& op_name) {
 std::string GetBaseOp(const std::string& op_name) {
   if (IsInvolutionOp(op_name)) {
     return "OneFlow_InvolutionBaseOp";
-  } else if (IsIdempotentOp(op_name)) {
+  } else if(IsQuantizationOp(op_name)){
+    return "OneFlow_QuantizationBaseOp";
+  }
+  else if (IsIdempotentOp(op_name)) {
     return "OneFlow_IdempotentBaseOp";
   } else if (IsConvOp(op_name)) {
     return "OneFlow_ConvolutionBaseOp";
