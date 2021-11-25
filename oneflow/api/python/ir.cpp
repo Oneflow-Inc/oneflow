@@ -556,8 +556,7 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
       std::cout << "// "
                 << "Total: " << kv.second.size() << "\n";
       group_name = "GET_ONEFLOW_" + group_name + "_OP_DEFINITIONS";
-      std::cout << "#ifndef " << group_name << "\n";
-      std::cout << "#define " << group_name << "\n\n";
+      std::cout << "#ifdef " << group_name << "\n";
       PrintODSFromOpRegistryResults(results);
       std::cout << "#endif  // " << group_name << "\n\n";
     }
