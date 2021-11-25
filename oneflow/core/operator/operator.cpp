@@ -458,10 +458,12 @@ Maybe<void> Operator::GetSbpSignaturesIf(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, cfg::SbpSignatureList* sbp_sig_list) const {
   JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, parallel_desc, sbp_sig_list));
-  SbpSignatureBuilder()
-      .Broadcast(input_bns())
-      .Broadcast(output_bns())
-      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  if (op_conf().op_type_case() != /*output_op*/ 138) {
+    SbpSignatureBuilder()
+        .Broadcast(input_bns())
+        .Broadcast(output_bns())
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  }
   return Maybe<void>::Ok();
 }
 
