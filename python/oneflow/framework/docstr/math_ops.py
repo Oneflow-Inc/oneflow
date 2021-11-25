@@ -160,14 +160,6 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.mul_,
-    r"""
-    In-place version of :func:`oneflow.mul`.
-
-    """,
-)
-
-add_docstr(
     oneflow.reciprocal,
     r"""Computes the safe reciprocal of x. If x is zero, the reciprocal will
     be also set to zero.

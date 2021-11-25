@@ -247,7 +247,7 @@ def _mul(self, other):
 
 
 def _mul_(self, other):
-    return flow.mul_(self, other)
+    return flow._C.mul_(self, other)
 
 
 def _rmul(self, other):

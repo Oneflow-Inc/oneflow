@@ -129,11 +129,14 @@ class InplaceMulFunctor {
     TensorProcessor tensor_processor;
     JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
     TensorTuple input_vec = JUST(tensor_processor.GetInputs());
+    const std::shared_ptr<one::Tensor>& x_cast = input_vec[0];
+    const std::shared_ptr<one::Tensor>& y_cast = input_vec[1];
     JUST(CheckInplaceValid(x));
-    JUST(CheckInplaceCastValid(x, input_vec[0]));
+    JUST(CheckInplaceCastValid(x, x_cast));
+    JUST(CheckShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-    outputs->at(0) = x;
-    if (*x->shape() == *y->shape()) {
+    outputs->at(0) = x_cast;
+    if (*x_cast->shape() == *y_cast->shape()) {
       JUST(OpInterpUtil::Dispatch(*mul_op_, input_vec, outputs.get()));
     } else {
       JUST(OpInterpUtil::Dispatch(*broadcast_mul_op_, input_vec, outputs.get()));
