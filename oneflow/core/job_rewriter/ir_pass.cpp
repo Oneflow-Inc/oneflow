@@ -112,12 +112,16 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
   }
 
   AttrType QueryAttrType(const std::string& op_type_name, const std::string& attr_name) const {
+    user_op::UserOpDefWrapper op_def(GetUserOpDef(attr_name));
+    CHECK(op_def.IsAttrName(attr_name)) << attr_name << " not a attr name for op: " << op_type_name;
+    return op_def.GetAttrType(attr_name);
+  }
+
+  UserOpDef GetUserOpDef(const std::string& op_type_name) const {
     const user_op::OpRegistryResult* val =
         user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
     CHECK(val) << " Cannot find op_type_name: " << op_type_name;
-    user_op::UserOpDefWrapper op_def(val->op_def);
-    CHECK(op_def.IsAttrName(attr_name)) << attr_name << " not a attr name for op: " << op_type_name;
-    return op_def.GetAttrType(attr_name);
+    return val->op_def;
   }
 
   void QueryLogicalBlob(
