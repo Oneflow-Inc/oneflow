@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/profiler/profiler.h"
 #include "oneflow/user/image/random_crop_generator.h"
 #include <opencv2/opencv.hpp>
 
@@ -469,6 +470,7 @@ class Worker final {
 
   void PollWork(const std::function<std::shared_ptr<DecodeHandle>()>& handle_factory,
                 int target_width, int target_height, int warmup_size) {
+    OF_PROFILER_NAME_THIS_HOST_THREAD("_cuda_img_decode");
     std::shared_ptr<DecodeHandle> handle = handle_factory();
     std::shared_ptr<Work> work;
     while (true) {
