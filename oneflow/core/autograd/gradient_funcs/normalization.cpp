@@ -100,8 +100,8 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
     } else {
       const auto& moving_mean = ctx->SavedTensors().at(2);      // moving_mean
       const auto& moving_variance = ctx->SavedTensors().at(3);  // moving_variance
-      const auto& add_eps =
-          JUST(functional::ScalarAdd(moving_variance, ctx->epsilon, /*inplace=*/false));
+      const auto& add_eps = JUST(
+          functional::ScalarAdd(moving_variance, ctx->epsilon, /*alpha=*/1, /*inplace=*/false));
       mean = moving_mean;
       inv_variance = JUST(functional::Rsqrt(add_eps));
     }

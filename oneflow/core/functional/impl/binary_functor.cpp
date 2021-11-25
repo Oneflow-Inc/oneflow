@@ -41,20 +41,29 @@ class AddFunctor {
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& y, bool inplace) const {
+                           const std::shared_ptr<one::Tensor>& y, const Scalar& alpha,
+                           bool inplace) const {
     bool x_static_zeros = IsStaticZerosTensor(x);
     if (x_static_zeros || IsStaticZerosTensor(y)) {
       CHECK_OR_RETURN(JUST(x->device()) == JUST(y->device()));
       CHECK_OR_RETURN(*x->shape() == *y->shape());
       CHECK_OR_RETURN(x->dtype() == y->dtype());
-      if (x_static_zeros) { return y; }
+      if (x_static_zeros) {
+        return alpha.Value<float>() == 1.0 ? y : JUST(functional::ScalarMul(alpha, y));
+      }
       return x;
     }
 
     const OpExpr* op = nullptr;
 
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    if (alpha.Value<float>() == 1.0) {
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    } else {
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+               .AddInputs({x, JUST(functional::ScalarMul(alpha, y))})
+               .Apply());
+    }
     TensorTuple input_vec = JUST(tensor_processor.GetInputs());
     const std::shared_ptr<one::Tensor>& x_cast = input_vec[0];
     const std::shared_ptr<one::Tensor>& y_cast = input_vec[1];
