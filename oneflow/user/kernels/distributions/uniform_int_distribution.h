@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_DISTRIBUTIONS_UNIFORM_INT_DISTRIBUTION_H_
 #define ONEFLOW_USER_KERNELS_DISTRIBUTIONS_UNIFORM_INT_DISTRIBUTION_H_
 
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/framework/random_generator.h"
 #ifdef WITH_CUDA
 #include <curand.h>
