@@ -180,14 +180,14 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
       // or has 4 inputs which are x, addend, gamma and beta.
       if (ctx->has_addend) {
         in_grads->resize(4);
-        if (ctx->gamma_requires_grad) {
-          in_grads->at(1) = results->at(1);  // gamma_diff;
-        }
-        if (ctx->beta_requires_grad) {
-          in_grads->at(2) = results->at(2);  // beta_diff
-        }
         if (ctx->addend_requires_grad) {
           in_grads->at(1) = results->at(3);  // addend_diff
+        }
+        if (ctx->gamma_requires_grad) {
+          in_grads->at(2) = results->at(1);  // gamma_diff;
+        }
+        if (ctx->beta_requires_grad) {
+          in_grads->at(3) = results->at(2);  // beta_diff
         }
       } else {
         in_grads->resize(3);
