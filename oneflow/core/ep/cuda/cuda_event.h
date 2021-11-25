@@ -13,20 +13,38 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_CORE_EP_CUDA_CUDA_EVENT_H_
+#define ONEFLOW_CORE_EP_CUDA_CUDA_EVENT_H_
 
-#ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_METHOD_H_
-#define ONEFLOW_CORE_FRAMEWORK_TENSOR_METHOD_H_
+#include "oneflow/core/ep/include/event.h"
 
-#include "oneflow/core/framework/tensor.h"
+#ifdef WITH_CUDA
+
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
-namespace one {
 
-class Tensor;
+namespace ep {
 
-Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor);
+class CudaEvent : public Event {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudaEvent);
+  explicit CudaEvent(unsigned int flags);
+  ~CudaEvent() override;
 
-}  // namespace one
+  Maybe<bool> QueryDone() override;
+  Maybe<void> Sync() override;
+
+  cudaEvent_t cuda_event();
+
+ private:
+  cudaEvent_t cuda_event_;
+};
+
+}  // namespace ep
+
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_METHOD_H_
+#endif  // WITH_CUDA
+
+#endif  // ONEFLOW_CORE_EP_CUDA_CUDA_EVENT_H_
