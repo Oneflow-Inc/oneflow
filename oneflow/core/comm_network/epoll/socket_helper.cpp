@@ -16,6 +16,7 @@ limitations under the License.
 #ifdef __linux__
 
 #include "oneflow/core/comm_network/epoll/socket_helper.h"
+#include "oneflow/core/actor/actor_message_bus.h"
 
 namespace oneflow {
 

@@ -43,6 +43,7 @@ class SocketReadHelper final {
   void SetStatusWhenMsgHeadDone();
   void SetStatusWhenMsgBodyDone();
   void SetStatusWhenActorMsgHeadDone();
+  void RegisterMsgCallback(const std::function<void(void*, size_t)>& MsgHandle );
 
 #define MAKE_ENTRY(x, y) void SetStatusWhen##x##MsgHeadDone();
   OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ);
@@ -54,6 +55,8 @@ class SocketReadHelper final {
   bool (SocketReadHelper::*cur_read_handle_)();
   char* read_ptr_;
   size_t read_size_;
+
+  std::function<void(void*, size_t)> msghandle_;
 };
 
 }  // namespace oneflow
