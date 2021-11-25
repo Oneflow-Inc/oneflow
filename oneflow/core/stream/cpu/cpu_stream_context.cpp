@@ -21,6 +21,8 @@ limitations under the License.
 #include "oneflow/core/kernel/cpu_check_numerics_kernel_observer.h"
 #include "oneflow/core/graph/stream_id.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
+#include "oneflow/core/ep/cpu/cpu_device.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
@@ -36,11 +38,14 @@ class CpuStreamContext : public StreamContext, public KernelObserverProvider {
   DeviceType device_type() const override { return DeviceType::kCPU; }
 
  private:
-  ep::CpuStream stream_;
+  std::shared_ptr<ep::Device> device_;
+  ep::Stream* stream_;
   std::unique_ptr<KernelObserver> kernel_observer_;
 };
 
-CpuStreamContext::CpuStreamContext() : stream_() {
+CpuStreamContext::CpuStreamContext() : stream_(nullptr) {
+  device_ = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCPU, 0);
+  stream_ = device_->CreateStream();  // NOLINT
   std::vector<std::shared_ptr<KernelObserver>> kernel_observers;
   if (ParseBooleanFromEnv("ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS", false)) {
     kernel_observers.emplace_back(new CpuCheckNumericsKernelObserver());
@@ -48,9 +53,9 @@ CpuStreamContext::CpuStreamContext() : stream_() {
   kernel_observer_.reset(new ChainKernelObserver(kernel_observers));
 }
 
-CpuStreamContext::~CpuStreamContext() = default;
+CpuStreamContext::~CpuStreamContext() { device_->DestroyStream(stream_); }
 
-ep::Stream* CpuStreamContext::stream() { return &stream_; }
+ep::Stream* CpuStreamContext::stream() { return stream_; }
 
 Maybe<void> CpuStreamContext::AddCallback(std::function<void()> callback) {
   callback();

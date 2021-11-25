@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_IN_TOP_K_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_IN_TOP_K_KERNEL_UTIL_H_
 
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 
