@@ -175,6 +175,10 @@ class Operator {
       cfg::SbpSignature* sbp_signature,
       std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
       const ParallelDesc& parallel_desc) const;
+  virtual Maybe<double> GetComputeComplexity(
+      cfg::NdSbpSignature* sbp_signature,
+      std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
+      const ParallelDesc& parallel_desc) const;
   Maybe<void> GetNdSbpSignaturesIf(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& ndsbp_sig_list) const;
