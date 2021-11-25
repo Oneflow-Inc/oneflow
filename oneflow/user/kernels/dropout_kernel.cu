@@ -105,8 +105,8 @@ __global__ RETURN_VOID_IF_FLOAT_BF16 FusedDropoutAddGpu(
       if (has_addend) { y_vec.elem[i] += addend_vec.elem[i]; }
     }
 
-    *(reinterpret_cast<LoadType*>(y + linear_index)) = y_vec.storage; 
-    *(reinterpret_cast<MaskType*>(mask + linear_index)) = mask_vec.storage; 
+    *(reinterpret_cast<LoadType*>(y + linear_index)) = y_vec.storage;
+    *(reinterpret_cast<MaskType*>(mask + linear_index)) = mask_vec.storage;
   }
 
   if (tail && global_thread_id < n_tail) {
@@ -115,9 +115,7 @@ __global__ RETURN_VOID_IF_FLOAT_BF16 FusedDropoutAddGpu(
     tail_mask[global_thread_id] = mask_val;
     T tmp_float_mask = static_cast<float>(mask_val);
     T tmp_tail_out = tail_x[global_thread_id] * tmp_float_mask * t_scale;
-    if (has_addend) {
-      tmp_tail_out  += tail_addend[global_thread_id];
-    } 
+    if (has_addend) { tmp_tail_out += tail_addend[global_thread_id]; }
     tail_y[global_thread_id] = tmp_tail_out;
   }
 
@@ -126,7 +124,7 @@ __global__ RETURN_VOID_IF_FLOAT_BF16 FusedDropoutAddGpu(
   if (threadIdx.x == 0) {
     int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
     if (new_counter == gridDim.x) {
-      cuda_gen_state->dev_counter = 0;               // reset counter to zero
+      cuda_gen_state->dev_counter = 0;           // reset counter to zero
       cuda_gen_state->dev_offset += inc_offset;  // maintain the state of generator's dev_offset
     }
   }
@@ -142,8 +140,8 @@ __global__ RETURN_VOID_IF_HALF FusedDropoutAddGpu(
   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
   using LoadType = cuda::elementwise::PackType<T, pack_size>;
   using LoadPack = cuda::elementwise::Pack<T, pack_size>;
-  using StoreType = cuda::elementwise::PackType<half2, pack_size/2>;
-  using StorePack = cuda::elementwise::Pack<half2, pack_size/2>;
+  using StoreType = cuda::elementwise::PackType<half2, pack_size / 2>;
+  using StorePack = cuda::elementwise::Pack<half2, pack_size / 2>;
   using MaskType = cuda::elementwise::PackType<int8_t, pack_size>;
   using MaskPack = cuda::elementwise::Pack<int8_t, pack_size>;
 
@@ -158,7 +156,7 @@ __global__ RETURN_VOID_IF_HALF FusedDropoutAddGpu(
 
     H2Pack addend_vec{};
     if (has_addend) {
-      const LoadType* addend_load = reinterpret_cast<const LoadType*>(addend+linear_index);
+      const LoadType* addend_load = reinterpret_cast<const LoadType*>(addend + linear_index);
       addend_vec.pack_storage.storage = *addend_load;
     }
 
@@ -192,9 +190,7 @@ __global__ RETURN_VOID_IF_HALF FusedDropoutAddGpu(
     const int8_t mask_val = rand_uniform > rate;
     tail_mask[global_thread_id] = mask_val;
     half tmp_tail_out = tail_x[global_thread_id] * static_cast<half>(mask_val) * h2_scale.x;
-    if (has_addend) {
-      tmp_tail_out  += tail_addend[global_thread_id];
-    } 
+    if (has_addend) { tmp_tail_out += tail_addend[global_thread_id]; }
     tail_y[global_thread_id] = tmp_tail_out;
   }
 
@@ -202,7 +198,7 @@ __global__ RETURN_VOID_IF_HALF FusedDropoutAddGpu(
   if (threadIdx.x == 0) {
     int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
     if (new_counter == gridDim.x) {
-      cuda_gen_state->dev_counter = 0;               // reset counter to zero
+      cuda_gen_state->dev_counter = 0;           // reset counter to zero
       cuda_gen_state->dev_offset += inc_offset;  // maintain the state of generator's dev_offset
     }
   }
@@ -262,9 +258,7 @@ __global__ RETURN_VOID_IF_DOUBLE FusedDropoutAddGpu(
     const int8_t mask_val = rand_uniform > rate;
     tail_mask[global_thread_id] = mask_val;
     double tmp_tail_out = tail_x[global_thread_id] * mask_val * scale;
-    if (has_addend) {
-      tmp_tail_out  += tail_addend[global_thread_id];
-    } 
+    if (has_addend) { tmp_tail_out += tail_addend[global_thread_id]; }
     tail_y[global_thread_id] = tmp_tail_out;
   }
 
@@ -272,7 +266,7 @@ __global__ RETURN_VOID_IF_DOUBLE FusedDropoutAddGpu(
   if (threadIdx.x == 0) {
     int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
     if (new_counter == gridDim.x) {
-      cuda_gen_state->dev_counter = 0;               // reset counter to zero
+      cuda_gen_state->dev_counter = 0;           // reset counter to zero
       cuda_gen_state->dev_offset += inc_offset;  // maintain the state of generator's dev_offset
     }
   }
@@ -393,7 +387,9 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
 REGISTER_DROPOUT_KERNEL_GPU(half, DataType::kFloat16);
 REGISTER_DROPOUT_KERNEL_GPU(float, DataType::kFloat);
 REGISTER_DROPOUT_KERNEL_GPU(double, DataType::kDouble);
+#if CUDA_VERSION >= 11000
 REGISTER_DROPOUT_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
+#endif
 
 template<typename T>
 class DropoutGradKernelGPU final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -431,8 +427,9 @@ class DropoutGradKernelGPU final : public user_op::OpKernel, public user_op::Cud
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(half, DataType::kFloat16);
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(float, DataType::kFloat);
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(double, DataType::kDouble);
+#if CUDA_VERSION >= 11000
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
-
+#endif
 }  // namespace
 
 }  // namespace oneflow
