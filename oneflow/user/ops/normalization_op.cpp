@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #ifdef WITH_CUDA
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/device/cudnn_util.h"
 #endif
 

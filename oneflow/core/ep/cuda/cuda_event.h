@@ -13,39 +13,38 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EP_STREAM_H_
-#define ONEFLOW_CORE_EP_STREAM_H_
+#ifndef ONEFLOW_CORE_EP_CUDA_CUDA_EVENT_H_
+#define ONEFLOW_CORE_EP_CUDA_CUDA_EVENT_H_
 
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/common/device_type.h"
-#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/ep/include/event.h"
+
+#ifdef WITH_CUDA
+
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
 namespace ep {
 
-class Stream {
+class CudaEvent : public Event {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Stream);
-  Stream() = default;
-  virtual ~Stream() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CudaEvent);
+  explicit CudaEvent(unsigned int flags);
+  ~CudaEvent() override;
 
-  virtual DeviceType device_type() const = 0;
-  virtual Maybe<void> Sync() = 0;
-  virtual void RecordEvent(Event* event) = 0;
+  Maybe<bool> QueryDone() override;
+  Maybe<void> Sync() override;
 
-  virtual Maybe<void> OnExecutionContextSetup() { return Maybe<void>::Ok(); }
-  virtual Maybe<void> OnExecutionContextTeardown() { return Maybe<void>::Ok(); }
+  cudaEvent_t cuda_event();
 
-  template<typename T>
-  T* As() {
-    return static_cast<T*>(this);
-  }
+ private:
+  cudaEvent_t cuda_event_;
 };
 
 }  // namespace ep
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_EP_STREAM_H_
+#endif  // WITH_CUDA
+
+#endif  // ONEFLOW_CORE_EP_CUDA_CUDA_EVENT_H_

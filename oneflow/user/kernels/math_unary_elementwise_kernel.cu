@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/user/kernels/math_unary_elementwise_func.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
