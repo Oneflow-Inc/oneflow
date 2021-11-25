@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_LOSS_KERNEL_UTIL_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
