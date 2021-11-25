@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 #include "oneflow/core/common/data_type.h"
@@ -22,6 +23,7 @@ limitations under the License.
 #include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/device/cuda_pseudo_bfloat16.h"
 
 namespace oneflow {
 
@@ -29,15 +31,30 @@ namespace {
 
 constexpr int32_t kVecSize = 4;
 constexpr int32_t kBlockSize = 256;
-constexpr int32_t PackDoubleSize = 2;
-constexpr int32_t PackFloatSize = 4;
-constexpr int32_t PackHalfSize = 4;
-constexpr int32_t PackHalf2Size = 2;
+
+template<typename T>
+constexpr int32_t GetDropoutPackSize() {
+  // For float, bfloat16, half.
+  return 4;
+};
+
+template<>
+constexpr int32_t GetDropoutPackSize<half2>() {
+  return 2;
+};
+
+template<>
+constexpr int32_t GetDropoutPackSize<double>() {
+  return 2;
+};
 
 using H2PackType = typename std::aligned_storage<4 * sizeof(half), 4 * sizeof(half)>::type;
 union H2Pack {
-  H2PackType storage;
+  cuda::elementwise::Pack<half, 4> pack_storage;
   half2 h2[2];
+  __device__ H2Pack() {
+    // do nothing
+  }
 };
 
 union RandPack4 {
@@ -46,56 +63,63 @@ union RandPack4 {
 };
 
 #define RETURN_VOID_IF_HALF typename std::enable_if_t<std::is_same<T, half>::value, void>
-#define RETURN_VOID_IF_FLOAT typename std::enable_if_t<std::is_same<T, float>::value, void>
+#define RETURN_VOID_IF_FLOAT_BF16 \
+  typename std::enable_if_t<      \
+      (std::is_same<T, float>::value || std::is_same<T, nv_bfloat16>::value), void>
 #define RETURN_VOID_IF_DOUBLE typename std::enable_if_t<std::is_same<T, double>::value, void>
 
-template<typename T, bool tail, bool hasAddend>
-__global__ RETURN_VOID_IF_FLOAT MaskAndScaleAddGpu(
+template<typename T, int pack_size, bool tail, bool has_addend>
+__global__ RETURN_VOID_IF_FLOAT_BF16 FusedDropoutAddGpu(
     uint64_t seed, one::CUDAGeneratorState* cuda_gen_state, uint64_t counter_offset,
     const int64_t elem_cnt, float rate, float scale, int64_t n_tail, const T* x, int8_t* mask,
     const T* addend, T* y, const T* tail_x, int8_t* tail_mask, const T* tail_addend, T* tail_y) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
-  using LoadT =
-      typename std::aligned_storage<sizeof(T) * PackFloatSize, sizeof(T) * PackFloatSize>::type;
-  using MaskT = typename std::aligned_storage<sizeof(int8_t) * PackFloatSize,
-                                              sizeof(int8_t) * PackFloatSize>::type;
+  using LoadType = cuda::elementwise::PackType<T, pack_size>;
+  using LoadPack = cuda::elementwise::Pack<T, pack_size>;
+  using MaskType = cuda::elementwise::PackType<int8_t, pack_size>;
+  using MaskPack = cuda::elementwise::Pack<int8_t, pack_size>;
 
+  using MaskT = typename std::aligned_storage<sizeof(int8_t) * 4, sizeof(int8_t) * 4>::type;
+
+  T t_scale = static_cast<T>(scale);
   RandPack4 rand_uniform_pack4;
-  for (int64_t linear_index = global_thread_id * PackFloatSize; linear_index < elem_cnt;
-       linear_index += gridDim.x * blockDim.x * PackFloatSize) {
+  for (int64_t linear_index = global_thread_id * pack_size; linear_index < elem_cnt;
+       linear_index += gridDim.x * blockDim.x * pack_size) {
     rand_uniform_pack4.storage = curand_uniform4(&state);
 
-    const LoadT* x_load = reinterpret_cast<const LoadT*>(x + linear_index);
-    cuda::elementwise::Pack<T, PackFloatSize> x_vec;
+    const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
+    LoadPack x_vec;
     x_vec.storage = *x_load;
 
-    cuda::elementwise::Pack<T, PackFloatSize> addend_vec;
-    if (hasAddend) {
-      const LoadT* addend_load = reinterpret_cast<const LoadT*>(&addend[linear_index]);
+    LoadPack addend_vec;
+    if (has_addend) {
+      const LoadType* addend_load = reinterpret_cast<const LoadType*>(addend + linear_index);
       addend_vec.storage = *addend_load;
     }
 
-    int8_t mask_vec[PackFloatSize];
-    T y_vec[PackFloatSize];
+    int8_t mask_vec[pack_size];
+    T y_vec[pack_size];
 #pragma unroll
-    for (int i = 0; i < PackFloatSize; i++) {
+    for (int i = 0; i < pack_size; i++) {
       mask_vec[i] = rand_uniform_pack4.elem[i] > rate;
-      y_vec[i] = x_vec.elem[i] * mask_vec[i] * scale;
-      if (hasAddend) { y_vec[i] += addend_vec.elem[i]; }
+      T tmp_float_mask = static_cast<float>(mask_vec[i]);
+      y_vec[i] = x_vec.elem[i] * tmp_float_mask * t_scale;
+      if (has_addend) { y_vec[i] += addend_vec.elem[i]; }
     }
 
-    *(reinterpret_cast<LoadT*>(y + linear_index)) = *reinterpret_cast<LoadT*>(y_vec);
-    *(reinterpret_cast<MaskT*>(mask + linear_index)) = *reinterpret_cast<MaskT*>(mask_vec);
+    *(reinterpret_cast<LoadType*>(y + linear_index)) = *reinterpret_cast<LoadType*>(y_vec);
+    *(reinterpret_cast<MaskType*>(mask + linear_index)) = *reinterpret_cast<MaskType*>(mask_vec);
   }
 
   if (tail && global_thread_id < n_tail) {
     const float rand_uniform = curand_uniform(&state);
-    const int8_t mask = rand_uniform > rate;
-    tail_mask[global_thread_id] = mask;
-    float tmp_tail_out = tail_x[global_thread_id] * mask * scale;
-    if (hasAddend) {
+    const int8_t mask_val = rand_uniform > rate;
+    tail_mask[global_thread_id] = mask_val;
+    T tmp_float_mask = static_cast<float>(mask_val);
+    T tmp_tail_out = tail_x[global_thread_id] * tmp_float_mask * t_scale;
+    if (has_addend) {
       tail_y[global_thread_id] = tmp_tail_out + tail_addend[global_thread_id];
     } else {
       tail_y[global_thread_id] = tmp_tail_out;
@@ -113,37 +137,35 @@ __global__ RETURN_VOID_IF_FLOAT MaskAndScaleAddGpu(
   }
 }
 
-template<typename T, bool tail, bool hasAddend>
-__global__ RETURN_VOID_IF_HALF MaskAndScaleAddGpu(
+template<typename T, int pack_size, bool tail, bool has_addend>
+__global__ RETURN_VOID_IF_HALF FusedDropoutAddGpu(
     uint64_t seed, one::CUDAGeneratorState* cuda_gen_state, uint64_t counter_offset,
     const int64_t elem_cnt, float rate, float scale, int64_t n_tail, const T* x, int8_t* mask,
     const T* addend, T* y, const T* tail_x, int8_t* tail_mask, const T* tail_addend, T* tail_y) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
-  using LoadT =
-      typename std::aligned_storage<sizeof(half) * PackHalfSize, sizeof(half) * PackHalfSize>::type;
-  using MaskT = typename std::aligned_storage<sizeof(int8_t) * PackHalfSize,
-                                              sizeof(int8_t) * PackHalfSize>::type;
+  using LoadT = cuda::elementwise::Pack<T, pack_size>;
+  using MaskT = cuda::elementwise::Pack<int8_t, pack_size>;
 
   RandPack4 rand_uniform_pack4;
   half2 h2_scale = __float2half2_rn(scale);
-  for (int64_t linear_index = global_thread_id * PackHalfSize; linear_index < elem_cnt;
-       linear_index += gridDim.x * blockDim.x * PackHalfSize) {
+  for (int64_t linear_index = global_thread_id * pack_size; linear_index < elem_cnt;
+       linear_index += gridDim.x * blockDim.x * pack_size) {
     rand_uniform_pack4.storage = curand_uniform4(&state);
     const LoadT* x_load = reinterpret_cast<const LoadT*>(x + linear_index);
     H2Pack x_vec{};
-    x_vec.storage = *x_load;
+    x_vec.pack_storage = *x_load;
 
     H2Pack addend_vec{};
-    if (hasAddend) {
+    if (has_addend) {
       const LoadT* addend_load = reinterpret_cast<const LoadT*>(&addend[linear_index]);
-      addend_vec.storage = *addend_load;
+      addend_vec.pack_storage = *addend_load;
     }
 
-    int8_t mask_vec[PackHalfSize];
-    half2 y_vec[PackHalf2Size];
-    half2 one_or_zero_h2[PackHalf2Size];
+    int8_t mask_vec[pack_size];
+    half2 y_vec[pack_size / 2];
+    half2 one_or_zero_h2[pack_size / 2];
 
     mask_vec[0] = rand_uniform_pack4.elem[0] > rate;
     one_or_zero_h2[0].x = mask_vec[0];
@@ -157,7 +179,7 @@ __global__ RETURN_VOID_IF_HALF MaskAndScaleAddGpu(
     one_or_zero_h2[1].y = mask_vec[3];
     y_vec[1] = __hmul2(__hmul2(x_vec.h2[1], one_or_zero_h2[1]), h2_scale);
 
-    if (hasAddend) {
+    if (has_addend) {
       y_vec[0] = __hadd2(y_vec[0], addend_vec.h2[0]);
       y_vec[1] = __hadd2(y_vec[1], addend_vec.h2[1]);
     }
@@ -169,10 +191,10 @@ __global__ RETURN_VOID_IF_HALF MaskAndScaleAddGpu(
   if (tail && global_thread_id < n_tail) {
     half half_scale = __float2half_rn(scale);
     const float rand_uniform = curand_uniform(&state);
-    const int8_t mask = rand_uniform > rate;
-    tail_mask[global_thread_id] = mask;
-    half tmp_tail_out = tail_x[global_thread_id] * static_cast<half>(mask) * half_scale;
-    if (hasAddend) {
+    const int8_t mask_val = rand_uniform > rate;
+    tail_mask[global_thread_id] = mask_val;
+    half tmp_tail_out = tail_x[global_thread_id] * static_cast<half>(mask_val) * half_scale;
+    if (has_addend) {
       tail_y[global_thread_id] = tmp_tail_out + tail_addend[global_thread_id];
     } else {
       tail_y[global_thread_id] = tmp_tail_out;
@@ -189,24 +211,24 @@ __global__ RETURN_VOID_IF_HALF MaskAndScaleAddGpu(
   }
 }
 
-template<typename T, bool tail, bool hasAddend>
-__global__ RETURN_VOID_IF_DOUBLE MaskAndScaleAddGpu(
+template<typename T, int pack_size, bool tail, bool has_addend>
+__global__ RETURN_VOID_IF_DOUBLE FusedDropoutAddGpu(
     uint64_t seed, one::CUDAGeneratorState* cuda_gen_state, uint64_t counter_offset,
     const int64_t elem_cnt, float rate, float scale, int64_t n_tail, const T* x, int8_t* mask,
     const T* addend, T* y, const T* tail_x, int8_t* tail_mask, const T* tail_addend, T* tail_y) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
-  using LoadT = typename std::aligned_storage<sizeof(double) * PackDoubleSize,
-                                              sizeof(double) * PackDoubleSize>::type;
-  using MaskT = typename std::aligned_storage<sizeof(int8_t) * PackDoubleSize,
-                                              sizeof(int8_t) * PackDoubleSize>::type;
+  using LoadType = cuda::elementwise::PackType<T, pack_size>;
+  using LoadPack = cuda::elementwise::Pack<T, pack_size>;
+  using MaskType = cuda::elementwise::PackType<int8_t, pack_size>;
+  using MaskPack = cuda::elementwise::Pack<int8_t, pack_size>;
 
   RandPack4 rand_uniform_pack4;
   bool grid_loop_rand_state = 0;
 
-  for (int64_t linear_index = global_thread_id * PackDoubleSize; linear_index < elem_cnt;
-       linear_index += gridDim.x * blockDim.x * PackDoubleSize) {
+  for (int64_t linear_index = global_thread_id * pack_size; linear_index < elem_cnt;
+       linear_index += gridDim.x * blockDim.x * pack_size) {
     if (grid_loop_rand_state == 0) {
       rand_uniform_pack4.storage = curand_uniform4(&state);
     } else {
@@ -215,34 +237,34 @@ __global__ RETURN_VOID_IF_DOUBLE MaskAndScaleAddGpu(
       rand_uniform_pack4.elem[1] = rand_uniform_pack4.elem[3];
       grid_loop_rand_state ^= 1;
     }
-    const LoadT* x_load = reinterpret_cast<const LoadT*>(x + linear_index);
-    cuda::elementwise::Pack<double, PackDoubleSize> x_vec;
+    const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
+    LoadPack x_vec;
     x_vec.storage = *x_load;
 
-    cuda::elementwise::Pack<double, PackDoubleSize> addend_vec;
-    if (hasAddend) {
-      const LoadT* addend_load = reinterpret_cast<const LoadT*>(&addend[linear_index]);
+    LoadPack addend_vec;
+    if (has_addend) {
+      const LoadType* addend_load = reinterpret_cast<const LoadType*>(addend + linear_index);
       addend_vec.storage = *addend_load;
     }
 
-    int8_t mask_vec[PackDoubleSize];
-    double y_vec[PackDoubleSize];
+    int8_t mask_vec[pack_size];
+    double y_vec[pack_size];
 #pragma unroll
-    for (int i = 0; i < PackDoubleSize; i++) {
+    for (int i = 0; i < pack_size; i++) {
       mask_vec[i] = rand_uniform_pack4.elem[i] > rate;
       y_vec[i] = x_vec.elem[i] * mask_vec[i] * scale;
-      if (hasAddend) { y_vec[i] += addend_vec.elem[i]; }
+      if (has_addend) { y_vec[i] += addend_vec.elem[i]; }
     }
-    *(reinterpret_cast<LoadT*>(y + linear_index)) = *reinterpret_cast<LoadT*>(y_vec);
-    *(reinterpret_cast<MaskT*>(mask + linear_index)) = *reinterpret_cast<MaskT*>(mask_vec);
+    *(reinterpret_cast<LoadType*>(y + linear_index)) = *reinterpret_cast<LoadType*>(y_vec);
+    *(reinterpret_cast<MaskType*>(mask + linear_index)) = *reinterpret_cast<MaskType*>(mask_vec);
   }
 
   if (tail && global_thread_id < n_tail) {
     const float rand_uniform = curand_uniform(&state);
-    const int8_t mask = rand_uniform > rate;
-    tail_mask[global_thread_id] = mask;
-    double tmp_tail_out = tail_x[global_thread_id] * mask * scale;
-    if (hasAddend) {
+    const int8_t mask_val = rand_uniform > rate;
+    tail_mask[global_thread_id] = mask_val;
+    double tmp_tail_out = tail_x[global_thread_id] * mask_val * scale;
+    if (has_addend) {
       tail_y[global_thread_id] = tmp_tail_out + tail_addend[global_thread_id];
     } else {
       tail_y[global_thread_id] = tmp_tail_out;
@@ -269,36 +291,49 @@ unsigned int ComputeGridSize(const int32_t block_size, const int64_t elem_cnt) {
   return grid_size;
 }
 
-template<typename T, bool hasAddend>
+template<typename T, bool has_addend>
 void DispatchTail(DeviceCtx* ctx, uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                   const int64_t elem_cnt, float rate, float scale, const T* x, int8_t* mask,
                   const T* addend, T* y) {
   unsigned int grid_size = ComputeGridSize<4>(kBlockSize, elem_cnt);
-  constexpr int pack_size = cuda::elementwise::PackSize<T>();
+  constexpr int pack_size = GetDropoutPackSize<T>();
   const int64_t pack_num = elem_cnt / pack_size;
   const int64_t tail_offset = pack_num * pack_size;
-  const int64_t n_tail = pack_num - tail_offset;
+  const int64_t n_tail = elem_cnt - tail_offset;
   const bool tail = n_tail > 0 ? true : false;
   uint64_t counter_offset = 0;
+
   if (tail) {
     // If tail, we need generate randnum one more time, so here we add another `1`.
     counter_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize + 1;
-    MaskAndScaleAddGpu<T, true, hasAddend><<<grid_size, kBlockSize, 0, ctx->cuda_stream()>>>(
-        seed, cuda_gen_state, counter_offset, elem_cnt, rate, scale, n_tail, x, mask, addend, y,
-        (x + tail_offset), (mask + tail_offset), (addend + tail_offset), (y + tail_offset));
+    FusedDropoutAddGpu<T, pack_size, true, has_addend>
+        <<<grid_size, kBlockSize, 0, ctx->cuda_stream()>>>(
+            seed, cuda_gen_state, counter_offset, elem_cnt, rate, scale, n_tail, x, mask, addend, y,
+            (x + tail_offset), (mask + tail_offset), (addend + tail_offset), (y + tail_offset));
   } else {
     counter_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize;
-    MaskAndScaleAddGpu<T, false, hasAddend><<<grid_size, kBlockSize, 0, ctx->cuda_stream()>>>(
-        seed, cuda_gen_state, counter_offset, elem_cnt, rate, scale, n_tail, x, mask, addend, y,
-        (x + tail_offset), (mask + tail_offset), (addend + tail_offset), (y + tail_offset));
+    FusedDropoutAddGpu<T, pack_size, false, has_addend>
+        <<<grid_size, kBlockSize, 0, ctx->cuda_stream()>>>(
+            seed, cuda_gen_state, counter_offset, elem_cnt, rate, scale, n_tail, x, mask, addend, y,
+            nullptr, nullptr, nullptr, nullptr);
   }
 }
 
 template<typename T>
 struct MaskAndScaleFunctor {
   OF_DEVICE_FUNC explicit MaskAndScaleFunctor(float scale) : scale(scale) {}
-  OF_DEVICE_FUNC T operator()(T x, int8_t mask) const {
+  __device__ T operator()(T x, int8_t mask) const {
     return x * static_cast<T>(mask) * static_cast<T>(scale);
+  }
+  float scale;
+};
+
+template<>
+struct MaskAndScaleFunctor<nv_bfloat16> {
+  OF_DEVICE_FUNC explicit MaskAndScaleFunctor(float scale) : scale(scale) {}
+  __device__ nv_bfloat16 operator()(nv_bfloat16 x, int8_t mask) const {
+    float float_mask = static_cast<float>(mask);
+    return x * static_cast<nv_bfloat16>(float_mask) * static_cast<nv_bfloat16>(scale);
   }
   float scale;
 };
@@ -336,27 +371,30 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
 
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* addend = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
-      DispatchTail<T, true>(ctx->device_ctx(), seed, cuda_gen_state, in->shape().elem_cnt(), rate,
-                            scale, in->dptr<T>(), mask->mut_dptr<int8_t>(), addend->dptr<T>(),
-                            out->mut_dptr<T>());
+      DispatchTail<T, true>(
+          ctx->device_ctx(), seed, cuda_gen_state, in->shape().elem_cnt(), rate, scale,
+          reinterpret_cast<const T*>(in->dptr()), reinterpret_cast<int8_t*>(mask->mut_dptr()),
+          reinterpret_cast<const T*>(addend->dptr()), reinterpret_cast<T*>(out->mut_dptr()));
     } else {
       DispatchTail<T, false>(ctx->device_ctx(), seed, cuda_gen_state, in->shape().elem_cnt(), rate,
-                             scale, in->dptr<T>(), mask->mut_dptr<int8_t>(), nullptr,
-                             out->mut_dptr<T>());
+                             scale, reinterpret_cast<const T*>(in->dptr()),
+                             reinterpret_cast<int8_t*>(mask->mut_dptr()), nullptr,
+                             reinterpret_cast<T*>(out->mut_dptr()));
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DROPOUT_KERNEL_GPU(dtype)                                                \
-  REGISTER_USER_KERNEL("dropout").SetCreateFn<DropoutKernelGPU<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kGPU)                                      \
-      && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)                    \
-      && (user_op::HobDataType("mask", 0) == GetDataType<int8_t>::value));
+#define REGISTER_DROPOUT_KERNEL_GPU(cpp_type, data_type)                                     \
+  REGISTER_USER_KERNEL("dropout").SetCreateFn<DropoutKernelGPU<cpp_type>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == DeviceType::kGPU)                                         \
+      && (user_op::HobDataType("out", 0) == data_type)                                       \
+      && (user_op::HobDataType("mask", 0) == GetDataType<int8_t>::value))
 
-REGISTER_DROPOUT_KERNEL_GPU(half)
-REGISTER_DROPOUT_KERNEL_GPU(float)
-REGISTER_DROPOUT_KERNEL_GPU(double)
+REGISTER_DROPOUT_KERNEL_GPU(half, DataType::kFloat16);
+REGISTER_DROPOUT_KERNEL_GPU(float, DataType::kFloat);
+REGISTER_DROPOUT_KERNEL_GPU(double, DataType::kDouble);
+REGISTER_DROPOUT_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
 
 template<typename T>
 class DropoutGradKernelGPU final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -372,27 +410,29 @@ class DropoutGradKernelGPU final : public user_op::OpKernel, public user_op::Cud
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const float scale = ctx->Attr<float>("scale");
     const int64_t elem_cnt = dy->shape().elem_cnt();
-    OF_CUDA_CHECK((cuda::elementwise::Binary(MaskAndScaleFunctor<T>(scale), elem_cnt,
-                                             dx->mut_dptr<T>(), dy->dptr<T>(), mask->dptr<int8_t>(),
-                                             ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
+    OF_CUDA_CHECK((cuda::elementwise::Binary(
+        MaskAndScaleFunctor<T>(scale), elem_cnt, reinterpret_cast<T*>(dx->mut_dptr()),
+        reinterpret_cast<const T*>(dy->dptr()), reinterpret_cast<const int8_t*>(mask->dptr()),
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DROPOUT_GRAD_KERNEL_GPU(dtype)                                                 \
+#define REGISTER_DROPOUT_GRAD_KERNEL_GPU(cpp_type, data_type)                                   \
   REGISTER_USER_KERNEL("dropout_grad")                                                          \
-      .SetCreateFn<DropoutGradKernelGPU<dtype>>()                                               \
+      .SetCreateFn<DropoutGradKernelGPU<cpp_type>>()                                            \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
-                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))         \
+                       && (user_op::HobDataType("dx", 0) == data_type))                         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                        \
         return Maybe<void>::Ok();                                                               \
-      });
+      })
 
-REGISTER_DROPOUT_GRAD_KERNEL_GPU(half)
-REGISTER_DROPOUT_GRAD_KERNEL_GPU(float)
-REGISTER_DROPOUT_GRAD_KERNEL_GPU(double)
+REGISTER_DROPOUT_GRAD_KERNEL_GPU(half, DataType::kFloat16);
+REGISTER_DROPOUT_GRAD_KERNEL_GPU(float, DataType::kFloat);
+REGISTER_DROPOUT_GRAD_KERNEL_GPU(double, DataType::kDouble);
+REGISTER_DROPOUT_GRAD_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
 
 }  // namespace
 
