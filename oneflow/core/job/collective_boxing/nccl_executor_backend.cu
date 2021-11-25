@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
-#include "oneflow/core/kernel/batch_memcpy_kernel_util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/device/cuda_util.h"
@@ -127,7 +126,7 @@ class CommRank final {
 
   ~CommRank() {
     if (nccl_comm_ != nullptr) {
-      CudaCurrentDeviceGuard(device_id_);
+      CudaCurrentDeviceGuard guard(device_id_);
       OF_NCCL_CHECK(ncclCommDestroy(nccl_comm_));
     }
   }
@@ -137,7 +136,7 @@ class CommRank final {
   ncclComm_t nccl_comm() const { return nccl_comm_; }
 
   void InitRank(ncclUniqueId unique_id, int32_t global_rank_count) {
-    CudaCurrentDeviceGuard(device_id_);
+    CudaCurrentDeviceGuard guard(device_id_);
     OF_NCCL_CHECK(ncclCommInitRank(&nccl_comm_, global_rank_count, unique_id, global_rank_));
   }
 

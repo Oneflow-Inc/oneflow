@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import copy
 import os
 import unittest
 from collections import OrderedDict
@@ -35,6 +36,15 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(
             np.allclose(tensor.numpy(), np.ones(shape, dtype=np.float32))
         )
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_tensor_deepcopy(test_case):
+        shape = (2, 3)
+        tensor1 = flow.ones(*shape)
+        tensor2 = copy.deepcopy(tensor1)
+        tensor1[0, 0] = 0
+        test_case.assertEqual(tensor1[0, 0], 0)
+        test_case.assertEqual(tensor2[0, 0], 1)
 
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_property(test_case):
@@ -578,6 +588,14 @@ class TestTensor(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     @autotest()
+    def test_arccos_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(low=2, high=3).to(device)
+        y = x.arccos()
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest()
     def test_arccosh_tensor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(low=2, high=3).to(device)
@@ -638,6 +656,12 @@ class TestTensor(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         return x.negative()
+
+    @autotest()
+    def test_neg_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return x.neg()
 
     @autotest(auto_backward=False)
     def test_greater_tensor_with_random_data(test_case):
@@ -1034,6 +1058,14 @@ class TestTensor(flow.unittest.TestCase):
         device = random_device()
         input = random_pytorch_tensor().to(device)
         y = input.clip(min=random().to(float), max=random().to(float) | nothing())
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest()
+    def test_ceil_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = len(input)
         return y
 
     @flow.unittest.skip_unless_1n1d()
@@ -1499,6 +1531,11 @@ class TestTensor(flow.unittest.TestCase):
         )
         test_case.assertEqual(y.placement, placement)
 
+        y_default_dtype = flow.tensor(
+            x, placement=placement, sbp=[flow.sbp.split(0)], requires_grad=False,
+        )
+        test_case.assertTrue(y_default_dtype.dtype == flow.int32)
+
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestTensorNumpy(flow.unittest.TestCase):
@@ -1565,6 +1602,16 @@ class TestTensorNumpy(flow.unittest.TestCase):
 
         # TODO: (s0, b) has bug
         # x = ori_x.to_consistent(placement=placement, sbp=[flow.sbp.split(0), flow.sbp.broadcast])
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest()
+    def test_tensor_bmm(test_case):
+        t = random(1, 5)
+        k = random(1, 5)
+        input1 = random_pytorch_tensor(ndim=3, dim0=t, dim1=3, dim2=k)
+        input2 = random_pytorch_tensor(ndim=3, dim0=t, dim1=k, dim2=5)
+        of_out = input1.bmm(input2)
+        return of_out
 
 
 if __name__ == "__main__":

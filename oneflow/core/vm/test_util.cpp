@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 namespace vm {
@@ -52,9 +53,11 @@ TestResourceDescScope::TestResourceDescScope(int64_t gpu_device_num, int64_t cpu
   resource.set_gpu_device_num(gpu_device_num);
   resource.set_cpu_device_num(cpu_device_num);
   Global<ResourceDesc, ForSession>::New(resource, GlobalProcessCtx::NumOfProcessPerNode());
+  Global<ep::DeviceManagerRegistry>::New();
 }
 
 TestResourceDescScope::~TestResourceDescScope() {
+  Global<ep::DeviceManagerRegistry>::Delete();
   Global<ResourceDesc, ForSession>::Delete();
   Global<EnvDesc>::Delete();
   Global<ProcessCtx>::Delete();

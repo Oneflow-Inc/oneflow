@@ -28,6 +28,11 @@ static void SetIsForkedSubProcess() { is_fork = true; }
 void RegisterForkCallback() { pthread_atfork(nullptr, nullptr, SetIsForkedSubProcess); }
 COMMAND(RegisterForkCallback());
 
+const char* kOfCudaNotSupportInForkedSubProcess =
+    "Cannot re-initialize CUDA in forked subprocess. To use CUDA with multiprocessing, you "
+    "must add 'multiprocessing.set_start_method(\"spawn\")' in '__main__' if you are using "
+    "Python's multiprocessing";
+
 }  // namespace pthread_fork
 
 }  // namespace oneflow

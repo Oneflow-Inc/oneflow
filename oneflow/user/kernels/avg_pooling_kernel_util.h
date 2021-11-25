@@ -15,7 +15,7 @@ limitations under the License.
 */
 #ifndef ONEFLOW_USER_KERNELS_AVG_POOLING_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_AVG_POOLING_KERNEL_UTIL_H_
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
@@ -97,27 +97,33 @@ class AvgPoolingParams3D {
 
 template<DeviceType device_type, typename T>
 struct AvgPoolingKernelUtil {
-  static void Avgpool1dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 3>& index_helper,
+  static void Avgpool1dForward(ep::Stream* stream,
+                               const NdIndexOffsetHelper<int64_t, 3>& index_helper,
                                const int64_t elem_num, const T* src, T* dest,
                                const AvgPoolingParams3D& params_3d);
 
-  static void Avgpool1dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 3>& index_helper,
+  static void Avgpool1dBackward(ep::Stream* stream,
+                                const NdIndexOffsetHelper<int64_t, 3>& index_helper,
                                 const int64_t elem_num, const T* src, T* dest,
                                 const AvgPoolingParams3D& params_3d);
 
-  static void Avgpool2dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper,
+  static void Avgpool2dForward(ep::Stream* stream,
+                               const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                const int64_t elem_num, const T* src, T* dest,
                                const AvgPoolingParams3D& params_3d);
 
-  static void Avgpool2dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper,
+  static void Avgpool2dBackward(ep::Stream* stream,
+                                const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                 const int64_t elem_num, const T* src, T* dest,
                                 const AvgPoolingParams3D& params_3d);
 
-  static void Avgpool3dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5>& index_helper,
+  static void Avgpool3dForward(ep::Stream* stream,
+                               const NdIndexOffsetHelper<int64_t, 5>& index_helper,
                                const int64_t elem_num, const T* src, T* dest,
                                const AvgPoolingParams3D& params_3d);
 
-  static void Avgpool3dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5>& index_helper,
+  static void Avgpool3dBackward(ep::Stream* stream,
+                                const NdIndexOffsetHelper<int64_t, 5>& index_helper,
                                 const int64_t elem_num, const T* src, T* dest,
                                 const AvgPoolingParams3D& params_3d);
 };

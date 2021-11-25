@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_LOSS_KERNEL_UTIL_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -43,12 +43,12 @@ inline ReductionType GetReductionType(const std::string& reduction) {
 
 template<DeviceType device_type, typename T>
 RETURN_VOID_IF_CPU(device_type)
-ApplyLossReductionIfNeed(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* out,
+ApplyLossReductionIfNeed(ep::Stream* stream, int64_t elem_cnt, const T* tmp_out, T* out,
                          const ReductionType reduction_type);
 
 template<DeviceType device_type, typename T>
 RETURN_VOID_IF_GPU(device_type)
-ApplyLossReductionIfNeed(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* out,
+ApplyLossReductionIfNeed(ep::Stream* stream, int64_t elem_cnt, const T* tmp_out, T* out,
                          const ReductionType reduction_type);
 
 template<typename T>
@@ -89,7 +89,7 @@ class SimpleLossKernel : public user_op::OpKernel {
 
     static_cast<const R*>(this)->ComputeOut(ctx, elem_cnt, input, target,
                                             reduction == ReductionType::kNone ? out : tmp_out);
-    ApplyLossReductionIfNeed<device_type, T>(ctx->device_ctx(), elem_cnt, tmp_out, out, reduction);
+    ApplyLossReductionIfNeed<device_type, T>(ctx->stream(), elem_cnt, tmp_out, out, reduction);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -123,22 +123,22 @@ class SimpleLossGradKernel : public user_op::OpKernel {
 };
 namespace {
 
-#define REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, device, dtype)                          \
-  REGISTER_USER_KERNEL(name)                                                              \
-      .SetCreateFn<kernel<dtype>>()                                                       \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
-                       & (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))   \
+#define REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, device, dtype)                           \
+  REGISTER_USER_KERNEL(name)                                                               \
+      .SetCreateFn<kernel<dtype>>()                                                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                \
+                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
+                       && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))   \
       .SetInferTmpSizeFn(loss::GenDefaultInferTmpSizeFn<dtype>());
 
 #define REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, device, dtype)      \
   REGISTER_USER_KERNEL(name).SetCreateFn<kernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device)                                  \
-      & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)    \
-      & (user_op::HobDataType("target", 0) == GetDataType<dtype>::value)   \
-      & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)       \
-      & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+      (user_op::HobDeviceType() == device)                                 \
+      && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)   \
+      && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value)  \
+      && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)      \
+      && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 }  // namespace
 
