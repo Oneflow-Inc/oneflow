@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/in_top_k_kernel_util.h"
+#include "oneflow/core/common/data_type_seq.h"
 
 namespace oneflow {
 
