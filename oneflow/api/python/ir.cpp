@@ -426,6 +426,15 @@ void PrintODSFromOpRegistryResults(const std::map<K, V>& results) {
   }
 }
 
+void PrintNamesInResults(const std::map<K, V>& results) {
+  std::cout << "// ";
+  for (auto it = results.begin(); it != results.end(); ++it) {
+    std::cout << it->first;
+    if (std::next(it) != results.end()) { std::cout << ", "; }
+  }
+  std::cout << "\n";
+}
+
 void GroupOpRegistryResults(const std::map<K, V>& results,
                             std::map<std::string, std::map<K, V>>& groups) {
   for (const auto& kv : results) {
@@ -486,11 +495,12 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
     GroupOpRegistryResults(sorted, groups);
     for (const auto& kv : groups) {
       const auto& group_name = kv.first;
+      auto results = kv.second;
+      PrintNamesInResults(results);
       std::cout << "// "
                 << "Total: " << kv.second.size() << "\n";
       std::cout << "#ifndef " << group_name << "\n";
       std::cout << "#define " << group_name << "\n\n";
-      auto results = kv.second;
       PrintODSFromOpRegistryResults(results);
       std::cout << "#endif  // " << group_name << "\n\n";
     }
