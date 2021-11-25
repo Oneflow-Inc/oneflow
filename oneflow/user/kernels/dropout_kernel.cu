@@ -45,8 +45,44 @@ constexpr int32_t GetDropoutPackSize<double>() {
   return 2;
 };
 
+union RandPack4 {
+  float4 storage;
+  float elem[4];
+};
+
+template<typename T>
+struct GetPack2Type {
+  using T2 = typename std::aligned_storage<2 * sizeof(T), 2 * sizeof(T)>::type;
+};
+
+template<>
+struct GetPack2Type<half> {
+  using T2 = half2;
+};
+
+#if CUDA_VERSION >= 11000
+template<>
+struct GetPack2Type<nv_bfloat16> {
+  using T2 = nv_bfloat162;
+};
+#endif
+
+template<typename T>
+using Pack2Type = typename GetPack2Type<T>::T2;
+
 using H2PackType = typename std::aligned_storage<4 * sizeof(half), 4 * sizeof(half)>::type;
+
+template<typename T>
 union H2Pack {
+  cuda::elementwise::Pack<T, 4> pack_storage;
+  Pack2Type<T> h2[2];
+  __device__ H2Pack() {
+    // do nothing
+  }
+};
+
+template<>
+union H2Pack<half> {
   cuda::elementwise::Pack<half, 4> pack_storage;
   half2 h2[2];
   __device__ H2Pack() {
@@ -54,19 +90,44 @@ union H2Pack {
   }
 };
 
-union RandPack4 {
-  float4 storage;
-  float elem[4];
+#if CUDA_VERSION >= 11000
+template<>
+union H2Pack<nv_bfloat16> {
+  cuda::elementwise::Pack<nv_bfloat16, 4> pack_storage;
+  nv_bfloat162 h2[2];
+  __device__ H2Pack() {
+    // do nothing
+  }
 };
+#endif
 
+template<typename T>
+__device__ Pack2Type<T> Make2(float v);
+
+template<>
+__device__ Pack2Type<half> Make2<half>(float v) {
+  return __float2half2_rn(v);
+}
+
+#if CUDA_VERSION >= 11000
+template<>
+__device__ Pack2Type<nv_bfloat16> Make2<nv_bfloat16>(float v) {
+  return __float2bfloat162_rn(v);
+}
+#endif
+
+#if CUDA_VERSION >= 11000
+#define RETURN_VOID_IF_HALF                                                                        \
+  typename std::enable_if_t<(std::is_same<T, half>::value || std::is_same<T, nv_bfloat16>::value), \
+                            void>
+#else
 #define RETURN_VOID_IF_HALF typename std::enable_if_t<std::is_same<T, half>::value, void>
-#define RETURN_VOID_IF_FLOAT_BF16 \
-  typename std::enable_if_t<      \
-      (std::is_same<T, float>::value || std::is_same<T, nv_bfloat16>::value), void>
+#endif
+#define RETURN_VOID_IF_FLOAT typename std::enable_if_t<std::is_same<T, float>::value, void>
 #define RETURN_VOID_IF_DOUBLE typename std::enable_if_t<std::is_same<T, double>::value, void>
 
 template<typename T, int pack_size, bool tail, bool has_addend>
-__global__ RETURN_VOID_IF_FLOAT_BF16 FusedDropoutAddGpu(
+__global__ RETURN_VOID_IF_FLOAT FusedDropoutAddGpu(
     uint64_t seed, one::CUDAGeneratorState* cuda_gen_state, uint64_t inc_offset,
     const int64_t elem_cnt, float rate, float scale, int64_t n_tail, const T* x, int8_t* mask,
     const T* addend, T* y, const T* tail_x, int8_t* tail_mask, const T* tail_addend, T* tail_y) {
@@ -139,21 +200,22 @@ __global__ RETURN_VOID_IF_HALF FusedDropoutAddGpu(
   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
   using LoadType = cuda::elementwise::PackType<T, pack_size>;
   using LoadPack = cuda::elementwise::Pack<T, pack_size>;
-  using StoreType = cuda::elementwise::PackType<half2, pack_size / 2>;
-  using StorePack = cuda::elementwise::Pack<half2, pack_size / 2>;
+  using StoreType = cuda::elementwise::PackType<Pack2Type<T>, pack_size / 2>;
+  using StorePack = cuda::elementwise::Pack<Pack2Type<T>, pack_size / 2>;
   using MaskType = cuda::elementwise::PackType<int8_t, pack_size>;
   using MaskPack = cuda::elementwise::Pack<int8_t, pack_size>;
 
   RandPack4 rand_uniform_pack4;
-  half2 h2_scale = __float2half2_rn(scale);
+  Pack2Type<T> h2_scale = Make2<T>(scale);
+
   for (int64_t linear_index = global_thread_id * pack_size; linear_index < elem_cnt;
        linear_index += gridDim.x * blockDim.x * pack_size) {
     rand_uniform_pack4.storage = curand_uniform4(&state);
     const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
-    H2Pack x_vec{};
+    H2Pack<T> x_vec{};
     x_vec.pack_storage.storage = *x_load;
 
-    H2Pack addend_vec{};
+    H2Pack<T> addend_vec{};
     if (has_addend) {
       const LoadType* addend_load = reinterpret_cast<const LoadType*>(addend + linear_index);
       addend_vec.pack_storage.storage = *addend_load;
@@ -164,15 +226,19 @@ __global__ RETURN_VOID_IF_HALF FusedDropoutAddGpu(
     StorePack one_or_zero_h2;
 
     mask_vec.elem[0] = rand_uniform_pack4.elem[0] > rate;
-    one_or_zero_h2.elem[0].x = mask_vec.elem[0];
+    float tmp_float_mask = static_cast<float>(mask_vec.elem[0]);
+    one_or_zero_h2.elem[0].x = tmp_float_mask;
     mask_vec.elem[1] = rand_uniform_pack4.elem[1] > rate;
-    one_or_zero_h2.elem[0].y = mask_vec.elem[1];
+    tmp_float_mask = static_cast<float>(mask_vec.elem[1]);
+    one_or_zero_h2.elem[0].y = tmp_float_mask;
     y_vec.elem[0] = __hmul2(__hmul2(x_vec.h2[0], one_or_zero_h2.elem[0]), h2_scale);
 
     mask_vec.elem[2] = rand_uniform_pack4.elem[2] > rate;
-    one_or_zero_h2.elem[1].x = mask_vec.elem[2];
+    tmp_float_mask = static_cast<float>(mask_vec.elem[2]);
+    one_or_zero_h2.elem[1].x = tmp_float_mask;
     mask_vec.elem[3] = rand_uniform_pack4.elem[3] > rate;
-    one_or_zero_h2.elem[1].y = mask_vec.elem[3];
+    tmp_float_mask = static_cast<float>(mask_vec.elem[3]);
+    one_or_zero_h2.elem[1].y = tmp_float_mask;
     y_vec.elem[1] = __hmul2(__hmul2(x_vec.h2[1], one_or_zero_h2.elem[1]), h2_scale);
 
     if (has_addend) {
@@ -188,7 +254,9 @@ __global__ RETURN_VOID_IF_HALF FusedDropoutAddGpu(
     const float rand_uniform = curand_uniform(&state);
     const int8_t mask_val = rand_uniform > rate;
     tail_mask[global_thread_id] = mask_val;
-    half tmp_tail_out = tail_x[global_thread_id] * static_cast<half>(mask_val) * h2_scale.x;
+    float tmp_half_mask = static_cast<float>(mask_val);
+    T tmp_tail_out = tail_x[global_thread_id] * static_cast<T>(tmp_half_mask) * h2_scale.x;
+    // T tmp_tail_out = tail_x[global_thread_id] * static_cast<T>(tmp_half_mask);
     if (has_addend) { tmp_tail_out += tail_addend[global_thread_id]; }
     tail_y[global_thread_id] = tmp_tail_out;
   }
