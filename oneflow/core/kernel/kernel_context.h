@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/kernel/kernel_observer.h"
-#include "oneflow/core/stream/include/stream_context.h"
 #include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
@@ -39,7 +38,6 @@ class KernelContext : public KernelObserver {
   KernelContext() = default;
   virtual ~KernelContext() = default;
 
-  virtual StreamContext* stream_ctx() const = 0;
   virtual ep::Stream* stream() const = 0;
   virtual DeviceCtx* device_ctx() const = 0;
   virtual Blob* BnInOp2Blob(const std::string& bn) const = 0;

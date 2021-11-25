@@ -124,16 +124,16 @@ class GpuQuantizationKernel final : public user_op::OpKernel {
 
     if (quantization_formula == "google") {
       if (quantization_scheme == "symmetric") {
-        RUN_CUDA_KERNEL((QuantizationSymmetric<T>), ctx->device_ctx(), elements, in->dptr<T>(),
+        RUN_CUDA_KERNEL((QuantizationSymmetric<T>), ctx->stream(), elements, in->dptr<T>(),
                         scale->dptr<T>(), scale_size, elements, panel_size, quantization_bit,
                         out->mut_dptr<T>());
       } else {  // quantization_scheme == "affine"
-        RUN_CUDA_KERNEL((QuantizationAffine<T>), ctx->device_ctx(), elements, in->dptr<T>(),
+        RUN_CUDA_KERNEL((QuantizationAffine<T>), ctx->stream(), elements, in->dptr<T>(),
                         scale->dptr<T>(), zero_point->dptr<T>(), scale_size, elements, panel_size,
                         quantization_bit, out->mut_dptr<T>());
       }
     } else if (quantization_formula == "cambricon") {
-      RUN_CUDA_KERNEL((QuantizationCambricon<T>), ctx->device_ctx(), elements, in->dptr<T>(),
+      RUN_CUDA_KERNEL((QuantizationCambricon<T>), ctx->stream(), elements, in->dptr<T>(),
                       scale->dptr<T>(), scale_size, elements, panel_size, quantization_bit,
                       out->mut_dptr<T>());
     } else {

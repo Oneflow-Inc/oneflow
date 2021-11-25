@@ -13,16 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_STREAM_STREAM_CONTEXT_ADAPTER_H_
-#define ONEFLOW_CORE_STREAM_STREAM_CONTEXT_ADAPTER_H_
-
-#include "oneflow/core/stream/include/stream_context.h"
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/cpu/cpu_stream.h"
 
 namespace oneflow {
 
-StreamContext* NewStreamContextAdapter(DeviceCtx* ctx);
+namespace ep {
+
+DeviceType CpuStream::device_type() const { return DeviceType::kCPU; }
+
+Maybe<void> CpuStream::Sync() { return Maybe<void>::Ok(); }
+
+void CpuStream::RecordEvent(Event* /*event*/) {}
+
+}  // namespace ep
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_STREAM_STREAM_CONTEXT_ADAPTER_H_
