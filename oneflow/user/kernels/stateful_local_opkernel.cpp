@@ -220,7 +220,6 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
   }
   ~LocalUserKernelInitContext() override = default;
 
-  DeviceCtx* device_ctx() override { return device_ctx_; }
   ep::Stream* stream() override {
     CHECK(device_ctx_);
     return device_ctx_->stream();
