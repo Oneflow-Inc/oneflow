@@ -98,6 +98,11 @@ const std::set<std::string>& GetInvolutionOps() {
 }
 
 bool IsGradOp(const std::string& op_name) { return op_name.find("grad") != std::string::npos; }
+const std::set<std::string>& GetQuantizationOps() {
+  static std::set<std::string> ret{"min_max_observer", "moving_average_min_max_observer",
+                                   "fake_quantization", "quantization"};
+  return ret;
+}
 
 const std::set<std::string>& GetMathOps() {
   static std::set<std::string> ret{"abs",         "acos",
@@ -128,6 +133,9 @@ bool IsMathOp(const std::string& op_name) {
 }
 bool IsInvolutionOp(const std::string& op_name) {
   return GetInvolutionOps().find(op_name) != GetInvolutionOps().end() && !IsGradOp(op_name);
+}
+bool IsQuantizationOp(const std::string& op_name) {
+  return GetQuantizationOps().find(op_name) != GetQuantizationOps().end();
 }
 bool IsIdempotentOp(const std::string& op_name) {
   return GetIdempotentOps().find(op_name) != GetIdempotentOps().end() && !IsGradOp(op_name);
@@ -476,6 +484,7 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
     if (IsIdentityOp(r.op_type_name)) { group_name = "Identity"; }
     if (IsFusedOp(r.op_type_name)) { group_name = "Fused"; }
     if (IsEagerOp(r.op_type_name)) { group_name = "eager"; }
+    if (IsQuantizationOp(r.op_type_name)) { group_name = "QUANTIZATION"; }
     if (IsDatasetOp(r.op_type_name)) { group_name = "DATASET"; }
     if (IsMatmulOp(r.op_type_name)) { group_name = "matmul"; }
     if (IsTensorBufferOp(r.op_type_name)) { group_name = "tensor_buffer"; }
