@@ -30,7 +30,7 @@ void MaskAndScale(ep::Stream* stream, const int64_t n, float scale, const T* x, 
 }
 
 template<typename T>
-void FusedDropoutKernel(DeviceCtx* ctx, const int64_t elem_cnt,
+void FusedDropoutKernel(ep::Stream* stream, const int64_t elem_cnt,
                         const std::shared_ptr<one::CPUGeneratorImpl>& cpu_gen, const float rate,
                         float scale, const T* x, int8_t* mask, T* y) {
   /*
@@ -73,7 +73,7 @@ class DropoutKernelCPU final : public user_op::OpKernel {
     std::shared_ptr<one::CPUGeneratorImpl> cpu_generator =
         CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
 
-    FusedDropoutKernel<T>(ctx->device_ctx(), in->shape().elem_cnt(), cpu_generator, rate, scale,
+    FusedDropoutKernel<T>(ctx->stream(), in->shape().elem_cnt(), cpu_generator, rate, scale,
                           in->dptr<T>(), mask->mut_dptr<int8_t>(), out->mut_dptr<T>());
 
     if (ctx->has_input("_add_to_output", 0)) {

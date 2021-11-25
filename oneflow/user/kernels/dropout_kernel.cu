@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/cuda/elementwise.cuh"
+#include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
@@ -281,7 +282,7 @@ unsigned int ComputeGridSize(const int32_t block_size, const int64_t elem_cnt) {
 }
 
 template<typename T, bool has_addend>
-void DispatchTail(DeviceCtx* ctx, uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
+void DispatchTail(ep::Stream* stream, uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                   const int64_t elem_cnt, float rate, float scale, const T* x, int8_t* mask,
                   const T* addend, T* y) {
   unsigned int grid_size = ComputeGridSize<4>(kBlockSize, elem_cnt);
@@ -296,13 +297,13 @@ void DispatchTail(DeviceCtx* ctx, uint64_t seed, one::CUDAGeneratorState* cuda_g
     // If tail, we need generate randnum one more time, so here we add another `1`.
     inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize + 1;
     FusedDropoutAddGpu<T, pack_size, true, has_addend>
-        <<<grid_size, kBlockSize, 0, ctx->cuda_stream()>>>(
+        <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             seed, cuda_gen_state, inc_offset, elem_cnt, rate, scale, n_tail, x, mask, addend, y,
             (x + tail_offset), (mask + tail_offset), (addend + tail_offset), (y + tail_offset));
   } else {
     inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize;
     FusedDropoutAddGpu<T, pack_size, false, has_addend>
-        <<<grid_size, kBlockSize, 0, ctx->cuda_stream()>>>(
+        <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             seed, cuda_gen_state, inc_offset, elem_cnt, rate, scale, n_tail, x, mask, addend, y,
             nullptr, nullptr, nullptr, nullptr);
   }
@@ -363,11 +364,11 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* addend = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       DispatchTail<T, true>(
-          ctx->device_ctx(), seed, cuda_gen_state, in->shape().elem_cnt(), rate, scale,
+          ctx->stream(), seed, cuda_gen_state, in->shape().elem_cnt(), rate, scale,
           reinterpret_cast<const T*>(in->dptr()), reinterpret_cast<int8_t*>(mask->mut_dptr()),
           reinterpret_cast<const T*>(addend->dptr()), reinterpret_cast<T*>(out->mut_dptr()));
     } else {
-      DispatchTail<T, false>(ctx->device_ctx(), seed, cuda_gen_state, in->shape().elem_cnt(), rate,
+      DispatchTail<T, false>(ctx->stream(), seed, cuda_gen_state, in->shape().elem_cnt(), rate,
                              scale, reinterpret_cast<const T*>(in->dptr()),
                              reinterpret_cast<int8_t*>(mask->mut_dptr()), nullptr,
                              reinterpret_cast<T*>(out->mut_dptr()));
