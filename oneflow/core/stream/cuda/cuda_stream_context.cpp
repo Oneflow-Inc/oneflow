@@ -84,7 +84,7 @@ CudaStreamContext::CudaStreamContext(int device_ordinal)
   poller_thread_ = std::thread([this]() {
     CudaCurrentDeviceGuard guard(device_ordinal_);
     stream_.OnExecutionContextSetup();
-    OF_PROFILER_NAME_THIS_HOST_THREAD("GPU " + std::to_string(device_ordinal_) + " Poller : ("
+    OF_PROFILER_NAME_THIS_HOST_THREAD("_cuda " + std::to_string(device_ordinal_) + " Poller : ("
                                       + std::to_string(device_ordinal_) + ")");
     std::pair<cudaEvent_t, std::function<void()>> cb_event;
     while (cb_event_chan_.Receive(&cb_event) == kChannelStatusSuccess) {
