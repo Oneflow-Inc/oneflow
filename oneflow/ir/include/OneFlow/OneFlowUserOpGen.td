@@ -56,6 +56,500 @@ def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", [Decla
 
 #endif  // GET_ONEFLOW_ASSIGN_OP_DEFINITIONS
 
+// normalization_add_relu
+// Total: 1
+#ifndef GET_ONEFLOW_BASE_OP_DEFINITIONS
+#define GET_ONEFLOW_BASE_OP_DEFINITIONS
+
+class OneFlow_NormalizationAddReluBaseOp : OneFlow_BaseOp<"normalization_add_relu", [AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    Optional<AnyType>:$addend,
+    Optional<AnyType>:$moving_mean,
+    Optional<AnyType>:$moving_variance,
+    AnyType:$gamma,
+    AnyType:$beta
+  );
+  let output = (outs
+    AnyType:$y,
+    AnyType:$reserve_space,
+    Optional<AnyType>:$mean,
+    Optional<AnyType>:$inv_variance
+  );
+  let attrs = (ins
+    SI32Attr:$axis,
+    F32Attr:$epsilon,
+    BoolAttr:$training,
+    F32Attr:$momentum
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes,
+    I32ElementsAttr:$result_segment_sizes
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x", "addend", "moving_mean", "moving_variance", "gamma", "beta"}; }
+    static std::vector<std::string> outputOrder() { return {"y", "reserve_space", "mean", "inv_variance"}; }
+  }];
+}
+
+#endif  // GET_ONEFLOW_BASE_OP_DEFINITIONS
+
+// bias_add, cast_like, celu_grad, diag_grad, dropout_grad, elementwise_maximum, elementwise_minimum, elu_grad, floordiv, gelu_grad, grid_sample, hardsigmoid_grad, hardswish_grad, l1_l2_regularize_gradient, leaky_relu_grad, masked_fill, mish_grad, multiply, narrow_grad, pow, prelu, relu_grad, selu_grad, sigmoid_grad, silu_grad, tf_prelu, unfold_tensor_grad, xdivy, xlogy
+// Total: 29
+#ifndef GET_ONEFLOW_BINARY_OP_DEFINITIONS
+#define GET_ONEFLOW_BINARY_OP_DEFINITIONS
+
+def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$a,
+    AnyType:$b
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    SI32Attr:$axis
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"a", "b"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_CastLikeOp : OneFlow_BaseOp<"cast_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in,
+    AnyType:$dtype_like
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in", "dtype_like"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_CeluGradOp : OneFlow_BaseOp<"celu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    F64Attr:$alpha
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() { return {"dx"}; }
+  }];
+}
+
+def OneFlow_DiagGradOp : OneFlow_BaseOp<"diag_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$dy,
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    SI32Attr:$diagonal
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"dy", "in"}; }
+    static std::vector<std::string> outputOrder() { return {"dx"}; }
+  }];
+}
+
+def OneFlow_DropoutGradOp : OneFlow_BaseOp<"dropout_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$dy,
+    AnyType:$mask
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    F32Attr:$scale
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"dy", "mask"}; }
+    static std::vector<std::string> outputOrder() { return {"dx"}; }
+  }];
+}
+
+def OneFlow_ElementwiseMaximumOp : OneFlow_BaseOp<"elementwise_maximum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y
+  );
+  let output = (outs
+    AnyType:$z
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() { return {"z"}; }
+  }];
+}
+
+def OneFlow_ElementwiseMinimumOp : OneFlow_BaseOp<"elementwise_minimum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y
+  );
+  let output = (outs
+    AnyType:$z
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() { return {"z"}; }
+  }];
+}
+
+def OneFlow_EluGradOp : OneFlow_BaseOp<"elu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    F64Attr:$alpha
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() { return {"dx"}; }
+  }];
+}
+
+def OneFlow_FloordivOp : OneFlow_BaseOp<"floordiv", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y
+  );
+  let output = (outs
+    AnyType:$z
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() { return {"z"}; }
+  }];
+}
+
+def OneFlow_GeluGradOp : OneFlow_BaseOp<"gelu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() { return {"dx"}; }
+  }];
+}
+
+def OneFlow_GridSampleOp : OneFlow_BaseOp<"grid_sample", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$input,
+    AnyType:$grid
+  );
+  let output = (outs
+    AnyType:$output
+  );
+  let attrs = (ins
+    StrAttr:$interpolation_mode,
+    StrAttr:$padding_mode,
+    BoolAttr:$align_corners
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"input", "grid"}; }
+    static std::vector<std::string> outputOrder() { return {"output"}; }
+  }];
+}
+
+def OneFlow_HardsigmoidGradOp : OneFlow_BaseOp<"hardsigmoid_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() { return {"dx"}; }
+  }];
+}
+
+def OneFlow_HardswishGradOp : OneFlow_BaseOp<"hardswish_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() { return {"dx"}; }
+  }];
+}
+
+def OneFlow_L1L2RegularizeGradientOp : OneFlow_BaseOp<"l1_l2_regularize_gradient", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$model,
+    AnyType:$model_diff
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    F32Attr:$l1,
+    F32Attr:$l2
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"model", "model_diff"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_LeakyReluGradOp : OneFlow_BaseOp<"leaky_relu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    F32Attr:$alpha
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() { return {"dx"}; }
+  }];
+}
+
+def OneFlow_MaskedFillOp : OneFlow_BaseOp<"masked_fill", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$mask
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    BoolAttr:$has_int_operand,
+    BoolAttr:$has_float_operand,
+    SI64Attr:$int_operand,
+    F64Attr:$float_operand
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x", "mask"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_MishGradOp : OneFlow_BaseOp<"mish_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() { return {"dx"}; }
+  }];
+}
+
+def OneFlow_MultiplyOp : OneFlow_BaseOp<"multiply", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_NarrowGradOp : OneFlow_BaseOp<"narrow_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$dy,
+    AnyType:$like
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    SI64Attr:$dim,
+    SI64Attr:$start,
+    SI64Attr:$length
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"dy", "like"}; }
+    static std::vector<std::string> outputOrder() { return {"dx"}; }
+  }];
+}
+
+def OneFlow_PowOp : OneFlow_BaseOp<"pow", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y
+  );
+  let output = (outs
+    AnyType:$z
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() { return {"z"}; }
+  }];
+}
+
+def OneFlow_PreluOp : OneFlow_BaseOp<"prelu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$alpha
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x", "alpha"}; }
+    static std::vector<std::string> outputOrder() { return {"y"}; }
+  }];
+}
+
+def OneFlow_ReluGradOp : OneFlow_BaseOp<"relu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$y,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"y", "dy"}; }
+    static std::vector<std::string> outputOrder() { return {"dx"}; }
+  }];
+}
+
+def OneFlow_SeluGradOp : OneFlow_BaseOp<"selu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() { return {"dx"}; }
+  }];
+}
+
+def OneFlow_SigmoidGradOp : OneFlow_BaseOp<"sigmoid_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$y,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"y", "dy"}; }
+    static std::vector<std::string> outputOrder() { return {"dx"}; }
+  }];
+}
+
+def OneFlow_SiluGradOp : OneFlow_BaseOp<"silu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
+    static std::vector<std::string> outputOrder() { return {"dx"}; }
+  }];
+}
+
+def OneFlow_TfPreluOp : OneFlow_BaseOp<"tf_prelu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$alpha
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x", "alpha"}; }
+    static std::vector<std::string> outputOrder() { return {"y"}; }
+  }];
+}
+
+def OneFlow_UnfoldTensorGradOp : OneFlow_BaseOp<"unfold_tensor_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$dy,
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    SI32Attr:$dimension,
+    SI32Attr:$size,
+    SI32Attr:$step
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"dy", "x"}; }
+    static std::vector<std::string> outputOrder() { return {"dx"}; }
+  }];
+}
+
+def OneFlow_XdivyOp : OneFlow_BaseOp<"xdivy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y
+  );
+  let output = (outs
+    AnyType:$z
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() { return {"z"}; }
+  }];
+}
+
+def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y
+  );
+  let output = (outs
+    AnyType:$z
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
+    static std::vector<std::string> outputOrder() { return {"z"}; }
+  }];
+}
+
+#endif  // GET_ONEFLOW_BINARY_OP_DEFINITIONS
+
 // broadcast_add, broadcast_div, broadcast_div_grad, broadcast_equal, broadcast_floor_mod, broadcast_fmod, broadcast_greater, broadcast_greater_equal, broadcast_less, broadcast_less_equal, broadcast_like, broadcast_logical_and, broadcast_logical_or, broadcast_logical_xor, broadcast_maximum, broadcast_minimum, broadcast_mul, broadcast_not_equal, broadcast_pow, broadcast_pow_x_grad, broadcast_pow_y_grad, broadcast_sub
 // Total: 22
 #ifndef GET_ONEFLOW_BROADCAST_OP_DEFINITIONS
@@ -797,6 +1291,45 @@ def OneFlow_SparseCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_cross_entropy_ms
 
 #endif  // GET_ONEFLOW_CROSS_ENTROPY_OP_DEFINITIONS
 
+// nvtx_end, nvtx_start
+// Total: 2
+#ifndef GET_ONEFLOW_CUDA_OP_DEFINITIONS
+#define GET_ONEFLOW_CUDA_OP_DEFINITIONS
+
+def OneFlow_NvtxEndOp : OneFlow_BaseOp<"nvtx_end", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    StrAttr:$mark_prefix
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_NvtxStartOp : OneFlow_BaseOp<"nvtx_start", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    StrAttr:$mark_prefix
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+#endif  // GET_ONEFLOW_CUDA_OP_DEFINITIONS
+
 // COCOReader, OFRecordReader, OneRecReader, ctc_greedy_decoder, megatron_gpt_mmap_data_loader, ofrecord_bytes_decoder, ofrecord_image_classification_reader, ofrecord_image_decoder, ofrecord_image_decoder_random_crop, ofrecord_raw_decoder, onerec_decoder
 // Total: 11
 #ifndef GET_ONEFLOW_DATASET_OP_DEFINITIONS
@@ -1395,8 +1928,8 @@ def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", [Dec
 
 #endif  // GET_ONEFLOW_EAGER_OP_DEFINITIONS
 
-// cudnn_fused_normalization_add_relu, cudnn_fused_normalization_add_relu_grad, fused_bias_add_gelu, fused_bias_add_gelu_grad, fused_bias_add_mask_scale, fused_cast_scale, fused_scale_tril, fused_self_attention_query_mul_key_and_value, fused_self_attention_query_mul_key_and_value_grad, fused_tril_scale_softmax_mask_scale, fused_tril_scale_softmax_mask_scale_grad, normalization_add_relu, normalization_add_relu_grad
-// Total: 13
+// cudnn_fused_normalization_add_relu, cudnn_fused_normalization_add_relu_grad, fused_bias_add_gelu, fused_bias_add_gelu_grad, fused_bias_add_mask_scale, fused_cast_scale, fused_scale_tril, fused_self_attention_query_mul_key_and_value, fused_self_attention_query_mul_key_and_value_grad, fused_tril_scale_softmax_mask_scale, fused_tril_scale_softmax_mask_scale_grad, normalization_add_relu_grad
+// Total: 12
 #ifndef GET_ONEFLOW_FUSED_OP_DEFINITIONS
 #define GET_ONEFLOW_FUSED_OP_DEFINITIONS
 
@@ -1625,37 +2158,6 @@ def OneFlow_FusedTrilScaleSoftmaxMaskScaleGradOp : OneFlow_BaseOp<"fused_tril_sc
   let extraClassDeclaration = [{
     static std::vector<std::string> inputOrder() { return {"softmax_y", "dy", "mask"}; }
     static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
-
-class OneFlow_NormalizationAddReluBaseOp : OneFlow_BaseOp<"normalization_add_relu", [AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    Optional<AnyType>:$addend,
-    Optional<AnyType>:$moving_mean,
-    Optional<AnyType>:$moving_variance,
-    AnyType:$gamma,
-    AnyType:$beta
-  );
-  let output = (outs
-    AnyType:$y,
-    AnyType:$reserve_space,
-    Optional<AnyType>:$mean,
-    Optional<AnyType>:$inv_variance
-  );
-  let attrs = (ins
-    SI32Attr:$axis,
-    F32Attr:$epsilon,
-    BoolAttr:$training,
-    F32Attr:$momentum
-  );
-  let trait_attrs = (ins
-    I32ElementsAttr:$operand_segment_sizes,
-    I32ElementsAttr:$result_segment_sizes
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "addend", "moving_mean", "moving_variance", "gamma", "beta"}; }
-    static std::vector<std::string> outputOrder() { return {"y", "reserve_space", "mean", "inv_variance"}; }
   }];
 }
 
@@ -1981,8 +2483,8 @@ def OneFlow_ImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", [Decl
 
 #endif  // GET_ONEFLOW_IMAGE_OP_DEFINITIONS
 
-// arg_sort, argmax, argwhere, batch_gather, dim_gather, dim_scatter_add, dim_scatter_add_like, dim_scatter_add_scalar, dim_scatter_mul, dim_scatter_mul_scalar, dim_scatter_update, dim_scatter_update_scalar, gather, gather_nd, image_target_resize, logical_slice, scatter_nd, scatter_nd_like, slice, slice_grad, tensor_scatter_nd_add, tensor_scatter_nd_update, unsorted_batch_segment_sum, unsorted_segment_sum, unsorted_segment_sum_like, where, where_scalar_x, where_scalar_xy, where_scalar_y
-// Total: 29
+// arg_sort, argmax, argwhere, batch_gather, dim_gather, dim_scatter_add, dim_scatter_add_like, dim_scatter_add_scalar, dim_scatter_mul, dim_scatter_mul_scalar, dim_scatter_update, dim_scatter_update_scalar, gather, gather_nd, generate_random_batch_permutation_indices, image_target_resize, logical_slice, scatter_nd, scatter_nd_like, slice, slice_grad, tensor_scatter_nd_add, tensor_scatter_nd_update, unsorted_batch_segment_sum, unsorted_segment_sum, unsorted_segment_sum_like, where, where_scalar_x, where_scalar_xy, where_scalar_y
+// Total: 30
 #ifndef GET_ONEFLOW_INDICES_OP_DEFINITIONS
 #define GET_ONEFLOW_INDICES_OP_DEFINITIONS
 
@@ -2217,6 +2719,22 @@ def OneFlow_GatherNdOp : OneFlow_BaseOp<"gather_nd", [DeclareOpInterfaceMethods<
   let extraClassDeclaration = [{
     static std::vector<std::string> inputOrder() { return {"params", "indices"}; }
     static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_GenerateRandomBatchPermutationIndicesOp : OneFlow_BaseOp<"generate_random_batch_permutation_indices", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let attrs = (ins
+    SI64Attr:$seed
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x"}; }
+    static std::vector<std::string> outputOrder() { return {"y"}; }
   }];
 }
 
@@ -3415,8 +3933,8 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [DeclareOpInterfaceMethods<BnOrd
 
 #endif  // GET_ONEFLOW_MATMUL_OP_DEFINITIONS
 
-// CategoricalOrdinalEncode, acc, add_n, affine_grid, affine_grid_grad, arange, bernoulli, bias_add, cast, cast_like, cast_to_static_shape, cast_to_tick, celu, celu_grad, coin_flip, concat, constant, copy, count_not_finite, diag, diag_grad, dropout, dropout_grad, elementwise_maximum, elementwise_maximum_backward, elementwise_minimum, elementwise_minimum_backward, elu, elu_grad, empty, expand, expand_dims, eye, flatten, flip, flip_grad, floordiv, fold, gelu, gelu_grad, generate_random_batch_permutation_indices, grid_sample, grid_sample_grad, hardsigmoid, hardsigmoid_grad, hardswish, hardswish_grad, hierarchical_parallel_cast, hierarchical_parallel_cast_like, l1_l2_regularize_gradient, leaky_relu, leaky_relu_grad, logical_not, masked_fill, mish, mish_grad, multi_count_not_finite, multi_square_sum, multiply, narrow, narrow_grad, nll, nll_grad, nvtx_end, nvtx_start, one_hot, pack, parallel_cast, pow, pow_x_grad, pow_y_grad, prelu, prelu_grad, random_mask_like, randperm, recv, relu_grad, repeat, roll, selu, selu_grad, send, sigmoid, sigmoid_grad, silu, silu_grad, softsign, sort, split_like, square_sum, squeeze, ssp_variable_proxy, tf_prelu, tf_prelu_grad, transpose, tril, triu, unfold, unfold_tensor, unfold_tensor_grad, uniform, uniform_int, unique_with_counts, unpack, xdivy, xdivy_x_grad, xdivy_y_grad, xlogy, zero_like
-// Total: 109
+// CategoricalOrdinalEncode, add_n, arange, coin_flip, concat, constant, dropout, elementwise_maximum_backward, elementwise_minimum_backward, empty, eye, grid_sample_grad, multi_count_not_finite, multi_square_sum, nll, nll_grad, pow_x_grad, pow_y_grad, prelu_grad, randperm, recv, send, split_like, ssp_variable_proxy, tf_prelu_grad, uniform, uniform_int, unique_with_counts, xdivy_x_grad, xdivy_y_grad
+// Total: 30
 #ifndef GET_ONEFLOW_MISC_OP_DEFINITIONS
 #define GET_ONEFLOW_MISC_OP_DEFINITIONS
 
@@ -3438,22 +3956,6 @@ def OneFlow_CategoricalOrdinalEncodeOp : OneFlow_BaseOp<"CategoricalOrdinalEncod
   }];
 }
 
-def OneFlow_AccOp : OneFlow_BaseOp<"acc", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    SI32Attr:$max_acc_num
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
 def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     Variadic<AnyType>:$in
@@ -3466,40 +3968,6 @@ def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", [DeclareOpInterfaceMethods<BnOrderO
     static std::vector<std::string> outputOrder() { return {"out"}; }
   }];
   let hasCanonicalizer = 1;
-}
-
-def OneFlow_AffineGridOp : OneFlow_BaseOp<"affine_grid", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$theta
-  );
-  let output = (outs
-    AnyType:$grid
-  );
-  let attrs = (ins
-    AnyI64ElementsAttr:$size,
-    BoolAttr:$align_corners
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"theta"}; }
-    static std::vector<std::string> outputOrder() { return {"grid"}; }
-  }];
-}
-
-def OneFlow_AffineGridGradOp : OneFlow_BaseOp<"affine_grid_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$dgrid
-  );
-  let output = (outs
-    AnyType:$dtheta
-  );
-  let attrs = (ins
-    AnyI64ElementsAttr:$size,
-    BoolAttr:$align_corners
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dgrid"}; }
-    static std::vector<std::string> outputOrder() { return {"dtheta"}; }
-  }];
 }
 
 def OneFlow_ArangeOp : OneFlow_BaseOp<"arange", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
@@ -3519,130 +3987,6 @@ def OneFlow_ArangeOp : OneFlow_BaseOp<"arange", [DeclareOpInterfaceMethods<BnOrd
   let extraClassDeclaration = [{
     static std::vector<std::string> inputOrder() { return {}; }
     static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_BernoulliOp : OneFlow_BaseOp<"bernoulli", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    SI64Attr:$seed,
-    BoolAttr:$has_seed,
-    StrAttr:$dtype
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$a,
-    AnyType:$b
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    SI32Attr:$axis
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"a", "b"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_CastOp : OneFlow_BaseOp<"cast", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    StrAttr:$dtype
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_CastLikeOp : OneFlow_BaseOp<"cast_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in,
-    AnyType:$dtype_like
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "dtype_like"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_CastToStaticShapeOp : OneFlow_BaseOp<"cast_to_static_shape", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$input
-  );
-  let output = (outs
-    AnyType:$output
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input"}; }
-    static std::vector<std::string> outputOrder() { return {"output"}; }
-  }];
-}
-
-def OneFlow_CastToTickOp : OneFlow_BaseOp<"cast_to_tick", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_CeluOp : OneFlow_BaseOp<"celu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    F64Attr:$alpha
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_CeluGradOp : OneFlow_BaseOp<"celu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    F64Attr:$alpha
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
   }];
 }
 
@@ -3698,69 +4042,6 @@ def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [DeclareOpInterfaceMethods<B
   }];
 }
 
-def OneFlow_CopyOp : OneFlow_BaseOp<"copy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    StrAttr:$device_type,
-    SI64Attr:$device_id
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_CountNotFiniteOp : OneFlow_BaseOp<"count_not_finite", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
-  }];
-}
-
-def OneFlow_DiagOp : OneFlow_BaseOp<"diag", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    SI32Attr:$diagonal
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_DiagGradOp : OneFlow_BaseOp<"diag_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$dy,
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    SI32Attr:$diagonal
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "in"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
-
 def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in,
@@ -3776,37 +4057,6 @@ def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", [DeclareOpInterfaceMethods<BnO
   let extraClassDeclaration = [{
     static std::vector<std::string> inputOrder() { return {"in", "mask", "_add_to_output"}; }
     static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_DropoutGradOp : OneFlow_BaseOp<"dropout_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$dy,
-    AnyType:$mask
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    F32Attr:$scale
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "mask"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
-
-def OneFlow_ElementwiseMaximumOp : OneFlow_BaseOp<"elementwise_maximum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y
-  );
-  let output = (outs
-    AnyType:$z
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
   }];
 }
 
@@ -3829,20 +4079,6 @@ def OneFlow_ElementwiseMaximumBackwardOp : OneFlow_BaseOp<"elementwise_maximum_b
   }];
 }
 
-def OneFlow_ElementwiseMinimumOp : OneFlow_BaseOp<"elementwise_minimum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y
-  );
-  let output = (outs
-    AnyType:$z
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
-  }];
-}
-
 def OneFlow_ElementwiseMinimumBackwardOp : OneFlow_BaseOp<"elementwise_minimum_backward", [AttrSizedResultSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dz,
@@ -3862,39 +4098,6 @@ def OneFlow_ElementwiseMinimumBackwardOp : OneFlow_BaseOp<"elementwise_minimum_b
   }];
 }
 
-def OneFlow_EluOp : OneFlow_BaseOp<"elu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    F64Attr:$alpha
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_EluGradOp : OneFlow_BaseOp<"elu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    F64Attr:$alpha
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
-
 def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let output = (outs
     AnyType:$out
@@ -3906,39 +4109,6 @@ def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", [DeclareOpInterfaceMethods<BnOrder
   );
   let extraClassDeclaration = [{
     static std::vector<std::string> inputOrder() { return {}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_ExpandOp : OneFlow_BaseOp<"expand", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$logical_in_shape,
-    SI32ArrayAttr:$logical_expand_shape
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_ExpandDimsOp : OneFlow_BaseOp<"expand_dims", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    SI32Attr:$axis
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
     static std::vector<std::string> outputOrder() { return {"out"}; }
   }];
 }
@@ -3956,151 +4126,6 @@ def OneFlow_EyeOp : OneFlow_BaseOp<"eye", [DeclareOpInterfaceMethods<BnOrderOpIn
   let extraClassDeclaration = [{
     static std::vector<std::string> inputOrder() { return {}; }
     static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_FlattenOp : OneFlow_BaseOp<"flatten", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    SI32Attr:$start_dim,
-    SI32Attr:$end_dim
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_FlipOp : OneFlow_BaseOp<"flip", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$dims
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
-  }];
-}
-
-def OneFlow_FlipGradOp : OneFlow_BaseOp<"flip_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$dims
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
-
-def OneFlow_FloordivOp : OneFlow_BaseOp<"floordiv", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y
-  );
-  let output = (outs
-    AnyType:$z
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
-  }];
-}
-
-def OneFlow_FoldOp : OneFlow_BaseOp<"fold", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$output_size,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$strides,
-    SI32ArrayAttr:$padding,
-    SI32ArrayAttr:$dilation_rate
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
-  }];
-}
-
-def OneFlow_GeluOp : OneFlow_BaseOp<"gelu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_GeluGradOp : OneFlow_BaseOp<"gelu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
-
-def OneFlow_GenerateRandomBatchPermutationIndicesOp : OneFlow_BaseOp<"generate_random_batch_permutation_indices", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    SI64Attr:$seed
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
-  }];
-}
-
-def OneFlow_GridSampleOp : OneFlow_BaseOp<"grid_sample", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$input,
-    AnyType:$grid
-  );
-  let output = (outs
-    AnyType:$output
-  );
-  let attrs = (ins
-    StrAttr:$interpolation_mode,
-    StrAttr:$padding_mode,
-    BoolAttr:$align_corners
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input", "grid"}; }
-    static std::vector<std::string> outputOrder() { return {"output"}; }
   }];
 }
 
@@ -4122,203 +4147,6 @@ def OneFlow_GridSampleGradOp : OneFlow_BaseOp<"grid_sample_grad", [DeclareOpInte
   let extraClassDeclaration = [{
     static std::vector<std::string> inputOrder() { return {"doutput", "input", "grid"}; }
     static std::vector<std::string> outputOrder() { return {"dinput", "dgrid"}; }
-  }];
-}
-
-def OneFlow_HardsigmoidOp : OneFlow_BaseOp<"hardsigmoid", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_HardsigmoidGradOp : OneFlow_BaseOp<"hardsigmoid_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
-
-def OneFlow_HardswishOp : OneFlow_BaseOp<"hardswish", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_HardswishGradOp : OneFlow_BaseOp<"hardswish_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
-
-def OneFlow_HierarchicalParallelCastOp : OneFlow_BaseOp<"hierarchical_parallel_cast", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    StrArrayAttr:$nd_sbp,
-    StrAttr:$grad_mode,
-    StrArrayAttr:$grad_nd_sbp
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_HierarchicalParallelCastLikeOp : OneFlow_BaseOp<"hierarchical_parallel_cast_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in,
-    AnyType:$like
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "like"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_L1L2RegularizeGradientOp : OneFlow_BaseOp<"l1_l2_regularize_gradient", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$model,
-    AnyType:$model_diff
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    F32Attr:$l1,
-    F32Attr:$l2
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"model", "model_diff"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    F32Attr:$alpha
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
-  }];
-}
-
-def OneFlow_LeakyReluGradOp : OneFlow_BaseOp<"leaky_relu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    F32Attr:$alpha
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
-
-def OneFlow_LogicalNotOp : OneFlow_BaseOp<"logical_not", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
-  }];
-}
-
-def OneFlow_MaskedFillOp : OneFlow_BaseOp<"masked_fill", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$mask
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    BoolAttr:$has_int_operand,
-    BoolAttr:$has_float_operand,
-    SI64Attr:$int_operand,
-    F64Attr:$float_operand
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "mask"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_MishOp : OneFlow_BaseOp<"mish", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_MishGradOp : OneFlow_BaseOp<"mish_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
   }];
 }
 
@@ -4345,57 +4173,6 @@ def OneFlow_MultiSquareSumOp : OneFlow_BaseOp<"multi_square_sum", [DeclareOpInte
   let extraClassDeclaration = [{
     static std::vector<std::string> inputOrder() { return {"x"}; }
     static std::vector<std::string> outputOrder() { return {"y"}; }
-  }];
-}
-
-def OneFlow_MultiplyOp : OneFlow_BaseOp<"multiply", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_NarrowOp : OneFlow_BaseOp<"narrow", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    SI64Attr:$dim,
-    SI64Attr:$start,
-    SI64Attr:$length
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_NarrowGradOp : OneFlow_BaseOp<"narrow_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$dy,
-    AnyType:$like
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    SI64Attr:$dim,
-    SI64Attr:$start,
-    SI64Attr:$length
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "like"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
   }];
 }
 
@@ -4440,106 +4217,6 @@ def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", [DeclareOpInterfaceMethods<Bn
   }];
 }
 
-def OneFlow_NvtxEndOp : OneFlow_BaseOp<"nvtx_end", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    StrAttr:$mark_prefix
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_NvtxStartOp : OneFlow_BaseOp<"nvtx_start", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    StrAttr:$mark_prefix
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_OneHotOp : OneFlow_BaseOp<"one_hot", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$indices
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    SI64Attr:$depth,
-    F64Attr:$floating_on_value,
-    SI64Attr:$integer_on_value,
-    F64Attr:$floating_off_value,
-    SI64Attr:$integer_off_value,
-    StrAttr:$dtype
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"indices"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_PackOp : OneFlow_BaseOp<"pack", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    SI32Attr:$pack_num
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_ParallelCastOp : OneFlow_BaseOp<"parallel_cast", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    StrAttr:$sbp_parallel,
-    StrAttr:$grad_sbp_parallel
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_PowOp : OneFlow_BaseOp<"pow", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y
-  );
-  let output = (outs
-    AnyType:$z
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
-  }];
-}
-
 def OneFlow_PowXGradOp : OneFlow_BaseOp<"pow_x_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
@@ -4570,20 +4247,6 @@ def OneFlow_PowYGradOp : OneFlow_BaseOp<"pow_y_grad", [DeclareOpInterfaceMethods
   }];
 }
 
-def OneFlow_PreluOp : OneFlow_BaseOp<"prelu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$alpha
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "alpha"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
-  }];
-}
-
 def OneFlow_PreluGradOp : OneFlow_BaseOp<"prelu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
@@ -4597,23 +4260,6 @@ def OneFlow_PreluGradOp : OneFlow_BaseOp<"prelu_grad", [DeclareOpInterfaceMethod
   let extraClassDeclaration = [{
     static std::vector<std::string> inputOrder() { return {"dy", "x", "alpha"}; }
     static std::vector<std::string> outputOrder() { return {"dx", "alpha_diff"}; }
-  }];
-}
-
-def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$like
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    F32Attr:$rate,
-    SI64Attr:$seed
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"like"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
   }];
 }
 
@@ -4648,80 +4294,6 @@ def OneFlow_RecvOp : OneFlow_BaseOp<"recv", [DeclareOpInterfaceMethods<BnOrderOp
   }];
 }
 
-def OneFlow_ReluGradOp : OneFlow_BaseOp<"relu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"y", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
-
-def OneFlow_RepeatOp : OneFlow_BaseOp<"repeat", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    SI32Attr:$repeat_num
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_RollOp : OneFlow_BaseOp<"roll", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$shifts,
-    SI32ArrayAttr:$dims
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_SeluOp : OneFlow_BaseOp<"selu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_SeluGradOp : OneFlow_BaseOp<"selu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
-
 def OneFlow_SendOp : OneFlow_BaseOp<"send", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$in
@@ -4732,89 +4304,6 @@ def OneFlow_SendOp : OneFlow_BaseOp<"send", [DeclareOpInterfaceMethods<BnOrderOp
   let extraClassDeclaration = [{
     static std::vector<std::string> inputOrder() { return {"in"}; }
     static std::vector<std::string> outputOrder() { return {}; }
-  }];
-}
-
-def OneFlow_SigmoidOp : OneFlow_BaseOp<"sigmoid", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_SigmoidGradOp : OneFlow_BaseOp<"sigmoid_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"y", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
-
-def OneFlow_SiluOp : OneFlow_BaseOp<"silu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_SiluGradOp : OneFlow_BaseOp<"silu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
-
-def OneFlow_SoftsignOp : OneFlow_BaseOp<"softsign", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_SortOp : OneFlow_BaseOp<"sort", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    StrAttr:$direction
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
   }];
 }
 
@@ -4831,35 +4320,6 @@ def OneFlow_SplitLikeOp : OneFlow_BaseOp<"split_like", [DeclareOpInterfaceMethod
   );
   let extraClassDeclaration = [{
     static std::vector<std::string> inputOrder() { return {"in", "like"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_SquareSumOp : OneFlow_BaseOp<"square_sum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
-  }];
-}
-
-def OneFlow_SqueezeOp : OneFlow_BaseOp<"squeeze", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$axes
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
     static std::vector<std::string> outputOrder() { return {"out"}; }
   }];
 }
@@ -4881,20 +4341,6 @@ def OneFlow_SspVariableProxyOp : OneFlow_BaseOp<"ssp_variable_proxy", [DeclareOp
   }];
 }
 
-def OneFlow_TfPreluOp : OneFlow_BaseOp<"tf_prelu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$alpha
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "alpha"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
-  }];
-}
-
 def OneFlow_TfPreluGradOp : OneFlow_BaseOp<"tf_prelu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$dy,
@@ -4908,114 +4354,6 @@ def OneFlow_TfPreluGradOp : OneFlow_BaseOp<"tf_prelu_grad", [DeclareOpInterfaceM
   let extraClassDeclaration = [{
     static std::vector<std::string> inputOrder() { return {"dy", "x", "alpha"}; }
     static std::vector<std::string> outputOrder() { return {"dx", "alpha_diff"}; }
-  }];
-}
-
-def OneFlow_TransposeOp : OneFlow_BaseOp<"transpose", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$input
-  );
-  let output = (outs
-    AnyType:$output
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$perm
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input"}; }
-    static std::vector<std::string> outputOrder() { return {"output"}; }
-  }];
-}
-
-def OneFlow_TrilOp : OneFlow_BaseOp<"tril", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    SI64Attr:$diagonal,
-    F64Attr:$floating_fill_value,
-    SI64Attr:$integer_fill_value,
-    BoolAttr:$is_floating_fill_value
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_TriuOp : OneFlow_BaseOp<"triu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    SI64Attr:$diagonal
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_UnfoldOp : OneFlow_BaseOp<"unfold", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$padding,
-    SI32ArrayAttr:$strides,
-    SI32ArrayAttr:$dilation_rate
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
-  }];
-}
-
-def OneFlow_UnfoldTensorOp : OneFlow_BaseOp<"unfold_tensor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    SI32Attr:$dimension,
-    SI32Attr:$size,
-    SI32Attr:$step
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
-  }];
-}
-
-def OneFlow_UnfoldTensorGradOp : OneFlow_BaseOp<"unfold_tensor_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$dy,
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    SI32Attr:$dimension,
-    SI32Attr:$size,
-    SI32Attr:$step
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "x"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
   }];
 }
 
@@ -5072,36 +4410,6 @@ def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", [DeclareOp
   }];
 }
 
-def OneFlow_UnpackOp : OneFlow_BaseOp<"unpack", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    SI32Attr:$unpack_num
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
-
-def OneFlow_XdivyOp : OneFlow_BaseOp<"xdivy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y
-  );
-  let output = (outs
-    AnyType:$z
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
-  }];
-}
-
 def OneFlow_XdivyXGradOp : OneFlow_BaseOp<"xdivy_x_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
   let input = (ins
     AnyType:$x,
@@ -5129,33 +4437,6 @@ def OneFlow_XdivyYGradOp : OneFlow_BaseOp<"xdivy_y_grad", [DeclareOpInterfaceMet
   let extraClassDeclaration = [{
     static std::vector<std::string> inputOrder() { return {"x", "y", "dz"}; }
     static std::vector<std::string> outputOrder() { return {"dy"}; }
-  }];
-}
-
-def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y
-  );
-  let output = (outs
-    AnyType:$z
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
-  }];
-}
-
-def OneFlow_ZeroLikeOp : OneFlow_BaseOp<"zero_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$like
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"like"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
   }];
 }
 
@@ -6131,6 +5412,62 @@ def OneFlow_SamePaddingGradOp : OneFlow_BaseOp<"same_padding_grad", [DeclareOpIn
 }
 
 #endif  // GET_ONEFLOW_PADDING_OP_DEFINITIONS
+
+// hierarchical_parallel_cast, hierarchical_parallel_cast_like, parallel_cast
+// Total: 3
+#ifndef GET_ONEFLOW_PARALLEL_CAST_OP_DEFINITIONS
+#define GET_ONEFLOW_PARALLEL_CAST_OP_DEFINITIONS
+
+def OneFlow_HierarchicalParallelCastOp : OneFlow_BaseOp<"hierarchical_parallel_cast", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    StrArrayAttr:$nd_sbp,
+    StrAttr:$grad_mode,
+    StrArrayAttr:$grad_nd_sbp
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_HierarchicalParallelCastLikeOp : OneFlow_BaseOp<"hierarchical_parallel_cast_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in,
+    AnyType:$like
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in", "like"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_ParallelCastOp : OneFlow_BaseOp<"parallel_cast", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    StrAttr:$sbp_parallel,
+    StrAttr:$grad_sbp_parallel
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+#endif  // GET_ONEFLOW_PARALLEL_CAST_OP_DEFINITIONS
 
 // adaptive_avg_pool1d, adaptive_avg_pool1d_grad, adaptive_avg_pool2d, adaptive_avg_pool2d_grad, adaptive_avg_pool3d, adaptive_avg_pool3d_grad, avg_pool_1d, avg_pool_1d_grad, avg_pool_2d, avg_pool_2d_grad, avg_pool_3d, avg_pool_3d_grad, avgpool_1d, avgpool_1d_grad, avgpool_2d, avgpool_2d_grad, avgpool_3d, avgpool_3d_grad, max_pool_1d, max_pool_1d_grad, max_pool_2d, max_pool_2d_grad, max_pool_3d, max_pool_3d_grad, maxpool_1d, maxpool_1d_grad, maxpool_2d, maxpool_2d_grad, maxpool_3d, maxpool_3d_grad
 // Total: 30
@@ -8613,6 +7950,704 @@ def OneFlow_TanhGradOp : OneFlow_BaseOp<"tanh_grad", [DeclareOpInterfaceMethods<
 }
 
 #endif  // GET_ONEFLOW_TRIGONOMETRIC_OP_DEFINITIONS
+
+// acc, affine_grid, affine_grid_grad, bernoulli, cast, cast_to_static_shape, cast_to_tick, celu, copy, count_not_finite, diag, elu, expand, expand_dims, flatten, flip, flip_grad, fold, gelu, hardsigmoid, hardswish, leaky_relu, logical_not, mish, narrow, one_hot, pack, random_mask_like, repeat, roll, selu, sigmoid, silu, softsign, sort, square_sum, squeeze, transpose, tril, triu, unfold, unfold_tensor, unpack, zero_like
+// Total: 44
+#ifndef GET_ONEFLOW_UNARY_OP_DEFINITIONS
+#define GET_ONEFLOW_UNARY_OP_DEFINITIONS
+
+def OneFlow_AccOp : OneFlow_BaseOp<"acc", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    SI32Attr:$max_acc_num
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_AffineGridOp : OneFlow_BaseOp<"affine_grid", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$theta
+  );
+  let output = (outs
+    AnyType:$grid
+  );
+  let attrs = (ins
+    AnyI64ElementsAttr:$size,
+    BoolAttr:$align_corners
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"theta"}; }
+    static std::vector<std::string> outputOrder() { return {"grid"}; }
+  }];
+}
+
+def OneFlow_AffineGridGradOp : OneFlow_BaseOp<"affine_grid_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$dgrid
+  );
+  let output = (outs
+    AnyType:$dtheta
+  );
+  let attrs = (ins
+    AnyI64ElementsAttr:$size,
+    BoolAttr:$align_corners
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"dgrid"}; }
+    static std::vector<std::string> outputOrder() { return {"dtheta"}; }
+  }];
+}
+
+def OneFlow_BernoulliOp : OneFlow_BaseOp<"bernoulli", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    SI64Attr:$seed,
+    BoolAttr:$has_seed,
+    StrAttr:$dtype
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_CastOp : OneFlow_BaseOp<"cast", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    StrAttr:$dtype
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_CastToStaticShapeOp : OneFlow_BaseOp<"cast_to_static_shape", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$input
+  );
+  let output = (outs
+    AnyType:$output
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"input"}; }
+    static std::vector<std::string> outputOrder() { return {"output"}; }
+  }];
+}
+
+def OneFlow_CastToTickOp : OneFlow_BaseOp<"cast_to_tick", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_CeluOp : OneFlow_BaseOp<"celu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    F64Attr:$alpha
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_CopyOp : OneFlow_BaseOp<"copy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    StrAttr:$device_type,
+    SI64Attr:$device_id
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_CountNotFiniteOp : OneFlow_BaseOp<"count_not_finite", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x"}; }
+    static std::vector<std::string> outputOrder() { return {"y"}; }
+  }];
+}
+
+def OneFlow_DiagOp : OneFlow_BaseOp<"diag", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    SI32Attr:$diagonal
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_EluOp : OneFlow_BaseOp<"elu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    F64Attr:$alpha
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_ExpandOp : OneFlow_BaseOp<"expand", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$logical_in_shape,
+    SI32ArrayAttr:$logical_expand_shape
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_ExpandDimsOp : OneFlow_BaseOp<"expand_dims", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    SI32Attr:$axis
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_FlattenOp : OneFlow_BaseOp<"flatten", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    SI32Attr:$start_dim,
+    SI32Attr:$end_dim
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_FlipOp : OneFlow_BaseOp<"flip", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$dims
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x"}; }
+    static std::vector<std::string> outputOrder() { return {"y"}; }
+  }];
+}
+
+def OneFlow_FlipGradOp : OneFlow_BaseOp<"flip_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$dims
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"dy"}; }
+    static std::vector<std::string> outputOrder() { return {"dx"}; }
+  }];
+}
+
+def OneFlow_FoldOp : OneFlow_BaseOp<"fold", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$output_size,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$strides,
+    SI32ArrayAttr:$padding,
+    SI32ArrayAttr:$dilation_rate
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x"}; }
+    static std::vector<std::string> outputOrder() { return {"y"}; }
+  }];
+}
+
+def OneFlow_GeluOp : OneFlow_BaseOp<"gelu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_HardsigmoidOp : OneFlow_BaseOp<"hardsigmoid", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_HardswishOp : OneFlow_BaseOp<"hardswish", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let attrs = (ins
+    F32Attr:$alpha
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x"}; }
+    static std::vector<std::string> outputOrder() { return {"y"}; }
+  }];
+}
+
+def OneFlow_LogicalNotOp : OneFlow_BaseOp<"logical_not", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x"}; }
+    static std::vector<std::string> outputOrder() { return {"y"}; }
+  }];
+}
+
+def OneFlow_MishOp : OneFlow_BaseOp<"mish", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_NarrowOp : OneFlow_BaseOp<"narrow", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    SI64Attr:$dim,
+    SI64Attr:$start,
+    SI64Attr:$length
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_OneHotOp : OneFlow_BaseOp<"one_hot", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$indices
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    SI64Attr:$depth,
+    F64Attr:$floating_on_value,
+    SI64Attr:$integer_on_value,
+    F64Attr:$floating_off_value,
+    SI64Attr:$integer_off_value,
+    StrAttr:$dtype
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"indices"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_PackOp : OneFlow_BaseOp<"pack", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    SI32Attr:$pack_num
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$like
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    F32Attr:$rate,
+    SI64Attr:$seed
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"like"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_RepeatOp : OneFlow_BaseOp<"repeat", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    SI32Attr:$repeat_num
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_RollOp : OneFlow_BaseOp<"roll", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$shifts,
+    SI32ArrayAttr:$dims
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_SeluOp : OneFlow_BaseOp<"selu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_SigmoidOp : OneFlow_BaseOp<"sigmoid", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_SiluOp : OneFlow_BaseOp<"silu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_SoftsignOp : OneFlow_BaseOp<"softsign", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_SortOp : OneFlow_BaseOp<"sort", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    StrAttr:$direction
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_SquareSumOp : OneFlow_BaseOp<"square_sum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x"}; }
+    static std::vector<std::string> outputOrder() { return {"y"}; }
+  }];
+}
+
+def OneFlow_SqueezeOp : OneFlow_BaseOp<"squeeze", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$axes
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_TransposeOp : OneFlow_BaseOp<"transpose", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$input
+  );
+  let output = (outs
+    AnyType:$output
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$perm
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"input"}; }
+    static std::vector<std::string> outputOrder() { return {"output"}; }
+  }];
+}
+
+def OneFlow_TrilOp : OneFlow_BaseOp<"tril", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    SI64Attr:$diagonal,
+    F64Attr:$floating_fill_value,
+    SI64Attr:$integer_fill_value,
+    BoolAttr:$is_floating_fill_value
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_TriuOp : OneFlow_BaseOp<"triu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    SI64Attr:$diagonal
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_UnfoldOp : OneFlow_BaseOp<"unfold", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let attrs = (ins
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$padding,
+    SI32ArrayAttr:$strides,
+    SI32ArrayAttr:$dilation_rate
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x"}; }
+    static std::vector<std::string> outputOrder() { return {"y"}; }
+  }];
+}
+
+def OneFlow_UnfoldTensorOp : OneFlow_BaseOp<"unfold_tensor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let attrs = (ins
+    SI32Attr:$dimension,
+    SI32Attr:$size,
+    SI32Attr:$step
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"x"}; }
+    static std::vector<std::string> outputOrder() { return {"y"}; }
+  }];
+}
+
+def OneFlow_UnpackOp : OneFlow_BaseOp<"unpack", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$in
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let attrs = (ins
+    SI32Attr:$unpack_num
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"in"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+def OneFlow_ZeroLikeOp : OneFlow_BaseOp<"zero_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+  let input = (ins
+    AnyType:$like
+  );
+  let output = (outs
+    AnyType:$out
+  );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputOrder() { return {"like"}; }
+    static std::vector<std::string> outputOrder() { return {"out"}; }
+  }];
+}
+
+#endif  // GET_ONEFLOW_UNARY_OP_DEFINITIONS
 
 // upsample, upsample_bicubic_2d, upsample_bicubic_2d_grad, upsample_bilinear_2d, upsample_bilinear_2d_grad, upsample_grad, upsample_linear_1d, upsample_linear_1d_grad, upsample_nearest_1d, upsample_nearest_1d_grad, upsample_nearest_2d, upsample_nearest_2d_grad, upsample_nearest_3d, upsample_nearest_3d_grad, upsample_trilinear_3d, upsample_trilinear_3d_grad
 // Total: 16

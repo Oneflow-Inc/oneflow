@@ -227,11 +227,15 @@ bool IsIndicesOp(const std::string& op_name) {
   return (op_name.find("arg") != std::string::npos || op_name.find("where") != std::string::npos
           || op_name.find("gather") != std::string::npos
           || op_name.find("slice") != std::string::npos
+          || op_name.find("indices") != std::string::npos
           || op_name.find("segment_sum") != std::string::npos
           || op_name.find("scatter") != std::string::npos);
 }
 bool IsNormalizationOp(const std::string& op_name) {
   return (op_name.find("norm") != std::string::npos);
+}
+bool IsParallelCastOp(const std::string& op_name) {
+  return (op_name.find("parallel_cast") != std::string::npos);
 }
 
 std::string PostProcessClassName(const std::string& op_name) {
@@ -292,14 +296,19 @@ void PrintArgDef(const UserOpDef_ArgDef& arg_def) {
   }
 }
 
-bool HasMultipleVariadic(
+uint32_t NumMultipleVariadic(
     const ::google::protobuf::RepeatedPtrField<::oneflow::UserOpDef_ArgDef>& arg_defs) {
   uint32_t num_variadic_op = 0;
   for (const auto& arg_def : arg_defs) {
     if (arg_def.is_optional()) { num_variadic_op += 1; }
     if (arg_def.num_as_min()) { num_variadic_op += 1; }
   }
-  return num_variadic_op > 1;
+  return num_variadic_op;
+}
+
+bool HasMultipleVariadic(
+    const ::google::protobuf::RepeatedPtrField<::oneflow::UserOpDef_ArgDef>& arg_defs) {
+  return NumMultipleVariadic(arg_defs) > 1;
 }
 
 std::string GetOperandOrder(
@@ -349,11 +358,13 @@ void PrintTraitAttrs(const oneflow::UserOpDef& op_def) {
 }
 
 bool IsUnaryOp(const oneflow::user_op::OpRegistryResult& r) {
-  return r.op_def.input().size() == 1 && r.op_def.output().size() == 1;
+  return NumMultipleVariadic(r.op_def.input()) == 0 && NumMultipleVariadic(r.op_def.output()) == 0
+         && r.op_def.input().size() == 1 && r.op_def.output().size() == 1;
 }
 
 bool IsBinaryOp(const oneflow::user_op::OpRegistryResult& r) {
-  return r.op_def.input().size() == 2 && r.op_def.output().size() == 1;
+  return NumMultipleVariadic(r.op_def.input()) == 0 && NumMultipleVariadic(r.op_def.output()) == 0
+         && r.op_def.input().size() == 2 && r.op_def.output().size() == 1;
 }
 
 void PrintBody(const oneflow::user_op::OpRegistryResult& r) {
@@ -502,6 +513,7 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
     if (IsDetectionOp(r.op_type_name)) { group_name = "Detection"; }
     if (IsSummaryOp(r.op_type_name)) { group_name = "summary"; }
     if (IsCUDAOp(r.op_type_name)) { group_name = "cuda"; }
+    if (IsParallelCastOp(r.op_type_name)) { group_name = "parallel_cast"; }
     if (ShouldGenBaseClass(r.op_type_name)) { group_name = "BASE"; }
     group_name = "GET_ONEFLOW_" + group_name + "_OP_DEFINITIONS";
     std::transform(group_name.begin(), group_name.end(), group_name.begin(), ::toupper);
