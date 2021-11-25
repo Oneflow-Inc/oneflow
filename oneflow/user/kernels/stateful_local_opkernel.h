@@ -346,7 +346,6 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return base_ctx_.Tensor4ArgNameAndIndex(arg_name, index);
   }
-  DeviceCtx* device_ctx() override { return device_ctx_; }
   ep::Stream* stream() override {
     CHECK(device_ctx_);
     return device_ctx_->stream();

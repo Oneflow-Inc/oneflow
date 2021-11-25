@@ -153,7 +153,7 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
       auto op_name =
           (cast_op.op_name() + "__FUSE__" + mul_op.op_name()).toStringRef(op_name_storage);
       SmallVector<::mlir::Value, 2> operands;
-      operands.push_back(cast_op.x());
+      operands.push_back(cast_op.in());
       operands.push_back(mul_op.scalar());
       SmallVector<::mlir::Value, 1> results;
       results.push_back(mul_op.y());

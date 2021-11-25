@@ -369,26 +369,6 @@ struct FillUserAttrsInNormalizationAddReluOp
   }
 };
 
-void FusedBiasAddGeluOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
-                                                     ::mlir::MLIRContext* context) {
-  results.insert<FillUserOpAttrsInFusedBiasAddGeluOp>(context);
-}
-
-void FusedBiasAddMaskScaleOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
-                                                          ::mlir::MLIRContext* context) {
-  results.insert<FillUserAttrsInFusedBiasAddMaskScaleOp>(context);
-}
-
-void FusedScaleTrilOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
-                                                   ::mlir::MLIRContext* context) {
-  results.insert<FillUserAttrsInFusedScaleTrilOp>(context);
-}
-
-void NormalizationAddReluOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
-                                                         ::mlir::MLIRContext* context) {
-  results.insert<FillUserAttrsInNormalizationAddReluOp>(context);
-}
-
 struct ConcreteSystemOps : public mlir::OpRewritePattern<oneflow::SystemOp> {
   explicit ConcreteSystemOps(mlir::MLIRContext* context)
       : OpRewritePattern<oneflow::SystemOp>(context, /*benefit=*/1) {}
