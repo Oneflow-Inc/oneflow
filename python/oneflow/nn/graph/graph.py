@@ -510,7 +510,6 @@ class Graph(object):
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
         # Get config form GraphConfig
-
         self._outputs_buffer_size = self.config._outputs_buffer_size
         self._generate_config_proto()
 
