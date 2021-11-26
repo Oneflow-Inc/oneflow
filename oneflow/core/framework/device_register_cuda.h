@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_GPU_H_
-#define ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_GPU_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_CUDA_H_
+#define ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_CUDA_H_
 
 #include <type_traits>
 #include "oneflow/core/common/util.h"
@@ -24,7 +24,7 @@ namespace oneflow {
 #ifdef WITH_CUDA
 #include <cuda_fp16.h>
 
-void GpuDumpVersionInfo();
+void CudaDumpVersionInfo();
 
 template<typename T>
 struct IsFloat16;
@@ -32,7 +32,7 @@ struct IsFloat16;
 template<>
 struct IsFloat16<half> : std::true_type {};
 
-REGISTER_DEVICE(DeviceType::kGPU).SetDumpVersionInfoFn(GpuDumpVersionInfo).SetDeviceTag("gpu");
+REGISTER_DEVICE(DeviceType::kCUDA).SetDumpVersionInfoFn(CudaDumpVersionInfo).SetDeviceTag("gpu");
 #endif  // WITH_CUDA
 }  // namespace oneflow
-#endif  // ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_GPU_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_CUDA_H_

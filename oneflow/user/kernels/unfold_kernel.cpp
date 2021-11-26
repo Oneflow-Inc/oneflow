@@ -92,8 +92,8 @@ REGISTER_UNFOLD_KERNEL(DeviceType::kCPU, float)
 REGISTER_UNFOLD_KERNEL(DeviceType::kCPU, double)
 
 #ifdef WITH_CUDA
-REGISTER_UNFOLD_KERNEL(DeviceType::kGPU, float)
-REGISTER_UNFOLD_KERNEL(DeviceType::kGPU, double)
+REGISTER_UNFOLD_KERNEL(DeviceType::kCUDA, float)
+REGISTER_UNFOLD_KERNEL(DeviceType::kCUDA, double)
 #endif  // WITH_CUDA
 
 }  // namespace user_op
