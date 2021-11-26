@@ -217,16 +217,16 @@ class GpuHeapSelectionTopKKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(dtype)                                           \
+#define REGISTER_CUDA_HEAP_SELECTION_TOP_K_KERNEL(dtype)                                          \
   REGISTER_USER_KERNEL("top_k").SetCreateFn<GpuHeapSelectionTopKKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kGPU) && (user_op::HobAttr<int32_t>("k") <= 128)   \
+      (user_op::HobDeviceType() == DeviceType::kCUDA) && (user_op::HobAttr<int32_t>("k") <= 128)  \
       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(float)
-REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(double)
-REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(uint8_t)
-REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(int8_t)
-REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(int32_t)
-REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(int64_t)
+REGISTER_CUDA_HEAP_SELECTION_TOP_K_KERNEL(float)
+REGISTER_CUDA_HEAP_SELECTION_TOP_K_KERNEL(double)
+REGISTER_CUDA_HEAP_SELECTION_TOP_K_KERNEL(uint8_t)
+REGISTER_CUDA_HEAP_SELECTION_TOP_K_KERNEL(int8_t)
+REGISTER_CUDA_HEAP_SELECTION_TOP_K_KERNEL(int32_t)
+REGISTER_CUDA_HEAP_SELECTION_TOP_K_KERNEL(int64_t)
 
 }  // namespace oneflow

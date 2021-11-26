@@ -96,7 +96,7 @@ Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(const std::shared_ptr<const
 }
 
 bool ConsistentTensor::is_cuda() const {
-  return CHECK_JUST(parallel_desc())->device_type() == DeviceType::kGPU;
+  return CHECK_JUST(parallel_desc())->device_type() == DeviceType::kCUDA;
 }
 
 Maybe<Tensor> ConsistentTensor::detach() const {

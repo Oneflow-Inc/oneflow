@@ -161,9 +161,9 @@ class SGDUpdateKernel final : public user_op::OpKernel, public user_op::CudaGrap
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCPU, double, double);
 #ifdef WITH_CUDA
-REGISTER_SGD_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
-REGISTER_SGD_UPDATE_KERNEL(DeviceType::kGPU, float, float);
-REGISTER_SGD_UPDATE_KERNEL(DeviceType::kGPU, double, double);
+REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
+REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T, typename K>
@@ -300,9 +300,9 @@ class MomentumUpdateKernel final : public user_op::OpKernel, public user_op::Cud
 REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCPU, double, double);
 #ifdef WITH_CUDA
-REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
-REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kGPU, float, float);
-REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kGPU, double, double);
+REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
+REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T, typename K>
@@ -458,9 +458,9 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCPU, double, double);
 #ifdef WITH_CUDA
-REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
-REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kGPU, float, float);
-REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kGPU, double, double);
+REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
+REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T, typename G>
@@ -525,8 +525,8 @@ class AdagradUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
 REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kCPU, double, double);
 #ifdef WITH_CUDA
-REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kGPU, float, float);
-REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kGPU, double, double);
+REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T, typename K>
@@ -731,9 +731,9 @@ user_op::InferTmpSizeFn LambGenInferTmpSizeFn() {
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCPU, double, double);
 #ifdef WITH_CUDA
-REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
-REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, float, float);
-REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, double, double);
+REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
+REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
 
 template<DeviceType device_type>
@@ -760,7 +760,7 @@ class BiasCorrectionFactorKernel final : public user_op::OpKernel,
       .SetIsMatchedHob((user_op::HobDeviceType() == device));
 REGISTER_ADAM_BIAS_CORRECTION_FACTOR_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_ADAM_BIAS_CORRECTION_FACTOR_KERNEL(DeviceType::kGPU)
+REGISTER_ADAM_BIAS_CORRECTION_FACTOR_KERNEL(DeviceType::kCUDA)
 #endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T, typename G>
@@ -823,9 +823,9 @@ class RmsPropUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
 REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCPU, double, double);
 #ifdef WITH_CUDA
-REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
-REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kGPU, float, float);
-REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kGPU, double, double);
+REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
+REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T>
@@ -926,9 +926,9 @@ user_op::InferTmpSizeFn LarsGenInferTmpSizeFn() {
 REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCPU, double, double);
 #ifdef WITH_CUDA
-REGISTER_LARS_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
-REGISTER_LARS_UPDATE_KERNEL(DeviceType::kGPU, float, float);
-REGISTER_LARS_UPDATE_KERNEL(DeviceType::kGPU, double, double);
+REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
+REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
 
 }  // namespace

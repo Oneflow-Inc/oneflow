@@ -58,7 +58,7 @@ REGISTER_EYE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 
 // // Register GPU version
 #ifdef WITH_CUDA
-REGISTER_EYE_KERNELS_WITH_DEVICE(DeviceType::kGPU);
+REGISTER_EYE_KERNELS_WITH_DEVICE(DeviceType::kCUDA);
 #endif
 }  // namespace user_op
 }  // namespace oneflow

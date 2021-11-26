@@ -208,7 +208,7 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
 #define REGISTER_CONV_KERNEL(op_name, dtype, ndims)                                                \
   REGISTER_USER_KERNEL(#op_name)                                                                   \
       .SetCreateFn<ConvGpuKernel<dtype, ndims>>()                                                  \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                             \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))            \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
         const auto& in = ctx->InputTensorDesc("in", 0);                                            \
@@ -259,7 +259,7 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), dx->data_type());
       CHECK_EQ(add_to_output->shape(), dx->shape());
-      Memcpy<DeviceType::kGPU>(
+      Memcpy<DeviceType::kCUDA>(
           ctx->stream(), dx->mut_dptr<void>(), add_to_output->dptr<void>(),
           add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       beta = CudnnSPOnePtr<T>();
@@ -285,7 +285,7 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
 #define REGISTER_CONV_DATA_GRAD_FLOATING_KERNEL(dtype)                                             \
   REGISTER_USER_KERNEL("conv_data_grad")                                                           \
       .SetCreateFn<ConvDataGradGpuKernel<dtype>>()                                                 \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                             \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))            \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
         const auto& dy = ctx->InputTensorDesc("dy", 0);                                            \
@@ -350,7 +350,7 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel, public user_op::
 #define REGISTER_CONV_FILTER_GRAD_FLOATING_KERNEL(dtype)                                           \
   REGISTER_USER_KERNEL("conv_filter_grad")                                                         \
       .SetCreateFn<ConvFilterGradGpuKernel<dtype>>()                                               \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                             \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))            \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
         const auto& dy = ctx->InputTensorDesc("dy", 0);                                            \
@@ -421,10 +421,10 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
   }
 };
 
-#define REGISTER_CONV_BIAS_GRAD_FLOATING_KERNEL(dtype)                \
-  REGISTER_USER_KERNEL("conv_bias_grad")                              \
-      .SetCreateFn<ConvBiasGradGpuKernel<dtype>>()                    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_CONV_BIAS_GRAD_FLOATING_KERNEL(dtype)                 \
+  REGISTER_USER_KERNEL("conv_bias_grad")                               \
+      .SetCreateFn<ConvBiasGradGpuKernel<dtype>>()                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
 
 REGISTER_CONV_BIAS_GRAD_FLOATING_KERNEL(float);
