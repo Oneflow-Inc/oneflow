@@ -132,7 +132,7 @@ XrtDevice DeviceTagToXrtDevice(const std::string& device_tag) {
 
 XrtDevice DeviceTypeToXrtDevice(const DeviceType& device_type) {
   switch (device_type) {
-    case DeviceType::kGPU: return XrtDevice::GPU_CUDA;
+    case DeviceType::kCUDA: return XrtDevice::GPU_CUDA;
     case DeviceType::kCPU: return XrtDevice::CPU_X86;
     default:
       DLOG(WARNING) << "Meet invalid device type (" << device_type
@@ -143,7 +143,7 @@ XrtDevice DeviceTypeToXrtDevice(const DeviceType& device_type) {
 
 DeviceType XrtDeviceToDeviceType(const XrtDevice& device) {
   if (device == XrtDevice::GPU_CUDA) {
-    return DeviceType::kGPU;
+    return DeviceType::kCUDA;
   } else if (device == XrtDevice::CPU_X86) {
     return DeviceType::kCPU;
   } else {

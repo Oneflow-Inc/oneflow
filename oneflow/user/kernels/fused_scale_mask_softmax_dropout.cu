@@ -155,16 +155,16 @@ class FusedScaleMaskSoftmaxDropoutKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_GPU_KERNEL(dtype)   \
-  REGISTER_USER_KERNEL("fused_scale_mask_softmax_dropout")            \
-      .SetCreateFn<FusedScaleMaskSoftmaxDropoutKernel<dtype>>()       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_CUDA_KERNEL(dtype)   \
+  REGISTER_USER_KERNEL("fused_scale_mask_softmax_dropout")             \
+      .SetCreateFn<FusedScaleMaskSoftmaxDropoutKernel<dtype>>()        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_GPU_KERNEL(half)
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_GPU_KERNEL(float)
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_GPU_KERNEL(double)
-#undef REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_GPU_KERNEL
+REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_CUDA_KERNEL(half)
+REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_CUDA_KERNEL(float)
+REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_CUDA_KERNEL(double)
+#undef REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_CUDA_KERNEL
 
 template<typename T>
 class FusedScaleMaskSoftmaxDropoutGradKernel final : public user_op::OpKernel {
@@ -198,10 +198,10 @@ class FusedScaleMaskSoftmaxDropoutGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_GRAD_KERNEL(dtype)  \
-  REGISTER_USER_KERNEL("fused_scale_mask_softmax_dropout_grad")       \
-      .SetCreateFn<FusedScaleMaskSoftmaxDropoutGradKernel<dtype>>()   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_GRAD_KERNEL(dtype)   \
+  REGISTER_USER_KERNEL("fused_scale_mask_softmax_dropout_grad")        \
+      .SetCreateFn<FusedScaleMaskSoftmaxDropoutGradKernel<dtype>>()    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_GRAD_KERNEL(half)

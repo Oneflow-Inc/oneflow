@@ -111,7 +111,7 @@ __launch_bounds__(kBlockSize) __global__
 };
 
 template<typename T>
-struct PoolingKernelUtil<DeviceType::kGPU, T> {
+struct PoolingKernelUtil<DeviceType::kCUDA, T> {
   static void Maxpool1dForward(ep::Stream* stream,
                                const NdIndexOffsetHelper<int64_t, 3>& index_helper,
                                const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
@@ -188,8 +188,8 @@ struct PoolingKernelUtil<DeviceType::kGPU, T> {
   }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_POOLING_KERNEL_UTIL, (DeviceType::kGPU),
-                                 POOLING_DATA_TYPE_GPU_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_POOLING_KERNEL_UTIL, (DeviceType::kCUDA),
+                                 POOLING_DATA_TYPE_CUDA_SEQ);
 
 }  // namespace oneflow
 #endif  // WITH_CUDA
