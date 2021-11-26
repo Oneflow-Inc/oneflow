@@ -287,14 +287,11 @@ std::string GetBaseOp(const std::string& op_name) {
 }
 
 bool ShouldSkipOperandAndResultsAndAttrs(const std::string& op_name) {
-  return false;
-  // return IsInvolutionOp(op_name) || IsIdempotentOp(op_name) || IsPoolOp(op_name)
-  //        || IsConvOp(op_name);
+  return IsInvolutionOp(op_name) || IsIdempotentOp(op_name);
 }
 
 bool ShouldGenEmptyBody(const std::string& op_name) {
-  return IsInvolutionOp(op_name) || IsIdempotentOp(op_name) || IsPoolOp(op_name)
-         || IsConvOp(op_name);
+  return IsPoolOp(op_name) || IsConvOp(op_name);
 }
 
 void PrintArgDef(const UserOpDef_ArgDef& arg_def) {
