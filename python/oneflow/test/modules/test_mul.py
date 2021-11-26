@@ -140,7 +140,6 @@ def inplace_mul_tensors_helper(test_case, device, arr_0, arr_y):
     test_case.assertTrue(
         np.allclose(arr_y, of_x.grad.numpy(), 1e-05, 1e-05)
     )
-    print(of_y.grad.numpy())
     test_case.assertTrue(
         np.allclose(arr_0+1, of_y.grad.numpy(), 1e-05, 1e-05)
     )
@@ -150,31 +149,25 @@ def _test_inplace_mul_tensors(test_case, device):
     arr_0 = np.random.rand(3, 5)
     arr_y = np.random.rand(3, 5)
     inplace_mul_tensors_helper(test_case, device, arr_0, arr_y)
-    # test inplace boardcast mul
-    arr_0 = np.random.rand(5, 1, 4, 1)
-    arr_y = np.random.rand(1, 4, 1)
-    inplace_mul_tensors_helper(test_case, device, arr_0, arr_y)
-    arr_0 = np.random.rand(2, 3, 4, 5)
-    arr_y = np.random.rand(1, 1)
-    inplace_mul_tensors_helper(test_case, device, arr_0, arr_y)
 
 
 def _test_inplace_mul_scalar(test_case, device):
     arr = np.random.rand(2, 3, 4)
     of_x = flow.tensor(
-        arr, flow.float32, device=flow.device(device), requires_grad=True
+        arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     y = 3.25
-    id_x_before = id(of_x)
-    of_x.mul_(y)
-    test_case.assertTrue(id_x_before == id(x))
-    test_case.assertTrue(np.allclose(of_x.numpy(), np.multiply(arr, y)))
+    of_inplace_x = of_x + 1
+    id_x_before = id(of_inplace_x)
+    of_inplace_x.mul_(y)
+    test_case.assertTrue(id_x_before == id(of_inplace_x))
+    test_case.assertTrue(np.allclose(of_inplace_x.numpy(), np.multiply(arr+1, y)))
 
     of_x = flow.tensor(
-        arr, flow.float32, device=flow.device(device), requires_grad=True
+        arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    of_inplace_x_id_before = id(of_inplace_x)
     of_inplace_x = of_x + 1
+    of_inplace_x_id_before = id(of_inplace_x)
     of_inplace_x.mul_(y)
     test_case.assertTrue(of_inplace_x_id_before == id(of_inplace_x))
     test_case.assertTrue(
