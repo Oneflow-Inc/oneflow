@@ -52,6 +52,8 @@ struct OfBlob_CopyBuffer {
 
 }  // namespace oneflow
 
+typedef half_float::half float16;
+
 #define DEFINE_COPIER(T, type_proto)                                                               \
   inline void OfBlob_CopyToBuffer_##T(uint64_t of_blob_ptr, const oneflow::NumPyArrayPtr& array) { \
     oneflow::OfBlob_CopyBuffer::To<T>(of_blob_ptr, array).GetOrThrow();                            \
@@ -61,7 +63,7 @@ struct OfBlob_CopyBuffer {
     oneflow::OfBlob_CopyBuffer::From<T>(of_blob_ptr, array).GetOrThrow();                          \
   }
 
-OF_PP_FOR_EACH_TUPLE(DEFINE_COPIER, POD_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(DEFINE_COPIER, POD_AND_HALF_DATA_TYPE_SEQ);
 
 #undef DEFINE_COPIER
 
@@ -70,7 +72,7 @@ inline std::string Dtype_GetOfBlobCopyToBufferFuncName(int64_t dtype) {
   static const HashMap<int64_t, std::string> data_type2func_name{
 #define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
   {type_proto, "OfBlob_CopyToBuffer_" #type_cpp},
-      OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ)
+      OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_AND_HALF_DATA_TYPE_SEQ)
 #undef DATA_TYPE_FUNC_NAME_PAIR
   };
   return data_type2func_name.at(dtype);
@@ -81,7 +83,7 @@ inline std::string Dtype_GetOfBlobCopyFromBufferFuncName(int64_t dtype) {
   static const HashMap<int64_t, std::string> data_type2func_name{
 #define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
   {type_proto, "OfBlob_CopyFromBuffer_" #type_cpp},
-      OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ)
+      OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_AND_HALF_DATA_TYPE_SEQ)
 #undef DATA_TYPE_FUNC_NAME_PAIR
   };
   return data_type2func_name.at(dtype);
