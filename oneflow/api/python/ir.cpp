@@ -286,6 +286,11 @@ std::string GetBaseOp(const std::string& op_name) {
   }
 }
 
+bool ShouldSkipOperandAndResultsAndAttrs(const std::string& op_name) {
+  return IsInvolutionOp(op_name) || IsIdempotentOp(op_name) || IsPoolOp(op_name)
+         || IsConvOp(op_name);
+}
+
 bool ShouldGenEmptyBody(const std::string& op_name) {
   return false;
   // return IsInvolutionOp(op_name) || IsIdempotentOp(op_name) || IsPoolOp(op_name)
@@ -315,9 +320,14 @@ uint32_t NumMultipleVariadic(
   return num_variadic_op;
 }
 
-bool HasMultipleVariadic(
+bool HasAtLeastTwoVariadic(
     const ::google::protobuf::RepeatedPtrField<::oneflow::UserOpDef_ArgDef>& arg_defs) {
   return NumMultipleVariadic(arg_defs) > 1;
+}
+
+bool HasVariadic(
+    const ::google::protobuf::RepeatedPtrField<::oneflow::UserOpDef_ArgDef>& arg_defs) {
+  return NumMultipleVariadic(arg_defs) > 0;
 }
 
 std::string GetOperandOrder(
@@ -351,8 +361,8 @@ void PrintHasCanonicalizer(const std::string& op_name) {
 }
 
 void PrintTraitAttrs(const oneflow::UserOpDef& op_def) {
-  const bool need_operand_segment_sizes = HasMultipleVariadic(op_def.input());
-  const bool need_result_segment_sizes = HasMultipleVariadic(op_def.output());
+  const bool need_operand_segment_sizes = HasAtLeastTwoVariadic(op_def.input());
+  const bool need_result_segment_sizes = HasAtLeastTwoVariadic(op_def.output());
   if (need_operand_segment_sizes || need_result_segment_sizes) {
     std::cout << "  let trait_attrs = (ins"
               << "\n";
@@ -383,7 +393,12 @@ void PrintBody(const oneflow::user_op::OpRegistryResult& r) {
   std::cout << "{"
             << "\n";
   // inputs
-  if (op_def.input().size()) {
+  const bool should_skip_operand_and_results_and_attrs =
+      ShouldSkipOperandAndResultsAndAttrs(r.op_type_name);
+  const bool should_skip_operand = should_skip_operand_and_results_and_attrs;
+  const bool should_skip_result = should_skip_operand_and_results_and_attrs;
+  const bool should_skip_attrs = should_skip_operand_and_results_and_attrs;
+  if (op_def.input().size() && !should_skip_operand) {
     std::cout << "  let input = (ins"
               << "\n";
     for (auto it = op_def.input().begin(); it != op_def.input().end(); ++it) {
@@ -394,7 +409,7 @@ void PrintBody(const oneflow::user_op::OpRegistryResult& r) {
               << "\n";
   }
   // outputs
-  if (op_def.output().size()) {
+  if (op_def.output().size() && !should_skip_result) {
     std::cout << "  let output = (outs"
               << "\n";
     for (auto it = op_def.output().begin(); it != op_def.output().end(); ++it) {
@@ -405,7 +420,7 @@ void PrintBody(const oneflow::user_op::OpRegistryResult& r) {
               << "\n";
   }
   // attrs
-  if (op_def.attr().size()) {
+  if (op_def.attr().size() && !should_skip_attrs) {
     std::cout << "  let attrs = (ins"
               << "\n";
     for (auto it = op_def.attr().begin(); it != op_def.attr().end(); ++it) {
@@ -440,8 +455,8 @@ std::string GetOpClassName(const std::string& op_name) {
 
 std::string GetTraits(const oneflow::UserOpDef& op_def) {
   std::string ret{};
-  const bool need_operand_segment_sizes = HasMultipleVariadic(op_def.input());
-  const bool need_result_segment_sizes = HasMultipleVariadic(op_def.output());
+  const bool need_operand_segment_sizes = HasAtLeastTwoVariadic(op_def.input());
+  const bool need_result_segment_sizes = HasAtLeastTwoVariadic(op_def.output());
   if (need_operand_segment_sizes) { ret += "AttrSizedOperandSegments"; }
 
   if (need_result_segment_sizes) {
