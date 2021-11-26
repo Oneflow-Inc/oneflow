@@ -358,17 +358,20 @@ std::string GetOperandMinimums(
 }
 
 // TODO: use MLIR Interfaces it implement this
+void PrintReturnStaticVal(const std::string& type, const std::string& func_name,
+                          const std::string& val) {
+  std::cout << "    static const " + type + "* " + func_name + "() { static " + type + " val(" + val
+                   + "); return &val; }\n";
+}
 void PrintExtraClassDeclaration(const oneflow::UserOpDef& op_def) {
   std::cout << "  let extraClassDeclaration = [{"
             << "\n";
-  std::cout << "    static std::vector<std::string> inputKeys() { return "
-            << GetOperandKeys(op_def.input()) << "; }\n";
-  std::cout << "    static std::vector<std::uint32_t> inputMinimums() { return "
-            << GetOperandMinimums(op_def.input()) << "; }\n";
-  std::cout << "    static std::vector<std::string> outputKeys() { return "
-            << GetOperandKeys(op_def.output()) << "; }\n";
-  std::cout << "    static std::vector<std::uint32_t> outputMinimums() { return "
-            << GetOperandMinimums(op_def.input()) << "; }\n";
+  PrintReturnStaticVal("std::vector<std::string>", "inputKeys", GetOperandKeys(op_def.input()));
+  PrintReturnStaticVal("std::vector<std::uint32_t>", "inputMinimums",
+                       GetOperandMinimums(op_def.input()));
+  PrintReturnStaticVal("std::vector<std::string>", "outputKeys", GetOperandKeys(op_def.output()));
+  PrintReturnStaticVal("std::vector<std::uint32_t>", "outputMinimums",
+                       GetOperandMinimums(op_def.input()));
   std::cout << "  }];"
             << "\n";
 }
