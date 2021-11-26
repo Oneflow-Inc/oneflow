@@ -176,9 +176,9 @@ class MaxPoolingNdGradFunctor {
   }
 
  protected:
-  MaxPoolingNdGradFunctorImpl<1, EagerMaxPool1DGradOpInterpCtx> pool1d_func_;
-  MaxPoolingNdGradFunctorImpl<2, EagerMaxPool2DGradOpInterpCtx> pool2d_func_;
-  MaxPoolingNdGradFunctorImpl<3, EagerMaxPool3DGradOpInterpCtx> pool3d_func_;
+  MaxPoolingNdGradFunctorImpl<1, MaxPool1DGradOpInterpCtx> pool1d_func_;
+  MaxPoolingNdGradFunctorImpl<2, MaxPool2DGradOpInterpCtx> pool2d_func_;
+  MaxPoolingNdGradFunctorImpl<3, MaxPool3DGradOpInterpCtx> pool3d_func_;
 };
 
 template<int Ndims, typename ContextT>
@@ -241,9 +241,9 @@ class AvgPoolingNdGradFunctor {
   }
 
  protected:
-  AvgPoolingNdGradFunctorImpl<1, EagerAvgPool1DOpInterpCtx> pool1d_func_;
-  AvgPoolingNdGradFunctorImpl<2, EagerAvgPool2DOpInterpCtx> pool2d_func_;
-  AvgPoolingNdGradFunctorImpl<3, EagerAvgPool3DOpInterpCtx> pool3d_func_;
+  AvgPoolingNdGradFunctorImpl<1, AvgPool1DOpInterpCtx> pool1d_func_;
+  AvgPoolingNdGradFunctorImpl<2, AvgPool2DOpInterpCtx> pool2d_func_;
+  AvgPoolingNdGradFunctorImpl<3, AvgPool3DOpInterpCtx> pool3d_func_;
 };
 
 class PoolNdGradFunctorImplBase {
@@ -293,12 +293,12 @@ class PoolNdGradFunctorImpl : public PoolNdGradFunctorImplBase {
 class PoolNdGradFunctor {
  public:
   PoolNdGradFunctor() {
-    maxpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<1, LazyMaxPool1DGradOpInterpCtx>("max"));
-    maxpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<2, LazyMaxPool2DGradOpInterpCtx>("max"));
-    maxpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<3, LazyMaxPool3DGradOpInterpCtx>("max"));
-    avgpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<1, LazyAvgPool1DGradOpInterpCtx>("avg"));
-    avgpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<2, LazyAvgPool2DGradOpInterpCtx>("avg"));
-    avgpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<3, LazyAvgPool3DGradOpInterpCtx>("avg"));
+    maxpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<1, TfMaxPool1DGradOpInterpCtx>("max"));
+    maxpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<2, TfMaxPool2DGradOpInterpCtx>("max"));
+    maxpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<3, TfMaxPool3DGradOpInterpCtx>("max"));
+    avgpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<1, TfAvgPool1DGradOpInterpCtx>("avg"));
+    avgpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<2, TfAvgPool2DGradOpInterpCtx>("avg"));
+    avgpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<3, TfAvgPool3DGradOpInterpCtx>("avg"));
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y,
@@ -971,6 +971,54 @@ class FusedScaleTrilSoftmaxMaskScaleGradFunctor {
   std::shared_ptr<OpExpr> fused_op_;
 };
 
+class FusedScaleMaskSoftmaxGradFunctor {
+ public:
+  FusedScaleMaskSoftmaxGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_scale_mask_softmax_grad")
+                         .Input("y")
+                         .Input("dy")
+                         .Input("mask")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& mask, const float& scale) const {
+    auto ctx = std::make_shared<FusedScaleMaskSoftmaxGradOpInterpCtx>();
+    ctx->scale_value = scale;
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {y, dy, mask}, ctx);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedScaleMaskSoftmaxDropoutGradFunctor {
+ public:
+  FusedScaleMaskSoftmaxDropoutGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_scale_mask_softmax_dropout_grad")
+                         .Input("softmax_y")
+                         .Input("dy")
+                         .Input("mask")
+                         .Input("dropout_mask")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& softmax_y,
+                           const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& mask,
+                           const std::shared_ptr<one::Tensor>& dropout_mask, const float& scale,
+                           const float& dropout_scale) const {
+    auto ctx = std::make_shared<FusedScaleMaskSoftmaxDropoutGradOpInterpCtx>();
+    ctx->scale_value = scale;
+    ctx->dropout_scale_value = dropout_scale;
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {softmax_y, dy, mask, dropout_mask}, ctx);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -1003,6 +1051,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::CtcLossGradFunctor>("CtcLossGrad");
   m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleGradFunctor>(
       "FusedScaleTrilSoftmaxMaskScaleGrad");
+  m.add_functor<impl::FusedScaleMaskSoftmaxGradFunctor>("FusedScaleMaskSoftmaxGrad");
+  m.add_functor<impl::FusedScaleMaskSoftmaxDropoutGradFunctor>("FusedScaleMaskSoftmaxDropoutGrad");
 };
 
 }  // namespace functional

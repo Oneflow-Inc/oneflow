@@ -113,7 +113,6 @@ class ConsistentRandFunctor {
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-
     auto ctx = std::make_shared<UniformOpInterpCtx>();
     ctx->from = 0;
     ctx->to = 1;
@@ -255,10 +254,8 @@ class ConsistentRandIntFunctor {
                            const bool& requires_grad) const {
     DataType dtype_val = DataType::kInt64;
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
-
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-
     auto ctx = std::make_shared<UniformIntOpInterpCtx>();
     ctx->shape = shape;
     ctx->from = low;

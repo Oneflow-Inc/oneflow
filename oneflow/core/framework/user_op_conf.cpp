@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/core/framework/op_interp_ctx.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/framework/user_op_def.h"

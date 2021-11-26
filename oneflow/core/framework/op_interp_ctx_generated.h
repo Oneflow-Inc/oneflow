@@ -710,187 +710,7 @@ class AtanhGradOpInterpCtx : public OpInterpCtx {
     return Error::RuntimeError() << "AtanhGrad op has no attribute named " << attr_name;
   }
 };
-class LazyAvgPool1DOpInterpCtx : public OpInterpCtx {
- public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
-      return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
-      return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
-      return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
-      return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
-      return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
-      return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
-      return (const void*)&ceil_mode;
-    } else {
-      return Error::RuntimeError() << "LazyAvgPool1D op has no attribute named " << attr_name;
-    }
-  }
- public:
-  std::string padding;
-  std::vector<int32_t> padding_before;
-  std::vector<int32_t> padding_after;
-  std::string data_format;
-  std::vector<int32_t> pool_size;
-  std::vector<int32_t> strides;
-  bool ceil_mode;
-};
-class LazyAvgPool1DGradOpInterpCtx : public OpInterpCtx {
- public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
-      return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
-      return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
-      return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
-      return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
-      return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
-      return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
-      return (const void*)&ceil_mode;
-    } else {
-      return Error::RuntimeError() << "LazyAvgPool1DGrad op has no attribute named " << attr_name;
-    }
-  }
- public:
-  std::string padding;
-  std::vector<int32_t> padding_before;
-  std::vector<int32_t> padding_after;
-  std::string data_format;
-  std::vector<int32_t> pool_size;
-  std::vector<int32_t> strides;
-  bool ceil_mode;
-};
-class LazyAvgPool2DOpInterpCtx : public OpInterpCtx {
- public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
-      return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
-      return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
-      return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
-      return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
-      return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
-      return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
-      return (const void*)&ceil_mode;
-    } else {
-      return Error::RuntimeError() << "LazyAvgPool2D op has no attribute named " << attr_name;
-    }
-  }
- public:
-  std::string padding;
-  std::vector<int32_t> padding_before;
-  std::vector<int32_t> padding_after;
-  std::string data_format;
-  std::vector<int32_t> pool_size;
-  std::vector<int32_t> strides;
-  bool ceil_mode;
-};
-class LazyAvgPool2DGradOpInterpCtx : public OpInterpCtx {
- public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
-      return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
-      return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
-      return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
-      return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
-      return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
-      return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
-      return (const void*)&ceil_mode;
-    } else {
-      return Error::RuntimeError() << "LazyAvgPool2DGrad op has no attribute named " << attr_name;
-    }
-  }
- public:
-  std::string padding;
-  std::vector<int32_t> padding_before;
-  std::vector<int32_t> padding_after;
-  std::string data_format;
-  std::vector<int32_t> pool_size;
-  std::vector<int32_t> strides;
-  bool ceil_mode;
-};
-class LazyAvgPool3DOpInterpCtx : public OpInterpCtx {
- public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
-      return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
-      return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
-      return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
-      return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
-      return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
-      return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
-      return (const void*)&ceil_mode;
-    } else {
-      return Error::RuntimeError() << "LazyAvgPool3D op has no attribute named " << attr_name;
-    }
-  }
- public:
-  std::string padding;
-  std::vector<int32_t> padding_before;
-  std::vector<int32_t> padding_after;
-  std::string data_format;
-  std::vector<int32_t> pool_size;
-  std::vector<int32_t> strides;
-  bool ceil_mode;
-};
-class LazyAvgPool3DGradOpInterpCtx : public OpInterpCtx {
- public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
-      return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
-      return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
-      return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
-      return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
-      return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
-      return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
-      return (const void*)&ceil_mode;
-    } else {
-      return Error::RuntimeError() << "LazyAvgPool3DGrad op has no attribute named " << attr_name;
-    }
-  }
- public:
-  std::string padding;
-  std::vector<int32_t> padding_before;
-  std::vector<int32_t> padding_after;
-  std::string data_format;
-  std::vector<int32_t> pool_size;
-  std::vector<int32_t> strides;
-  bool ceil_mode;
-};
-class EagerAvgPool1DOpInterpCtx : public OpInterpCtx {
+class AvgPool1DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "padding")) {
@@ -908,7 +728,7 @@ class EagerAvgPool1DOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "divisor_override")) {
       return (const void*)&divisor_override;
     } else {
-      return Error::RuntimeError() << "EagerAvgPool1D op has no attribute named " << attr_name;
+      return Error::RuntimeError() << "AvgPool1D op has no attribute named " << attr_name;
     }
   }
  public:
@@ -920,7 +740,7 @@ class EagerAvgPool1DOpInterpCtx : public OpInterpCtx {
   bool count_include_pad;
   int64_t divisor_override;
 };
-class EagerAvgPool1DGradOpInterpCtx : public OpInterpCtx {
+class AvgPool1DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "padding")) {
@@ -938,7 +758,7 @@ class EagerAvgPool1DGradOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "divisor_override")) {
       return (const void*)&divisor_override;
     } else {
-      return Error::RuntimeError() << "EagerAvgPool1DGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError() << "AvgPool1DGrad op has no attribute named " << attr_name;
     }
   }
  public:
@@ -950,7 +770,7 @@ class EagerAvgPool1DGradOpInterpCtx : public OpInterpCtx {
   bool count_include_pad;
   int64_t divisor_override;
 };
-class EagerAvgPool2DOpInterpCtx : public OpInterpCtx {
+class AvgPool2DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "padding")) {
@@ -968,7 +788,7 @@ class EagerAvgPool2DOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "divisor_override")) {
       return (const void*)&divisor_override;
     } else {
-      return Error::RuntimeError() << "EagerAvgPool2D op has no attribute named " << attr_name;
+      return Error::RuntimeError() << "AvgPool2D op has no attribute named " << attr_name;
     }
   }
  public:
@@ -980,7 +800,7 @@ class EagerAvgPool2DOpInterpCtx : public OpInterpCtx {
   bool count_include_pad;
   int64_t divisor_override;
 };
-class EagerAvgPool2DGradOpInterpCtx : public OpInterpCtx {
+class AvgPool2DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "padding")) {
@@ -998,7 +818,7 @@ class EagerAvgPool2DGradOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "divisor_override")) {
       return (const void*)&divisor_override;
     } else {
-      return Error::RuntimeError() << "EagerAvgPool2DGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError() << "AvgPool2DGrad op has no attribute named " << attr_name;
     }
   }
  public:
@@ -1010,7 +830,7 @@ class EagerAvgPool2DGradOpInterpCtx : public OpInterpCtx {
   bool count_include_pad;
   int64_t divisor_override;
 };
-class EagerAvgPool3DOpInterpCtx : public OpInterpCtx {
+class AvgPool3DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "padding")) {
@@ -1028,7 +848,7 @@ class EagerAvgPool3DOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "divisor_override")) {
       return (const void*)&divisor_override;
     } else {
-      return Error::RuntimeError() << "EagerAvgPool3D op has no attribute named " << attr_name;
+      return Error::RuntimeError() << "AvgPool3D op has no attribute named " << attr_name;
     }
   }
  public:
@@ -1040,7 +860,7 @@ class EagerAvgPool3DOpInterpCtx : public OpInterpCtx {
   bool count_include_pad;
   int64_t divisor_override;
 };
-class EagerAvgPool3DGradOpInterpCtx : public OpInterpCtx {
+class AvgPool3DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "padding")) {
@@ -1058,7 +878,7 @@ class EagerAvgPool3DGradOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "divisor_override")) {
       return (const void*)&divisor_override;
     } else {
-      return Error::RuntimeError() << "EagerAvgPool3DGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError() << "AvgPool3DGrad op has no attribute named " << attr_name;
     }
   }
  public:
@@ -2966,6 +2786,66 @@ class FusedCastScaleOpInterpCtx : public OpInterpCtx {
  public:
   double scale;
 };
+class FusedScaleMaskSoftmaxOpInterpCtx : public OpInterpCtx {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "scale_value")) {
+      return (const void*)&scale_value;
+    } else if (!strcmp(attr_name, "mask_fill_value")) {
+      return (const void*)&mask_fill_value;
+    } else {
+      return Error::RuntimeError() << "FusedScaleMaskSoftmax op has no attribute named " << attr_name;
+    }
+  }
+ public:
+  float scale_value;
+  float mask_fill_value;
+};
+class FusedScaleMaskSoftmaxDropoutOpInterpCtx : public OpInterpCtx {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "scale_value")) {
+      return (const void*)&scale_value;
+    } else if (!strcmp(attr_name, "mask_fill_value")) {
+      return (const void*)&mask_fill_value;
+    } else if (!strcmp(attr_name, "dropout_scale_value")) {
+      return (const void*)&dropout_scale_value;
+    } else {
+      return Error::RuntimeError() << "FusedScaleMaskSoftmaxDropout op has no attribute named " << attr_name;
+    }
+  }
+ public:
+  float scale_value;
+  float mask_fill_value;
+  float dropout_scale_value;
+};
+class FusedScaleMaskSoftmaxDropoutGradOpInterpCtx : public OpInterpCtx {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "scale_value")) {
+      return (const void*)&scale_value;
+    } else if (!strcmp(attr_name, "dropout_scale_value")) {
+      return (const void*)&dropout_scale_value;
+    } else {
+      return Error::RuntimeError() << "FusedScaleMaskSoftmaxDropoutGrad op has no attribute named " << attr_name;
+    }
+  }
+ public:
+  float scale_value;
+  float dropout_scale_value;
+};
+class FusedScaleMaskSoftmaxGradOpInterpCtx : public OpInterpCtx {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "scale_value")) {
+      return (const void*)&scale_value;
+    } else {
+      return Error::RuntimeError() << "FusedScaleMaskSoftmaxGrad op has no attribute named " << attr_name;
+    }
+  }
+ public:
+  float scale_value;
+};
 class FusedScaleTrilOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
@@ -3830,187 +3710,7 @@ class MatmulOpInterpCtx : public OpInterpCtx {
   bool transpose_b;
   double alpha;
 };
-class LazyMaxPool1DOpInterpCtx : public OpInterpCtx {
- public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
-      return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
-      return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
-      return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
-      return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
-      return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
-      return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
-      return (const void*)&ceil_mode;
-    } else {
-      return Error::RuntimeError() << "LazyMaxPool1D op has no attribute named " << attr_name;
-    }
-  }
- public:
-  std::string padding;
-  std::vector<int32_t> padding_before;
-  std::vector<int32_t> padding_after;
-  std::string data_format;
-  std::vector<int32_t> pool_size;
-  std::vector<int32_t> strides;
-  bool ceil_mode;
-};
-class LazyMaxPool1DGradOpInterpCtx : public OpInterpCtx {
- public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
-      return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
-      return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
-      return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
-      return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
-      return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
-      return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
-      return (const void*)&ceil_mode;
-    } else {
-      return Error::RuntimeError() << "LazyMaxPool1DGrad op has no attribute named " << attr_name;
-    }
-  }
- public:
-  std::string padding;
-  std::vector<int32_t> padding_before;
-  std::vector<int32_t> padding_after;
-  std::string data_format;
-  std::vector<int32_t> pool_size;
-  std::vector<int32_t> strides;
-  bool ceil_mode;
-};
-class LazyMaxPool2DOpInterpCtx : public OpInterpCtx {
- public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
-      return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
-      return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
-      return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
-      return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
-      return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
-      return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
-      return (const void*)&ceil_mode;
-    } else {
-      return Error::RuntimeError() << "LazyMaxPool2D op has no attribute named " << attr_name;
-    }
-  }
- public:
-  std::string padding;
-  std::vector<int32_t> padding_before;
-  std::vector<int32_t> padding_after;
-  std::string data_format;
-  std::vector<int32_t> pool_size;
-  std::vector<int32_t> strides;
-  bool ceil_mode;
-};
-class LazyMaxPool2DGradOpInterpCtx : public OpInterpCtx {
- public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
-      return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
-      return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
-      return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
-      return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
-      return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
-      return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
-      return (const void*)&ceil_mode;
-    } else {
-      return Error::RuntimeError() << "LazyMaxPool2DGrad op has no attribute named " << attr_name;
-    }
-  }
- public:
-  std::string padding;
-  std::vector<int32_t> padding_before;
-  std::vector<int32_t> padding_after;
-  std::string data_format;
-  std::vector<int32_t> pool_size;
-  std::vector<int32_t> strides;
-  bool ceil_mode;
-};
-class LazyMaxPool3DOpInterpCtx : public OpInterpCtx {
- public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
-      return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
-      return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
-      return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
-      return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
-      return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
-      return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
-      return (const void*)&ceil_mode;
-    } else {
-      return Error::RuntimeError() << "LazyMaxPool3D op has no attribute named " << attr_name;
-    }
-  }
- public:
-  std::string padding;
-  std::vector<int32_t> padding_before;
-  std::vector<int32_t> padding_after;
-  std::string data_format;
-  std::vector<int32_t> pool_size;
-  std::vector<int32_t> strides;
-  bool ceil_mode;
-};
-class LazyMaxPool3DGradOpInterpCtx : public OpInterpCtx {
- public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
-      return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
-      return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
-      return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
-      return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
-      return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
-      return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
-      return (const void*)&ceil_mode;
-    } else {
-      return Error::RuntimeError() << "LazyMaxPool3DGrad op has no attribute named " << attr_name;
-    }
-  }
- public:
-  std::string padding;
-  std::vector<int32_t> padding_before;
-  std::vector<int32_t> padding_after;
-  std::string data_format;
-  std::vector<int32_t> pool_size;
-  std::vector<int32_t> strides;
-  bool ceil_mode;
-};
-class EagerMaxPool1DOpInterpCtx : public OpInterpCtx {
+class MaxPool1DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "padding")) {
@@ -4028,7 +3728,7 @@ class EagerMaxPool1DOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "ceil_mode")) {
       return (const void*)&ceil_mode;
     } else {
-      return Error::RuntimeError() << "EagerMaxPool1D op has no attribute named " << attr_name;
+      return Error::RuntimeError() << "MaxPool1D op has no attribute named " << attr_name;
     }
   }
  public:
@@ -4040,7 +3740,7 @@ class EagerMaxPool1DOpInterpCtx : public OpInterpCtx {
   bool return_indices;
   bool ceil_mode;
 };
-class EagerMaxPool1DGradOpInterpCtx : public OpInterpCtx {
+class MaxPool1DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "padding")) {
@@ -4058,7 +3758,7 @@ class EagerMaxPool1DGradOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "ceil_mode")) {
       return (const void*)&ceil_mode;
     } else {
-      return Error::RuntimeError() << "EagerMaxPool1DGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError() << "MaxPool1DGrad op has no attribute named " << attr_name;
     }
   }
  public:
@@ -4070,7 +3770,7 @@ class EagerMaxPool1DGradOpInterpCtx : public OpInterpCtx {
   bool return_indices;
   bool ceil_mode;
 };
-class EagerMaxPool2DOpInterpCtx : public OpInterpCtx {
+class MaxPool2DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "padding")) {
@@ -4088,7 +3788,7 @@ class EagerMaxPool2DOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "ceil_mode")) {
       return (const void*)&ceil_mode;
     } else {
-      return Error::RuntimeError() << "EagerMaxPool2D op has no attribute named " << attr_name;
+      return Error::RuntimeError() << "MaxPool2D op has no attribute named " << attr_name;
     }
   }
  public:
@@ -4100,7 +3800,7 @@ class EagerMaxPool2DOpInterpCtx : public OpInterpCtx {
   bool return_indices;
   bool ceil_mode;
 };
-class EagerMaxPool2DGradOpInterpCtx : public OpInterpCtx {
+class MaxPool2DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "padding")) {
@@ -4118,7 +3818,7 @@ class EagerMaxPool2DGradOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "ceil_mode")) {
       return (const void*)&ceil_mode;
     } else {
-      return Error::RuntimeError() << "EagerMaxPool2DGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError() << "MaxPool2DGrad op has no attribute named " << attr_name;
     }
   }
  public:
@@ -4130,7 +3830,7 @@ class EagerMaxPool2DGradOpInterpCtx : public OpInterpCtx {
   bool return_indices;
   bool ceil_mode;
 };
-class EagerMaxPool3DOpInterpCtx : public OpInterpCtx {
+class MaxPool3DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "padding")) {
@@ -4148,7 +3848,7 @@ class EagerMaxPool3DOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "ceil_mode")) {
       return (const void*)&ceil_mode;
     } else {
-      return Error::RuntimeError() << "EagerMaxPool3D op has no attribute named " << attr_name;
+      return Error::RuntimeError() << "MaxPool3D op has no attribute named " << attr_name;
     }
   }
  public:
@@ -4160,7 +3860,7 @@ class EagerMaxPool3DOpInterpCtx : public OpInterpCtx {
   bool return_indices;
   bool ceil_mode;
 };
-class EagerMaxPool3DGradOpInterpCtx : public OpInterpCtx {
+class MaxPool3DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     if (!strcmp(attr_name, "padding")) {
@@ -4178,7 +3878,7 @@ class EagerMaxPool3DGradOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "ceil_mode")) {
       return (const void*)&ceil_mode;
     } else {
-      return Error::RuntimeError() << "EagerMaxPool3DGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError() << "MaxPool3DGrad op has no attribute named " << attr_name;
     }
   }
  public:
@@ -6343,6 +6043,366 @@ class TestUserOpAttrAutoTypeOpInterpCtx : public OpInterpCtx {
  public:
   int32_t int1;
   int32_t int2;
+};
+class TfAvgPool1DOpInterpCtx : public OpInterpCtx {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "padding")) {
+      return (const void*)&padding;
+    } else if (!strcmp(attr_name, "padding_before")) {
+      return (const void*)&padding_before;
+    } else if (!strcmp(attr_name, "padding_after")) {
+      return (const void*)&padding_after;
+    } else if (!strcmp(attr_name, "data_format")) {
+      return (const void*)&data_format;
+    } else if (!strcmp(attr_name, "pool_size")) {
+      return (const void*)&pool_size;
+    } else if (!strcmp(attr_name, "strides")) {
+      return (const void*)&strides;
+    } else if (!strcmp(attr_name, "ceil_mode")) {
+      return (const void*)&ceil_mode;
+    } else {
+      return Error::RuntimeError() << "TfAvgPool1D op has no attribute named " << attr_name;
+    }
+  }
+ public:
+  std::string padding;
+  std::vector<int32_t> padding_before;
+  std::vector<int32_t> padding_after;
+  std::string data_format;
+  std::vector<int32_t> pool_size;
+  std::vector<int32_t> strides;
+  bool ceil_mode;
+};
+class TfAvgPool1DGradOpInterpCtx : public OpInterpCtx {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "padding")) {
+      return (const void*)&padding;
+    } else if (!strcmp(attr_name, "padding_before")) {
+      return (const void*)&padding_before;
+    } else if (!strcmp(attr_name, "padding_after")) {
+      return (const void*)&padding_after;
+    } else if (!strcmp(attr_name, "data_format")) {
+      return (const void*)&data_format;
+    } else if (!strcmp(attr_name, "pool_size")) {
+      return (const void*)&pool_size;
+    } else if (!strcmp(attr_name, "strides")) {
+      return (const void*)&strides;
+    } else if (!strcmp(attr_name, "ceil_mode")) {
+      return (const void*)&ceil_mode;
+    } else {
+      return Error::RuntimeError() << "TfAvgPool1DGrad op has no attribute named " << attr_name;
+    }
+  }
+ public:
+  std::string padding;
+  std::vector<int32_t> padding_before;
+  std::vector<int32_t> padding_after;
+  std::string data_format;
+  std::vector<int32_t> pool_size;
+  std::vector<int32_t> strides;
+  bool ceil_mode;
+};
+class TfAvgPool2DOpInterpCtx : public OpInterpCtx {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "padding")) {
+      return (const void*)&padding;
+    } else if (!strcmp(attr_name, "padding_before")) {
+      return (const void*)&padding_before;
+    } else if (!strcmp(attr_name, "padding_after")) {
+      return (const void*)&padding_after;
+    } else if (!strcmp(attr_name, "data_format")) {
+      return (const void*)&data_format;
+    } else if (!strcmp(attr_name, "pool_size")) {
+      return (const void*)&pool_size;
+    } else if (!strcmp(attr_name, "strides")) {
+      return (const void*)&strides;
+    } else if (!strcmp(attr_name, "ceil_mode")) {
+      return (const void*)&ceil_mode;
+    } else {
+      return Error::RuntimeError() << "TfAvgPool2D op has no attribute named " << attr_name;
+    }
+  }
+ public:
+  std::string padding;
+  std::vector<int32_t> padding_before;
+  std::vector<int32_t> padding_after;
+  std::string data_format;
+  std::vector<int32_t> pool_size;
+  std::vector<int32_t> strides;
+  bool ceil_mode;
+};
+class TfAvgPool2DGradOpInterpCtx : public OpInterpCtx {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "padding")) {
+      return (const void*)&padding;
+    } else if (!strcmp(attr_name, "padding_before")) {
+      return (const void*)&padding_before;
+    } else if (!strcmp(attr_name, "padding_after")) {
+      return (const void*)&padding_after;
+    } else if (!strcmp(attr_name, "data_format")) {
+      return (const void*)&data_format;
+    } else if (!strcmp(attr_name, "pool_size")) {
+      return (const void*)&pool_size;
+    } else if (!strcmp(attr_name, "strides")) {
+      return (const void*)&strides;
+    } else if (!strcmp(attr_name, "ceil_mode")) {
+      return (const void*)&ceil_mode;
+    } else {
+      return Error::RuntimeError() << "TfAvgPool2DGrad op has no attribute named " << attr_name;
+    }
+  }
+ public:
+  std::string padding;
+  std::vector<int32_t> padding_before;
+  std::vector<int32_t> padding_after;
+  std::string data_format;
+  std::vector<int32_t> pool_size;
+  std::vector<int32_t> strides;
+  bool ceil_mode;
+};
+class TfAvgPool3DOpInterpCtx : public OpInterpCtx {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "padding")) {
+      return (const void*)&padding;
+    } else if (!strcmp(attr_name, "padding_before")) {
+      return (const void*)&padding_before;
+    } else if (!strcmp(attr_name, "padding_after")) {
+      return (const void*)&padding_after;
+    } else if (!strcmp(attr_name, "data_format")) {
+      return (const void*)&data_format;
+    } else if (!strcmp(attr_name, "pool_size")) {
+      return (const void*)&pool_size;
+    } else if (!strcmp(attr_name, "strides")) {
+      return (const void*)&strides;
+    } else if (!strcmp(attr_name, "ceil_mode")) {
+      return (const void*)&ceil_mode;
+    } else {
+      return Error::RuntimeError() << "TfAvgPool3D op has no attribute named " << attr_name;
+    }
+  }
+ public:
+  std::string padding;
+  std::vector<int32_t> padding_before;
+  std::vector<int32_t> padding_after;
+  std::string data_format;
+  std::vector<int32_t> pool_size;
+  std::vector<int32_t> strides;
+  bool ceil_mode;
+};
+class TfAvgPool3DGradOpInterpCtx : public OpInterpCtx {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "padding")) {
+      return (const void*)&padding;
+    } else if (!strcmp(attr_name, "padding_before")) {
+      return (const void*)&padding_before;
+    } else if (!strcmp(attr_name, "padding_after")) {
+      return (const void*)&padding_after;
+    } else if (!strcmp(attr_name, "data_format")) {
+      return (const void*)&data_format;
+    } else if (!strcmp(attr_name, "pool_size")) {
+      return (const void*)&pool_size;
+    } else if (!strcmp(attr_name, "strides")) {
+      return (const void*)&strides;
+    } else if (!strcmp(attr_name, "ceil_mode")) {
+      return (const void*)&ceil_mode;
+    } else {
+      return Error::RuntimeError() << "TfAvgPool3DGrad op has no attribute named " << attr_name;
+    }
+  }
+ public:
+  std::string padding;
+  std::vector<int32_t> padding_before;
+  std::vector<int32_t> padding_after;
+  std::string data_format;
+  std::vector<int32_t> pool_size;
+  std::vector<int32_t> strides;
+  bool ceil_mode;
+};
+class TfMaxPool1DOpInterpCtx : public OpInterpCtx {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "padding")) {
+      return (const void*)&padding;
+    } else if (!strcmp(attr_name, "padding_before")) {
+      return (const void*)&padding_before;
+    } else if (!strcmp(attr_name, "padding_after")) {
+      return (const void*)&padding_after;
+    } else if (!strcmp(attr_name, "data_format")) {
+      return (const void*)&data_format;
+    } else if (!strcmp(attr_name, "pool_size")) {
+      return (const void*)&pool_size;
+    } else if (!strcmp(attr_name, "strides")) {
+      return (const void*)&strides;
+    } else if (!strcmp(attr_name, "ceil_mode")) {
+      return (const void*)&ceil_mode;
+    } else {
+      return Error::RuntimeError() << "TfMaxPool1D op has no attribute named " << attr_name;
+    }
+  }
+ public:
+  std::string padding;
+  std::vector<int32_t> padding_before;
+  std::vector<int32_t> padding_after;
+  std::string data_format;
+  std::vector<int32_t> pool_size;
+  std::vector<int32_t> strides;
+  bool ceil_mode;
+};
+class TfMaxPool1DGradOpInterpCtx : public OpInterpCtx {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "padding")) {
+      return (const void*)&padding;
+    } else if (!strcmp(attr_name, "padding_before")) {
+      return (const void*)&padding_before;
+    } else if (!strcmp(attr_name, "padding_after")) {
+      return (const void*)&padding_after;
+    } else if (!strcmp(attr_name, "data_format")) {
+      return (const void*)&data_format;
+    } else if (!strcmp(attr_name, "pool_size")) {
+      return (const void*)&pool_size;
+    } else if (!strcmp(attr_name, "strides")) {
+      return (const void*)&strides;
+    } else if (!strcmp(attr_name, "ceil_mode")) {
+      return (const void*)&ceil_mode;
+    } else {
+      return Error::RuntimeError() << "TfMaxPool1DGrad op has no attribute named " << attr_name;
+    }
+  }
+ public:
+  std::string padding;
+  std::vector<int32_t> padding_before;
+  std::vector<int32_t> padding_after;
+  std::string data_format;
+  std::vector<int32_t> pool_size;
+  std::vector<int32_t> strides;
+  bool ceil_mode;
+};
+class TfMaxPool2DOpInterpCtx : public OpInterpCtx {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "padding")) {
+      return (const void*)&padding;
+    } else if (!strcmp(attr_name, "padding_before")) {
+      return (const void*)&padding_before;
+    } else if (!strcmp(attr_name, "padding_after")) {
+      return (const void*)&padding_after;
+    } else if (!strcmp(attr_name, "data_format")) {
+      return (const void*)&data_format;
+    } else if (!strcmp(attr_name, "pool_size")) {
+      return (const void*)&pool_size;
+    } else if (!strcmp(attr_name, "strides")) {
+      return (const void*)&strides;
+    } else if (!strcmp(attr_name, "ceil_mode")) {
+      return (const void*)&ceil_mode;
+    } else {
+      return Error::RuntimeError() << "TfMaxPool2D op has no attribute named " << attr_name;
+    }
+  }
+ public:
+  std::string padding;
+  std::vector<int32_t> padding_before;
+  std::vector<int32_t> padding_after;
+  std::string data_format;
+  std::vector<int32_t> pool_size;
+  std::vector<int32_t> strides;
+  bool ceil_mode;
+};
+class TfMaxPool2DGradOpInterpCtx : public OpInterpCtx {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "padding")) {
+      return (const void*)&padding;
+    } else if (!strcmp(attr_name, "padding_before")) {
+      return (const void*)&padding_before;
+    } else if (!strcmp(attr_name, "padding_after")) {
+      return (const void*)&padding_after;
+    } else if (!strcmp(attr_name, "data_format")) {
+      return (const void*)&data_format;
+    } else if (!strcmp(attr_name, "pool_size")) {
+      return (const void*)&pool_size;
+    } else if (!strcmp(attr_name, "strides")) {
+      return (const void*)&strides;
+    } else if (!strcmp(attr_name, "ceil_mode")) {
+      return (const void*)&ceil_mode;
+    } else {
+      return Error::RuntimeError() << "TfMaxPool2DGrad op has no attribute named " << attr_name;
+    }
+  }
+ public:
+  std::string padding;
+  std::vector<int32_t> padding_before;
+  std::vector<int32_t> padding_after;
+  std::string data_format;
+  std::vector<int32_t> pool_size;
+  std::vector<int32_t> strides;
+  bool ceil_mode;
+};
+class TfMaxPool3DOpInterpCtx : public OpInterpCtx {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "padding")) {
+      return (const void*)&padding;
+    } else if (!strcmp(attr_name, "padding_before")) {
+      return (const void*)&padding_before;
+    } else if (!strcmp(attr_name, "padding_after")) {
+      return (const void*)&padding_after;
+    } else if (!strcmp(attr_name, "data_format")) {
+      return (const void*)&data_format;
+    } else if (!strcmp(attr_name, "pool_size")) {
+      return (const void*)&pool_size;
+    } else if (!strcmp(attr_name, "strides")) {
+      return (const void*)&strides;
+    } else if (!strcmp(attr_name, "ceil_mode")) {
+      return (const void*)&ceil_mode;
+    } else {
+      return Error::RuntimeError() << "TfMaxPool3D op has no attribute named " << attr_name;
+    }
+  }
+ public:
+  std::string padding;
+  std::vector<int32_t> padding_before;
+  std::vector<int32_t> padding_after;
+  std::string data_format;
+  std::vector<int32_t> pool_size;
+  std::vector<int32_t> strides;
+  bool ceil_mode;
+};
+class TfMaxPool3DGradOpInterpCtx : public OpInterpCtx {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "padding")) {
+      return (const void*)&padding;
+    } else if (!strcmp(attr_name, "padding_before")) {
+      return (const void*)&padding_before;
+    } else if (!strcmp(attr_name, "padding_after")) {
+      return (const void*)&padding_after;
+    } else if (!strcmp(attr_name, "data_format")) {
+      return (const void*)&data_format;
+    } else if (!strcmp(attr_name, "pool_size")) {
+      return (const void*)&pool_size;
+    } else if (!strcmp(attr_name, "strides")) {
+      return (const void*)&strides;
+    } else if (!strcmp(attr_name, "ceil_mode")) {
+      return (const void*)&ceil_mode;
+    } else {
+      return Error::RuntimeError() << "TfMaxPool3DGrad op has no attribute named " << attr_name;
+    }
+  }
+ public:
+  std::string padding;
+  std::vector<int32_t> padding_before;
+  std::vector<int32_t> padding_after;
+  std::string data_format;
+  std::vector<int32_t> pool_size;
+  std::vector<int32_t> strides;
+  bool ceil_mode;
 };
 class TfPreluOpInterpCtx : public OpInterpCtx {
  public:

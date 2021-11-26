@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/framework/op_interp_ctx.h"
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
@@ -28,6 +27,7 @@ limitations under the License.
 namespace oneflow {
 
 class BlobDesc;
+class OpInterpCtx;
 
 namespace user_op {
 

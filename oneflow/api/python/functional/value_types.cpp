@@ -51,7 +51,6 @@ HashMap<ValueType, std::string>* GetValueTypeNameMap() {
       {kTENSOR_TUPLE_MAYBE, "maybe tensor tuple"},
       {kATTR, "attr"},
       {kATTR_REF, "attr"},
-      {kATTR_MAP, "attr map"},
       {kDTYPE, "data type"},
       {kSHAPE, "shape"},
       {kGENERATOR, "generator"},

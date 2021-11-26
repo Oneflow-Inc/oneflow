@@ -116,13 +116,14 @@ const StringSet<>& GetConvOpTypeNames() {
 }
 
 const StringSet<>& GetPoolOpTypeNames() {
-  static llvm::StringSet<> names(
-      {"avgpool_1d", "avgpool_2d", "avgpool_3d", "avg_pool_1d", "avg_pool_2d", "avg_pool_3d",
-       "max_pool_1d", "max_pool_2d", "max_pool_3d", "max_pool_1d_grad", "max_pool_2d_grad",
-       "max_pool_3d_grad", "avg_pool_1d_grad", "avg_pool_2d_grad", "avg_pool_3d_grad",
-       "avgpool_1d_grad", "avgpool_2d_grad", "avgpool_3d_grad"
+  static llvm::StringSet<> names({"avgpool_1d", "avgpool_2d", "avgpool_3d", "tf_avg_pool_1d",
+                                  "tf_avg_pool_2d", "tf_avg_pool_3d", "tf_max_pool_1d",
+                                  "tf_max_pool_2d", "tf_max_pool_3d", "tf_max_pool_1d_grad",
+                                  "max_pool_2d_grad", "max_pool_3d_grad", "tf_avg_pool_1d_grad",
+                                  "tf_avg_pool_2d_grad", "tf_avg_pool_3d_grad", "avgpool_1d_grad",
+                                  "avgpool_2d_grad", "avgpool_3d_grad"
 
-      });
+  });
   return names;
 }
 

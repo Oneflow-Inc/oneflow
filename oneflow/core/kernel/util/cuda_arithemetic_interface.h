@@ -28,7 +28,7 @@ class Blob;
 class ConstantInitializerConf;
 
 template<>
-struct ArithemeticIf<DeviceType::kGPU> {
+struct ArithemeticIf<DeviceType::kCUDA> {
   static void InitializeWithConstConf(ep::Stream* stream,
                                       const ConstantInitializerConf& initializer_conf, Blob* blob);
 

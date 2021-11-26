@@ -85,7 +85,7 @@ Maybe<void> FuseCastScalePass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
         != DataType::kFloat) {
       return;
     }
-    if (op_node->parallel_desc().device_type() != DeviceType::kGPU) { return; }
+    if (op_node->parallel_desc().device_type() != DeviceType::kCUDA) { return; }
     double scale = 1.0;
     if (IsUserOpWithTypeName(sole_dst_node->op().op_conf(), "scalar_mul")) {
       const user_op::UserOpConfWrapper scalar_mul_op_conf(sole_dst_node->op().op_conf());

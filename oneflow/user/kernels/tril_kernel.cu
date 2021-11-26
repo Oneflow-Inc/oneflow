@@ -175,10 +175,10 @@ class GpuTrilKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_TRIL_KERNEL(dtype)                                                         \
+#define REGISTER_CUDA_TRIL_KERNEL(dtype)                                                        \
   REGISTER_USER_KERNEL("tril")                                                                  \
       .SetCreateFn<GpuTrilKernel<dtype>>()                                                      \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -186,13 +186,13 @@ class GpuTrilKernel final : public user_op::OpKernel {
         return Maybe<void>::Ok();                                                               \
       });
 
-REGISTER_GPU_TRIL_KERNEL(float)
-REGISTER_GPU_TRIL_KERNEL(double)
-REGISTER_GPU_TRIL_KERNEL(uint8_t)
-REGISTER_GPU_TRIL_KERNEL(int8_t)
-REGISTER_GPU_TRIL_KERNEL(int32_t)
-REGISTER_GPU_TRIL_KERNEL(int64_t)
-REGISTER_GPU_TRIL_KERNEL(half)
+REGISTER_CUDA_TRIL_KERNEL(float)
+REGISTER_CUDA_TRIL_KERNEL(double)
+REGISTER_CUDA_TRIL_KERNEL(uint8_t)
+REGISTER_CUDA_TRIL_KERNEL(int8_t)
+REGISTER_CUDA_TRIL_KERNEL(int32_t)
+REGISTER_CUDA_TRIL_KERNEL(int64_t)
+REGISTER_CUDA_TRIL_KERNEL(half)
 
 template<typename T>
 class GpuFusedScaleTrilKernel final : public user_op::OpKernel {
@@ -231,10 +231,10 @@ class GpuFusedScaleTrilKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(dtype)                                             \
+#define REGISTER_CUDA_FUSED_SCALE_TRIL_KERNEL(dtype)                                            \
   REGISTER_USER_KERNEL("fused_scale_tril")                                                      \
       .SetCreateFn<GpuFusedScaleTrilKernel<dtype>>()                                            \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -242,12 +242,12 @@ class GpuFusedScaleTrilKernel final : public user_op::OpKernel {
         return Maybe<void>::Ok();                                                               \
       });
 
-REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(float)
-REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(double)
-REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(uint8_t)
-REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(int8_t)
-REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(int32_t)
-REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(int64_t)
-REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(half)
+REGISTER_CUDA_FUSED_SCALE_TRIL_KERNEL(float)
+REGISTER_CUDA_FUSED_SCALE_TRIL_KERNEL(double)
+REGISTER_CUDA_FUSED_SCALE_TRIL_KERNEL(uint8_t)
+REGISTER_CUDA_FUSED_SCALE_TRIL_KERNEL(int8_t)
+REGISTER_CUDA_FUSED_SCALE_TRIL_KERNEL(int32_t)
+REGISTER_CUDA_FUSED_SCALE_TRIL_KERNEL(int64_t)
+REGISTER_CUDA_FUSED_SCALE_TRIL_KERNEL(half)
 
 }  // namespace oneflow
