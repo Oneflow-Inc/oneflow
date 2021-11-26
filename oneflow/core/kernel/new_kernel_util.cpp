@@ -37,7 +37,7 @@ void WithHostBlobAndStreamSynchronizeEnv(ep::Stream* stream, Blob* blob,
   OF_CUDA_CHECK(cudaMallocHost(&host_raw_dptr, blob->AlignedTotalByteSize()));
   Blob host_blob(MemoryCase(), &blob->blob_desc(), host_raw_dptr);
   Callback(&host_blob);
-  Memcpy<DeviceType::kGPU>(stream, blob->mut_dptr(), host_blob.dptr(), blob->ByteSizeOfBlobBody());
+  Memcpy<DeviceType::kCUDA>(stream, blob->mut_dptr(), host_blob.dptr(), blob->ByteSizeOfBlobBody());
   CHECK_JUST(stream->Sync());
   OF_CUDA_CHECK(cudaFreeHost(host_raw_dptr));
 #else

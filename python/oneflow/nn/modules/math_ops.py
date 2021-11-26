@@ -569,7 +569,7 @@ def addmm_op(input, mat1, mat2, alpha=1, beta=1):
     .. math::
         \\text{out} = \\beta\\ \\text{input} + \\alpha\\ (\\text{mat1}_i \\mathbin{@} \\text{mat2}_i)
 
-    For inputs of type `FloatTensor` or `DoubleTensor`, arguments :attr:`beta` and
+    For inputs of type `float` or `double`, arguments :attr:`beta` and
     :attr:`alpha` must be real numbers, otherwise they should be integers.
 
     Args:

@@ -147,14 +147,14 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DROPOUT_KERNEL_GPU(dtype)                                                \
+#define REGISTER_DROPOUT_KERNEL_CUDA(dtype)                                               \
   REGISTER_USER_KERNEL("dropout").SetCreateFn<DropoutKernelGPU<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kGPU)                                      \
+      (user_op::HobDeviceType() == DeviceType::kCUDA)                                     \
       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
-REGISTER_DROPOUT_KERNEL_GPU(half)
-REGISTER_DROPOUT_KERNEL_GPU(float)
-REGISTER_DROPOUT_KERNEL_GPU(double)
+REGISTER_DROPOUT_KERNEL_CUDA(half)
+REGISTER_DROPOUT_KERNEL_CUDA(float)
+REGISTER_DROPOUT_KERNEL_CUDA(double)
 
 template<typename T>
 class DropoutGradKernelGPU final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -177,10 +177,10 @@ class DropoutGradKernelGPU final : public user_op::OpKernel, public user_op::Cud
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DROPOUT_GRAD_KERNEL_GPU(dtype)                                                 \
+#define REGISTER_DROPOUT_GRAD_KERNEL_CUDA(dtype)                                                \
   REGISTER_USER_KERNEL("dropout_grad")                                                          \
       .SetCreateFn<DropoutGradKernelGPU<dtype>>()                                               \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -188,9 +188,9 @@ class DropoutGradKernelGPU final : public user_op::OpKernel, public user_op::Cud
         return Maybe<void>::Ok();                                                               \
       });
 
-REGISTER_DROPOUT_GRAD_KERNEL_GPU(half)
-REGISTER_DROPOUT_GRAD_KERNEL_GPU(float)
-REGISTER_DROPOUT_GRAD_KERNEL_GPU(double)
+REGISTER_DROPOUT_GRAD_KERNEL_CUDA(half)
+REGISTER_DROPOUT_GRAD_KERNEL_CUDA(float)
+REGISTER_DROPOUT_GRAD_KERNEL_CUDA(double)
 
 }  // namespace
 

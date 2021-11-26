@@ -463,14 +463,15 @@ class GpuPReluKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_PRELU_KERNEL(dtype)                                              \
+#define REGISTER_CUDA_PRELU_KERNEL(dtype)                                             \
   REGISTER_USER_KERNEL("prelu").SetCreateFn<GpuPReluKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kGPU)                                  \
+      (user_op::HobDeviceType() == DeviceType::kCUDA)                                 \
       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_PRELU_KERNEL(float)
 REGISTER_GPU_PRELU_KERNEL(double)
 REGISTER_GPU_PRELU_KERNEL(half)
+
 
 template<typename T>
 class GpuPReluGradKernel final : public user_op::OpKernel {
@@ -503,6 +504,7 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
       const int channels = x->shape().At(1);
       const int32_t inner_size = elem_cnt / batch / channels;
 
+
       DispatchBackwardTail<T>(
           ctx->stream(), x->shape().elem_cnt(), alpha_size, inner_size,
           reinterpret_cast<const T*>(x->dptr()), reinterpret_cast<const T*>(alpha->dptr()),
@@ -513,14 +515,15 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_PRELU_GRAD_KERNEL(dtype)                         \
-  REGISTER_USER_KERNEL("prelu_grad")                                  \
-      .SetCreateFn<GpuPReluGradKernel<dtype>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_CUDA_PRELU_GRAD_KERNEL(dtype)                         \
+  REGISTER_USER_KERNEL("prelu_grad")                                   \
+      .SetCreateFn<GpuPReluGradKernel<dtype>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_PRELU_GRAD_KERNEL(float)
 REGISTER_GPU_PRELU_GRAD_KERNEL(double)
 REGISTER_GPU_PRELU_GRAD_KERNEL(half)
+
 
 }  // namespace oneflow

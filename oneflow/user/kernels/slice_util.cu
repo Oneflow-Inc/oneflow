@@ -122,7 +122,7 @@ void GetPackedParams(const SliceParams& params, const T* entire, const T* sliced
 }  // namespace
 
 template<typename T>
-struct SliceKernelUtil<DeviceType::kGPU, T> {
+struct SliceKernelUtil<DeviceType::kCUDA, T> {
   static void Forward(ep::Stream* stream, const SliceParams& params, const T* entire, T* sliced) {
     SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
     size_t pack_size;
@@ -184,7 +184,7 @@ struct SliceKernelUtil<DeviceType::kGPU, T> {
   }
 };
 
-INSTANTIATE_SLICE_KERNEL_UTIL_WITH_DEVICE(DeviceType::kGPU)
-INSTANTIATE_SLICE_KERNEL_UTIL(DeviceType::kGPU, float16)
+INSTANTIATE_SLICE_KERNEL_UTIL_WITH_DEVICE(DeviceType::kCUDA)
+INSTANTIATE_SLICE_KERNEL_UTIL(DeviceType::kCUDA, float16)
 
 }  // namespace oneflow
