@@ -77,8 +77,8 @@ Tensor Tensor::from_blob(const void* blob, const Shape& shape, const Device& dev
     return builder->AccessBlobByCallback(
         local_tensor,
         [blob, shape, dtype](uint64_t ofblob_ptr) {
-          CHECK_JUST(of::OfBlobCopyBuffer<char>::From(ofblob_ptr, static_cast<const char*>(blob),
-                                                      shape.Count(0) * getDTypeSize(dtype)));
+          CHECK_JUST(of::BlobBufferConvert<char>::From(ofblob_ptr, static_cast<const char*>(blob),
+                                                      shape.Count(0) * GetDTypeSize(dtype)));
         },
         "mut");
   }).GetOrThrow();
@@ -93,7 +93,7 @@ void Tensor::copy_to(T* blob) {
 
   const auto& Callback =
       std::make_shared<std::function<void(uint64_t)>>([blob, shape](uint64_t ofblob_ptr) {
-        CHECK_JUST(of::OfBlobCopyBuffer<T>::To(ofblob_ptr, blob, shape.Count(0)));
+        CHECK_JUST(of::BlobBufferConvert<T>::To(ofblob_ptr, blob, shape.Count(0)));
       });
 
   bool is_printed = false;

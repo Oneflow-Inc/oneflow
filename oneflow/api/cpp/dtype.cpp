@@ -29,6 +29,6 @@ std::map<DType, int32_t> DTypeSize = {
 
 }
 
-int32_t getDTypeSize(DType dtype) { return DTypeSize[dtype]; }
+int32_t GetDTypeSize(DType dtype) { return DTypeSize[dtype]; }
 
 }  // namespace oneflow_api

@@ -55,7 +55,7 @@ void ApiEagerMirroredTensorZeros(const std::shared_ptr<Tensor>& tensor) {
 
 template<typename T>
 void ApiCopyMirroredTensorToNumpy(const std::shared_ptr<Tensor>& tensor, py::array_t<T> array) {
-  CopyBetweenMirroredTensorAndNumpy<T>(tensor, array.ptr(), OfBlob_CopyBuffer::template To<T>,
+  CopyBetweenMirroredTensorAndNumpy<T>(tensor, array.ptr(), BlobNumpyConvert<T>::To,
                                        "const",
                                        /*block_host_until_done=*/true)
       .GetOrThrow();
@@ -67,7 +67,7 @@ void ApiCopyMirroredTensorFromNumpy(const std::shared_ptr<Tensor>& tensor, py::a
   // array at the same time.
   // Only NPY_CORDER is supported, and it makes sure that the array is C-style contiguous.
   auto* copied_array = PyArray_NewCopy((PyArrayObject*)array.ptr(), NPY_CORDER);
-  CopyBetweenMirroredTensorAndNumpy<T>(tensor, copied_array, OfBlob_CopyBuffer::template From<T>,
+  CopyBetweenMirroredTensorAndNumpy<T>(tensor, copied_array, BlobNumpyConvert<T>::From,
                                        "mut",
                                        /*block_host_until_done=*/false)
       .GetOrThrow();

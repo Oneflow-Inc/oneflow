@@ -27,7 +27,7 @@ class Shape;
 
 namespace oneflow_api {
 
-class Shape {
+class Shape final {
   friend class Tensor;
 
  public:

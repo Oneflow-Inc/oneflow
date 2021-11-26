@@ -33,7 +33,7 @@ class EnvScope {  // NOLINT
 
 std::mt19937 rng(std::random_device{}());
 
-Shape randomShape() {
+Shape RandomShape() {
   std::uniform_int_distribution<> dist_ndim(1, 4), dist_dims(16, 64);
   std::vector<std::int64_t> dims(dist_ndim(rng), 0);
   for (auto& x : dims) { x = dist_dims(rng); }
@@ -41,7 +41,7 @@ Shape randomShape() {
 }
 
 template<typename T>
-std::vector<T> randomData(size_t size) {
+std::vector<T> RandomData(size_t size) {
   std::uniform_int_distribution<> dist(-100, 100);
   std::vector<T> data(size);
   for (auto& x : data) { x = static_cast<T>(dist(rng)); }
@@ -49,7 +49,7 @@ std::vector<T> randomData(size_t size) {
 }
 
 template<typename T>
-std::vector<T> relu(const std::vector<T>& data) {
+std::vector<T> Relu(const std::vector<T>& data) {
   std::vector<T> result(data.begin(), data.end());
   T zero = static_cast<T>(0);
   for (auto& x : result) {
@@ -81,10 +81,14 @@ TEST(Api, tensor) {
   EnvScope scope;
 
   const auto device = Device("cpu");
-  const auto shape = randomShape();
+  const auto shape = RandomShape();
   const auto dtype = DType::kDouble;
 
   Tensor tensor;
+  ASSERT_EQ(tensor.shape(), Shape());
+  ASSERT_EQ(tensor.device(), Device("cpu"));
+  ASSERT_EQ(tensor.dtype(), DType::kFloat);
+
   Tensor tensor_with_all(shape, device, dtype);
 
   ASSERT_EQ(tensor_with_all.shape(), shape);
@@ -95,7 +99,7 @@ TEST(Api, tensor) {
 TEST(Api, tensor_from_and_to_blob) {
   EnvScope scope;
 
-  const auto shape = randomShape();
+  const auto shape = RandomShape();
 
 #define TEST_TENSOR_FROM_AND_TO_BLOB(dtype, cpp_dtype)                                           \
   std::vector<cpp_dtype> data_##cpp_dtype(shape.Count(0)), new_data_##cpp_dtype(shape.Count(0)); \
@@ -115,7 +119,7 @@ TEST(Api, tensor_from_and_to_blob) {
 TEST(Api, tensor_zeros) {
   EnvScope scope;
 
-  const auto shape = randomShape();
+  const auto shape = RandomShape();
 
   std::vector<float> data(shape.Count(0)), target_data(shape.Count(0));
 
@@ -128,30 +132,34 @@ TEST(Api, tensor_zeros) {
   ASSERT_EQ(data, target_data);
 }
 
+void TestRelu() {
+  const auto shape = RandomShape();
+  const auto data = RandomData<float>(shape.Count(0));
+  const auto target_data = Relu(data);
+  std::vector<float> result(shape.Count(0));
+
+  auto tensor = Tensor::from_blob(data.data(), shape, Device("cpu"), DType::kFloat);
+  auto result_tensor = nn::relu(tensor);
+
+  result_tensor.copy_to(result.data());
+
+  ASSERT_EQ(result, target_data);
+}
+
 TEST(Api, nn_relu) {
   EnvScope scope;
 
-  const auto testRelu = []() {
-    const auto shape = randomShape();
-    const auto data = randomData<float>(shape.Count(0));
-    const auto target_data = relu(data);
-    std::vector<float> result(shape.Count(0));
+  TestRelu();
+}
 
-    auto tensor = Tensor::from_blob(data.data(), shape, Device("cpu"), DType::kFloat);
-    auto result_tensor = nn::relu(tensor);
-
-    result_tensor.copy_to(result.data());
-
-    ASSERT_EQ(result, target_data);
-  };
-
-  testRelu();
+TEST(Api, nn_relu_multithreading) {
+  EnvScope scope;
 
   std::vector<std::thread> threads;
   std::uniform_int_distribution<> dist(8, 32);
   int n_threads = dist(rng);
 
-  for (int i = 0; i < n_threads; ++i) { threads.emplace_back(std::thread(testRelu)); }
+  for (int i = 0; i < n_threads; ++i) { threads.emplace_back(std::thread(TestRelu)); }
 
   for (auto& x : threads) { x.join(); }
 }
