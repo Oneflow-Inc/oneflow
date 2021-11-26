@@ -78,7 +78,7 @@ Tensor Tensor::from_blob(const void* blob, const Shape& shape, const Device& dev
         local_tensor,
         [blob, shape, dtype](uint64_t ofblob_ptr) {
           CHECK_JUST(of::BlobBufferCopyUtil<char>::From(ofblob_ptr, static_cast<const char*>(blob),
-                                                       shape.Count(0) * GetDTypeSize(dtype)));
+                                                        shape.Count(0) * GetDTypeSize(dtype)));
         },
         "mut");
   }).GetOrThrow();

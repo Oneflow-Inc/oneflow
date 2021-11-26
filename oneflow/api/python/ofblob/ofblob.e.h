@@ -46,11 +46,11 @@ struct BlobNumpyCopyUtil {
 
 #define DEFINE_COPIER(T, type_proto)                                                               \
   inline void OfBlob_CopyToBuffer_##T(uint64_t of_blob_ptr, const oneflow::NumPyArrayPtr& array) { \
-    oneflow::BlobNumpyCopyUtil<T>::To(of_blob_ptr, array).GetOrThrow();                             \
+    oneflow::BlobNumpyCopyUtil<T>::To(of_blob_ptr, array).GetOrThrow();                            \
   }                                                                                                \
   inline void OfBlob_CopyFromBuffer_##T(uint64_t of_blob_ptr,                                      \
                                         const oneflow::NumPyArrayPtr& array) {                     \
-    oneflow::BlobNumpyCopyUtil<T>::From(of_blob_ptr, array).GetOrThrow();                           \
+    oneflow::BlobNumpyCopyUtil<T>::From(of_blob_ptr, array).GetOrThrow();                          \
   }
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_COPIER, POD_DATA_TYPE_SEQ);
