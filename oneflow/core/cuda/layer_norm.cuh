@@ -125,6 +125,13 @@ struct DefaultComputeType<half> {
   using type = float;
 };
 
+#if CUDA_VERSION >= 11000
+template<>
+struct DefaultComputeType<nv_bfloat16> {
+  using type = float;
+};
+#endif  // CUDA_VERSION >= 11000
+
 template<typename T, int N>
 struct GetPackType {
   using type = typename std::aligned_storage<N * sizeof(T), N * sizeof(T)>::type;
