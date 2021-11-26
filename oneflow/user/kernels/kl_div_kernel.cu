@@ -118,7 +118,7 @@ class KLDivGradKernel : public SimpleLossGradKernel<DeviceType::kCUDA, T, KLDivG
                   const T* target, const T* dy, T* dx) const {
     const bool log_target = ctx->Attr<bool>("log_target");
     ComputeKLDivGradOut<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                          ctx->device_ctx()->cuda_stream()>>>(
+                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         elem_cnt, static_cast<float>(1.0 / elem_cnt), input, target, dy, dx, log_target);
   }
 };

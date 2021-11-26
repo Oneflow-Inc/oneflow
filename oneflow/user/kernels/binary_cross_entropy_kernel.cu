@@ -158,7 +158,7 @@ class BinaryCrossEntropyGradKernel final : public user_op::OpKernel {
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
 
     ComputeBinaryCrossEntropyGradOut<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                       ctx->device_ctx()->cuda_stream()>>>(
+                                       ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         elem_cnt, static_cast<float>(1.0 / elem_cnt), input, target, dy, dx, weight);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

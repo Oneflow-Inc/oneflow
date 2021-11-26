@@ -138,7 +138,7 @@ class NllKernel final : public user_op::OpKernel {
     Memset<DeviceType::kCUDA>(ctx->stream(), total_weight, 0, sizeof(T));
 
     ComputeNllOutNone<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
-                        ctx->device_ctx()->cuda_stream()>>>(
+                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         num_instances, num_classes, ignore_index, input, target, out, weight, total_weight);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -175,7 +175,7 @@ class NllGradKernel final : public user_op::OpKernel {
     Memset<DeviceType::kCUDA>(ctx->stream(), dx, 0, input_elem_cnt * sizeof(T));
 
     ComputeNllGradOut<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
-                        ctx->device_ctx()->cuda_stream()>>>(
+                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         num_instances, num_classes, ignore_index, target, dy, dx, weight, total_weight);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

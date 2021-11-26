@@ -131,7 +131,7 @@ class SmoothL1LossGradKernel
                   const T* target, const T* dy, T* dx) const {
     const float beta = ctx->Attr<float>("beta");
     ComputeSmoothL1GradOut<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                             ctx->device_ctx()->cuda_stream()>>>(
+                             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         elem_cnt, static_cast<float>(1.0 / elem_cnt), input, target, dy, dx, beta,
         static_cast<float>(1.0 / beta));
   }
