@@ -25,10 +25,8 @@ namespace oneflow {
 
 class Device;
 
-// clang-format off
-
-// Helps VirtualMachine building instruction edges
-INTRUSIVE_BEGIN(LocalDepObject);
+// Helps VirtualMachineEngine building instruction edges
+class LocalDepObject final : public intrusive::Base {
  public:
   // Getters
   const vm::LogicalObject& logical_object() const {
@@ -41,9 +39,10 @@ INTRUSIVE_BEGIN(LocalDepObject);
     static const auto default_val = intrusive::make_shared<vm::MirroredObject>();
     return default_val.Get();
   }
-  bool is_pool_hook_empty() const { return pool_hook_.empty(); }
-  bool is_stored_hook_empty() const { return stored_hook_.empty(); }
-  bool is_lifetime_hook_empty() const { return lifetime_hook_.empty(); }
+
+  const intrusive::ListHook& pool_hook() const { return pool_hook_; }
+  const intrusive::ListHook& stored_hook() const { return stored_hook_; }
+  const intrusive::ListHook& lifetime_hook() const { return lifetime_hook_; }
 
   // Setters
   vm::LogicalObject* mut_logical_object() {
@@ -64,18 +63,24 @@ INTRUSIVE_BEGIN(LocalDepObject);
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  LocalDepObject() : intrusive_ref_(), logical_object_(), mirrored_object_(), pool_hook_(), stored_hook_(), lifetime_hook_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
+  LocalDepObject()
+      : intrusive_ref_(),
+        logical_object_(),
+        mirrored_object_(),
+        pool_hook_(),
+        stored_hook_(),
+        lifetime_hook_() {}
+  intrusive::Ref intrusive_ref_;
   // fields
-  INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<vm::LogicalObject>, logical_object_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<vm::MirroredObject>, mirrored_object_); 
+  intrusive::shared_ptr<vm::LogicalObject> logical_object_;
+  intrusive::shared_ptr<vm::MirroredObject> mirrored_object_;
 
+ public:
   // list hooks
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, pool_hook_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, stored_hook_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, lifetime_hook_);
-INTRUSIVE_END(LocalDepObject);
-// clang-format on
+  intrusive::ListHook pool_hook_;
+  intrusive::ListHook stored_hook_;
+  intrusive::ListHook lifetime_hook_;
+};
 
 Maybe<LocalDepObject*> GetLocalDepObjectFromDevicePool(Symbol<Device> device);
 Maybe<void> PutLocalDepObjectToDevicePool(Symbol<Device> device, LocalDepObject* local_dep_object);

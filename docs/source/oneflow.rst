@@ -15,6 +15,7 @@ oneflow
             acosh, 
             acosh_, 
             addmm, 
+            arccos, 
             arcsin, 
             arcsinh, 
             arccosh, 
@@ -36,8 +37,10 @@ oneflow
             atanh, 
             bernoulli,
             broadcast_like, 
-            batch_gather, 
+            batch_gather,
+            bmm,
             cat, 
+            concat,
             cast, 
             ceil, 
             ceil_, 
@@ -76,6 +79,7 @@ oneflow
             index_select,
             logical_and,
             logical_or,
+            logical_not,
             logical_xor,
             load, 
             log, 
@@ -110,9 +114,14 @@ oneflow
             randint,
             randperm,
             reciprocal,
+<<<<<<< HEAD
             reciprocal_,
             round, 
             round_, 
+=======
+            roll,
+            round, 
+>>>>>>> 203ef5ec9be4d74a4db422f3f4ebc2fb92373fa1
             save, 
             scatter,
             scatter_add,
@@ -154,6 +163,7 @@ oneflow
             transpose,
             tril, 
             unsqueeze, 
+            permute,
             var, 
             view, 
             where, 
@@ -165,5 +175,6 @@ oneflow
             inference_mode,
             is_grad_enabled,
             is_floating_point,
+            set_printoptions,
 .. autofunction:: oneflow.relu
 .. autofunction:: oneflow.env.get_rank

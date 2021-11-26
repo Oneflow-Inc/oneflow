@@ -20,6 +20,11 @@ limitations under the License.
 #include <cub/cub.cuh>
 #include <math_constants.h>
 #include <assert.h>
+#include <cuda.h>
+
+#if CUDA_VERSION >= 11000
+#include <cuda_bf16.h>
+#endif  // CUDA_VERSION >= 11000
 
 namespace oneflow {
 
@@ -39,7 +44,7 @@ struct MaxOp {
   __device__ __forceinline__ T operator()(const T& a, const T& b) const { return max(a, b); }
 };
 
-template<template<typename> typename ReductionOp, typename T, int thread_group_width = kWarpSize>
+template<template<typename> class ReductionOp, typename T, int thread_group_width = kWarpSize>
 __inline__ __device__ T WarpAllReduce(T val) {
   for (int mask = thread_group_width / 2; mask > 0; mask /= 2) {
     val = ReductionOp<T>()(val, __shfl_xor_sync(0xffffffff, val, mask));
@@ -47,7 +52,7 @@ __inline__ __device__ T WarpAllReduce(T val) {
   return val;
 }
 
-template<template<typename> typename ReductionOp, typename T, int block_size>
+template<template<typename> class ReductionOp, typename T, int block_size>
 __inline__ __device__ T BlockAllReduce(T val) {
   typedef cub::BlockReduce<T, block_size> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
@@ -152,6 +157,13 @@ template<>
 struct DefaultComputeType<half> {
   using type = float;
 };
+
+#if CUDA_VERSION >= 11000
+template<>
+struct DefaultComputeType<nv_bfloat16> {
+  using type = float;
+};
+#endif  // CUDA_VERSION >= 11000
 
 template<typename T, int N>
 struct GetPackType {
@@ -510,7 +522,6 @@ __global__ void SoftmaxBlockSMemImpl(LOAD load, STORE store, const int64_t rows,
         } else {
           __trap();
         }
-        thread_max = max(thread_max, pack[i]);
       }
       store.template store<pack_size>(pack, row, pack_id * pack_size);
     }
@@ -936,7 +947,7 @@ typename std::enable_if<pack_size == 2, cudaError_t>::type DispatchSoftmaxGradWa
           stream, load_y, load_dy, store, rows, cols);                                          \
     } else {                                                                                    \
       return DispatchSoftmaxGradWarpImplPadding<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, \
-                                                pack_size, thread_group_width, 2, algorithm>(   \
+                                                pack_size, thread_group_width, 1, algorithm>(   \
           stream, load_y, load_dy, store, rows, cols);                                          \
     }                                                                                           \
   }

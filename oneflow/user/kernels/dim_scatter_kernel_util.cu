@@ -31,34 +31,34 @@ __global__ void DoCUDADimScatter(const DimOpIndexNdHelper<IDX_T> src_nd_helper,
 }
 
 template<typename IN_T, typename IDX_T, template<typename T> class Opt>
-struct DimScatterFunctor<DeviceType::kGPU, IN_T, IDX_T, Opt> final {
-  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
+struct DimScatterFunctor<DeviceType::kCUDA, IN_T, IDX_T, Opt> final {
+  void operator()(ep::Stream* stream, const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& output_nd_helper, const int ndim,
                   const int64_t elem_cnt, const int32_t dim, const int64_t upper_bound,
                   const IDX_T* index, const IN_T* src, IN_T* output) {
-    RUN_CUDA_KERNEL((DoCUDADimScatter<IN_T, IDX_T, Opt>), ctx, BlocksNum4ThreadsNum(elem_cnt),
+    RUN_CUDA_KERNEL((DoCUDADimScatter<IN_T, IDX_T, Opt>), stream, BlocksNum4ThreadsNum(elem_cnt),
                     src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim,
                     upper_bound, index, src, output);
   }
 };
 
 template<typename IDX_T, template<typename T> class Opt>
-struct DimScatterFunctor<DeviceType::kGPU, float16, IDX_T, Opt> final {
-  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
+struct DimScatterFunctor<DeviceType::kCUDA, float16, IDX_T, Opt> final {
+  void operator()(ep::Stream* stream, const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& output_nd_helper, const int ndim,
                   const int64_t elem_cnt, const int32_t dim, const int64_t upper_bound,
                   const IDX_T* index, const float16* src, float16* output) {
-    RUN_CUDA_KERNEL((DoCUDADimScatter<half, IDX_T, Opt>), ctx, BlocksNum4ThreadsNum(elem_cnt),
+    RUN_CUDA_KERNEL((DoCUDADimScatter<half, IDX_T, Opt>), stream, BlocksNum4ThreadsNum(elem_cnt),
                     src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim,
                     upper_bound, index, reinterpret_cast<const half*>(src),
                     reinterpret_cast<half*>(output));
   }
 };
 
-INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kGPU, BinOpAddFunctor);
-INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kGPU, BinOpUpdateFunctor);
+INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kCUDA, BinOpAddFunctor);
+INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kCUDA, BinOpUpdateFunctor);
 
 }  // namespace user_op
 }  // namespace oneflow

@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -84,7 +85,7 @@ class FusedCastScaleGpuKernel final : public user_op::OpKernel, public user_op::
                                  ? RoundUp(n, 2) / 2
                                  : n;
     FusedCastScaleGpu<T, U><<<BlocksNum4ThreadsNum(launch_n), kCudaThreadsNumPerBlock, 0,
-                              ctx->device_ctx()->cuda_stream()>>>(
+                              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         n, static_cast<T>(scale), x->dptr<U>(), scale_by_tensor->dptr<T>(), y->mut_dptr<T>());
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -92,19 +93,19 @@ class FusedCastScaleGpuKernel final : public user_op::OpKernel, public user_op::
 
 }  // namespace
 
-#define REGISTER_FUSED_CAST_SCALE_GPU_KERNEL(x_type, y_type)                          \
-  REGISTER_USER_KERNEL("fused_cast_scale")                                            \
-      .SetCreateFn<FusedCastScaleGpuKernel<y_type, x_type>>()                         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                             \
-                       & (user_op::HobDataType("y", 0) == GetDataType<y_type>::value) \
-                       & (user_op::HobDataType("x", 0) == GetDataType<x_type>::value));
+#define REGISTER_FUSED_CAST_SCALE_CUDA_KERNEL(x_type, y_type)                          \
+  REGISTER_USER_KERNEL("fused_cast_scale")                                             \
+      .SetCreateFn<FusedCastScaleGpuKernel<y_type, x_type>>()                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
+                       && (user_op::HobDataType("y", 0) == GetDataType<y_type>::value) \
+                       && (user_op::HobDataType("x", 0) == GetDataType<x_type>::value));
 
-REGISTER_FUSED_CAST_SCALE_GPU_KERNEL(half, float);
-REGISTER_FUSED_CAST_SCALE_GPU_KERNEL(half, double);
-REGISTER_FUSED_CAST_SCALE_GPU_KERNEL(float, half);
-REGISTER_FUSED_CAST_SCALE_GPU_KERNEL(float, double);
-REGISTER_FUSED_CAST_SCALE_GPU_KERNEL(double, half);
-REGISTER_FUSED_CAST_SCALE_GPU_KERNEL(double, float);
-#undef REGISTER_FUSED_CAST_SCALE_GPU_KERNEL
+REGISTER_FUSED_CAST_SCALE_CUDA_KERNEL(half, float);
+REGISTER_FUSED_CAST_SCALE_CUDA_KERNEL(half, double);
+REGISTER_FUSED_CAST_SCALE_CUDA_KERNEL(float, half);
+REGISTER_FUSED_CAST_SCALE_CUDA_KERNEL(float, double);
+REGISTER_FUSED_CAST_SCALE_CUDA_KERNEL(double, half);
+REGISTER_FUSED_CAST_SCALE_CUDA_KERNEL(double, float);
+#undef REGISTER_FUSED_CAST_SCALE_CUDA_KERNEL
 
 }  // namespace oneflow

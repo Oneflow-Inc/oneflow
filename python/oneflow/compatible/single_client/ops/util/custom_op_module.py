@@ -119,7 +119,7 @@ class CustomOpModule(object):
         return self
 
     def cpp_def(self):
-        flags = "-std=c++11 -c -fPIC -O2 " + get_cflags()
+        flags = "-std=c++14 -c -fPIC -O2 " + get_cflags()
         compile(
             "g++",
             flags,
@@ -144,7 +144,7 @@ class CustomOpModule(object):
         return self
 
     def cpp_kernel(self):
-        flags = "-std=c++11 -c -fPIC -O2 " + get_cflags()
+        flags = "-std=c++14 -c -fPIC -O2 " + get_cflags()
         compile(
             "g++",
             flags,
@@ -161,7 +161,7 @@ class CustomOpModule(object):
 
     def build_load(self):
         if len(self.objs_) > 0:
-            flags = "-std=c++11 -shared -fPIC " + get_cflags()
+            flags = "-std=c++14 -shared -fPIC " + get_cflags()
             compile(
                 "g++", flags, get_lflags(), self.objs_, "{}.so".format(self.out_prefix_)
             )

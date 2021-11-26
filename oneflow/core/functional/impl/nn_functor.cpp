@@ -26,12 +26,12 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
-#include "oneflow/core/functional/functional.h"
-#include "oneflow/core/functional/sequence_function.h"
+#include "oneflow/core/register/ofblob.h"
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -147,15 +147,13 @@ class DeConvBaseFunctor {
       auto nc = x->dim(1) / groups;
       auto split_x = JUST(functional::Split(x, nc, 1));
       auto split_weight = JUST(functional::Split(weight, nc, 0));
-      int64_t max_dim_size = 0;
       one::TensorTuple split_out;
       for (int i = 0; i < groups; i++) {
         const std::shared_ptr<one::Tensor>& deconv_i = JUST(OpInterpUtil::Dispatch<Tensor>(
             *deconv_op_, {split_x->at(i), split_weight->at(i)}, deconv_attrs));
-        max_dim_size += deconv_i->dim(1);
         split_out.push_back(deconv_i);
       }
-      deconv_out = JUST(functional::Concat(split_out, 1, max_dim_size));
+      deconv_out = JUST(functional::Concat(split_out, 1));
     }
 
     if (bias) {
@@ -363,17 +361,17 @@ class PoolingNDFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class AvgPool2DFunctor : public PoolNDFunctor {
+class TFAvgPool2DFunctor : public PoolNDFunctor {
  public:
-  AvgPool2DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("avg_pool_2d").Input("x").Output("y").Build());
+  TFAvgPool2DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("tf_avg_pool_2d").Input("x").Output("y").Build());
   }
 };
 
-class MaxPool2DFunctor : public PoolNDFunctor {
+class TFMaxPool2DFunctor : public PoolNDFunctor {
  public:
-  MaxPool2DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("max_pool_2d").Input("x").Output("y").Build());
+  TFMaxPool2DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("tf_max_pool_2d").Input("x").Output("y").Build());
   }
 };
 
@@ -1083,6 +1081,44 @@ class CtcLossFunctor {
   std::shared_ptr<OpExpr> op_xdivy_;
 };
 
+class TripletMarginLossFunctor {
+ public:
+  TripletMarginLossFunctor() {}
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& anchor,
+                           const std::shared_ptr<one::Tensor>& positive,
+                           const std::shared_ptr<one::Tensor>& negative, const float& margin,
+                           const float& p, const float& eps, const bool& swap,
+                           const std::string& reduction) const {
+    int32_t dim_norm = anchor->ndim() - 1;
+    std::vector<int32_t> dim(1, dim_norm);
+    CHECK_OR_RETURN([&]() -> bool {
+      if ((reduction != "none") && (reduction != "sum") && (reduction != "mean")) return false;
+      return true;
+    }());
+    auto da_p = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, positive)))), p, dim, false,
+                                anchor->dtype()));
+    auto da_n = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, negative)))), p, dim, false,
+                                anchor->dtype()));
+    if (swap) {
+      auto distance_swap = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(positive, negative)))), p,
+                                           dim, false, positive->dtype()));
+      da_n = JUST(Minimum(distance_swap, da_n));
+    }
+    auto triplet_loss =
+        JUST(Clamp(JUST(ScalarAdd(JUST(Sub(da_p, da_n)), margin, false)), 0.0, NullOpt));
+    int32_t ndim = triplet_loss->ndim() - 1;
+    std::vector<int32_t> axis(1, ndim);
+
+    if (reduction == "mean") {
+      triplet_loss = JUST(ReduceMean(triplet_loss, axis, false));
+    } else if (reduction == "sum") {
+      triplet_loss = JUST(ReduceSum(triplet_loss, axis, false));
+    }
+    return triplet_loss;
+  }
+};
+
 class AffineGridFunctor {
  public:
   AffineGridFunctor() {
@@ -1193,74 +1229,63 @@ class NormalizationFunctor {
 class NormalizationAddReluFunctor {
  public:
   NormalizationAddReluFunctor() {
-    norm_eval_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
+    norm_eval_op_ = CHECK_JUST(one::OpBuilder("normalization")
                                    .Input("x")
                                    .Input("moving_mean")
                                    .Input("moving_variance")
                                    .Input("gamma")
                                    .Input("beta")
                                    .Output("y")
-                                   .Output("reserve_space")
                                    .Attr("training", false)
                                    .Build());
-    norm_training_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
-                                             .Input("x")
-                                             .Input("moving_mean")
-                                             .Input("moving_variance")
-                                             .Input("gamma")
-                                             .Input("beta")
-                                             .Output("y")
-                                             .Output("reserve_space")
-                                             .Output("mean")
-                                             .Output("inv_variance")
-                                             .Attr("training", true)
-                                             .Build());
-    norm_training_no_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
-                                                .Input("x")
-                                                .Input("gamma")
-                                                .Input("beta")
-                                                .Output("y")
-                                                .Output("reserve_space")
-                                                .Output("mean")
-                                                .Output("inv_variance")
-                                                .Attr("training", true)
-                                                .Build());
-
-    addend_norm_eval_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
-                                          .Input("x")
-                                          .Input("addend")
-                                          .Input("moving_mean")
-                                          .Input("moving_variance")
-                                          .Input("gamma")
-                                          .Input("beta")
-                                          .Output("y")
-                                          .Output("reserve_space")
-                                          .Attr("training", false)
-                                          .Build());
-    addend_norm_training_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
-                                                    .Input("x")
-                                                    .Input("addend")
-                                                    .Input("moving_mean")
-                                                    .Input("moving_variance")
-                                                    .Input("gamma")
-                                                    .Input("beta")
-                                                    .Output("y")
-                                                    .Output("reserve_space")
-                                                    .Output("mean")
-                                                    .Output("inv_variance")
-                                                    .Attr("training", true)
-                                                    .Build());
-    addend_norm_training_no_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
-                                                       .Input("x")
-                                                       .Input("addend")
-                                                       .Input("gamma")
-                                                       .Input("beta")
-                                                       .Output("y")
-                                                       .Output("reserve_space")
-                                                       .Output("mean")
-                                                       .Output("inv_variance")
-                                                       .Attr("training", true)
-                                                       .Build());
+    relu_op_ = CHECK_JUST(one::OpBuilder("relu").Input("in").Output("out").Build());
+    add_op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build());
+    fused_norm_training_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
+                                                   .Input("x")
+                                                   .Input("moving_mean")
+                                                   .Input("moving_variance")
+                                                   .Input("gamma")
+                                                   .Input("beta")
+                                                   .Output("y")
+                                                   .Output("reserve_space")
+                                                   .Output("mean")
+                                                   .Output("inv_variance")
+                                                   .Attr("training", true)
+                                                   .Build());
+    fused_addend_norm_training_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
+                                                          .Input("x")
+                                                          .Input("addend")
+                                                          .Input("moving_mean")
+                                                          .Input("moving_variance")
+                                                          .Input("gamma")
+                                                          .Input("beta")
+                                                          .Output("y")
+                                                          .Output("reserve_space")
+                                                          .Output("mean")
+                                                          .Output("inv_variance")
+                                                          .Attr("training", true)
+                                                          .Build());
+    fused_norm_training_no_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
+                                                      .Input("x")
+                                                      .Input("gamma")
+                                                      .Input("beta")
+                                                      .Output("y")
+                                                      .Output("reserve_space")
+                                                      .Output("mean")
+                                                      .Output("inv_variance")
+                                                      .Attr("training", true)
+                                                      .Build());
+    fused_addend_norm_training_no_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
+                                                             .Input("x")
+                                                             .Input("addend")
+                                                             .Input("gamma")
+                                                             .Input("beta")
+                                                             .Output("y")
+                                                             .Output("reserve_space")
+                                                             .Output("mean")
+                                                             .Output("inv_variance")
+                                                             .Attr("training", true)
+                                                             .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<one::Tensor>& addend,
@@ -1274,49 +1299,51 @@ class NormalizationAddReluFunctor {
     JUST(attrs.SetAttr<int32_t>("axis", axis));
     JUST(attrs.SetAttr<float>("epsilon", epsilon));
     // convert torch momentum to tensorflow momentum
-    JUST(attrs.SetAttr<float>("momentum", 1 - momentum));
+    JUST(attrs.SetAttr<float>("momentum", 1.0f - momentum));
 
     CHECK_OR_RETURN((moving_mean && moving_variance) || (!moving_mean && !moving_variance))
         << "Both moving_mean and moving_variance should be None or Tensor.";
     if (!is_training) {
       CHECK_OR_RETURN(moving_mean && moving_variance)
           << "Must have moving_mean and moving_variance in eval mode.";
+      const auto& normalize_result = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+          *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs));
       if (addend) {
-        return OpInterpUtil::Dispatch<one::Tensor>(
-            *addend_norm_eval_op_,
-            {x, JUST(addend), JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
+        const auto& add_result =
+            JUST(OpInterpUtil::Dispatch<one::Tensor>(*add_op_, {normalize_result, JUST(addend)}));
+        return OpInterpUtil::Dispatch<one::Tensor>(*relu_op_, {add_result});
       } else {
-        return OpInterpUtil::Dispatch<one::Tensor>(
-            *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
+        return OpInterpUtil::Dispatch<one::Tensor>(*relu_op_, {normalize_result});
       }
     } else if (moving_mean) {
       if (addend) {
         return OpInterpUtil::Dispatch<one::Tensor>(
-            *addend_norm_training_stats_op_,
+            *fused_addend_norm_training_stats_op_,
             {x, JUST(addend), JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
       } else {
         return OpInterpUtil::Dispatch<one::Tensor>(
-            *norm_training_stats_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta},
-            attrs);
+            *fused_norm_training_stats_op_,
+            {x, JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
       }
     } else {
       if (addend) {
-        return OpInterpUtil::Dispatch<one::Tensor>(*addend_norm_training_no_stats_op_,
+        return OpInterpUtil::Dispatch<one::Tensor>(*fused_addend_norm_training_no_stats_op_,
                                                    {x, JUST(addend), gamma, beta}, attrs);
       } else {
-        return OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_, {x, gamma, beta},
-                                                   attrs);
+        return OpInterpUtil::Dispatch<one::Tensor>(*fused_norm_training_no_stats_op_,
+                                                   {x, gamma, beta}, attrs);
       }
     }
   }
 
  private:
   std::shared_ptr<OpExpr> norm_eval_op_;
-  std::shared_ptr<OpExpr> norm_training_stats_op_;
-  std::shared_ptr<OpExpr> norm_training_no_stats_op_;
-  std::shared_ptr<OpExpr> addend_norm_eval_op_;
-  std::shared_ptr<OpExpr> addend_norm_training_stats_op_;
-  std::shared_ptr<OpExpr> addend_norm_training_no_stats_op_;
+  std::shared_ptr<OpExpr> relu_op_;
+  std::shared_ptr<OpExpr> add_op_;
+  std::shared_ptr<OpExpr> fused_norm_training_stats_op_;
+  std::shared_ptr<OpExpr> fused_addend_norm_training_stats_op_;
+  std::shared_ptr<OpExpr> fused_norm_training_no_stats_op_;
+  std::shared_ptr<OpExpr> fused_addend_norm_training_no_stats_op_;
 };
 
 class PadFunctor {
@@ -1386,31 +1413,30 @@ class DropoutFunctor {
     dropout_op_ =
         CHECK_JUST(one::OpBuilder("dropout").Input("in").Input("mask").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a, const float& p,
                            const bool& training, const Optional<one::Generator>& generator) const {
-    if (!training || p == 0.0) return x;
+    if (!training || p == 0.0) return a;
 
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap random_mask_like_attrs;
     JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
-
-    std::shared_ptr<one::Generator> gen;
-    if (!generator) {
-      gen = JUST(one::DefaultAutoGenerator());
-    } else {
-      gen = JUST(generator);
-    }
-
     JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
 
-    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *random_mask_like_op_, {x},
-        OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
     float scale = 1.0;
     if (p != 1.0) { scale = 1.0 / (1.0 - p); }
     MutableAttrMap dropout_attrs;
     JUST(dropout_attrs.SetAttr<float>("scale", scale));
-    return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {x, mask}, dropout_attrs);
+
+    return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
+             return OpInterpUtil::Dispatch<Tensor>(
+                 *random_mask_like_op_, {a},
+                 OpExprInterpContext(random_mask_like_attrs, random_mask_like_state));
+           })
+        .then([&](const std::shared_ptr<one::Tensor>& x) {
+          return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {a, x}, dropout_attrs);
+        })
+        .call();
   }
 
  private:
@@ -1541,15 +1567,46 @@ class FoldFunctor {
   std::shared_ptr<OpExpr> fold_op_;
 };
 
+Maybe<void> SyncAccessTensorWithTimeOut(
+    const std::shared_ptr<Tensor>& tensor,
+    const std::shared_ptr<std::function<void(uint64_t)>>& callback, const std::string& modifier) {
+  return SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
+    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(JUST(tensor->AsMirroredTensor()), sc, callback,
+                                               modifier);
+    });
+  });
+}
+
 class OneHotFunctor {
  public:
   OneHotFunctor() {
     one_hot_op_ = CHECK_JUST(one::OpBuilder("one_hot").Input("indices").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& num_classes,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& num_classes,
                            const Scalar& on_value, const Scalar& off_value) const {
+    if (IsFloatingDataType(input->dtype()->data_type())) {
+      OF_RUNTIME_ERROR() << "one_hot is only applicable to index tensor.";
+    }
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("depth", num_classes));
+    if (num_classes == -1) {
+      std::vector<int32_t> axis(input->ndim());
+      std::iota(axis.begin(), axis.end(), 0);
+      auto tensor_max = JUST(functional::ReduceMax(input, axis, false));
+
+      int64_t max = 0;
+      const auto& callback =
+          std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
+            auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+            of_blob->AutoMemCopyTo<int64_t>(&max,
+                                            1);  // copy 1 scalar(int64_t) tensor's value to max
+          });
+      JUST(SyncAccessTensorWithTimeOut(tensor_max, callback, "const"));
+      JUST(attrs.SetAttr<int64_t>("depth", max + 1));
+
+    } else {
+      JUST(attrs.SetAttr<int64_t>("depth", num_classes));
+    }
     bool is_on_value_double = on_value.IsFloatingPoint();
     bool is_off_value_double = off_value.IsFloatingPoint();
     if (is_on_value_double || is_off_value_double) {
@@ -1565,7 +1622,7 @@ class OneHotFunctor {
       JUST(attrs.SetAttr<int64_t>("integer_on_value", JUST(on_value.As<int64_t>())));
       JUST(attrs.SetAttr<int64_t>("integer_off_value", JUST(off_value.As<int64_t>())));
     }
-    return OpInterpUtil::Dispatch<Tensor>(*one_hot_op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*one_hot_op_, {input}, attrs);
   }
 
  private:
@@ -1633,6 +1690,46 @@ class FusedSelfAttentionGradFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class FusedScaleTrilSoftmaxMaskScaleFunctor {
+ public:
+  FusedScaleTrilSoftmaxMaskScaleFunctor() {
+    random_mask_like_op_ =
+        CHECK_JUST(one::OpBuilder("random_mask_like").Input("like").Output("out").Build());
+    fused_op_ = CHECK_JUST(one::OpBuilder("fused_tril_scale_softmax_mask_scale")
+                               .Input("x")
+                               .Input("mask")
+                               .Output("y")
+                               .Output("softmax_y")
+                               .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const float p,
+                                const int64_t diagonal, const float tril_scale_value,
+                                const Optional<one::Generator>& generator) const {
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    MutableAttrMap random_mask_like_attrs;
+    JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
+    JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
+
+    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *random_mask_like_op_, {x},
+        OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
+
+    float mask_scale_value = 1.0;
+    if (p != 1.0) { mask_scale_value = 1.0 / (1.0 - p); }
+    MutableAttrMap fused_attrs;
+    JUST(fused_attrs.SetAttr<int64_t>("diagonal", diagonal));
+    JUST(fused_attrs.SetAttr<float>("tril_scale_value", tril_scale_value));
+    JUST(fused_attrs.SetAttr<float>("mask_scale_value", mask_scale_value));
+
+    return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_, {x, mask}, fused_attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> fused_op_;
+  std::shared_ptr<OpExpr> random_mask_like_op_;
 };
 
 class L2NormalizeGradFunctor {
@@ -1713,26 +1810,28 @@ class FusedBiasAddDropoutFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b, const float& p,
                            const int32_t& axis, const Optional<one::Generator>& generator) const {
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap random_mask_like_attrs;
     JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
-    std::shared_ptr<one::Generator> gen;
-    if (!generator) {
-      gen = JUST(one::DefaultAutoGenerator());
-    } else {
-      gen = JUST(generator);
-    }
     JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
-    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *random_mask_like_op_, {a},
-        OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
+
     float scale = 1.0;
     if (p != 1.0) { scale = 1.0 / (1.0 - p); }
     MutableAttrMap fused_bias_add_mask_attrs;
     JUST(fused_bias_add_mask_attrs.SetAttr<float>("scale", scale));
     JUST(fused_bias_add_mask_attrs.SetAttr<int32_t>("axis", axis));
-    return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a, b, mask},
-                                          fused_bias_add_mask_attrs);
+
+    return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
+             return OpInterpUtil::Dispatch<Tensor>(
+                 *random_mask_like_op_, {a},
+                 OpExprInterpContext(random_mask_like_attrs, random_mask_like_state));
+           })
+        .then([&](const std::shared_ptr<one::Tensor>& x) {
+          return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a, b, x},
+                                                fused_bias_add_mask_attrs);
+        })
+        .call();
   }
 
  private:
@@ -1778,6 +1877,73 @@ class FusedScaleTrilFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedScaleMaskSoftmaxFunctor {
+ public:
+  FusedScaleMaskSoftmaxFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("fused_scale_mask_softmax").Input("x").Input("mask").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& mask, const float& fill_value,
+                           const float& scale) const {
+    MutableAttrMap attrs_;
+    JUST(attrs_.SetAttr<float>("scale_value", scale));
+    JUST(attrs_.SetAttr<float>("mask_fill_value", fill_value));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mask}, attrs_);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedScaleMaskSoftmaxDropoutFunctor {
+ public:
+  FusedScaleMaskSoftmaxDropoutFunctor() {
+    random_mask_like_op_ =
+        CHECK_JUST(one::OpBuilder("random_mask_like").Input("like").Output("out").Build());
+    fused_scale_mask_softmax_dropout_op_ =
+        CHECK_JUST(one::OpBuilder("fused_scale_mask_softmax_dropout")
+                       .Input("x")
+                       .Input("mask")
+                       .Input("dropout_mask")
+                       .Output("y")
+                       .Output("softmax_y")
+                       .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& mask, const float& fill_value,
+                                const float& scale, const float& p, const bool& training,
+                                const Optional<one::Generator>& generator) const {
+    float rate = p;
+    if (!training) rate = 0.0;
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    MutableAttrMap random_mask_like_attrs;
+    JUST(random_mask_like_attrs.SetAttr<float>("rate", rate));
+    JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
+
+    const auto& dropout_mask = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *random_mask_like_op_, {x},
+        OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
+
+    float dropout_scale = 1.0;
+    if (rate != 1.0) { dropout_scale = 1.0 / (1.0 - rate); }
+    MutableAttrMap fused_scale_mask_softmax_dropout_attrs;
+    JUST(fused_scale_mask_softmax_dropout_attrs.SetAttr<float>("scale_value", scale));
+    JUST(fused_scale_mask_softmax_dropout_attrs.SetAttr<float>("mask_fill_value", fill_value));
+    JUST(fused_scale_mask_softmax_dropout_attrs.SetAttr<float>("dropout_scale_value",
+                                                               dropout_scale));
+
+    return OpInterpUtil::Dispatch<TensorTuple>(*fused_scale_mask_softmax_dropout_op_,
+                                               {x, mask, dropout_mask},
+                                               fused_scale_mask_softmax_dropout_attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> random_mask_like_op_;
+  std::shared_ptr<OpExpr> fused_scale_mask_softmax_dropout_op_;
+};
+
 class CtcGreedyDecoderFunctor {
  public:
   CtcGreedyDecoderFunctor() {
@@ -1800,6 +1966,64 @@ class CtcGreedyDecoderFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class PartialFCSampleFunctor {
+ public:
+  PartialFCSampleFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("distributed_partial_fc_sample")
+                         .Input("weight")
+                         .Input("label")
+                         .Output("mapped_label")
+                         .Output("sampled_label")
+                         .Output("sampled_weight")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& wegiht,
+                                const std::shared_ptr<one::Tensor>& label,
+                                const int64_t& num_sample) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("num_sample", num_sample));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {wegiht, label}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class PariticalFCSampleDisableBoxing {
+ public:
+  PariticalFCSampleDisableBoxing() {
+    op_ = CHECK_JUST(one::OpBuilder("distributed_partial_fc_sample_disable_boxing")
+                         .Input("sampled_weight_diff")
+                         .Input("sampled_label")
+                         .Output("boxing_disabled_sampled_weight_diff")
+                         .Output("boxing_disabled_sampled_label")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& sampled_weight_diff,
+                                const std::shared_ptr<one::Tensor>& sampled_label) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {sampled_weight_diff, sampled_label});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class NmsFunctor {
+ public:
+  NmsFunctor() { op_ = CHECK_JUST(one::OpBuilder("nms").Input("in").Output("out").Build()); }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& iou_threshold,
+                           const int32_t& keep_n) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("iou_threshold", iou_threshold));
+    JUST(attrs.SetAttr<int32_t>("keep_n", keep_n));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -1813,11 +2037,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
-  m.add_functor<impl::AvgPool2DFunctor>("AvgPool2D");
+  m.add_functor<impl::TFAvgPool2DFunctor>("AvgPool2D");
   m.add_functor<impl::Maxpool1DFunctor>("Maxpool1D");
   m.add_functor<impl::Maxpool2DFunctor>("Maxpool2D");
   m.add_functor<impl::Maxpool3DFunctor>("Maxpool3D");
-  m.add_functor<impl::MaxPool2DFunctor>("MaxPool2D");
+  m.add_functor<impl::TFMaxPool2DFunctor>("MaxPool2D");
   m.add_functor<impl::AdaptiveAvgPool1DFunctor>("AdaptiveAvgPool1D");
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
@@ -1835,6 +2059,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SoftmaxCrossEntropyGradFunctor>("SoftmaxCrossEntropyGrad");
   m.add_functor<impl::SmoothL1LossFunctor>("SmoothL1Loss");
   m.add_functor<impl::CombinedMarginLossFunctor>("CombinedMarginLoss");
+  m.add_functor<impl::TripletMarginLossFunctor>("TripletMarginLoss");
   m.add_functor<impl::MarginRankingLossFunctor>("MarginRankingLoss");
   m.add_functor<impl::CtcLossFunctor>("CtcLoss");
   m.add_functor<impl::AffineGridFunctor>("AffineGrid");
@@ -1857,8 +2082,14 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedBiasAddGeluFunctor>("FusedBiasAddGelu");
   m.add_functor<impl::FusedBiasAddGeluGradFunctor>("FusedBiasAddGeluGrad");
   m.add_functor<impl::FusedBiasAddDropoutFunctor>("FusedBiasAddDropout");
+  m.add_functor<impl::FusedScaleMaskSoftmaxFunctor>("FusedScaleMaskSoftmax");
+  m.add_functor<impl::FusedScaleMaskSoftmaxDropoutFunctor>("FusedScaleMaskSoftmaxDropout");
+  m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleFunctor>("FusedScaleTrilSoftmaxMaskScale");
   m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
   m.add_functor<impl::CtcGreedyDecoderFunctor>("CtcGreedyDecoder");
+  m.add_functor<impl::PartialFCSampleFunctor>("DistributedPariticalFCSample");
+  m.add_functor<impl::PariticalFCSampleDisableBoxing>("DistributedPariticalFCSampleDisableBoxing");
+  m.add_functor<impl::NmsFunctor>("Nms");
 };
 
 }  // namespace functional

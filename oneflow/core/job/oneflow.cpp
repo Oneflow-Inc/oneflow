@@ -36,7 +36,7 @@ limitations under the License.
 #include "oneflow/core/operator/interface_op_util.h"
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/vm/oneflow_vm.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/profiler/profiler.h"
@@ -197,7 +197,7 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   OpAttributeInfo op_attribute_info;
   Global<CtrlClient>::Get()->PullKV("op_attribute_info", &op_attribute_info);
   // populate op_attribute_info
-  PlanUtil::PopulateOpAttibute(plan, op_attribute_info.job_id2op_attribute_ref_table());
+  PlanUtil::PopulateOpAttribute(plan, op_attribute_info.job_id2op_attribute_ref_table());
 }
 
 Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) {

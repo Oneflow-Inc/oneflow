@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/functional/impl/unary_functor.h"
+#include "oneflow/core/functional/impl/binary_functor.h"
 
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/functional/function_library.h"
@@ -102,6 +103,8 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("tan", Tan)               \
   OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)
 
+#define LOGICAL_FLOAT_UNARY_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("logical_not", LogicalNot)
+
 #define UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, base)                    \
   class class_name##Functor : public base {                                          \
    public:                                                                           \
@@ -110,57 +113,80 @@ namespace impl {
     }                                                                                \
   };
 
+#define UNARY_ELEMENTWISE_GRAD_FUNCTOR(op_type_name, class_name, base)          \
+  class class_name##GradFunctor : public base {                                 \
+   public:                                                                      \
+    class_name##GradFunctor() {                                                 \
+      op_ = CHECK_JUST(one::OpBuilder(std::string("") + op_type_name + "_grad") \
+                           .Input("x")                                          \
+                           .Input("dy")                                         \
+                           .Output("dx")                                        \
+                           .Build());                                           \
+    }                                                                           \
+  };
+
 #define INPLACE_UNARY_FUNCOTRS(op_type_name, class_name) \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, InplaceUnaryFunctor)
 #define INPLACE_FLOAT_UNARY_FUNCOTRS(op_type_name, class_name) \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, InplaceFloatUnaryFunctor)
-#define UNARY_FUNCOTRS(op_type_name, class_name) \
-  UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, UnaryFunctor)
-#define FLOAT_UNARY_FUNCOTRS(op_type_name, class_name) \
+#define LOGICAL_FLOAT_UNARY_FUNCTORS(op_type_name, class_name) \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, FloatUnaryFunctor)
+#define UNARY_FUNCOTRS(op_type_name, class_name)                    \
+  UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, UnaryFunctor) \
+  UNARY_ELEMENTWISE_GRAD_FUNCTOR(op_type_name, class_name, BinaryFunctor)
+#define FLOAT_UNARY_FUNCOTRS(op_type_name, class_name)                   \
+  UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, FloatUnaryFunctor) \
+  UNARY_ELEMENTWISE_GRAD_FUNCTOR(op_type_name, class_name, BinaryFunctor)
 
 OF_PP_FOR_EACH_TUPLE(INPLACE_UNARY_FUNCOTRS, INPLACE_UNARY_FUNC_SEQ)
 OF_PP_FOR_EACH_TUPLE(INPLACE_FLOAT_UNARY_FUNCOTRS, INPLACE_UNARY_FLOAT_FUNC_SEQ);
 OF_PP_FOR_EACH_TUPLE(UNARY_FUNCOTRS, UNARY_FUNC_SEQ);
 OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_FUNCOTRS, FLOAT_UNARY_FUNC_SEQ);
+OF_PP_FOR_EACH_TUPLE(LOGICAL_FLOAT_UNARY_FUNCTORS, LOGICAL_FLOAT_UNARY_FUNC_SEQ);
 
 }  // namespace impl
 
+using namespace impl;
+#define ADD_UNARY_FUNCTOR(class_name, functor_name) \
+  m.add_functor<class_name##Functor>(functor_name); \
+  m.add_functor<class_name##GradFunctor>(std::string("") + functor_name + "Grad");
+
 ONEFLOW_FUNCTION_LIBRARY(m) {
-  m.add_functor<impl::AbsFunctor>("Abs");
-  m.add_functor<impl::AcosFunctor>("Acos");
-  m.add_functor<impl::AcoshFunctor>("Acosh");
-  m.add_functor<impl::AsinFunctor>("Asin");
-  m.add_functor<impl::AsinhFunctor>("Asinh");
-  m.add_functor<impl::AtanFunctor>("Atan");
-  m.add_functor<impl::AtanhFunctor>("Atanh");
-  m.add_functor<impl::CeilFunctor>("Ceil");
-  m.add_functor<impl::CosFunctor>("Cos"); //
-  m.add_functor<impl::CoshFunctor>("Cosh"); //
-  m.add_functor<impl::ErfFunctor>("Erf");
-  m.add_functor<impl::ErfcFunctor>("Erfc");
-  m.add_functor<impl::ExpFunctor>("Exp");
-  m.add_functor<impl::Expm1Functor>("Expm1");
-  m.add_functor<impl::FloorFunctor>("Floor");
-  m.add_functor<impl::LgammaFunctor>("Lgamma");
-  m.add_functor<impl::LogFunctor>("Log");
-  m.add_functor<impl::Log1pFunctor>("Log1p");
-  m.add_functor<impl::LogSigmoidFunctor>("LogSigmoid");
-  m.add_functor<impl::NegativeFunctor>("Negative");
-  m.add_functor<impl::ReciprocalFunctor>("Reciprocal");
-  m.add_functor<impl::ReciprocalNoNanFunctor>("ReciprocalNoNan");
-  m.add_functor<impl::RintFunctor>("Rint");
-  m.add_functor<impl::RoundFunctor>("Round");
-  m.add_functor<impl::RsqrtFunctor>("Rsqrt");
-  m.add_functor<impl::SigmoidFunctor>("Sigmoid");
-  m.add_functor<impl::SignFunctor>("Sign");
-  m.add_functor<impl::SinFunctor>("Sin");
-  m.add_functor<impl::SinhFunctor>("Sinh");
-  m.add_functor<impl::SoftplusFunctor>("Softplus");
-  m.add_functor<impl::SqrtFunctor>("Sqrt");
-  m.add_functor<impl::SquareFunctor>("Square");
-  m.add_functor<impl::TanFunctor>("Tan");
-  m.add_functor<impl::TanhFunctor>("Tanh");
+  ADD_UNARY_FUNCTOR("Abs");
+  ADD_UNARY_FUNCTOR("Acos");
+  ADD_UNARY_FUNCTOR("Acosh");
+  ADD_UNARY_FUNCTOR("Asin");
+  ADD_UNARY_FUNCTOR("Asinh");
+  ADD_UNARY_FUNCTOR("Atan");
+  ADD_UNARY_FUNCTOR("Atanh");
+  ADD_UNARY_FUNCTOR("Ceil");
+  ADD_UNARY_FUNCTOR("Cos"); //
+  ADD_UNARY_FUNCTOR("Cosh"); //
+  ADD_UNARY_FUNCTOR("Erf");
+  ADD_UNARY_FUNCTOR("Erfc");
+  ADD_UNARY_FUNCTOR("Exp");
+  ADD_UNARY_FUNCTOR("Expm1");
+  ADD_UNARY_FUNCTOR("Floor");
+  ADD_UNARY_FUNCTOR("Lgamma");
+  ADD_UNARY_FUNCTOR("Log");
+  ADD_UNARY_FUNCTOR("Log1p");
+  ADD_UNARY_FUNCTOR("LogSigmoid");
+  ADD_UNARY_FUNCTOR("Negative");
+  ADD_UNARY_FUNCTOR("Reciprocal");
+  ADD_UNARY_FUNCTOR("ReciprocalNoNan");
+  ADD_UNARY_FUNCTOR("Rint");
+  ADD_UNARY_FUNCTOR("Round");
+  ADD_UNARY_FUNCTOR("Rsqrt");
+  ADD_UNARY_FUNCTOR("Sigmoid");
+  ADD_UNARY_FUNCTOR("Sign");
+  ADD_UNARY_FUNCTOR("Sin");
+  ADD_UNARY_FUNCTOR("Sinh");
+  ADD_UNARY_FUNCTOR("Softplus");
+  ADD_UNARY_FUNCTOR("Sqrt");
+  ADD_UNARY_FUNCTOR("Square");
+  ADD_UNARY_FUNCTOR("Tan");
+  ADD_UNARY_FUNCTOR("Tanh");
+  m.add_functor<LogicalNotFunctor>("LogicalNot");
   // inplace version of the functors above
   m.add_functor<impl::InplaceAbsFunctor>("Abs_");
   m.add_functor<impl::InplaceAcosFunctor>("Acos_");
@@ -197,6 +223,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::InplaceTanFunctor>("Tan_");
   m.add_functor<impl::InplaceTanhFunctor>("Tanh_");
 };
+
+#undef ADD_UNARY_FUNCTOR
 
 }  // namespace functional
 }  // namespace one

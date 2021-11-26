@@ -21,7 +21,7 @@ namespace oneflow {
 #define REGISTER_EXPAND_DIMS_KERNEL(D)                                                          \
   REGISTER_USER_KERNEL("expand_dims")                                                           \
       .SetCreateFn<CopyDataContentKernel<DeviceType::D>>()                                      \
-      .SetIsMatchedHob(user_op::HobDeviceTag() == DeviceType::D)                                \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::D)                               \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, false));                      \
@@ -30,7 +30,7 @@ namespace oneflow {
 
 REGISTER_EXPAND_DIMS_KERNEL(kCPU)
 #ifdef WITH_CUDA
-REGISTER_EXPAND_DIMS_KERNEL(kGPU)
+REGISTER_EXPAND_DIMS_KERNEL(kCUDA)
 #endif
 
 }  // namespace oneflow

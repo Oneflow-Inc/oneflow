@@ -40,6 +40,7 @@ class DimGatherKernel final : public user_op::OpKernel {
  private:
   void Compute(KernelComputeContext* ctx) const override {
     const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input", 0);
+    if (input_tensor->shape().elem_cnt() == 0) { return; }
     const Tensor* index_tensor = ctx->Tensor4ArgNameAndIndex("index", 0);
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("output", 0);
     const int32_t dim = ctx->Attr<int32_t>("dim");
@@ -59,9 +60,9 @@ class DimGatherKernel final : public user_op::OpKernel {
     shape2dims(index_tensor->shape());
     DimOpIndexNdHelper<IDX_T> index_nd_helper(shape_vec.data(), ndim);
 
-    DimGatherFunctor<device_type, IN_T, IDX_T>()(
-        ctx->device_ctx(), input_nd_helper, index_nd_helper, ndim, index_tensor->shape().elem_cnt(),
-        dim, index, input, output);
+    DimGatherFunctor<device_type, IN_T, IDX_T>()(ctx->stream(), input_nd_helper, index_nd_helper,
+                                                 ndim, index_tensor->shape().elem_cnt(), dim, index,
+                                                 input, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -70,9 +71,9 @@ class DimGatherKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("dim_gather")                                                             \
       .SetCreateFn<                                                                              \
           DimGatherKernel<device, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
-                       & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair))     \
-                       & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
+                       && (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair))    \
+                       && (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIM_GATHER_KERNEL, (DeviceType::kCPU),
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
@@ -80,7 +81,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIM_GATHER_KERNEL, (DeviceType::kCPU),
 
 #ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-    REGISTER_DIM_GATHER_KERNEL, (DeviceType::kGPU),
+    REGISTER_DIM_GATHER_KERNEL, (DeviceType::kCUDA),
     ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 #endif  // WITH_CUDA
 

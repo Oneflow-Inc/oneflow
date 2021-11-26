@@ -39,7 +39,7 @@ class IndexedSlicesReduceSumKernel final : public user_op::OpKernel {
     const int64_t n = x_indices->shape().elem_cnt();
     const int64_t m = x_values->shape().elem_cnt() / n;
     IndexedSlicesReduceSumKernelUtil<device_type, K, T, int64_t>::ReduceSum(
-        ctx->device_ctx(), n, m, x_indices->dptr<K>(), x_values->dptr<T>(),
+        ctx->stream(), n, m, x_indices->dptr<K>(), x_values->dptr<T>(),
         num_unique->mut_dptr<int64_t>(), y_indices->mut_dptr<K>(), y_values->mut_dptr<T>(), tmp_ptr,
         tmp_size);
   }
@@ -66,9 +66,9 @@ user_op::InferTmpSizeFn GenInferTmpSizeFn() {
       .SetCreateFn<IndexedSlicesReduceSumKernel<device_type_v, OF_PP_PAIR_FIRST(data_type_pair), \
                                                 OF_PP_PAIR_FIRST(indices_type_pair)>>()          \
       .SetIsMatchedHob(                                                                          \
-          (user_op::HobDeviceTag() == ToString(device_type_v))                                   \
-          & (user_op::HobDataType("x_values", 0) == OF_PP_PAIR_SECOND(data_type_pair))           \
-          & (user_op::HobDataType("x_indices", 0) == OF_PP_PAIR_SECOND(indices_type_pair)))      \
+          (user_op::HobDeviceType() == device_type_v)                                            \
+          && (user_op::HobDataType("x_values", 0) == OF_PP_PAIR_SECOND(data_type_pair))          \
+          && (user_op::HobDataType("x_indices", 0) == OF_PP_PAIR_SECOND(indices_type_pair)))     \
       .SetInferTmpSizeFn(GenInferTmpSizeFn<device_type_v, OF_PP_PAIR_FIRST(data_type_pair),      \
                                            OF_PP_PAIR_FIRST(indices_type_pair)>());
 

@@ -33,25 +33,27 @@ namespace intrusive {
 
 // details
 
-#define _INTRUSIVE_FOR_EACH(container_type, elem, container)                              \
-  for (intrusive::shared_ptr<typename container_type::value_type> elem,                   \
-       *end_if_not_null = nullptr;                                                        \
-       end_if_not_null == nullptr; end_if_not_null = nullptr, ++end_if_not_null)          \
-  LIST_HOOK_FOR_EACH_WITH_EXPR(                                                           \
-      (StructField<typename container_type, intrusive::ListHook,                          \
-                   container_type::IteratorHookOffset()>::FieldPtr4StructPtr(container)), \
+#define _INTRUSIVE_FOR_EACH(container_type, elem, container)                     \
+  for (intrusive::shared_ptr<typename container_type::value_type> elem,          \
+       *end_if_not_null = nullptr;                                               \
+       end_if_not_null == nullptr; end_if_not_null = nullptr, ++end_if_not_null) \
+  LIST_HOOK_FOR_EACH_WITH_EXPR(                                                  \
+      (intrusive::OffsetStructField<                                             \
+          typename container_type, intrusive::ListHook,                          \
+          container_type::IteratorHookOffset()>::FieldPtr4StructPtr(container)), \
       container_type::iterator_struct_field, elem_ptr, (elem.Reset(elem_ptr), true))
 
-#define _INTRUSIVE_FOR_EACH_PTR(container_type, elem, container)                          \
-  LIST_HOOK_FOR_EACH(                                                                     \
-      (StructField<typename container_type, intrusive::ListHook,                          \
-                   container_type::IteratorHookOffset()>::FieldPtr4StructPtr(container)), \
-      container_type::iterator_struct_field, elem)
+#define _INTRUSIVE_FOR_EACH_PTR(container_type, elem, container)                                \
+  LIST_HOOK_FOR_EACH((intrusive::OffsetStructField<                                             \
+                         typename container_type, intrusive::ListHook,                          \
+                         container_type::IteratorHookOffset()>::FieldPtr4StructPtr(container)), \
+                     container_type::iterator_struct_field, elem)
 
-#define _INTRUSIVE_UNSAFE_FOR_EACH_PTR(container_type, elem, container)                   \
-  LIST_HOOK_UNSAFE_FOR_EACH(                                                              \
-      (StructField<typename container_type, intrusive::ListHook,                          \
-                   container_type::IteratorHookOffset()>::FieldPtr4StructPtr(container)), \
+#define _INTRUSIVE_UNSAFE_FOR_EACH_PTR(container_type, elem, container)          \
+  LIST_HOOK_UNSAFE_FOR_EACH(                                                     \
+      (intrusive::OffsetStructField<                                             \
+          typename container_type, intrusive::ListHook,                          \
+          container_type::IteratorHookOffset()>::FieldPtr4StructPtr(container)), \
       container_type::iterator_struct_field, elem)
 
 }  // namespace intrusive
