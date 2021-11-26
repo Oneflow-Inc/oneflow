@@ -422,9 +422,9 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
     if (!size_attr) return failure();
     auto segment_sizes = size_attr.getValues<int32_t>();
     if (full_keys.size() != segment_sizes.size()) {
-      op->emitError() << "fail to convert op inputs, keys != sizes, attr_name: " << attr_name
-                      << ", keys: " << keys.size() << ", sizes: " << segment_sizes.size()
-                      << ", name: " << op->getName();
+      op->emitError() << "fail to convert op inputs, attr_name: " << attr_name
+                      << ", full_keys: " << full_keys.size()
+                      << ", segment_sizes: " << segment_sizes.size() << ", name: " << op->getName();
       op->dump();
       return failure();
     };
