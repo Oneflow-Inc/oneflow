@@ -25,8 +25,6 @@ namespace oneflow {
 namespace ep {
 namespace primitive {
 
-namespace {
-
 template<typename T, int N>
 struct GetPackType {
   using type = typename std::aligned_storage<N * sizeof(T), N * sizeof(T)>::type;
@@ -164,7 +162,7 @@ void LaunchWithSimplified(Stream* stream, size_t src0_pack_size, size_t src1_pac
 constexpr size_t kMaxPackSize = 4;
 constexpr size_t kMaxNumDims = 8;
 
-void SimplifyDims(size_t num_src0_dims, const int64_t* src0_dims, size_t num_src1_dims,
+inline void SimplifyDims(size_t num_src0_dims, const int64_t* src0_dims, size_t num_src1_dims,
                   const int64_t* src1_dims, size_t* simplified_num_dims,
                   int64_t* simplified_src0_dims, int64_t* simplified_src1_dims) {
   const size_t num_max_dims = std::max(num_src0_dims, num_src1_dims);
@@ -266,13 +264,12 @@ void SimplifyThenLaunch(Stream* stream, size_t num_src0_dims, const int64_t* src
                                  simplified_dst_dims, dst);
 }
 
-size_t GetElementCount(size_t num_dims, const int64_t* dims) {
+inline size_t GetElementCount(size_t num_dims, const int64_t* dims) {
   size_t count = 1;
   for (size_t i = 0; i < num_dims; ++i) { count *= dims[i]; }
   return count;
 }
 
-}  // namespace
 
 #define BINARY_MATH_OP_SEQ             \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAdd) \
