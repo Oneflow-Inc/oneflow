@@ -26,6 +26,9 @@ namespace oneflow {
 
 namespace maybe {
 
+// in this file, xxxS represents struct of xxx
+// for implementant aspect, xxx is an alias of xxxS::type or xxxS::value
+
 template<bool B>
 using BoolConstant = std::integral_constant<bool, B>;
 
@@ -35,116 +38,108 @@ using IndexConstant = std::integral_constant<std::size_t, I>;
 constexpr std::size_t NPos = -1;
 
 template<typename...>
-struct ConjT : std::true_type {};
+struct ConjS : std::true_type {};
 template<typename B1>
-struct ConjT<B1> : B1 {};
+struct ConjS<B1> : B1 {};
 template<typename B1, typename... Bn>
-struct ConjT<B1, Bn...> : std::conditional_t<bool(B1::value), ConjT<Bn...>, B1> {};
+struct ConjS<B1, Bn...> : std::conditional_t<bool(B1::value), ConjS<Bn...>, B1> {};
 
 template<typename... B>
-constexpr bool Conj = ConjT<B...>::value;
+constexpr bool Conj = ConjS<B...>::value;
 
 template<typename...>
-struct DisjT : std::false_type {};
+struct DisjS : std::false_type {};
 template<typename B1>
-struct DisjT<B1> : B1 {};
+struct DisjS<B1> : B1 {};
 template<typename B1, typename... Bn>
-struct DisjT<B1, Bn...> : std::conditional_t<bool(B1::value), B1, DisjT<Bn...>> {};
+struct DisjS<B1, Bn...> : std::conditional_t<bool(B1::value), B1, DisjS<Bn...>> {};
 
 template<typename... B>
-constexpr bool Disj = DisjT<B...>::value;
+constexpr bool Disj = DisjS<B...>::value;
 
 template<typename B>
-struct NegT : BoolConstant<!bool(B::value)> {};
+struct NegS : BoolConstant<!bool(B::value)> {};
 
 template<typename B>
-constexpr bool Neg = NegT<B>::value;
+constexpr bool Neg = NegS<B>::value;
 
 struct TypeNotFound;
 
 // return TypeNotFound while out of range
 template<std::size_t I, typename... Tn>
-struct TypeGetT;
+struct TypeGetS;
 
 template<std::size_t I, typename T1, typename... Tn>
-struct TypeGetT<I, T1, Tn...> : TypeGetT<I - 1, Tn...> {};
+struct TypeGetS<I, T1, Tn...> : TypeGetS<I - 1, Tn...> {};
 
 template<typename T1, typename... Tn>
-struct TypeGetT<0, T1, Tn...> {
+struct TypeGetS<0, T1, Tn...> {
   using type = T1;
 };
 
 template<std::size_t N>
-struct TypeGetT<N> {
+struct TypeGetS<N> {
   using type = TypeNotFound;
 };
 
 template<std::size_t I, typename... Ts>
-using TypeGet = typename TypeGetT<I, Ts...>::type;
+using TypeGet = typename TypeGetS<I, Ts...>::type;
 
 // return NPos (-1) while not found
 template<std::size_t I, typename T, typename... Tn>
-struct IndexGetT;
+struct IndexGetFromS;
 
 template<std::size_t I, typename T, typename T1, typename... Tn>
-struct IndexGetT<I, T, T1, Tn...> : IndexGetT<I + 1, T, Tn...> {};
+struct IndexGetFromS<I, T, T1, Tn...> : IndexGetFromS<I + 1, T, Tn...> {};
 
 template<std::size_t I, typename T1, typename... Tn>
-struct IndexGetT<I, T1, T1, Tn...> : IndexConstant<I> {};
+struct IndexGetFromS<I, T1, T1, Tn...> : IndexConstant<I> {};
 
 template<std::size_t I, typename T>
-struct IndexGetT<I, T> : IndexConstant<NPos> {};
+struct IndexGetFromS<I, T> : IndexConstant<NPos> {};
 
 template<typename T, typename... Ts>
-constexpr auto IndexGet = IndexGetT<0, T, Ts...>::value;
+constexpr auto IndexGet = IndexGetFromS<0, T, Ts...>::value;
 
 template<typename T, typename... Ts>
 constexpr auto TypeIn = IndexGet<T, Ts...> != NPos;
 
 template<typename T, typename... Ts>
-using TypeInT = BoolConstant<TypeIn<T, Ts...>>;
+using TypeInS = BoolConstant<TypeIn<T, Ts...>>;
 
 template<typename T>
-struct RemoveCVRefT {
+struct RemoveCVRefS {
   using type = std::remove_cv_t<std::remove_reference_t<T>>;
 };
 
 template<typename T>
-using RemoveCVRef = typename RemoveCVRefT<T>::type;
+using RemoveCVRef = typename RemoveCVRefS<T>::type;
 
 template<typename T, typename... Ts>
-struct IsDifferentTypesT : BoolConstant<!TypeIn<T, Ts...> && IsDifferentTypesT<Ts...>::value> {};
+struct IsDifferentTypesS : BoolConstant<!TypeIn<T, Ts...> && IsDifferentTypesS<Ts...>::value> {};
 
 template<typename T>
-struct IsDifferentTypesT<T> : std::true_type {};
+struct IsDifferentTypesS<T> : std::true_type {};
 
 template<typename T, typename... Ts>
-constexpr auto IsDifferentTypes = IsDifferentTypesT<T, Ts...>::value;
+constexpr auto IsDifferentTypes = IsDifferentTypesS<T, Ts...>::value;
 
 template<typename T>
-struct ConstRefExceptVoidT {
+struct ConstRefExceptVoidS {
   using type = const T&;
 };
 
 template<>
-struct ConstRefExceptVoidT<void> {
+struct ConstRefExceptVoidS<void> {
   using type = void;
 };
 
 template<typename T>
-using ConstRefExceptVoid = typename ConstRefExceptVoidT<T>::type;
+using ConstRefExceptVoid = typename ConstRefExceptVoidS<T>::type;
 
 template<typename T>
 using RemoveRValRef =
     std::conditional_t<std::is_rvalue_reference<T>::value, std::remove_reference_t<T>, T>;
-
-template<typename T, typename... U>
-struct DependentNameT {
-  using type = T;
-};
-
-template<typename T, typename... U>
-using DependentName = typename DependentNameT<T, U...>::type;
 
 }  // namespace maybe
 

@@ -133,8 +133,8 @@ template<typename... Ts>
 struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
  public:
   static_assert(sizeof...(Ts) > 1, "expected more than two types");
-  static_assert(Conj<NegT<std::is_reference<Ts>>...>, "reference types are not allowed here");
-  static_assert(Conj<NegT<DisjT<std::is_const<Ts>, std::is_volatile<Ts>>>...>,
+  static_assert(Conj<NegS<std::is_reference<Ts>>...>, "reference types are not allowed here");
+  static_assert(Conj<NegS<DisjS<std::is_const<Ts>, std::is_volatile<Ts>>>...>,
                 "cv qualifiers are not allowed here");
   // important precondition to optimize Visit via binary search
   static_assert(IsDifferentTypes<Ts...>, "expected all of different types");
