@@ -547,12 +547,15 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
                                                 oneflow::UserOpAdaptor& user_op_adaptor,
                                                 ::oneflow::OperatorConf& op_conf) {
   auto user_conf = op_conf.mutable_user_conf();
-  std::string op_type_name = op->getName().getStringRef().str();
-  if (auto op_type_name_ = op->getAttrOfType<StringAttr>("op_type_name")) {
+  std::string op_type_name = op->getName().stripDialect().str();
+  if (op->hasAttrOfType<StringAttr>("op_type_name")) {
+    auto op_type_name_ = op->getAttrOfType<StringAttr>("op_type_name");
+    assert(op_type_name_.size());
     op_type_name = op_type_name_.getValue().str();
   } else if (op_type_name == "add_n2") {
     op_type_name = "add_n";
   }
+  op_conf.mutable_user_conf()->set_op_type_name(op_type_name);
   for (auto id_attr : op->getAttrDictionary()) {
     auto id = id_attr.first;
     // mlir only attrs
