@@ -123,6 +123,29 @@ __device__ Pack2Type<nv_bfloat16> Make2<nv_bfloat16>(float v) {
 #define RETURN_VOID_IF_DOUBLE typename std::enable_if_t<std::is_same<T, double>::value, void>
 
 template<typename T, int pack_size, bool tail>
+__global__ RETURN_VOID_IF_HALF PReluForwardMultiAlphaGpu(
+    const int32_t elem_cnt, const int32_t alpha_size, const int32_t inner_size,
+    const int64_t n_tail, const T* x, const T* alpha, T* y, const T* tail_x, T* tail_y) {
+  int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
+  for (int64_t linear_index = global_thread_id; linear_index < elem_cnt;
+       linear_index += gridDim.x * blockDim.x) {
+    const T* x_load = x + linear_index;
+    T* y_load = y + linear_index;
+    y_load[0] = x_load[0] > static_cast<T>(0.0)
+                    ? x_load[0]
+                    : __hmul(x_load[0], alpha[(linear_index / inner_size) % alpha_size]);
+  }
+
+  if (tail && global_thread_id < n_tail) {
+    const T* x_load = x + global_thread_id;
+    T* y_load = y + global_thread_id;
+    y_load[0] = x_load[0] > static_cast<T>(0.0)
+                    ? x_load[0]
+                    : __hmul(x_load[0], alpha[(global_thread_id / inner_size) % alpha_size]);
+  }
+}
+
+template<typename T, int pack_size, bool tail>
 __global__ RETURN_VOID_IF_DOUBLE PReluForwardMultiAlphaGpu(
     const int32_t elem_cnt, const int32_t alpha_size, const int32_t inner_size,
     const int64_t n_tail, const T* x, const T* alpha, T* y, const T* tail_x, T* tail_y) {
@@ -185,6 +208,40 @@ __global__ RETURN_VOID_IF_FLOAT PReluForwardMultiAlphaGpu(
     tail_y[global_thread_id] =
         tail_x_val > 0 ? tail_x_val
                        : tail_x_val * alpha[(global_thread_id / inner_size) % alpha_size];
+  }
+}
+
+template<typename T, int pack_size, bool tail>
+__global__ RETURN_VOID_IF_HALF PReluBackwardMultiAlphaGpu(
+    const int32_t elem_cnt, const int32_t alpha_size, const int32_t inner_size,
+    const int32_t n_tail, const T* x, const T* alpha, const T* dy, T* dx, T* alpha_diff,
+    const T* tail_x, const T* tail_dy, T* tail_dx) {
+  int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
+
+  for (int64_t linear_index = global_thread_id; linear_index < elem_cnt;
+       linear_index += gridDim.x * blockDim.x) {
+    const T* x_load = x + linear_index;
+    const T* dy_load = dy + linear_index;
+    T* dx_load = dx + linear_index;
+    dx_load[0] = x_load[0] > static_cast<T>(0.0)
+                     ? dy_load[0]
+                     : __hmul(dy_load[0], alpha[(linear_index / inner_size) % alpha_size]);
+    alpha_diff[(linear_index / inner_size) % alpha_size] = __hadd(
+        alpha_diff[(linear_index / inner_size) % alpha_size],
+        x_load[0] > static_cast<T>(0.0) ? static_cast<T>(0.0) : __hmul(dy_load[0], x_load[0]));
+  }
+
+  if (tail && global_thread_id < n_tail) {
+    const T* x_load = x + global_thread_id;
+    const T* dy_load = dy + global_thread_id;
+    T* dx_load = dx + global_thread_id;
+    T* alpha_diff_load = alpha_diff + global_thread_id;
+    dx_load[0] = x_load[0] > static_cast<T>(0.0)
+                     ? dy_load[0]
+                     : __hmul(dy_load[0], alpha[(global_thread_id / inner_size) % alpha_size]);
+    alpha_diff_load[0] =
+        __hadd(alpha_diff_load[0], x_load[0] > static_cast<T>(0.0) ? static_cast<T>(0.0)
+                                                                   : __hmul(dy_load[0], x_load[0]));
   }
 }
 
@@ -355,6 +412,25 @@ __global__ void PReluBackwardSingleAlphaGpu(const int32_t elem_cnt, const T* x, 
   }
 }
 
+template<>
+__global__ void PReluForwardSingleAlphaGpu<half>(const int32_t elem_cnt, const half* x,
+                                                 const half* alpha, half* y) {
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
+    y[i] = x[i] > static_cast<half>(0.0) ? x[i] : __hmul(x[i], alpha[0]);
+  }
+}
+
+template<>
+__global__ void PReluBackwardSingleAlphaGpu<half>(const int32_t elem_cnt, const half* x,
+                                                  const half* alpha, const half* dy, half* dx,
+                                                  half* alpha_diff) {
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
+    dx[i] = x[i] > static_cast<half>(0.0) ? dy[i] : __hmul(dy[i], alpha[0]);
+    alpha_diff[0] = __hadd(alpha_diff[0], x[i] > static_cast<half>(0.0) ? static_cast<half>(0.0)
+                                                                        : __hmul(dy[i], x[i]));
+  }
+}
+
 }  // namespace
 
 template<typename T>
@@ -394,6 +470,7 @@ class GpuPReluKernel final : public user_op::OpKernel {
 
 REGISTER_GPU_PRELU_KERNEL(float)
 REGISTER_GPU_PRELU_KERNEL(double)
+REGISTER_GPU_PRELU_KERNEL(half)
 
 template<typename T>
 class GpuPReluGradKernel final : public user_op::OpKernel {
@@ -444,5 +521,6 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
 
 REGISTER_GPU_PRELU_GRAD_KERNEL(float)
 REGISTER_GPU_PRELU_GRAD_KERNEL(double)
+REGISTER_GPU_PRELU_GRAD_KERNEL(half)
 
 }  // namespace oneflow
