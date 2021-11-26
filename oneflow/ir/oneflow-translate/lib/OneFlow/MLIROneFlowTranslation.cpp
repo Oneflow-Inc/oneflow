@@ -317,21 +317,7 @@ LogicalResult JobImporter::TryToUpdateJob() {
   new_job.clear_net();
   new_job.mutable_placement()->clear_placement_group();
   auto convertOps = [&](Operation* op) {
-    if (llvm::dyn_cast<oneflow::UserOp>(op)) {
-      oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
-      UpdatePlacement(op, user_op_adaptor, new_job);
-      ::oneflow::OperatorConf op_conf;
-      const std::string op_name = user_op_adaptor.op_name().getValue().str();
-      auto user_conf = op_conf.mutable_user_conf();
-      if (succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))
-          && succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))
-          && succeeded(ConvertUserOpAttributes(op, user_op_adaptor, op_conf))
-          && succeeded(ConvertCtrlInputs(op, op_conf))) {
-        *(new_job.mutable_net()->add_op()) = op_conf;
-      } else {
-        return WalkResult::interrupt();
-      }
-    } else if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
+    if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
       oneflow::SystemOpAdaptor system_op_adaptor(op->getOperands(), op->getAttrDictionary());
       UpdatePlacement(op, system_op_adaptor, new_job);
       auto op_name = system_op_adaptor.op_name().getValue().str();
@@ -356,8 +342,19 @@ LogicalResult JobImporter::TryToUpdateJob() {
                || llvm::dyn_cast<ModuleOp>(op)) {
       return WalkResult::advance();
     } else {
-      op->emitError("failed to convert op: " + op->getName().getStringRef().str()) << "\n" << *op;
-      return WalkResult::interrupt();
+      oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
+      UpdatePlacement(op, user_op_adaptor, new_job);
+      ::oneflow::OperatorConf op_conf;
+      const std::string op_name = user_op_adaptor.op_name().getValue().str();
+      auto user_conf = op_conf.mutable_user_conf();
+      if (succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))
+          && succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))
+          && succeeded(ConvertUserOpAttributes(op, user_op_adaptor, op_conf))
+          && succeeded(ConvertCtrlInputs(op, op_conf))) {
+        *(new_job.mutable_net()->add_op()) = op_conf;
+      } else {
+        return WalkResult::interrupt();
+      }
     } /* convert op conf */
     return WalkResult::advance();
   };
