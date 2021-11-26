@@ -16,7 +16,6 @@ limitations under the License.
 
 import unittest
 import numpy as np
-import random
 import oneflow as flow
 import oneflow.unittest
 from collections import OrderedDict
