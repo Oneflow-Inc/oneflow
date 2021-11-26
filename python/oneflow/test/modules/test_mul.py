@@ -140,14 +140,13 @@ def inplace_mul_tensors_helper(test_case, device, arr_0, arr_y):
     test_case.assertTrue(
         np.allclose(arr_y, of_x.grad.numpy(), 1e-05, 1e-05)
     )
-    #print(arr_0 + 1)
     print(of_y.grad.numpy())
     test_case.assertTrue(
         np.allclose(arr_0+1, of_y.grad.numpy(), 1e-05, 1e-05)
     )
 
 
-def test_inplace_mul_tensors(test_case, device):
+def _test_inplace_mul_tensors(test_case, device):
     arr_0 = np.random.rand(3, 5)
     arr_y = np.random.rand(3, 5)
     inplace_mul_tensors_helper(test_case, device, arr_0, arr_y)
@@ -160,7 +159,7 @@ def test_inplace_mul_tensors(test_case, device):
     inplace_mul_tensors_helper(test_case, device, arr_0, arr_y)
 
 
-def test_inplace_mul_scalar(test_case, device):
+def _test_inplace_mul_scalar(test_case, device):
     arr = np.random.rand(2, 3, 4)
     of_x = flow.tensor(
         arr, flow.float32, device=flow.device(device), requires_grad=True
@@ -194,8 +193,8 @@ class TestMulModule(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_mul_impl,
-            test_inplace_mul_tensors,
-            test_inplace_mul_scalar,
+            _test_inplace_mul_tensors,
+            _test_inplace_mul_scalar,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
