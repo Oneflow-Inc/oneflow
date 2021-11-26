@@ -43,7 +43,7 @@ def test_xrt_openvino(test_case, graph, input, ref_out, rtol=1e-3, atol=1e-4):
     if not flow.sysconfig.with_openvino():
         return
 
-    graph.config.enable_xrt_use_openvino(True)
+    graph.config.enable_openvino(True)
     if len(input) == 1:
         out = graph(input)
     else:
@@ -68,7 +68,7 @@ def test_xrt_tensorrt(test_case, graph, input, ref_out, rtol=1e-3, atol=1e-4):
     if not flow.sysconfig.with_tensorrt():
         return
 
-    graph.config.enable_xrt_use_tensorrt(True)
+    graph.config.enable_tensorrt(True)
     if len(input) == 1:
         out = graph(input)
     else:
@@ -93,7 +93,7 @@ def test_xrt_xla(test_case, graph, input, ref_out, rtol=1e-3, atol=1e-4):
     if not flow.sysconfig.with_xla():
         return
 
-    graph.config.enable_xrt_use_xla_jit(True)
+    graph.config.enable_xla_jit(True)
     if len(input) == 1:
         out = graph(input)
     else:

@@ -110,7 +110,7 @@ class GraphConfig(object):
         assert mode in ("distributed_split", "non_distributed")
         self.proto.set_optimizer_placement_optimization_mode(mode)
 
-    def enable_xrt_use_xla_jit(self, value=True):
+    def enable_xla_jit(self, value=True):
         """Whether use xla_jit in xrt or not. When this option enable, oneflow will check all operators is supported by 
            xla_jit or not. Clustering supported operators as subgraph, then runing subgraph by xla_jit.
 
@@ -121,7 +121,7 @@ class GraphConfig(object):
         """
         self.proto.mutable_xrt_config().set_use_xla_jit(value)
 
-    def enable_xrt_use_tensorrt(self, value=True):
+    def enable_tensorrt(self, value=True):
         """Whether use tensorrt in xrt or not. When this option enable, oneflow will check all operators is supported by 
            tensorrt or not. Clustering supported operators as subgraph, then runing subgraph by tensorrt.
 
@@ -132,7 +132,7 @@ class GraphConfig(object):
         """
         self.proto.mutable_xrt_config().set_use_tensorrt(value)
 
-    def enable_xrt_use_openvino(self, value=True):
+    def enable_openvino(self, value=True):
         """Whether use openvino in xrt or not. When this option enable, oneflow will check all operators is supported by 
            openvino or not. Clustering supported operators as subgraph, then runing subgraph by openvino.
 
