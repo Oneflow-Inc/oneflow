@@ -417,7 +417,7 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
   if (op->hasTrait<Trait>()) {
     const StringRef attr_name = GetSegmentSizeAttr<Trait>();
     const DenseIntElementsAttr& size_attr = op->getAttrOfType<DenseIntElementsAttr>(attr_name);
-    if (size_attr) return failure();
+    if (!size_attr) return failure();
     auto sizes_ = size_attr.getValues<int32_t>();
     if (keys.size() != sizes_.size()) {
       op->emitError() << "fail to convert op inputs, keys != sizes, name: " << op->getName();
