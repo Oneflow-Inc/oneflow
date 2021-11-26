@@ -70,7 +70,9 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
-    for (size_t i = 0; i < NDims; ++i) { weight_shape.at(idx_offset + i) = kernel_size.at(i); }
+    for (size_t i = 0; i < NDims; ++i) { 
+      weight_shape.at(idx_offset + i) = kernel_size.at(i);
+    }
 
     const user_op::TensorDesc& weight = ctx->InputTensorDesc("weight", 0);
     CHECK_EQ_OR_RETURN(weight.shape(), Shape(weight_shape));

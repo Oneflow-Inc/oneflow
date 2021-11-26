@@ -125,6 +125,8 @@ from oneflow.nn.modules.pooling import (
     AdaptiveAvgPool1d,
     AdaptiveAvgPool2d,
     AdaptiveAvgPool3d,
+    LegacyMaxPool2d,
+    LegacyAvgPool2d
 )
 from oneflow.nn.modules.sparse import Embedding
 from oneflow.nn.modules.upsampling import (

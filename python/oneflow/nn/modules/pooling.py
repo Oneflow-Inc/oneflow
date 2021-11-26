@@ -121,6 +121,218 @@ class MaxPool1d(Module):
             self.kernel_size, self.stride, self.padding
         )
 
+def get_dhw_offset(channel_pos):
+    if channel_pos == "channels_first":
+        return 2
+    else:
+        return 1
+
+def get_ndim_pads_list(padding, dhw_offset, ndims):
+    pads_list = []
+    for i in range(len(padding)):
+        pad = padding[i]
+        if isinstance(pad, int):
+            pad = [pad, pad]
+        elif isinstance(pad, (list, tuple)):
+            assert len(pad) == 2
+            pad = [pad[0], pad[1]]
+        else:
+            raise ValueError("padding must be list tuple or int")
+        if i in range(dhw_offset, dhw_offset + ndims):
+            pads_list.append(pad)
+        else:
+            assert pad == [0, 0]
+    return pads_list
+
+def calc_pool_padding(padding, dhw_offset, ndims):
+    if isinstance(padding, str):
+        padding = "SAME_LOWER" if padding.upper() == "SAME" else padding
+        assert padding.upper() in ["VALID", "SAME_LOWER", "SAME_UPPER"]
+        padding_type = padding.lower()
+        ndim_pads_list = [[0, 0]] * ndims
+    elif isinstance(padding, (list, tuple)):
+        padding_type = "customized"
+        ndim_pads_list = get_ndim_pads_list(padding, dhw_offset, ndims)
+    else:
+        raise ValueError("padding must be str or a list.")
+    return (padding_type, ndim_pads_list)
+
+
+class LegacyMaxPool2d(Module):
+    r"""Applies a 2D max pooling over an input signal composed of several input planes.
+    In the simplest case, the output value of the layer with input size :math:`(N, C, H, W)`,
+    output :math:`(N, C, H_{out}, W_{out})` and :attr:`kernel_size` :math:`(kH, kW)`
+    can be precisely described as:
+    .. math::
+        \begin{aligned}
+            out(N_i, C_j, h, w) ={} & \max_{m=0, \ldots, kH-1} \max_{n=0, \ldots, kW-1} \\
+                                    & \text{input}(N_i, C_j, \text{stride[0]} \times h + m,
+                                                   \text{stride[1]} \times w + n)
+        \end{aligned}
+    If :attr:`padding` is non-zero, then the input is implicitly minimum value padded on both sides
+    for :attr:`padding` number of points. :attr:`dilation` controls the spacing between the kernel points.
+    It is harder to describe, but this `link`_ has a nice visualization of what :attr:`dilation` does.
+
+    Note:
+        When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
+        or the input. Sliding windows that would start in the right padded region are ignored.
+    The parameters :attr:`kernel_size`, :attr:`stride`, :attr:`padding`, :attr:`dilation` can either be:
+        - a single ``int`` -- in which case the same value is used for the height and width dimension
+        - a ``tuple`` of two ints -- in which case, the first `int` is used for the height dimension,
+          and the second `int` for the width dimension
+    Args:
+        kernel_size: the size of the window to take a max over
+        stride: the stride of the window. Default value is :attr:`kernel_size`
+        padding: implicit minimum value padding to be added on both sides
+        ceil_mode: when True, will use `ceil` instead of `floor` to compute the output shape
+        data_format (str, optional): '`NHWC'`, '`NCHW'`. Defaults to "NCHW".
+    
+    Shape:
+        - Input: :math:`(N, C, H_{in}, W_{in})`
+        - Output: :math:`(N, C, H_{out}, W_{out})`, where
+          .. math::
+              H_{out} = \left\lfloor\frac{H_{in} + 2 * \text{padding[0]} - \text{dilation[0]}
+                    \times (\text{kernel\_size[0]} - 1) - 1}{\text{stride[0]}} + 1\right\rfloor
+          .. math::
+              W_{out} = \left\lfloor\frac{W_{in} + 2 * \text{padding[1]} - \text{dilation[1]}
+                    \times (\text{kernel\_size[1]} - 1) - 1}{\text{stride[1]}} + 1\right\rfloor
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> kernel_size, stride, padding = (4, 4), (1, 1), (1, 2)
+        >>> m = flow.nn.LagacyMaxPool2d(kernel_size, stride, padding)
+        >>> x = flow.Tensor(np.random.rand(6, 4, 7, 9))
+        >>> y = m(x)
+    """
+    def __init__(
+        self,
+        kernel_size: _size_2_t,
+        stride: Optional[_size_2_t] = None,
+        padding: _size_2_t = 0,
+        ceil_mode: bool = False,
+        data_format: Optional[str] = "NCHW"
+    ):
+        super().__init__()
+        self.ceil_mode = ceil_mode
+        self.kernel_size = _pair(kernel_size)
+        self.strides = _pair(stride) if (stride is not None) else kernel_size
+        self.channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
+
+        padding = _pair(padding)
+        if len(padding) == 2:
+            if data_format == "NCHW":
+                padding = (0, 0, padding[0], padding[1])
+            elif data_format == "NHWC":
+                padding = (0, padding[0], padding[1], 0)
+            else:
+                raise ValueError("error padding param!")
+        
+        self.padding_type, pads_list = calc_pool_padding(
+            padding, get_dhw_offset(self.channel_pos), 2
+        )
+        self.padding_before = [pad[0] for pad in pads_list]
+        self.padding_after = [pad[1] for pad in pads_list]
+
+    def forward(self, x):
+        return flow._C.max_pool_2d(
+            x,
+            kernel_size=self.kernel_size,
+            stride=self.strides,
+            padding=self.padding_type,
+            padding_before=self.padding_before,
+            padding_after=self.padding_after,
+            data_format=self.channel_pos,
+            ceil_mode=self.ceil_mode
+        )
+
+
+class LegacyAvgPool2d(Module):
+    r"""Performs the 2d-average pooling on the input.
+    In the simplest case, the output value of the layer with input size :math:`(N, C, H, W)`,
+    output :math:`(N, C, H_{out}, W_{out})` and `kernel_size` :math:`(kH, kW)`
+    can be precisely described as:
+
+    .. math::
+        out(N_i, C_j, h, w)  = \frac{1}{kH * kW} \sum_{m=0}^{kH-1} \sum_{n=0}^{kW-1}
+                               input(N_i, C_j, stride[0] \times h + m, stride[1] \times w + n)
+
+    Args:
+        kernel_size (Union[int, Tuple[int, int]]):  An int or list of ints that has length 1, 2. The size of the window for each dimension of the input Tensor.
+        strides (Union[int, Tuple[int, int]]): An int or list of ints that has length 1, 2. The stride of the sliding window for each dimension of the input Tensor.
+        padding (Tuple[int, int]): An int or list of ints that has length 1, 2. Implicit zero padding to be added on both sides.
+        ceil_mode (bool, default to False): When True, will use ceil instead of floor to compute the output shape.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> m = flow.nn.LegacyAvgPool2d(
+        ...     kernel_size=(3, 2),
+        ...     padding=0,
+        ...     stride=(2, 1),
+        ... )
+        >>> x = flow.Tensor(shape=(1, 1, 10, 10))
+        >>> y = m(x)   
+        
+    """
+
+    def __init__(
+        self,
+        kernel_size: _size_2_t,
+        stride: Optional[_size_2_t] = None,
+        padding: _size_2_t = 0,
+        ceil_mode: bool = False,
+        count_include_pad: Optional[bool] = None,
+        divisor_override: Optional[int] = None,
+        name: Optional[str] = None,
+        data_format: Optional[str] = "NCHW",
+    ):
+        super().__init__()
+        self.kernel_size = _pair(kernel_size)
+        self.stride = _pair(stride) if (stride is not None) else kernel_size
+
+        assert isinstance(padding, int) or isinstance(
+            padding, tuple
+        ), "padding can only int int or tuple of 2 ints."
+        padding = _pair(padding)
+        if len(padding) == 2:
+            if data_format == "NCHW":
+                padding = (0, 0, padding[0], padding[1])
+            elif data_format == "NHWC":
+                padding = (0, padding[0], padding[1], 0)
+            else:
+                raise ValueError("error padding param!")
+
+        assert count_include_pad is None, "count_include_pad not supported yet"
+        assert divisor_override is None, "divisor_override not supported yet"
+
+        self.channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
+        # TODO(yaochi): align with pytorch when padding is asymmetric
+        self._padding_type, _pads_list = calc_pool_padding(
+            padding, get_dhw_offset(self.channel_pos), 2
+        )
+        self._padding_before = [pad[0] for pad in _pads_list]
+        self._padding_after = [pad[1] for pad in _pads_list]
+        self.ceil_mode = ceil_mode
+
+    def forward(self, x):
+        return flow._C.avg_pool_2d(
+            x,
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            padding=self._padding_type,
+            padding_before=self._padding_before,
+            padding_after=self._padding_after,
+            ceil_mode=self.ceil_mode,
+            data_format=self.channel_pos,
+        )
+
 
 class MaxPool2d(Module):
     r"""The interface is consistent with PyTorch.
