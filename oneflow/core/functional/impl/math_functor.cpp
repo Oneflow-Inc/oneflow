@@ -259,7 +259,7 @@ class ReduceMinFunctor {
       ctx->axis = axis;
     }
     ctx->keepdims = keepdims;
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, std::make_shared<OpInterpCtx>(ctx));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
  private:
@@ -305,7 +305,7 @@ class ReduceDeviceStageBaseFunctor {
                            .Build())) {}
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in,
                                 const std::vector<int32_t>& axis) const {
-    auto ctx = std::make_shared<ReduceDeviceStageOpInterpCtx>();
+    auto ctx = std::make_shared<typename T::ContextT>();
     ctx->axis = axis;
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in}, ctx);
   }
@@ -329,7 +329,7 @@ class ReduceDeviceStageGradBaseFunctor {
                            const std::shared_ptr<one::Tensor>& mask,
                            const std::shared_ptr<one::Tensor>& count,
                            const std::vector<int32_t>& axis) const {
-    auto ctx = std::make_shared<ReduceDeviceStageGradOpInterpCtx>();
+    auto ctx = std::make_shared<typename T::ContextT>();
     ctx->axis = axis;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, count}, ctx);
   }
@@ -342,24 +342,28 @@ class ReduceDeviceStageGradBaseFunctor {
 class ReduceMinDeviceStageFunctor
     : public ReduceDeviceStageBaseFunctor<ReduceMinDeviceStageFunctor> {
  public:
+  using ContextT = ReduceMinDeviceStageOpInterpCtx;
   static std::string GetOpName() { return "reduce_min_device_stage"; }
 };
 
 class ReduceMaxDeviceStageFunctor
     : public ReduceDeviceStageBaseFunctor<ReduceMaxDeviceStageFunctor> {
  public:
+  using ContextT = ReduceMaxDeviceStageOpInterpCtx;
   static std::string GetOpName() { return "reduce_max_device_stage"; }
 };
 
 class ReduceMinDeviceStageGradFunctor
     : public ReduceDeviceStageGradBaseFunctor<ReduceMinDeviceStageGradFunctor> {
  public:
+  using ContextT = ReduceMinDeviceStageGradOpInterpCtx;
   static std::string GetOpName() { return "reduce_min_device_stage_grad"; }
 };
 
 class ReduceMaxDeviceStageGradFunctor
     : public ReduceDeviceStageGradBaseFunctor<ReduceMaxDeviceStageGradFunctor> {
  public:
+  using ContextT = ReduceMaxDeviceStageGradOpInterpCtx;
   static std::string GetOpName() { return "reduce_max_device_stage_grad"; }
 };
 
@@ -376,7 +380,7 @@ class ReduceGlobalStageBaseFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in,
                                 const std::shared_ptr<one::Tensor>& device_count,
                                 const std::vector<int32_t>& axis, const bool& keepdims) const {
-    auto ctx = std::make_shared<ReduceGlobalStageOpInterpCtx>();
+    auto ctx = std::make_shared<typename T::ContextT>();
     ctx->axis = axis;
     ctx->keepdims = keepdims;
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in, device_count}, ctx);
@@ -401,7 +405,7 @@ class ReduceGlobalStageGradBaseFunctor {
                            const std::shared_ptr<one::Tensor>& mask,
                            const std::shared_ptr<one::Tensor>& device_count,
                            const std::vector<int32_t>& axis, const bool& keepdims) const {
-    auto ctx = std::make_shared<ReduceGlobalStageGradOpInterpCtx>();
+    auto ctx = std::make_shared<typename T::ContextT>();
     ctx->axis = axis;
     ctx->keepdims = keepdims;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, device_count}, ctx);
@@ -415,24 +419,28 @@ class ReduceGlobalStageGradBaseFunctor {
 class ReduceMinGlobalStageFunctor
     : public ReduceGlobalStageBaseFunctor<ReduceMinGlobalStageFunctor> {
  public:
+  using ContextT = ReduceMinGlobalStageOpInterpCtx;
   static std::string GetOpName() { return "reduce_min_global_stage"; }
 };
 
 class ReduceMinGlobalStageGradFunctor
     : public ReduceGlobalStageGradBaseFunctor<ReduceMinGlobalStageGradFunctor> {
  public:
+  using ContextT = ReduceMinGlobalStageGradOpInterpCtx;
   static std::string GetOpName() { return "reduce_min_global_stage_grad"; }
 };
 
 class ReduceMaxGlobalStageFunctor
     : public ReduceGlobalStageBaseFunctor<ReduceMaxGlobalStageFunctor> {
  public:
+  using ContextT = ReduceMaxGlobalStageOpInterpCtx;
   static std::string GetOpName() { return "reduce_max_global_stage"; }
 };
 
 class ReduceMaxGlobalStageGradFunctor
     : public ReduceGlobalStageGradBaseFunctor<ReduceMaxGlobalStageGradFunctor> {
  public:
+  using ContextT = ReduceMaxGlobalStageGradOpInterpCtx;
   static std::string GetOpName() { return "reduce_max_global_stage_grad"; }
 };
 
@@ -675,41 +683,49 @@ class ClampFunctor {
                            const Optional<Scalar>& max) const {
     CHECK_OR_RETURN(min.has_value() || max.has_value())
         << "Requires one of argument `min` and `max` at least in clip.";
-    auto ctx = std::make_shared<ClampOpInterpCtx>();
-    if (IsFloatingDataType(x->dtype()->data_type())) {
-      if (min.has_value()) {
-        const auto& min_val = JUST(min);
+    bool is_floating = IsFloatingDataType(x->dtype()->data_type());
+    if (!is_floating && !IsIntegralDataType(x->dtype()->data_type())) {
+      return Error::RuntimeError() << "Only support floating or integral data type.";
+    }
+    if (min.has_value() && max.has_value()) {
+      const auto& min_val = JUST(min);
+      const auto& max_val = JUST(max);
+      auto ctx = std::make_shared<ClipByScalarOpInterpCtx>();
+      if (is_floating) {
         ctx->floating_min = JUST(min_val->As<double>());
         ctx->integral_min = 0;
-      }
-      if (max.has_value()) {
-        const auto& max_val = JUST(max);
         ctx->floating_max = JUST(max_val->As<double>());
         ctx->integral_max = 0;
-      }
-    } else if (IsIntegralDataType(x->dtype()->data_type())) {
-      if (min.has_value()) {
-        const auto& min_val = JUST(min);
+      } else {
         ctx->floating_min = 0;
         ctx->integral_min = JUST(min_val->As<int64_t>());
-      }
-      if (max.has_value()) {
-        const auto& max_val = JUST(max);
         ctx->floating_max = 0;
         ctx->integral_max = JUST(max_val->As<int64_t>());
       }
+      return OpInterpUtil::Dispatch<Tensor>(*clip_op_, {x}, ctx);
+    } else if (min.has_value()) {
+      const auto& min_val = JUST(min);
+      auto ctx = std::make_shared<ClipByScalarMinOpInterpCtx>();
+      if (is_floating) {
+        ctx->floating_min = JUST(min_val->As<double>());
+        ctx->integral_min = 0;
+      } else {
+        ctx->floating_min = 0;
+        ctx->integral_min = JUST(min_val->As<int64_t>());
+      }
+      return OpInterpUtil::Dispatch<Tensor>(*clip_min_op_, {x}, ctx);
     } else {
-      UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
+      const auto& max_val = JUST(max);
+      auto ctx = std::make_shared<ClipByScalarMaxOpInterpCtx>();
+      if (is_floating) {
+        ctx->floating_max = JUST(max_val->As<double>());
+        ctx->integral_max = 0;
+      } else {
+        ctx->floating_max = 0;
+        ctx->integral_max = JUST(max_val->As<int64_t>());
+      }
+      return OpInterpUtil::Dispatch<Tensor>(*clip_max_op_, {x}, ctx);
     }
-    const OpExpr* op = nullptr;
-    if (!min.has_value()) {
-      op = clip_max_op_.get();
-    } else if (!max.has_value()) {
-      op = clip_min_op_.get();
-    } else {
-      op = clip_op_.get();
-    }
-    return OpInterpUtil::Dispatch<Tensor>(*op, {x}, ctx);
   }
 
  private:
@@ -1103,41 +1119,50 @@ class ClampGradFunctor {
                            const Optional<Scalar>& max) const {
     CHECK_OR_RETURN(min.has_value() || max.has_value())
         << "Requires one of argument `min` and `max` at least in clip_grad.";
-    auto ctx = std::make_shared<ClampGradOpInterpCtx>();
-    if (IsFloatingDataType(x->dtype()->data_type())) {
-      if (min.has_value()) {
-        const auto& min_val = JUST(min);
+ 
+    bool is_floating = IsFloatingDataType(x->dtype()->data_type());
+    if (!is_floating && !IsIntegralDataType(x->dtype()->data_type())) {
+      return Error::RuntimeError() << "Only support floating or integral data type.";
+    }
+    if (min.has_value() && max.has_value()) {
+      const auto& min_val = JUST(min);
+      const auto& max_val = JUST(max);
+      auto ctx = std::make_shared<ClipByScalarOpInterpCtx>();
+      if (is_floating) {
         ctx->floating_min = JUST(min_val->As<double>());
         ctx->integral_min = 0;
-      }
-      if (max.has_value()) {
-        const auto& max_val = JUST(max);
         ctx->floating_max = JUST(max_val->As<double>());
         ctx->integral_max = 0;
-      }
-    } else if (IsIntegralDataType(x->dtype()->data_type())) {
-      if (min.has_value()) {
-        const auto& min_val = JUST(min);
-        ctx->integral_min = JUST(min_val->As<int64_t>());
+      } else {
         ctx->floating_min = 0;
-      }
-      if (max.has_value()) {
-        const auto& max_val = JUST(max);
+        ctx->integral_min = JUST(min_val->As<int64_t>());
         ctx->floating_max = 0;
         ctx->integral_max = JUST(max_val->As<int64_t>());
       }
+      return OpInterpUtil::Dispatch<Tensor>(*clip_op_, {dy, x}, ctx);
+    } else if (min.has_value()) {
+      const auto& min_val = JUST(min);
+      auto ctx = std::make_shared<ClipByScalarMinOpInterpCtx>();
+      if (is_floating) {
+        ctx->floating_min = JUST(min_val->As<double>());
+        ctx->integral_min = 0;
+      } else {
+        ctx->floating_min = 0;
+        ctx->integral_min = JUST(min_val->As<int64_t>());
+      }
+      return OpInterpUtil::Dispatch<Tensor>(*clip_min_op_, {dy, x}, ctx);
     } else {
-      UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
+      const auto& max_val = JUST(max);
+      auto ctx = std::make_shared<ClipByScalarMaxOpInterpCtx>();
+      if (is_floating) {
+        ctx->floating_max = JUST(max_val->As<double>());
+        ctx->integral_max = 0;
+      } else {
+        ctx->floating_max = 0;
+        ctx->integral_max = JUST(max_val->As<int64_t>());
+      }
+      return OpInterpUtil::Dispatch<Tensor>(*clip_max_op_, {dy, x}, ctx);
     }
-    const OpExpr* op = nullptr;
-    if (!min.has_value()) {
-      op = clip_max_op_.get();
-    } else if (!max.has_value()) {
-      op = clip_min_op_.get();
-    } else {
-      op = clip_op_.get();
-    }
-    return OpInterpUtil::Dispatch<Tensor>(*op, {dy, x}, ctx);
   }
 
  private:
@@ -1217,15 +1242,16 @@ class MaximumFunctor {
   std::shared_ptr<OpExpr> broadcast_maximum_op_;
 };
 
+template <typename T>
 class ScalarLogicalBaseFunctor {
  public:
-  explicit ScalarLogicalBaseFunctor(std::string op_name) {
-    op_ = CHECK_JUST(one::OpBuilder(op_name).Input("in").Output("out").Build());
+  explicit ScalarLogicalBaseFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder(T::op_type_name_).Input("in").Output("out").Build());
   }
   virtual ~ScalarLogicalBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
     const DataType dtype = x->dtype()->data_type();
-    auto ctx = std::make_shared<ScalarLogicalOpInterpCtx>();
+    auto ctx = std::make_shared<typename T::ContextT>();
 
     if (IsFloatingDataType(dtype)) {
       ctx->float_operand = JUST(scalar.As<double>());
@@ -1239,7 +1265,6 @@ class ScalarLogicalBaseFunctor {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
                                   << " should be float or int.";
     }
-
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -1247,9 +1272,10 @@ class ScalarLogicalBaseFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ScalarLogicalEqualFunctor : public ScalarLogicalBaseFunctor {
+class ScalarLogicalEqualFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalEqualFunctor> {
  public:
-  ScalarLogicalEqualFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_equal") {}
+  using ContextT = ScalarLogicalEqualOpInterpCtx;;
+  static constexpr const char* op_type_name_ = "scalar_logical_equal";
 };
 
 // (scalar == x) = (x == scalar)
@@ -1260,10 +1286,10 @@ class ScalarLogicalEqual2Functor {
   }
 };
 
-class ScalarLogicalNotEqualFunctor : public ScalarLogicalBaseFunctor {
+class ScalarLogicalNotEqualFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalNotEqualFunctor> {
  public:
-  ScalarLogicalNotEqualFunctor()
-      : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_not_equal") {}
+  using ContextT = ScalarLogicalNotEqualOpInterpCtx;;
+  static constexpr const char* op_type_name_ = "scalar_logical_not_equal";
 };
 
 // (scalar != x) = (x != scalar)
@@ -1274,9 +1300,10 @@ class ScalarLogicalNotEqual2Functor {
   }
 };
 
-class ScalarLogicalGreaterFunctor : public ScalarLogicalBaseFunctor {
+class ScalarLogicalGreaterFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalGreaterFunctor> {
  public:
-  ScalarLogicalGreaterFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_greater") {}
+  using ContextT = ScalarLogicalGreaterOpInterpCtx;;
+  static constexpr const char* op_type_name_ = "scalar_logical_greater";
 };
 
 // (scalar > x) = (x < scalar)
@@ -1287,10 +1314,10 @@ class ScalarLogicalGreater2Functor {
   }
 };
 
-class ScalarLogicalGreaterEqualFunctor : public ScalarLogicalBaseFunctor {
+class ScalarLogicalGreaterEqualFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalGreaterEqualFunctor> {
  public:
-  ScalarLogicalGreaterEqualFunctor()
-      : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_greater_equal") {}
+  using ContextT = ScalarLogicalGreaterEqualOpInterpCtx;;
+  static constexpr const char* op_type_name_ = "scalar_logical_greater_equal";
 };
 
 // (scalar >= x) = (x <= scalar)
@@ -1301,9 +1328,10 @@ class ScalarLogicalGreaterEqual2Functor {
   }
 };
 
-class ScalarLogicalLessFunctor : public ScalarLogicalBaseFunctor {
+class ScalarLogicalLessFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalLessFunctor> {
  public:
-  ScalarLogicalLessFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_less") {}
+  using ContextT = ScalarLogicalLessOpInterpCtx;;
+  static constexpr const char* op_type_name_ = "scalar_logical_less";
 };
 
 // (scalar < x) = (x > scalar)
@@ -1314,10 +1342,10 @@ class ScalarLogicalLess2Functor {
   }
 };
 
-class ScalarLogicalLessEqualFunctor : public ScalarLogicalBaseFunctor {
+class ScalarLogicalLessEqualFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalLessEqualFunctor> {
  public:
-  ScalarLogicalLessEqualFunctor()
-      : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_less_equal") {}
+  using ContextT = ScalarLogicalLessEqualOpInterpCtx;;
+  static constexpr const char* op_type_name_ = "scalar_logical_less_equal";
 };
 
 // (scalar <= x) = (x >= scalar)
@@ -1328,9 +1356,10 @@ class ScalarLogicalLessEqual2Functor {
   }
 };
 
-class ScalarLogicalAndFunctor : public ScalarLogicalBaseFunctor {
+class ScalarLogicalAndFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalAndFunctor> {
  public:
-  ScalarLogicalAndFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_and") {}
+  using ContextT = ScalarLogicalAndOpInterpCtx;;
+  static constexpr const char* op_type_name_ = "scalar_logical_and";
 };
 
 // (scalar && x) = (x && scalar)
@@ -1341,9 +1370,10 @@ class ScalarLogicalAnd2Functor {
   }
 };
 
-class ScalarLogicalOrFunctor : public ScalarLogicalBaseFunctor {
+class ScalarLogicalOrFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalOrFunctor> {
  public:
-  ScalarLogicalOrFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_or") {}
+  using ContextT = ScalarLogicalOrOpInterpCtx;;
+  static constexpr const char* op_type_name_ = "scalar_logical_or";
 };
 
 // (scalar || x) = (x || scalar)
@@ -1354,9 +1384,10 @@ class ScalarLogicalOr2Functor {
   }
 };
 
-class ScalarLogicalXorFunctor : public ScalarLogicalBaseFunctor {
+class ScalarLogicalXorFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalXorFunctor> {
  public:
-  ScalarLogicalXorFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_xor") {}
+  using ContextT = ScalarLogicalXorOpInterpCtx;;
+  static constexpr const char* op_type_name_ = "scalar_logical_xor";
 };
 
 // (scalar ^ x) = (x ^ scalar)

@@ -128,7 +128,7 @@ class MaxPoolingNdGradFunctorImpl {
                            const std::vector<int32_t>& padding,
                            const std::vector<int32_t>& kernel_size,
                            const std::vector<int32_t>& stride, const std::vector<int32_t>& dilation,
-                           const bool& return_indices, const bool& ceil_mode) const override {
+                           const bool& return_indices, const bool& ceil_mode) const {
     auto ctx = std::make_shared<ContextT>();
     ctx->data_format = data_format;
     ctx->padding = padding;

@@ -53,18 +53,17 @@ class BiasAddFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+template <typename T>
 class ConvBaseFunctor {
  public:
-  explicit ConvBaseFunctor(const int& num_spatial_dims) : num_spatial_dims_(num_spatial_dims) {}
-  virtual ~ConvBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& weight,
                            const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
                            const std::vector<int32_t>& padding,
                            const std::vector<int32_t>& dilation, const int32_t& groups) const {
-    auto ctx = std::make_shared<ConvOpInterpCtx>();
-    std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
-    for (int i = 0; i < num_spatial_dims_; i++) {
+    auto ctx = std::make_shared<typename T::ContextT>();
+    std::vector<int32_t> kernel_size_vec(T::num_spatial_dims_);
+    for (int i = 0; i < T::num_spatial_dims_; i++) {
       kernel_size_vec.at(i) = ((weight->shape())->At(i + 2));
     }
     ctx->filters = weight->shape()->At(0);
@@ -86,37 +85,41 @@ class ConvBaseFunctor {
  protected:
   std::shared_ptr<OpExpr> conv_op_;
   std::shared_ptr<OpExpr> bias_op_;
-  int32_t num_spatial_dims_;
 };
 
-class Conv1dFunctor : public ConvBaseFunctor {
+class Conv1dFunctor : public ConvBaseFunctor<Conv1dFunctor> {
  public:
-  Conv1dFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/1) {
+  using ContextT = Conv1DOpInterpCtx;
+  static constexpr int num_spatial_dims_ = 1;
+  Conv1dFunctor() : ConvBaseFunctor<Conv1dFunctor>() {
     conv_op_ =
         CHECK_JUST(one::OpBuilder("conv1d").Input("in").Input("weight").Output("out").Build());
   }
 };
 
-class Conv2dFunctor : public ConvBaseFunctor {
+class Conv2dFunctor : public ConvBaseFunctor<Conv2dFunctor> {
  public:
-  Conv2dFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/2) {
+  using ContextT = Conv2DOpInterpCtx;
+  static constexpr int num_spatial_dims_ = 2;
+  Conv2dFunctor() : ConvBaseFunctor<Conv2dFunctor>() {
     conv_op_ =
         CHECK_JUST(one::OpBuilder("conv2d").Input("in").Input("weight").Output("out").Build());
   }
 };
 
-class Conv3dFunctor : public ConvBaseFunctor {
+class Conv3dFunctor : public ConvBaseFunctor<Conv3dFunctor> {
  public:
-  Conv3dFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/3) {
+  using ContextT = Conv3DOpInterpCtx;
+  static constexpr int num_spatial_dims_ = 3;
+  Conv3dFunctor() : ConvBaseFunctor<Conv3dFunctor>() {
     conv_op_ =
         CHECK_JUST(one::OpBuilder("conv3d").Input("in").Input("weight").Output("out").Build());
   }
 };
 
+template <typename T>
 class DeConvBaseFunctor {
  public:
-  explicit DeConvBaseFunctor() {}
-  virtual ~DeConvBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& weight,
                            const Optional<one::Tensor>& bias, const int32_t& filters,
@@ -125,7 +128,7 @@ class DeConvBaseFunctor {
                            const std::vector<int32_t>& output_padding,
                            const std::vector<int32_t>& strides,
                            const std::vector<int32_t>& dilation, const int32_t& groups) const {
-    auto ctx = std::make_shared<DeConvOpInterpCtx>();
+    auto ctx = std::make_shared<typename T::ContextT>();
     ctx->filters = filters;
     ctx->padding_before = padding;
     ctx->kernel_size = kernel_size;
@@ -161,17 +164,19 @@ class DeConvBaseFunctor {
   std::shared_ptr<OpExpr> bias_op_;
 };
 
-class DeConv1dFunctor : public DeConvBaseFunctor {
+class DeConv1dFunctor : public DeConvBaseFunctor<DeConv1dFunctor> {
  public:
-  DeConv1dFunctor() {
+  using ContextT = Deconv1DOpInterpCtx;
+  DeConv1dFunctor() : DeConvBaseFunctor<DeConv1dFunctor>() {
     deconv_op_ =
         CHECK_JUST(one::OpBuilder("deconv1d").Input("in").Input("weight").Output("out").Build());
   }
 };
 
-class DeConv3dFunctor : public DeConvBaseFunctor {
+class DeConv3dFunctor : public DeConvBaseFunctor<DeConv3dFunctor> {
  public:
-  DeConv3dFunctor() {
+  using ContextT = Deconv3DOpInterpCtx;
+  DeConv3dFunctor() : DeConvBaseFunctor<DeConv3dFunctor>() {
     deconv_op_ =
         CHECK_JUST(one::OpBuilder("deconv3d").Input("in").Input("weight").Output("out").Build());
   }
@@ -181,8 +186,6 @@ class MatMulFunctor {
  public:
   MatMulFunctor() {
     matmul_op_ = CHECK_JUST(one::OpBuilder("matmul").Input("a").Input("b").Output("out").Build());
-    batch_matmul_op_ =
-        CHECK_JUST(one::OpBuilder("batch_matmul").Input("a").Input("b").Output("out").Build());
     bcast_matmul_op_ =
         CHECK_JUST(one::OpBuilder("broadcast_matmul").Input("a").Input("b").Output("out").Build());
   }
@@ -196,24 +199,27 @@ class MatMulFunctor {
     CHECK_GE_OR_RETURN(a_shape->NumAxes(), 2) << "Tensor a's dim should >= 2";
     CHECK_GE_OR_RETURN(b_shape->NumAxes(), 2) << "Tensor b's dim should >= 2";
 
-    auto ctx = std::make_shared<MatMulOpOpInterpCtx>();
-    ctx->transpose_a = transpose_a;
-    ctx->transpose_b = transpose_b;
-    ctx->alpha = alpha;
     if (a_shape->NumAxes() != b_shape->NumAxes()) {
       CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 2)
           << "Not support number of dimensions of a being less than number of dimensions of b!";
+      auto ctx = std::make_shared<BroadcastMatmulOpInterpCtx>();
+      ctx->transpose_a = transpose_a;
+      ctx->transpose_b = transpose_b;
+      ctx->alpha = alpha;   
       return OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {a, b}, ctx);
     }
     if (a_shape->NumAxes() > 2) {
-      return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b}, ctx);
+      return BatchMatMul(a, b, transpose_a, transpose_b, alpha);
     }
+    auto ctx = std::make_shared<MatmulOpInterpCtx>();
+    ctx->transpose_a = transpose_a;
+    ctx->transpose_b = transpose_b;
+    ctx->alpha = alpha;
     return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, ctx);
   }
 
  private:
   std::shared_ptr<OpExpr> matmul_op_;
-  std::shared_ptr<OpExpr> batch_matmul_op_;
   std::shared_ptr<OpExpr> bcast_matmul_op_;
 };
 
