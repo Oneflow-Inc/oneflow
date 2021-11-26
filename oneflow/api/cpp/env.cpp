@@ -122,6 +122,7 @@ of::Maybe<void> initEnv() {
 void initialize() {
   of::SetIsMultiClient(true).GetOrThrow();
   if (!isEnvInited()) { initEnv().GetOrThrow(); }
+  of::SetShuttingDown(false);
 }
 
 void release() {
