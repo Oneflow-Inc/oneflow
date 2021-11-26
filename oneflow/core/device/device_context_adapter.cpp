@@ -84,7 +84,7 @@ class CudaDeviceCtxAdapter : public DeviceCtx, public EventRecordProvider {
 DeviceCtx* NewDeviceCtxAdapter(ep::Stream* stream) {
   if (stream->device_type() == DeviceType::kCPU) {
     return new CpuDeviceCtxAdapter(stream);
-  } else if (stream->device_type() == DeviceType::kGPU) {
+  } else if (stream->device_type() == DeviceType::kCUDA) {
 #ifdef WITH_CUDA
     return new CudaDeviceCtxAdapter(stream);
 #else

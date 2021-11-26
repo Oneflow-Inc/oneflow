@@ -146,10 +146,10 @@ class GpuArgMaxKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_ARGMAX_KERNEL(dtype)                                                          \
+#define REGISTER_CUDA_ARGMAX_KERNEL(dtype)                                                         \
   REGISTER_USER_KERNEL("argmax")                                                                   \
       .SetCreateFn<GpuArgMaxKernel<dtype>>()                                                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                             \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))            \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
         const Shape& in_shape = ctx->InputShape("in", 0);                                          \
@@ -166,11 +166,11 @@ class GpuArgMaxKernel final : public user_op::OpKernel {
         return key_value_out_bytes + temp_storage_bytes;                                           \
       });
 
-REGISTER_GPU_ARGMAX_KERNEL(float)
-REGISTER_GPU_ARGMAX_KERNEL(double)
-REGISTER_GPU_ARGMAX_KERNEL(uint8_t)
-REGISTER_GPU_ARGMAX_KERNEL(int8_t)
-REGISTER_GPU_ARGMAX_KERNEL(int32_t)
-REGISTER_GPU_ARGMAX_KERNEL(int64_t)
+REGISTER_CUDA_ARGMAX_KERNEL(float)
+REGISTER_CUDA_ARGMAX_KERNEL(double)
+REGISTER_CUDA_ARGMAX_KERNEL(uint8_t)
+REGISTER_CUDA_ARGMAX_KERNEL(int8_t)
+REGISTER_CUDA_ARGMAX_KERNEL(int32_t)
+REGISTER_CUDA_ARGMAX_KERNEL(int64_t)
 
 }  // namespace oneflow
