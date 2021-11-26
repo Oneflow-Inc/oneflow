@@ -17,6 +17,9 @@ def OneFlow_UserOp : OneFlow_UserBaseOp<"user", [AttrSizedOperandSegments, AttrS
       I32ElementsAttr:$operand_segment_sizes,
       I32ElementsAttr:$result_segment_sizes
     );
+    let attrs = (ins
+      StrArrayAttr:$output_lbns
+    );
     let hasCanonicalizer = 1;
 }
 
@@ -54,7 +57,7 @@ def OneFlow_NormalizationAddReluOp : OneFlow_NormalizationAddReluBaseOp {
   ];
 }
 
-def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let summary = "";
   let input = (ins
     AnyType:$in0,
@@ -62,8 +65,10 @@ def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceM
   );
   let output = (outs AnyType:$out);
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static std::vector<std::string> inputKeys() { return {"in"}; }
+    static std::vector<std::uint32_t> inputMinimums() { return {1}; }
+    static std::vector<std::string> outputKeys() { return {"out"}; }
+    static std::vector<std::uint32_t> outputMinimums() { return {1}; }
   }];
 }
 

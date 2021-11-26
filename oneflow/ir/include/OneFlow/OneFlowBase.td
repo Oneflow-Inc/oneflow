@@ -67,11 +67,8 @@ class OneFlow_UserBaseOp<string mnemonic, list<OpTrait> traits = []> :
     let summary = "";
     let user_op_attrs = (ins
       StrAttr:$op_type_name,
-      StrArrayAttr:$input_lbn_segment_keys,
-      I32ArrayAttr:$input_lbn_segment_sizes,
-      StrArrayAttr:$output_lbn_segment_keys,
-      I32ArrayAttr:$output_lbn_segment_sizes,
-      StrArrayAttr:$output_lbns
+      I32ElementsAttr:$input_sizes,
+      I32ElementsAttr:$output_sizes
     );
 }
 
@@ -91,7 +88,7 @@ class OneFlow_UserBaseWithCtrlOp<string mnemonic, list<OpTrait> traits = []> :
 
 
 class OneFlow_ConvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
     let summary = "OneFlow convolution operation";
     let description = [{
     "The convolution operator consumes an input tensor and a filter, and"
@@ -99,7 +96,9 @@ class OneFlow_ConvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
     }];
     let input = (ins
       AnyType:$in,
-      AnyType:$weight
+      AnyType:$weight,
+      Optional<AnyType>:$bias,
+      Optional<AnyType>:$bias_multiplier
     );
     let output = (outs AnyType:$out);
     let attrs = (ins
@@ -111,10 +110,19 @@ class OneFlow_ConvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
       SI32ArrayAttr:$dilation_rate,
       DefaultValuedAttr<SI32Attr, "1">:$group
     );
+    let trait_attrs = (ins
+      I32ElementsAttr:$operand_segment_sizes
+    );
+    let extraClassDeclaration = [{
+      static std::vector<std::string> inputKeys() { return {"in", "weight", "bias", "bias_multiplier"}; }
+      static std::vector<std::uint32_t> inputMinimums() { return {1, 1, 0, 0}; }
+      static std::vector<std::string> outputKeys() { return {"out"}; }
+      static std::vector<std::uint32_t> outputMinimums() { return {1}; }
+    }];
 }
 
 class OneFlow_LazyPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
     let summary = "OneFlow Lazy Pooling operation";
     let input = (ins AnyType:$x);
     let output = (outs AnyType:$y);
@@ -127,18 +135,24 @@ class OneFlow_LazyPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
     SI32ArrayAttr:$strides,
     BoolAttr:$ceil_mode
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputKeys() { return {"x"}; }
+    static std::vector<std::uint32_t> inputMinimums() { return {1}; }
+    static std::vector<std::string> outputKeys() { return {"y"}; }
+    static std::vector<std::uint32_t> outputMinimums() { return {1}; }
+  }];
 }
 
 class OneFlow_LazyPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
-    let summary = "OneFlow Lazy Pooling Grad operation";
-    let input = (ins
-      AnyType:$x,
-      AnyType:$y,
-      AnyType:$dy
-    );
-    let output = (outs AnyType:$dx);
-    let attrs = (ins
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
+  let summary = "OneFlow Lazy Pooling Grad operation";
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y,
+    AnyType:$dy
+  );
+  let output = (outs AnyType:$dx);
+  let attrs = (ins
     StrAttr:$padding,
     SI32ArrayAttr:$padding_before,
     SI32ArrayAttr:$padding_after,
@@ -147,15 +161,21 @@ class OneFlow_LazyPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
     SI32ArrayAttr:$strides,
     BoolAttr:$ceil_mode
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputKeys() { return {"x", "y", "dy"}; }
+    static std::vector<std::uint32_t> inputMinimums() { return {1, 1, 1}; }
+    static std::vector<std::string> outputKeys() { return {"dx"}; }
+    static std::vector<std::uint32_t> outputMinimums() { return {1}; }
+  }];
 }
 
 
 class OneFlow_EagerPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
-    let summary = "OneFlow Eager Pooling operation";
-    let input = (ins AnyType:$x);
-    let output = (outs AnyType:$y);
-    let attrs = (ins
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
+  let summary = "OneFlow Eager Pooling operation";
+  let input = (ins AnyType:$x);
+  let output = (outs AnyType:$y);
+  let attrs = (ins
     SI32ArrayAttr:$padding,
     StrAttr:$data_format,
     SI32ArrayAttr:$kernel_size,
@@ -164,18 +184,24 @@ class OneFlow_EagerPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
     BoolAttr:$count_include_pad,
     SI64Attr:$divisor_override
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputKeys() { return {"x"}; }
+    static std::vector<std::uint32_t> inputMinimums() { return {1}; }
+    static std::vector<std::string> outputKeys() { return {"y"}; }
+    static std::vector<std::uint32_t> outputMinimums() { return {1}; }
+  }];
 }
 
 class OneFlow_EagerPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
-    let summary = "OneFlow Eager Pooling Grad operation";
-    let input = (ins
-      AnyType:$x,
-      AnyType:$y,
-      AnyType:$dy
-    );
-    let output = (outs AnyType:$dx);
-    let attrs = (ins
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
+  let summary = "OneFlow Eager Pooling Grad operation";
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y,
+    AnyType:$dy
+  );
+  let output = (outs AnyType:$dx);
+  let attrs = (ins
     SI32ArrayAttr:$padding,
     StrAttr:$data_format,
     SI32ArrayAttr:$kernel_size,
@@ -184,13 +210,19 @@ class OneFlow_EagerPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
     BoolAttr:$count_include_pad,
     SI64Attr:$divisor_override
   );
+  let extraClassDeclaration = [{
+    static std::vector<std::string> inputKeys() { return {"x", "y", "dy"}; }
+    static std::vector<std::uint32_t> inputMinimums() { return {1, 1, 1}; }
+    static std::vector<std::string> outputKeys() { return {"dx"}; }
+    static std::vector<std::uint32_t> outputMinimums() { return {1}; }
+  }];
 }
 
 class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType, NoSideEffect])> {
-    let summary = "";
-    let input = (ins AnyType:$x);
-    let output = (outs AnyType:$y);
+  let summary = "";
+  let input = (ins AnyType:$x);
+  let output = (outs AnyType:$y);
 }
 
 def OneFlow_Idempotent : NativeOpTrait<"IsIdempotentOfIdenticalPlacement">;

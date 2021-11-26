@@ -26,6 +26,9 @@ limitations under the License.
 #include <functional>
 #include <string>
 
+using UserOpArgs = const ::google::protobuf::Map<std::string, ::oneflow::UserOpConf_ListString>&;
+using UserOpArgDefs = const ::google::protobuf::RepeatedPtrField<::oneflow::UserOpDef_ArgDef>&;
+
 namespace mlir {
 
 // TODO: wrap in a helper namespace
@@ -62,8 +65,8 @@ class Importer {
                                             std::vector<::mlir::Value>& operand_vec) = 0;
   LogicalResult AppendCtrlOutType(llvm::SmallVector<Type, 8>& out_types);
   LogicalResult AddOpConf(const ::oneflow::OperatorConf& op, std::vector<NamedAttribute>& attr_vec);
-  LogicalResult AddUserOpInputOutputSegments(const ::oneflow::OperatorConf& op,
-                                             std::vector<NamedAttribute>& attr_vec);
+  virtual LogicalResult AddUserOpInputOutputSegments(const ::oneflow::OperatorConf& op,
+                                                     std::vector<NamedAttribute>& attr_vec) = 0;
   virtual LogicalResult AddDeviceName(const ::oneflow::OperatorConf& op,
                                       std::vector<NamedAttribute>& attr_vec) = 0;
   LogicalResult AddOperandSegmentSizes(int32_t input_lbns_size, int32_t ctrl_in_size,

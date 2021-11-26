@@ -64,7 +64,10 @@ LogicalResult TrimRedundantCtrl(OpType& op, PatternRewriter& rewriter) {
 
 bool IsCtrlOutTrimmed(oneflow::UserOp& op) { return !op.ctrl_output(); }
 
-bool IsCtrlInAbsent(oneflow::UserOp& op) { return op.ctrl_inputs().empty(); }
+bool IsCtrlInAbsent(oneflow::UserOp& op) {
+  if (!op->hasAttrOfType<::mlir::DenseIntElementsAttr>("operand_segment_sizes")) op.dump();
+  return op.ctrl_inputs().empty();
+}
 
 StringSet<>* GetPrintedOpTypeNames() {
   static llvm::StringSet<> names({});
@@ -147,76 +150,12 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
     // 3. enable the reuse of established MLIR infra like built-in traits
     if (IsCtrlOutTrimmed(op) && IsCtrlInAbsent(op)) {
       NamedAttrList attributes(op->getAttrDictionary());
+      attributes.erase("input_sizes");
+      attributes.erase("output_sizes");
       attributes.erase("operand_segment_sizes");
       attributes.erase("result_segment_sizes");
-      if (op_type_name.equals("sgd_update")) {
-        llvm::StringSet<> bns({});
-        oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
-        for (auto key : user_op_adaptor.input_lbn_segment_keys()) {
-          auto bn = key.dyn_cast<StringAttr>().getValue();
-          bns.insert(bn);
-        }
-        attributes.push_back(rewriter.getNamedAttr(
-            "operand_segment_sizes",
-            rewriter.getI32VectorAttr({1, 1, bns.contains("learning_rate"),
-                                       bns.contains("scale_by_tensor"), bns.contains("skip_if")})));
-      }
-      if (op_type_name.equals("normalization")) {
-        {
-          llvm::StringSet<> ibns({});
-          oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
-          for (auto key : user_op_adaptor.input_lbn_segment_keys()) {
-            auto bn = key.dyn_cast<StringAttr>().getValue();
-            ibns.insert(bn);
-          }
-          attributes.push_back(rewriter.getNamedAttr(
-              "operand_segment_sizes",
-              rewriter.getI32VectorAttr({1, ibns.contains("moving_mean"),
-                                         ibns.contains("moving_variance"), 1, 1,
-                                         ibns.contains("_add_to_output")})));
-        }
-        {
-          llvm::StringSet<> obns({});
-          oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
-          for (auto key : user_op_adaptor.output_lbn_segment_keys()) {
-            auto bn = key.dyn_cast<StringAttr>().getValue();
-            obns.insert(bn);
-          }
-          attributes.push_back(rewriter.getNamedAttr(
-              "result_segment_sizes", rewriter.getI32VectorAttr({1, obns.contains("mean"),
-                                                                 obns.contains("inv_variance")})));
-        }
-      }
-      if (op_type_name.equals("normalization_add_relu")) {
-        {
-          llvm::StringSet<> ibns({});
-          oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
-          for (auto key : user_op_adaptor.input_lbn_segment_keys()) {
-            auto bn = key.dyn_cast<StringAttr>().getValue();
-            ibns.insert(bn);
-          }
-          attributes.push_back(
-              rewriter.getNamedAttr("operand_segment_sizes", rewriter.getI32VectorAttr({
-                                                                 1,
-                                                                 ibns.contains("addend"),
-                                                                 ibns.contains("moving_mean"),
-                                                                 ibns.contains("moving_variance"),
-                                                                 1,
-                                                                 1,
-                                                             })));
-        }
-        {
-          llvm::StringSet<> obns({});
-          oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
-          for (auto key : user_op_adaptor.output_lbn_segment_keys()) {
-            auto bn = key.dyn_cast<StringAttr>().getValue();
-            obns.insert(bn);
-          }
-          attributes.push_back(rewriter.getNamedAttr(
-              "result_segment_sizes", rewriter.getI32VectorAttr({1, 1, obns.contains("mean"),
-                                                                 obns.contains("inv_variance")})));
-        }
-      }
+      attributes.push_back(rewriter.getNamedAttr("operand_segment_sizes", op.input_sizes()));
+      attributes.push_back(rewriter.getNamedAttr("result_segment_sizes", op.output_sizes()));
       OperationState state(op->getLoc(), "oneflow." + op_type_name.str());
       state.addAttributes(attributes);
       state.addOperands(op.getODSOperands(0) /* data in */);
@@ -225,29 +164,9 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
         if (created->isRegistered()) {
           rewriter.replaceOp(op, created->getResults());
         } else {
-          created->erase();
-          // NOTE: (not required) add op type name here if want to make sure it is concreted
-          if (op_type_name.equals("relu") || op_type_name.equals("gelu")
-              || op_type_name.equals("cast") || op_type_name.equals("relu_grad")
-              || GetUnaryOpTypeNames().contains(op_type_name)
-              || GetFloatUnaryOpTypeNames().contains(op_type_name)
-              || GetScalarMathOpTypeNames().contains(op_type_name)
-              || GetConvOpTypeNames().contains(op_type_name)
-              || GetPoolOpTypeNames().contains(op_type_name)
-              || GetReduceOpTypeNames().contains(op_type_name) || op_type_name.equals("reshape")
-              || op_type_name.equals("scalar_mul_by_tensor") || op_type_name.equals("matmul")
-              || op_type_name.equals("gather") || op_type_name.equals("gelu_grad")
-              || op_type_name.equals("bias_add")
-              || op_type_name.equals("sparse_softmax_cross_entropy_grad")
-              || op_type_name.equals("normalization")) {
-            op.dump();
-            op->emitError("Fail to convert opaque user op: " + op.op_type_name());
-            return failure();
-          }
-          if (!GetPrintedOpTypeNames()->contains(op.op_type_name())) {
-            llvm::errs() << "MLIR opaque user op: " << op.op_type_name() << "\n";
-            GetPrintedOpTypeNames()->insert(op.op_type_name());
-          }
+          op->emitError("Fail to convert opaque user op to concrete op: " + op.op_type_name());
+          op->dump();
+          return failure();
         }
       }
     }
@@ -259,115 +178,6 @@ void UserOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
                                          ::mlir::MLIRContext* context) {
   results.insert<ConcreteUserOps>(context);
 }
-
-struct FillUserOpAttrsInFusedBiasAddGeluOp
-    : public mlir::OpRewritePattern<oneflow::FusedBiasAddGeluOp> {
-  explicit FillUserOpAttrsInFusedBiasAddGeluOp(mlir::MLIRContext* context)
-      : OpRewritePattern<oneflow::FusedBiasAddGeluOp>(context, /*benefit=*/1) {}
-  mlir::LogicalResult matchAndRewrite(oneflow::FusedBiasAddGeluOp op,
-                                      mlir::PatternRewriter& rewriter) const override {
-    if (op->hasAttrOfType<StringAttr>("op_type_name")) {
-      return failure();
-    } else {
-      op->setAttr("op_type_name", rewriter.getStringAttr("fused_bias_add_gelu"));
-      op->setAttr("input_lbn_segment_keys", rewriter.getStrArrayAttr({"a", "b"}));
-      op->setAttr("input_lbn_segment_sizes", rewriter.getI32ArrayAttr({1, 1}));
-      op->setAttr("output_lbn_segment_keys", rewriter.getStrArrayAttr({"out"}));
-      op->setAttr("output_lbn_segment_sizes", rewriter.getI32ArrayAttr({1}));
-      op->setAttr("output_lbns", rewriter.getStrArrayAttr({op.op_name().str() + "/out_0"}));
-      return success();
-    }
-  }
-};
-
-struct FillUserAttrsInFusedBiasAddMaskScaleOp
-    : public mlir::OpRewritePattern<oneflow::FusedBiasAddMaskScaleOp> {
-  explicit FillUserAttrsInFusedBiasAddMaskScaleOp(mlir::MLIRContext* context)
-      : OpRewritePattern<oneflow::FusedBiasAddMaskScaleOp>(context, /*benefit=*/1) {}
-  mlir::LogicalResult matchAndRewrite(oneflow::FusedBiasAddMaskScaleOp op,
-                                      mlir::PatternRewriter& rewriter) const override {
-    if (op->hasAttrOfType<StringAttr>("op_type_name")) {
-      return failure();
-    } else {
-      op->setAttr("op_type_name", rewriter.getStringAttr("fused_bias_add_mask_scale"));
-      op->setAttr("input_lbn_segment_keys", rewriter.getStrArrayAttr({"a", "b", "mask"}));
-      op->setAttr("input_lbn_segment_sizes", rewriter.getI32ArrayAttr({1, 1, 1}));
-      op->setAttr("output_lbn_segment_keys", rewriter.getStrArrayAttr({"out"}));
-      op->setAttr("output_lbn_segment_sizes", rewriter.getI32ArrayAttr({1}));
-      op->setAttr("output_lbns", rewriter.getStrArrayAttr({op.op_name().str() + "/out_0"}));
-      return success();
-    }
-  }
-};
-
-struct FillUserAttrsInFusedScaleTrilOp : public mlir::OpRewritePattern<oneflow::FusedScaleTrilOp> {
-  explicit FillUserAttrsInFusedScaleTrilOp(mlir::MLIRContext* context)
-      : OpRewritePattern<oneflow::FusedScaleTrilOp>(context, /*benefit=*/1) {}
-  mlir::LogicalResult matchAndRewrite(oneflow::FusedScaleTrilOp op,
-                                      mlir::PatternRewriter& rewriter) const override {
-    if (op->hasAttrOfType<StringAttr>("op_type_name")) {
-      return failure();
-    } else {
-      op->setAttr("op_type_name", rewriter.getStringAttr(op->getName().stripDialect()));
-      op->setAttr("input_lbn_segment_keys", rewriter.getStrArrayAttr({"in"}));
-      op->setAttr("input_lbn_segment_sizes", rewriter.getI32ArrayAttr({1}));
-      op->setAttr("output_lbn_segment_keys", rewriter.getStrArrayAttr({"out"}));
-      op->setAttr("output_lbn_segment_sizes", rewriter.getI32ArrayAttr({1}));
-      op->setAttr("output_lbns", rewriter.getStrArrayAttr({op.op_name().str() + "/out_0"}));
-      return success();
-    }
-  }
-};
-
-struct FillUserAttrsInNormalizationAddReluOp
-    : public mlir::OpRewritePattern<oneflow::NormalizationAddReluOp> {
-  explicit FillUserAttrsInNormalizationAddReluOp(mlir::MLIRContext* context)
-      : OpRewritePattern<oneflow::NormalizationAddReluOp>(context, /*benefit=*/1) {}
-  mlir::LogicalResult matchAndRewrite(oneflow::NormalizationAddReluOp op,
-                                      mlir::PatternRewriter& rewriter) const override {
-    if (op->hasAttrOfType<StringAttr>("op_type_name")) {
-      return failure();
-    } else {
-      op->setAttr("op_type_name", rewriter.getStringAttr(op->getName().stripDialect()));
-      {
-        llvm::SmallVector<std::string, 4> input_lbn_segment_keys = {"x"};
-        if (op.addend()) input_lbn_segment_keys.push_back("addend");
-        if (op.moving_mean()) input_lbn_segment_keys.push_back("moving_mean");
-        if (op.moving_variance()) input_lbn_segment_keys.push_back("moving_variance");
-        input_lbn_segment_keys.push_back("gamma");
-        input_lbn_segment_keys.push_back("beta");
-        op->setAttr("input_lbn_segment_keys",
-                    rewriter.getStrArrayAttr(llvm::SmallVector<StringRef, 4>(
-                        {input_lbn_segment_keys.begin(), input_lbn_segment_keys.end()})));
-        llvm::SmallVector<int32_t, 4> input_lbn_segment_sizes(input_lbn_segment_keys.size());
-        std::fill_n(input_lbn_segment_sizes.begin(), input_lbn_segment_sizes.size(), 1);
-        op->setAttr("input_lbn_segment_sizes", rewriter.getI32ArrayAttr(input_lbn_segment_sizes));
-      }
-      {
-        llvm::SmallVector<std::string, 4> output_lbn_segment_keys = {"y", "reserve_space"};
-        llvm::SmallVector<std::string, 4> output_lbns = {op.op_name().str() + "/y_0",
-                                                         op.op_name().str() + "/reserve_space_0"};
-        if (op.mean()) {
-          output_lbn_segment_keys.push_back("mean");
-          output_lbns.push_back(op.op_name().str() + "/mean_0");
-        }
-        if (op.inv_variance()) {
-          output_lbn_segment_keys.push_back("inv_variance");
-          output_lbns.push_back(op.op_name().str() + "/inv_variance_0");
-        }
-        op->setAttr("output_lbn_segment_keys",
-                    rewriter.getStrArrayAttr(llvm::SmallVector<StringRef, 4>(
-                        {output_lbn_segment_keys.begin(), output_lbn_segment_keys.end()})));
-        llvm::SmallVector<int32_t, 4> output_lbn_segment_sizes(output_lbn_segment_keys.size());
-        std::fill_n(output_lbn_segment_sizes.begin(), output_lbn_segment_sizes.size(), 1);
-        op->setAttr("output_lbn_segment_sizes", rewriter.getI32ArrayAttr(output_lbn_segment_sizes));
-        op->setAttr("output_lbns", rewriter.getStrArrayAttr(llvm::SmallVector<StringRef, 4>(
-                                       {output_lbns.begin(), output_lbns.end()})));
-      }
-      return success();
-    }
-  }
-};
 
 struct ConcreteSystemOps : public mlir::OpRewritePattern<oneflow::SystemOp> {
   explicit ConcreteSystemOps(mlir::MLIRContext* context)

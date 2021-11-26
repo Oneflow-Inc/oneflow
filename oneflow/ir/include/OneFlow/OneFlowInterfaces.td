@@ -3,19 +3,27 @@
 
 include "mlir/IR/OpBase.td"
 
-def BnOrderOpInterface : OpInterface<"BnOrder"> {
+def UserOpCompatibleInterface : OpInterface<"UserOpCompatible"> {
   let description = [{
     Interface to getting the hard-coded bn
   }];
 
   let methods = [
-    StaticInterfaceMethod<"Get ibn",
-        "std::vector<std::string>", "inputOrder", (ins), [{
-        return ConcreteOp::inputOrder();
+    StaticInterfaceMethod<"",
+        "std::vector<std::string>", "inputKeys", (ins), [{
+        return ConcreteOp::inputKeys();
     }]>,
-    StaticInterfaceMethod<"Get obn",
-        "std::vector<std::string>", "outputOrder", (ins), [{
-        return ConcreteOp::outputOrder();
+    StaticInterfaceMethod<"",
+        "std::vector<uint32_t>", "inputMinimums", (ins), [{
+        return ConcreteOp::inputMinimums();
+    }]>,
+    StaticInterfaceMethod<"",
+        "std::vector<std::string>", "outputKeys", (ins), [{
+        return ConcreteOp::outputKeys();
+    }]>,
+    StaticInterfaceMethod<"",
+        "std::vector<uint32_t>", "outputMinimums", (ins), [{
+        return ConcreteOp::outputMinimums();
     }]>
   ];
 }
