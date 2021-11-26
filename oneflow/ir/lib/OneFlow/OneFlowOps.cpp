@@ -149,7 +149,7 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
       : OpRewritePattern<oneflow::UserOp>(context, /*benefit=*/1) {}
   mlir::LogicalResult matchAndRewrite(oneflow::UserOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    auto op_type_name = op->getAttrOfType<StringAttr>("op_type_name").getValue();
+    auto op_type_name = op.op_type_name();
     if (succeeded(TrimRedundantCtrl(op, rewriter))) { return success(); }
     // In principle, a concrete user op has no ctrl input/output. Some benefits:
     // 1. simplify things
@@ -161,6 +161,7 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
       attributes.erase("output_sizes");
       attributes.erase("operand_segment_sizes");
       attributes.erase("result_segment_sizes");
+      attributes.erase("op_type_name");  // TODO: use trait to mark this attr name
       llvm::SmallVector<int32_t> input_sizes, output_sizes;
       getValuesFromIntArrayAttribute(op.input_sizes(), input_sizes);
       getValuesFromIntArrayAttribute(op.output_sizes(), output_sizes);
