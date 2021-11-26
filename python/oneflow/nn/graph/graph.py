@@ -444,7 +444,7 @@ class Graph(object):
     def _compile(self, *args):
         # Build graph
         try:
-            self._print(0, 0, self._shallow_repr() + " start building graph.")
+            self._print(0, 0, self._shallow_repr() + " build_graph_start.")
             assert not self._is_compiled, (
                 "nn.Graph " + self._name + " has already been compiled."
             )
@@ -476,7 +476,7 @@ class Graph(object):
             self._print(
                 0,
                 0,
-                self._shallow_repr() + " start compiling plan and init graph runtime:",
+                self._shallow_repr() + " compile_and_init_start",
             )
             t2 = time.clock()
             self._c_nn_graph.complie_and_init_runtime()
