@@ -29,7 +29,8 @@ def get_sbp(device: str):
 shapes = {2: (128, 8), 3: (16, 8, 64), 4: (16, 8, 32, 32), 5: (16, 8, 16, 16, 16)}
 
 
-def compare_loss(device_type, reduction, cls, x, y, x1, y1):
+def compare_loss(device_type, dim, reduction, cls, data_generator):
+    x, y, x1, y1 = data_generator(dim, device_type, *get_sbp(device_type))
     reduce_loss_func = cls(reduction=reduction).to(device_type)
     none_loss_func = cls(reduction="none").to(device_type)
 
@@ -65,11 +66,6 @@ def generate_necessity_default(dim: int, device: str, placement, sbp):
     return f(x_np, True), f(y_np, False), f(x_np, True), f(y_np, False)
 
 
-def compare_loss_default(device_type, dim, reduction, cls):
-    x, y, x1, y1 = generate_necessity_default(dim, device_type, *get_sbp(device_type))
-    compare_loss(device_type, reduction, cls, x, y, x1, y1)
-
-
 def generate_necessity_for_cross_entropy_or_nll_loss(
     dim: int, device: str, placement, sbp
 ):
@@ -83,13 +79,6 @@ def generate_necessity_for_cross_entropy_or_nll_loss(
     return f(x_np, True), f(y_np, False), f(x_np, True), f(y_np, False)
 
 
-def compare_cross_entropy_or_nll_loss(device_type, dim, reduction, cls):
-    x, y, x1, y1 = generate_necessity_for_cross_entropy_or_nll_loss(
-        dim, device_type, *get_sbp(device_type)
-    )
-    compare_loss(device_type, reduction, cls, x, y, x1, y1)
-
-
 class TestBCELossOrWithLogitsConsistent(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_bce_loss(testcase):
@@ -98,8 +87,9 @@ class TestBCELossOrWithLogitsConsistent(flow.unittest.TestCase):
         arg_dict["dim"] = [2, 3, 4, 5]
         arg_dict["reduction"] = ["sum", "mean"]
         arg_dict["cls"] = [flow.nn.BCELoss, flow.nn.BCEWithLogitsLoss]
+        arg_dict["data_generator"] = [generate_necessity_default]
         for arg in GenArgList(arg_dict):
-            compare_loss_default(*arg)
+            compare_loss(*arg)
 
 
 class TestCrossEntropyOrNllLossConsistent(flow.unittest.TestCase):
@@ -110,8 +100,9 @@ class TestCrossEntropyOrNllLossConsistent(flow.unittest.TestCase):
         arg_dict["dim"] = [2, 3, 4, 5]
         arg_dict["reduction"] = ["sum", "mean"]
         arg_dict["cls"] = [flow.nn.CrossEntropyLoss, flow.nn.NLLLoss]
+        arg_dict["data_generator"] = [generate_necessity_for_cross_entropy_or_nll_loss]
         for arg in GenArgList(arg_dict):
-            compare_cross_entropy_or_nll_loss(*arg)
+            compare_loss(*arg)
 
 
 class TestKLDivLossConsistent(flow.unittest.TestCase):
@@ -121,8 +112,10 @@ class TestKLDivLossConsistent(flow.unittest.TestCase):
         arg_dict["device_type"] = ["cuda", "cpu"]
         arg_dict["dim"] = [2, 3, 4, 5]
         arg_dict["reduction"] = ["sum", "mean"]
+        arg_dict["cls"] = [flow.nn.KLDivLoss]
+        arg_dict["data_generator"] = [generate_necessity_default]
         for arg in GenArgList(arg_dict):
-            compare_loss_default(*arg, flow.nn.KLDivLoss)
+            compare_loss(*arg)
 
 
 class TestSmoothL1LossConsistent(flow.unittest.TestCase):
@@ -132,8 +125,10 @@ class TestSmoothL1LossConsistent(flow.unittest.TestCase):
         arg_dict["device_type"] = ["cuda", "cpu"]
         arg_dict["dim"] = [2, 3, 4, 5]
         arg_dict["reduction"] = ["sum", "mean"]
+        arg_dict["cls"] = [flow.nn.SmoothL1Loss]
+        arg_dict["data_generator"] = [generate_necessity_default]
         for arg in GenArgList(arg_dict):
-            compare_loss_default(*arg, flow.nn.SmoothL1Loss)
+            compare_loss(*arg)
 
 
 if __name__ == "__main__":
