@@ -162,14 +162,15 @@ TEST(Just, MaybeErrorPtr) {
 namespace oneflow {
 namespace maybe {
 
+template<typename T>
 struct JustConfig {
-  template<typename T>
-  static simple::StackedError<std::string> ValueNotFoundError(T&&) {
+  template<typename U>
+  static simple::StackedError<std::string> ValueNotFoundError(U&&) {
     return {"not found"};
   }
 
-  template<typename T>
-  static decltype(auto) Value(T&& v) {
+  template<typename U>
+  static decltype(auto) Value(U&& v) {
     return *v;
   }
 };

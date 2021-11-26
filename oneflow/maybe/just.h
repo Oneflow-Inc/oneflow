@@ -45,10 +45,23 @@ struct IsOptional : std::false_type {};
 template<typename T>
 struct IsOptional<Optional<T>> : std::true_type {};
 
-// user should provide which error will be returned while an optional (or pointers) has no value
+// user should provide which error will be returned while an optional has no value
 // and is used in JUST or CHECK_JUST;
-// if not provided, then JUST(_MSG) and CHECK_JUST(_MSG) cannot be used for Optional (or pointers)
-// i.e. `struct JustConfig { static SomeError ValueNotFoundError(auto&&) { ... } }`
+// if not provided, then JUST(_MSG) and CHECK_JUST(_MSG) cannot be used for Optional
+// i.e. ```c++
+// template <typename T> struct JustConfig<Optional<T>> {
+//   static SomeError ValueNotFoundError(auto&&) { ... }
+// };
+// ```
+// or some other optional types, i.e. std::shared_ptr ```c++
+// template <typename T> struct JustConfig<std::shared_ptr<T>> {
+//   // define which error will be returned while it is empty
+//   static SomeError ValueNotFoundError(auto&&) { ... }
+//   // define how to get the underlying value
+//   static decltype(auto) Value(auto&&) { ... }
+// };
+// ```
+template<typename T>
 struct JustConfig;
 
 namespace details {
@@ -66,7 +79,7 @@ struct JustPrivateScope {
 
   template<typename T, std::enable_if_t<!IsMaybe<RemoveCVRef<T>>::value, int> = 0>
   static decltype(auto) StackedError(T&& v) {
-    return DependentName<JustConfig, T>::ValueNotFoundError(std::forward<T>(v));
+    return JustConfig<RemoveCVRef<T>>::ValueNotFoundError(std::forward<T>(v));
   }
 };
 
@@ -96,10 +109,10 @@ auto JustGetValue(T&& v) -> RemoveRValRef<decltype(JustPrivateScope::Value(std::
   return JustPrivateScope::Value(std::forward<T>(v));
 }
 
-template<typename T, std::enable_if_t<!(IsMaybe<T>::value || IsOptional<T>::value), int> = 0>
+template<typename T, std::enable_if_t<!IsMaybe<T>::value && !IsOptional<T>::value, int> = 0>
 auto JustGetValue(T&& v)
-    -> RemoveRValRef<decltype(DependentName<JustConfig, T>::Value(std::forward<T>(v)))> {
-  return DependentName<JustConfig, T>::Value(std::forward<T>(v));
+    -> RemoveRValRef<decltype(JustConfig<RemoveCVRef<T>>::Value(std::forward<T>(v)))> {
+  return JustConfig<RemoveCVRef<T>>::Value(std::forward<T>(v));
 }
 
 }  // namespace details
