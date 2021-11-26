@@ -234,6 +234,7 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
       switch (engine) {
         case XrtEngine::XLA: return "XLA";
         case XrtEngine::TENSORRT: return "TENSORRT";
+        case XrtEngine::OPENVINO: return "OPENVINO";
         default: LOG(FATAL) << "Not supported engine " << engine; return "";
       }
     }());
