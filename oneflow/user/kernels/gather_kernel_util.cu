@@ -62,7 +62,7 @@ bool IsSafeUseIndex32(const Shape& flat_in_shape, const int64_t num_indices) {
 }  // namespace
 
 template<typename T, typename K>
-struct GatherKernelUtilImpl<DeviceType::kGPU, T, K> final {
+struct GatherKernelUtilImpl<DeviceType::kCUDA, T, K> final {
   static void Forward(ep::Stream* stream, const K* indices, int64_t num_indices, const T* in,
                       const Shape& flat_in_shape, T* out, const int64_t offset) {
     const int64_t out_elem_cnt = flat_in_shape.At(0) * num_indices * flat_in_shape.At(2);
@@ -81,20 +81,20 @@ struct GatherKernelUtilImpl<DeviceType::kGPU, T, K> final {
 };
 
 template<typename K>
-struct GatherKernelUtilImpl<DeviceType::kGPU, float16, K> final {
+struct GatherKernelUtilImpl<DeviceType::kCUDA, float16, K> final {
   static void Forward(ep::Stream* stream, const K* indices, int64_t num_indices, const float16* in,
                       const Shape& flat_in_shape, float16* out, const int64_t offset) {
-    GatherKernelUtilImpl<DeviceType::kGPU, half, K>::Forward(
+    GatherKernelUtilImpl<DeviceType::kCUDA, half, K>::Forward(
         stream, indices, num_indices, reinterpret_cast<const half*>(in), flat_in_shape,
         reinterpret_cast<half*>(out), offset);
   }
 };
 
-#define INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL(in_type_pair, index_type_pair)              \
-  template struct GatherKernelUtilImpl<DeviceType::kGPU, OF_PP_PAIR_FIRST(in_type_pair), \
+#define INITIATE_GATHER_KERNEL_UTIL_CUDA_IMPL(in_type_pair, index_type_pair)              \
+  template struct GatherKernelUtilImpl<DeviceType::kCUDA, OF_PP_PAIR_FIRST(in_type_pair), \
                                        OF_PP_PAIR_FIRST(index_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL, GATHER_DATA_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_CUDA_IMPL, GATHER_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ);
-#undef INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL
+#undef INITIATE_GATHER_KERNEL_UTIL_CUDA_IMPL
 
 }  // namespace oneflow

@@ -432,29 +432,29 @@ class OneFlow_EagerPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
   );
 }
 
-def OneFlow_LazyMaxPool1dOp : OneFlow_LazyPoolBaseOp<"max_pool_1d", []> {}
+def OneFlow_LazyMaxPool1dOp : OneFlow_LazyPoolBaseOp<"tf_max_pool_1d", []> {}
 
-def OneFlow_LazyMaxPoolGrad1dOp : OneFlow_LazyPoolGradBaseOp<"max_pool_1d_grad", []> {}
+def OneFlow_LazyMaxPoolGrad1dOp : OneFlow_LazyPoolGradBaseOp<"tf_max_pool_1d_grad", []> {}
 
-def OneFlow_LazyMaxPool2dOp : OneFlow_LazyPoolBaseOp<"max_pool_2d", []> {}
+def OneFlow_LazyMaxPool2dOp : OneFlow_LazyPoolBaseOp<"tf_max_pool_2d", []> {}
 
 def OneFlow_LazyMaxPoolGrad2dOp : OneFlow_LazyPoolGradBaseOp<"max_pool_2d_grad", []> {}
 
-def OneFlow_LazyMaxPool3dOp : OneFlow_LazyPoolBaseOp<"max_pool_3d", []> {}
+def OneFlow_LazyMaxPool3dOp : OneFlow_LazyPoolBaseOp<"tf_max_pool_3d", []> {}
 
 def OneFlow_LazyMaxPoolGrad3dOp : OneFlow_LazyPoolGradBaseOp<"max_pool_3d_grad", []> {}
 
-def OneFlow_LazyAvgPool1dOp : OneFlow_LazyPoolBaseOp<"avg_pool_1d", []> {}
+def OneFlow_LazyAvgPool1dOp : OneFlow_LazyPoolBaseOp<"tf_avg_pool_1d", []> {}
 
-def OneFlow_LazyAvgPoolGrad1dOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_1d_grad", []> {}
+def OneFlow_LazyAvgPoolGrad1dOp : OneFlow_LazyPoolGradBaseOp<"tf_avg_pool_1d_grad", []> {}
 
-def OneFlow_LazyAvgPool2dOp : OneFlow_LazyPoolBaseOp<"avg_pool_2d", []> {}
+def OneFlow_LazyAvgPool2dOp : OneFlow_LazyPoolBaseOp<"tf_avg_pool_2d", []> {}
 
-def OneFlow_LazyAvgPoolGrad2dOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_2d_grad", []> {}
+def OneFlow_LazyAvgPoolGrad2dOp : OneFlow_LazyPoolGradBaseOp<"tf_avg_pool_2d_grad", []> {}
 
-def OneFlow_LazyAvgPool3dOp : OneFlow_LazyPoolBaseOp<"avg_pool_3d", []> {}
+def OneFlow_LazyAvgPool3dOp : OneFlow_LazyPoolBaseOp<"tf_avg_pool_3d", []> {}
 
-def OneFlow_LazyAvgPoolGrad3dOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_3d_grad", []> {}
+def OneFlow_LazyAvgPoolGrad3dOp : OneFlow_LazyPoolGradBaseOp<"tf_avg_pool_3d_grad", []> {}
 
 def OneFlow_EagerAvgPool1dOp : OneFlow_EagerPoolBaseOp<"avgpool_1d", []> {}
 
