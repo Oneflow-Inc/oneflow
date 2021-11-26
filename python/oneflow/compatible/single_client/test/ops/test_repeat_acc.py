@@ -30,7 +30,6 @@ func_config.default_data_type(flow.float)
 
 
 def test_repeat_acc(test_case, device_type, shape, dtype, acc_num):
-    print("mu:-->", device_type, dtype)
     flow.clear_default_session()
     if flow.eager_execution_enabled():
         return
@@ -51,7 +50,6 @@ def test_repeat_acc(test_case, device_type, shape, dtype, acc_num):
     if dtype == "float16":
         z = x.astype(np.float16) * acc_num
         z = z.astype(np.float32)
-    print(y - z)
     test_case.assertTrue(np.allclose(y, z, rtol=1e-05, atol=1e-05))
 
 

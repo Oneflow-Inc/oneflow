@@ -85,6 +85,9 @@ class AddOneDnnImpl : public Add {
   using Add::Launch;
   void Launch(Stream* stream, const void* const* srcs, size_t arity, void* dst,
               size_t count) override {
+    for (int i = 1; i < arity; i++) {
+      if (srcs[i] == dst) { LOG(FATAL) << "Only the first parameter can be operated inplace"; }
+    }
     dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
     dnnl::stream* onednn_stream = stream->As<CpuStream>()->onednn_stream();
 
