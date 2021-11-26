@@ -376,7 +376,7 @@ LogicalResult GetFullKeys<OpTrait::AttrSizedOperandSegments>(Operation* op,
                                                              std::vector<std::string>& full_keys) {
   if (auto uc = dyn_cast<UserOpCompatible>(op)) {
     assert(full_keys.size() == 0);
-    full_keys.insert(full_keys.end(), uc.inputKeys().begin(), uc.inputKeys().end());
+    full_keys.insert(full_keys.end(), uc.inputKeys()->begin(), uc.inputKeys()->end());
     return success();
   }
   return failure();
@@ -387,7 +387,7 @@ LogicalResult GetFullKeys<OpTrait::AttrSizedResultSegments>(Operation* op,
                                                             std::vector<std::string>& full_keys) {
   if (auto uc = dyn_cast<UserOpCompatible>(op)) {
     assert(full_keys.size() == 0);
-    full_keys.insert(full_keys.end(), uc.outputKeys().begin(), uc.outputKeys().end());
+    full_keys.insert(full_keys.end(), uc.outputKeys()->begin(), uc.outputKeys()->end());
     return success();
   }
   return failure();

@@ -117,8 +117,8 @@ class OneFlow_ConvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
     let extraClassDeclaration = [{
       static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "weight", "bias", "bias_multiplier"}); return &val; }
       static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0, 0}); return &val; }
-      static const std::vector<std::string>* outputKeys() { std::vector<std::string> val({"out"}); return &val; }
-      static const std::vector<std::uint32_t>* outputMinimums() { std::vector<std::uint32_t> val({1}); return &val; }
+      static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
+      static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     }];
 }
 
