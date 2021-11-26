@@ -331,20 +331,20 @@ size_t InferS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
 
 REGISTER_USER_KERNEL("_nccl_logical_all_reduce")
     .SetCreateFn<NcclLogicalAllReduceKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
 
 REGISTER_USER_KERNEL("_nccl_logical_reduce_scatter")
     .SetCreateFn<NcclLogicalReduceScatterKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
 
 REGISTER_USER_KERNEL("_nccl_logical_all_gather")
     .SetCreateFn<NcclLogicalAllGatherKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
 
 #define REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(dtype)                                   \
   REGISTER_USER_KERNEL("_nccl_logical_all_gather_noncontinuous")                         \
       .SetCreateFn<NcclLogicalAllGatherNoncontinuous<dtype>>()                           \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferAllGatherNoncontinuousKernelTmpBufferSize);
@@ -359,7 +359,7 @@ REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(float16)
 #define REGISTER_S2S_KERNEL(dtype)                                                       \
   REGISTER_USER_KERNEL("_nccl_logical_s2s")                                              \
       .SetCreateFn<NcclLogicalS2SKernel<dtype>>()                                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferS2SKernelTmpBufferSize);

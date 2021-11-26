@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_DISTRIBUTIONS_UNIFORM_DISTRIBUTION_H_
 #define ONEFLOW_USER_KERNELS_DISTRIBUTIONS_UNIFORM_DISTRIBUTION_H_
 
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/framework/random_generator.h"
 #ifdef WITH_CUDA
 #include <curand.h>
@@ -45,7 +45,7 @@ class UniformDistribution<DeviceType::kCPU, T> final {
 
 #ifdef WITH_CUDA
 template<typename T>
-class UniformDistribution<DeviceType::kGPU, T> final {
+class UniformDistribution<DeviceType::kCUDA, T> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UniformDistribution);
   UniformDistribution(T low, T high) : low_(low), high_(high) {}

@@ -32,9 +32,9 @@ const AMPList& AutoMixedPrecisionLists::BlackList() {
 
 const AMPList& AutoMixedPrecisionLists::GrayList() {
   static AMPList gray_list = {"add_n",
-                              "avg_pool_1d",
-                              "avg_pool_2d",
-                              "avg_pool_3d",
+                              "tf_avg_pool_1d",
+                              "tf_avg_pool_2d",
+                              "tf_avg_pool_3d",
                               "bias_add",
                               "multiply",
                               "sigmoid",
@@ -65,9 +65,9 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
 const AMPList& AutoMixedPrecisionLists::ClearList() {
   // TODO(niuchong): tuple_identity
   static AMPList clear_list = {"gather",
-                               "max_pool_1d",
-                               "max_pool_2d",
-                               "max_pool_3d",
+                               "tf_max_pool_1d",
+                               "tf_max_pool_2d",
+                               "tf_max_pool_3d",
                                "reshape",
                                "relu",
                                "transpose",
