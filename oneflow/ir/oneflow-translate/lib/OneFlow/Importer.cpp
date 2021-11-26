@@ -421,7 +421,7 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
     const DenseIntElementsAttr& size_attr = op->getAttrOfType<DenseIntElementsAttr>(attr_name);
     if (!size_attr) return failure();
     auto sizes_ = size_attr.getValues<int32_t>();
-    if (keys.size() != sizes_.size()) {
+    if (full_keys.size() != sizes_.size()) {
       op->emitError() << "fail to convert op inputs, keys != sizes, attr_name: " << attr_name
                       << ", keys: " << keys.size() << ", sizes: " << sizes_.size()
                       << ", name: " << op->getName();
@@ -590,8 +590,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
       auto attr_name = id.str();
       Attribute attr = id_attr.second;
       auto user_attr = ::oneflow::AttrValue();
-      ::oneflow::AttrType attr_type =
-          QueryAttrType(user_op_adaptor.op_type_name().getValue().str(), attr_name);
+      ::oneflow::AttrType attr_type = QueryAttrType(op->getName().getStringRef().str(), attr_name);
       if (attr_type == ::oneflow::kAtInt32) {
         user_attr.set_at_int32(attr.dyn_cast<IntegerAttr>().getSInt());
       } else if (attr_type == ::oneflow::kAtInt64) {

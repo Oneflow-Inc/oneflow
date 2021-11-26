@@ -112,7 +112,7 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
   }
 
   AttrType QueryAttrType(const std::string& op_type_name, const std::string& attr_name) const {
-    user_op::UserOpDefWrapper op_def(GetUserOpDef(attr_name));
+    user_op::UserOpDefWrapper op_def(GetUserOpDef(op_type_name));
     CHECK(op_def.IsAttrName(attr_name)) << attr_name << " not a attr name for op: " << op_type_name;
     return op_def.GetAttrType(attr_name);
   }
