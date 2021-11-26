@@ -420,15 +420,15 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
     const StringRef attr_name = GetSegmentSizeAttr<Trait>();
     const DenseIntElementsAttr& size_attr = op->getAttrOfType<DenseIntElementsAttr>(attr_name);
     if (!size_attr) return failure();
-    auto sizes_ = size_attr.getValues<int32_t>();
-    if (full_keys.size() != sizes_.size()) {
+    auto segment_sizes = size_attr.getValues<int32_t>();
+    if (full_keys.size() != segment_sizes.size()) {
       op->emitError() << "fail to convert op inputs, keys != sizes, attr_name: " << attr_name
-                      << ", keys: " << keys.size() << ", sizes: " << sizes_.size()
+                      << ", keys: " << keys.size() << ", sizes: " << segment_sizes.size()
                       << ", name: " << op->getName();
       op->dump();
       return failure();
     };
-    sizes = {sizes_.begin(), sizes_.end()};
+    full_sizes = {segment_sizes.begin(), segment_sizes.end()};
   } else {
     for (auto key : keys) { sizes.push_back(1); }
   }
