@@ -140,14 +140,18 @@ __global__ RETURN_VOID_IF_DOUBLE PReluForwardMultiAlphaGpu(
     LoadPack y_vec;
 #pragma unroll
     for (int i = 0; i < pack_size; i++) {
-      y_vec.elem[i] = x_vec.elem[i] * alpha[(linear_index / inner_size) % alpha_size];
+      y_vec.elem[i] = x_vec.elem[i] > 0
+                          ? x_vec.elem[i]
+                          : x_vec.elem[i] * alpha[(linear_index / inner_size) % alpha_size];
     }
     *(reinterpret_cast<LoadType*>(y + linear_index)) = y_vec.storage;
   }
 
   if (tail && global_thread_id < n_tail) {
+    T tail_x_val = tail_x[global_thread_id];
     tail_y[global_thread_id] =
-        tail_x[global_thread_id] * alpha[(global_thread_id / inner_size) % alpha_size];
+        tail_x_val > 0 ? tail_x_val
+                       : tail_x_val * alpha[(global_thread_id / inner_size) % alpha_size];
   }
 }
 
@@ -169,14 +173,18 @@ __global__ RETURN_VOID_IF_FLOAT PReluForwardMultiAlphaGpu(
     LoadPack y_vec;
 #pragma unroll
     for (int i = 0; i < pack_size; i++) {
-      y_vec.elem[i] = x_vec.elem[i] * alpha[(linear_index / inner_size) % alpha_size];
+      y_vec.elem[i] = x_vec.elem[i] > 0
+                          ? x_vec.elem[i]
+                          : x_vec.elem[i] * alpha[(linear_index / inner_size) % alpha_size];
     }
     *(reinterpret_cast<LoadType*>(y + linear_index)) = y_vec.storage;
   }
 
   if (tail && global_thread_id < n_tail) {
+    T tail_x_val = tail_x[global_thread_id];
     tail_y[global_thread_id] =
-        tail_x[global_thread_id] * alpha[(global_thread_id / inner_size) % alpha_size];
+        tail_x_val > 0 ? tail_x_val
+                       : tail_x_val * alpha[(global_thread_id / inner_size) % alpha_size];
   }
 }
 
@@ -214,12 +222,13 @@ __global__ RETURN_VOID_IF_DOUBLE PReluBackwardMultiAlphaGpu(
   }
 
   if (tail && global_thread_id < n_tail) {
+    T tail_x_val = tail_x[global_thread_id];
+    T tail_dy_val = tail_dy[global_thread_id];
     tail_dx[global_thread_id] =
-        tail_x[global_thread_id] > 0
-            ? tail_dy[global_thread_id]
-            : tail_dy[global_thread_id] * alpha[(global_thread_id / inner_size) % alpha_size];
+        tail_x_val > 0 ? tail_dy_val
+                       : tail_dy_val * alpha[(global_thread_id / inner_size) % alpha_size];
     alpha_diff[(global_thread_id / inner_size) % alpha_size] +=
-        tail_x[global_thread_id] > 0 ? 0 : tail_dy[global_thread_id] * tail_x[global_thread_id];
+        tail_x_val > 0 ? 0 : tail_dy_val * tail_x[global_thread_id];
   }
 }
 
@@ -257,12 +266,13 @@ __global__ RETURN_VOID_IF_FLOAT PReluBackwardMultiAlphaGpu(
   }
 
   if (tail && global_thread_id < n_tail) {
+    T tail_x_val = tail_x[global_thread_id];
+    T tail_dy_val = tail_dy[global_thread_id];
     tail_dx[global_thread_id] =
-        tail_x[global_thread_id] > 0
-            ? tail_dy[global_thread_id]
-            : tail_dy[global_thread_id] * alpha[(global_thread_id / inner_size) % alpha_size];
+        tail_x_val > 0 ? tail_dy_val
+                       : tail_dy_val * alpha[(global_thread_id / inner_size) % alpha_size];
     alpha_diff[(global_thread_id / inner_size) % alpha_size] +=
-        tail_x[global_thread_id] > 0 ? 0 : tail_dy[global_thread_id] * tail_x[global_thread_id];
+        tail_x_val > 0 ? 0 : tail_dy_val * tail_x[global_thread_id];
   }
 }
 
