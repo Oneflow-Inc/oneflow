@@ -129,10 +129,10 @@ void XrtLaunchKernel<device_type>::MakeInputOutputAlias(
   for (int i = 0; i < entry_params.size(); ++i) {
     const std::string& entry_name = entry_params[i].name();
     if (mutability_table.count(entry_name) > 0) {
-      aliases->emplace_back({{static_cast<int>(return_params->size())} /*output_index*/,
+      aliases->push_back({{static_cast<int>(return_params->size())} /*output_index*/,
                              i /*param_number=*/,
                              {} /*param_index=*/});
-      return_params->emplace_back(entry_params[i]);
+      return_params->push_back(entry_params[i]);
     }
   }
 }
