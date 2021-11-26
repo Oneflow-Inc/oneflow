@@ -119,7 +119,7 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
     bn2parallel_desc["out"] = op_parallel_desc;
     if (device_type() == DeviceType::kCPU) {
       bn2parallel_desc["in"] = op_parallel_desc;
-    } else if (device_type() == DeviceType::kGPU) {
+    } else if (device_type() == DeviceType::kCUDA) {
       std::shared_ptr<ParallelDesc> in_parallel_desc =
           std::make_shared<ParallelDesc>(*op_parallel_desc);
       in_parallel_desc->set_device_type(DeviceType::kCPU);
