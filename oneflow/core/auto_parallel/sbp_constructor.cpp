@@ -67,16 +67,17 @@ Maybe<void> SbpConstructor::DumpNdSbpSignatureForJob(const OpGraph& op_graph, Jo
   op_graph.ForEachNode([&](const OpNode* node) -> void {
     SbpNode<cfg::NdSbpSignature>* sbp_node = op_name2sbp_node_[node->op().op_name()];
     // Update NdSbpSignature
-    cfg::NdSbpSignature nd_sbp_signature;
-    // SbpSignatureToNdSbpSignature(*sbp_node->FinalSbpSignature(), &nd_sbp_signature);
     sbp_node->FinalSbpSignature()->ToProto(
         &(*job->mutable_job_parallel_view_conf()
                ->mutable_op_name2nd_sbp_signature_conf())[node->op().op_name()]);
     // Do we have 1D SbpSignature Conf
-    // Update SbpSignature
-    // sbp_node->FinalSbpSignature()->ToProto(
-    //     &(*job->mutable_job_parallel_view_conf()
-    //            ->mutable_op_name2sbp_signature_conf())[node->op().op_name()]);
+    if (node->parallel_desc().hierarchy()->NumAxes() == 1) {
+      // Update SbpSignature
+      cfg::SbpSignature sbp_signature;
+      NdSbpSignatureToSbpSignature(*sbp_node->FinalSbpSignature(), &sbp_signature);
+      sbp_signature.ToProto(&(*job->mutable_job_parallel_view_conf()
+                                   ->mutable_op_name2sbp_signature_conf())[node->op().op_name()]);
+    }
   });
   return Maybe<void>::Ok();
 }
