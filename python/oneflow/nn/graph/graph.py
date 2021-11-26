@@ -466,7 +466,7 @@ class Graph(object):
                 0,
                 "[ERROR]"
                 + self._shallow_repr()
-                + " build graph got error: "
+                + " build graph got error:"
                 + sys_exc_error_msg(),
             )
             raise
@@ -474,9 +474,7 @@ class Graph(object):
         # Complie graph to execution plan and init Runtime
         try:
             self._print(
-                0,
-                0,
-                self._shallow_repr() + " Compile_and_init_start",
+                0, 0, self._shallow_repr() + " Start compiling plan and init graph runtime.",
             )
             compile_and_init_start = time.clock()
             self._c_nn_graph.complie_and_init_runtime()
@@ -490,7 +488,7 @@ class Graph(object):
                 + "s."
                 + "\n"
                 + "The total time consumed to complete build graph and compiling plan and init graph runtime:"
-                + str(round( compile_and_init_end - build_graph_start, 2))
+                + str(round(compile_and_init_end - build_graph_start, 2))
                 + "s."
                 + "\n",
             )
@@ -500,7 +498,7 @@ class Graph(object):
                 0,
                 "[ERROR]"
                 + self._shallow_repr()
-                + " compiling plan or initialing graph runtime got error : "
+                + " compiling plan or initialing graph runtime got error :"
                 + sys_exc_error_msg(),
             )
             raise
@@ -711,7 +709,7 @@ class Graph(object):
                 0,
                 "[ERROR]"
                 + self._shallow_repr()
-                + " run got error : "
+                + " run got error :"
                 + sys_exc_error_msg(),
             )
             raise
