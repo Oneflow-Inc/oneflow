@@ -125,20 +125,20 @@ class ScalarAddFunctor : public ScalarMathBaseFunctor {
  public:
   ScalarAddFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_add") {}
 
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Scalar& other,
                            const Scalar& alpha, const bool& inplace) const {
     return ScalarMathBaseFunctor::operator()(
-        x, Scalar(scalar.Value<float>() * alpha.Value<float>()), inplace);
+        input, Scalar(other.Value<float>() * alpha.Value<float>()), inplace);
   }
 };
 
 class ScalarAdd2Functor {
  public:
-  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x,
+  Maybe<Tensor> operator()(const Scalar& input, const std::shared_ptr<one::Tensor>& other,
                            const Scalar& alpha) const {
-    std::shared_ptr<one::Tensor> x_;
-    x_ = alpha.Value<float>() == 1.0 ? x : JUST(ScalarMul(alpha, x));
-    return ScalarAdd(x_, scalar, /*alpha=*/1, /*inplace=*/false);
+    std::shared_ptr<one::Tensor> other_;
+    other_ = alpha.Value<float>() == 1.0 ? other : JUST(ScalarMul(alpha, other));
+    return ScalarAdd(other_, input, /*alpha=*/1, /*inplace=*/false);
   }
 };
 

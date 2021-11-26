@@ -40,45 +40,45 @@ class AddFunctor {
         CHECK_JUST(one::OpBuilder("broadcast_add").Input("x").Input("y").Output("z").Build());
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& y, const Scalar& alpha,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& other, const Scalar& alpha,
                            bool inplace) const {
-    bool x_static_zeros = IsStaticZerosTensor(x);
-    if (x_static_zeros || IsStaticZerosTensor(y)) {
-      CHECK_OR_RETURN(JUST(x->device()) == JUST(y->device()));
-      CHECK_OR_RETURN(*x->shape() == *y->shape());
-      CHECK_OR_RETURN(x->dtype() == y->dtype());
-      if (x_static_zeros) {
-        return alpha.Value<float>() == 1.0 ? y : JUST(functional::ScalarMul(alpha, y));
+    bool input_static_zeros = IsStaticZerosTensor(input);
+    if (input_static_zeros || IsStaticZerosTensor(other)) {
+      CHECK_OR_RETURN(JUST(input->device()) == JUST(other->device()));
+      CHECK_OR_RETURN(*input->shape() == *other->shape());
+      CHECK_OR_RETURN(input->dtype() == other->dtype());
+      if (input_static_zeros) {
+        return alpha.Value<float>() == 1.0 ? other : JUST(functional::ScalarMul(alpha, other));
       }
-      return x;
+      return input;
     }
 
     const OpExpr* op = nullptr;
 
     TensorProcessor tensor_processor;
     if (alpha.Value<float>() == 1.0) {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({input, other}).Apply());
     } else {
       JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-               .AddInputs({x, JUST(functional::ScalarMul(alpha, y))})
+               .AddInputs({input, JUST(functional::ScalarMul(alpha, other))})
                .Apply());
     }
     TensorTuple input_vec = JUST(tensor_processor.GetInputs());
-    const std::shared_ptr<one::Tensor>& x_cast = input_vec[0];
-    const std::shared_ptr<one::Tensor>& y_cast = input_vec[1];
+    const std::shared_ptr<one::Tensor>& input_cast = input_vec[0];
+    const std::shared_ptr<one::Tensor>& other_cast = input_vec[1];
 
-    if (*x_cast->shape() == *y_cast->shape()) {
+    if (*input_cast->shape() == *other_cast->shape()) {
       op = add_op_.get();
     } else {
       op = broadcast_add_op_.get();
     }
     if (inplace) {
-      JUST(CheckInplaceCastValid(x, x_cast));
-      JUST(CheckInplaceValid(x));
-      JUST(CheckShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
+      JUST(CheckInplaceCastValid(input, input_cast));
+      JUST(CheckInplaceValid(input));
+      JUST(CheckShapeCanExpandTo(*other_cast->shape(), *input_cast->shape()));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x_cast;
+      outputs->at(0) = input_cast;
       JUST(OpInterpUtil::Dispatch(*op, input_vec, outputs.get()));
       return outputs->at(0);
     }
