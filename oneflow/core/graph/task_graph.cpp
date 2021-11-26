@@ -564,7 +564,12 @@ void TaskGraph::AddCtrlEdgeBetweenSrcDstTickAndInputOutputInSameRank() {
 
   auto AddCtrlEdge = [&](TaskNode* src, TaskNode* dst) {
     std::string ctrl_regst_name;
-    src->BuildCtrlRegstDesc(dst, &ctrl_regst_name);
+    RegstDesc* ctrl_regst = src->BuildCtrlRegstDesc(dst, &ctrl_regst_name);
+    // NOTE(chengcheng):
+    //   ctrl edge between src subset tick to output is just for restrict order in multi-client
+    //   but this ctrl edge will block src subset tick to delay pipeline, so this ctrl edge must
+    //   at least 2.
+    ctrl_regst->UpdtMinRegstNumIfNeed(2);
     TaskEdge* edge = NewEdge();
     Connect<TaskNode>(src, edge, dst);
     src->BindEdgeWithProducedRegst(edge, ctrl_regst_name);
