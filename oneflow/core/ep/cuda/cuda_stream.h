@@ -57,11 +57,12 @@ class CudaGraphExecutable {
 class CudaStream : public Stream {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaStream);
-  explicit CudaStream(int device_ordinal);
+  explicit CudaStream(int device_index);
   ~CudaStream() override;
 
   DeviceType device_type() const override;
   Maybe<void> Sync() override;
+  void RecordEvent(Event* event) override;
 
   Maybe<void> OnExecutionContextSetup() override;
   Maybe<void> OnExecutionContextTeardown() override;
@@ -75,13 +76,13 @@ class CudaStream : public Stream {
   void EndGraphCapture(CudaGraphExecutable* executable);
   bool IsGraphCapturing() const;
   void LaunchGraph(const CudaGraphExecutable* executable);
-#endif
+#endif  // WITH_CUDA_GRAPHS
 
  private:
   cudaStream_t cuda_stream_{};
   cublasHandle_t cublas_handle_{};
   cudnnHandle_t cudnn_handle_{};
-  int device_ordinal_;
+  int device_index_;
 #if CUBLAS_VERSION >= 11200
   void* workspace_{};
   size_t workspace_size_{};

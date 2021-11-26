@@ -151,15 +151,15 @@ class CombinedMarginLossGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_COMBINED_MARGIN_LOSS_GPU_KERNEL(in_type, indices_type)                \
+#define REGISTER_COMBINED_MARGIN_LOSS_CUDA_KERNEL(in_type, indices_type)               \
   REGISTER_USER_KERNEL("combined_margin_loss")                                         \
       .SetCreateFn<CombinedMarginLossGpuKernel<OF_PP_PAIR_FIRST(in_type),              \
                                                OF_PP_PAIR_FIRST(indices_type)>>()      \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
                        && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(in_type)) \
                        && (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(indices_type)));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_COMBINED_MARGIN_LOSS_GPU_KERNEL, FLOATING_DATA_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_COMBINED_MARGIN_LOSS_CUDA_KERNEL, FLOATING_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
 
 template<typename T, typename K>
@@ -209,15 +209,15 @@ class CombinedMarginLossGradGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_COMBINED_MARGIN_LOSS_GRAD_GPU_KERNEL(dy_type, indices_type)            \
+#define REGISTER_COMBINED_MARGIN_LOSS_GRAD_CUDA_KERNEL(dy_type, indices_type)           \
   REGISTER_USER_KERNEL("combined_margin_loss_grad")                                     \
       .SetCreateFn<CombinedMarginLossGradGpuKernel<OF_PP_PAIR_FIRST(dy_type),           \
                                                    OF_PP_PAIR_FIRST(indices_type)>>()   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("dy", 0) == OF_PP_PAIR_SECOND(dy_type)) \
                        && (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(indices_type)));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_COMBINED_MARGIN_LOSS_GRAD_GPU_KERNEL,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_COMBINED_MARGIN_LOSS_GRAD_CUDA_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

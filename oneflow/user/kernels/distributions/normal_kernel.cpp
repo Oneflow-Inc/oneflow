@@ -27,8 +27,8 @@ namespace {
 REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, float)
 REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, double)
 #ifdef WITH_CUDA
-REGISTER_UNIFORM_KERNEL(DeviceType::kGPU, float)
-REGISTER_UNIFORM_KERNEL(DeviceType::kGPU, double)
+REGISTER_UNIFORM_KERNEL(DeviceType::kCUDA, float)
+REGISTER_UNIFORM_KERNEL(DeviceType::kCUDA, double)
 #endif  // WITH_CUDA
 }  // namespace
 
