@@ -60,9 +60,9 @@ TEST(Variant, Basics) {
   ASSERT_TRUE(a.Is<float>());
   ASSERT_EQ(a.Get<float>(), 1.2f);
 
-  ASSERT_EQ((b.visit<Variant<int, float>>([](auto&& x) { return x + 1; })),
+  ASSERT_EQ((b.Visit<Variant<int, float>>([](auto&& x) { return x + 1; })),
             (Variant<int, float>(2)));
-  ASSERT_EQ((c.visit<Variant<int, float>>([](auto&& x) { return x + 1; })),
+  ASSERT_EQ((c.Visit<Variant<int, float>>([](auto&& x) { return x + 1; })),
             (Variant<int, float>(2.2f)));
 
   ASSERT_EQ(a.Emplace<1>(1.3f), 1.3f);

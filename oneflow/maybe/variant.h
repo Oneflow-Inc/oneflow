@@ -153,51 +153,51 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
   template<typename T = TypeByIndex<0>,
            std::enable_if_t<std::is_default_constructible<T>::value, int> = 0>
   Variant() {  // NOLINT(cppcoreguidelines-pro-type-member-init)
-    construct<0>();
+    Construct<0>();
   }
 
   // unlike std::variant, we only accept exact types to avoid wrong construction
   template<typename T, std::enable_if_t<HasType<RemoveCVRef<T>>, int> = 0>
   Variant(T&& v) {  // NOLINT(cppcoreguidelines-pro-type-member-init, google-explicit-constructor)
-    construct<RemoveCVRef<T>>(std::forward<T>(v));
+    Construct<RemoveCVRef<T>>(std::forward<T>(v));
   }
 
   template<typename T, typename... Args, std::enable_if_t<HasType<RemoveCVRef<T>>, int> = 0>
   explicit Variant(InPlaceTypeT<T>,  // NOLINT(cppcoreguidelines-pro-type-member-init)
                    Args&&... args) {
-    construct<RemoveCVRef<T>>(std::forward<Args>(args)...);
+    Construct<RemoveCVRef<T>>(std::forward<Args>(args)...);
   }
 
   template<std::size_t I, typename... Args, std::enable_if_t<(I < Num), int> = 0>
   explicit Variant(InPlaceIndexT<I>,  // NOLINT(cppcoreguidelines-pro-type-member-init)
                    Args&&... args) {
-    construct<I>(std::forward<Args>(args)...);
+    Construct<I>(std::forward<Args>(args)...);
   }
 
   template<typename R = DefaultArgument, typename F>
-  decltype(auto) visit(F&& f) & {
+  decltype(auto) Visit(F&& f) & {
     using Result = details::VisitResult<R, F, Ts&...>;
     return details::VisitImpl<Result>(std::forward<F>(f), *this);
   }
 
   template<typename R = DefaultArgument, typename F>
-  decltype(auto) visit(F&& f) && {
+  decltype(auto) Visit(F&& f) && {
     using Result = details::VisitResult<R, F, Ts&&...>;
     return details::VisitImpl<Result>(std::forward<F>(f), std::move(*this));
   }
 
   template<typename R = DefaultArgument, typename F>
-  decltype(auto) visit(F&& f) const& {
+  decltype(auto) Visit(F&& f) const& {
     using Result = details::VisitResult<R, F, const Ts&...>;
     return details::VisitImpl<Result>(std::forward<F>(f), *this);
   }
 
   Variant(const Variant& v) {  // NOLINT(cppcoreguidelines-pro-type-member-init)
-    copyConstruct(v);
+    CopyConstruct(v);
   }
 
   Variant(Variant&& v) noexcept {  // NOLINT(cppcoreguidelines-pro-type-member-init)
-    copyConstruct(std::move(v));
+    CopyConstruct(std::move(v));
   }
 
   template<typename T, std::enable_if_t<HasType<RemoveCVRef<T>>, int> = 0>
@@ -210,12 +210,12 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
   }
 
   Variant& operator=(const Variant& v) {
-    copy(v);
+    Copy(v);
     return *this;
   }
 
   Variant& operator=(Variant&& v) noexcept {
-    copy(std::move(v));
+    Copy(std::move(v));
     return *this;
   }
 
@@ -257,12 +257,12 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
     return *reinterpret_cast<const TypeByIndex<I>*>(storage);
   }
 
-  ~Variant() { destory(); }
+  ~Variant() { Destory(); }
 
   bool operator==(const Variant& v) const {
     if (index != v.index) return false;
 
-    return v.visit([this](const auto& elem) { return elem == Get<RemoveCVRef<decltype(elem)>>(); });
+    return v.Visit([this](const auto& elem) { return elem == Get<RemoveCVRef<decltype(elem)>>(); });
   }
 
   bool operator!=(const Variant& v) const { return !operator==(v); }
@@ -271,7 +271,7 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
     if (index < v.index) return true;
     if (index > v.index) return false;
 
-    return v.visit([this](const auto& elem) { return Get<RemoveCVRef<decltype(elem)>>() < elem; });
+    return v.Visit([this](const auto& elem) { return Get<RemoveCVRef<decltype(elem)>>() < elem; });
   }
 
   bool operator>=(const Variant& v) const { return !(*this < v); }
@@ -280,7 +280,7 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
     if (index > v.index) return true;
     if (index < v.index) return false;
 
-    return v.visit([this](const auto& elem) { return Get<RemoveCVRef<decltype(elem)>>() > elem; });
+    return v.Visit([this](const auto& elem) { return Get<RemoveCVRef<decltype(elem)>>() > elem; });
   }
 
   bool operator<=(const Variant& v) const { return !(*this > v); }
@@ -312,8 +312,8 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
     if (Is<T>()) {
       return Get<T>() = T(std::forward<Args>(args)...);
     } else {
-      destory();
-      construct<T>(std::forward<Args>(args)...);
+      Destory();
+      Construct<T>(std::forward<Args>(args)...);
       return Get<T>();
     }
   }
@@ -330,19 +330,19 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
   std::uint8_t index;
 
   template<typename T, typename... Args, std::enable_if_t<HasType<T>, int> = 0>
-  void construct(Args&&... args) {
+  void Construct(Args&&... args) {
     new (storage) T{std::forward<Args>(args)...};
     index = IndexOfType<T>;
   }
 
   template<std::size_t I, typename... Args, std::enable_if_t<(I < Num), int> = 0>
-  void construct(Args&&... args) {
-    construct<TypeByIndex<I>>(std::forward<Args>(args)...);
+  void Construct(Args&&... args) {
+    Construct<TypeByIndex<I>>(std::forward<Args>(args)...);
   }
 
   template<typename V>
-  void copyConstruct(V&& v) {
-    std::forward<V>(v).visit([this](auto&& elem) {
+  void CopyConstruct(V&& v) {
+    std::forward<V>(v).Visit([this](auto&& elem) {
       using T = RemoveCVRef<decltype(elem)>;
 
       new (storage) T(std::forward<decltype(elem)>(elem));
@@ -351,21 +351,21 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
   }
 
   template<typename V>
-  void copy(V&& v) {
-    std::forward<V>(v).visit([this](auto&& elem) {
+  void Copy(V&& v) {
+    std::forward<V>(v).Visit([this](auto&& elem) {
       using T = RemoveCVRef<decltype(elem)>;
 
       if (Is<T>()) {
         Get<T>() = std::forward<decltype(elem)>(elem);
       } else {
-        destory();
-        construct<T>(std::forward<decltype(elem)>(elem));
+        Destory();
+        Construct<T>(std::forward<decltype(elem)>(elem));
       }
     });
   }
 
-  void destory() {
-    visit([this](auto& elem) {
+  void Destory() {
+    Visit([this](auto& elem) {
       using T = RemoveCVRef<decltype(elem)>;
 
       Get<T>().~T();
@@ -387,7 +387,7 @@ struct hash<oneflow::maybe::Variant<Ts...>> {
   size_t operator()(const oneflow::maybe::Variant<Ts...>& v) const noexcept {
     size_t seed = hash<size_t>()(v.Index());
 
-    v.visit([&seed](const auto& x) {
+    v.Visit([&seed](const auto& x) {
       using type = oneflow::maybe::RemoveCVRef<decltype(x)>;
       oneflow::maybe::HashCombine<type>(seed, x);
     });
