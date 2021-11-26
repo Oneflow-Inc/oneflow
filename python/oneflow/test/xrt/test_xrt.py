@@ -29,10 +29,10 @@ def generate_graph(func):
     class Graph(flow.nn.Graph):
         def __init__(self):
             super().__init__()
-        
+
         def build(self, *args):
             return func(*args)
-            
+
     return Graph()
 
 
