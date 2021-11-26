@@ -317,7 +317,7 @@ LogicalResult JobImporter::TryToUpdateJob() {
   new_job.clear_net();
   new_job.mutable_placement()->clear_placement_group();
   auto convertOps = [&](Operation* op) {
-    if (llvm::dyn_cast<oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
+    if (llvm::dyn_cast<oneflow::UserOp>(op)) {
       oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
       UpdatePlacement(op, user_op_adaptor, new_job);
       ::oneflow::OperatorConf op_conf;
