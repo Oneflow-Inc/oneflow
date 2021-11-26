@@ -112,7 +112,7 @@
 
 #ifdef GET_ONEFLOW_ASSIGN_OP_DEFINITIONS
 
-def OneFlow_AssignOp : OneFlow_BaseOp<"assign", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AssignOp : OneFlow_BaseOp<"assign", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$ref,
     AnyType:$value
@@ -125,7 +125,7 @@ def OneFlow_AssignOp : OneFlow_BaseOp<"assign", [DeclareOpInterfaceMethods<UserO
   }];
 }
 
-def OneFlow_AssignIfOp : OneFlow_BaseOp<"assign_if", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AssignIfOp : OneFlow_BaseOp<"assign_if", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$ref,
     AnyType:$value,
@@ -139,7 +139,7 @@ def OneFlow_AssignIfOp : OneFlow_BaseOp<"assign_if", [DeclareOpInterfaceMethods<
   }];
 }
 
-def OneFlow_AssignIfNotOp : OneFlow_BaseOp<"assign_if_not", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AssignIfNotOp : OneFlow_BaseOp<"assign_if_not", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$ref,
     AnyType:$value,
@@ -153,7 +153,7 @@ def OneFlow_AssignIfNotOp : OneFlow_BaseOp<"assign_if_not", [DeclareOpInterfaceM
   }];
 }
 
-def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$ref,
     AnyType:$value
@@ -179,7 +179,7 @@ def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", [Decla
 
 #ifdef GET_ONEFLOW_BASE_OP_DEFINITIONS
 
-class OneFlow_NormalizationAddReluBaseOp : OneFlow_BaseOp<"normalization_add_relu", [AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+class OneFlow_NormalizationAddReluBaseOp : OneFlow_BaseOp<"normalization_add_relu", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     Optional<AnyType>:$addend,
@@ -220,7 +220,7 @@ class OneFlow_NormalizationAddReluBaseOp : OneFlow_BaseOp<"normalization_add_rel
 
 #ifdef GET_ONEFLOW_BINARY_OP_DEFINITIONS
 
-def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b
@@ -239,7 +239,7 @@ def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", [DeclareOpInterfaceMethods<Us
   }];
 }
 
-def OneFlow_CastLikeOp : OneFlow_BaseOp<"cast_like", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CastLikeOp : OneFlow_BaseOp<"cast_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$dtype_like
@@ -255,7 +255,7 @@ def OneFlow_CastLikeOp : OneFlow_BaseOp<"cast_like", [DeclareOpInterfaceMethods<
   }];
 }
 
-def OneFlow_CeluGradOp : OneFlow_BaseOp<"celu_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CeluGradOp : OneFlow_BaseOp<"celu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -274,7 +274,7 @@ def OneFlow_CeluGradOp : OneFlow_BaseOp<"celu_grad", [DeclareOpInterfaceMethods<
   }];
 }
 
-def OneFlow_DiagGradOp : OneFlow_BaseOp<"diag_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_DiagGradOp : OneFlow_BaseOp<"diag_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$in
@@ -293,7 +293,7 @@ def OneFlow_DiagGradOp : OneFlow_BaseOp<"diag_grad", [DeclareOpInterfaceMethods<
   }];
 }
 
-def OneFlow_DropoutGradOp : OneFlow_BaseOp<"dropout_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_DropoutGradOp : OneFlow_BaseOp<"dropout_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$mask
@@ -312,7 +312,7 @@ def OneFlow_DropoutGradOp : OneFlow_BaseOp<"dropout_grad", [DeclareOpInterfaceMe
   }];
 }
 
-def OneFlow_ElementwiseMaximumOp : OneFlow_BaseOp<"elementwise_maximum", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ElementwiseMaximumOp : OneFlow_BaseOp<"elementwise_maximum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -328,7 +328,7 @@ def OneFlow_ElementwiseMaximumOp : OneFlow_BaseOp<"elementwise_maximum", [Declar
   }];
 }
 
-def OneFlow_ElementwiseMinimumOp : OneFlow_BaseOp<"elementwise_minimum", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ElementwiseMinimumOp : OneFlow_BaseOp<"elementwise_minimum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -344,7 +344,7 @@ def OneFlow_ElementwiseMinimumOp : OneFlow_BaseOp<"elementwise_minimum", [Declar
   }];
 }
 
-def OneFlow_EluGradOp : OneFlow_BaseOp<"elu_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_EluGradOp : OneFlow_BaseOp<"elu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -363,7 +363,7 @@ def OneFlow_EluGradOp : OneFlow_BaseOp<"elu_grad", [DeclareOpInterfaceMethods<Us
   }];
 }
 
-def OneFlow_FloordivOp : OneFlow_BaseOp<"floordiv", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FloordivOp : OneFlow_BaseOp<"floordiv", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -379,7 +379,7 @@ def OneFlow_FloordivOp : OneFlow_BaseOp<"floordiv", [DeclareOpInterfaceMethods<U
   }];
 }
 
-def OneFlow_GeluGradOp : OneFlow_BaseOp<"gelu_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_GeluGradOp : OneFlow_BaseOp<"gelu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -395,7 +395,7 @@ def OneFlow_GeluGradOp : OneFlow_BaseOp<"gelu_grad", [DeclareOpInterfaceMethods<
   }];
 }
 
-def OneFlow_GridSampleOp : OneFlow_BaseOp<"grid_sample", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_GridSampleOp : OneFlow_BaseOp<"grid_sample", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$grid
@@ -416,7 +416,7 @@ def OneFlow_GridSampleOp : OneFlow_BaseOp<"grid_sample", [DeclareOpInterfaceMeth
   }];
 }
 
-def OneFlow_HardsigmoidGradOp : OneFlow_BaseOp<"hardsigmoid_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_HardsigmoidGradOp : OneFlow_BaseOp<"hardsigmoid_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -432,7 +432,7 @@ def OneFlow_HardsigmoidGradOp : OneFlow_BaseOp<"hardsigmoid_grad", [DeclareOpInt
   }];
 }
 
-def OneFlow_HardswishGradOp : OneFlow_BaseOp<"hardswish_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_HardswishGradOp : OneFlow_BaseOp<"hardswish_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -448,7 +448,7 @@ def OneFlow_HardswishGradOp : OneFlow_BaseOp<"hardswish_grad", [DeclareOpInterfa
   }];
 }
 
-def OneFlow_L1L2RegularizeGradientOp : OneFlow_BaseOp<"l1_l2_regularize_gradient", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_L1L2RegularizeGradientOp : OneFlow_BaseOp<"l1_l2_regularize_gradient", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff
@@ -468,7 +468,7 @@ def OneFlow_L1L2RegularizeGradientOp : OneFlow_BaseOp<"l1_l2_regularize_gradient
   }];
 }
 
-def OneFlow_LeakyReluGradOp : OneFlow_BaseOp<"leaky_relu_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_LeakyReluGradOp : OneFlow_BaseOp<"leaky_relu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -487,7 +487,7 @@ def OneFlow_LeakyReluGradOp : OneFlow_BaseOp<"leaky_relu_grad", [DeclareOpInterf
   }];
 }
 
-def OneFlow_MaskedFillOp : OneFlow_BaseOp<"masked_fill", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_MaskedFillOp : OneFlow_BaseOp<"masked_fill", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$mask
@@ -509,7 +509,7 @@ def OneFlow_MaskedFillOp : OneFlow_BaseOp<"masked_fill", [DeclareOpInterfaceMeth
   }];
 }
 
-def OneFlow_MishGradOp : OneFlow_BaseOp<"mish_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_MishGradOp : OneFlow_BaseOp<"mish_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -525,7 +525,7 @@ def OneFlow_MishGradOp : OneFlow_BaseOp<"mish_grad", [DeclareOpInterfaceMethods<
   }];
 }
 
-def OneFlow_MultiplyOp : OneFlow_BaseOp<"multiply", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_MultiplyOp : OneFlow_BaseOp<"multiply", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -541,7 +541,7 @@ def OneFlow_MultiplyOp : OneFlow_BaseOp<"multiply", [DeclareOpInterfaceMethods<U
   }];
 }
 
-def OneFlow_NarrowGradOp : OneFlow_BaseOp<"narrow_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_NarrowGradOp : OneFlow_BaseOp<"narrow_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$like
@@ -562,7 +562,7 @@ def OneFlow_NarrowGradOp : OneFlow_BaseOp<"narrow_grad", [DeclareOpInterfaceMeth
   }];
 }
 
-def OneFlow_PowOp : OneFlow_BaseOp<"pow", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_PowOp : OneFlow_BaseOp<"pow", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -578,7 +578,7 @@ def OneFlow_PowOp : OneFlow_BaseOp<"pow", [DeclareOpInterfaceMethods<UserOpCompa
   }];
 }
 
-def OneFlow_PreluOp : OneFlow_BaseOp<"prelu", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_PreluOp : OneFlow_BaseOp<"prelu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$alpha
@@ -594,7 +594,7 @@ def OneFlow_PreluOp : OneFlow_BaseOp<"prelu", [DeclareOpInterfaceMethods<UserOpC
   }];
 }
 
-def OneFlow_ReluGradOp : OneFlow_BaseOp<"relu_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReluGradOp : OneFlow_BaseOp<"relu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$y,
     AnyType:$dy
@@ -610,7 +610,7 @@ def OneFlow_ReluGradOp : OneFlow_BaseOp<"relu_grad", [DeclareOpInterfaceMethods<
   }];
 }
 
-def OneFlow_SeluGradOp : OneFlow_BaseOp<"selu_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SeluGradOp : OneFlow_BaseOp<"selu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -626,7 +626,7 @@ def OneFlow_SeluGradOp : OneFlow_BaseOp<"selu_grad", [DeclareOpInterfaceMethods<
   }];
 }
 
-def OneFlow_SigmoidGradOp : OneFlow_BaseOp<"sigmoid_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SigmoidGradOp : OneFlow_BaseOp<"sigmoid_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$y,
     AnyType:$dy
@@ -642,7 +642,7 @@ def OneFlow_SigmoidGradOp : OneFlow_BaseOp<"sigmoid_grad", [DeclareOpInterfaceMe
   }];
 }
 
-def OneFlow_SiluGradOp : OneFlow_BaseOp<"silu_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SiluGradOp : OneFlow_BaseOp<"silu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -658,7 +658,7 @@ def OneFlow_SiluGradOp : OneFlow_BaseOp<"silu_grad", [DeclareOpInterfaceMethods<
   }];
 }
 
-def OneFlow_TfPreluOp : OneFlow_BaseOp<"tf_prelu", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TfPreluOp : OneFlow_BaseOp<"tf_prelu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$alpha
@@ -674,7 +674,7 @@ def OneFlow_TfPreluOp : OneFlow_BaseOp<"tf_prelu", [DeclareOpInterfaceMethods<Us
   }];
 }
 
-def OneFlow_UnfoldTensorGradOp : OneFlow_BaseOp<"unfold_tensor_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UnfoldTensorGradOp : OneFlow_BaseOp<"unfold_tensor_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -695,7 +695,7 @@ def OneFlow_UnfoldTensorGradOp : OneFlow_BaseOp<"unfold_tensor_grad", [DeclareOp
   }];
 }
 
-def OneFlow_XdivyOp : OneFlow_BaseOp<"xdivy", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_XdivyOp : OneFlow_BaseOp<"xdivy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -711,7 +711,7 @@ def OneFlow_XdivyOp : OneFlow_BaseOp<"xdivy", [DeclareOpInterfaceMethods<UserOpC
   }];
 }
 
-def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -735,7 +735,7 @@ def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", [DeclareOpInterfaceMethods<UserOpC
 
 #ifdef GET_ONEFLOW_BROADCAST_OP_DEFINITIONS
 
-def OneFlow_BroadcastAddOp : OneFlow_BaseOp<"broadcast_add", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastAddOp : OneFlow_BaseOp<"broadcast_add", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -751,7 +751,7 @@ def OneFlow_BroadcastAddOp : OneFlow_BaseOp<"broadcast_add", [DeclareOpInterface
   }];
 }
 
-def OneFlow_BroadcastDivOp : OneFlow_BaseOp<"broadcast_div", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastDivOp : OneFlow_BaseOp<"broadcast_div", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -767,7 +767,7 @@ def OneFlow_BroadcastDivOp : OneFlow_BaseOp<"broadcast_div", [DeclareOpInterface
   }];
 }
 
-def OneFlow_BroadcastDivGradOp : OneFlow_BaseOp<"broadcast_div_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastDivGradOp : OneFlow_BaseOp<"broadcast_div_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$y,
     AnyType:$z,
@@ -784,7 +784,7 @@ def OneFlow_BroadcastDivGradOp : OneFlow_BaseOp<"broadcast_div_grad", [DeclareOp
   }];
 }
 
-def OneFlow_BroadcastEqualOp : OneFlow_BaseOp<"broadcast_equal", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastEqualOp : OneFlow_BaseOp<"broadcast_equal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -800,7 +800,7 @@ def OneFlow_BroadcastEqualOp : OneFlow_BaseOp<"broadcast_equal", [DeclareOpInter
   }];
 }
 
-def OneFlow_BroadcastFloorModOp : OneFlow_BaseOp<"broadcast_floor_mod", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastFloorModOp : OneFlow_BaseOp<"broadcast_floor_mod", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -816,7 +816,7 @@ def OneFlow_BroadcastFloorModOp : OneFlow_BaseOp<"broadcast_floor_mod", [Declare
   }];
 }
 
-def OneFlow_BroadcastFmodOp : OneFlow_BaseOp<"broadcast_fmod", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastFmodOp : OneFlow_BaseOp<"broadcast_fmod", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -832,7 +832,7 @@ def OneFlow_BroadcastFmodOp : OneFlow_BaseOp<"broadcast_fmod", [DeclareOpInterfa
   }];
 }
 
-def OneFlow_BroadcastGreaterOp : OneFlow_BaseOp<"broadcast_greater", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastGreaterOp : OneFlow_BaseOp<"broadcast_greater", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -848,7 +848,7 @@ def OneFlow_BroadcastGreaterOp : OneFlow_BaseOp<"broadcast_greater", [DeclareOpI
   }];
 }
 
-def OneFlow_BroadcastGreaterEqualOp : OneFlow_BaseOp<"broadcast_greater_equal", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastGreaterEqualOp : OneFlow_BaseOp<"broadcast_greater_equal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -864,7 +864,7 @@ def OneFlow_BroadcastGreaterEqualOp : OneFlow_BaseOp<"broadcast_greater_equal", 
   }];
 }
 
-def OneFlow_BroadcastLessOp : OneFlow_BaseOp<"broadcast_less", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastLessOp : OneFlow_BaseOp<"broadcast_less", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -880,7 +880,7 @@ def OneFlow_BroadcastLessOp : OneFlow_BaseOp<"broadcast_less", [DeclareOpInterfa
   }];
 }
 
-def OneFlow_BroadcastLessEqualOp : OneFlow_BaseOp<"broadcast_less_equal", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastLessEqualOp : OneFlow_BaseOp<"broadcast_less_equal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -896,7 +896,7 @@ def OneFlow_BroadcastLessEqualOp : OneFlow_BaseOp<"broadcast_less_equal", [Decla
   }];
 }
 
-def OneFlow_BroadcastLikeOp : OneFlow_BaseOp<"broadcast_like", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastLikeOp : OneFlow_BaseOp<"broadcast_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$like
@@ -915,7 +915,7 @@ def OneFlow_BroadcastLikeOp : OneFlow_BaseOp<"broadcast_like", [DeclareOpInterfa
   }];
 }
 
-def OneFlow_BroadcastLogicalAndOp : OneFlow_BaseOp<"broadcast_logical_and", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastLogicalAndOp : OneFlow_BaseOp<"broadcast_logical_and", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -931,7 +931,7 @@ def OneFlow_BroadcastLogicalAndOp : OneFlow_BaseOp<"broadcast_logical_and", [Dec
   }];
 }
 
-def OneFlow_BroadcastLogicalOrOp : OneFlow_BaseOp<"broadcast_logical_or", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastLogicalOrOp : OneFlow_BaseOp<"broadcast_logical_or", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -947,7 +947,7 @@ def OneFlow_BroadcastLogicalOrOp : OneFlow_BaseOp<"broadcast_logical_or", [Decla
   }];
 }
 
-def OneFlow_BroadcastLogicalXorOp : OneFlow_BaseOp<"broadcast_logical_xor", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastLogicalXorOp : OneFlow_BaseOp<"broadcast_logical_xor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -963,7 +963,7 @@ def OneFlow_BroadcastLogicalXorOp : OneFlow_BaseOp<"broadcast_logical_xor", [Dec
   }];
 }
 
-def OneFlow_BroadcastMaximumOp : OneFlow_BaseOp<"broadcast_maximum", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastMaximumOp : OneFlow_BaseOp<"broadcast_maximum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -979,7 +979,7 @@ def OneFlow_BroadcastMaximumOp : OneFlow_BaseOp<"broadcast_maximum", [DeclareOpI
   }];
 }
 
-def OneFlow_BroadcastMinimumOp : OneFlow_BaseOp<"broadcast_minimum", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastMinimumOp : OneFlow_BaseOp<"broadcast_minimum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -995,7 +995,7 @@ def OneFlow_BroadcastMinimumOp : OneFlow_BaseOp<"broadcast_minimum", [DeclareOpI
   }];
 }
 
-def OneFlow_BroadcastMulOp : OneFlow_BaseOp<"broadcast_mul", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastMulOp : OneFlow_BaseOp<"broadcast_mul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -1011,7 +1011,7 @@ def OneFlow_BroadcastMulOp : OneFlow_BaseOp<"broadcast_mul", [DeclareOpInterface
   }];
 }
 
-def OneFlow_BroadcastNotEqualOp : OneFlow_BaseOp<"broadcast_not_equal", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastNotEqualOp : OneFlow_BaseOp<"broadcast_not_equal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -1027,7 +1027,7 @@ def OneFlow_BroadcastNotEqualOp : OneFlow_BaseOp<"broadcast_not_equal", [Declare
   }];
 }
 
-def OneFlow_BroadcastPowOp : OneFlow_BaseOp<"broadcast_pow", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastPowOp : OneFlow_BaseOp<"broadcast_pow", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -1043,7 +1043,7 @@ def OneFlow_BroadcastPowOp : OneFlow_BaseOp<"broadcast_pow", [DeclareOpInterface
   }];
 }
 
-def OneFlow_BroadcastPowXGradOp : OneFlow_BaseOp<"broadcast_pow_x_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastPowXGradOp : OneFlow_BaseOp<"broadcast_pow_x_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -1061,7 +1061,7 @@ def OneFlow_BroadcastPowXGradOp : OneFlow_BaseOp<"broadcast_pow_x_grad", [Declar
   }];
 }
 
-def OneFlow_BroadcastPowYGradOp : OneFlow_BaseOp<"broadcast_pow_y_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastPowYGradOp : OneFlow_BaseOp<"broadcast_pow_y_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -1079,7 +1079,7 @@ def OneFlow_BroadcastPowYGradOp : OneFlow_BaseOp<"broadcast_pow_y_grad", [Declar
   }];
 }
 
-def OneFlow_BroadcastSubOp : OneFlow_BaseOp<"broadcast_sub", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastSubOp : OneFlow_BaseOp<"broadcast_sub", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -1103,13 +1103,13 @@ def OneFlow_BroadcastSubOp : OneFlow_BaseOp<"broadcast_sub", [DeclareOpInterface
 
 #ifdef GET_ONEFLOW_CONV_OP_DEFINITIONS
 
-def OneFlow_Conv1DOp : OneFlow_ConvolutionBaseOp<"conv1d", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_Conv1DOp : OneFlow_ConvolutionBaseOp<"conv1d", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_Conv2DOp : OneFlow_ConvolutionBaseOp<"conv2d", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_Conv2DOp : OneFlow_ConvolutionBaseOp<"conv2d", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_Conv3DOp : OneFlow_ConvolutionBaseOp<"conv3d", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_Conv3DOp : OneFlow_ConvolutionBaseOp<"conv3d", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_ConvBiasGradOp : OneFlow_BaseOp<"conv_bias_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ConvBiasGradOp : OneFlow_BaseOp<"conv_bias_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -1128,7 +1128,7 @@ def OneFlow_ConvBiasGradOp : OneFlow_BaseOp<"conv_bias_grad", [DeclareOpInterfac
   }];
 }
 
-def OneFlow_ConvDataGradOp : OneFlow_BaseOp<"conv_data_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ConvDataGradOp : OneFlow_BaseOp<"conv_data_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$filter,
@@ -1155,7 +1155,7 @@ def OneFlow_ConvDataGradOp : OneFlow_BaseOp<"conv_data_grad", [DeclareOpInterfac
   }];
 }
 
-def OneFlow_ConvFilterGradOp : OneFlow_BaseOp<"conv_filter_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ConvFilterGradOp : OneFlow_BaseOp<"conv_filter_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -1180,7 +1180,7 @@ def OneFlow_ConvFilterGradOp : OneFlow_BaseOp<"conv_filter_grad", [DeclareOpInte
   }];
 }
 
-def OneFlow_Deconv1DOp : OneFlow_BaseOp<"deconv1d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_Deconv1DOp : OneFlow_BaseOp<"deconv1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$weight
@@ -1206,7 +1206,7 @@ def OneFlow_Deconv1DOp : OneFlow_BaseOp<"deconv1d", [DeclareOpInterfaceMethods<U
   }];
 }
 
-def OneFlow_Deconv2DOp : OneFlow_BaseOp<"deconv2d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_Deconv2DOp : OneFlow_BaseOp<"deconv2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$weight
@@ -1232,7 +1232,7 @@ def OneFlow_Deconv2DOp : OneFlow_BaseOp<"deconv2d", [DeclareOpInterfaceMethods<U
   }];
 }
 
-def OneFlow_Deconv3DOp : OneFlow_BaseOp<"deconv3d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_Deconv3DOp : OneFlow_BaseOp<"deconv3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$weight
@@ -1266,7 +1266,7 @@ def OneFlow_Deconv3DOp : OneFlow_BaseOp<"deconv3d", [DeclareOpInterfaceMethods<U
 
 #ifdef GET_ONEFLOW_CROSS_ENTROPY_OP_DEFINITIONS
 
-def OneFlow_BinaryCrossEntropyOp : OneFlow_BaseOp<"binary_cross_entropy", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BinaryCrossEntropyOp : OneFlow_BaseOp<"binary_cross_entropy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -1286,7 +1286,7 @@ def OneFlow_BinaryCrossEntropyOp : OneFlow_BaseOp<"binary_cross_entropy", [Decla
   }];
 }
 
-def OneFlow_BinaryCrossEntropyGradOp : OneFlow_BaseOp<"binary_cross_entropy_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BinaryCrossEntropyGradOp : OneFlow_BaseOp<"binary_cross_entropy_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -1307,7 +1307,7 @@ def OneFlow_BinaryCrossEntropyGradOp : OneFlow_BaseOp<"binary_cross_entropy_grad
   }];
 }
 
-def OneFlow_BinaryCrossEntropyWithLogitsOp : OneFlow_BaseOp<"binary_cross_entropy_with_logits", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BinaryCrossEntropyWithLogitsOp : OneFlow_BaseOp<"binary_cross_entropy_with_logits", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -1332,7 +1332,7 @@ def OneFlow_BinaryCrossEntropyWithLogitsOp : OneFlow_BaseOp<"binary_cross_entrop
   }];
 }
 
-def OneFlow_BinaryCrossEntropyWithLogitsGradOp : OneFlow_BaseOp<"binary_cross_entropy_with_logits_grad", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BinaryCrossEntropyWithLogitsGradOp : OneFlow_BaseOp<"binary_cross_entropy_with_logits_grad", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -1358,7 +1358,7 @@ def OneFlow_BinaryCrossEntropyWithLogitsGradOp : OneFlow_BaseOp<"binary_cross_en
   }];
 }
 
-def OneFlow_SigmoidCrossEntropyOp : OneFlow_BaseOp<"sigmoid_cross_entropy", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SigmoidCrossEntropyOp : OneFlow_BaseOp<"sigmoid_cross_entropy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label
@@ -1374,7 +1374,7 @@ def OneFlow_SigmoidCrossEntropyOp : OneFlow_BaseOp<"sigmoid_cross_entropy", [Dec
   }];
 }
 
-def OneFlow_SigmoidCrossEntropyGradOp : OneFlow_BaseOp<"sigmoid_cross_entropy_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SigmoidCrossEntropyGradOp : OneFlow_BaseOp<"sigmoid_cross_entropy_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$loss_diff,
@@ -1391,7 +1391,7 @@ def OneFlow_SigmoidCrossEntropyGradOp : OneFlow_BaseOp<"sigmoid_cross_entropy_gr
   }];
 }
 
-def OneFlow_SparseCrossEntropyOp : OneFlow_BaseOp<"sparse_cross_entropy", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SparseCrossEntropyOp : OneFlow_BaseOp<"sparse_cross_entropy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label
@@ -1410,7 +1410,7 @@ def OneFlow_SparseCrossEntropyOp : OneFlow_BaseOp<"sparse_cross_entropy", [Decla
   }];
 }
 
-def OneFlow_SparseCrossEntropyGradOp : OneFlow_BaseOp<"sparse_cross_entropy_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SparseCrossEntropyGradOp : OneFlow_BaseOp<"sparse_cross_entropy_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label,
@@ -1430,7 +1430,7 @@ def OneFlow_SparseCrossEntropyGradOp : OneFlow_BaseOp<"sparse_cross_entropy_grad
   }];
 }
 
-def OneFlow_SparseCrossEntropyMsOp : OneFlow_BaseOp<"sparse_cross_entropy_ms", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SparseCrossEntropyMsOp : OneFlow_BaseOp<"sparse_cross_entropy_ms", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label
@@ -1449,7 +1449,7 @@ def OneFlow_SparseCrossEntropyMsOp : OneFlow_BaseOp<"sparse_cross_entropy_ms", [
   }];
 }
 
-def OneFlow_SparseCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_cross_entropy_ms_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SparseCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_cross_entropy_ms_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label,
@@ -1477,7 +1477,7 @@ def OneFlow_SparseCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_cross_entropy_ms
 
 #ifdef GET_ONEFLOW_CUDA_OP_DEFINITIONS
 
-def OneFlow_NvtxEndOp : OneFlow_BaseOp<"nvtx_end", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_NvtxEndOp : OneFlow_BaseOp<"nvtx_end", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1495,7 +1495,7 @@ def OneFlow_NvtxEndOp : OneFlow_BaseOp<"nvtx_end", [DeclareOpInterfaceMethods<Us
   }];
 }
 
-def OneFlow_NvtxStartOp : OneFlow_BaseOp<"nvtx_start", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_NvtxStartOp : OneFlow_BaseOp<"nvtx_start", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1521,7 +1521,7 @@ def OneFlow_NvtxStartOp : OneFlow_BaseOp<"nvtx_start", [DeclareOpInterfaceMethod
 
 #ifdef GET_ONEFLOW_DATASET_OP_DEFINITIONS
 
-def OneFlow_COCOReaderOp : OneFlow_BaseOp<"COCOReader", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_COCOReaderOp : OneFlow_BaseOp<"COCOReader", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$image,
     AnyType:$image_id,
@@ -1551,7 +1551,7 @@ def OneFlow_COCOReaderOp : OneFlow_BaseOp<"COCOReader", [DeclareOpInterfaceMetho
   }];
 }
 
-def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -1575,7 +1575,7 @@ def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", [DeclareOpInterf
   }];
 }
 
-def OneFlow_OneRecReaderOp : OneFlow_BaseOp<"OneRecReader", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_OneRecReaderOp : OneFlow_BaseOp<"OneRecReader", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -1597,7 +1597,7 @@ def OneFlow_OneRecReaderOp : OneFlow_BaseOp<"OneRecReader", [DeclareOpInterfaceM
   }];
 }
 
-def OneFlow_CtcGreedyDecoderOp : OneFlow_BaseOp<"ctc_greedy_decoder", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CtcGreedyDecoderOp : OneFlow_BaseOp<"ctc_greedy_decoder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$log_probs,
     AnyType:$input_lengths
@@ -1617,7 +1617,7 @@ def OneFlow_CtcGreedyDecoderOp : OneFlow_BaseOp<"ctc_greedy_decoder", [DeclareOp
   }];
 }
 
-def OneFlow_MegatronGptMmapDataLoaderOp : OneFlow_BaseOp<"megatron_gpt_mmap_data_loader", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_MegatronGptMmapDataLoaderOp : OneFlow_BaseOp<"megatron_gpt_mmap_data_loader", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Optional<AnyType>:$iteration
   );
@@ -1645,7 +1645,7 @@ def OneFlow_MegatronGptMmapDataLoaderOp : OneFlow_BaseOp<"megatron_gpt_mmap_data
   }];
 }
 
-def OneFlow_OfrecordBytesDecoderOp : OneFlow_BaseOp<"ofrecord_bytes_decoder", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_OfrecordBytesDecoderOp : OneFlow_BaseOp<"ofrecord_bytes_decoder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1663,7 +1663,7 @@ def OneFlow_OfrecordBytesDecoderOp : OneFlow_BaseOp<"ofrecord_bytes_decoder", [D
   }];
 }
 
-def OneFlow_OfrecordImageClassificationReaderOp : OneFlow_BaseOp<"ofrecord_image_classification_reader", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_OfrecordImageClassificationReaderOp : OneFlow_BaseOp<"ofrecord_image_classification_reader", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$image,
     AnyType:$label
@@ -1692,7 +1692,7 @@ def OneFlow_OfrecordImageClassificationReaderOp : OneFlow_BaseOp<"ofrecord_image
   }];
 }
 
-def OneFlow_OfrecordImageDecoderOp : OneFlow_BaseOp<"ofrecord_image_decoder", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_OfrecordImageDecoderOp : OneFlow_BaseOp<"ofrecord_image_decoder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1711,7 +1711,7 @@ def OneFlow_OfrecordImageDecoderOp : OneFlow_BaseOp<"ofrecord_image_decoder", [D
   }];
 }
 
-def OneFlow_OfrecordImageDecoderRandomCropOp : OneFlow_BaseOp<"ofrecord_image_decoder_random_crop", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_OfrecordImageDecoderRandomCropOp : OneFlow_BaseOp<"ofrecord_image_decoder_random_crop", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1735,7 +1735,7 @@ def OneFlow_OfrecordImageDecoderRandomCropOp : OneFlow_BaseOp<"ofrecord_image_de
   }];
 }
 
-def OneFlow_OfrecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_OfrecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1757,7 +1757,7 @@ def OneFlow_OfrecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", [Decla
   }];
 }
 
-def OneFlow_OnerecDecoderOp : OneFlow_BaseOp<"onerec_decoder", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_OnerecDecoderOp : OneFlow_BaseOp<"onerec_decoder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1790,7 +1790,7 @@ def OneFlow_OnerecDecoderOp : OneFlow_BaseOp<"onerec_decoder", [DeclareOpInterfa
 
 #ifdef GET_ONEFLOW_DETECTION_OP_DEFINITIONS
 
-def OneFlow_InTopKOp : OneFlow_BaseOp<"in_top_k", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_InTopKOp : OneFlow_BaseOp<"in_top_k", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$targets,
     AnyType:$predictions
@@ -1809,7 +1809,7 @@ def OneFlow_InTopKOp : OneFlow_BaseOp<"in_top_k", [DeclareOpInterfaceMethods<Use
   }];
 }
 
-def OneFlow_NmsOp : OneFlow_BaseOp<"nms", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_NmsOp : OneFlow_BaseOp<"nms", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1828,7 +1828,7 @@ def OneFlow_NmsOp : OneFlow_BaseOp<"nms", [DeclareOpInterfaceMethods<UserOpCompa
   }];
 }
 
-def OneFlow_ObjectBboxFlipOp : OneFlow_BaseOp<"object_bbox_flip", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ObjectBboxFlipOp : OneFlow_BaseOp<"object_bbox_flip", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$bbox,
     AnyType:$image_size,
@@ -1845,7 +1845,7 @@ def OneFlow_ObjectBboxFlipOp : OneFlow_BaseOp<"object_bbox_flip", [DeclareOpInte
   }];
 }
 
-def OneFlow_ObjectBboxScaleOp : OneFlow_BaseOp<"object_bbox_scale", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ObjectBboxScaleOp : OneFlow_BaseOp<"object_bbox_scale", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$bbox,
     AnyType:$scale
@@ -1861,7 +1861,7 @@ def OneFlow_ObjectBboxScaleOp : OneFlow_BaseOp<"object_bbox_scale", [DeclareOpIn
   }];
 }
 
-def OneFlow_ObjectSegmentationPolygonFlipOp : OneFlow_BaseOp<"object_segmentation_polygon_flip", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ObjectSegmentationPolygonFlipOp : OneFlow_BaseOp<"object_segmentation_polygon_flip", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$poly,
     AnyType:$image_size,
@@ -1878,7 +1878,7 @@ def OneFlow_ObjectSegmentationPolygonFlipOp : OneFlow_BaseOp<"object_segmentatio
   }];
 }
 
-def OneFlow_ObjectSegmentationPolygonScaleOp : OneFlow_BaseOp<"object_segmentation_polygon_scale", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ObjectSegmentationPolygonScaleOp : OneFlow_BaseOp<"object_segmentation_polygon_scale", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$poly,
     AnyType:$scale
@@ -1894,7 +1894,7 @@ def OneFlow_ObjectSegmentationPolygonScaleOp : OneFlow_BaseOp<"object_segmentati
   }];
 }
 
-def OneFlow_ObjectSegmentationPolygonToMaskOp : OneFlow_BaseOp<"object_segmentation_polygon_to_mask", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ObjectSegmentationPolygonToMaskOp : OneFlow_BaseOp<"object_segmentation_polygon_to_mask", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$poly,
     AnyType:$poly_index,
@@ -1911,7 +1911,7 @@ def OneFlow_ObjectSegmentationPolygonToMaskOp : OneFlow_BaseOp<"object_segmentat
   }];
 }
 
-def OneFlow_TopKOp : OneFlow_BaseOp<"top_k", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TopKOp : OneFlow_BaseOp<"top_k", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1938,7 +1938,7 @@ def OneFlow_TopKOp : OneFlow_BaseOp<"top_k", [DeclareOpInterfaceMethods<UserOpCo
 
 #ifdef GET_ONEFLOW_EAGER_OP_DEFINITIONS
 
-def OneFlow_EagerBToSOp : OneFlow_BaseOp<"eager_b_to_s", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_EagerBToSOp : OneFlow_BaseOp<"eager_b_to_s", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1959,7 +1959,7 @@ def OneFlow_EagerBToSOp : OneFlow_BaseOp<"eager_b_to_s", [DeclareOpInterfaceMeth
   }];
 }
 
-def OneFlow_EagerNaiveSToSOp : OneFlow_BaseOp<"eager_naive_s_to_s", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_EagerNaiveSToSOp : OneFlow_BaseOp<"eager_naive_s_to_s", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1981,7 +1981,7 @@ def OneFlow_EagerNaiveSToSOp : OneFlow_BaseOp<"eager_naive_s_to_s", [DeclareOpIn
   }];
 }
 
-def OneFlow_EagerNcclAllGatherOp : OneFlow_BaseOp<"eager_nccl_all_gather", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_EagerNcclAllGatherOp : OneFlow_BaseOp<"eager_nccl_all_gather", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1999,7 +1999,7 @@ def OneFlow_EagerNcclAllGatherOp : OneFlow_BaseOp<"eager_nccl_all_gather", [Decl
   }];
 }
 
-def OneFlow_EagerNcclAllReduceOp : OneFlow_BaseOp<"eager_nccl_all_reduce", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_EagerNcclAllReduceOp : OneFlow_BaseOp<"eager_nccl_all_reduce", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2018,7 +2018,7 @@ def OneFlow_EagerNcclAllReduceOp : OneFlow_BaseOp<"eager_nccl_all_reduce", [Decl
   }];
 }
 
-def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2037,7 +2037,7 @@ def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", [Decla
   }];
 }
 
-def OneFlow_EagerNcclReduceOp : OneFlow_BaseOp<"eager_nccl_reduce", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_EagerNcclReduceOp : OneFlow_BaseOp<"eager_nccl_reduce", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2056,7 +2056,7 @@ def OneFlow_EagerNcclReduceOp : OneFlow_BaseOp<"eager_nccl_reduce", [DeclareOpIn
   }];
 }
 
-def OneFlow_EagerNcclReduceScatterOp : OneFlow_BaseOp<"eager_nccl_reduce_scatter", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_EagerNcclReduceScatterOp : OneFlow_BaseOp<"eager_nccl_reduce_scatter", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2075,7 +2075,7 @@ def OneFlow_EagerNcclReduceScatterOp : OneFlow_BaseOp<"eager_nccl_reduce_scatter
   }];
 }
 
-def OneFlow_EagerNcclS2sOp : OneFlow_BaseOp<"eager_nccl_s2s", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_EagerNcclS2sOp : OneFlow_BaseOp<"eager_nccl_s2s", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2095,7 +2095,7 @@ def OneFlow_EagerNcclS2sOp : OneFlow_BaseOp<"eager_nccl_s2s", [DeclareOpInterfac
   }];
 }
 
-def OneFlow_EagerPToBOp : OneFlow_BaseOp<"eager_p_to_b", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_EagerPToBOp : OneFlow_BaseOp<"eager_p_to_b", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2115,7 +2115,7 @@ def OneFlow_EagerPToBOp : OneFlow_BaseOp<"eager_p_to_b", [DeclareOpInterfaceMeth
   }];
 }
 
-def OneFlow_EagerPToSOp : OneFlow_BaseOp<"eager_p_to_s", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_EagerPToSOp : OneFlow_BaseOp<"eager_p_to_s", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2136,7 +2136,7 @@ def OneFlow_EagerPToSOp : OneFlow_BaseOp<"eager_p_to_s", [DeclareOpInterfaceMeth
   }];
 }
 
-def OneFlow_EagerSToBOp : OneFlow_BaseOp<"eager_s_to_b", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_EagerSToBOp : OneFlow_BaseOp<"eager_s_to_b", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2157,7 +2157,7 @@ def OneFlow_EagerSToBOp : OneFlow_BaseOp<"eager_s_to_b", [DeclareOpInterfaceMeth
   }];
 }
 
-def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2184,7 +2184,7 @@ def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", [Dec
 
 #ifdef GET_ONEFLOW_FUSED_OP_DEFINITIONS
 
-def OneFlow_CudnnFusedNormalizationAddReluOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu", [AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CudnnFusedNormalizationAddReluOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     Optional<AnyType>:$addend,
@@ -2216,7 +2216,7 @@ def OneFlow_CudnnFusedNormalizationAddReluOp : OneFlow_BaseOp<"cudnn_fused_norma
   }];
 }
 
-def OneFlow_CudnnFusedNormalizationAddReluGradOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CudnnFusedNormalizationAddReluGradOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy,
@@ -2245,7 +2245,7 @@ def OneFlow_CudnnFusedNormalizationAddReluGradOp : OneFlow_BaseOp<"cudnn_fused_n
   }];
 }
 
-def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b
@@ -2264,7 +2264,7 @@ def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", [DeclareO
   }];
 }
 
-def OneFlow_FusedBiasAddGeluGradOp : OneFlow_BaseOp<"fused_bias_add_gelu_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedBiasAddGeluGradOp : OneFlow_BaseOp<"fused_bias_add_gelu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b,
@@ -2284,7 +2284,7 @@ def OneFlow_FusedBiasAddGeluGradOp : OneFlow_BaseOp<"fused_bias_add_gelu_grad", 
   }];
 }
 
-def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b,
@@ -2306,7 +2306,7 @@ def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale"
   }];
 }
 
-def OneFlow_FusedCastScaleOp : OneFlow_BaseOp<"fused_cast_scale", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedCastScaleOp : OneFlow_BaseOp<"fused_cast_scale", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$scale_by_tensor
@@ -2325,7 +2325,7 @@ def OneFlow_FusedCastScaleOp : OneFlow_BaseOp<"fused_cast_scale", [DeclareOpInte
   }];
 }
 
-def OneFlow_FusedScaleMaskSoftmaxOp : OneFlow_BaseOp<"fused_scale_mask_softmax", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedScaleMaskSoftmaxOp : OneFlow_BaseOp<"fused_scale_mask_softmax", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$mask
@@ -2345,7 +2345,7 @@ def OneFlow_FusedScaleMaskSoftmaxOp : OneFlow_BaseOp<"fused_scale_mask_softmax",
   }];
 }
 
-def OneFlow_FusedScaleMaskSoftmaxDropoutOp : OneFlow_BaseOp<"fused_scale_mask_softmax_dropout", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedScaleMaskSoftmaxDropoutOp : OneFlow_BaseOp<"fused_scale_mask_softmax_dropout", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$mask,
@@ -2368,7 +2368,7 @@ def OneFlow_FusedScaleMaskSoftmaxDropoutOp : OneFlow_BaseOp<"fused_scale_mask_so
   }];
 }
 
-def OneFlow_FusedScaleMaskSoftmaxDropoutGradOp : OneFlow_BaseOp<"fused_scale_mask_softmax_dropout_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedScaleMaskSoftmaxDropoutGradOp : OneFlow_BaseOp<"fused_scale_mask_softmax_dropout_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$softmax_y,
     AnyType:$dy,
@@ -2390,7 +2390,7 @@ def OneFlow_FusedScaleMaskSoftmaxDropoutGradOp : OneFlow_BaseOp<"fused_scale_mas
   }];
 }
 
-def OneFlow_FusedScaleMaskSoftmaxGradOp : OneFlow_BaseOp<"fused_scale_mask_softmax_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedScaleMaskSoftmaxGradOp : OneFlow_BaseOp<"fused_scale_mask_softmax_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$y,
     AnyType:$dy,
@@ -2410,7 +2410,7 @@ def OneFlow_FusedScaleMaskSoftmaxGradOp : OneFlow_BaseOp<"fused_scale_mask_softm
   }];
 }
 
-def OneFlow_FusedScaleTrilOp : OneFlow_BaseOp<"fused_scale_tril", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedScaleTrilOp : OneFlow_BaseOp<"fused_scale_tril", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2434,7 +2434,7 @@ def OneFlow_FusedScaleTrilOp : OneFlow_BaseOp<"fused_scale_tril", [DeclareOpInte
   }];
 }
 
-def OneFlow_FusedSelfAttentionQueryMulKeyAndValueOp : OneFlow_BaseOp<"fused_self_attention_query_mul_key_and_value", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedSelfAttentionQueryMulKeyAndValueOp : OneFlow_BaseOp<"fused_self_attention_query_mul_key_and_value", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$hidden_states
   );
@@ -2454,7 +2454,7 @@ def OneFlow_FusedSelfAttentionQueryMulKeyAndValueOp : OneFlow_BaseOp<"fused_self
   }];
 }
 
-def OneFlow_FusedSelfAttentionQueryMulKeyAndValueGradOp : OneFlow_BaseOp<"fused_self_attention_query_mul_key_and_value_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedSelfAttentionQueryMulKeyAndValueGradOp : OneFlow_BaseOp<"fused_self_attention_query_mul_key_and_value_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$query_mul_key_grad,
     AnyType:$value_grad,
@@ -2474,7 +2474,7 @@ def OneFlow_FusedSelfAttentionQueryMulKeyAndValueGradOp : OneFlow_BaseOp<"fused_
   }];
 }
 
-def OneFlow_FusedTrilScaleSoftmaxMaskScaleOp : OneFlow_BaseOp<"fused_tril_scale_softmax_mask_scale", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedTrilScaleSoftmaxMaskScaleOp : OneFlow_BaseOp<"fused_tril_scale_softmax_mask_scale", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$mask
@@ -2497,7 +2497,7 @@ def OneFlow_FusedTrilScaleSoftmaxMaskScaleOp : OneFlow_BaseOp<"fused_tril_scale_
   }];
 }
 
-def OneFlow_FusedTrilScaleSoftmaxMaskScaleGradOp : OneFlow_BaseOp<"fused_tril_scale_softmax_mask_scale_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedTrilScaleSoftmaxMaskScaleGradOp : OneFlow_BaseOp<"fused_tril_scale_softmax_mask_scale_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$softmax_y,
     AnyType:$dy,
@@ -2519,7 +2519,7 @@ def OneFlow_FusedTrilScaleSoftmaxMaskScaleGradOp : OneFlow_BaseOp<"fused_tril_sc
   }];
 }
 
-def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy,
@@ -2556,7 +2556,7 @@ def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_
 
 #ifdef GET_ONEFLOW_IDEMPOTENT_OP_DEFINITIONS
 
-def OneFlow_AbsOp : OneFlow_IdempotentBaseOp<"abs", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AbsOp : OneFlow_IdempotentBaseOp<"abs", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
     static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
@@ -2565,7 +2565,7 @@ def OneFlow_AbsOp : OneFlow_IdempotentBaseOp<"abs", [DeclareOpInterfaceMethods<U
   }];
 }
 
-def OneFlow_CeilOp : OneFlow_IdempotentBaseOp<"ceil", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CeilOp : OneFlow_IdempotentBaseOp<"ceil", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
     static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
@@ -2574,7 +2574,7 @@ def OneFlow_CeilOp : OneFlow_IdempotentBaseOp<"ceil", [DeclareOpInterfaceMethods
   }];
 }
 
-def OneFlow_FloorOp : OneFlow_IdempotentBaseOp<"floor", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FloorOp : OneFlow_IdempotentBaseOp<"floor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
     static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
@@ -2583,7 +2583,7 @@ def OneFlow_FloorOp : OneFlow_IdempotentBaseOp<"floor", [DeclareOpInterfaceMetho
   }];
 }
 
-def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"like"}); return &val; }
     static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
@@ -2592,7 +2592,7 @@ def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", [DeclareOpInterfa
   }];
 }
 
-def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
     static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
@@ -2601,7 +2601,7 @@ def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", [DeclareOpInterfaceMethods
   }];
 }
 
-def OneFlow_RintOp : OneFlow_IdempotentBaseOp<"rint", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_RintOp : OneFlow_IdempotentBaseOp<"rint", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
     static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
@@ -2610,7 +2610,7 @@ def OneFlow_RintOp : OneFlow_IdempotentBaseOp<"rint", [DeclareOpInterfaceMethods
   }];
 }
 
-def OneFlow_RoundOp : OneFlow_IdempotentBaseOp<"round", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_RoundOp : OneFlow_IdempotentBaseOp<"round", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
     static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
@@ -2619,7 +2619,7 @@ def OneFlow_RoundOp : OneFlow_IdempotentBaseOp<"round", [DeclareOpInterfaceMetho
   }];
 }
 
-def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
     static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
@@ -2636,7 +2636,7 @@ def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", [DeclareOpInterfaceMethods
 
 #ifdef GET_ONEFLOW_IDENTITY_OP_DEFINITIONS
 
-def OneFlow_AmpWhiteIdentityOp : OneFlow_BaseOp<"amp_white_identity", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AmpWhiteIdentityOp : OneFlow_BaseOp<"amp_white_identity", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2651,7 +2651,7 @@ def OneFlow_AmpWhiteIdentityOp : OneFlow_BaseOp<"amp_white_identity", [DeclareOp
   }];
 }
 
-def OneFlow_IdentityOp : OneFlow_BaseOp<"identity", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_IdentityOp : OneFlow_BaseOp<"identity", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2666,7 +2666,7 @@ def OneFlow_IdentityOp : OneFlow_BaseOp<"identity", [DeclareOpInterfaceMethods<U
   }];
 }
 
-def OneFlow_IdentityBufferOp : OneFlow_BaseOp<"identity_buffer", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_IdentityBufferOp : OneFlow_BaseOp<"identity_buffer", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2684,7 +2684,7 @@ def OneFlow_IdentityBufferOp : OneFlow_BaseOp<"identity_buffer", [DeclareOpInter
   }];
 }
 
-def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Variadic<AnyType>:$in
   );
@@ -2707,7 +2707,7 @@ def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", [DeclareOpInterfa
 
 #ifdef GET_ONEFLOW_IMAGE_OP_DEFINITIONS
 
-def OneFlow_ImageBatchAlignOp : OneFlow_BaseOp<"image_batch_align", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ImageBatchAlignOp : OneFlow_BaseOp<"image_batch_align", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2728,7 +2728,7 @@ def OneFlow_ImageBatchAlignOp : OneFlow_BaseOp<"image_batch_align", [DeclareOpIn
   }];
 }
 
-def OneFlow_ImageDecodeOp : OneFlow_BaseOp<"image_decode", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ImageDecodeOp : OneFlow_BaseOp<"image_decode", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2747,7 +2747,7 @@ def OneFlow_ImageDecodeOp : OneFlow_BaseOp<"image_decode", [DeclareOpInterfaceMe
   }];
 }
 
-def OneFlow_ImageFlipOp : OneFlow_BaseOp<"image_flip", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ImageFlipOp : OneFlow_BaseOp<"image_flip", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$flip_code
@@ -2763,7 +2763,7 @@ def OneFlow_ImageFlipOp : OneFlow_BaseOp<"image_flip", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_ImageRandomCropOp : OneFlow_BaseOp<"image_random_crop", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ImageRandomCropOp : OneFlow_BaseOp<"image_random_crop", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2785,7 +2785,7 @@ def OneFlow_ImageRandomCropOp : OneFlow_BaseOp<"image_random_crop", [DeclareOpIn
   }];
 }
 
-def OneFlow_ImageResizeKeepAspectRatioOp : OneFlow_BaseOp<"image_resize_keep_aspect_ratio", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ImageResizeKeepAspectRatioOp : OneFlow_BaseOp<"image_resize_keep_aspect_ratio", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2809,7 +2809,7 @@ def OneFlow_ImageResizeKeepAspectRatioOp : OneFlow_BaseOp<"image_resize_keep_asp
   }];
 }
 
-def OneFlow_ImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2840,7 +2840,7 @@ def OneFlow_ImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", [Decl
 
 #ifdef GET_ONEFLOW_INDICES_OP_DEFINITIONS
 
-def OneFlow_ArgSortOp : OneFlow_BaseOp<"arg_sort", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ArgSortOp : OneFlow_BaseOp<"arg_sort", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2858,7 +2858,7 @@ def OneFlow_ArgSortOp : OneFlow_BaseOp<"arg_sort", [DeclareOpInterfaceMethods<Us
   }];
 }
 
-def OneFlow_ArgmaxOp : OneFlow_BaseOp<"argmax", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ArgmaxOp : OneFlow_BaseOp<"argmax", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2873,7 +2873,7 @@ def OneFlow_ArgmaxOp : OneFlow_BaseOp<"argmax", [DeclareOpInterfaceMethods<UserO
   }];
 }
 
-def OneFlow_ArgwhereOp : OneFlow_BaseOp<"argwhere", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ArgwhereOp : OneFlow_BaseOp<"argwhere", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input
   );
@@ -2892,7 +2892,7 @@ def OneFlow_ArgwhereOp : OneFlow_BaseOp<"argwhere", [DeclareOpInterfaceMethods<U
   }];
 }
 
-def OneFlow_BatchGatherOp : OneFlow_BaseOp<"batch_gather", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BatchGatherOp : OneFlow_BaseOp<"batch_gather", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$indices
@@ -2908,7 +2908,7 @@ def OneFlow_BatchGatherOp : OneFlow_BaseOp<"batch_gather", [DeclareOpInterfaceMe
   }];
 }
 
-def OneFlow_DimGatherOp : OneFlow_BaseOp<"dim_gather", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_DimGatherOp : OneFlow_BaseOp<"dim_gather", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$index
@@ -2927,7 +2927,7 @@ def OneFlow_DimGatherOp : OneFlow_BaseOp<"dim_gather", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_DimScatterAddOp : OneFlow_BaseOp<"dim_scatter_add", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_DimScatterAddOp : OneFlow_BaseOp<"dim_scatter_add", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$index,
@@ -2947,7 +2947,7 @@ def OneFlow_DimScatterAddOp : OneFlow_BaseOp<"dim_scatter_add", [DeclareOpInterf
   }];
 }
 
-def OneFlow_DimScatterAddLikeOp : OneFlow_BaseOp<"dim_scatter_add_like", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_DimScatterAddLikeOp : OneFlow_BaseOp<"dim_scatter_add_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$like,
     AnyType:$index,
@@ -2967,7 +2967,7 @@ def OneFlow_DimScatterAddLikeOp : OneFlow_BaseOp<"dim_scatter_add_like", [Declar
   }];
 }
 
-def OneFlow_DimScatterAddScalarOp : OneFlow_BaseOp<"dim_scatter_add_scalar", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_DimScatterAddScalarOp : OneFlow_BaseOp<"dim_scatter_add_scalar", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$index
@@ -2987,7 +2987,7 @@ def OneFlow_DimScatterAddScalarOp : OneFlow_BaseOp<"dim_scatter_add_scalar", [De
   }];
 }
 
-def OneFlow_DimScatterMulOp : OneFlow_BaseOp<"dim_scatter_mul", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_DimScatterMulOp : OneFlow_BaseOp<"dim_scatter_mul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$index,
@@ -3007,7 +3007,7 @@ def OneFlow_DimScatterMulOp : OneFlow_BaseOp<"dim_scatter_mul", [DeclareOpInterf
   }];
 }
 
-def OneFlow_DimScatterMulScalarOp : OneFlow_BaseOp<"dim_scatter_mul_scalar", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_DimScatterMulScalarOp : OneFlow_BaseOp<"dim_scatter_mul_scalar", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$index
@@ -3027,7 +3027,7 @@ def OneFlow_DimScatterMulScalarOp : OneFlow_BaseOp<"dim_scatter_mul_scalar", [De
   }];
 }
 
-def OneFlow_DimScatterUpdateOp : OneFlow_BaseOp<"dim_scatter_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_DimScatterUpdateOp : OneFlow_BaseOp<"dim_scatter_update", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$index,
@@ -3047,7 +3047,7 @@ def OneFlow_DimScatterUpdateOp : OneFlow_BaseOp<"dim_scatter_update", [DeclareOp
   }];
 }
 
-def OneFlow_DimScatterUpdateScalarOp : OneFlow_BaseOp<"dim_scatter_update_scalar", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_DimScatterUpdateScalarOp : OneFlow_BaseOp<"dim_scatter_update_scalar", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$index
@@ -3067,7 +3067,7 @@ def OneFlow_DimScatterUpdateScalarOp : OneFlow_BaseOp<"dim_scatter_update_scalar
   }];
 }
 
-def OneFlow_GatherOp : OneFlow_BaseOp<"gather", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_GatherOp : OneFlow_BaseOp<"gather", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$indices
@@ -3086,7 +3086,7 @@ def OneFlow_GatherOp : OneFlow_BaseOp<"gather", [DeclareOpInterfaceMethods<UserO
   }];
 }
 
-def OneFlow_GatherNdOp : OneFlow_BaseOp<"gather_nd", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_GatherNdOp : OneFlow_BaseOp<"gather_nd", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$params,
     AnyType:$indices
@@ -3102,7 +3102,7 @@ def OneFlow_GatherNdOp : OneFlow_BaseOp<"gather_nd", [DeclareOpInterfaceMethods<
   }];
 }
 
-def OneFlow_GenerateRandomBatchPermutationIndicesOp : OneFlow_BaseOp<"generate_random_batch_permutation_indices", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_GenerateRandomBatchPermutationIndicesOp : OneFlow_BaseOp<"generate_random_batch_permutation_indices", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3120,7 +3120,7 @@ def OneFlow_GenerateRandomBatchPermutationIndicesOp : OneFlow_BaseOp<"generate_r
   }];
 }
 
-def OneFlow_ImageTargetResizeOp : OneFlow_BaseOp<"image_target_resize", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ImageTargetResizeOp : OneFlow_BaseOp<"image_target_resize", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -3141,7 +3141,7 @@ def OneFlow_ImageTargetResizeOp : OneFlow_BaseOp<"image_target_resize", [Declare
   }];
 }
 
-def OneFlow_LogicalSliceOp : OneFlow_BaseOp<"logical_slice", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_LogicalSliceOp : OneFlow_BaseOp<"logical_slice", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3161,7 +3161,7 @@ def OneFlow_LogicalSliceOp : OneFlow_BaseOp<"logical_slice", [DeclareOpInterface
   }];
 }
 
-def OneFlow_ScatterNdOp : OneFlow_BaseOp<"scatter_nd", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScatterNdOp : OneFlow_BaseOp<"scatter_nd", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$indices,
     AnyType:$updates
@@ -3180,7 +3180,7 @@ def OneFlow_ScatterNdOp : OneFlow_BaseOp<"scatter_nd", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_ScatterNdLikeOp : OneFlow_BaseOp<"scatter_nd_like", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScatterNdLikeOp : OneFlow_BaseOp<"scatter_nd_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$like,
     AnyType:$indices,
@@ -3197,7 +3197,7 @@ def OneFlow_ScatterNdLikeOp : OneFlow_BaseOp<"scatter_nd_like", [DeclareOpInterf
   }];
 }
 
-def OneFlow_SliceOp : OneFlow_BaseOp<"slice", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SliceOp : OneFlow_BaseOp<"slice", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3217,7 +3217,7 @@ def OneFlow_SliceOp : OneFlow_BaseOp<"slice", [DeclareOpInterfaceMethods<UserOpC
   }];
 }
 
-def OneFlow_SliceGradOp : OneFlow_BaseOp<"slice_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SliceGradOp : OneFlow_BaseOp<"slice_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$like
@@ -3238,7 +3238,7 @@ def OneFlow_SliceGradOp : OneFlow_BaseOp<"slice_grad", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_TensorScatterNdAddOp : OneFlow_BaseOp<"tensor_scatter_nd_add", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TensorScatterNdAddOp : OneFlow_BaseOp<"tensor_scatter_nd_add", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$params,
     AnyType:$updates,
@@ -3255,7 +3255,7 @@ def OneFlow_TensorScatterNdAddOp : OneFlow_BaseOp<"tensor_scatter_nd_add", [Decl
   }];
 }
 
-def OneFlow_TensorScatterNdUpdateOp : OneFlow_BaseOp<"tensor_scatter_nd_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TensorScatterNdUpdateOp : OneFlow_BaseOp<"tensor_scatter_nd_update", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$params,
     AnyType:$updates,
@@ -3272,7 +3272,7 @@ def OneFlow_TensorScatterNdUpdateOp : OneFlow_BaseOp<"tensor_scatter_nd_update",
   }];
 }
 
-def OneFlow_UnsortedBatchSegmentSumOp : OneFlow_BaseOp<"unsorted_batch_segment_sum", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UnsortedBatchSegmentSumOp : OneFlow_BaseOp<"unsorted_batch_segment_sum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$data,
     AnyType:$segment_ids
@@ -3291,7 +3291,7 @@ def OneFlow_UnsortedBatchSegmentSumOp : OneFlow_BaseOp<"unsorted_batch_segment_s
   }];
 }
 
-def OneFlow_UnsortedSegmentSumOp : OneFlow_BaseOp<"unsorted_segment_sum", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UnsortedSegmentSumOp : OneFlow_BaseOp<"unsorted_segment_sum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$data,
     AnyType:$segment_ids
@@ -3311,7 +3311,7 @@ def OneFlow_UnsortedSegmentSumOp : OneFlow_BaseOp<"unsorted_segment_sum", [Decla
   }];
 }
 
-def OneFlow_UnsortedSegmentSumLikeOp : OneFlow_BaseOp<"unsorted_segment_sum_like", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UnsortedSegmentSumLikeOp : OneFlow_BaseOp<"unsorted_segment_sum_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$data,
     AnyType:$segment_ids,
@@ -3331,7 +3331,7 @@ def OneFlow_UnsortedSegmentSumLikeOp : OneFlow_BaseOp<"unsorted_segment_sum_like
   }];
 }
 
-def OneFlow_WhereOp : OneFlow_BaseOp<"where", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_WhereOp : OneFlow_BaseOp<"where", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$condition,
     AnyType:$x,
@@ -3348,7 +3348,7 @@ def OneFlow_WhereOp : OneFlow_BaseOp<"where", [DeclareOpInterfaceMethods<UserOpC
   }];
 }
 
-def OneFlow_WhereScalarXOp : OneFlow_BaseOp<"where_scalar_x", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_WhereScalarXOp : OneFlow_BaseOp<"where_scalar_x", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$condition,
     AnyType:$y
@@ -3370,7 +3370,7 @@ def OneFlow_WhereScalarXOp : OneFlow_BaseOp<"where_scalar_x", [DeclareOpInterfac
   }];
 }
 
-def OneFlow_WhereScalarXyOp : OneFlow_BaseOp<"where_scalar_xy", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_WhereScalarXyOp : OneFlow_BaseOp<"where_scalar_xy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$condition
   );
@@ -3395,7 +3395,7 @@ def OneFlow_WhereScalarXyOp : OneFlow_BaseOp<"where_scalar_xy", [DeclareOpInterf
   }];
 }
 
-def OneFlow_WhereScalarYOp : OneFlow_BaseOp<"where_scalar_y", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_WhereScalarYOp : OneFlow_BaseOp<"where_scalar_y", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$condition,
     AnyType:$x
@@ -3425,7 +3425,7 @@ def OneFlow_WhereScalarYOp : OneFlow_BaseOp<"where_scalar_y", [DeclareOpInterfac
 
 #ifdef GET_ONEFLOW_INVOLUTION_OP_DEFINITIONS
 
-def OneFlow_NegativeOp : OneFlow_InvolutionBaseOp<"negative", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_NegativeOp : OneFlow_InvolutionBaseOp<"negative", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
     static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
@@ -3434,7 +3434,7 @@ def OneFlow_NegativeOp : OneFlow_InvolutionBaseOp<"negative", [DeclareOpInterfac
   }];
 }
 
-def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
     static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
@@ -3451,7 +3451,7 @@ def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", [DeclareOpInte
 
 #ifdef GET_ONEFLOW_LOSS_OP_DEFINITIONS
 
-def OneFlow_CombinedMarginLossOp : OneFlow_BaseOp<"combined_margin_loss", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CombinedMarginLossOp : OneFlow_BaseOp<"combined_margin_loss", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$label
@@ -3474,7 +3474,7 @@ def OneFlow_CombinedMarginLossOp : OneFlow_BaseOp<"combined_margin_loss", [Decla
   }];
 }
 
-def OneFlow_CombinedMarginLossGradOp : OneFlow_BaseOp<"combined_margin_loss_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CombinedMarginLossGradOp : OneFlow_BaseOp<"combined_margin_loss_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$label,
@@ -3497,7 +3497,7 @@ def OneFlow_CombinedMarginLossGradOp : OneFlow_BaseOp<"combined_margin_loss_grad
   }];
 }
 
-def OneFlow_CtcLossOp : OneFlow_BaseOp<"ctc_loss", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CtcLossOp : OneFlow_BaseOp<"ctc_loss", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$log_probs,
     AnyType:$targets,
@@ -3521,7 +3521,7 @@ def OneFlow_CtcLossOp : OneFlow_BaseOp<"ctc_loss", [DeclareOpInterfaceMethods<Us
   }];
 }
 
-def OneFlow_CtcLossGradOp : OneFlow_BaseOp<"ctc_loss_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CtcLossGradOp : OneFlow_BaseOp<"ctc_loss_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$grad_out,
     AnyType:$log_probs,
@@ -3547,7 +3547,7 @@ def OneFlow_CtcLossGradOp : OneFlow_BaseOp<"ctc_loss_grad", [DeclareOpInterfaceM
   }];
 }
 
-def OneFlow_DynamicLossScaleScheduleOp : OneFlow_BaseOp<"dynamic_loss_scale_schedule", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_DynamicLossScaleScheduleOp : OneFlow_BaseOp<"dynamic_loss_scale_schedule", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$count_not_finite,
     AnyType:$loss_scale,
@@ -3565,7 +3565,7 @@ def OneFlow_DynamicLossScaleScheduleOp : OneFlow_BaseOp<"dynamic_loss_scale_sche
   }];
 }
 
-def OneFlow_KlDivLossOp : OneFlow_BaseOp<"kl_div_loss", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_KlDivLossOp : OneFlow_BaseOp<"kl_div_loss", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target
@@ -3585,7 +3585,7 @@ def OneFlow_KlDivLossOp : OneFlow_BaseOp<"kl_div_loss", [DeclareOpInterfaceMetho
   }];
 }
 
-def OneFlow_KlDivLossGradOp : OneFlow_BaseOp<"kl_div_loss_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_KlDivLossGradOp : OneFlow_BaseOp<"kl_div_loss_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -3606,7 +3606,7 @@ def OneFlow_KlDivLossGradOp : OneFlow_BaseOp<"kl_div_loss_grad", [DeclareOpInter
   }];
 }
 
-def OneFlow_SmoothL1LossOp : OneFlow_BaseOp<"smooth_l1_loss", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SmoothL1LossOp : OneFlow_BaseOp<"smooth_l1_loss", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target
@@ -3626,7 +3626,7 @@ def OneFlow_SmoothL1LossOp : OneFlow_BaseOp<"smooth_l1_loss", [DeclareOpInterfac
   }];
 }
 
-def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -3655,7 +3655,7 @@ def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", [DeclareO
 
 #ifdef GET_ONEFLOW_MATH_OP_DEFINITIONS
 
-def OneFlow_AbsGradOp : OneFlow_BaseOp<"abs_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AbsGradOp : OneFlow_BaseOp<"abs_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3671,7 +3671,7 @@ def OneFlow_AbsGradOp : OneFlow_BaseOp<"abs_grad", [DeclareOpInterfaceMethods<Us
   }];
 }
 
-def OneFlow_CeilGradOp : OneFlow_BaseOp<"ceil_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CeilGradOp : OneFlow_BaseOp<"ceil_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3687,7 +3687,7 @@ def OneFlow_CeilGradOp : OneFlow_BaseOp<"ceil_grad", [DeclareOpInterfaceMethods<
   }];
 }
 
-def OneFlow_ErfOp : OneFlow_BaseOp<"erf", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ErfOp : OneFlow_BaseOp<"erf", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3702,7 +3702,7 @@ def OneFlow_ErfOp : OneFlow_BaseOp<"erf", [DeclareOpInterfaceMethods<UserOpCompa
   }];
 }
 
-def OneFlow_ErfGradOp : OneFlow_BaseOp<"erf_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ErfGradOp : OneFlow_BaseOp<"erf_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3718,7 +3718,7 @@ def OneFlow_ErfGradOp : OneFlow_BaseOp<"erf_grad", [DeclareOpInterfaceMethods<Us
   }];
 }
 
-def OneFlow_ExpOp : OneFlow_BaseOp<"exp", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ExpOp : OneFlow_BaseOp<"exp", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3733,7 +3733,7 @@ def OneFlow_ExpOp : OneFlow_BaseOp<"exp", [DeclareOpInterfaceMethods<UserOpCompa
   }];
 }
 
-def OneFlow_ExpGradOp : OneFlow_BaseOp<"exp_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ExpGradOp : OneFlow_BaseOp<"exp_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3749,7 +3749,7 @@ def OneFlow_ExpGradOp : OneFlow_BaseOp<"exp_grad", [DeclareOpInterfaceMethods<Us
   }];
 }
 
-def OneFlow_ExpandGradOp : OneFlow_BaseOp<"expand_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ExpandGradOp : OneFlow_BaseOp<"expand_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -3768,7 +3768,7 @@ def OneFlow_ExpandGradOp : OneFlow_BaseOp<"expand_grad", [DeclareOpInterfaceMeth
   }];
 }
 
-def OneFlow_Expm1Op : OneFlow_BaseOp<"expm1", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_Expm1Op : OneFlow_BaseOp<"expm1", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3783,7 +3783,7 @@ def OneFlow_Expm1Op : OneFlow_BaseOp<"expm1", [DeclareOpInterfaceMethods<UserOpC
   }];
 }
 
-def OneFlow_Expm1GradOp : OneFlow_BaseOp<"expm1_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_Expm1GradOp : OneFlow_BaseOp<"expm1_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3799,7 +3799,7 @@ def OneFlow_Expm1GradOp : OneFlow_BaseOp<"expm1_grad", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_FloorGradOp : OneFlow_BaseOp<"floor_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FloorGradOp : OneFlow_BaseOp<"floor_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3815,7 +3815,7 @@ def OneFlow_FloorGradOp : OneFlow_BaseOp<"floor_grad", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_FloordivXGradOp : OneFlow_BaseOp<"floordiv_x_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FloordivXGradOp : OneFlow_BaseOp<"floordiv_x_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -3832,7 +3832,7 @@ def OneFlow_FloordivXGradOp : OneFlow_BaseOp<"floordiv_x_grad", [DeclareOpInterf
   }];
 }
 
-def OneFlow_FloordivYGradOp : OneFlow_BaseOp<"floordiv_y_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FloordivYGradOp : OneFlow_BaseOp<"floordiv_y_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -3849,7 +3849,7 @@ def OneFlow_FloordivYGradOp : OneFlow_BaseOp<"floordiv_y_grad", [DeclareOpInterf
   }];
 }
 
-def OneFlow_LgammaOp : OneFlow_BaseOp<"lgamma", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_LgammaOp : OneFlow_BaseOp<"lgamma", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3864,7 +3864,7 @@ def OneFlow_LgammaOp : OneFlow_BaseOp<"lgamma", [DeclareOpInterfaceMethods<UserO
   }];
 }
 
-def OneFlow_LgammaGradOp : OneFlow_BaseOp<"lgamma_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_LgammaGradOp : OneFlow_BaseOp<"lgamma_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3880,7 +3880,7 @@ def OneFlow_LgammaGradOp : OneFlow_BaseOp<"lgamma_grad", [DeclareOpInterfaceMeth
   }];
 }
 
-def OneFlow_LogOp : OneFlow_BaseOp<"log", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_LogOp : OneFlow_BaseOp<"log", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3895,7 +3895,7 @@ def OneFlow_LogOp : OneFlow_BaseOp<"log", [DeclareOpInterfaceMethods<UserOpCompa
   }];
 }
 
-def OneFlow_Log1pOp : OneFlow_BaseOp<"log1p", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_Log1pOp : OneFlow_BaseOp<"log1p", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3910,7 +3910,7 @@ def OneFlow_Log1pOp : OneFlow_BaseOp<"log1p", [DeclareOpInterfaceMethods<UserOpC
   }];
 }
 
-def OneFlow_Log1pGradOp : OneFlow_BaseOp<"log1p_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_Log1pGradOp : OneFlow_BaseOp<"log1p_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3926,7 +3926,7 @@ def OneFlow_Log1pGradOp : OneFlow_BaseOp<"log1p_grad", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_LogGradOp : OneFlow_BaseOp<"log_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_LogGradOp : OneFlow_BaseOp<"log_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3942,7 +3942,7 @@ def OneFlow_LogGradOp : OneFlow_BaseOp<"log_grad", [DeclareOpInterfaceMethods<Us
   }];
 }
 
-def OneFlow_LogSigmoidOp : OneFlow_BaseOp<"log_sigmoid", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_LogSigmoidOp : OneFlow_BaseOp<"log_sigmoid", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3957,7 +3957,7 @@ def OneFlow_LogSigmoidOp : OneFlow_BaseOp<"log_sigmoid", [DeclareOpInterfaceMeth
   }];
 }
 
-def OneFlow_LogSigmoidGradOp : OneFlow_BaseOp<"log_sigmoid_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_LogSigmoidGradOp : OneFlow_BaseOp<"log_sigmoid_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3973,7 +3973,7 @@ def OneFlow_LogSigmoidGradOp : OneFlow_BaseOp<"log_sigmoid_grad", [DeclareOpInte
   }];
 }
 
-def OneFlow_NegativeGradOp : OneFlow_BaseOp<"negative_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_NegativeGradOp : OneFlow_BaseOp<"negative_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3989,7 +3989,7 @@ def OneFlow_NegativeGradOp : OneFlow_BaseOp<"negative_grad", [DeclareOpInterface
   }];
 }
 
-def OneFlow_ReciprocalGradOp : OneFlow_BaseOp<"reciprocal_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReciprocalGradOp : OneFlow_BaseOp<"reciprocal_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -4005,7 +4005,7 @@ def OneFlow_ReciprocalGradOp : OneFlow_BaseOp<"reciprocal_grad", [DeclareOpInter
   }];
 }
 
-def OneFlow_ReciprocalNoNanOp : OneFlow_BaseOp<"reciprocal_no_nan", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReciprocalNoNanOp : OneFlow_BaseOp<"reciprocal_no_nan", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4020,7 +4020,7 @@ def OneFlow_ReciprocalNoNanOp : OneFlow_BaseOp<"reciprocal_no_nan", [DeclareOpIn
   }];
 }
 
-def OneFlow_ReciprocalNoNanGradOp : OneFlow_BaseOp<"reciprocal_no_nan_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReciprocalNoNanGradOp : OneFlow_BaseOp<"reciprocal_no_nan_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -4036,7 +4036,7 @@ def OneFlow_ReciprocalNoNanGradOp : OneFlow_BaseOp<"reciprocal_no_nan_grad", [De
   }];
 }
 
-def OneFlow_RintGradOp : OneFlow_BaseOp<"rint_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_RintGradOp : OneFlow_BaseOp<"rint_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -4052,7 +4052,7 @@ def OneFlow_RintGradOp : OneFlow_BaseOp<"rint_grad", [DeclareOpInterfaceMethods<
   }];
 }
 
-def OneFlow_RoundGradOp : OneFlow_BaseOp<"round_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_RoundGradOp : OneFlow_BaseOp<"round_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -4068,7 +4068,7 @@ def OneFlow_RoundGradOp : OneFlow_BaseOp<"round_grad", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_RsqrtOp : OneFlow_BaseOp<"rsqrt", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_RsqrtOp : OneFlow_BaseOp<"rsqrt", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4083,7 +4083,7 @@ def OneFlow_RsqrtOp : OneFlow_BaseOp<"rsqrt", [DeclareOpInterfaceMethods<UserOpC
   }];
 }
 
-def OneFlow_RsqrtGradOp : OneFlow_BaseOp<"rsqrt_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_RsqrtGradOp : OneFlow_BaseOp<"rsqrt_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -4099,7 +4099,7 @@ def OneFlow_RsqrtGradOp : OneFlow_BaseOp<"rsqrt_grad", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_SigmoidV2Op : OneFlow_BaseOp<"sigmoid_v2", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SigmoidV2Op : OneFlow_BaseOp<"sigmoid_v2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4114,7 +4114,7 @@ def OneFlow_SigmoidV2Op : OneFlow_BaseOp<"sigmoid_v2", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_SigmoidV2GradOp : OneFlow_BaseOp<"sigmoid_v2_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SigmoidV2GradOp : OneFlow_BaseOp<"sigmoid_v2_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -4130,7 +4130,7 @@ def OneFlow_SigmoidV2GradOp : OneFlow_BaseOp<"sigmoid_v2_grad", [DeclareOpInterf
   }];
 }
 
-def OneFlow_SignGradOp : OneFlow_BaseOp<"sign_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SignGradOp : OneFlow_BaseOp<"sign_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -4146,7 +4146,7 @@ def OneFlow_SignGradOp : OneFlow_BaseOp<"sign_grad", [DeclareOpInterfaceMethods<
   }];
 }
 
-def OneFlow_SoftplusOp : OneFlow_BaseOp<"softplus", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SoftplusOp : OneFlow_BaseOp<"softplus", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4161,7 +4161,7 @@ def OneFlow_SoftplusOp : OneFlow_BaseOp<"softplus", [DeclareOpInterfaceMethods<U
   }];
 }
 
-def OneFlow_SoftplusGradOp : OneFlow_BaseOp<"softplus_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SoftplusGradOp : OneFlow_BaseOp<"softplus_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -4177,7 +4177,7 @@ def OneFlow_SoftplusGradOp : OneFlow_BaseOp<"softplus_grad", [DeclareOpInterface
   }];
 }
 
-def OneFlow_SoftsignGradOp : OneFlow_BaseOp<"softsign_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SoftsignGradOp : OneFlow_BaseOp<"softsign_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -4193,7 +4193,7 @@ def OneFlow_SoftsignGradOp : OneFlow_BaseOp<"softsign_grad", [DeclareOpInterface
   }];
 }
 
-def OneFlow_SqrtOp : OneFlow_BaseOp<"sqrt", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SqrtOp : OneFlow_BaseOp<"sqrt", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4208,7 +4208,7 @@ def OneFlow_SqrtOp : OneFlow_BaseOp<"sqrt", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_SqrtGradOp : OneFlow_BaseOp<"sqrt_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SqrtGradOp : OneFlow_BaseOp<"sqrt_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -4224,7 +4224,7 @@ def OneFlow_SqrtGradOp : OneFlow_BaseOp<"sqrt_grad", [DeclareOpInterfaceMethods<
   }];
 }
 
-def OneFlow_SquareOp : OneFlow_BaseOp<"square", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SquareOp : OneFlow_BaseOp<"square", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4239,7 +4239,7 @@ def OneFlow_SquareOp : OneFlow_BaseOp<"square", [DeclareOpInterfaceMethods<UserO
   }];
 }
 
-def OneFlow_SquareGradOp : OneFlow_BaseOp<"square_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SquareGradOp : OneFlow_BaseOp<"square_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -4255,7 +4255,7 @@ def OneFlow_SquareGradOp : OneFlow_BaseOp<"square_grad", [DeclareOpInterfaceMeth
   }];
 }
 
-def OneFlow_XlogyXGradOp : OneFlow_BaseOp<"xlogy_x_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_XlogyXGradOp : OneFlow_BaseOp<"xlogy_x_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -4272,7 +4272,7 @@ def OneFlow_XlogyXGradOp : OneFlow_BaseOp<"xlogy_x_grad", [DeclareOpInterfaceMet
   }];
 }
 
-def OneFlow_XlogyYGradOp : OneFlow_BaseOp<"xlogy_y_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_XlogyYGradOp : OneFlow_BaseOp<"xlogy_y_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -4297,7 +4297,7 @@ def OneFlow_XlogyYGradOp : OneFlow_BaseOp<"xlogy_y_grad", [DeclareOpInterfaceMet
 
 #ifdef GET_ONEFLOW_MATMUL_OP_DEFINITIONS
 
-def OneFlow_BatchMatmulOp : OneFlow_BaseOp<"batch_matmul", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BatchMatmulOp : OneFlow_BaseOp<"batch_matmul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b,
@@ -4319,7 +4319,7 @@ def OneFlow_BatchMatmulOp : OneFlow_BaseOp<"batch_matmul", [DeclareOpInterfaceMe
   }];
 }
 
-def OneFlow_BroadcastMatmulOp : OneFlow_BaseOp<"broadcast_matmul", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastMatmulOp : OneFlow_BaseOp<"broadcast_matmul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b,
@@ -4341,7 +4341,7 @@ def OneFlow_BroadcastMatmulOp : OneFlow_BaseOp<"broadcast_matmul", [DeclareOpInt
   }];
 }
 
-def OneFlow_BroadcastMatmulGradBOp : OneFlow_BaseOp<"broadcast_matmul_grad_b", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BroadcastMatmulGradBOp : OneFlow_BaseOp<"broadcast_matmul_grad_b", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b,
@@ -4361,7 +4361,7 @@ def OneFlow_BroadcastMatmulGradBOp : OneFlow_BaseOp<"broadcast_matmul_grad_b", [
   }];
 }
 
-def OneFlow_DistributedPartialFcSampleOp : OneFlow_BaseOp<"distributed_partial_fc_sample", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_DistributedPartialFcSampleOp : OneFlow_BaseOp<"distributed_partial_fc_sample", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$weight,
     AnyType:$label
@@ -4383,7 +4383,7 @@ def OneFlow_DistributedPartialFcSampleOp : OneFlow_BaseOp<"distributed_partial_f
   }];
 }
 
-def OneFlow_DistributedPartialFcSampleDisableBoxingOp : OneFlow_BaseOp<"distributed_partial_fc_sample_disable_boxing", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_DistributedPartialFcSampleDisableBoxingOp : OneFlow_BaseOp<"distributed_partial_fc_sample_disable_boxing", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$sampled_weight_diff,
     AnyType:$sampled_label
@@ -4400,7 +4400,7 @@ def OneFlow_DistributedPartialFcSampleDisableBoxingOp : OneFlow_BaseOp<"distribu
   }];
 }
 
-def OneFlow_ErfcOp : OneFlow_BaseOp<"erfc", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ErfcOp : OneFlow_BaseOp<"erfc", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4415,7 +4415,7 @@ def OneFlow_ErfcOp : OneFlow_BaseOp<"erfc", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_ErfcGradOp : OneFlow_BaseOp<"erfc_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ErfcGradOp : OneFlow_BaseOp<"erfc_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -4431,7 +4431,7 @@ def OneFlow_ErfcGradOp : OneFlow_BaseOp<"erfc_grad", [DeclareOpInterfaceMethods<
   }];
 }
 
-def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b,
@@ -4461,7 +4461,7 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [DeclareOpInterfaceMethods<UserO
 
 #ifdef GET_ONEFLOW_MISC_OP_DEFINITIONS
 
-def OneFlow_CategoricalOrdinalEncodeOp : OneFlow_BaseOp<"CategoricalOrdinalEncode", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CategoricalOrdinalEncodeOp : OneFlow_BaseOp<"CategoricalOrdinalEncode", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$table,
     AnyType:$size,
@@ -4481,7 +4481,7 @@ def OneFlow_CategoricalOrdinalEncodeOp : OneFlow_BaseOp<"CategoricalOrdinalEncod
   }];
 }
 
-def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Variadic<AnyType>:$in
   );
@@ -4497,7 +4497,7 @@ def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", [DeclareOpInterfaceMethods<UserOpCo
   let hasCanonicalizer = 1;
 }
 
-def OneFlow_ArangeOp : OneFlow_BaseOp<"arange", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ArangeOp : OneFlow_BaseOp<"arange", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -4519,7 +4519,7 @@ def OneFlow_ArangeOp : OneFlow_BaseOp<"arange", [DeclareOpInterfaceMethods<UserO
   }];
 }
 
-def OneFlow_CoinFlipOp : OneFlow_BaseOp<"coin_flip", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CoinFlipOp : OneFlow_BaseOp<"coin_flip", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -4538,7 +4538,7 @@ def OneFlow_CoinFlipOp : OneFlow_BaseOp<"coin_flip", [DeclareOpInterfaceMethods<
   }];
 }
 
-def OneFlow_ConcatOp : OneFlow_BaseOp<"concat", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ConcatOp : OneFlow_BaseOp<"concat", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Variadic<AnyType>:$in
   );
@@ -4557,7 +4557,7 @@ def OneFlow_ConcatOp : OneFlow_BaseOp<"concat", [DeclareOpInterfaceMethods<UserO
   }];
 }
 
-def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -4577,7 +4577,7 @@ def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [DeclareOpInterfaceMethods<U
   }];
 }
 
-def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$mask,
@@ -4597,7 +4597,7 @@ def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", [DeclareOpInterfaceMethods<Use
   }];
 }
 
-def OneFlow_ElementwiseMaximumBackwardOp : OneFlow_BaseOp<"elementwise_maximum_backward", [AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ElementwiseMaximumBackwardOp : OneFlow_BaseOp<"elementwise_maximum_backward", [NoSideEffect, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dz,
     AnyType:$x,
@@ -4618,7 +4618,7 @@ def OneFlow_ElementwiseMaximumBackwardOp : OneFlow_BaseOp<"elementwise_maximum_b
   }];
 }
 
-def OneFlow_ElementwiseMinimumBackwardOp : OneFlow_BaseOp<"elementwise_minimum_backward", [AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ElementwiseMinimumBackwardOp : OneFlow_BaseOp<"elementwise_minimum_backward", [NoSideEffect, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dz,
     AnyType:$x,
@@ -4639,7 +4639,7 @@ def OneFlow_ElementwiseMinimumBackwardOp : OneFlow_BaseOp<"elementwise_minimum_b
   }];
 }
 
-def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -4656,7 +4656,7 @@ def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", [DeclareOpInterfaceMethods<UserOpC
   }];
 }
 
-def OneFlow_EyeOp : OneFlow_BaseOp<"eye", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_EyeOp : OneFlow_BaseOp<"eye", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -4674,7 +4674,7 @@ def OneFlow_EyeOp : OneFlow_BaseOp<"eye", [DeclareOpInterfaceMethods<UserOpCompa
   }];
 }
 
-def OneFlow_GridSampleGradOp : OneFlow_BaseOp<"grid_sample_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_GridSampleGradOp : OneFlow_BaseOp<"grid_sample_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$doutput,
     AnyType:$input,
@@ -4697,7 +4697,7 @@ def OneFlow_GridSampleGradOp : OneFlow_BaseOp<"grid_sample_grad", [DeclareOpInte
   }];
 }
 
-def OneFlow_MultiCountNotFiniteOp : OneFlow_BaseOp<"multi_count_not_finite", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_MultiCountNotFiniteOp : OneFlow_BaseOp<"multi_count_not_finite", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Variadic<AnyType>:$x
   );
@@ -4712,7 +4712,7 @@ def OneFlow_MultiCountNotFiniteOp : OneFlow_BaseOp<"multi_count_not_finite", [De
   }];
 }
 
-def OneFlow_MultiSquareSumOp : OneFlow_BaseOp<"multi_square_sum", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_MultiSquareSumOp : OneFlow_BaseOp<"multi_square_sum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Variadic<AnyType>:$x
   );
@@ -4727,7 +4727,7 @@ def OneFlow_MultiSquareSumOp : OneFlow_BaseOp<"multi_square_sum", [DeclareOpInte
   }];
 }
 
-def OneFlow_NllOp : OneFlow_BaseOp<"nll", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_NllOp : OneFlow_BaseOp<"nll", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -4749,7 +4749,7 @@ def OneFlow_NllOp : OneFlow_BaseOp<"nll", [DeclareOpInterfaceMethods<UserOpCompa
   }];
 }
 
-def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -4772,7 +4772,7 @@ def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", [DeclareOpInterfaceMethods<Us
   }];
 }
 
-def OneFlow_PowXGradOp : OneFlow_BaseOp<"pow_x_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_PowXGradOp : OneFlow_BaseOp<"pow_x_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -4789,7 +4789,7 @@ def OneFlow_PowXGradOp : OneFlow_BaseOp<"pow_x_grad", [DeclareOpInterfaceMethods
   }];
 }
 
-def OneFlow_PowYGradOp : OneFlow_BaseOp<"pow_y_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_PowYGradOp : OneFlow_BaseOp<"pow_y_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -4806,7 +4806,7 @@ def OneFlow_PowYGradOp : OneFlow_BaseOp<"pow_y_grad", [DeclareOpInterfaceMethods
   }];
 }
 
-def OneFlow_PreluGradOp : OneFlow_BaseOp<"prelu_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_PreluGradOp : OneFlow_BaseOp<"prelu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x,
@@ -4824,7 +4824,7 @@ def OneFlow_PreluGradOp : OneFlow_BaseOp<"prelu_grad", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_RandpermOp : OneFlow_BaseOp<"randperm", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_RandpermOp : OneFlow_BaseOp<"randperm", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -4840,7 +4840,7 @@ def OneFlow_RandpermOp : OneFlow_BaseOp<"randperm", [DeclareOpInterfaceMethods<U
   }];
 }
 
-def OneFlow_RecvOp : OneFlow_BaseOp<"recv", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_RecvOp : OneFlow_BaseOp<"recv", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -4859,7 +4859,7 @@ def OneFlow_RecvOp : OneFlow_BaseOp<"recv", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_SendOp : OneFlow_BaseOp<"send", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SendOp : OneFlow_BaseOp<"send", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4874,7 +4874,7 @@ def OneFlow_SendOp : OneFlow_BaseOp<"send", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_SplitLikeOp : OneFlow_BaseOp<"split_like", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SplitLikeOp : OneFlow_BaseOp<"split_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     Variadic<AnyType>:$like
@@ -4893,7 +4893,7 @@ def OneFlow_SplitLikeOp : OneFlow_BaseOp<"split_like", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_SspVariableProxyOp : OneFlow_BaseOp<"ssp_variable_proxy", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SspVariableProxyOp : OneFlow_BaseOp<"ssp_variable_proxy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$var
   );
@@ -4912,7 +4912,7 @@ def OneFlow_SspVariableProxyOp : OneFlow_BaseOp<"ssp_variable_proxy", [DeclareOp
   }];
 }
 
-def OneFlow_TfPreluGradOp : OneFlow_BaseOp<"tf_prelu_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TfPreluGradOp : OneFlow_BaseOp<"tf_prelu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x,
@@ -4930,7 +4930,7 @@ def OneFlow_TfPreluGradOp : OneFlow_BaseOp<"tf_prelu_grad", [DeclareOpInterfaceM
   }];
 }
 
-def OneFlow_UniformOp : OneFlow_BaseOp<"uniform", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UniformOp : OneFlow_BaseOp<"uniform", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -4949,7 +4949,7 @@ def OneFlow_UniformOp : OneFlow_BaseOp<"uniform", [DeclareOpInterfaceMethods<Use
   }];
 }
 
-def OneFlow_UniformIntOp : OneFlow_BaseOp<"uniform_int", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UniformIntOp : OneFlow_BaseOp<"uniform_int", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -4968,7 +4968,7 @@ def OneFlow_UniformIntOp : OneFlow_BaseOp<"uniform_int", [DeclareOpInterfaceMeth
   }];
 }
 
-def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4989,7 +4989,7 @@ def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", [DeclareOp
   }];
 }
 
-def OneFlow_XdivyXGradOp : OneFlow_BaseOp<"xdivy_x_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_XdivyXGradOp : OneFlow_BaseOp<"xdivy_x_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -5006,7 +5006,7 @@ def OneFlow_XdivyXGradOp : OneFlow_BaseOp<"xdivy_x_grad", [DeclareOpInterfaceMet
   }];
 }
 
-def OneFlow_XdivyYGradOp : OneFlow_BaseOp<"xdivy_y_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_XdivyYGradOp : OneFlow_BaseOp<"xdivy_y_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -5031,7 +5031,7 @@ def OneFlow_XdivyYGradOp : OneFlow_BaseOp<"xdivy_y_grad", [DeclareOpInterfaceMet
 
 #ifdef GET_ONEFLOW_NCCL_OP_DEFINITIONS
 
-def OneFlow__ncclLogical_2DSameDim0All2allOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all2all", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow__ncclLogical_2DSameDim0All2allOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all2all", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5050,7 +5050,7 @@ def OneFlow__ncclLogical_2DSameDim0All2allOp : OneFlow_BaseOp<"_nccl_logical_2D_
   }];
 }
 
-def OneFlow__ncclLogical_2DSameDim0AllGatherOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_gather", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow__ncclLogical_2DSameDim0AllGatherOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_gather", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5065,7 +5065,7 @@ def OneFlow__ncclLogical_2DSameDim0AllGatherOp : OneFlow_BaseOp<"_nccl_logical_2
   }];
 }
 
-def OneFlow__ncclLogical_2DSameDim0AllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_gather_noncontinuous", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow__ncclLogical_2DSameDim0AllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_gather_noncontinuous", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5083,7 +5083,7 @@ def OneFlow__ncclLogical_2DSameDim0AllGatherNoncontinuousOp : OneFlow_BaseOp<"_n
   }];
 }
 
-def OneFlow__ncclLogical_2DSameDim0AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_reduce", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow__ncclLogical_2DSameDim0AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_reduce", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5098,7 +5098,7 @@ def OneFlow__ncclLogical_2DSameDim0AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2
   }];
 }
 
-def OneFlow__ncclLogical_2DSameDim1AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim1_all_reduce", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow__ncclLogical_2DSameDim1AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim1_all_reduce", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5113,7 +5113,7 @@ def OneFlow__ncclLogical_2DSameDim1AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2
   }];
 }
 
-def OneFlow__ncclLogicalAllGatherOp : OneFlow_BaseOp<"_nccl_logical_all_gather", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow__ncclLogicalAllGatherOp : OneFlow_BaseOp<"_nccl_logical_all_gather", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5128,7 +5128,7 @@ def OneFlow__ncclLogicalAllGatherOp : OneFlow_BaseOp<"_nccl_logical_all_gather",
   }];
 }
 
-def OneFlow__ncclLogicalAllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical_all_gather_noncontinuous", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow__ncclLogicalAllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical_all_gather_noncontinuous", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5146,7 +5146,7 @@ def OneFlow__ncclLogicalAllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical
   }];
 }
 
-def OneFlow__ncclLogicalAllReduceOp : OneFlow_BaseOp<"_nccl_logical_all_reduce", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow__ncclLogicalAllReduceOp : OneFlow_BaseOp<"_nccl_logical_all_reduce", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5161,7 +5161,7 @@ def OneFlow__ncclLogicalAllReduceOp : OneFlow_BaseOp<"_nccl_logical_all_reduce",
   }];
 }
 
-def OneFlow__ncclLogicalReduceScatterOp : OneFlow_BaseOp<"_nccl_logical_reduce_scatter", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow__ncclLogicalReduceScatterOp : OneFlow_BaseOp<"_nccl_logical_reduce_scatter", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5176,7 +5176,7 @@ def OneFlow__ncclLogicalReduceScatterOp : OneFlow_BaseOp<"_nccl_logical_reduce_s
   }];
 }
 
-def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5203,7 +5203,7 @@ def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", [DeclareOpIn
 
 #ifdef GET_ONEFLOW_NORMALIZATION_OP_DEFINITIONS
 
-def OneFlow_CropMirrorNormalizeFromTensorbufferOp : OneFlow_BaseOp<"crop_mirror_normalize_from_tensorbuffer", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CropMirrorNormalizeFromTensorbufferOp : OneFlow_BaseOp<"crop_mirror_normalize_from_tensorbuffer", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     Optional<AnyType>:$mirror
@@ -5230,7 +5230,7 @@ def OneFlow_CropMirrorNormalizeFromTensorbufferOp : OneFlow_BaseOp<"crop_mirror_
   }];
 }
 
-def OneFlow_CropMirrorNormalizeFromUint8Op : OneFlow_BaseOp<"crop_mirror_normalize_from_uint8", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CropMirrorNormalizeFromUint8Op : OneFlow_BaseOp<"crop_mirror_normalize_from_uint8", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     Optional<AnyType>:$mirror
@@ -5257,7 +5257,7 @@ def OneFlow_CropMirrorNormalizeFromUint8Op : OneFlow_BaseOp<"crop_mirror_normali
   }];
 }
 
-def OneFlow_ImageNormalizeOp : OneFlow_BaseOp<"image_normalize", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ImageNormalizeOp : OneFlow_BaseOp<"image_normalize", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5276,7 +5276,7 @@ def OneFlow_ImageNormalizeOp : OneFlow_BaseOp<"image_normalize", [DeclareOpInter
   }];
 }
 
-def OneFlow_L2NormalizeOp : OneFlow_BaseOp<"l2_normalize", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_L2NormalizeOp : OneFlow_BaseOp<"l2_normalize", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -5296,7 +5296,7 @@ def OneFlow_L2NormalizeOp : OneFlow_BaseOp<"l2_normalize", [DeclareOpInterfaceMe
   }];
 }
 
-def OneFlow_L2NormalizeGradOp : OneFlow_BaseOp<"l2_normalize_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_L2NormalizeGradOp : OneFlow_BaseOp<"l2_normalize_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$y,
@@ -5317,7 +5317,7 @@ def OneFlow_L2NormalizeGradOp : OneFlow_BaseOp<"l2_normalize_grad", [DeclareOpIn
   }];
 }
 
-def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     Optional<AnyType>:$beta,
@@ -5347,7 +5347,7 @@ def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", [AttrSizedOperandSegments
   }];
 }
 
-def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x,
@@ -5370,7 +5370,7 @@ def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", [DeclareOpInterf
   }];
 }
 
-def OneFlow_LayerNormParamGradOp : OneFlow_BaseOp<"layer_norm_param_grad", [AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_LayerNormParamGradOp : OneFlow_BaseOp<"layer_norm_param_grad", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     Optional<AnyType>:$normalized,
@@ -5397,7 +5397,7 @@ def OneFlow_LayerNormParamGradOp : OneFlow_BaseOp<"layer_norm_param_grad", [Attr
   }];
 }
 
-def OneFlow_NormalOp : OneFlow_BaseOp<"normal", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_NormalOp : OneFlow_BaseOp<"normal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -5416,7 +5416,7 @@ def OneFlow_NormalOp : OneFlow_BaseOp<"normal", [DeclareOpInterfaceMethods<UserO
   }];
 }
 
-def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     Optional<AnyType>:$moving_mean,
@@ -5448,7 +5448,7 @@ def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [AttrSizedOperandS
   }];
 }
 
-def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy,
@@ -5481,7 +5481,7 @@ def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", [DeclareO
 
 #ifdef GET_ONEFLOW_OPTIMIZER_OP_DEFINITIONS
 
-def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -5512,7 +5512,7 @@ def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", [AttrSizedOperand
   }];
 }
 
-def OneFlow_AdamBiasCorrectionFactorOp : OneFlow_BaseOp<"adam_bias_correction_factor", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AdamBiasCorrectionFactorOp : OneFlow_BaseOp<"adam_bias_correction_factor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$train_step
   );
@@ -5530,7 +5530,7 @@ def OneFlow_AdamBiasCorrectionFactorOp : OneFlow_BaseOp<"adam_bias_correction_fa
   }];
 }
 
-def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -5568,7 +5568,7 @@ def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", [AttrSizedOperandSegmen
   }];
 }
 
-def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_update", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff_indices,
@@ -5600,7 +5600,7 @@ def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_upda
   }];
 }
 
-def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momentum_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momentum_update", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff_indices,
@@ -5620,7 +5620,7 @@ def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momen
   }];
 }
 
-def OneFlow_IndexedSlicesSgdUpdateOp : OneFlow_BaseOp<"indexed_slices_sgd_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_IndexedSlicesSgdUpdateOp : OneFlow_BaseOp<"indexed_slices_sgd_update", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff_indices,
@@ -5638,7 +5638,7 @@ def OneFlow_IndexedSlicesSgdUpdateOp : OneFlow_BaseOp<"indexed_slices_sgd_update
   }];
 }
 
-def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$m,
     AnyType:$v,
@@ -5670,7 +5670,7 @@ def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", [AttrSizedOperandSegmen
   }];
 }
 
-def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -5699,7 +5699,7 @@ def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", [AttrSizedOperandSegmen
   }];
 }
 
-def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -5727,7 +5727,7 @@ def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", [AttrSizedOpera
   }];
 }
 
-def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -5758,7 +5758,7 @@ def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", [AttrSizedOperand
   }];
 }
 
-def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -5784,7 +5784,7 @@ def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", [AttrSizedOperandSegments
   }];
 }
 
-def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$update
@@ -5813,7 +5813,7 @@ def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", [DeclareOpInterfaceMe
 
 #ifdef GET_ONEFLOW_PADDING_OP_DEFINITIONS
 
-def OneFlow_ConstantPad1DOp : OneFlow_BaseOp<"constant_pad1d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ConstantPad1DOp : OneFlow_BaseOp<"constant_pad1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -5833,7 +5833,7 @@ def OneFlow_ConstantPad1DOp : OneFlow_BaseOp<"constant_pad1d", [DeclareOpInterfa
   }];
 }
 
-def OneFlow_ConstantPad1DGradOp : OneFlow_BaseOp<"constant_pad1d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ConstantPad1DGradOp : OneFlow_BaseOp<"constant_pad1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -5853,7 +5853,7 @@ def OneFlow_ConstantPad1DGradOp : OneFlow_BaseOp<"constant_pad1d_grad", [Declare
   }];
 }
 
-def OneFlow_ConstantPad2DOp : OneFlow_BaseOp<"constant_pad2d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ConstantPad2DOp : OneFlow_BaseOp<"constant_pad2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -5873,7 +5873,7 @@ def OneFlow_ConstantPad2DOp : OneFlow_BaseOp<"constant_pad2d", [DeclareOpInterfa
   }];
 }
 
-def OneFlow_ConstantPad2DGradOp : OneFlow_BaseOp<"constant_pad2d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ConstantPad2DGradOp : OneFlow_BaseOp<"constant_pad2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -5893,7 +5893,7 @@ def OneFlow_ConstantPad2DGradOp : OneFlow_BaseOp<"constant_pad2d_grad", [Declare
   }];
 }
 
-def OneFlow_ConstantPad3DOp : OneFlow_BaseOp<"constant_pad3d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ConstantPad3DOp : OneFlow_BaseOp<"constant_pad3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -5913,7 +5913,7 @@ def OneFlow_ConstantPad3DOp : OneFlow_BaseOp<"constant_pad3d", [DeclareOpInterfa
   }];
 }
 
-def OneFlow_ConstantPad3DGradOp : OneFlow_BaseOp<"constant_pad3d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ConstantPad3DGradOp : OneFlow_BaseOp<"constant_pad3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -5933,7 +5933,7 @@ def OneFlow_ConstantPad3DGradOp : OneFlow_BaseOp<"constant_pad3d_grad", [Declare
   }];
 }
 
-def OneFlow_PadOp : OneFlow_BaseOp<"pad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_PadOp : OneFlow_BaseOp<"pad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -5954,7 +5954,7 @@ def OneFlow_PadOp : OneFlow_BaseOp<"pad", [DeclareOpInterfaceMethods<UserOpCompa
   }];
 }
 
-def OneFlow_PadGradOp : OneFlow_BaseOp<"pad_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_PadGradOp : OneFlow_BaseOp<"pad_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -5975,7 +5975,7 @@ def OneFlow_PadGradOp : OneFlow_BaseOp<"pad_grad", [DeclareOpInterfaceMethods<Us
   }];
 }
 
-def OneFlow_ReflectionPad2DOp : OneFlow_BaseOp<"reflection_pad2d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReflectionPad2DOp : OneFlow_BaseOp<"reflection_pad2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -5993,7 +5993,7 @@ def OneFlow_ReflectionPad2DOp : OneFlow_BaseOp<"reflection_pad2d", [DeclareOpInt
   }];
 }
 
-def OneFlow_ReflectionPad2DGradOp : OneFlow_BaseOp<"reflection_pad2d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReflectionPad2DGradOp : OneFlow_BaseOp<"reflection_pad2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -6011,7 +6011,7 @@ def OneFlow_ReflectionPad2DGradOp : OneFlow_BaseOp<"reflection_pad2d_grad", [Dec
   }];
 }
 
-def OneFlow_ReplicationPad2DOp : OneFlow_BaseOp<"replication_pad2d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReplicationPad2DOp : OneFlow_BaseOp<"replication_pad2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -6029,7 +6029,7 @@ def OneFlow_ReplicationPad2DOp : OneFlow_BaseOp<"replication_pad2d", [DeclareOpI
   }];
 }
 
-def OneFlow_ReplicationPad2DGradOp : OneFlow_BaseOp<"replication_pad2d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReplicationPad2DGradOp : OneFlow_BaseOp<"replication_pad2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -6047,7 +6047,7 @@ def OneFlow_ReplicationPad2DGradOp : OneFlow_BaseOp<"replication_pad2d_grad", [D
   }];
 }
 
-def OneFlow_SamePaddingOp : OneFlow_BaseOp<"same_padding", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SamePaddingOp : OneFlow_BaseOp<"same_padding", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -6069,7 +6069,7 @@ def OneFlow_SamePaddingOp : OneFlow_BaseOp<"same_padding", [DeclareOpInterfaceMe
   }];
 }
 
-def OneFlow_SamePaddingGradOp : OneFlow_BaseOp<"same_padding_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SamePaddingGradOp : OneFlow_BaseOp<"same_padding_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x_like,
     AnyType:$dy
@@ -6100,7 +6100,7 @@ def OneFlow_SamePaddingGradOp : OneFlow_BaseOp<"same_padding_grad", [DeclareOpIn
 
 #ifdef GET_ONEFLOW_PARALLEL_CAST_OP_DEFINITIONS
 
-def OneFlow_HierarchicalParallelCastOp : OneFlow_BaseOp<"hierarchical_parallel_cast", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_HierarchicalParallelCastOp : OneFlow_BaseOp<"hierarchical_parallel_cast", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6120,7 +6120,7 @@ def OneFlow_HierarchicalParallelCastOp : OneFlow_BaseOp<"hierarchical_parallel_c
   }];
 }
 
-def OneFlow_HierarchicalParallelCastLikeOp : OneFlow_BaseOp<"hierarchical_parallel_cast_like", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_HierarchicalParallelCastLikeOp : OneFlow_BaseOp<"hierarchical_parallel_cast_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$like
@@ -6136,7 +6136,7 @@ def OneFlow_HierarchicalParallelCastLikeOp : OneFlow_BaseOp<"hierarchical_parall
   }];
 }
 
-def OneFlow_ParallelCastOp : OneFlow_BaseOp<"parallel_cast", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ParallelCastOp : OneFlow_BaseOp<"parallel_cast", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6163,7 +6163,7 @@ def OneFlow_ParallelCastOp : OneFlow_BaseOp<"parallel_cast", [DeclareOpInterface
 
 #ifdef GET_ONEFLOW_POOL_OP_DEFINITIONS
 
-def OneFlow_AdaptiveAvgPool1DOp : OneFlow_BaseOp<"adaptive_avg_pool1d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AdaptiveAvgPool1DOp : OneFlow_BaseOp<"adaptive_avg_pool1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -6181,7 +6181,7 @@ def OneFlow_AdaptiveAvgPool1DOp : OneFlow_BaseOp<"adaptive_avg_pool1d", [Declare
   }];
 }
 
-def OneFlow_AdaptiveAvgPool1DGradOp : OneFlow_BaseOp<"adaptive_avg_pool1d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AdaptiveAvgPool1DGradOp : OneFlow_BaseOp<"adaptive_avg_pool1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -6200,7 +6200,7 @@ def OneFlow_AdaptiveAvgPool1DGradOp : OneFlow_BaseOp<"adaptive_avg_pool1d_grad",
   }];
 }
 
-def OneFlow_AdaptiveAvgPool2DOp : OneFlow_BaseOp<"adaptive_avg_pool2d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AdaptiveAvgPool2DOp : OneFlow_BaseOp<"adaptive_avg_pool2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -6218,7 +6218,7 @@ def OneFlow_AdaptiveAvgPool2DOp : OneFlow_BaseOp<"adaptive_avg_pool2d", [Declare
   }];
 }
 
-def OneFlow_AdaptiveAvgPool2DGradOp : OneFlow_BaseOp<"adaptive_avg_pool2d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AdaptiveAvgPool2DGradOp : OneFlow_BaseOp<"adaptive_avg_pool2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -6237,7 +6237,7 @@ def OneFlow_AdaptiveAvgPool2DGradOp : OneFlow_BaseOp<"adaptive_avg_pool2d_grad",
   }];
 }
 
-def OneFlow_AdaptiveAvgPool3DOp : OneFlow_BaseOp<"adaptive_avg_pool3d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AdaptiveAvgPool3DOp : OneFlow_BaseOp<"adaptive_avg_pool3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -6255,7 +6255,7 @@ def OneFlow_AdaptiveAvgPool3DOp : OneFlow_BaseOp<"adaptive_avg_pool3d", [Declare
   }];
 }
 
-def OneFlow_AdaptiveAvgPool3DGradOp : OneFlow_BaseOp<"adaptive_avg_pool3d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AdaptiveAvgPool3DGradOp : OneFlow_BaseOp<"adaptive_avg_pool3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -6274,53 +6274,53 @@ def OneFlow_AdaptiveAvgPool3DGradOp : OneFlow_BaseOp<"adaptive_avg_pool3d_grad",
   }];
 }
 
-def OneFlow_LazyAvgPool1DOp : OneFlow_LazyPoolBaseOp<"avg_pool_1d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_LazyAvgPool1DOp : OneFlow_LazyPoolBaseOp<"avg_pool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_LazyAvgPool1DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_1d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_LazyAvgPool1DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_LazyAvgPool2DOp : OneFlow_LazyPoolBaseOp<"avg_pool_2d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_LazyAvgPool2DOp : OneFlow_LazyPoolBaseOp<"avg_pool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_LazyAvgPool2DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_2d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_LazyAvgPool2DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_LazyAvgPool3DOp : OneFlow_LazyPoolBaseOp<"avg_pool_3d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_LazyAvgPool3DOp : OneFlow_LazyPoolBaseOp<"avg_pool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_LazyAvgPool3DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_3d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_LazyAvgPool3DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool1DOp : OneFlow_EagerPoolBaseOp<"avgpool_1d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_EagerAvgPool1DOp : OneFlow_EagerPoolBaseOp<"avgpool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_1d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_EagerAvgPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool2DOp : OneFlow_EagerPoolBaseOp<"avgpool_2d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_EagerAvgPool2DOp : OneFlow_EagerPoolBaseOp<"avgpool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_2d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_EagerAvgPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool3DOp : OneFlow_EagerPoolBaseOp<"avgpool_3d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_EagerAvgPool3DOp : OneFlow_EagerPoolBaseOp<"avgpool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_3d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_EagerAvgPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_LazyMaxPool1DOp : OneFlow_LazyPoolBaseOp<"max_pool_1d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_LazyMaxPool1DOp : OneFlow_LazyPoolBaseOp<"max_pool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_LazyMaxPool1DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_1d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_LazyMaxPool1DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_LazyMaxPool2DOp : OneFlow_LazyPoolBaseOp<"max_pool_2d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_LazyMaxPool2DOp : OneFlow_LazyPoolBaseOp<"max_pool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_LazyMaxPool2DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_2d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_LazyMaxPool2DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_LazyMaxPool3DOp : OneFlow_LazyPoolBaseOp<"max_pool_3d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_LazyMaxPool3DOp : OneFlow_LazyPoolBaseOp<"max_pool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_LazyMaxPool3DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_3d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_LazyMaxPool3DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool1DOp : OneFlow_EagerPoolBaseOp<"maxpool_1d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_EagerMaxPool1DOp : OneFlow_EagerPoolBaseOp<"maxpool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_1d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_EagerMaxPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool2DOp : OneFlow_EagerPoolBaseOp<"maxpool_2d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_EagerMaxPool2DOp : OneFlow_EagerPoolBaseOp<"maxpool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_2d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_EagerMaxPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool3DOp : OneFlow_EagerPoolBaseOp<"maxpool_3d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_EagerMaxPool3DOp : OneFlow_EagerPoolBaseOp<"maxpool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_3d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_EagerMaxPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
 #endif // GET_ONEFLOW_POOL_OP_DEFINITIONS
 
@@ -6330,7 +6330,7 @@ def OneFlow_EagerMaxPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_3d_grad"
 
 #ifdef GET_ONEFLOW_QUANTIZATION_OP_DEFINITIONS
 
-def OneFlow_FakeQuantizationOp : OneFlow_BaseOp<"fake_quantization", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FakeQuantizationOp : OneFlow_BaseOp<"fake_quantization", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$scale,
@@ -6352,7 +6352,7 @@ def OneFlow_FakeQuantizationOp : OneFlow_BaseOp<"fake_quantization", [DeclareOpI
   }];
 }
 
-def OneFlow_MinMaxObserverOp : OneFlow_BaseOp<"min_max_observer", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_MinMaxObserverOp : OneFlow_BaseOp<"min_max_observer", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6374,7 +6374,7 @@ def OneFlow_MinMaxObserverOp : OneFlow_BaseOp<"min_max_observer", [DeclareOpInte
   }];
 }
 
-def OneFlow_MovingAverageMinMaxObserverOp : OneFlow_BaseOp<"moving_average_min_max_observer", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_MovingAverageMinMaxObserverOp : OneFlow_BaseOp<"moving_average_min_max_observer", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$current_train_step,
@@ -6401,7 +6401,7 @@ def OneFlow_MovingAverageMinMaxObserverOp : OneFlow_BaseOp<"moving_average_min_m
   }];
 }
 
-def OneFlow_QuantizationOp : OneFlow_BaseOp<"quantization", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_QuantizationOp : OneFlow_BaseOp<"quantization", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$scale,
@@ -6431,7 +6431,7 @@ def OneFlow_QuantizationOp : OneFlow_BaseOp<"quantization", [DeclareOpInterfaceM
 
 #ifdef GET_ONEFLOW_REDUCE_OP_DEFINITIONS
 
-def OneFlow_IndexedSlicesReduceSumOp : OneFlow_BaseOp<"indexed_slices_reduce_sum", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_IndexedSlicesReduceSumOp : OneFlow_BaseOp<"indexed_slices_reduce_sum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x_indices,
     AnyType:$x_values
@@ -6449,7 +6449,7 @@ def OneFlow_IndexedSlicesReduceSumOp : OneFlow_BaseOp<"indexed_slices_reduce_sum
   }];
 }
 
-def OneFlow_ReduceAllOp : OneFlow_BaseOp<"reduce_all", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReduceAllOp : OneFlow_BaseOp<"reduce_all", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input_tensor
   );
@@ -6468,7 +6468,7 @@ def OneFlow_ReduceAllOp : OneFlow_BaseOp<"reduce_all", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_ReduceAnyOp : OneFlow_BaseOp<"reduce_any", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReduceAnyOp : OneFlow_BaseOp<"reduce_any", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input_tensor
   );
@@ -6487,7 +6487,7 @@ def OneFlow_ReduceAnyOp : OneFlow_BaseOp<"reduce_any", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_ReduceMaxOp : OneFlow_BaseOp<"reduce_max", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReduceMaxOp : OneFlow_BaseOp<"reduce_max", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input_tensor
   );
@@ -6506,7 +6506,7 @@ def OneFlow_ReduceMaxOp : OneFlow_BaseOp<"reduce_max", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_ReduceMaxDeviceStageOp : OneFlow_BaseOp<"reduce_max_device_stage", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReduceMaxDeviceStageOp : OneFlow_BaseOp<"reduce_max_device_stage", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6526,7 +6526,7 @@ def OneFlow_ReduceMaxDeviceStageOp : OneFlow_BaseOp<"reduce_max_device_stage", [
   }];
 }
 
-def OneFlow_ReduceMaxDeviceStageGradOp : OneFlow_BaseOp<"reduce_max_device_stage_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReduceMaxDeviceStageGradOp : OneFlow_BaseOp<"reduce_max_device_stage_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$out_diff,
     AnyType:$mask,
@@ -6546,7 +6546,7 @@ def OneFlow_ReduceMaxDeviceStageGradOp : OneFlow_BaseOp<"reduce_max_device_stage
   }];
 }
 
-def OneFlow_ReduceMaxGlobalStageOp : OneFlow_BaseOp<"reduce_max_global_stage", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReduceMaxGlobalStageOp : OneFlow_BaseOp<"reduce_max_global_stage", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$device_count
@@ -6567,7 +6567,7 @@ def OneFlow_ReduceMaxGlobalStageOp : OneFlow_BaseOp<"reduce_max_global_stage", [
   }];
 }
 
-def OneFlow_ReduceMaxGlobalStageGradOp : OneFlow_BaseOp<"reduce_max_global_stage_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReduceMaxGlobalStageGradOp : OneFlow_BaseOp<"reduce_max_global_stage_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$out_diff,
     AnyType:$mask,
@@ -6588,7 +6588,7 @@ def OneFlow_ReduceMaxGlobalStageGradOp : OneFlow_BaseOp<"reduce_max_global_stage
   }];
 }
 
-def OneFlow_ReduceMinOp : OneFlow_BaseOp<"reduce_min", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReduceMinOp : OneFlow_BaseOp<"reduce_min", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input_tensor
   );
@@ -6607,7 +6607,7 @@ def OneFlow_ReduceMinOp : OneFlow_BaseOp<"reduce_min", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_ReduceMinDeviceStageOp : OneFlow_BaseOp<"reduce_min_device_stage", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReduceMinDeviceStageOp : OneFlow_BaseOp<"reduce_min_device_stage", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6627,7 +6627,7 @@ def OneFlow_ReduceMinDeviceStageOp : OneFlow_BaseOp<"reduce_min_device_stage", [
   }];
 }
 
-def OneFlow_ReduceMinDeviceStageGradOp : OneFlow_BaseOp<"reduce_min_device_stage_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReduceMinDeviceStageGradOp : OneFlow_BaseOp<"reduce_min_device_stage_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$out_diff,
     AnyType:$mask,
@@ -6647,7 +6647,7 @@ def OneFlow_ReduceMinDeviceStageGradOp : OneFlow_BaseOp<"reduce_min_device_stage
   }];
 }
 
-def OneFlow_ReduceMinGlobalStageOp : OneFlow_BaseOp<"reduce_min_global_stage", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReduceMinGlobalStageOp : OneFlow_BaseOp<"reduce_min_global_stage", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$device_count
@@ -6668,7 +6668,7 @@ def OneFlow_ReduceMinGlobalStageOp : OneFlow_BaseOp<"reduce_min_global_stage", [
   }];
 }
 
-def OneFlow_ReduceMinGlobalStageGradOp : OneFlow_BaseOp<"reduce_min_global_stage_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReduceMinGlobalStageGradOp : OneFlow_BaseOp<"reduce_min_global_stage_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$out_diff,
     AnyType:$mask,
@@ -6689,7 +6689,7 @@ def OneFlow_ReduceMinGlobalStageGradOp : OneFlow_BaseOp<"reduce_min_global_stage
   }];
 }
 
-def OneFlow_ReduceProdOp : OneFlow_BaseOp<"reduce_prod", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReduceProdOp : OneFlow_BaseOp<"reduce_prod", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input_tensor
   );
@@ -6708,7 +6708,7 @@ def OneFlow_ReduceProdOp : OneFlow_BaseOp<"reduce_prod", [DeclareOpInterfaceMeth
   }];
 }
 
-def OneFlow_ReduceSumOp : OneFlow_BaseOp<"reduce_sum", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReduceSumOp : OneFlow_BaseOp<"reduce_sum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input_tensor
   );
@@ -6727,7 +6727,7 @@ def OneFlow_ReduceSumOp : OneFlow_BaseOp<"reduce_sum", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_ReduceSumLikeOp : OneFlow_BaseOp<"reduce_sum_like", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReduceSumLikeOp : OneFlow_BaseOp<"reduce_sum_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$like
@@ -6754,7 +6754,7 @@ def OneFlow_ReduceSumLikeOp : OneFlow_BaseOp<"reduce_sum_like", [DeclareOpInterf
 
 #ifdef GET_ONEFLOW_RESHAPE_OP_DEFINITIONS
 
-def OneFlow_ReshapeOp : OneFlow_BaseOp<"reshape", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReshapeOp : OneFlow_BaseOp<"reshape", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6772,7 +6772,7 @@ def OneFlow_ReshapeOp : OneFlow_BaseOp<"reshape", [DeclareOpInterfaceMethods<Use
   }];
 }
 
-def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$like
@@ -6796,7 +6796,7 @@ def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", [DeclareOpInterfaceMe
 
 #ifdef GET_ONEFLOW_SCALAR_OP_DEFINITIONS
 
-def OneFlow_ClipByScalarOp : OneFlow_BaseOp<"clip_by_scalar", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ClipByScalarOp : OneFlow_BaseOp<"clip_by_scalar", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -6817,7 +6817,7 @@ def OneFlow_ClipByScalarOp : OneFlow_BaseOp<"clip_by_scalar", [DeclareOpInterfac
   }];
 }
 
-def OneFlow_ClipByScalarGradOp : OneFlow_BaseOp<"clip_by_scalar_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ClipByScalarGradOp : OneFlow_BaseOp<"clip_by_scalar_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -6839,7 +6839,7 @@ def OneFlow_ClipByScalarGradOp : OneFlow_BaseOp<"clip_by_scalar_grad", [DeclareO
   }];
 }
 
-def OneFlow_ClipByScalarMaxOp : OneFlow_BaseOp<"clip_by_scalar_max", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ClipByScalarMaxOp : OneFlow_BaseOp<"clip_by_scalar_max", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -6858,7 +6858,7 @@ def OneFlow_ClipByScalarMaxOp : OneFlow_BaseOp<"clip_by_scalar_max", [DeclareOpI
   }];
 }
 
-def OneFlow_ClipByScalarMaxGradOp : OneFlow_BaseOp<"clip_by_scalar_max_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ClipByScalarMaxGradOp : OneFlow_BaseOp<"clip_by_scalar_max_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -6878,7 +6878,7 @@ def OneFlow_ClipByScalarMaxGradOp : OneFlow_BaseOp<"clip_by_scalar_max_grad", [D
   }];
 }
 
-def OneFlow_ClipByScalarMinOp : OneFlow_BaseOp<"clip_by_scalar_min", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ClipByScalarMinOp : OneFlow_BaseOp<"clip_by_scalar_min", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -6897,7 +6897,7 @@ def OneFlow_ClipByScalarMinOp : OneFlow_BaseOp<"clip_by_scalar_min", [DeclareOpI
   }];
 }
 
-def OneFlow_ClipByScalarMinGradOp : OneFlow_BaseOp<"clip_by_scalar_min_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ClipByScalarMinGradOp : OneFlow_BaseOp<"clip_by_scalar_min_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -6917,7 +6917,7 @@ def OneFlow_ClipByScalarMinGradOp : OneFlow_BaseOp<"clip_by_scalar_min_grad", [D
   }];
 }
 
-def OneFlow_ScalarAddOp : OneFlow_BaseOp<"scalar_add", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScalarAddOp : OneFlow_BaseOp<"scalar_add", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6938,7 +6938,7 @@ def OneFlow_ScalarAddOp : OneFlow_BaseOp<"scalar_add", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_ScalarAddByTensorOp : OneFlow_BaseOp<"scalar_add_by_tensor", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScalarAddByTensorOp : OneFlow_BaseOp<"scalar_add_by_tensor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$scalar
@@ -6954,7 +6954,7 @@ def OneFlow_ScalarAddByTensorOp : OneFlow_BaseOp<"scalar_add_by_tensor", [Declar
   }];
 }
 
-def OneFlow_ScalarDivByTensorOp : OneFlow_BaseOp<"scalar_div_by_tensor", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScalarDivByTensorOp : OneFlow_BaseOp<"scalar_div_by_tensor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$scalar
@@ -6970,7 +6970,7 @@ def OneFlow_ScalarDivByTensorOp : OneFlow_BaseOp<"scalar_div_by_tensor", [Declar
   }];
 }
 
-def OneFlow_ScalarFloordivOp : OneFlow_BaseOp<"scalar_floordiv", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScalarFloordivOp : OneFlow_BaseOp<"scalar_floordiv", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6991,7 +6991,7 @@ def OneFlow_ScalarFloordivOp : OneFlow_BaseOp<"scalar_floordiv", [DeclareOpInter
   }];
 }
 
-def OneFlow_ScalarFmodOp : OneFlow_BaseOp<"scalar_fmod", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScalarFmodOp : OneFlow_BaseOp<"scalar_fmod", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7012,7 +7012,7 @@ def OneFlow_ScalarFmodOp : OneFlow_BaseOp<"scalar_fmod", [DeclareOpInterfaceMeth
   }];
 }
 
-def OneFlow_ScalarLogicalAndOp : OneFlow_BaseOp<"scalar_logical_and", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScalarLogicalAndOp : OneFlow_BaseOp<"scalar_logical_and", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7033,7 +7033,7 @@ def OneFlow_ScalarLogicalAndOp : OneFlow_BaseOp<"scalar_logical_and", [DeclareOp
   }];
 }
 
-def OneFlow_ScalarLogicalEqualOp : OneFlow_BaseOp<"scalar_logical_equal", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScalarLogicalEqualOp : OneFlow_BaseOp<"scalar_logical_equal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7054,7 +7054,7 @@ def OneFlow_ScalarLogicalEqualOp : OneFlow_BaseOp<"scalar_logical_equal", [Decla
   }];
 }
 
-def OneFlow_ScalarLogicalGreaterOp : OneFlow_BaseOp<"scalar_logical_greater", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScalarLogicalGreaterOp : OneFlow_BaseOp<"scalar_logical_greater", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7075,7 +7075,7 @@ def OneFlow_ScalarLogicalGreaterOp : OneFlow_BaseOp<"scalar_logical_greater", [D
   }];
 }
 
-def OneFlow_ScalarLogicalGreaterEqualOp : OneFlow_BaseOp<"scalar_logical_greater_equal", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScalarLogicalGreaterEqualOp : OneFlow_BaseOp<"scalar_logical_greater_equal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7096,7 +7096,7 @@ def OneFlow_ScalarLogicalGreaterEqualOp : OneFlow_BaseOp<"scalar_logical_greater
   }];
 }
 
-def OneFlow_ScalarLogicalLessOp : OneFlow_BaseOp<"scalar_logical_less", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScalarLogicalLessOp : OneFlow_BaseOp<"scalar_logical_less", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7117,7 +7117,7 @@ def OneFlow_ScalarLogicalLessOp : OneFlow_BaseOp<"scalar_logical_less", [Declare
   }];
 }
 
-def OneFlow_ScalarLogicalLessEqualOp : OneFlow_BaseOp<"scalar_logical_less_equal", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScalarLogicalLessEqualOp : OneFlow_BaseOp<"scalar_logical_less_equal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7138,7 +7138,7 @@ def OneFlow_ScalarLogicalLessEqualOp : OneFlow_BaseOp<"scalar_logical_less_equal
   }];
 }
 
-def OneFlow_ScalarLogicalNotEqualOp : OneFlow_BaseOp<"scalar_logical_not_equal", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScalarLogicalNotEqualOp : OneFlow_BaseOp<"scalar_logical_not_equal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7159,7 +7159,7 @@ def OneFlow_ScalarLogicalNotEqualOp : OneFlow_BaseOp<"scalar_logical_not_equal",
   }];
 }
 
-def OneFlow_ScalarLogicalOrOp : OneFlow_BaseOp<"scalar_logical_or", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScalarLogicalOrOp : OneFlow_BaseOp<"scalar_logical_or", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7180,7 +7180,7 @@ def OneFlow_ScalarLogicalOrOp : OneFlow_BaseOp<"scalar_logical_or", [DeclareOpIn
   }];
 }
 
-def OneFlow_ScalarLogicalXorOp : OneFlow_BaseOp<"scalar_logical_xor", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScalarLogicalXorOp : OneFlow_BaseOp<"scalar_logical_xor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7201,7 +7201,7 @@ def OneFlow_ScalarLogicalXorOp : OneFlow_BaseOp<"scalar_logical_xor", [DeclareOp
   }];
 }
 
-def OneFlow_ScalarMulOp : OneFlow_BaseOp<"scalar_mul", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScalarMulOp : OneFlow_BaseOp<"scalar_mul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7222,7 +7222,7 @@ def OneFlow_ScalarMulOp : OneFlow_BaseOp<"scalar_mul", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$scalar
@@ -7238,7 +7238,7 @@ def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", [Declar
   }];
 }
 
-def OneFlow_ScalarPowOp : OneFlow_BaseOp<"scalar_pow", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScalarPowOp : OneFlow_BaseOp<"scalar_pow", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7259,7 +7259,7 @@ def OneFlow_ScalarPowOp : OneFlow_BaseOp<"scalar_pow", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_ScalarPowGradOp : OneFlow_BaseOp<"scalar_pow_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScalarPowGradOp : OneFlow_BaseOp<"scalar_pow_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7281,7 +7281,7 @@ def OneFlow_ScalarPowGradOp : OneFlow_BaseOp<"scalar_pow_grad", [DeclareOpInterf
   }];
 }
 
-def OneFlow_ScalarSubByTensorOp : OneFlow_BaseOp<"scalar_sub_by_tensor", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScalarSubByTensorOp : OneFlow_BaseOp<"scalar_sub_by_tensor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$scalar
@@ -7305,7 +7305,7 @@ def OneFlow_ScalarSubByTensorOp : OneFlow_BaseOp<"scalar_sub_by_tensor", [Declar
 
 #ifdef GET_ONEFLOW_SOFTMAX_OP_DEFINITIONS
 
-def OneFlow_LogSoftmaxOp : OneFlow_BaseOp<"log_softmax", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_LogSoftmaxOp : OneFlow_BaseOp<"log_softmax", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7320,7 +7320,7 @@ def OneFlow_LogSoftmaxOp : OneFlow_BaseOp<"log_softmax", [DeclareOpInterfaceMeth
   }];
 }
 
-def OneFlow_LogSoftmaxGradOp : OneFlow_BaseOp<"log_softmax_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_LogSoftmaxGradOp : OneFlow_BaseOp<"log_softmax_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$prob,
     AnyType:$dy
@@ -7336,7 +7336,7 @@ def OneFlow_LogSoftmaxGradOp : OneFlow_BaseOp<"log_softmax_grad", [DeclareOpInte
   }];
 }
 
-def OneFlow_SoftmaxOp : OneFlow_BaseOp<"softmax", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SoftmaxOp : OneFlow_BaseOp<"softmax", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7351,7 +7351,7 @@ def OneFlow_SoftmaxOp : OneFlow_BaseOp<"softmax", [DeclareOpInterfaceMethods<Use
   }];
 }
 
-def OneFlow_SoftmaxCrossEntropyOp : OneFlow_BaseOp<"softmax_cross_entropy", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SoftmaxCrossEntropyOp : OneFlow_BaseOp<"softmax_cross_entropy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label
@@ -7368,7 +7368,7 @@ def OneFlow_SoftmaxCrossEntropyOp : OneFlow_BaseOp<"softmax_cross_entropy", [Dec
   }];
 }
 
-def OneFlow_SoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"softmax_cross_entropy_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"softmax_cross_entropy_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$label,
@@ -7385,7 +7385,7 @@ def OneFlow_SoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"softmax_cross_entropy_gr
   }];
 }
 
-def OneFlow_SoftmaxGradOp : OneFlow_BaseOp<"softmax_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SoftmaxGradOp : OneFlow_BaseOp<"softmax_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$y,
     AnyType:$dy
@@ -7401,7 +7401,7 @@ def OneFlow_SoftmaxGradOp : OneFlow_BaseOp<"softmax_grad", [DeclareOpInterfaceMe
   }];
 }
 
-def OneFlow_SparseSoftmaxCrossEntropyOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SparseSoftmaxCrossEntropyOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label
@@ -7421,7 +7421,7 @@ def OneFlow_SparseSoftmaxCrossEntropyOp : OneFlow_BaseOp<"sparse_softmax_cross_e
   }];
 }
 
-def OneFlow_SparseSoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SparseSoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$label,
     AnyType:$dy,
@@ -7441,7 +7441,7 @@ def OneFlow_SparseSoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"sparse_softmax_cro
   }];
 }
 
-def OneFlow_SparseSoftmaxCrossEntropyMsOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_ms", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SparseSoftmaxCrossEntropyMsOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_ms", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label
@@ -7461,7 +7461,7 @@ def OneFlow_SparseSoftmaxCrossEntropyMsOp : OneFlow_BaseOp<"sparse_softmax_cross
   }];
 }
 
-def OneFlow_SparseSoftmaxCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_ms_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SparseSoftmaxCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_ms_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$label,
     AnyType:$dy,
@@ -7489,7 +7489,7 @@ def OneFlow_SparseSoftmaxCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_softmax_c
 
 #ifdef GET_ONEFLOW_SUMMARY_OP_DEFINITIONS
 
-def OneFlow_CreateSummaryWriterOp : OneFlow_BaseOp<"create_summary_writer", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CreateSummaryWriterOp : OneFlow_BaseOp<"create_summary_writer", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let attrs = (ins
     StrAttr:$logdir
   );
@@ -7501,7 +7501,7 @@ def OneFlow_CreateSummaryWriterOp : OneFlow_BaseOp<"create_summary_writer", [Dec
   }];
 }
 
-def OneFlow_FlushSummaryWriterOp : OneFlow_BaseOp<"flush_summary_writer", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FlushSummaryWriterOp : OneFlow_BaseOp<"flush_summary_writer", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
     static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
@@ -7510,7 +7510,7 @@ def OneFlow_FlushSummaryWriterOp : OneFlow_BaseOp<"flush_summary_writer", [Decla
   }];
 }
 
-def OneFlow_SummaryWriteHistogramOp : OneFlow_BaseOp<"summary_write_histogram", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SummaryWriteHistogramOp : OneFlow_BaseOp<"summary_write_histogram", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$step,
@@ -7524,7 +7524,7 @@ def OneFlow_SummaryWriteHistogramOp : OneFlow_BaseOp<"summary_write_histogram", 
   }];
 }
 
-def OneFlow_SummaryWriteImageOp : OneFlow_BaseOp<"summary_write_image", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SummaryWriteImageOp : OneFlow_BaseOp<"summary_write_image", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$step,
@@ -7538,7 +7538,7 @@ def OneFlow_SummaryWriteImageOp : OneFlow_BaseOp<"summary_write_image", [Declare
   }];
 }
 
-def OneFlow_SummaryWritePbOp : OneFlow_BaseOp<"summary_write_pb", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SummaryWritePbOp : OneFlow_BaseOp<"summary_write_pb", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$step
@@ -7551,7 +7551,7 @@ def OneFlow_SummaryWritePbOp : OneFlow_BaseOp<"summary_write_pb", [DeclareOpInte
   }];
 }
 
-def OneFlow_SummaryWriteScalarOp : OneFlow_BaseOp<"summary_write_scalar", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SummaryWriteScalarOp : OneFlow_BaseOp<"summary_write_scalar", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$step,
@@ -7573,7 +7573,7 @@ def OneFlow_SummaryWriteScalarOp : OneFlow_BaseOp<"summary_write_scalar", [Decla
 
 #ifdef GET_ONEFLOW_TENSOR_BUFFER_OP_DEFINITIONS
 
-def OneFlow_GenTensorBufferOp : OneFlow_BaseOp<"gen_tensor_buffer", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_GenTensorBufferOp : OneFlow_BaseOp<"gen_tensor_buffer", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -7592,7 +7592,7 @@ def OneFlow_GenTensorBufferOp : OneFlow_BaseOp<"gen_tensor_buffer", [DeclareOpIn
   }];
 }
 
-def OneFlow_TensorBufferToListOfTensorsOp : OneFlow_BaseOp<"tensor_buffer_to_list_of_tensors", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TensorBufferToListOfTensorsOp : OneFlow_BaseOp<"tensor_buffer_to_list_of_tensors", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7612,7 +7612,7 @@ def OneFlow_TensorBufferToListOfTensorsOp : OneFlow_BaseOp<"tensor_buffer_to_lis
   }];
 }
 
-def OneFlow_TensorBufferToListOfTensorsV2Op : OneFlow_BaseOp<"tensor_buffer_to_list_of_tensors_v2", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TensorBufferToListOfTensorsV2Op : OneFlow_BaseOp<"tensor_buffer_to_list_of_tensors_v2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7632,7 +7632,7 @@ def OneFlow_TensorBufferToListOfTensorsV2Op : OneFlow_BaseOp<"tensor_buffer_to_l
   }];
 }
 
-def OneFlow_TensorBufferToTensorOp : OneFlow_BaseOp<"tensor_buffer_to_tensor", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TensorBufferToTensorOp : OneFlow_BaseOp<"tensor_buffer_to_tensor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7651,7 +7651,7 @@ def OneFlow_TensorBufferToTensorOp : OneFlow_BaseOp<"tensor_buffer_to_tensor", [
   }];
 }
 
-def OneFlow_TensorToTensorBufferOp : OneFlow_BaseOp<"tensor_to_tensor_buffer", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TensorToTensorBufferOp : OneFlow_BaseOp<"tensor_to_tensor_buffer", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7677,7 +7677,7 @@ def OneFlow_TensorToTensorBufferOp : OneFlow_BaseOp<"tensor_to_tensor_buffer", [
 
 #ifdef GET_ONEFLOW_TEST_OP_DEFINITIONS
 
-def OneFlow_TestDataTypeAttrOp : OneFlow_BaseOp<"TestDataTypeAttr", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TestDataTypeAttrOp : OneFlow_BaseOp<"TestDataTypeAttr", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7695,7 +7695,7 @@ def OneFlow_TestDataTypeAttrOp : OneFlow_BaseOp<"TestDataTypeAttr", [DeclareOpIn
   }];
 }
 
-def OneFlow_TestDynamicSourceOp : OneFlow_BaseOp<"TestDynamicSource", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TestDynamicSourceOp : OneFlow_BaseOp<"TestDynamicSource", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -7707,7 +7707,7 @@ def OneFlow_TestDynamicSourceOp : OneFlow_BaseOp<"TestDynamicSource", [DeclareOp
   }];
 }
 
-def OneFlow_TestListDataTypeAndListShapeAndListStringAttrOp : OneFlow_BaseOp<"TestListDataTypeAndListShapeAndListStringAttr", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TestListDataTypeAndListShapeAndListStringAttrOp : OneFlow_BaseOp<"TestListDataTypeAndListShapeAndListStringAttr", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7727,7 +7727,7 @@ def OneFlow_TestListDataTypeAndListShapeAndListStringAttrOp : OneFlow_BaseOp<"Te
   }];
 }
 
-def OneFlow_TestMultiInputOp : OneFlow_BaseOp<"TestMultiInput", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TestMultiInputOp : OneFlow_BaseOp<"TestMultiInput", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x1,
     AnyType:$x2
@@ -7743,7 +7743,7 @@ def OneFlow_TestMultiInputOp : OneFlow_BaseOp<"TestMultiInput", [DeclareOpInterf
   }];
 }
 
-def OneFlow_TestMultiInputGradOp : OneFlow_BaseOp<"TestMultiInputGrad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TestMultiInputGradOp : OneFlow_BaseOp<"TestMultiInputGrad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x1,
     AnyType:$x2,
@@ -7761,7 +7761,7 @@ def OneFlow_TestMultiInputGradOp : OneFlow_BaseOp<"TestMultiInputGrad", [Declare
   }];
 }
 
-def OneFlow_TestMultiOutputOrderOp : OneFlow_BaseOp<"TestMultiOutputOrder", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TestMultiOutputOrderOp : OneFlow_BaseOp<"TestMultiOutputOrder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7777,7 +7777,7 @@ def OneFlow_TestMultiOutputOrderOp : OneFlow_BaseOp<"TestMultiOutputOrder", [Dec
   }];
 }
 
-def OneFlow_TestRandomSourceOp : OneFlow_BaseOp<"TestRandomSource", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TestRandomSourceOp : OneFlow_BaseOp<"TestRandomSource", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -7792,7 +7792,7 @@ def OneFlow_TestRandomSourceOp : OneFlow_BaseOp<"TestRandomSource", [DeclareOpIn
   }];
 }
 
-def OneFlow_TestReshapeOp : OneFlow_BaseOp<"TestReshape", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TestReshapeOp : OneFlow_BaseOp<"TestReshape", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7810,7 +7810,7 @@ def OneFlow_TestReshapeOp : OneFlow_BaseOp<"TestReshape", [DeclareOpInterfaceMet
   }];
 }
 
-def OneFlow_TestSourceOp : OneFlow_BaseOp<"TestSource", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TestSourceOp : OneFlow_BaseOp<"TestSource", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -7822,7 +7822,7 @@ def OneFlow_TestSourceOp : OneFlow_BaseOp<"TestSource", [DeclareOpInterfaceMetho
   }];
 }
 
-def OneFlow_TestSourceMultiGpuFixedOutNumOp : OneFlow_BaseOp<"TestSourceMultiGpuFixedOutNum", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TestSourceMultiGpuFixedOutNumOp : OneFlow_BaseOp<"TestSourceMultiGpuFixedOutNum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -7837,7 +7837,7 @@ def OneFlow_TestSourceMultiGpuFixedOutNumOp : OneFlow_BaseOp<"TestSourceMultiGpu
   }];
 }
 
-def OneFlow_CcreluOp : OneFlow_BaseOp<"ccrelu", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CcreluOp : OneFlow_BaseOp<"ccrelu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7852,7 +7852,7 @@ def OneFlow_CcreluOp : OneFlow_BaseOp<"ccrelu", [DeclareOpInterfaceMethods<UserO
   }];
 }
 
-def OneFlow_CcreluGradOp : OneFlow_BaseOp<"ccrelu_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CcreluGradOp : OneFlow_BaseOp<"ccrelu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$y,
     AnyType:$dy
@@ -7868,7 +7868,7 @@ def OneFlow_CcreluGradOp : OneFlow_BaseOp<"ccrelu_grad", [DeclareOpInterfaceMeth
   }];
 }
 
-def OneFlow_CpuOnlyReluTestOp : OneFlow_BaseOp<"cpu_only_relu_test", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CpuOnlyReluTestOp : OneFlow_BaseOp<"cpu_only_relu_test", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7883,7 +7883,7 @@ def OneFlow_CpuOnlyReluTestOp : OneFlow_BaseOp<"cpu_only_relu_test", [DeclareOpI
   }];
 }
 
-def OneFlow_TestUserOpAttrAutoTypeOp : OneFlow_BaseOp<"test_user_op_attr_auto_type", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TestUserOpAttrAutoTypeOp : OneFlow_BaseOp<"test_user_op_attr_auto_type", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7910,7 +7910,7 @@ def OneFlow_TestUserOpAttrAutoTypeOp : OneFlow_BaseOp<"test_user_op_attr_auto_ty
 
 #ifdef GET_ONEFLOW_TRIGONOMETRIC_OP_DEFINITIONS
 
-def OneFlow_AcosOp : OneFlow_BaseOp<"acos", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AcosOp : OneFlow_BaseOp<"acos", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7925,7 +7925,7 @@ def OneFlow_AcosOp : OneFlow_BaseOp<"acos", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_AcosGradOp : OneFlow_BaseOp<"acos_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AcosGradOp : OneFlow_BaseOp<"acos_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7941,7 +7941,7 @@ def OneFlow_AcosGradOp : OneFlow_BaseOp<"acos_grad", [DeclareOpInterfaceMethods<
   }];
 }
 
-def OneFlow_AcoshOp : OneFlow_BaseOp<"acosh", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AcoshOp : OneFlow_BaseOp<"acosh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7956,7 +7956,7 @@ def OneFlow_AcoshOp : OneFlow_BaseOp<"acosh", [DeclareOpInterfaceMethods<UserOpC
   }];
 }
 
-def OneFlow_AcoshGradOp : OneFlow_BaseOp<"acosh_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AcoshGradOp : OneFlow_BaseOp<"acosh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7972,7 +7972,7 @@ def OneFlow_AcoshGradOp : OneFlow_BaseOp<"acosh_grad", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_AsinOp : OneFlow_BaseOp<"asin", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AsinOp : OneFlow_BaseOp<"asin", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7987,7 +7987,7 @@ def OneFlow_AsinOp : OneFlow_BaseOp<"asin", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_AsinGradOp : OneFlow_BaseOp<"asin_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AsinGradOp : OneFlow_BaseOp<"asin_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -8003,7 +8003,7 @@ def OneFlow_AsinGradOp : OneFlow_BaseOp<"asin_grad", [DeclareOpInterfaceMethods<
   }];
 }
 
-def OneFlow_AsinhOp : OneFlow_BaseOp<"asinh", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AsinhOp : OneFlow_BaseOp<"asinh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8018,7 +8018,7 @@ def OneFlow_AsinhOp : OneFlow_BaseOp<"asinh", [DeclareOpInterfaceMethods<UserOpC
   }];
 }
 
-def OneFlow_AsinhGradOp : OneFlow_BaseOp<"asinh_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AsinhGradOp : OneFlow_BaseOp<"asinh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -8034,7 +8034,7 @@ def OneFlow_AsinhGradOp : OneFlow_BaseOp<"asinh_grad", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_AtanOp : OneFlow_BaseOp<"atan", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AtanOp : OneFlow_BaseOp<"atan", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8049,7 +8049,7 @@ def OneFlow_AtanOp : OneFlow_BaseOp<"atan", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_Atan2Op : OneFlow_BaseOp<"atan2", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_Atan2Op : OneFlow_BaseOp<"atan2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -8065,7 +8065,7 @@ def OneFlow_Atan2Op : OneFlow_BaseOp<"atan2", [DeclareOpInterfaceMethods<UserOpC
   }];
 }
 
-def OneFlow_Atan2XGradOp : OneFlow_BaseOp<"atan2_x_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_Atan2XGradOp : OneFlow_BaseOp<"atan2_x_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -8082,7 +8082,7 @@ def OneFlow_Atan2XGradOp : OneFlow_BaseOp<"atan2_x_grad", [DeclareOpInterfaceMet
   }];
 }
 
-def OneFlow_Atan2YGradOp : OneFlow_BaseOp<"atan2_y_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_Atan2YGradOp : OneFlow_BaseOp<"atan2_y_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -8099,7 +8099,7 @@ def OneFlow_Atan2YGradOp : OneFlow_BaseOp<"atan2_y_grad", [DeclareOpInterfaceMet
   }];
 }
 
-def OneFlow_AtanGradOp : OneFlow_BaseOp<"atan_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AtanGradOp : OneFlow_BaseOp<"atan_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -8115,7 +8115,7 @@ def OneFlow_AtanGradOp : OneFlow_BaseOp<"atan_grad", [DeclareOpInterfaceMethods<
   }];
 }
 
-def OneFlow_AtanhOp : OneFlow_BaseOp<"atanh", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AtanhOp : OneFlow_BaseOp<"atanh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8130,7 +8130,7 @@ def OneFlow_AtanhOp : OneFlow_BaseOp<"atanh", [DeclareOpInterfaceMethods<UserOpC
   }];
 }
 
-def OneFlow_AtanhGradOp : OneFlow_BaseOp<"atanh_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AtanhGradOp : OneFlow_BaseOp<"atanh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -8146,7 +8146,7 @@ def OneFlow_AtanhGradOp : OneFlow_BaseOp<"atanh_grad", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_CosOp : OneFlow_BaseOp<"cos", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CosOp : OneFlow_BaseOp<"cos", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8161,7 +8161,7 @@ def OneFlow_CosOp : OneFlow_BaseOp<"cos", [DeclareOpInterfaceMethods<UserOpCompa
   }];
 }
 
-def OneFlow_CosGradOp : OneFlow_BaseOp<"cos_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CosGradOp : OneFlow_BaseOp<"cos_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -8177,7 +8177,7 @@ def OneFlow_CosGradOp : OneFlow_BaseOp<"cos_grad", [DeclareOpInterfaceMethods<Us
   }];
 }
 
-def OneFlow_CoshOp : OneFlow_BaseOp<"cosh", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CoshOp : OneFlow_BaseOp<"cosh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8192,7 +8192,7 @@ def OneFlow_CoshOp : OneFlow_BaseOp<"cosh", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_CoshGradOp : OneFlow_BaseOp<"cosh_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CoshGradOp : OneFlow_BaseOp<"cosh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -8208,7 +8208,7 @@ def OneFlow_CoshGradOp : OneFlow_BaseOp<"cosh_grad", [DeclareOpInterfaceMethods<
   }];
 }
 
-def OneFlow_HardtanhOp : OneFlow_BaseOp<"hardtanh", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_HardtanhOp : OneFlow_BaseOp<"hardtanh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8227,7 +8227,7 @@ def OneFlow_HardtanhOp : OneFlow_BaseOp<"hardtanh", [DeclareOpInterfaceMethods<U
   }];
 }
 
-def OneFlow_HardtanhGradOp : OneFlow_BaseOp<"hardtanh_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_HardtanhGradOp : OneFlow_BaseOp<"hardtanh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$y,
     AnyType:$dy
@@ -8247,7 +8247,7 @@ def OneFlow_HardtanhGradOp : OneFlow_BaseOp<"hardtanh_grad", [DeclareOpInterface
   }];
 }
 
-def OneFlow_SinOp : OneFlow_BaseOp<"sin", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SinOp : OneFlow_BaseOp<"sin", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8262,7 +8262,7 @@ def OneFlow_SinOp : OneFlow_BaseOp<"sin", [DeclareOpInterfaceMethods<UserOpCompa
   }];
 }
 
-def OneFlow_SinGradOp : OneFlow_BaseOp<"sin_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SinGradOp : OneFlow_BaseOp<"sin_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -8278,7 +8278,7 @@ def OneFlow_SinGradOp : OneFlow_BaseOp<"sin_grad", [DeclareOpInterfaceMethods<Us
   }];
 }
 
-def OneFlow_SinhOp : OneFlow_BaseOp<"sinh", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SinhOp : OneFlow_BaseOp<"sinh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8293,7 +8293,7 @@ def OneFlow_SinhOp : OneFlow_BaseOp<"sinh", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_SinhGradOp : OneFlow_BaseOp<"sinh_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SinhGradOp : OneFlow_BaseOp<"sinh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -8309,7 +8309,7 @@ def OneFlow_SinhGradOp : OneFlow_BaseOp<"sinh_grad", [DeclareOpInterfaceMethods<
   }];
 }
 
-def OneFlow_TanOp : OneFlow_BaseOp<"tan", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TanOp : OneFlow_BaseOp<"tan", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8324,7 +8324,7 @@ def OneFlow_TanOp : OneFlow_BaseOp<"tan", [DeclareOpInterfaceMethods<UserOpCompa
   }];
 }
 
-def OneFlow_TanGradOp : OneFlow_BaseOp<"tan_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TanGradOp : OneFlow_BaseOp<"tan_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -8340,7 +8340,7 @@ def OneFlow_TanGradOp : OneFlow_BaseOp<"tan_grad", [DeclareOpInterfaceMethods<Us
   }];
 }
 
-def OneFlow_TanhOp : OneFlow_BaseOp<"tanh", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TanhOp : OneFlow_BaseOp<"tanh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8355,7 +8355,7 @@ def OneFlow_TanhOp : OneFlow_BaseOp<"tanh", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_TanhGradOp : OneFlow_BaseOp<"tanh_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TanhGradOp : OneFlow_BaseOp<"tanh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -8379,7 +8379,7 @@ def OneFlow_TanhGradOp : OneFlow_BaseOp<"tanh_grad", [DeclareOpInterfaceMethods<
 
 #ifdef GET_ONEFLOW_UNARY_OP_DEFINITIONS
 
-def OneFlow_AccOp : OneFlow_BaseOp<"acc", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AccOp : OneFlow_BaseOp<"acc", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8397,7 +8397,7 @@ def OneFlow_AccOp : OneFlow_BaseOp<"acc", [DeclareOpInterfaceMethods<UserOpCompa
   }];
 }
 
-def OneFlow_AffineGridOp : OneFlow_BaseOp<"affine_grid", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AffineGridOp : OneFlow_BaseOp<"affine_grid", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$theta
   );
@@ -8416,7 +8416,7 @@ def OneFlow_AffineGridOp : OneFlow_BaseOp<"affine_grid", [DeclareOpInterfaceMeth
   }];
 }
 
-def OneFlow_AffineGridGradOp : OneFlow_BaseOp<"affine_grid_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AffineGridGradOp : OneFlow_BaseOp<"affine_grid_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dgrid
   );
@@ -8435,7 +8435,7 @@ def OneFlow_AffineGridGradOp : OneFlow_BaseOp<"affine_grid_grad", [DeclareOpInte
   }];
 }
 
-def OneFlow_BernoulliOp : OneFlow_BaseOp<"bernoulli", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BernoulliOp : OneFlow_BaseOp<"bernoulli", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8455,7 +8455,7 @@ def OneFlow_BernoulliOp : OneFlow_BaseOp<"bernoulli", [DeclareOpInterfaceMethods
   }];
 }
 
-def OneFlow_CastOp : OneFlow_BaseOp<"cast", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CastOp : OneFlow_BaseOp<"cast", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8473,7 +8473,7 @@ def OneFlow_CastOp : OneFlow_BaseOp<"cast", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_CastToStaticShapeOp : OneFlow_BaseOp<"cast_to_static_shape", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CastToStaticShapeOp : OneFlow_BaseOp<"cast_to_static_shape", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input
   );
@@ -8488,7 +8488,7 @@ def OneFlow_CastToStaticShapeOp : OneFlow_BaseOp<"cast_to_static_shape", [Declar
   }];
 }
 
-def OneFlow_CastToTickOp : OneFlow_BaseOp<"cast_to_tick", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CastToTickOp : OneFlow_BaseOp<"cast_to_tick", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8503,7 +8503,7 @@ def OneFlow_CastToTickOp : OneFlow_BaseOp<"cast_to_tick", [DeclareOpInterfaceMet
   }];
 }
 
-def OneFlow_CeluOp : OneFlow_BaseOp<"celu", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CeluOp : OneFlow_BaseOp<"celu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8521,7 +8521,7 @@ def OneFlow_CeluOp : OneFlow_BaseOp<"celu", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_CopyOp : OneFlow_BaseOp<"copy", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CopyOp : OneFlow_BaseOp<"copy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8540,7 +8540,7 @@ def OneFlow_CopyOp : OneFlow_BaseOp<"copy", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_CountNotFiniteOp : OneFlow_BaseOp<"count_not_finite", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CountNotFiniteOp : OneFlow_BaseOp<"count_not_finite", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8555,7 +8555,7 @@ def OneFlow_CountNotFiniteOp : OneFlow_BaseOp<"count_not_finite", [DeclareOpInte
   }];
 }
 
-def OneFlow_DiagOp : OneFlow_BaseOp<"diag", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_DiagOp : OneFlow_BaseOp<"diag", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8573,7 +8573,7 @@ def OneFlow_DiagOp : OneFlow_BaseOp<"diag", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_EluOp : OneFlow_BaseOp<"elu", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_EluOp : OneFlow_BaseOp<"elu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8591,7 +8591,7 @@ def OneFlow_EluOp : OneFlow_BaseOp<"elu", [DeclareOpInterfaceMethods<UserOpCompa
   }];
 }
 
-def OneFlow_ExpandOp : OneFlow_BaseOp<"expand", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ExpandOp : OneFlow_BaseOp<"expand", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8610,7 +8610,7 @@ def OneFlow_ExpandOp : OneFlow_BaseOp<"expand", [DeclareOpInterfaceMethods<UserO
   }];
 }
 
-def OneFlow_ExpandDimsOp : OneFlow_BaseOp<"expand_dims", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ExpandDimsOp : OneFlow_BaseOp<"expand_dims", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8628,7 +8628,7 @@ def OneFlow_ExpandDimsOp : OneFlow_BaseOp<"expand_dims", [DeclareOpInterfaceMeth
   }];
 }
 
-def OneFlow_FlattenOp : OneFlow_BaseOp<"flatten", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FlattenOp : OneFlow_BaseOp<"flatten", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8647,7 +8647,7 @@ def OneFlow_FlattenOp : OneFlow_BaseOp<"flatten", [DeclareOpInterfaceMethods<Use
   }];
 }
 
-def OneFlow_FlipOp : OneFlow_BaseOp<"flip", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FlipOp : OneFlow_BaseOp<"flip", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8665,7 +8665,7 @@ def OneFlow_FlipOp : OneFlow_BaseOp<"flip", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_FlipGradOp : OneFlow_BaseOp<"flip_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FlipGradOp : OneFlow_BaseOp<"flip_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -8683,7 +8683,7 @@ def OneFlow_FlipGradOp : OneFlow_BaseOp<"flip_grad", [DeclareOpInterfaceMethods<
   }];
 }
 
-def OneFlow_FoldOp : OneFlow_BaseOp<"fold", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FoldOp : OneFlow_BaseOp<"fold", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8705,7 +8705,7 @@ def OneFlow_FoldOp : OneFlow_BaseOp<"fold", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_GeluOp : OneFlow_BaseOp<"gelu", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_GeluOp : OneFlow_BaseOp<"gelu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8720,7 +8720,7 @@ def OneFlow_GeluOp : OneFlow_BaseOp<"gelu", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_HardsigmoidOp : OneFlow_BaseOp<"hardsigmoid", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_HardsigmoidOp : OneFlow_BaseOp<"hardsigmoid", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8735,7 +8735,7 @@ def OneFlow_HardsigmoidOp : OneFlow_BaseOp<"hardsigmoid", [DeclareOpInterfaceMet
   }];
 }
 
-def OneFlow_HardswishOp : OneFlow_BaseOp<"hardswish", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_HardswishOp : OneFlow_BaseOp<"hardswish", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8750,7 +8750,7 @@ def OneFlow_HardswishOp : OneFlow_BaseOp<"hardswish", [DeclareOpInterfaceMethods
   }];
 }
 
-def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8768,7 +8768,7 @@ def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_LogicalNotOp : OneFlow_BaseOp<"logical_not", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_LogicalNotOp : OneFlow_BaseOp<"logical_not", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8783,7 +8783,7 @@ def OneFlow_LogicalNotOp : OneFlow_BaseOp<"logical_not", [DeclareOpInterfaceMeth
   }];
 }
 
-def OneFlow_MishOp : OneFlow_BaseOp<"mish", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_MishOp : OneFlow_BaseOp<"mish", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8798,7 +8798,7 @@ def OneFlow_MishOp : OneFlow_BaseOp<"mish", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_NarrowOp : OneFlow_BaseOp<"narrow", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_NarrowOp : OneFlow_BaseOp<"narrow", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8818,7 +8818,7 @@ def OneFlow_NarrowOp : OneFlow_BaseOp<"narrow", [DeclareOpInterfaceMethods<UserO
   }];
 }
 
-def OneFlow_OneHotOp : OneFlow_BaseOp<"one_hot", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_OneHotOp : OneFlow_BaseOp<"one_hot", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$indices
   );
@@ -8841,7 +8841,7 @@ def OneFlow_OneHotOp : OneFlow_BaseOp<"one_hot", [DeclareOpInterfaceMethods<User
   }];
 }
 
-def OneFlow_PackOp : OneFlow_BaseOp<"pack", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_PackOp : OneFlow_BaseOp<"pack", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8859,7 +8859,7 @@ def OneFlow_PackOp : OneFlow_BaseOp<"pack", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$like
   );
@@ -8878,7 +8878,7 @@ def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", [DeclareOpInte
   }];
 }
 
-def OneFlow_RepeatOp : OneFlow_BaseOp<"repeat", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_RepeatOp : OneFlow_BaseOp<"repeat", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8896,7 +8896,7 @@ def OneFlow_RepeatOp : OneFlow_BaseOp<"repeat", [DeclareOpInterfaceMethods<UserO
   }];
 }
 
-def OneFlow_RollOp : OneFlow_BaseOp<"roll", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_RollOp : OneFlow_BaseOp<"roll", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8915,7 +8915,7 @@ def OneFlow_RollOp : OneFlow_BaseOp<"roll", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_SeluOp : OneFlow_BaseOp<"selu", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SeluOp : OneFlow_BaseOp<"selu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8930,7 +8930,7 @@ def OneFlow_SeluOp : OneFlow_BaseOp<"selu", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_SigmoidOp : OneFlow_BaseOp<"sigmoid", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SigmoidOp : OneFlow_BaseOp<"sigmoid", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8945,7 +8945,7 @@ def OneFlow_SigmoidOp : OneFlow_BaseOp<"sigmoid", [DeclareOpInterfaceMethods<Use
   }];
 }
 
-def OneFlow_SiluOp : OneFlow_BaseOp<"silu", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SiluOp : OneFlow_BaseOp<"silu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8960,7 +8960,7 @@ def OneFlow_SiluOp : OneFlow_BaseOp<"silu", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_SoftsignOp : OneFlow_BaseOp<"softsign", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SoftsignOp : OneFlow_BaseOp<"softsign", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8975,7 +8975,7 @@ def OneFlow_SoftsignOp : OneFlow_BaseOp<"softsign", [DeclareOpInterfaceMethods<U
   }];
 }
 
-def OneFlow_SortOp : OneFlow_BaseOp<"sort", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SortOp : OneFlow_BaseOp<"sort", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8993,7 +8993,7 @@ def OneFlow_SortOp : OneFlow_BaseOp<"sort", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_SquareSumOp : OneFlow_BaseOp<"square_sum", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SquareSumOp : OneFlow_BaseOp<"square_sum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -9008,7 +9008,7 @@ def OneFlow_SquareSumOp : OneFlow_BaseOp<"square_sum", [DeclareOpInterfaceMethod
   }];
 }
 
-def OneFlow_SqueezeOp : OneFlow_BaseOp<"squeeze", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SqueezeOp : OneFlow_BaseOp<"squeeze", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -9026,7 +9026,7 @@ def OneFlow_SqueezeOp : OneFlow_BaseOp<"squeeze", [DeclareOpInterfaceMethods<Use
   }];
 }
 
-def OneFlow_TransposeOp : OneFlow_BaseOp<"transpose", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TransposeOp : OneFlow_BaseOp<"transpose", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input
   );
@@ -9044,7 +9044,7 @@ def OneFlow_TransposeOp : OneFlow_BaseOp<"transpose", [DeclareOpInterfaceMethods
   }];
 }
 
-def OneFlow_TrilOp : OneFlow_BaseOp<"tril", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TrilOp : OneFlow_BaseOp<"tril", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -9065,7 +9065,7 @@ def OneFlow_TrilOp : OneFlow_BaseOp<"tril", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_TriuOp : OneFlow_BaseOp<"triu", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TriuOp : OneFlow_BaseOp<"triu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -9083,7 +9083,7 @@ def OneFlow_TriuOp : OneFlow_BaseOp<"triu", [DeclareOpInterfaceMethods<UserOpCom
   }];
 }
 
-def OneFlow_UnfoldOp : OneFlow_BaseOp<"unfold", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UnfoldOp : OneFlow_BaseOp<"unfold", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -9105,7 +9105,7 @@ def OneFlow_UnfoldOp : OneFlow_BaseOp<"unfold", [DeclareOpInterfaceMethods<UserO
   }];
 }
 
-def OneFlow_UnfoldTensorOp : OneFlow_BaseOp<"unfold_tensor", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UnfoldTensorOp : OneFlow_BaseOp<"unfold_tensor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -9125,7 +9125,7 @@ def OneFlow_UnfoldTensorOp : OneFlow_BaseOp<"unfold_tensor", [DeclareOpInterface
   }];
 }
 
-def OneFlow_UnpackOp : OneFlow_BaseOp<"unpack", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UnpackOp : OneFlow_BaseOp<"unpack", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -9143,7 +9143,7 @@ def OneFlow_UnpackOp : OneFlow_BaseOp<"unpack", [DeclareOpInterfaceMethods<UserO
   }];
 }
 
-def OneFlow_ZeroLikeOp : OneFlow_BaseOp<"zero_like", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ZeroLikeOp : OneFlow_BaseOp<"zero_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$like
   );
@@ -9166,7 +9166,7 @@ def OneFlow_ZeroLikeOp : OneFlow_BaseOp<"zero_like", [DeclareOpInterfaceMethods<
 
 #ifdef GET_ONEFLOW_UPSAMPLE_OP_DEFINITIONS
 
-def OneFlow_UpsampleOp : OneFlow_BaseOp<"upsample", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UpsampleOp : OneFlow_BaseOp<"upsample", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -9188,7 +9188,7 @@ def OneFlow_UpsampleOp : OneFlow_BaseOp<"upsample", [DeclareOpInterfaceMethods<U
   }];
 }
 
-def OneFlow_UpsampleBicubic2DOp : OneFlow_BaseOp<"upsample_bicubic_2d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UpsampleBicubic2DOp : OneFlow_BaseOp<"upsample_bicubic_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -9209,7 +9209,7 @@ def OneFlow_UpsampleBicubic2DOp : OneFlow_BaseOp<"upsample_bicubic_2d", [Declare
   }];
 }
 
-def OneFlow_UpsampleBicubic2DGradOp : OneFlow_BaseOp<"upsample_bicubic_2d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UpsampleBicubic2DGradOp : OneFlow_BaseOp<"upsample_bicubic_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -9231,7 +9231,7 @@ def OneFlow_UpsampleBicubic2DGradOp : OneFlow_BaseOp<"upsample_bicubic_2d_grad",
   }];
 }
 
-def OneFlow_UpsampleBilinear2DOp : OneFlow_BaseOp<"upsample_bilinear_2d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UpsampleBilinear2DOp : OneFlow_BaseOp<"upsample_bilinear_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -9252,7 +9252,7 @@ def OneFlow_UpsampleBilinear2DOp : OneFlow_BaseOp<"upsample_bilinear_2d", [Decla
   }];
 }
 
-def OneFlow_UpsampleBilinear2DGradOp : OneFlow_BaseOp<"upsample_bilinear_2d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UpsampleBilinear2DGradOp : OneFlow_BaseOp<"upsample_bilinear_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -9274,7 +9274,7 @@ def OneFlow_UpsampleBilinear2DGradOp : OneFlow_BaseOp<"upsample_bilinear_2d_grad
   }];
 }
 
-def OneFlow_UpsampleGradOp : OneFlow_BaseOp<"upsample_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UpsampleGradOp : OneFlow_BaseOp<"upsample_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -9297,7 +9297,7 @@ def OneFlow_UpsampleGradOp : OneFlow_BaseOp<"upsample_grad", [DeclareOpInterface
   }];
 }
 
-def OneFlow_UpsampleLinear1DOp : OneFlow_BaseOp<"upsample_linear_1d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UpsampleLinear1DOp : OneFlow_BaseOp<"upsample_linear_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -9317,7 +9317,7 @@ def OneFlow_UpsampleLinear1DOp : OneFlow_BaseOp<"upsample_linear_1d", [DeclareOp
   }];
 }
 
-def OneFlow_UpsampleLinear1DGradOp : OneFlow_BaseOp<"upsample_linear_1d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UpsampleLinear1DGradOp : OneFlow_BaseOp<"upsample_linear_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -9338,7 +9338,7 @@ def OneFlow_UpsampleLinear1DGradOp : OneFlow_BaseOp<"upsample_linear_1d_grad", [
   }];
 }
 
-def OneFlow_UpsampleNearest1DOp : OneFlow_BaseOp<"upsample_nearest_1d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UpsampleNearest1DOp : OneFlow_BaseOp<"upsample_nearest_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -9357,7 +9357,7 @@ def OneFlow_UpsampleNearest1DOp : OneFlow_BaseOp<"upsample_nearest_1d", [Declare
   }];
 }
 
-def OneFlow_UpsampleNearest1DGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UpsampleNearest1DGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -9377,7 +9377,7 @@ def OneFlow_UpsampleNearest1DGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad",
   }];
 }
 
-def OneFlow_UpsampleNearest2DOp : OneFlow_BaseOp<"upsample_nearest_2d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UpsampleNearest2DOp : OneFlow_BaseOp<"upsample_nearest_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -9397,7 +9397,7 @@ def OneFlow_UpsampleNearest2DOp : OneFlow_BaseOp<"upsample_nearest_2d", [Declare
   }];
 }
 
-def OneFlow_UpsampleNearest2DGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UpsampleNearest2DGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -9418,7 +9418,7 @@ def OneFlow_UpsampleNearest2DGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad",
   }];
 }
 
-def OneFlow_UpsampleNearest3DOp : OneFlow_BaseOp<"upsample_nearest_3d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UpsampleNearest3DOp : OneFlow_BaseOp<"upsample_nearest_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -9439,7 +9439,7 @@ def OneFlow_UpsampleNearest3DOp : OneFlow_BaseOp<"upsample_nearest_3d", [Declare
   }];
 }
 
-def OneFlow_UpsampleNearest3DGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UpsampleNearest3DGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -9461,7 +9461,7 @@ def OneFlow_UpsampleNearest3DGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad",
   }];
 }
 
-def OneFlow_UpsampleTrilinear3DOp : OneFlow_BaseOp<"upsample_trilinear_3d", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UpsampleTrilinear3DOp : OneFlow_BaseOp<"upsample_trilinear_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -9483,7 +9483,7 @@ def OneFlow_UpsampleTrilinear3DOp : OneFlow_BaseOp<"upsample_trilinear_3d", [Dec
   }];
 }
 
-def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
