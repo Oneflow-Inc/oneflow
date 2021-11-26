@@ -440,6 +440,7 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
       sizes.push_back(size);
     }
   }
+  assert(keys.size() == sizes.size());
   return success();
 }
 
