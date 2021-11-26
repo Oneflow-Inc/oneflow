@@ -67,8 +67,9 @@ class OneFlow_UserBaseOp<string mnemonic, list<OpTrait> traits = []> :
     let summary = "";
     let user_op_attrs = (ins
       StrAttr:$op_type_name,
-      I32ElementsAttr:$input_sizes,
-      I32ElementsAttr:$output_sizes
+      // NOTE: vector types must have positive constant sizes, so we can't use I32ElementsAttr
+      I32ArrayAttr:$input_sizes,
+      I32ArrayAttr:$output_sizes
     );
 }
 

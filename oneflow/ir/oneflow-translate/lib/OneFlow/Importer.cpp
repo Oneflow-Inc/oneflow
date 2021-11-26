@@ -333,7 +333,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
     uint32_t data_input_size = 0;
     uint32_t data_output_size = 0;
     for (const auto& input : op.user_conf().input()) { data_input_size += input.second.s().size(); }
-    for (const auto& output : op.user_conf().input()) {
+    for (const auto& output : op.user_conf().output()) {
       data_output_size += output.second.s().size();
     }
     if (failed(AddOperandSegmentSizes(data_input_size, op.ctrl_in_op_name_size(), attr_vec))) {

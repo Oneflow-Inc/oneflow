@@ -133,10 +133,10 @@ LogicalResult JobImporter::AddUserOpInputOutputSegments(const ::oneflow::Operato
   const ::oneflow::UserOpDef& op_def = job_wrapper_.GetUserOpDef(op.user_conf().op_type_name());
   attr_vec.push_back(GetBuilder().getNamedAttr(
       "input_sizes",
-      GetBuilder().getI32VectorAttr(GetSizesFromArgs(user_conf.input(), op_def.input()))));
+      GetBuilder().getI32ArrayAttr(GetSizesFromArgs(user_conf.input(), op_def.input()))));
   attr_vec.push_back(GetBuilder().getNamedAttr(
       "output_sizes",
-      GetBuilder().getI32VectorAttr(GetSizesFromArgs(user_conf.output(), op_def.output()))));
+      GetBuilder().getI32ArrayAttr(GetSizesFromArgs(user_conf.output(), op_def.output()))));
   auto output_lbns = GetOutputLbns(op, op_def.output());
   attr_vec.push_back(GetBuilder().getNamedAttr(
       "output_lbns", GetBuilder().getStrArrayAttr(
@@ -172,8 +172,17 @@ LogicalResult JobImporter::AppendDataInOperand(const std::string& lbn,
 
 LogicalResult JobImporter::InsertOpResults(const ::oneflow::OperatorConf& op,
                                            Operation* created_op) {
-  for (const auto& data_out : llvm::enumerate(GetDataOutputResults(created_op))) {
-    auto output_lbns = created_op->getAttrOfType<ArrayAttr>("output_lbns");
+  auto output_lbns = created_op->getAttrOfType<ArrayAttr>("output_lbns");
+  auto data_results = GetDataOutputResults(created_op);
+  if (output_lbns.size() != data_results.size()) {
+    created_op->emitError() << "output_lbns size: " << output_lbns.size()
+                            << " != data_results size: " << data_results.size() << "\n"
+                            << op.DebugString();
+    created_op->getAttrDictionary().dump();
+    created_op->dump();
+    return failure();
+  }
+  for (const auto& data_out : llvm::enumerate(data_results)) {
     auto data_out_index = data_out.index();
     lbn2result_.insert({output_lbns[data_out_index].dyn_cast<StringAttr>().getValue().str(),
                         data_out.value().dyn_cast<OpResult>()});

@@ -137,6 +137,13 @@ const StringSet<>& GetFloatUnaryOpTypeNames() {
   return names;
 }
 
+template<typename T>
+static void getValuesFromIntArrayAttribute(ArrayAttr attr, SmallVector<T>& arrayValues) {
+  for (Attribute val : attr.getValue()) {
+    arrayValues.push_back(val.cast<IntegerAttr>().getValue().getSExtValue());
+  }
+}
+
 struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
   explicit ConcreteUserOps(mlir::MLIRContext* context)
       : OpRewritePattern<oneflow::UserOp>(context, /*benefit=*/1) {}
@@ -154,8 +161,17 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
       attributes.erase("output_sizes");
       attributes.erase("operand_segment_sizes");
       attributes.erase("result_segment_sizes");
-      attributes.push_back(rewriter.getNamedAttr("operand_segment_sizes", op.input_sizes()));
-      attributes.push_back(rewriter.getNamedAttr("result_segment_sizes", op.output_sizes()));
+      llvm::SmallVector<int32_t> input_sizes, output_sizes;
+      getValuesFromIntArrayAttribute(op.input_sizes(), input_sizes);
+      getValuesFromIntArrayAttribute(op.output_sizes(), output_sizes);
+      if (!input_sizes.empty()) {
+        attributes.push_back(
+            rewriter.getNamedAttr("operand_segment_sizes", rewriter.getI32VectorAttr(input_sizes)));
+      }
+      if (!output_sizes.empty()) {
+        attributes.push_back(
+            rewriter.getNamedAttr("result_segment_sizes", rewriter.getI32VectorAttr(output_sizes)));
+      }
       OperationState state(op->getLoc(), "oneflow." + op_type_name.str());
       state.addAttributes(attributes);
       state.addOperands(op.getODSOperands(0) /* data in */);
