@@ -35,7 +35,7 @@ __global__ void NdarrayApplyBinaryInplaceApplyGpu(size_t n, T* y, const T* x) {
 }  // namespace
 
 template<typename T, template<typename> class binary_func>
-struct NdarrayApplyBinaryCoreWrapper<DeviceType::kGPU, T, binary_func> final {
+struct NdarrayApplyBinaryCoreWrapper<DeviceType::kCUDA, T, binary_func> final {
   static void Apply(ep::Stream* stream,
                     const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
                     const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
@@ -53,8 +53,8 @@ struct NdarrayApplyBinaryCoreWrapper<DeviceType::kGPU, T, binary_func> final {
   }
 };
 
-#define INSTANTIATE_NDARRAY_APPLY_BINARY_CORE(dtype_pair, binary_func)                          \
-  template struct NdarrayApplyBinaryCoreWrapper<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype_pair), \
+#define INSTANTIATE_NDARRAY_APPLY_BINARY_CORE(dtype_pair, binary_func)                           \
+  template struct NdarrayApplyBinaryCoreWrapper<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype_pair), \
                                                 binary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_APPLY_BINARY_CORE,
                                  ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ

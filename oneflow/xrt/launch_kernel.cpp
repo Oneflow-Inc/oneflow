@@ -186,7 +186,7 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(KernelContext* ctx) const 
   run_options.device_ordinal = device_ordinal;
   run_options.return_params = return_params;
   bool block_until_done = true;
-  if (device_type == DeviceType::kGPU) {
+  if (device_type == DeviceType::kCUDA) {
 #ifdef WITH_CUDA
     run_options.stream = ctx->device_ctx()->cuda_stream();
     run_options.device_memory_limit = FLAGS_max_workspace_bytes;
@@ -196,7 +196,7 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(KernelContext* ctx) const 
 #endif  // WITH_CUDA
   }
   if (executable->engine() == xrt::XrtEngine::TENSORRT) {
-    CHECK_EQ(device_type, DeviceType::kGPU);
+    CHECK_EQ(device_type, DeviceType::kCUDA);
     run_options.max_batch_size = FLAGS_max_batch_size;
     run_options.tensorrt_fp16 = FLAGS_tensorrt_fp16;
     run_options.tensorrt_int8 = FLAGS_tensorrt_int8;

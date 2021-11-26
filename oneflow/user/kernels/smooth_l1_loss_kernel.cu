@@ -116,7 +116,7 @@ __global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, float inv_elem_cnt, con
 }
 
 template<typename T>
-class SmoothL1LossKernel : public SimpleLossKernel<DeviceType::kGPU, T, SmoothL1LossKernel<T>> {
+class SmoothL1LossKernel : public SimpleLossKernel<DeviceType::kCUDA, T, SmoothL1LossKernel<T>> {
  public:
   void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
                   const T* target, T* out) const {
@@ -129,7 +129,7 @@ class SmoothL1LossKernel : public SimpleLossKernel<DeviceType::kGPU, T, SmoothL1
 
 template<typename T>
 class SmoothL1LossGradKernel
-    : public SimpleLossGradKernel<DeviceType::kGPU, T, SmoothL1LossGradKernel<T>> {
+    : public SimpleLossGradKernel<DeviceType::kCUDA, T, SmoothL1LossGradKernel<T>> {
  public:
   void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
                   const T* target, const T* dy, T* dx, const ReductionType reduction) const {
@@ -143,8 +143,8 @@ class SmoothL1LossGradKernel
 
 }  // namespace
 
-REGISTER_SIMPLE_LOSS_KERNEL_GPU("smooth_l1_loss", SmoothL1LossKernel)
-REGISTER_SIMPLE_LOSS_GRAD_KERNEL_GPU("smooth_l1_loss_grad", SmoothL1LossGradKernel)
+REGISTER_SIMPLE_LOSS_KERNEL_CUDA("smooth_l1_loss", SmoothL1LossKernel)
+REGISTER_SIMPLE_LOSS_GRAD_KERNEL_CUDA("smooth_l1_loss_grad", SmoothL1LossGradKernel)
 
 }  // namespace user_op
 }  // namespace oneflow
