@@ -650,10 +650,7 @@ Maybe<void> Operator::InferSbpSignature(
     return Maybe<const BlobDesc&>(sbp_infer_hint->logical_blob_desc());
   };
   cfg::SbpSignatureList valid_sbp_sig_list;
-  {
-    cfg::SbpSignatureList total_sbp_sig_list;
-    JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &total_sbp_sig_list));
-  }
+  JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &valid_sbp_sig_list));
   // filter sbp signatures by sbp signature conf
   cfg::SbpSignatureList filtered_sbp_sigs_by_conf;
   FilterSbpSignatureList(valid_sbp_sig_list, sbp_sig_conf, &filtered_sbp_sigs_by_conf);
