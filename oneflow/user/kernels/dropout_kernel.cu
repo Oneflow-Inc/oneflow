@@ -256,7 +256,6 @@ __global__ RETURN_VOID_IF_HALF FusedDropoutAddGpu(
     tail_mask[global_thread_id] = mask_val;
     float tmp_half_mask = static_cast<float>(mask_val);
     T tmp_tail_out = tail_x[global_thread_id] * static_cast<T>(tmp_half_mask) * h2_scale.x;
-    // T tmp_tail_out = tail_x[global_thread_id] * static_cast<T>(tmp_half_mask);
     if (has_addend) { tmp_tail_out += tail_addend[global_thread_id]; }
     tail_y[global_thread_id] = tmp_tail_out;
   }
