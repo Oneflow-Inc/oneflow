@@ -550,6 +550,8 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
   std::string op_type_name = op->getName().getStringRef().str();
   if (auto op_type_name_ = op->getAttrOfType<StringAttr>("op_type_name")) {
     op_type_name = op_type_name_.getValue().str();
+  } else if (op_type_name == "add_n2") {
+    op_type_name = "add_n";
   }
   for (auto id_attr : op->getAttrDictionary()) {
     auto id = id_attr.first;
