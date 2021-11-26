@@ -46,7 +46,7 @@ class NormalDistribution<DeviceType::kCPU, T> final {
 
 #ifdef WITH_CUDA
 template<typename T>
-class NormalDistribution<DeviceType::kGPU, T> final {
+class NormalDistribution<DeviceType::kCUDA, T> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NormalDistribution);
   NormalDistribution(T mean, T std) : mean_(mean), std_(std) {}
