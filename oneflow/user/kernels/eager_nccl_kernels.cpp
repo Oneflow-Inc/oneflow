@@ -341,14 +341,7 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
       unpack_from_dim_vec[out_split_axis] = unpack_from_dim_vec.at(out_split_axis) / num_ranks;
       unpack_from_dim_vec.insert(unpack_from_dim_vec.begin(), num_ranks);
       std::vector<int32_t> perm;
-<<<<<<< HEAD
-      FOR_RANGE(int64_t, i, 1, unpack_from_shape.NumAxes()) {
-        perm.emplace_back(i);
-        transpose_out_dim_vec.emplace_back(unpack_from_shape.At(i));
-      }
-=======
-      FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.push_back(i); }
->>>>>>> master
+      FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.emplace_back(i); }
       perm.insert(perm.begin() + in_split_axis, 0);
       auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
           ctx->stream()->device_type(), unpack_from_dim_vec.size());
