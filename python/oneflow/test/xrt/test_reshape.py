@@ -24,8 +24,8 @@ import oneflow as flow
 from test_xrt import *
 
 
-class TestXrtReLU(flow.unittest.TestCase):
-    def test_xrt_relu(test_case):
+class TestXrtReshape(flow.unittest.TestCase):
+    def test_xrt_reshape(test_case):
         x = np.random.random((1, 10, 2)).astype(np.float32)
         x_cpu = flow.tensor(x, dtype=flow.float32, device=flow.device("cpu"))
         x_cuda = flow.tensor(x, dtype=flow.float32, device=flow.device("cuda"))

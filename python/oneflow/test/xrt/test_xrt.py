@@ -36,6 +36,7 @@ def generate_graph(func):
     return Graph()
 
 
+# graph need to be a new graph, due to the limit of nn.Graph
 def test_xrt_openvino(test_case, graph, input, ref_out, rtol=1e-3, atol=1e-4):
     if os.getenv("ONEFLOW_TEST_FORCE_OPENVINO") and not flow.sysconfig.with_openvino():
         test_case.assertTrue(False)
@@ -61,6 +62,7 @@ def test_xrt_openvino(test_case, graph, input, ref_out, rtol=1e-3, atol=1e-4):
             )
 
 
+# graph need to be a new graph, due to the limit of nn.Graph
 def test_xrt_tensorrt(test_case, graph, input, ref_out, rtol=1e-3, atol=1e-4):
     if os.getenv("ONEFLOW_TEST_FORCE_TENSORRT") and not flow.sysconfig.with_tensorrt():
         test_case.assertTrue(False)
@@ -86,6 +88,7 @@ def test_xrt_tensorrt(test_case, graph, input, ref_out, rtol=1e-3, atol=1e-4):
             )
 
 
+# graph need to be a new graph, due to the limit of nn.Graph
 def test_xrt_xla(test_case, graph, input, ref_out, rtol=1e-3, atol=1e-4):
     if os.getenv("ONEFLOW_TEST_FORCE_XLA") and not flow.sysconfig.with_xla():
         test_case.assertTrue(False)

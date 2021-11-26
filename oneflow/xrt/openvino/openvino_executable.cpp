@@ -76,13 +76,13 @@ InferenceEngine::Blob::Ptr OpenvinoExecutable::ParameterToBlobPtr(
   } else if (date_type == DataType::kDouble) {
     return InferenceEngine::make_shared_blob<double>(in_desc, input.data<double>());
   } else if (date_type == DataType::kInt8) {
-    return InferenceEngine::make_shared_blob<char>(in_desc, input.data<char>());
+    return InferenceEngine::make_shared_blob<int8_t>(in_desc, input.data<int8_t>());
   } else if (date_type == DataType::kInt32) {
     return InferenceEngine::make_shared_blob<int32_t>(in_desc, input.data<int32_t>());
   } else if (date_type == DataType::kInt64) {
     return InferenceEngine::make_shared_blob<int64_t>(in_desc, input.data<int64_t>());
   } else if (date_type == DataType::kUInt8) {
-    return InferenceEngine::make_shared_blob<unsigned char>(in_desc, input.data<unsigned char>());
+    return InferenceEngine::make_shared_blob<uint8_t>(in_desc, input.data<uint8_t>());
   } else {
     UNIMPLEMENTED();
   }
