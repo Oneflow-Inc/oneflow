@@ -128,8 +128,9 @@ class InplaceMulFunctor {
                            const std::shared_ptr<one::Tensor>& y) const {
     TensorProcessor tensor_processor;
     if (y->requires_grad()) {
-      std::shared_ptr<one::Tensor> x_copy = JUST(Identity(x));
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x_copy, y}).Apply());
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+               .AddInputs({JUST(Identity(x)), y})
+               .Apply());
     } else {
       JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
     }
