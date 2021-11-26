@@ -38,7 +38,7 @@ void NcclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node,
                             const BlobDesc& logical_blob_desc, OpType op_type, int64_t root) {
   OperatorConf op_conf;
   op_conf.set_name(name);
-  op_conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(DeviceType::kGPU)));
+  op_conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(DeviceType::kCUDA)));
   CollectiveBoxingGenericOpConf* conf = op_conf.mutable_collective_boxing_generic_conf();
   *conf->mutable_lbi() = lbi;
   RankDesc* rank_desc = conf->mutable_rank_desc();
@@ -65,7 +65,7 @@ void NcclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node,
   const int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
   const int64_t device_index = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
   const int64_t thrd_id = EncodeStreamIdToInt64(
-      GenerateNamedTaskStreamId(machine_id, DeviceType::kGPU, device_index, "NCCL"));
+      GenerateNamedTaskStreamId(machine_id, DeviceType::kCUDA, device_index, "NCCL"));
   node->Init(machine_id, thrd_id, lbi, op_conf);
 }
 
@@ -101,7 +101,7 @@ class NcclCollectiveBoxingAllReduceSubTskGphBuilder final : public SubTskGphBuil
       const cfg::SbpParallel& out_sbp_parallel, const Shape& time_shape) const override {
     if (out_parallel_desc.Equals(in_parallel_desc)
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
-        && out_parallel_desc.device_type() == DeviceType::kGPU
+        && out_parallel_desc.device_type() == DeviceType::kCUDA
         && out_parallel_desc.parallel_num() > 1
         && SubTskGphBuilderUtil::IsBoxingP2B(in_sbp_parallel, out_sbp_parallel)) {
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingAllReduce-" + NewUniqueId();
@@ -135,7 +135,7 @@ class NcclCollectiveBoxingReduceScatterSubTskGphBuilder final : public SubTskGph
       const cfg::SbpParallel& out_sbp_parallel, const Shape& time_shape) const override {
     if (out_parallel_desc.Equals(in_parallel_desc)
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
-        && out_parallel_desc.device_type() == DeviceType::kGPU
+        && out_parallel_desc.device_type() == DeviceType::kCUDA
         && out_parallel_desc.parallel_num() > 1
         && logical_blob_desc.shape().At(0) % out_parallel_desc.parallel_num() == 0
         && SubTskGphBuilderUtil::IsBoxingP2S(in_sbp_parallel, out_sbp_parallel)
@@ -173,7 +173,7 @@ class NcclCollectiveBoxingP2SNoncontinuousSubTskGphBuilder final : public SubTsk
       const cfg::SbpParallel& out_sbp_parallel, const Shape& time_shape) const override {
     if (out_parallel_desc.Equals(in_parallel_desc)
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
-        && out_parallel_desc.device_type() == DeviceType::kGPU
+        && out_parallel_desc.device_type() == DeviceType::kCUDA
         && out_parallel_desc.parallel_num() > 1
         && SubTskGphBuilderUtil::IsBoxingP2S(in_sbp_parallel, out_sbp_parallel)
         && logical_blob_desc.shape().At(out_sbp_parallel.split_parallel().axis())
@@ -186,7 +186,7 @@ class NcclCollectiveBoxingP2SNoncontinuousSubTskGphBuilder final : public SubTsk
         const int64_t machine_id = CHECK_JUST(in_parallel_desc.MachineId4ParallelId(i));
         const int64_t device_index = CHECK_JUST(in_parallel_desc.DeviceId4ParallelId(i));
         const int64_t thrd_id = EncodeStreamIdToInt64(
-            GenerateComputeTaskStreamId(machine_id, DeviceType::kGPU, device_index));
+            GenerateComputeTaskStreamId(machine_id, DeviceType::kCUDA, device_index));
         TaskNode* in_node = sorted_in_tasks.at(i);
         CollectiveBoxingPackTaskNode* pack_node =
             ctx->task_graph()->NewNode<CollectiveBoxingPackTaskNode>();
@@ -231,8 +231,8 @@ class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuil
       const cfg::SbpParallel& out_sbp_parallel, const Shape& time_shape) const override {
     if (out_parallel_desc.EqualsIgnoringDeviceType(in_parallel_desc)
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
-        && SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(in_parallel_desc)
-        && out_parallel_desc.device_type() == DeviceType::kGPU
+        && SubTskGphBuilderUtil::IsDeviceTypeCPUOrCUDA(in_parallel_desc)
+        && out_parallel_desc.device_type() == DeviceType::kCUDA
         && out_parallel_desc.parallel_num() > 1
         && logical_blob_desc.shape().At(0) % out_parallel_desc.parallel_num() == 0
         && SubTskGphBuilderUtil::IsBoxingS2B(in_sbp_parallel, out_sbp_parallel)
@@ -270,8 +270,8 @@ class NcclCollectiveBoxingS2BNoncontinuousSubTskGphBuilder final : public SubTsk
       const cfg::SbpParallel& out_sbp_parallel, const Shape& time_shape) const override {
     if (out_parallel_desc.EqualsIgnoringDeviceType(in_parallel_desc)
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
-        && SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(in_parallel_desc)
-        && out_parallel_desc.device_type() == DeviceType::kGPU
+        && SubTskGphBuilderUtil::IsDeviceTypeCPUOrCUDA(in_parallel_desc)
+        && out_parallel_desc.device_type() == DeviceType::kCUDA
         && out_parallel_desc.parallel_num() > 1
         && SubTskGphBuilderUtil::IsBoxingS2B(in_sbp_parallel, out_sbp_parallel)
         && logical_blob_desc.shape().At(in_sbp_parallel.split_parallel().axis())
@@ -284,7 +284,7 @@ class NcclCollectiveBoxingS2BNoncontinuousSubTskGphBuilder final : public SubTsk
         const int64_t machine_id = CHECK_JUST(out_parallel_desc.MachineId4ParallelId(i));
         const int64_t device_index = CHECK_JUST(out_parallel_desc.DeviceId4ParallelId(i));
         const int64_t thrd_id = EncodeStreamIdToInt64(
-            GenerateComputeTaskStreamId(machine_id, DeviceType::kGPU, device_index));
+            GenerateComputeTaskStreamId(machine_id, DeviceType::kCUDA, device_index));
         TaskNode* in_node = sorted_in_tasks.at(i);
         TaskNode* in_node_proxy =
             ctx->task_graph()->GetProxyNode(in_node, lbi, out_parallel_desc, i);
@@ -328,8 +328,8 @@ class NcclCollectiveBoxingReduceSubTskGphBuilder final : public SubTskGphBuilder
       const BlobDesc& logical_blob_desc, const cfg::SbpParallel& in_sbp_parallel,
       const cfg::SbpParallel& out_sbp_parallel, const Shape& time_shape) const override {
     if (in_parallel_desc.parallel_num() > 1 && out_parallel_desc.parallel_num() == 1
-        && in_parallel_desc.device_type() == DeviceType::kGPU
-        && out_parallel_desc.device_type() == DeviceType::kGPU
+        && in_parallel_desc.device_type() == DeviceType::kCUDA
+        && out_parallel_desc.device_type() == DeviceType::kCUDA
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
         && in_sbp_parallel.has_partial_sum_parallel()) {
       const int64_t root_parallel_id = FindRootParallelId(in_parallel_desc, out_parallel_desc);
@@ -371,7 +371,7 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
       const cfg::SbpParallel& out_sbp_parallel, const Shape& time_shape) const override {
     if (in_parallel_desc.parallel_num() == 1 && out_parallel_desc.parallel_num() > 1
         && in_parallel_desc.device_type() == DeviceType::kCPU
-        && out_parallel_desc.device_type() == DeviceType::kGPU
+        && out_parallel_desc.device_type() == DeviceType::kCUDA
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
         && logical_blob_desc.shape().elem_cnt() >= 1024
         && out_sbp_parallel.has_broadcast_parallel()
@@ -428,10 +428,10 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
       const BlobDesc& logical_blob_desc, const cfg::SbpParallel& in_sbp_parallel,
       const cfg::SbpParallel& out_sbp_parallel, const Shape& time_shape) const override {
     if (in_parallel_desc.parallel_num() == 1 && out_parallel_desc.parallel_num() > 1
-        && (in_parallel_desc.device_type() == DeviceType::kGPU
+        && (in_parallel_desc.device_type() == DeviceType::kCUDA
             || (in_parallel_desc.device_type() == DeviceType::kCPU
                 && logical_blob_desc.shape().elem_cnt() >= 1024))
-        && out_parallel_desc.device_type() == DeviceType::kGPU
+        && out_parallel_desc.device_type() == DeviceType::kCUDA
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
         && out_sbp_parallel.has_broadcast_parallel()) {
       TaskNode* gpu_in_node = nullptr;
@@ -443,7 +443,7 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
         gpu_in_node =
             ctx->task_graph()->GetProxyNode(cpu_in_node, lbi, out_parallel_desc, root_parallel_id);
 
-      } else if (in_parallel_desc.device_type() == DeviceType::kGPU) {
+      } else if (in_parallel_desc.device_type() == DeviceType::kCUDA) {
         root_parallel_id = FindRootParallelId(out_parallel_desc, in_parallel_desc);
         gpu_in_node = sorted_in_tasks.front();
       } else {
@@ -489,8 +489,8 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
       const cfg::SbpParallel& out_sbp_parallel, const Shape& time_shape) const override {
     if (out_parallel_desc.EqualsIgnoringDeviceType(in_parallel_desc)
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
-        && in_parallel_desc.device_type() == DeviceType::kGPU
-        && out_parallel_desc.device_type() == DeviceType::kGPU
+        && in_parallel_desc.device_type() == DeviceType::kCUDA
+        && out_parallel_desc.device_type() == DeviceType::kCUDA
         && out_parallel_desc.parallel_num() > 1
         && logical_blob_desc.shape().At(in_sbp_parallel.split_parallel().axis())
                    % in_parallel_desc.parallel_num()
@@ -505,7 +505,7 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
         const int64_t machine_id = CHECK_JUST(in_parallel_desc.MachineId4ParallelId(i));
         const int64_t device_index = CHECK_JUST(in_parallel_desc.DeviceId4ParallelId(i));
         const int64_t thrd_id = EncodeStreamIdToInt64(
-            GenerateComputeTaskStreamId(machine_id, DeviceType::kGPU, device_index));
+            GenerateComputeTaskStreamId(machine_id, DeviceType::kCUDA, device_index));
         TaskNode* in_node = sorted_in_tasks.at(i);
         CollectiveBoxingPackTaskNode* pack_node =
             ctx->task_graph()->NewNode<CollectiveBoxingPackTaskNode>();

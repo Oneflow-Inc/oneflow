@@ -54,7 +54,7 @@ class BroadcastLikeKernel final : public user_op::OpKernel, public user_op::Cuda
 #ifdef WITH_CUDA
 #define REGISTER_BROADCAST_LIKE_KERNEL(dtype)                 \
   REGISTER_BROADCAST_LIKE_XPU_KERNEL(DeviceType::kCPU, dtype) \
-  REGISTER_BROADCAST_LIKE_XPU_KERNEL(DeviceType::kGPU, dtype)
+  REGISTER_BROADCAST_LIKE_XPU_KERNEL(DeviceType::kCUDA, dtype)
 #else
 #define REGISTER_BROADCAST_LIKE_KERNEL(dtype) \
   REGISTER_BROADCAST_LIKE_XPU_KERNEL(DeviceType::kCPU, dtype)

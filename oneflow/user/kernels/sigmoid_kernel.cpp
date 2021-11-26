@@ -50,9 +50,9 @@ class SigmoidKernel final : public user_op::OpKernel {
 REGISTER_SIGMOID_KERNEL(DeviceType::kCPU, float)
 REGISTER_SIGMOID_KERNEL(DeviceType::kCPU, double)
 #ifdef WITH_CUDA
-REGISTER_SIGMOID_KERNEL(DeviceType::kGPU, float)
-REGISTER_SIGMOID_KERNEL(DeviceType::kGPU, double)
-REGISTER_SIGMOID_KERNEL(DeviceType::kGPU, float16)
+REGISTER_SIGMOID_KERNEL(DeviceType::kCUDA, float)
+REGISTER_SIGMOID_KERNEL(DeviceType::kCUDA, double)
+REGISTER_SIGMOID_KERNEL(DeviceType::kCUDA, float16)
 #endif
 
 template<DeviceType device_type, typename T>
@@ -87,9 +87,9 @@ class SigmoidGradKernel final : public user_op::OpKernel {
 REGISTER_SIGMOID_GRAD_KERNEL(DeviceType::kCPU, float)
 REGISTER_SIGMOID_GRAD_KERNEL(DeviceType::kCPU, double)
 #ifdef WITH_CUDA
-REGISTER_SIGMOID_GRAD_KERNEL(DeviceType::kGPU, float)
-REGISTER_SIGMOID_GRAD_KERNEL(DeviceType::kGPU, double)
-REGISTER_SIGMOID_GRAD_KERNEL(DeviceType::kGPU, float16)
+REGISTER_SIGMOID_GRAD_KERNEL(DeviceType::kCUDA, float)
+REGISTER_SIGMOID_GRAD_KERNEL(DeviceType::kCUDA, double)
+REGISTER_SIGMOID_GRAD_KERNEL(DeviceType::kCUDA, float16)
 #endif
 
 }  // namespace

@@ -349,7 +349,7 @@ Maybe<void> Improver::CheckAllZoneNotOOM(
       if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
         MemZoneId mem_zone = DecodeMemZoneIdFromInt64(mem_zone_id);
         LOG(ERROR) << "machine_id: " << machine_id << ", mem_zone_id: " << mem_zone_id
-                   << ", is_gpu: " << (mem_zone.device_type() == DeviceType::kGPU ? "yes" : "no")
+                   << ", is_gpu: " << (mem_zone.device_type() == DeviceType::kCUDA ? "yes" : "no")
                    << ", CalcMemoryConsumed: " << calc;
       }
       if (calc >= available) {

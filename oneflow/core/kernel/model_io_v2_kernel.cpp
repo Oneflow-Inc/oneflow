@@ -92,7 +92,8 @@ void SyncCopyToHost<DeviceType::kCPU>(ep::Stream* stream, const void* src, void*
 
 #ifdef WITH_CUDA
 template<>
-void SyncCopyToHost<DeviceType::kGPU>(ep::Stream* stream, const void* src, void* dst, size_t size) {
+void SyncCopyToHost<DeviceType::kCUDA>(ep::Stream* stream, const void* src, void* dst,
+                                       size_t size) {
   OF_CUDA_CHECK(cudaStreamSynchronize(stream->As<ep::CudaStream>()->cuda_stream()));
   OF_CUDA_CHECK(cudaMemcpyAsync(dst, src, size, cudaMemcpyDefault,
                                 stream->As<ep::CudaStream>()->cuda_stream()));
@@ -111,8 +112,8 @@ void SyncCopyToDevice<DeviceType::kCPU>(ep::Stream* stream, const void* src, voi
 
 #ifdef WITH_CUDA
 template<>
-void SyncCopyToDevice<DeviceType::kGPU>(ep::Stream* stream, const void* src, void* dst,
-                                        size_t size) {
+void SyncCopyToDevice<DeviceType::kCUDA>(ep::Stream* stream, const void* src, void* dst,
+                                         size_t size) {
   OF_CUDA_CHECK(cudaStreamSynchronize(stream->As<ep::CudaStream>()->cuda_stream()));
   OF_CUDA_CHECK(cudaMemcpyAsync(dst, src, size, cudaMemcpyDefault,
                                 stream->As<ep::CudaStream>()->cuda_stream()));

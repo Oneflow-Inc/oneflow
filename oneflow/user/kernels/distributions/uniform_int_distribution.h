@@ -45,7 +45,7 @@ class UniformIntDistribution<DeviceType::kCPU, T> final {
 
 #ifdef WITH_CUDA
 template<typename T>
-class UniformIntDistribution<DeviceType::kGPU, T> final {
+class UniformIntDistribution<DeviceType::kCUDA, T> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UniformIntDistribution);
   UniformIntDistribution(int64_t low, int64_t high) : low_(low), high_(high) {}

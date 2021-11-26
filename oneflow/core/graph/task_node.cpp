@@ -310,7 +310,7 @@ void TaskNode::InitProducedRegstMemCase(RegstDesc* regst) {
 void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
   if (device_type() == DeviceType::kCPU) {
     mem_case->mutable_host_mem();
-  } else if (device_type() == DeviceType::kGPU) {
+  } else if (device_type() == DeviceType::kCUDA) {
     mem_case->mutable_device_cuda_mem()->set_device_id(stream_id().device_id().device_index());
   } else {
     UNIMPLEMENTED();
@@ -318,7 +318,7 @@ void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
 }
 
 void TaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
-  if (mem_case->has_host_mem() && device_type() == DeviceType::kGPU) {
+  if (mem_case->has_host_mem() && device_type() == DeviceType::kCUDA) {
     mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(
         stream_id().device_id().device_index());
   }

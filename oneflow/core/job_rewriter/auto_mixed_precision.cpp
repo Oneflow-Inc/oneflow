@@ -56,7 +56,7 @@ bool FindInNoCastRegisry(const std::string& op_type, const OpArg& op_arg) {
 std::function<bool(OpNode*)> MakePredicatorIsAllowedToRunWithHalf(const OpGraph& op_graph) {
   auto allowed_set = std::make_shared<HashSet<OpNode*>>();
   op_graph.ForEachNode([&](OpNode* node) {
-    if (node->parallel_desc().device_type() != DeviceType::kGPU) { return; }
+    if (node->parallel_desc().device_type() != DeviceType::kCUDA) { return; }
     if (node->op().output_bns().size() > 0) { INSERT_CHECK(allowed_set->insert(node)); }
   });
   return [allowed_set](OpNode* node) -> bool { return IsKeyFound(*allowed_set, node); };
