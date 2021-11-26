@@ -35,7 +35,7 @@ void TransportStreamType::DeleteInstructionStatus(const Stream& stream,
   ptr->~RefCntType();
 }
 
-bool TransportStreamType::QueryInstructionStatusDone(
+bool TransportStreamType::QueryInstructionStatusLaunched(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
   const char* data = status_buffer.buffer().data();
   return *reinterpret_cast<const RefCntType*>(data) == 0;

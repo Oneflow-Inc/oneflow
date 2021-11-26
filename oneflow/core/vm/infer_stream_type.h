@@ -35,8 +35,8 @@ struct InstructionStatusBuffer;
 struct InferStreamTypeUtil final {
   static void InitInstructionStatus(const Stream& stream, InstructionStatusBuffer* status_buffer);
   static void DeleteInstructionStatus(const Stream& stream, InstructionStatusBuffer* status_buffer);
-  static bool QueryInstructionStatusDone(const Stream& stream,
-                                         const InstructionStatusBuffer& status_buffer);
+  static bool QueryInstructionStatusLaunched(const Stream& stream,
+                                             const InstructionStatusBuffer& status_buffer);
   static void Infer(Instruction* instruction);
 };
 
@@ -58,9 +58,13 @@ class InferStreamType final : public StreamType {
                                InstructionStatusBuffer* status_buffer) const override {
     return InferStreamTypeUtil::DeleteInstructionStatus(stream, status_buffer);
   }
-  bool QueryInstructionStatusDone(const Stream& stream,
-                                  const InstructionStatusBuffer& status_buffer) const override {
-    return InferStreamTypeUtil::QueryInstructionStatusDone(stream, status_buffer);
+  bool QueryInstructionStatusLaunched(const Stream& stream,
+                                      const InstructionStatusBuffer& status_buffer) const override {
+    return InferStreamTypeUtil::QueryInstructionStatusLaunched(stream, status_buffer);
+  }
+  bool QueryInstructionStatusDoneAfterLaunched(
+      const Stream& stream, const InstructionStatusBuffer& status_buffer) const override {
+    return true;
   }
   void Infer(Instruction* instruction) const override { InferStreamTypeUtil::Infer(instruction); }
   void Compute(Instruction* instruction) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
@@ -96,9 +100,13 @@ class InferStreamType<ControlStreamType> final : public StreamType {
                                InstructionStatusBuffer* status_buffer) const override {
     return ControlStreamType().DeleteInstructionStatus(stream, status_buffer);
   }
-  bool QueryInstructionStatusDone(const Stream& stream,
-                                  const InstructionStatusBuffer& status_buffer) const override {
-    return ControlStreamType().QueryInstructionStatusDone(stream, status_buffer);
+  bool QueryInstructionStatusLaunched(const Stream& stream,
+                                      const InstructionStatusBuffer& status_buffer) const override {
+    return ControlStreamType().QueryInstructionStatusLaunched(stream, status_buffer);
+  }
+  bool QueryInstructionStatusDoneAfterLaunched(
+      const Stream& stream, const InstructionStatusBuffer& status_buffer) const override {
+    return true;
   }
   void Infer(Instruction* instruction) const override { UNIMPLEMENTED(); }
   void Infer(VirtualMachineEngine* vm, Instruction* instruction) const override {

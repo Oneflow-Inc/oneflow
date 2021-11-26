@@ -247,7 +247,7 @@ Maybe<int64_t> InstructionsBuilder::NewObjectId(
 
 namespace {
 
-Maybe<Symbol<Device>> RawGetCriticalSectionDevice() { return Device::New("critical_section"); }
+Maybe<Symbol<Device>> RawGetCriticalSectionDevice() { return Device::New("critical_section", 0); }
 
 static constexpr auto* GetCriticalSectionDevice =
     DECORATE(&RawGetCriticalSectionDevice, ThreadLocal);

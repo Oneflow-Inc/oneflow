@@ -50,9 +50,17 @@ bool HasImmediateOperandsOnly(const InstructionMsg& instr_msg) {
   return true;
 }
 
+std::string DebugName(Instruction* instruction) {
+  std::string op_name =
+      instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction);
+  if (op_name.empty()) { return instruction->instr_msg().instr_type_name(); }
+  return op_name;
+}
+
 }  // namespace
 
 void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
+  OF_PROFILER_RANGE_PUSH("R:" + DebugName(instruction));
   auto* access_list = instruction->mut_access_list();
   auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
   INTRUSIVE_FOR_EACH(access, access_list) {
@@ -74,8 +82,14 @@ void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
     // Edges are erased only if the instruction is completed.
     out_edges->Erase(out_edge);
     out_instruction->mut_in_edges()->Erase(out_edge);
-    if (Dispatchable(out_instruction)) { mut_ready_instruction_list()->PushBack(out_instruction); }
+    if (Dispatchable(out_instruction)) {
+      OF_PROFILER_RANGE_PUSH("E:" + DebugName(out_instruction));
+      mut_ready_instruction_list()->PushBack(out_instruction);
+      OF_PROFILER_RANGE_POP();
+    }
   }
+  instruction->mut_stream()->DeleteInstruction(mut_lively_instruction_list()->Erase(instruction));
+  OF_PROFILER_RANGE_POP();
 }
 
 // Handle pending instructions, and try schedule them to ready list.
@@ -101,21 +115,35 @@ void VirtualMachineEngine::HandlePending() {
     }
   }
   OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_POP();
 }
 
 // Collect ready instructions onto ready_instruction_list_
 void VirtualMachineEngine::ReleaseFinishedInstructions() {
   INTRUSIVE_FOR_EACH_PTR(stream, mut_active_stream_list()) {
-    while (true) {
-      auto* instruction_ptr = stream->mut_running_instruction_list()->Begin();
-      if (instruction_ptr == nullptr || !instruction_ptr->Done()) { break; }
-      OF_PROFILER_RANGE_PUSH("ReleaseFinishedInstructions");
-      ReleaseInstruction(instruction_ptr);
-      stream->mut_running_instruction_list()->Erase(instruction_ptr);
-      stream->DeleteInstruction(mut_lively_instruction_list()->Erase(instruction_ptr));
-      OF_PROFILER_RANGE_POP();
+    // Handle finished instructions.
+    while (unlikely(stream->mut_running_instruction_list()->size())) {
+      auto* instruction = stream->mut_running_instruction_list()->Begin();
+      if (instruction == nullptr || !instruction->QueryDoneAfterLaunched()) { break; }
+      stream->mut_running_instruction_list()->Erase(instruction);
+      ReleaseInstruction(instruction);
     }
-    if (stream->running_instruction_list().empty()) { mut_active_stream_list()->Erase(stream); }
+    // Handle launched instructions.
+    while (unlikely(stream->mut_launching_instruction_list()->size())) {
+      auto* instruction = stream->mut_launching_instruction_list()->Begin();
+      if (instruction == nullptr || !instruction->QueryLaunched()) { break; }
+      if (instruction->QueryDoneAfterLaunched()) {
+        stream->mut_launching_instruction_list()->Erase(instruction);
+        ReleaseInstruction(instruction);
+      } else {
+        stream->mut_running_instruction_list()->EmplaceBack(
+            stream->mut_launching_instruction_list()->Erase(instruction));
+      }
+    }
+    if (stream->launching_instruction_list().size() == 0
+        && stream->running_instruction_list().size() == 0) {
+      mut_active_stream_list()->Erase(stream);
+    }
   }
 }
 
@@ -488,18 +516,21 @@ void VirtualMachineEngine::DispatchAndPrescheduleInstructions() {
 }
 
 void VirtualMachineEngine::DispatchInstruction(Instruction* instruction) {
-  OF_PROFILER_RANGE_PUSH(
-      "D:"
-      + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction)
-      + ":" + instruction->instr_msg().instr_type_name());
+  OF_PROFILER_RANGE_PUSH("D:" + DebugName(instruction));
   auto* stream = instruction->mut_stream();
-  stream->mut_running_instruction_list()->PushBack(instruction);
+  stream->mut_launching_instruction_list()->PushBack(instruction);
   if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
   const auto& stream_type = stream->stream_type();
   if (OnSchedulerThread(stream_type)) {
     stream_type.Run(this, instruction);
   } else {
     stream->mut_thread_ctx()->mut_pending_instruction_list()->PushBack(instruction);
+  }
+  // Eagerly delete in-edges.
+  INTRUSIVE_FOR_EACH_PTR(edge, instruction->mut_in_edges()) {
+    Instruction* src_instruction = edge->mut_src_instruction();
+    src_instruction->mut_out_edges()->Erase(edge);
+    instruction->mut_in_edges()->Erase(edge);
   }
   OF_PROFILER_RANGE_POP();
 }
@@ -558,7 +589,7 @@ int64_t InstructionMaxRunningSeconds() { return 60 * 5; }
 
 // Returns true if old pending_instruction_list is empty
 Maybe<bool> VirtualMachineEngine::Receive(InstructionMsgList* compute_instr_msg_list) {
-  OF_PROFILER_RANGE_PUSH("vm:Receive");
+  OF_PROFILER_RANGE_GUARD("vm:Receive");
   InstructionMsgList new_instr_msg_list;
   INTRUSIVE_FOR_EACH_PTR(compute_instr_msg, compute_instr_msg_list) {
     if (!compute_instr_msg->phy_instr_operand()) {
@@ -583,7 +614,6 @@ Maybe<bool> VirtualMachineEngine::Receive(InstructionMsgList* compute_instr_msg_
     }));
   }
   bool old_list_empty = mut_pending_msg_list()->MoveFrom(&new_instr_msg_list);
-  OF_PROFILER_RANGE_POP();
   return old_list_empty;
 }
 

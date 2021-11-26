@@ -46,9 +46,15 @@ void AsyncCudaStreamType::DeleteInstructionStatus(const Stream& stream,
   ptr->~CudaOptionalEventRecordStatusQuerier();
 }
 
-bool AsyncCudaStreamType::QueryInstructionStatusDone(
+bool AsyncCudaStreamType::QueryInstructionStatusLaunched(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
-  return CudaOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer().data())->done();
+  return CudaOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer().data())->QueryLaunched();
+}
+
+bool AsyncCudaStreamType::QueryInstructionStatusDoneAfterLaunched(
+    const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
+  return CudaOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer().data())
+      ->QueryDoneAfterLaunched();
 }
 
 void AsyncCudaStreamType::Compute(Instruction* instruction) const {
