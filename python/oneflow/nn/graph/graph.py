@@ -444,20 +444,20 @@ class Graph(object):
     def _compile(self, *args):
         # Build graph
         try:
-            self._print(0, 0, self._shallow_repr() + " build_graph_start.")
+            self._print(0, 0, self._shallow_repr() + " Start building graph.")
             assert not self._is_compiled, (
                 "nn.Graph " + self._name + " has already been compiled."
             )
-            t0 = time.clock()
+            build_graph_start = time.clock()
             eager_outputs = self._build_graph(*args)
-            t1 = time.clock()
+            build_graph_end = time.clock()
             self._print(
                 0,
                 0,
                 self._shallow_repr()
-                + " done! cost time:"
-                + str(round(t1 - t0, 2))
-                + "s"
+                + " Done! cost time:"
+                + str(round(build_graph_end - build_graph_start, 2))
+                + "s."
                 + "\n",
             )
         except:
@@ -476,22 +476,22 @@ class Graph(object):
             self._print(
                 0,
                 0,
-                self._shallow_repr() + " compile_and_init_start",
+                self._shallow_repr() + " Compile_and_init_start",
             )
-            t2 = time.clock()
+            compile_and_init_start = time.clock()
             self._c_nn_graph.complie_and_init_runtime()
-            t3 = time.clock()
+            compile_and_init_end = time.clock()
             self._print(
                 0,
                 0,
                 self._shallow_repr()
-                + " done! cost time :"
-                + str(round(t3 - t2, 2))
-                + "s"
+                + " Done! cost time :"
+                + str(round(compile_and_init_end - compile_and_init_start, 2))
+                + "s."
                 + "\n"
-                + "the total time consumed to complete build graph and compiling plan and init graph runtime:"
-                + str(round(t3 - t0, 2))
-                + "s"
+                + "The total time consumed to complete build graph and compiling plan and init graph runtime:"
+                + str(round( compile_and_init_end - build_graph_start, 2))
+                + "s."
                 + "\n",
             )
         except:
@@ -502,8 +502,6 @@ class Graph(object):
                 + self._shallow_repr()
                 + " compiling plan or initialing graph runtime got error : "
                 + sys_exc_error_msg(),
-                +" compiling plan or initialing graph runtime got error : ",
-                sys_exc_error_msg(),
             )
             raise
 
@@ -514,6 +512,7 @@ class Graph(object):
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
         # Get config form GraphConfig
+
         self._outputs_buffer_size = self.config._outputs_buffer_size
         self._generate_config_proto()
 
