@@ -437,8 +437,8 @@ void GpuDecodeHandle::WarmupOnce(int warmup_size, unsigned char* workspace, size
 void GpuDecodeHandle::Synchronize() { OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream_)); }
 
 template<>
-DecodeHandleFactory CreateDecodeHandleFactory<DeviceType::kGPU>(int target_width,
-                                                                int target_height) {
+DecodeHandleFactory CreateDecodeHandleFactory<DeviceType::kCUDA>(int target_width,
+                                                                 int target_height) {
   int dev;
   OF_CUDA_CHECK(cudaGetDevice(&dev));
   return [dev, target_width, target_height]() -> std::shared_ptr<DecodeHandle> {
@@ -598,7 +598,7 @@ NEW_REGISTER_KERNEL(OperatorConf::kImageDecoderRandomCropResizeConf,
 #if defined(WITH_NVJPEG)
 
 NEW_REGISTER_KERNEL(OperatorConf::kImageDecoderRandomCropResizeConf,
-                    ImageDecoderRandomCropResizeKernel<DeviceType::kGPU>)
+                    ImageDecoderRandomCropResizeKernel<DeviceType::kCUDA>)
     .SetIsMatchedPred([](const KernelConf& conf) -> bool {
       return conf.op_attribute().op_conf().device_tag() == "gpu";
     });
