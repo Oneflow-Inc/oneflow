@@ -430,7 +430,7 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
     };
     full_sizes = {segment_sizes.begin(), segment_sizes.end()};
   } else {
-    for (auto key : keys) { full_sizes.push_back(1); }
+    full_sizes.resize(full_keys.size(), 1);
   }
   for (const auto& key_size_tuple : llvm::zip(full_keys, full_sizes)) {
     const std::string& key = std::get<0>(key_size_tuple);
