@@ -14,14 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_API_H_
-#define ONEFLOW_API_H_
+#include "oneflow/api/cpp/dtype.h"
+#include <map>
 
-#include "env.h"
-#include "device.h"
-#include "shape.h"
-#include "dtype.h"
-#include "tensor.h"
-#include "nn.h"
+namespace oneflow_api {
 
-#endif  // ONELFOW_API_H_
+namespace {
+
+std::map<DType, int32_t> DTypeSize = {
+    {DType::kFloat, sizeof(float)},   {DType::kDouble, sizeof(double)},
+    {DType::kInt8, sizeof(int8_t)},   {DType::kInt32, sizeof(int32_t)},
+    {DType::kInt64, sizeof(int64_t)},
+};
+
+}
+
+int32_t GetDTypeSize(DType dtype) { return DTypeSize[dtype]; }
+
+}  // namespace oneflow_api

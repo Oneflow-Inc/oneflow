@@ -34,6 +34,7 @@ limitations under the License.
 #include "oneflow/core/control/ctrl_bootstrap.h"
 #include "oneflow/core/rpc/include/base.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/thread/thread_consistent_id.h"
 
 namespace oneflow_api {
 
@@ -121,6 +122,7 @@ of::Maybe<void> initEnv() {
 void initialize() {
   of::SetIsMultiClient(true).GetOrThrow();
   if (!isEnvInited()) { initEnv().GetOrThrow(); }
+  of::SetShuttingDown(false);
 }
 
 void release() {
@@ -137,6 +139,7 @@ void release() {
   }
   // TODO close session
   of::SetShuttingDown();
+  of::ResetThisThreadUniqueConsistentId().GetOrThrow();
 }
 
 }  // namespace oneflow_api

@@ -13,15 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-#ifndef ONEFLOW_API_H_
-#define ONEFLOW_API_H_
-
-#include "env.h"
-#include "device.h"
-#include "shape.h"
-#include "dtype.h"
-#include "tensor.h"
 #include "nn.h"
+#include "oneflow/core/functional/functional.h"
 
-#endif  // ONELFOW_API_H_
+namespace oneflow_api {
+namespace nn {
+
+namespace of = oneflow;
+namespace functional = of::one::functional;
+
+Tensor relu(const Tensor& tensor) {
+  return Tensor(functional::Relu(tensor.__internal_tensor(), false).GetPtrOrThrow());
+}
+
+}  // namespace nn
+}  // namespace oneflow_api

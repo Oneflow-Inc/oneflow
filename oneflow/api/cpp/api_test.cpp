@@ -13,10 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
+#include <algorithm>
+#include <array>
+#include <cstdint>
+#include <random>
+#include <thread>
+#include <vector>
 #include <gtest/gtest.h>
 #include "oneflow/api/cpp/api.h"
-#include "oneflow/api/cpp/device.h"
 
 namespace oneflow_api {
 namespace {
@@ -27,9 +31,36 @@ class EnvScope {  // NOLINT
   ~EnvScope() { release(); }
 };
 
+std::mt19937 rng(std::random_device{}());
+
+Shape RandomShape() {
+  std::uniform_int_distribution<> dist_ndim(1, 4), dist_dims(16, 64);
+  std::vector<std::int64_t> dims(dist_ndim(rng), 0);
+  for (auto& x : dims) { x = dist_dims(rng); }
+  return Shape(dims);
+}
+
+template<typename T>
+std::vector<T> RandomData(size_t size) {
+  std::uniform_int_distribution<> dist(-100, 100);
+  std::vector<T> data(size);
+  for (auto& x : data) { x = static_cast<T>(dist(rng)); }
+  return data;
+}
+
+template<typename T>
+std::vector<T> Relu(const std::vector<T>& data) {
+  std::vector<T> result(data.begin(), data.end());
+  T zero = static_cast<T>(0);
+  for (auto& x : result) {
+    if (x < zero) { x = zero; }
+  }
+  return result;
+}
+
 }  // namespace
 
-TEST(Api, init_and_release) {
+TEST(Api, device) {
   EnvScope scope;
 
   auto device = Device("cpu");
@@ -44,6 +75,93 @@ TEST(Api, init_and_release) {
   ASSERT_EQ(device.type(), "cuda");
   ASSERT_EQ(device.device_id(), 2);
 #endif
+}
+
+TEST(Api, tensor) {
+  EnvScope scope;
+
+  const auto device = Device("cpu");
+  const auto shape = RandomShape();
+  const auto dtype = DType::kDouble;
+
+  Tensor tensor;
+  ASSERT_EQ(tensor.shape(), Shape());
+  ASSERT_EQ(tensor.device(), Device("cpu"));
+  ASSERT_EQ(tensor.dtype(), DType::kFloat);
+
+  Tensor tensor_with_all(shape, device, dtype);
+
+  ASSERT_EQ(tensor_with_all.shape(), shape);
+  ASSERT_EQ(tensor_with_all.device(), device);
+  ASSERT_EQ(tensor_with_all.dtype(), dtype);
+}
+
+TEST(Api, tensor_from_and_to_blob) {
+  EnvScope scope;
+
+  const auto shape = RandomShape();
+
+#define TEST_TENSOR_FROM_AND_TO_BLOB(dtype, cpp_dtype)                                           \
+  std::vector<cpp_dtype> data_##cpp_dtype(shape.Count(0)), new_data_##cpp_dtype(shape.Count(0)); \
+  for (int i = 0; i < shape.Count(0); ++i) { data_##cpp_dtype[i] = i; }                          \
+  auto tensor_##cpp_dtype =                                                                      \
+      Tensor::from_blob(data_##cpp_dtype.data(), shape, Device("cpu"), dtype);                   \
+  tensor_##cpp_dtype.copy_to(new_data_##cpp_dtype.data());                                       \
+  ASSERT_EQ(new_data_##cpp_dtype, data_##cpp_dtype);
+
+  TEST_TENSOR_FROM_AND_TO_BLOB(DType::kFloat, float)
+  TEST_TENSOR_FROM_AND_TO_BLOB(DType::kDouble, double)
+  TEST_TENSOR_FROM_AND_TO_BLOB(DType::kInt8, int8_t)
+  TEST_TENSOR_FROM_AND_TO_BLOB(DType::kInt32, int32_t)
+  TEST_TENSOR_FROM_AND_TO_BLOB(DType::kInt64, int64_t)
+}
+
+TEST(Api, tensor_zeros) {
+  EnvScope scope;
+
+  const auto shape = RandomShape();
+
+  std::vector<float> data(shape.Count(0)), target_data(shape.Count(0));
+
+  Tensor tensor(shape, Device("cpu"), DType::kFloat);
+  tensor.zeros_();
+  tensor.copy_to(data.data());
+
+  std::fill(target_data.begin(), target_data.end(), 0);
+
+  ASSERT_EQ(data, target_data);
+}
+
+void TestRelu() {
+  const auto shape = RandomShape();
+  const auto data = RandomData<float>(shape.Count(0));
+  const auto target_data = Relu(data);
+  std::vector<float> result(shape.Count(0));
+
+  auto tensor = Tensor::from_blob(data.data(), shape, Device("cpu"), DType::kFloat);
+  auto result_tensor = nn::relu(tensor);
+
+  result_tensor.copy_to(result.data());
+
+  ASSERT_EQ(result, target_data);
+}
+
+TEST(Api, nn_relu) {
+  EnvScope scope;
+
+  TestRelu();
+}
+
+TEST(Api, nn_relu_multithreading) {
+  EnvScope scope;
+
+  std::vector<std::thread> threads;
+  std::uniform_int_distribution<> dist(8, 32);
+  int n_threads = dist(rng);
+
+  for (int i = 0; i < n_threads; ++i) { threads.emplace_back(std::thread(TestRelu)); }
+
+  for (auto& x : threads) { x.join(); }
 }
 
 }  // namespace oneflow_api

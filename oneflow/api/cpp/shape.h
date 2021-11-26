@@ -13,39 +13,44 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_API_CPP_DEVICE_H_
-#define ONEFLOW_API_CPP_DEVICE_H_
+#ifndef ONEFLOW_API_CPP_SHAPE_H_
+#define ONEFLOW_API_CPP_SHAPE_H_
 
-#include <string>
 #include <memory>
+#include <vector>
 
 namespace oneflow {
 
-class Device;
+class Shape;
 
-template<typename T>
-class Symbol;
-
-}  // namespace oneflow
+}
 
 namespace oneflow_api {
 
-class Device final {
+class Shape final {
   friend class Tensor;
 
  public:
-  explicit Device(const std::string& type_or_type_with_device_id);
-  explicit Device(const std::string& type, int64_t device_id);
-  const std::string& type() const;
-  int64_t device_id() const;
+  Shape();
+  explicit Shape(const std::vector<int64_t>& dim_vec);
+  Shape(const std::initializer_list<int64_t>& dim_vec);
+  ~Shape() = default;
+  Shape& operator=(const Shape& shape);
 
-  bool operator==(const Device& rhs) const;
-  bool operator!=(const Device& rhs) const;
+  bool operator==(const Shape& rhs) const;
+  bool operator!=(const Shape& rhs) const;
+
+  int64_t elem_cnt() const;
+  int64_t At(int64_t index) const;
+  void Set(int64_t index, int64_t val);
+  int64_t NumAxes() const;
+
+  int64_t Count(int64_t begin_axis, int64_t end_axis) const;
+  int64_t Count(int64_t begin_axis) const;
 
  private:
-  std::shared_ptr<oneflow::Symbol<oneflow::Device>> device_ = nullptr;
+  std::shared_ptr<oneflow::Shape> shape_ = nullptr;
 };
-
 }  // namespace oneflow_api
 
-#endif  // !ONEFLOW_API_CPP_DEVICE_H_
+#endif  // ONEFLOW_API_CPP_SHAPE_H_

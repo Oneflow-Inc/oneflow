@@ -32,6 +32,7 @@ Maybe<void> InitThisThreadUniqueConsistentId(int64_t thread_consistent_id,
 Maybe<void> InitThisThreadConsistentId(int64_t thread_consistent_id,
                                        const std::string& debug_string);
 Maybe<int64_t> GetThisThreadConsistentId();
+Maybe<void> ResetThisThreadUniqueConsistentId();
 
 }  // namespace oneflow
 
