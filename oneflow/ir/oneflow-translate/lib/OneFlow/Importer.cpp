@@ -330,32 +330,16 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   } else {
     if (failed(AppendCtrlOutType(out_types))) { return failure(); }
     OperationState state(FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0), "oneflow.user");
-    bool is_operand_segment_sizes_inserted = false;
-    bool is_result_segment_sizes_inserted = false;
-    for (auto na : attr_vec) {
-      if (na.first.str() == "input_sizes") {
-        int32_t data_input_size = 0;
-        for (auto segment_size : na.second.dyn_cast<ArrayAttr>()) {
-          data_input_size += segment_size.dyn_cast<IntegerAttr>().getInt();
-        }
-        if (failed(AddOperandSegmentSizes(data_input_size, op.ctrl_in_op_name_size(), attr_vec))) {
-          return failure();
-        }
-        is_operand_segment_sizes_inserted = true;
-      }
-      if (na.first.str() == "output_lbns") {
-        if (failed(AddResultSegmentSizes(na.second.dyn_cast<ArrayAttr>().size(), attr_vec))) {
-          return failure();
-        }
-        if (na.second.dyn_cast<ArrayAttr>().size() != out_types.size() - 1) {
-          GetModule()->emitError("len(out_types) - 1 != len(output_lbns), op: " + op.name());
-          return failure();
-        }
-        is_result_segment_sizes_inserted = true;
-      }
+    uint32_t data_input_size = 0;
+    uint32_t data_output_size = 0;
+    for (const auto& input : op.user_conf().input()) { data_input_size += input.second.s().size(); }
+    for (const auto& output : op.user_conf().input()) {
+      data_output_size += output.second.s().size();
     }
-    assert(is_operand_segment_sizes_inserted);
-    assert(is_result_segment_sizes_inserted);
+    if (failed(AddOperandSegmentSizes(data_input_size, op.ctrl_in_op_name_size(), attr_vec))) {
+      return failure();
+    }
+    if (failed(AddResultSegmentSizes(data_output_size, attr_vec))) { return failure(); }
     ArrayRef<NamedAttribute> named_attributes(attr_vec);
     state.addAttributes(named_attributes);
     state.addOperands(operands);
