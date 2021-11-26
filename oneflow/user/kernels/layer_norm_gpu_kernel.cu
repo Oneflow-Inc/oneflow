@@ -463,10 +463,10 @@ class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
   };
 };
 
-#define REGISTER_LAYER_NORM_GPU_KERNEL(dtype, bn_param_dtype)                          \
+#define REGISTER_LAYER_NORM_CUDA_KERNEL(dtype, bn_param_dtype)                         \
   REGISTER_USER_KERNEL("layer_norm")                                                   \
       .SetCreateFn<LayerNormGpuKernel<dtype, bn_param_dtype>>()                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                     \
         user_op::TensorDesc* mean = ctx->OutputTensorDesc("mean", 0);                  \
@@ -475,9 +475,9 @@ class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
         return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type)) * 2;        \
       });
 
-REGISTER_LAYER_NORM_GPU_KERNEL(float, float)
-REGISTER_LAYER_NORM_GPU_KERNEL(double, double)
-REGISTER_LAYER_NORM_GPU_KERNEL(float16, float)
+REGISTER_LAYER_NORM_CUDA_KERNEL(float, float)
+REGISTER_LAYER_NORM_CUDA_KERNEL(double, double)
+REGISTER_LAYER_NORM_CUDA_KERNEL(float16, float)
 
 template<typename T, typename BNParamT>
 class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -508,7 +508,7 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), dx->data_type());
       CHECK_EQ(add_to_output->shape(), dx->shape());
-      Memcpy<DeviceType::kGPU>(
+      Memcpy<DeviceType::kCUDA>(
           ctx->stream(), dx->mut_dptr<void>(), add_to_output->dptr<void>(),
           add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       sp_beta = CudnnSPOnePtr<T>();
@@ -529,10 +529,10 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
   };
 };
 
-#define REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(dtype, bn_param_dtype)                         \
+#define REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(dtype, bn_param_dtype)                        \
   REGISTER_USER_KERNEL("layer_norm_grad")                                                  \
       .SetCreateFn<LayerNormGradGpuKernel<dtype, bn_param_dtype>>()                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                     \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))    \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                         \
         const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);                 \
@@ -549,9 +549,9 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
             return Maybe<void>::Ok();                                                      \
           });
 
-REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(float, float)
-REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(double, double)
-REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(float16, float)
+REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(float, float)
+REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(double, double)
+REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(float16, float)
 
 template<typename T>
 class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
@@ -564,7 +564,7 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
   using user_op::OpKernel::Compute;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    using NdUtil = NdarrayUtil<DeviceType::kGPU, T>;
+    using NdUtil = NdarrayUtil<DeviceType::kCUDA, T>;
     auto Val = NdUtil::GetValNdarrayBuilder();
     auto Var = NdUtil::GetVarNdarrayBuilder();
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -585,10 +585,10 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
         GetParamGradDynamicSharedMemorySize<T>(m)));
     if (has_gamma_diff && has_beta_diff && has_normalized_diff && max_active_blocks > 0) {
       const user_op::Tensor* normalized = ctx->Tensor4ArgNameAndIndex("normalized", 0);
-      Memset<DeviceType::kGPU>(ctx->stream(), gamma_diff->mut_dptr<T>(), 0,
-                               gamma_diff->shape().elem_cnt() * sizeof(T));
-      Memset<DeviceType::kGPU>(ctx->stream(), beta_diff->mut_dptr<T>(), 0,
-                               beta_diff->shape().elem_cnt() * sizeof(T));
+      Memset<DeviceType::kCUDA>(ctx->stream(), gamma_diff->mut_dptr<T>(), 0,
+                                gamma_diff->shape().elem_cnt() * sizeof(T));
+      Memset<DeviceType::kCUDA>(ctx->stream(), beta_diff->mut_dptr<T>(), 0,
+                                beta_diff->shape().elem_cnt() * sizeof(T));
       if (elem_cnt > static_cast<int64_t>(GetMaxVal<int32_t>() / 2)) {
         LayerNormParamGradImpl<T, int64_t>
             <<<GetLayerNormParamGradNumBlocks(elem_cnt), GetLayerNormParamGradBlockSize(),
@@ -635,23 +635,23 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
           NdUtil::BroadcastMul(ctx->stream(), Var({n, m}, normalized_diff->mut_dptr<T>()),
                                Val({n, m}, dy->dptr<T>()), Val({1, m}, gamma->dptr<T>()));
         } else {
-          Memcpy<DeviceType::kGPU>(ctx->stream(), normalized_diff->mut_dptr<void>(),
-                                   dy->dptr<void>(),
-                                   dy->shape().elem_cnt() * GetSizeOfDataType(dy->data_type()));
+          Memcpy<DeviceType::kCUDA>(ctx->stream(), normalized_diff->mut_dptr<void>(),
+                                    dy->dptr<void>(),
+                                    dy->shape().elem_cnt() * GetSizeOfDataType(dy->data_type()));
         }
       }
     }
   };
 };
 
-#define REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(dtype)              \
-  REGISTER_USER_KERNEL("layer_norm_param_grad")                       \
-      .SetCreateFn<LayerNormParamGradGpuKernel<dtype>>()              \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_LAYER_NORM_PARAM_GRAD_CUDA_KERNEL(dtype)              \
+  REGISTER_USER_KERNEL("layer_norm_param_grad")                        \
+      .SetCreateFn<LayerNormParamGradGpuKernel<dtype>>()               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
 
-REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(float)
-REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(double)
+REGISTER_LAYER_NORM_PARAM_GRAD_CUDA_KERNEL(float)
+REGISTER_LAYER_NORM_PARAM_GRAD_CUDA_KERNEL(double)
 
 class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
                                               public user_op::CudaGraphSupport {
@@ -663,7 +663,7 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
   using user_op::OpKernel::Compute;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    using NdUtil = NdarrayUtil<DeviceType::kGPU, float16>;
+    using NdUtil = NdarrayUtil<DeviceType::kCUDA, float16>;
     auto Val = NdUtil::GetValNdarrayBuilder();
     auto Var = NdUtil::GetVarNdarrayBuilder();
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -747,9 +747,9 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
                                Val({n, m}, dy->dptr<float16>()),
                                Val({1, m}, gamma->dptr<float16>()));
         } else {
-          Memcpy<DeviceType::kGPU>(ctx->stream(), normalized_diff->mut_dptr<void>(),
-                                   dy->dptr<void>(),
-                                   dy->shape().elem_cnt() * GetSizeOfDataType(dy->data_type()));
+          Memcpy<DeviceType::kCUDA>(ctx->stream(), normalized_diff->mut_dptr<void>(),
+                                    dy->dptr<void>(),
+                                    dy->shape().elem_cnt() * GetSizeOfDataType(dy->data_type()));
         }
       }
     }
@@ -758,7 +758,7 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
 
 REGISTER_USER_KERNEL("layer_norm_param_grad")
     .SetCreateFn<LayerNormParamGradGpuHalfKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
                      && (user_op::HobDataType("dy", 0) == DataType::kFloat16))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
       const int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");

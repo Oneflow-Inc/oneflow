@@ -18,16 +18,15 @@ limitations under the License.
 
 #include <functional>
 #include <set>
+#include <vector>
 #include "oneflow/core/intrusive/intrusive.h"
-#include "absl/container/inlined_vector.h"
 
 namespace oneflow {
 namespace vm {
 
 struct MirroredObject;
 
-static constexpr int kDependenceVectorCap = 8;
-using DependenceVector = absl::InlinedVector<MirroredObject*, kDependenceVectorCap>;
+using DependenceVector = std::vector<MirroredObject*>;
 
 // physical instruction operand
 class PhyInstrOperand {

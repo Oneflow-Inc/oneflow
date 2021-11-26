@@ -310,6 +310,10 @@ def _acos(self):
     return flow.acos(self)
 
 
+def _arccos(self):
+    return flow.arccos(self)
+
+
 def _acosh(self):
     return flow.acosh(self)
 
@@ -552,6 +556,10 @@ def _argmin(self, dim=None, keepdim=None):
     return flow.argmin(self, dim=dim, keepdim=keepdim)
 
 
+def _argsort(self, dim=None, descending=None):
+    return flow.argsort(self, dim=dim, descending=descending)
+
+
 def _roll(self, shifts, dims=None):
     return flow.roll(self, shifts=shifts, dims=dims)
 
@@ -761,7 +769,9 @@ def RegisterMethods():
     Tensor.floor_divide = _floor_divide
     Tensor.argmax = _argmax
     Tensor.argmin = _argmin
+    Tensor.argsort = _argsort
     Tensor.acos = _acos
+    Tensor.arccos = _arccos
     Tensor.acosh = _acosh
     Tensor.arccosh = _arccosh
     Tensor.atanh = _atanh
