@@ -32,13 +32,13 @@ namespace py = pybind11;
 namespace oneflow {
 
 template<typename T>
-struct BlobNumpyConvert {
+struct BlobNumpyCopyUtil {
   static Maybe<void> From(uint64_t of_blob_ptr, const NumPyArrayPtr& array) {
-    return BlobBufferConvert<T>::From(of_blob_ptr, (T*)array.data(), array.size());
+    return BlobBufferCopyUtil<T>::From(of_blob_ptr, (T*)array.data(), array.size());
   }
 
   static Maybe<void> To(uint64_t of_blob_ptr, const NumPyArrayPtr& array) {
-    return BlobBufferConvert<T>::To(of_blob_ptr, (T*)array.data(), array.size());
+    return BlobBufferCopyUtil<T>::To(of_blob_ptr, (T*)array.data(), array.size());
   }
 };
 
@@ -46,11 +46,11 @@ struct BlobNumpyConvert {
 
 #define DEFINE_COPIER(T, type_proto)                                                               \
   inline void OfBlob_CopyToBuffer_##T(uint64_t of_blob_ptr, const oneflow::NumPyArrayPtr& array) { \
-    oneflow::BlobNumpyConvert<T>::To(of_blob_ptr, array).GetOrThrow();                             \
+    oneflow::BlobNumpyCopyUtil<T>::To(of_blob_ptr, array).GetOrThrow();                             \
   }                                                                                                \
   inline void OfBlob_CopyFromBuffer_##T(uint64_t of_blob_ptr,                                      \
                                         const oneflow::NumPyArrayPtr& array) {                     \
-    oneflow::BlobNumpyConvert<T>::From(of_blob_ptr, array).GetOrThrow();                           \
+    oneflow::BlobNumpyCopyUtil<T>::From(of_blob_ptr, array).GetOrThrow();                           \
   }
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_COPIER, POD_DATA_TYPE_SEQ);

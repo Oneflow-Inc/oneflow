@@ -55,7 +55,7 @@ Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t) {
 template<typename T>
 Maybe<void> CopyMirroredTensorFromUntypedArray(const std::shared_ptr<Tensor>& tensor,
                                                PyObject* array) {
-  return CopyBetweenMirroredTensorAndNumpy<T>(tensor, array, BlobNumpyConvert<T>::From,
+  return CopyBetweenMirroredTensorAndNumpy<T>(tensor, array, BlobNumpyCopyUtil<T>::From,
                                               "mut", /*block_host_until_done=*/false);
 }
 

@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-struct BlobBufferConvert {
+struct BlobBufferCopyUtil {
   static Maybe<void> From(uint64_t of_blob_ptr, const T* buf_ptr, size_t size) {
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
     of_blob->AutoMemCopyFrom<void>(buf_ptr, size);
@@ -38,7 +38,7 @@ struct BlobBufferConvert {
 };
 
 template<>
-struct BlobBufferConvert<void> {
+struct BlobBufferCopyUtil<void> {
   static Maybe<void> From(uint64_t of_blob_ptr, const void* buf_ptr, size_t size) {
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
     of_blob->AutoMemCopyFrom<void>(buf_ptr, size);
