@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_ND_INDEX_OFFSET_HELPER_H_
 
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/fast_div_mod.h"
+#include "oneflow/core/common/fast_math.h"
 #include <cassert>
 
 namespace oneflow {
@@ -31,20 +31,20 @@ class NdIndexOffsetHelper {
     constexpr int n = 1 + sizeof...(dims);
     static_assert(n <= N, "");
     T dims_arr[n] = {d0, static_cast<T>(dims)...};
-    InitStridesAndFastDiv(dims_arr, n);
+    InitFastIntegerMath(dims_arr, n);
   }
 
-  OF_DEVICE_FUNC explicit NdIndexOffsetHelper(const T* dims) { InitStridesAndFastDiv(dims, N); }
+  OF_DEVICE_FUNC explicit NdIndexOffsetHelper(const T* dims) { InitFastIntegerMath(dims, N); }
 
   template<typename U>
   OF_DEVICE_FUNC explicit NdIndexOffsetHelper(const U* dims) {
     T dims_arr[N];
     for (int i = 0; i < N; ++i) { dims_arr[i] = dims[i]; }
-    InitStridesAndFastDiv(dims_arr, N);
+    InitFastIntegerMath(dims_arr, N);
   }
 
   OF_DEVICE_FUNC explicit NdIndexOffsetHelper(const T* dims, int n) {
-    InitStridesAndFastDiv(dims, n);
+    InitFastIntegerMath(dims, n);
   }
 
   ~NdIndexOffsetHelper() = default;
@@ -54,7 +54,10 @@ class NdIndexOffsetHelper {
 #ifdef __CUDA_ARCH__
 #pragma unroll
 #endif
-    for (int i = 0; i < N - 1; ++i) { offset += index[i] * stride_[i]; }
+    for (int i = 0; i < N - 1; ++i) {
+      // offset += index[i] * stride_[i];
+      offset += math_helper_[i].Mul(index[i]);
+    }
     offset += index[N - 1];
     return offset;
   }
@@ -65,7 +68,7 @@ class NdIndexOffsetHelper {
 #ifdef __CUDA_ARCH__
 #pragma unroll
 #endif
-    for (int i = 0; i < n; ++i) { offset += index[i] * stride_[i]; }
+    for (int i = 0; i < n; ++i) { offset += math_helper_[i].Mul(index[i]); }
     return offset;
   }
 
@@ -78,11 +81,12 @@ class NdIndexOffsetHelper {
 #ifdef __CUDA_ARCH__
 #pragma unroll
 #endif
-    for (int i = 0; i < n - 1; ++i) { offset += index[i] * stride_[i]; }
+    for (int i = 0; i < n - 1; ++i) { offset += math_helper_[i].Mul(index[i]); }
     if (n == N) {
       offset += index[n - 1];
     } else {
-      offset += index[n - 1] * stride_[n - 1];
+      // offset += index[n - 1] * stride_[n - 1];
+      offset += math_helper_[n - 1].Mul(index[n - 1]);
     }
     return offset;
   }
@@ -93,9 +97,10 @@ class NdIndexOffsetHelper {
 #pragma unroll
 #endif
     for (int i = 0; i < N - 1; ++i) {
-      const T idx = div_helper_[i].div(remaining);
+      const T idx = math_helper_[i].Div(remaining);
       index[i] = idx;
-      remaining = remaining - idx * stride_[i];
+      // remaining = remaining - idx * stride_[i];
+      remaining = remaining - math_helper_[i].Mul(idx);
     }
     index[N - 1] = remaining;
   }
@@ -107,9 +112,10 @@ class NdIndexOffsetHelper {
 #pragma unroll
 #endif
     for (int i = 0; i < n; ++i) {
-      const T idx = div_helper_[i].div(remaining);
+      const T idx = math_helper_[i].Div(remaining);
       index[i] = idx;
-      remaining = remaining - idx * stride_[i];
+      // remaining = remaining - idx * stride_[i];
+      remaining = remaining - math_helper_[i].Mul(idx);
     }
   }
 
@@ -123,34 +129,34 @@ class NdIndexOffsetHelper {
 #pragma unroll
 #endif
     for (int i = 0; i < n - 1; ++i) {
-      const T idx = div_helper_[i].div(remaining);
+      const T idx = math_helper_[i].Div(remaining);
       *index[i] = idx;
-      remaining = remaining - idx * stride_[i];
+      // remaining = remaining - idx * stride_[i];
+      remaining = remaining - math_helper_[i].Mul(idx);
     }
     if (n == N) {
       *index[n - 1] = remaining;
     } else {
-      *index[n - 1] = remaining / stride_[n - 1];
+      // *index[n - 1] = remaining / stride_[n - 1];
+      *index[n - 1] = math_helper_[n - 1].Div(remaining);
     }
   }
 
   OF_DEVICE_FUNC constexpr int Size() const { return N; }
 
  private:
-  OF_DEVICE_FUNC void InitStridesAndFastDiv(const T* dims, const int n) {
+  OF_DEVICE_FUNC void InitFastIntegerMath(const T* dims, const int n) {
+    T stride_arr[N];
     for (int i = n - 1; i < N; ++i) {
-      stride_[i] = 1;
-      div_helper_[i] = FastDivMod<T>(1);
+      stride_arr[i] = 1;
+      math_helper_[i] = FastIntegerMath<T>(1);
     }
     for (int i = n - 2; i >= 0; --i) {
-      T stride = dims[i + 1] * stride_[i + 1];
-      stride_[i] = stride;
-      div_helper_[i] = FastDivMod<T>(stride);
+      stride_arr[i] = dims[i + 1] * stride_arr[i + 1];
+      math_helper_[i] = FastIntegerMath<T>(stride_arr[i]);
     }
   }
-
-  T stride_[N];
-  FastDivMod<T> div_helper_[N];
+  FastIntegerMath<T> math_helper_[N];
 };
 
 }  // namespace oneflow
