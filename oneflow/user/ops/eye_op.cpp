@@ -18,8 +18,8 @@ limitations under the License.
 namespace oneflow {
 REGISTER_NO_GRAD_USER_OP("eye")
     .Output("out")
-    .Attr<int64_t>("rows")
-    .Attr<int64_t>("cols")
+    .Attr<int64_t>("n")
+    .Attr<int64_t>("m")
     .Attr<DataType>("dtype")
     .Attr<std::vector<std::string>>("nd_sbp")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {

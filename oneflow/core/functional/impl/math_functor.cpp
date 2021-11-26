@@ -514,7 +514,9 @@ class EyeFunctor {
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
+    // rows
     JUST(attrs.SetAttr<int64_t>("n", JUST(n.As<int64_t>())));
+    // cols
     JUST(attrs.SetAttr<int64_t>("m", JUST(m.value_or(n).As<int64_t>())));
     JUST(attrs.SetAttr<DataType>("dtype", dtype ? JUST(dtype)->data_type() : DataType::kFloat));
     OpExprInterpContext ctx(attrs);
