@@ -173,9 +173,9 @@ LogicalResult JobImporter::AppendDataInOperand(const std::string& lbn,
 LogicalResult JobImporter::InsertOpResults(const ::oneflow::OperatorConf& op,
                                            Operation* created_op) {
   auto output_lbns = created_op->getAttrOfType<ArrayAttr>("output_lbns");
-  output_lbns.dump();
   auto data_results = GetDataOutputResults(created_op);
   if (output_lbns.size() != data_results.size()) {
+    output_lbns.dump();
     llvm::errs() << "output_lbns size: " << output_lbns.size()
                  << " != data_results size: " << data_results.size() << "\n"
                  << op.DebugString();
