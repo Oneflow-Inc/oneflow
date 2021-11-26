@@ -37,21 +37,6 @@ struct BlobBufferCopyUtil {
   }
 };
 
-template<>
-struct BlobBufferCopyUtil<void> {
-  static Maybe<void> From(uint64_t of_blob_ptr, const void* buf_ptr, size_t size) {
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    of_blob->AutoMemCopyFrom<void>(buf_ptr, size);
-    return Maybe<void>::Ok();
-  }
-
-  static Maybe<void> To(uint64_t of_blob_ptr, void* buf_ptr, size_t size) {
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    of_blob->AutoMemCopyTo<void>(buf_ptr, size);
-    return Maybe<void>::Ok();
-  }
-};
-
 }  // namespace oneflow
 
 #endif  // !ONEFLOW_API_COMMON_OFBLOB_H_
