@@ -1754,6 +1754,6 @@
   bind_python: True
 
 - name: "dot"
-  signature: "Tensor Dot(Tensor input, Tensor other) => Dot"
+  signature: "Tensor (Tensor input, Tensor other) => Dot"
   bind_python: True
 

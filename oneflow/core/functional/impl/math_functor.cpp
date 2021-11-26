@@ -1516,7 +1516,6 @@ class DotFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-
 }  // namespace impl
 
 using namespace impl;

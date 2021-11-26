@@ -38,8 +38,3 @@ struct BlasIf<DeviceType::kGPU> {
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_UTIL_CUDA_BLAS_INTERFACE_H_
-};
-
-}  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_KERNEL_UTIL_CUDA_BLAS_INTERFACE_H_
