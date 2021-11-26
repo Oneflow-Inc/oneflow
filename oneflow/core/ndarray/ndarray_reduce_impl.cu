@@ -161,7 +161,7 @@ struct RowOffsetFunctor final {
 };
 
 template<typename T, template<typename> class binary_func>
-struct NdarrayScalarReduce<DeviceType::kGPU, T, binary_func> final {
+struct NdarrayScalarReduce<DeviceType::kCUDA, T, binary_func> final {
   static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
     return y.shape().ElemNum() == 1;
   }
@@ -185,7 +185,7 @@ struct NdarrayScalarReduce<DeviceType::kGPU, T, binary_func> final {
 };
 
 template<typename T, template<typename> class binary_func>
-struct NdarrayMatrixRowReduce<DeviceType::kGPU, T, binary_func> final {
+struct NdarrayMatrixRowReduce<DeviceType::kCUDA, T, binary_func> final {
   static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
     if (y.shape().ElemNum() > GetMaxVal<int32_t>()) { return false; }
     if (x.shape().NumAxes() != 2) { return false; }
@@ -217,7 +217,7 @@ struct NdarrayMatrixRowReduce<DeviceType::kGPU, T, binary_func> final {
 };
 
 template<typename T, template<typename> class binary_func>
-struct NdarrayMatrixColReduce<DeviceType::kGPU, T, binary_func> final {
+struct NdarrayMatrixColReduce<DeviceType::kCUDA, T, binary_func> final {
   static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
     if (y.shape().ElemNum() > GetMaxVal<int32_t>()) { return false; }
     if (x.shape().NumAxes() != 2) { return false; }
@@ -272,7 +272,7 @@ struct NdarrayMatrixColReduce<DeviceType::kGPU, T, binary_func> final {
 };
 
 template<typename T, template<typename> class binary_func>
-struct NdarrayXYZCubeXZReduce<DeviceType::kGPU, T, binary_func> final {
+struct NdarrayXYZCubeXZReduce<DeviceType::kCUDA, T, binary_func> final {
   static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
     if (y.shape().ElemNum() > GetMaxVal<int32_t>()) { return false; }
     if (x.shape().NumAxes() != 3) { return false; }
@@ -338,7 +338,7 @@ __global__ void NdarrayReduceGpuInplaceReduceAxis(const XpuReducedNdarray<T, NDI
 }  // namespace
 
 template<typename T, int NDIMS, template<typename> class binary_func>
-struct NdarrayReduceCoreWrapper<DeviceType::kGPU, T, NDIMS, binary_func> final {
+struct NdarrayReduceCoreWrapper<DeviceType::kCUDA, T, NDIMS, binary_func> final {
   static void ReduceAxis(ep::Stream* stream, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
                          const XpuReducedNdarray<T, NDIMS>& x, int axis) {
     size_t n = x.host_shape().HostElemNum();
@@ -347,17 +347,17 @@ struct NdarrayReduceCoreWrapper<DeviceType::kGPU, T, NDIMS, binary_func> final {
   }
 };
 
-#define INSTANTIATE_NDARRAY_REDUCE_IMPL(dtype, binary_func)                                       \
-  template struct NdarrayScalarReduce<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype), binary_func>;    \
-  template struct NdarrayMatrixRowReduce<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype), binary_func>; \
-  template struct NdarrayMatrixColReduce<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype), binary_func>; \
-  template struct NdarrayXYZCubeXZReduce<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype), binary_func>;
+#define INSTANTIATE_NDARRAY_REDUCE_IMPL(dtype, binary_func)                                        \
+  template struct NdarrayScalarReduce<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype), binary_func>;    \
+  template struct NdarrayMatrixRowReduce<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype), binary_func>; \
+  template struct NdarrayMatrixColReduce<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype), binary_func>; \
+  template struct NdarrayXYZCubeXZReduce<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype), binary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
     INSTANTIATE_NDARRAY_REDUCE_IMPL,
     ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ, REDUCE_BINARY_FUNC_SEQ);
 
-#define INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER(dtype_pair, NDIMS, binary_func)                   \
-  template struct NdarrayReduceCoreWrapper<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype_pair), NDIMS, \
+#define INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER(dtype_pair, NDIMS, binary_func)                    \
+  template struct NdarrayReduceCoreWrapper<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype_pair), NDIMS, \
                                            binary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER,
                                  ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ

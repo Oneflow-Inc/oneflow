@@ -455,7 +455,7 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
     }
     if (pass_tag == kNoPassTag) {
       const StreamId stream_id = PlanUtil::GetStreamId(task_proto);
-      if (stream_id.device_id().device_type() == DeviceType::kGPU) {
+      if (stream_id.device_id().device_type() == DeviceType::kCUDA) {
         machine_id2job_id_device_id2node_list[task_proto.machine_id()][task_proto.job_id()]
                                              [stream_id.device_id().device_index()]
                                                  .push_back(node_def);
