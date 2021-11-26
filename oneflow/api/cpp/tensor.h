@@ -43,12 +43,14 @@ class Tensor final {
 
   void zeros_();
 
-  const std::shared_ptr<oneflow::one::Tensor>& internal_tensor() const;
+  // You should never call __internal_tensor() directly.
+  const std::shared_ptr<oneflow::one::Tensor>& __internal_tensor() const;
 
   template<typename T>
   void copy_to(T* blob);
 
-  static Tensor from_blob(const void* blob, const Shape& shape, const Device& device, const DType& dtype);
+  static Tensor from_blob(const void* blob, const Shape& shape, const Device& device,
+                          const DType& dtype);
 
  private:
   std::shared_ptr<oneflow::one::Tensor> tensor_ = nullptr;

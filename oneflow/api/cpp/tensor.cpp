@@ -78,7 +78,7 @@ Tensor Tensor::from_blob(const void* blob, const Shape& shape, const Device& dev
         local_tensor,
         [blob, shape, dtype](uint64_t ofblob_ptr) {
           CHECK_JUST(of::BlobBufferConvert<char>::From(ofblob_ptr, static_cast<const char*>(blob),
-                                                      shape.Count(0) * GetDTypeSize(dtype)));
+                                                       shape.Count(0) * GetDTypeSize(dtype)));
         },
         "mut");
   }).GetOrThrow();
@@ -113,7 +113,7 @@ void Tensor::copy_to(T* blob) {
       .GetOrThrow();
 }
 
-const std::shared_ptr<oneflow::one::Tensor>& Tensor::internal_tensor() const { return tensor_; }
+const std::shared_ptr<oneflow::one::Tensor>& Tensor::__internal_tensor() const { return tensor_; }
 
 #define REGISTER_TO_BLOB(cpp_dtype) template void Tensor::copy_to<cpp_dtype>(cpp_dtype * blob);
 

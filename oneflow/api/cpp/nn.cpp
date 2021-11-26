@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "nn.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
 
 namespace oneflow_api {
 namespace nn {
@@ -24,7 +23,7 @@ namespace of = oneflow;
 namespace functional = of::one::functional;
 
 Tensor relu(const Tensor& tensor) {
-  return Tensor(functional::Relu(tensor.internal_tensor(), false).GetPtrOrThrow());
+  return Tensor(functional::Relu(tensor.__internal_tensor(), false).GetPtrOrThrow());
 }
 
 }  // namespace nn
