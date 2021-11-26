@@ -267,10 +267,10 @@ class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
   };
 };
 
-#define REGISTER_LAYER_NORM_CUDA_KERNEL(dtype)                        \
-  REGISTER_USER_KERNEL("layer_norm")                                  \
-      .SetCreateFn<LayerNormGpuKernel<dtype>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_LAYER_NORM_CUDA_KERNEL(dtype)                         \
+  REGISTER_USER_KERNEL("layer_norm")                                   \
+      .SetCreateFn<LayerNormGpuKernel<dtype>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
 REGISTER_LAYER_NORM_CUDA_KERNEL(float)
