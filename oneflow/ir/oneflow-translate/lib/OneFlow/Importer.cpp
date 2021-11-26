@@ -70,6 +70,7 @@ bool IsOpaqueOp(Operation* op) {
 
 LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorConf& op,
                                                      std::vector<NamedAttribute>& attr_vec) {
+  //  TODO: query full bn order from op registry
   using LBNVec = SmallVector<StringRef, 8>;
   using LBNSegVec = SmallVector<int32_t, 8>;
   LBNVec input_lbn_segment_keys;
@@ -418,8 +419,8 @@ LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf)
 
 LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
                                   ::oneflow::UserOpConf* user_conf) {
-  if (auto shapeOp = dyn_cast<BnOrder>(op)) {
-    shapeOp.inputOrder();
+  if (auto bn_order = dyn_cast<BnOrder>(op)) {
+    bn_order.inputOrder();
   } else {
     op->dump();
     op->emitError("bn order not found");
