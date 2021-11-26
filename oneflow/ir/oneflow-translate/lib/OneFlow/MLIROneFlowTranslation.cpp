@@ -173,13 +173,14 @@ LogicalResult JobImporter::AppendDataInOperand(const std::string& lbn,
 LogicalResult JobImporter::InsertOpResults(const ::oneflow::OperatorConf& op,
                                            Operation* created_op) {
   auto output_lbns = created_op->getAttrOfType<ArrayAttr>("output_lbns");
+  output_lbns.dump();
   auto data_results = GetDataOutputResults(created_op);
   if (output_lbns.size() != data_results.size()) {
-    created_op->emitError() << "output_lbns size: " << output_lbns.size()
-                            << " != data_results size: " << data_results.size() << "\n"
-                            << op.DebugString();
+    llvm::errs() << "output_lbns size: " << output_lbns.size()
+                 << " != data_results size: " << data_results.size() << "\n"
+                 << op.DebugString();
     created_op->getAttrDictionary().dump();
-    created_op->dump();
+    // created_op->dump();
     return failure();
   }
   for (const auto& data_out : llvm::enumerate(data_results)) {
@@ -427,7 +428,7 @@ void RoundTripOneFlowJob(
     }
 
   } else {
-    llvm::errs() << "fail to convert job to IR, job_name: " << job->job_conf().job_name();
+    llvm::errs() << "fail to convert job to IR, job_name: " << job->job_conf().job_name() << "\n";
     exit(EXIT_FAILURE);
   }
 }
