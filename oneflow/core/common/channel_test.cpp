@@ -44,10 +44,10 @@ TEST(Channel, 30sender40receiver) {
     visits.emplace_back(visit_i);
   }
   for (int i = 0; i < sender_num; ++i) {
-    senders.emplace_back(std::thread(CallFromSenderThread, &channel, Range(0, range_num)));
+    senders.emplace_back(CallFromSenderThread, &channel, Range(0, range_num));
   }
   for (int i = 0; i < receiver_num; ++i) {
-    receivers.emplace_back(std::thread(CallFromReceiverThread, &visits[i], &channel));
+    receivers.emplace_back(CallFromReceiverThread, &visits[i], &channel);
   }
   for (std::thread& this_thread : senders) { this_thread.join(); }
   channel.Close();
