@@ -327,7 +327,7 @@ bool HasVariadic(
   return NumMultipleVariadic(arg_defs) > 0;
 }
 
-std::string GetOperandOrder(
+std::string GetOperandKeys(
     const ::google::protobuf::RepeatedPtrField<::oneflow::UserOpDef_ArgDef>& arg_defs) {
   std::string ret = "{";
   for (auto it = arg_defs.begin(); it != arg_defs.end(); ++it) {
@@ -338,14 +338,37 @@ std::string GetOperandOrder(
   return ret;
 }
 
+std::string GetOperandMinimums(
+    const ::google::protobuf::RepeatedPtrField<::oneflow::UserOpDef_ArgDef>& arg_defs) {
+  std::string ret = "{";
+  for (auto it = arg_defs.begin(); it != arg_defs.end(); ++it) {
+    uint32_t min = 0;
+    if (it->is_optional()) {
+      min = 0;
+    } else if (it->has_num_as_min()) {
+      min = it->num();
+    } else {
+      min = 1;
+    }
+    ret += std::to_string(min);
+    if (std::next(it) != arg_defs.end()) { ret += ", "; }
+  }
+  ret += "}";
+  return ret;
+}
+
 // TODO: use MLIR Interfaces it implement this
 void PrintExtraClassDeclaration(const oneflow::UserOpDef& op_def) {
   std::cout << "  let extraClassDeclaration = [{"
             << "\n";
-  std::cout << "    static std::vector<std::string> inputOrder() { return "
-            << GetOperandOrder(op_def.input()) << "; }\n";
-  std::cout << "    static std::vector<std::string> outputOrder() { return "
-            << GetOperandOrder(op_def.output()) << "; }\n";
+  std::cout << "    static std::vector<std::string> inputKeys() { return "
+            << GetOperandKeys(op_def.input()) << "; }\n";
+  std::cout << "    static std::vector<std::uint32_t> inputMinimums() { return "
+            << GetOperandMinimums(op_def.input()) << "; }\n";
+  std::cout << "    static std::vector<std::string> outputKeys() { return "
+            << GetOperandKeys(op_def.output()) << "; }\n";
+  std::cout << "    static std::vector<std::uint32_t> outputMinimums() { return "
+            << GetOperandMinimums(op_def.input()) << "; }\n";
   std::cout << "  }];"
             << "\n";
 }
@@ -461,7 +484,7 @@ std::string GetTraits(const oneflow::UserOpDef& op_def) {
     ret += "AttrSizedResultSegments";
   }
   if (ret != "") ret += ", ";
-  ret += "DeclareOpInterfaceMethods<BnOrderOpInterface>";
+  ret += "DeclareOpInterfaceMethods<UserOpCompatibleInterface>";
   return ret;
 }
 
