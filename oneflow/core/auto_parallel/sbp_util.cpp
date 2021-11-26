@@ -15,6 +15,8 @@ limitations under the License.
 */
 
 #include "sbp_util.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 
 namespace oneflow {
 namespace auto_parallel {
@@ -70,7 +72,10 @@ double ComputCopyCostBetweenTwoSbpParallel(const cfg::NdSbp& producer_sbp_parall
                                            const ParallelDesc& producer_parallel_desc,
                                            const ParallelDesc& consumer_parallel_desc,
                                            bool is_same_sbp) {
-  return 1.0;
+  // TODO: Implement a true computation of copy cost for nd sbps
+  return ComputCopyCostBetweenTwoSbpParallel(
+      producer_sbp_parallel.sbp_parallel(0), consumer_sbp_parallel.sbp_parallel(0),
+      logical_blob_desc, producer_parallel_desc, is_same_sbp);
 }
 
 // Judge whether we need the same SBP for both producer and consumer

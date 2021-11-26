@@ -476,9 +476,12 @@ Maybe<void> Operator::GetNdSbpSignaturesIf(
   // Get 1D sbp signature list
   cfg::SbpSignatureList sbp_sig_list;
   JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &sbp_sig_list));
+  CHECK(sbp_sig_list.sbp_signature_size() > 0)
+      << "No sbp signature got from 1d GetSbpSignaturesIf!";
 
   int32_t sbp_dimension = parallel_desc.hierarchy()->NumAxes();
   cfg::NdSbpSignature nd_sbp_sig;
+  SbpSignatureToNdSbpSignature(sbp_sig_list.sbp_signature(0), &nd_sbp_sig);
   ResizeNdSbpSignature(nd_sbp_sig, sbp_dimension);
   // ND sbp signature list would be direct product of 1D sbp signatures
   ndsbp_sig_list.clear();
