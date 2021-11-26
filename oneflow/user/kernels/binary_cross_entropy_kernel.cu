@@ -139,7 +139,8 @@ class BinaryCrossEntropyKernel final : public user_op::OpKernel {
                                    ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         elem_cnt, input, target, reduction == ReductionType::kNone ? out : tmp_out, weight);
 
-    ApplyLossReductionIfNeed<DeviceType::kGPU, T>(ctx->stream(), elem_cnt, tmp_out, out, reduction);
+    ApplyLossReductionIfNeed<DeviceType::kCUDA, T>(ctx->stream(), elem_cnt, tmp_out, out,
+                                                   reduction);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -179,7 +180,7 @@ class BinaryCrossEntropyGradKernel final : public user_op::OpKernel {
 #define REGISTER_BINARY_CROSS_ENTROPY_KERNEL(dtype)                                        \
   REGISTER_USER_KERNEL("binary_cross_entropy")                                             \
       .SetCreateFn<BinaryCrossEntropyKernel<dtype>>()                                      \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                     \
                        && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
                        && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))   \
@@ -188,7 +189,7 @@ class BinaryCrossEntropyGradKernel final : public user_op::OpKernel {
 #define REGISTER_BINARY_CROSS_ENTROPY_GRAD_KERNEL(dtype)                                   \
   REGISTER_USER_KERNEL("binary_cross_entropy_grad")                                        \
       .SetCreateFn<BinaryCrossEntropyGradKernel<dtype>>()                                  \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                     \
                        && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
                        && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)     \
