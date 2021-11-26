@@ -54,8 +54,10 @@ Maybe<void> Dropout::Capture(DropoutCaptureState* ctx, const TensorTuple& inputs
 
   if (inputs.size() == 1) {
     ctx->has_addend = false;
-  } else {
+  } else if (inputs.size() == 2) {
     ctx->has_addend = true;
+  } else {
+    UNIMPLEMENTED();
   }
 
   ctx->SaveTensorForBackward(outputs.at(1));  // output mask
