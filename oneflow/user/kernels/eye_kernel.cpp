@@ -33,17 +33,17 @@ class EyeKernel final : public OpKernel {
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     T* out = out_tensor->mut_dptr<T>();
     Memset<device_type>(
-        ctx->device_ctx(), out_tensor->mut_dptr<T>(), 0,
+        ctx->stream(), out_tensor->mut_dptr<T>(), 0,
         out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type()));
-    EyeFunctor<device_type, T>()(ctx->device_ctx(), m, std::min(m, n), out);
+    EyeFunctor<device_type, T>()(ctx->stream(), m, std::min(m, n), out);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_EYE_KERNEL(device, dtype)                                             \
   REGISTER_USER_KERNEL("eye").SetCreateFn<EyeKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device)                                              \
-      & (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
+      (user_op::HobDeviceType() == device)                                             \
+      && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
 #define REGISTER_EYE_KERNELS_WITH_DEVICE(device) \
   REGISTER_EYE_KERNEL(device, uint8_t)           \
@@ -58,7 +58,7 @@ REGISTER_EYE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 
 // // Register GPU version
 #ifdef WITH_CUDA
-REGISTER_EYE_KERNELS_WITH_DEVICE(DeviceType::kGPU);
+REGISTER_EYE_KERNELS_WITH_DEVICE(DeviceType::kCUDA);
 #endif
 }  // namespace user_op
 }  // namespace oneflow

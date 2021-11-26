@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/gather_kernel_util.h"
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #include <assert.h>
 
 namespace oneflow {
@@ -61,39 +62,39 @@ bool IsSafeUseIndex32(const Shape& flat_in_shape, const int64_t num_indices) {
 }  // namespace
 
 template<typename T, typename K>
-struct GatherKernelUtilImpl<DeviceType::kGPU, T, K> final {
-  static void Forward(DeviceCtx* ctx, const K* indices, int64_t num_indices, const T* in,
+struct GatherKernelUtilImpl<DeviceType::kCUDA, T, K> final {
+  static void Forward(ep::Stream* stream, const K* indices, int64_t num_indices, const T* in,
                       const Shape& flat_in_shape, T* out, const int64_t offset) {
     const int64_t out_elem_cnt = flat_in_shape.At(0) * num_indices * flat_in_shape.At(2);
     if (IsSafeUseIndex32(flat_in_shape, num_indices)) {
-      GatherForwardGpu<T, K, int32_t>
-          <<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-              out_elem_cnt, indices, num_indices, in, flat_in_shape.At(1), flat_in_shape.At(2), out,
-              offset);
+      GatherForwardGpu<T, K, int32_t><<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock,
+                                        0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+          out_elem_cnt, indices, num_indices, in, flat_in_shape.At(1), flat_in_shape.At(2), out,
+          offset);
     } else {
-      GatherForwardGpu<T, K, int64_t>
-          <<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-              out_elem_cnt, indices, num_indices, in, flat_in_shape.At(1), flat_in_shape.At(2), out,
-              offset);
+      GatherForwardGpu<T, K, int64_t><<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock,
+                                        0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+          out_elem_cnt, indices, num_indices, in, flat_in_shape.At(1), flat_in_shape.At(2), out,
+          offset);
     }
   }
 };
 
 template<typename K>
-struct GatherKernelUtilImpl<DeviceType::kGPU, float16, K> final {
-  static void Forward(DeviceCtx* ctx, const K* indices, int64_t num_indices, const float16* in,
+struct GatherKernelUtilImpl<DeviceType::kCUDA, float16, K> final {
+  static void Forward(ep::Stream* stream, const K* indices, int64_t num_indices, const float16* in,
                       const Shape& flat_in_shape, float16* out, const int64_t offset) {
-    GatherKernelUtilImpl<DeviceType::kGPU, half, K>::Forward(
-        ctx, indices, num_indices, reinterpret_cast<const half*>(in), flat_in_shape,
+    GatherKernelUtilImpl<DeviceType::kCUDA, half, K>::Forward(
+        stream, indices, num_indices, reinterpret_cast<const half*>(in), flat_in_shape,
         reinterpret_cast<half*>(out), offset);
   }
 };
 
-#define INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL(in_type_pair, index_type_pair)              \
-  template struct GatherKernelUtilImpl<DeviceType::kGPU, OF_PP_PAIR_FIRST(in_type_pair), \
+#define INITIATE_GATHER_KERNEL_UTIL_CUDA_IMPL(in_type_pair, index_type_pair)              \
+  template struct GatherKernelUtilImpl<DeviceType::kCUDA, OF_PP_PAIR_FIRST(in_type_pair), \
                                        OF_PP_PAIR_FIRST(index_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL, GATHER_DATA_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_CUDA_IMPL, GATHER_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ);
-#undef INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL
+#undef INITIATE_GATHER_KERNEL_UTIL_CUDA_IMPL
 
 }  // namespace oneflow

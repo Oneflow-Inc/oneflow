@@ -20,7 +20,7 @@ limitations under the License.
 #define private public
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/test_util.h"
@@ -38,7 +38,7 @@ namespace {
 TEST(ControlStreamType, new_symbol_symbol) {
   auto vm_desc = intrusive::make_shared<VmDesc>(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol"});
-  auto vm = intrusive::make_shared<VirtualMachine>(vm_desc.Get());
+  auto vm = intrusive::make_shared<VirtualMachineEngine>(vm_desc.Get());
   InstructionMsgList list;
   int64_t symbol_id = IdUtil::NewLogicalSymbolId();
   list.EmplaceBack(NewInstruction("NewSymbol")->add_int64_operand(symbol_id));
@@ -47,7 +47,6 @@ TEST(ControlStreamType, new_symbol_symbol) {
   ASSERT_EQ(vm->pending_msg_list().size(), 1 * 2);
   vm->Schedule();
   ASSERT_TRUE(vm->pending_msg_list().empty());
-  ASSERT_TRUE(vm->waiting_instruction_list().empty());
   ASSERT_TRUE(vm->active_stream_list().empty());
   ASSERT_EQ(vm->thread_ctx_list().size(), 1 * 2);
   ASSERT_EQ(vm->stream_type_id2stream_rt_desc().size(), 1 * 2);

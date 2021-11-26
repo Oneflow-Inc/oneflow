@@ -587,7 +587,7 @@ class Transpose2dimFunctor {
 
 class ArangeFunctor {
  public:
-  ArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
+  ArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
@@ -622,7 +622,7 @@ class Arange2Functor {
 
 class ConsistentArangeFunctor {
  public:
-  ConsistentArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
+  ConsistentArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Symbol<DType>& dtype, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
@@ -1170,7 +1170,17 @@ class SelectTopNFunctor {
   Maybe<TensorTuple> operator()(const TensorTuple& inputs, int32_t n) const {
     MutableAttrMap attr;
     JUST(attr.SetAttr<int32_t>("top_n", n));
+    std::vector<bool> require_grad(n);
+    std::vector<bool> is_leaf(n);
+    for (int i = 0; i < n; ++i) {
+      is_leaf.at(i) = (inputs.at(i)->is_leaf());
+      require_grad.at(i) = (inputs.at(i)->requires_grad());
+    }
     const auto& output = JUST(OpInterpUtil::Dispatch<one::TensorTuple>(*op_, inputs, attr));
+    for (int i = 0; i < n; ++i) {
+      inputs.at(i)->set_is_leaf(is_leaf.at(i));
+      JUST(inputs.at(i)->set_requires_grad(require_grad.at(i)));
+    }
     return output;
   }
 

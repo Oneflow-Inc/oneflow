@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/user/kernels/unfold_kernel_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -54,16 +55,16 @@ __global__ void CudaUnfoldForward(UnfoldParams<INDEX_T, NDIM, SDIM> params, cons
 }  // namespace
 
 template<typename T, typename INDEX_T, int NDIM, int SDIM>
-struct UnfoldKernelUtil<DeviceType::kGPU, T, INDEX_T, NDIM, SDIM> {
+struct UnfoldKernelUtil<DeviceType::kCUDA, T, INDEX_T, NDIM, SDIM> {
   using ParamType = UnfoldParams<INDEX_T, NDIM, SDIM>;
-  static void Forward(DeviceCtx* ctx, const UnfoldParams<INDEX_T, NDIM, SDIM>* params,
+  static void Forward(ep::Stream* stream, const UnfoldParams<INDEX_T, NDIM, SDIM>* params,
                       const T* input_ptr, T* output_ptr) {
     CudaUnfoldForward<T, INDEX_T, NDIM, SDIM>
-        <<<GetNumBlocks(params->out_elem_cnt), kBlockSize, 0, ctx->cuda_stream()>>>(
-            *params, input_ptr, output_ptr);
+        <<<GetNumBlocks(params->out_elem_cnt), kBlockSize, 0,
+           stream->As<ep::CudaStream>()->cuda_stream()>>>(*params, input_ptr, output_ptr);
   }
 };
-INSTANTIATE_UNFOLD_KERNEL_UTIL_FOR_DEVICE(DeviceType::kGPU)
+INSTANTIATE_UNFOLD_KERNEL_UTIL_FOR_DEVICE(DeviceType::kCUDA)
 }  // namespace user_op
 }  // namespace oneflow
 #endif  // WITH_CUDA

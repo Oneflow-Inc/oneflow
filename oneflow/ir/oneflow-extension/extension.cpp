@@ -131,7 +131,7 @@ llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
 }
 
 void WithMlirContext(
-    user_op::KernelComputeContext* ctx, llvm::SmallVector<llvm::StringRef, 4> ext_libs,
+    user_op::KernelComputeContext* ctx, const llvm::SmallVector<llvm::StringRef, 4>& ext_libs,
     const std::function<mlir::OwningModuleRef(mlir::MLIRContext* mlir_ctx)>& parse,
     const std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)>& lower) {
   mlir::DialectRegistry registry;
@@ -169,8 +169,10 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    llvm::SmallVector<llvm::StringRef, 4> ext_libs(
+        {SharedLibPaths()->begin(), SharedLibPaths()->end()});
     WithMlirContext(
-        ctx, {},
+        ctx, ext_libs,
         [&ctx](mlir::MLIRContext* mlir_ctx) {
           return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
                                                          mlir_ctx);
@@ -186,8 +188,8 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
 #define REGISTER_MLIR_JIT_CPU_KERNEL(dtype)                                                     \
   REGISTER_USER_KERNEL("mlir_jit")                                                              \
       .SetCreateFn<MlirJitCpuKernel<dtype>>()                                                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU)                            \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         return Maybe<void>::Ok();                                                               \
@@ -229,8 +231,8 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
 #define REGISTER_MLIR_JIT_GPU_KERNEL(dtype)                                                     \
   REGISTER_USER_KERNEL("mlir_jit")                                                              \
       .SetCreateFn<MlirJitGpuKernel<dtype>>()                                                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                            \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         return Maybe<void>::Ok();                                                               \
