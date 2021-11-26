@@ -123,6 +123,44 @@ __device__ Pack2Type<nv_bfloat16> Make2<nv_bfloat16>(float v) {
 #define RETURN_VOID_IF_DOUBLE typename std::enable_if_t<std::is_same<T, double>::value, void>
 
 template<typename T, int pack_size, bool tail>
+__global__ RETURN_VOID_IF_HALF PReluForwardMultiAlphaGpu(
+    const int32_t elem_cnt, const int32_t alpha_size, const int32_t inner_size,
+    const int64_t n_tail, const T* x, const T* alpha, T* y, const T* tail_x, T* tail_y) {
+  int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
+
+  using LoadType = cuda::elementwise::PackType<T, pack_size>;
+  using LoadPack = cuda::elementwise::Pack<T, pack_size>;
+  using StoreType = cuda::elementwise::PackType<Pack2Type<T>, pack_size / 2>;
+  using StorePack = cuda::elementwise::Pack<Pack2Type<T>, pack_size / 2>;
+
+  for (int64_t linear_index = global_thread_id * pack_size; linear_index < elem_cnt;
+       linear_index += gridDim.x * blockDim.x * pack_size) {
+    const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
+    H2Pack<T> x_vec{};
+    x_vec.pack_storage.storage = *x_load;
+
+    StorePack y_vec;
+#pragma unroll
+    for (int i = 0; i < pack_size; i++) {
+      y_vec.elem[i] =
+          x_vec.elem[i] > 0
+              ? x_vec.elem[i]
+              : __hmul2(x_vec.elem[i],
+                        static_cast<T>(alpha[(linear_index / inner_size) % alpha_size]));
+    }
+    *(reinterpret_cast<StoreType*>(y + linear_index)) = y_vec.storage;
+  }
+
+  if (tail && global_thread_id < n_tail) {
+    T tail_x_val = tail_x[global_thread_id];
+    tail_y[global_thread_id] =
+        tail_x_val > 0 ? tail_x_val
+                       : static_cast<T>(__hmul2(
+                           tail_x_val, alpha[(global_thread_id / inner_size) % alpha_size]));
+  }
+}
+
+template<typename T, int pack_size, bool tail>
 __global__ RETURN_VOID_IF_DOUBLE PReluForwardMultiAlphaGpu(
     const int32_t elem_cnt, const int32_t alpha_size, const int32_t inner_size,
     const int64_t n_tail, const T* x, const T* alpha, T* y, const T* tail_x, T* tail_y) {
@@ -185,6 +223,57 @@ __global__ RETURN_VOID_IF_FLOAT PReluForwardMultiAlphaGpu(
     tail_y[global_thread_id] =
         tail_x_val > 0 ? tail_x_val
                        : tail_x_val * alpha[(global_thread_id / inner_size) % alpha_size];
+  }
+}
+
+template<typename T, int pack_size, bool tail>
+__global__ RETURN_VOID_IF_HALF PReluBackwardMultiAlphaGpu(
+    const int32_t elem_cnt, const int32_t alpha_size, const int32_t inner_size,
+    const int32_t n_tail, const T* x, const T* alpha, const T* dy, T* dx, T* alpha_diff,
+    const T* tail_x, const T* tail_dy, T* tail_dx) {
+  int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
+
+  using LoadType = cuda::elementwise::PackType<T, pack_size>;
+  using LoadPack = cuda::elementwise::Pack<T, pack_size>;
+  using StoreType = cuda::elementwise::PackType<Pack2Type<T>, pack_size / 2>;
+  using StorePack = cuda::elementwise::Pack<Pack2Type<T>, pack_size / 2>;
+
+  for (int64_t linear_index = global_thread_id * pack_size; linear_index < elem_cnt;
+       linear_index += gridDim.x * blockDim.x * pack_size) {
+    const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
+    H2Pack<T> x_vec;
+    x_vec.storage = *x_load;
+
+    const LoadType* dy_load = reinterpret_cast<const LoadType*>(dy + linear_index);
+    H2Pack<T> dy_vec;
+    dy_vec.storage = *dy_load;
+
+    StorePack dx_vec;
+#pragma unroll
+    for (int i = 0; i < pack_size; i++) {
+      dx_vec.elem[i] = x_vec.elem[i] > 0 ? dy_vec.elem[i]
+                                         : __hmul2(dy_vec.elem[i],
+                                                   alpha[(linear_index / inner_size) % alpha_size]);
+      alpha_diff[(linear_index / inner_size) % alpha_size] =
+          __hadd2(alpha_diff[(linear_index / inner_size) % alpha_size],
+                  x_vec.elem[i] > 0
+                      ? 0
+                      : __hmul2(dy_vec.elem[i], alpha[(linear_index / inner_size) % alpha_size]));
+    }
+
+    *(reinterpret_cast<StorePack*>(dx + linear_index)) = dx_vec.storage;
+  }
+
+  if (tail && global_thread_id < n_tail) {
+    T tail_x_val = tail_x[global_thread_id];
+    T tail_dy_val = tail_dy[global_thread_id];
+    tail_dx[global_thread_id] =
+        tail_x_val > 0 ? tail_dy_val
+                       : static_cast<T>(__hmul2(
+                           tail_dy_val, alpha[(global_thread_id / inner_size) % alpha_size]));
+    alpha_diff[(global_thread_id / inner_size) % alpha_size] =
+        static_cast<T>(__hadd2(alpha_diff[(global_thread_id / inner_size) % alpha_size],
+                               tail_x_val > 0 ? 0 : __hmul2(tail_dy_val, tail_x_val)));
   }
 }
 
@@ -394,6 +483,7 @@ class GpuPReluKernel final : public user_op::OpKernel {
 
 REGISTER_GPU_PRELU_KERNEL(float)
 REGISTER_GPU_PRELU_KERNEL(double)
+REGISTER_GPU_PRELU_KERNEL(half)
 
 template<typename T>
 class GpuPReluGradKernel final : public user_op::OpKernel {
@@ -444,5 +534,6 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
 
 REGISTER_GPU_PRELU_GRAD_KERNEL(float)
 REGISTER_GPU_PRELU_GRAD_KERNEL(double)
+REGISTER_GPU_PRELU_GRAD_KERNEL(half)
 
 }  // namespace oneflow
