@@ -452,13 +452,9 @@ LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op
              .succeeded());
   const std::string op_name = user_op_adaptor.op_name().getValue().str();
   int32_t input_idx = 0;
-  llvm::errs() << keys.size() << "\n";
-  llvm::errs() << sizes.size() << "\n";
   for (auto tuple : llvm::zip(keys, sizes)) {
     auto input_key = std::get<0>(tuple);
     auto input_size = std::get<1>(tuple);
-    llvm::errs() << input_key << "\n";
-    llvm::errs() << input_size << "\n";
     assert(input_size > 0);
     for (int32_t i = 0; i < input_size; i++) {
       if (auto result = op->getOperand(input_idx).dyn_cast<mlir::OpResult>()) {
