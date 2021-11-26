@@ -132,17 +132,13 @@ def inplace_mul_tensors_helper(test_case, device, arr_0, arr_y):
     id_inpalce_x = id(of_inplace_x)
     of_inplace_x.mul_(of_y)
     test_case.assertTrue(
-        np.allclose(of_inplace_x.numpy(), np.multiply(arr_0+1, arr_y), 1e-05, 1e-05)
+        np.allclose(of_inplace_x.numpy(), np.multiply(arr_0 + 1, arr_y), 1e-05, 1e-05)
     )
     test_case.assertTrue(id_inpalce_x == id(of_inplace_x))
     of_inplace_x = of_inplace_x.sum()
     of_inplace_x.backward()
-    test_case.assertTrue(
-        np.allclose(arr_y, of_x.grad.numpy(), 1e-05, 1e-05)
-    )
-    test_case.assertTrue(
-        np.allclose(arr_0+1, of_y.grad.numpy(), 1e-05, 1e-05)
-    )
+    test_case.assertTrue(np.allclose(arr_y, of_x.grad.numpy(), 1e-05, 1e-05))
+    test_case.assertTrue(np.allclose(arr_0 + 1, of_y.grad.numpy(), 1e-05, 1e-05))
 
 
 def _test_inplace_mul_tensors(test_case, device):
@@ -161,7 +157,7 @@ def _test_inplace_mul_scalar(test_case, device):
     id_x_before = id(of_inplace_x)
     of_inplace_x.mul_(y)
     test_case.assertTrue(id_x_before == id(of_inplace_x))
-    test_case.assertTrue(np.allclose(of_inplace_x.numpy(), np.multiply(arr+1, y)))
+    test_case.assertTrue(np.allclose(of_inplace_x.numpy(), np.multiply(arr + 1, y)))
 
     of_x = flow.tensor(
         arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
@@ -171,7 +167,7 @@ def _test_inplace_mul_scalar(test_case, device):
     of_inplace_x.mul_(y)
     test_case.assertTrue(of_inplace_x_id_before == id(of_inplace_x))
     test_case.assertTrue(
-        np.allclose(of_inplace_x.numpy(), np.multiply(arr+1, y), 1e-05, 1e-05)
+        np.allclose(of_inplace_x.numpy(), np.multiply(arr + 1, y), 1e-05, 1e-05)
     )
     of_inplace_x = of_inplace_x.sum()
     of_inplace_x.backward()
@@ -192,6 +188,14 @@ class TestMulModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_boardcast_mul(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=3, dim0=4, dim1=2, dim2=3).to(device)
+        y = random_pytorch_tensor(ndim=2, dim0=2, dim1=3).to(device)
+        x.mul_(y)
+        return x
 
 
 if __name__ == "__main__":
