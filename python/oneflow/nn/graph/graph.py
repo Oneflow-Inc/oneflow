@@ -492,7 +492,7 @@ class Graph(object):
                 + "the total time consumed to complete build graph and compiling plan and init graph runtime:"
                 + str(round(t3 - t0, 2))
                 + "s"
-                + "\n"
+                + "\n",
             )
         except:
             self._print(
