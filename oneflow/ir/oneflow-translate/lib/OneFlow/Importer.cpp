@@ -375,7 +375,8 @@ template<>
 LogicalResult GetFullKeys<OpTrait::AttrSizedOperandSegments>(Operation* op,
                                                              std::vector<std::string>& full_keys) {
   if (auto uc = dyn_cast<UserOpCompatible>(op)) {
-    full_keys = uc.inputKeys();
+    assert(full_keys.size() == 0);
+    full_keys.insert(full_keys.end(), uc.inputKeys().begin(), uc.inputKeys().end());
     return success();
   }
   return failure();
@@ -385,7 +386,8 @@ template<>
 LogicalResult GetFullKeys<OpTrait::AttrSizedResultSegments>(Operation* op,
                                                             std::vector<std::string>& full_keys) {
   if (auto uc = dyn_cast<UserOpCompatible>(op)) {
-    full_keys = uc.outputKeys();
+    assert(full_keys.size() == 0);
+    full_keys.insert(full_keys.end(), uc.outputKeys().begin(), uc.outputKeys().end());
     return success();
   }
   return failure();
@@ -420,7 +422,9 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
     if (!size_attr) return failure();
     auto sizes_ = size_attr.getValues<int32_t>();
     if (keys.size() != sizes_.size()) {
-      op->emitError() << "fail to convert op inputs, keys != sizes, name: " << op->getName();
+      op->emitError() << "fail to convert op inputs, keys != sizes, attr_name: " << attr_name
+                      << ", keys: " << keys.size() << ", sizes: " << sizes_.size()
+                      << ", name: " << op->getName();
       op->dump();
       return failure();
     };
