@@ -27,17 +27,15 @@ class EyeKernel final : public OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    // rows
-    int64_t n = ctx->Attr<int64_t>("n");
-    // cols
-    int64_t m = ctx->Attr<int64_t>("m");
-    if (m == 0 || n == 0) { return; }
+    int64_t rows = ctx->Attr<int64_t>("rows");
+    int64_t cols = ctx->Attr<int64_t>("cols");
+    if (rows == 0 || cols == 0) { return; }
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     T* out = out_tensor->mut_dptr<T>();
     Memset<device_type>(
         ctx->stream(), out_tensor->mut_dptr<T>(), 0,
         out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type()));
-    EyeFunctor<device_type, T>()(ctx->stream(), m, std::min(m, n), out);
+    EyeFunctor<device_type, T>()(ctx->stream(), cols, std::min(cols, rows), out);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
