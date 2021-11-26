@@ -115,10 +115,10 @@ class OneFlow_ConvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
       I32ElementsAttr:$operand_segment_sizes
     );
     let extraClassDeclaration = [{
-      static std::vector<std::string> inputKeys() { return {"in", "weight", "bias", "bias_multiplier"}; }
-      static std::vector<std::uint32_t> inputMinimums() { return {1, 1, 0, 0}; }
-      static std::vector<std::string> outputKeys() { return {"out"}; }
-      static std::vector<std::uint32_t> outputMinimums() { return {1}; }
+      static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "weight", "bias", "bias_multiplier"}); return &val; }
+      static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0, 0}); return &val; }
+      static const std::vector<std::string>* outputKeys() { std::vector<std::string> val({"out"}); return &val; }
+      static const std::vector<std::uint32_t>* outputMinimums() { std::vector<std::uint32_t> val({1}); return &val; }
     }];
 }
 
@@ -137,10 +137,10 @@ class OneFlow_LazyPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
     BoolAttr:$ceil_mode
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputKeys() { return {"x"}; }
-    static std::vector<std::uint32_t> inputMinimums() { return {1}; }
-    static std::vector<std::string> outputKeys() { return {"y"}; }
-    static std::vector<std::uint32_t> outputMinimums() { return {1}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
+    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -163,10 +163,10 @@ class OneFlow_LazyPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
     BoolAttr:$ceil_mode
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputKeys() { return {"x", "y", "dy"}; }
-    static std::vector<std::uint32_t> inputMinimums() { return {1, 1, 1}; }
-    static std::vector<std::string> outputKeys() { return {"dx"}; }
-    static std::vector<std::uint32_t> outputMinimums() { return {1}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "dy"}); return &val; }
+    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
+    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -186,10 +186,10 @@ class OneFlow_EagerPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
     SI64Attr:$divisor_override
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputKeys() { return {"x"}; }
-    static std::vector<std::uint32_t> inputMinimums() { return {1}; }
-    static std::vector<std::string> outputKeys() { return {"y"}; }
-    static std::vector<std::uint32_t> outputMinimums() { return {1}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
+    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -212,10 +212,10 @@ class OneFlow_EagerPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
     SI64Attr:$divisor_override
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputKeys() { return {"x", "y", "dy"}; }
-    static std::vector<std::uint32_t> inputMinimums() { return {1, 1, 1}; }
-    static std::vector<std::string> outputKeys() { return {"dx"}; }
-    static std::vector<std::uint32_t> outputMinimums() { return {1}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "dy"}); return &val; }
+    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
+    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 

@@ -10,19 +10,19 @@ def UserOpCompatibleInterface : OpInterface<"UserOpCompatible"> {
 
   let methods = [
     StaticInterfaceMethod<"",
-        "std::vector<std::string>", "inputKeys", (ins), [{
+        "const std::vector<std::string>*", "inputKeys", (ins), [{
         return ConcreteOp::inputKeys();
     }]>,
     StaticInterfaceMethod<"",
-        "std::vector<uint32_t>", "inputMinimums", (ins), [{
+        "const std::vector<uint32_t>*", "inputMinimums", (ins), [{
         return ConcreteOp::inputMinimums();
     }]>,
     StaticInterfaceMethod<"",
-        "std::vector<std::string>", "outputKeys", (ins), [{
+        "const std::vector<std::string>*", "outputKeys", (ins), [{
         return ConcreteOp::outputKeys();
     }]>,
     StaticInterfaceMethod<"",
-        "std::vector<uint32_t>", "outputMinimums", (ins), [{
+        "const std::vector<uint32_t>*", "outputMinimums", (ins), [{
         return ConcreteOp::outputMinimums();
     }]>
   ];
