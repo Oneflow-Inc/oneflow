@@ -440,8 +440,7 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
       sizes.push_back(size);
     }
   }
-  assert(keys.size() == sizes.size());
-  return success();
+  return success(keys.size() == sizes.size());
 }
 
 LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
