@@ -127,8 +127,12 @@ class InplaceMulFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     TensorProcessor tensor_processor;
-    std::shared_ptr<one::Tensor> x_copy = JUST(Identity(x));
-    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x_copy, y}).Apply());
+    if (y->requires_grad()) {
+      std::shared_ptr<one::Tensor> x_copy = JUST(Identity(x));
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x_copy, y}).Apply());
+    } else {
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    }
     const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());
     const std::shared_ptr<one::Tensor>& x_cast = input_vec.at(0);
     const std::shared_ptr<one::Tensor>& y_cast = input_vec.at(1);
