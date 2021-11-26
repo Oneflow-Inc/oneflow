@@ -18,6 +18,8 @@ limitations under the License.
 
 #include <assert.h>
 #include <algorithm>
+#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "sbp_node.h"
 #include "sbp_util.h"
 
@@ -407,7 +409,8 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool comp
     if (use_sbp_collector_ && compute_cost && !SearchLbi(lbi)) { return; }
 
     oneflow::OpNode* producer = StartNode->op_node;
-    const oneflow::ParallelDesc& parallel_desc = consumer->parallel_desc();
+    const oneflow::ParallelDesc& producer_parallel_desc = producer->parallel_desc();
+    const oneflow::ParallelDesc& consumer_parallel_desc = consumer->parallel_desc();
 
     // Need to be careful, the logical blob description should be independent to current
     // SbpParallel. Use producer or op_node?
@@ -423,19 +426,20 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool comp
          sbp_id_producer++) {
       // get sbp parallel for a logical blob in producer
       const auto producer_sbp_bn_in_op2sbp_parallel =
-          StartNode->SbpSignatureList[sbp_id_producer]->bn_in_op2sbp_parallel();
-      const cfg::SbpParallel& sbp_producer = producer_sbp_bn_in_op2sbp_parallel.at(obn);
+          StartNode->SbpSignatureList[sbp_id_producer]->bn_in_op2nd_sbp();
+      const cfg::NdSbp& sbp_producer = producer_sbp_bn_in_op2sbp_parallel.at(obn);
 
       // look through sbp signature in consumer
       for (int32_t sbp_id_consumer = 0; sbp_id_consumer < consumer_sbp_size; sbp_id_consumer++) {
         // get sbp parallel for a logical blob in consumer
         const auto consumer_sbp_bn_in_op2sbp_parallel =
-            EndNode->SbpSignatureList[sbp_id_consumer]->bn_in_op2sbp_parallel();
-        const cfg::SbpParallel& sbp_consumer = consumer_sbp_bn_in_op2sbp_parallel.at(ibn);
+            EndNode->SbpSignatureList[sbp_id_consumer]->bn_in_op2nd_sbp();
+        const cfg::NdSbp& sbp_consumer = consumer_sbp_bn_in_op2sbp_parallel.at(ibn);
 
         // compute copy cost for a specific logical blob
         Cost[sbp_id_producer][sbp_id_consumer] += ComputCopyCostBetweenTwoSbpParallel(
-            sbp_producer, sbp_consumer, logical_blob_desc, parallel_desc, is_same_sbp);
+            sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc,
+            consumer_parallel_desc, is_same_sbp);
       }
     }
   }

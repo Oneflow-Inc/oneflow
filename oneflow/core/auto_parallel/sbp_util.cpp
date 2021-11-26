@@ -63,6 +63,16 @@ double ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& producer_sbp_
   return 2 * logical_blob_size * parallel_desc.parallel_num();
 }
 
+// compute copy cost
+double ComputCopyCostBetweenTwoSbpParallel(const cfg::NdSbp& producer_sbp_parallel,
+                                           const cfg::NdSbp& consumer_sbp_parallel,
+                                           const BlobDesc& logical_blob_desc,
+                                           const ParallelDesc& producer_parallel_desc,
+                                           const ParallelDesc& consumer_parallel_desc,
+                                           bool is_same_sbp) {
+  return 1.0;
+}
+
 // Judge whether we need the same SBP for both producer and consumer
 bool IsSameSBP(OpNode* consumer, const std::string& ibn) {
   // is mutable
