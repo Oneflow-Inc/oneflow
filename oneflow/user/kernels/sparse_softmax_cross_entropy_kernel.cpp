@@ -130,7 +130,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
                                  (SparseSoftmaxCrossEntropyMsKernel),
                                  ("sparse_softmax_cross_entropy_ms"),
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 #endif
 
@@ -228,7 +228,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_GRAD_KERN
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_GRAD_KERNEL,
                                  (SparseSoftmaxCrossEntropyGradKernel),
                                  ("sparse_softmax_cross_entropy_grad"),
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 #endif
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_GRAD_KERNEL,
@@ -240,7 +240,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_GRAD_KERN
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_GRAD_KERNEL,
                                  (SparseSoftmaxCrossEntropyMsGradKernel),
                                  ("sparse_softmax_cross_entropy_ms_grad"),
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 #endif
 }  // namespace user_op

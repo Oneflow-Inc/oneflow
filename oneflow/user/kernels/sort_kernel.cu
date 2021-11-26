@@ -33,8 +33,8 @@ class GpuSortKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    Memcpy<DeviceType::kGPU>(ctx->stream(), out->mut_dptr<T>(), in->dptr<T>(),
-                             in->shape().elem_cnt() * sizeof(T));
+    Memcpy<DeviceType::kCUDA>(ctx->stream(), out->mut_dptr<T>(), in->dptr<T>(),
+                              in->shape().elem_cnt() * sizeof(T));
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = in->shape().elem_cnt() / instance_size;
     const std::string& direction = ctx->Attr<std::string>("direction");
@@ -53,10 +53,10 @@ class GpuSortKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_SORT_KERNEL(dtype)                                                     \
+#define REGISTER_CUDA_SORT_KERNEL(dtype)                                                    \
   REGISTER_USER_KERNEL("sort")                                                              \
       .SetCreateFn<GpuSortKernel<dtype>>()                                                  \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                      \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))    \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                         \
         const Shape& in_shape = ctx->InputShape("in", 0);                                   \
@@ -73,9 +73,9 @@ class GpuSortKernel final : public user_op::OpKernel {
         }                                                                                   \
       });
 
-REGISTER_GPU_SORT_KERNEL(float)
-REGISTER_GPU_SORT_KERNEL(double)
-REGISTER_GPU_SORT_KERNEL(int32_t)
-REGISTER_GPU_SORT_KERNEL(int64_t)
+REGISTER_CUDA_SORT_KERNEL(float)
+REGISTER_CUDA_SORT_KERNEL(double)
+REGISTER_CUDA_SORT_KERNEL(int32_t)
+REGISTER_CUDA_SORT_KERNEL(int64_t)
 
 }  // namespace oneflow
