@@ -138,7 +138,7 @@ class ScalarAdd2Functor {
                            const Scalar& alpha) const {
     std::shared_ptr<one::Tensor> other_;
     other_ = alpha.Value<float>() == 1.0 ? other : JUST(ScalarMul(alpha, other));
-    return ScalarAdd(other_, input, /*alpha=*/1, /*inplace=*/false);
+    return ScalarAdd(other_, input, /*alpha=*/1.0, /*inplace=*/false);
   }
 };
 
@@ -146,14 +146,15 @@ class ScalarSubFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar,
                            bool inplace) const {
-    return ScalarAdd(x, Scalar(-1) * scalar, /*alpha=*/1, inplace);
+    return ScalarAdd(x, Scalar(-1) * scalar, /*alpha=*/1.0, inplace);
   }
 };
 
 class ScalarSub2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
-    return ScalarAdd(JUST(ScalarMul(x, Scalar(-1), false)), scalar, /*alpha=*/1, /*inplace=*/false);
+    return ScalarAdd(JUST(ScalarMul(x, Scalar(-1), false)), scalar, /*alpha=*/1.0,
+                     /*inplace=*/false);
   }
 };
 

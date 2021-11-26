@@ -480,7 +480,7 @@ class MarginRankingLossFunctor : public SimpleLossFunctorBase {
                  .then(functional::Negative)
                  .then(std::bind(functional::Mul, target, std::placeholders::_1))
                  .then([&margin](const std::shared_ptr<one::Tensor>& x) {
-                   return functional::ScalarAdd(x, Scalar(margin), /*alpha=*/1, true);
+                   return functional::ScalarAdd(x, Scalar(margin), /*alpha=*/1.0, true);
                  })
                  .then(std::bind(functional::Clamp, std::placeholders::_1, Scalar(0), NullOpt))
                  .call(input_1, input_2));
@@ -1096,18 +1096,18 @@ class TripletMarginLossFunctor {
       if ((reduction != "none") && (reduction != "sum") && (reduction != "mean")) return false;
       return true;
     }());
-    auto da_p = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, positive)), /*alpha=*/1)), p,
+    auto da_p = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, positive)), /*alpha=*/1.0)), p,
                                 dim, false, anchor->dtype()));
-    auto da_n = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, negative)), /*alpha=*/1)), p,
+    auto da_n = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, negative)), /*alpha=*/1.0)), p,
                                 dim, false, anchor->dtype()));
     if (swap) {
       auto distance_swap =
-          JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(positive, negative)), /*alpha=*/1)), p, dim,
-                          false, positive->dtype()));
+          JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(positive, negative)), /*alpha=*/1.0)), p,
+                          dim, false, positive->dtype()));
       da_n = JUST(Minimum(distance_swap, da_n));
     }
     auto triplet_loss = JUST(
-        Clamp(JUST(ScalarAdd(JUST(Sub(da_p, da_n)), margin, /*alpha=*/1, false)), 0.0, NullOpt));
+        Clamp(JUST(ScalarAdd(JUST(Sub(da_p, da_n)), margin, /*alpha=*/1.0, false)), 0.0, NullOpt));
     int32_t ndim = triplet_loss->ndim() - 1;
     std::vector<int32_t> axis(1, ndim);
 
