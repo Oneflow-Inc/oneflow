@@ -98,19 +98,19 @@ namespace {
   REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kCPU, float) \
   REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kCPU, double)
 
-#define REGISTER_SIMPLE_LOSS_KERNEL_GPU(name, kernel)                \
-  REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kGPU, half)  \
-  REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kGPU, float) \
-  REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kGPU, double)
+#define REGISTER_SIMPLE_LOSS_KERNEL_CUDA(name, kernel)                \
+  REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kCUDA, half)  \
+  REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kCUDA, float) \
+  REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kCUDA, double)
 
 #define REGISTER_SIMPLE_LOSS_GRAD_KERNEL_CPU(name, kernel)                \
   REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kCPU, float) \
   REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kCPU, double)
 
-#define REGISTER_SIMPLE_LOSS_GRAD_KERNEL_GPU(name, kernel)                \
-  REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kGPU, half)  \
-  REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kGPU, float) \
-  REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kGPU, double)
+#define REGISTER_SIMPLE_LOSS_GRAD_KERNEL_CUDA(name, kernel)                \
+  REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kCUDA, half)  \
+  REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kCUDA, float) \
+  REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kCUDA, double)
 
 }  // namespace loss
 }  // namespace user_op

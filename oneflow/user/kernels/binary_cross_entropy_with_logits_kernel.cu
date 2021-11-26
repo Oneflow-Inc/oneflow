@@ -184,14 +184,14 @@ class BinaryCrossEntropyWithLogitsKernel final : public user_op::OpKernel {
       Shape pos_weight_shape = Shape::Ones(target_blob->shape().NumAxes());
       pos_weight_shape.Set(pos_weight_shape.NumAxes() - 1,
                            ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->shape().elem_cnt());
-      NdarrayUtil<DeviceType::kGPU, T>::BroadcastMul(
+      NdarrayUtil<DeviceType::kCUDA, T>::BroadcastMul(
           ctx->stream(), XpuVarNdarray<T>(target_blob->shape(), pos_weight_processed),
           XpuVarNdarray<const T>(pos_weight_shape, pos_weight),
           XpuVarNdarray<const T>(target_blob->shape(), target));
     }
     ComputeBinaryCrossEntropyWithLogitsOut<<<BlocksNum4ThreadsNum(elem_cnt),
                                              kCudaThreadsNumPerBlock, 0,
-                                             ctx->device_ctx()->cuda_stream()>>>(
+                                             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         elem_cnt, input, target, out, weight, pos_weight_processed);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -230,7 +230,7 @@ class BinaryCrossEntropyWithLogitsGradKernel final : public user_op::OpKernel {
       Shape pos_weight_shape = Shape::Ones(target_blob->shape().NumAxes());
       pos_weight_shape.Set(pos_weight_shape.NumAxes() - 1,
                            ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->shape().elem_cnt());
-      NdarrayUtil<DeviceType::kGPU, T>::BroadcastMul(
+      NdarrayUtil<DeviceType::kCUDA, T>::BroadcastMul(
           ctx->stream(), XpuVarNdarray<T>(target_blob->shape(), pos_weight_processed),
           XpuVarNdarray<const T>(pos_weight_shape, pos_weight),
           XpuVarNdarray<const T>(target_blob->shape(), target));
@@ -268,7 +268,7 @@ user_op::InferTmpSizeFn GenBwInferTmpSizeFn() {
 #define REGISTER_BINARY_CROSS_ENTROPY_KERNEL(dtype)                                        \
   REGISTER_USER_KERNEL("binary_cross_entropy_with_logits")                                 \
       .SetCreateFn<BinaryCrossEntropyWithLogitsKernel<dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                     \
                        && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
                        && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))   \
@@ -277,7 +277,7 @@ user_op::InferTmpSizeFn GenBwInferTmpSizeFn() {
 #define REGISTER_BINARY_CROSS_ENTROPY_GRAD_KERNEL(dtype)                                   \
   REGISTER_USER_KERNEL("binary_cross_entropy_with_logits_grad")                            \
       .SetCreateFn<BinaryCrossEntropyWithLogitsGradKernel<dtype>>()                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                     \
                        && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
                        && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)     \

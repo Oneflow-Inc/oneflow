@@ -23,7 +23,7 @@ namespace oneflow {
 class Blob;
 
 template<>
-struct BlasIf<DeviceType::kGPU> {
+struct BlasIf<DeviceType::kCUDA> {
   static void OFGemm(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                      const int m, const int n, const int k, const double alpha, const float* a,
                      const float* b, const double beta, float* c);

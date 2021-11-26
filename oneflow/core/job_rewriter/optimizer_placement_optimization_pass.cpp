@@ -75,7 +75,7 @@ Maybe<void> GetDataParallelVariableAndNaiveSuccNode(
     std::vector<const OpNode*>* out) {
   if (!start->op().op_conf().has_variable_conf()) { return Maybe<void>::Ok(); }
   const ParallelDesc& pd = start->parallel_desc();
-  if (pd.device_type() != DeviceType::kGPU) { return Maybe<void>::Ok(); }
+  if (pd.device_type() != DeviceType::kCUDA) { return Maybe<void>::Ok(); }
   if (pd.parallel_num() == 1) { return Maybe<void>::Ok(); }
   const OpNode* cur_node = start;
   while (cur_node != nullptr) {
