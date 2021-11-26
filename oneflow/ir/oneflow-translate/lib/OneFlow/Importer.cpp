@@ -447,13 +447,18 @@ LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op
                                   ::oneflow::UserOpConf* user_conf) {
   std::vector<std::string> keys{};
   std::vector<int32_t> sizes{};
+  op->dump();
   assert(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(op, keys, sizes)
              .succeeded());
   const std::string op_name = user_op_adaptor.op_name().getValue().str();
   int32_t input_idx = 0;
+  llvm::errs() << keys.size() << "\n";
+  llvm::errs() << sizes.size() << "\n";
   for (auto tuple : llvm::zip(keys, sizes)) {
     auto input_key = std::get<0>(tuple);
     auto input_size = std::get<1>(tuple);
+    llvm::errs() << input_key << "\n";
+    llvm::errs() << input_size << "\n";
     assert(input_size > 0);
     for (int32_t i = 0; i < input_size; i++) {
       if (auto result = op->getOperand(input_idx).dyn_cast<mlir::OpResult>()) {
@@ -479,7 +484,8 @@ LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op
             auto size = std::get<1>(name_size_tuple);
             if (size_sum + size >= result_number) {
               bn_i = result_number - size_sum;
-              *(input_s_ptr) = op_name + "/" + name + "_" + std::to_string(bn_i);
+              *(input_s_ptr) = def_op->getAttrOfType<StringAttr>("op_name").str() + "/" + name + "_"
+                               + std::to_string(bn_i);
               break;
             }
             size_sum += size;
