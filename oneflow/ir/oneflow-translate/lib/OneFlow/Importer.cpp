@@ -590,7 +590,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
       auto attr_name = id.str();
       Attribute attr = id_attr.second;
       auto user_attr = ::oneflow::AttrValue();
-      ::oneflow::AttrType attr_type = QueryAttrType(op->getName().getStringRef().str(), attr_name);
+      ::oneflow::AttrType attr_type = QueryAttrType(op->getName().stripDialect().str(), attr_name);
       if (attr_type == ::oneflow::kAtInt32) {
         user_attr.set_at_int32(attr.dyn_cast<IntegerAttr>().getSInt());
       } else if (attr_type == ::oneflow::kAtInt64) {
