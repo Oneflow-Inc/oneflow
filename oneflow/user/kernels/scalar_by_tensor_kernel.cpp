@@ -102,7 +102,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_ADD_BY_TENSOR_KERNEL, SCALAR_BY
                                  DEVICE_TYPE_SEQ, ARITHMETIC_DATA_TYPE_SEQ)
 #ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_ADD_BY_TENSOR_KERNEL, SCALAR_BY_TENSOR_SEQ,
-                                 (DeviceType::kGPU), FLOAT16_DATA_TYPE_SEQ)
+                                 (DeviceType::kCUDA), FLOAT16_DATA_TYPE_SEQ)
 #endif
 
 }  // namespace oneflow

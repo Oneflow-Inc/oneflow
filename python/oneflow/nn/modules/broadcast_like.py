@@ -34,19 +34,6 @@ def _calc_broadcast_axes(x, like_tensor):
     return tuple(broadcast_axes)
 
 
-class BroadCastLike(Module):
-    def __init__(self, broadcast_axes: Optional[Sequence] = None) -> None:
-        super().__init__()
-        self.broadcast_axes = broadcast_axes
-
-    def forward(self, x, like_tensor):
-        if self.broadcast_axes is None:
-            broadcast_axes = _calc_broadcast_axes(x, like_tensor)
-        else:
-            broadcast_axes = self.broadcast_axes
-        return flow._C.broadcast_like(x, like_tensor, broadcast_axes=broadcast_axes)
-
-
 def broadcast_like_op(x, like_tensor, broadcast_axes: Optional[Sequence] = None):
     """This operator broadcast tensor `x` to `like_tensor` according to the broadcast_axes. 
 
@@ -71,4 +58,8 @@ def broadcast_like_op(x, like_tensor, broadcast_axes: Optional[Sequence] = None)
         oneflow.Size([3, 4, 5])
 
     """
-    return BroadCastLike(broadcast_axes=broadcast_axes)(x, like_tensor)
+    if broadcast_axes is None:
+        broadcast_axes = _calc_broadcast_axes(x, like_tensor)
+    else:
+        broadcast_axes = broadcast_axes
+    return flow._C.broadcast_like(x, like_tensor, broadcast_axes=broadcast_axes)

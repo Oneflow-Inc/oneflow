@@ -405,7 +405,7 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const auto& generator = CHECK_JUST(one::MakeGenerator(DeviceType::kGPU));
+    const auto& generator = CHECK_JUST(one::MakeGenerator(DeviceType::kCUDA));
     return std::make_shared<FusedDropoutKernelState>(generator);
   }
 
@@ -446,7 +446,7 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
 
 #define REGISTER_DROPOUT_KERNEL_GPU(cpp_type, data_type)                                     \
   REGISTER_USER_KERNEL("dropout").SetCreateFn<DropoutKernelGPU<cpp_type>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kGPU)                                         \
+      (user_op::HobDeviceType() == DeviceType::kCUDA)                                         \
       && (user_op::HobDataType("out", 0) == data_type)                                       \
       && (user_op::HobDataType("mask", 0) == GetDataType<int8_t>::value))
 
@@ -482,7 +482,7 @@ class DropoutGradKernelGPU final : public user_op::OpKernel, public user_op::Cud
 #define REGISTER_DROPOUT_GRAD_KERNEL_GPU(cpp_type, data_type)                                   \
   REGISTER_USER_KERNEL("dropout_grad")                                                          \
       .SetCreateFn<DropoutGradKernelGPU<cpp_type>>()                                            \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                           \
                        && (user_op::HobDataType("dx", 0) == data_type))                         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \

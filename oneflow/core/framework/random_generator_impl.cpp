@@ -155,7 +155,7 @@ Maybe<void> CUDASynchronize() {
 }  // namespace
 
 CUDAGeneratorImpl::CUDAGeneratorImpl(uint64_t seed, int device_index)
-    : DeviceGeneratorImpl(seed, DeviceType::kGPU, device_index) {
+    : DeviceGeneratorImpl(seed, DeviceType::kCUDA, device_index) {
   cudaDeviceProp prop;
   OF_CUDA_CHECK(cudaGetDeviceProperties(&prop, device_index));
   max_block_num_ = prop.multiProcessorCount;
@@ -416,7 +416,7 @@ template<>
 DeviceKey MakeDeviceKey<CUDAGeneratorImpl>(int device_index) {
   if (device_index == -1) { device_index = GetCudaDeviceIndex(); }
   DeviceKey device_key;
-  device_key.device_type = DeviceType::kGPU;
+  device_key.device_type = DeviceType::kCUDA;
   device_key.device_index = device_index;
   return device_key;
 }
@@ -437,7 +437,7 @@ Maybe<GeneratorImpl> MakeGeneratorImpl(uint64_t seed, DeviceType device_type, in
       break;
     }
 #ifdef WITH_CUDA
-    case kGPU: {
+    case kCUDA: {
       impl = JUST(MakeGeneratorImpl<CUDAGeneratorImpl>(seed, device_index));
       break;
     }
