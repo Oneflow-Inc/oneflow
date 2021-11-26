@@ -23,35 +23,24 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-struct ScalarPreluFunctor {
-  OF_DEVICE_FUNC T operator()(T x, T alpha) const { return x > 0 ? x : x * alpha; }
-};
+__global__ void PReluForwardSingleAlphaGpu(const int32_t elem_cnt, const T* x, const T* alpha,
+                                           T* y) {
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) { y[i] = x[i] > 0 ? x[i] : x[i] * alpha[0]; }
+}
 
 template<typename T>
-struct ScalarPreluGradFunctor {
-  OF_DEVICE_FUNC T operator()(T x, T dy, T alpha) const { return x > 0 ? dy : dy * alpha; }
-};
-
-template<>
-struct ScalarPreluFunctor<half> {
-  ScalarPreluFunctor<float> float_functor;
-  OF_DEVICE_FUNC half operator()(half x, half alpha) const {
-    return __float2half(float_functor(__half2float(x), __half2float(alpha)));
-    ;
+__global__ void PReluBackwardSingleAlphaGpu(const int32_t elem_cnt, const T* x, const T* alpha,
+                                            const T* dy, T* dx, T* alpha_diff) {
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
+    dx[i] = x[i] > 0 ? dy[i] : dy[i] * alpha[0];
+    alpha_diff[0] += x[i] > 0 ? 0 : dy[i] * x[i];
   }
-};
-
-template<>
-struct ScalarPreluGradFunctor<half> {
-  ScalarPreluGradFunctor<float> float_functor;
-  OF_DEVICE_FUNC half operator()(half x, half dy, half alpha) const {
-    return __float2half(float_functor(__half2float(x), __half2float(dy), __half2float(dy)));
-  }
-};
+}
 
 template<typename T>
-__global__ void PReluForwardGpu(const int32_t elem_cnt, const int32_t alpha_size,
-                                const int32_t inner_size, const T* x, const T* alpha, T* y) {
+__global__ void PReluForwardMultiAlphaGpu(const int32_t elem_cnt, const int32_t alpha_size,
+                                          const int32_t inner_size, const T* x, const T* alpha,
+                                          T* y) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T x_i = x[i];
     const T alpha_i = alpha[(i / inner_size) % alpha_size];
@@ -60,9 +49,9 @@ __global__ void PReluForwardGpu(const int32_t elem_cnt, const int32_t alpha_size
 }
 
 template<typename T>
-__global__ void PReluBackwardGpu(const int32_t elem_cnt, const int32_t alpha_size,
-                                 const int32_t inner_size, const T* x, const T* alpha, const T* dy,
-                                 T* dx, T* alpha_diff) {
+__global__ void PReluBackwardMultiAlphaGpu(const int32_t elem_cnt, const int32_t alpha_size,
+                                           const int32_t inner_size, const T* x, const T* alpha,
+                                           const T* dy, T* dx, T* alpha_diff) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T x_i = x[i];
     const T dy_i = dy[i];
@@ -89,15 +78,15 @@ class GpuPReluKernel final : public user_op::OpKernel {
     const int32_t elem_cnt = x->shape().elem_cnt();
     const int32_t alpha_size = alpha->shape().elem_cnt();
     if (alpha_size == 1) {
-      OF_CUDA_CHECK(cuda::elementwise::Binary(ScalarPreluFunctor<T>(), elem_cnt, y->mut_dptr<T>(),
-                                              x->dptr<T>(), alpha->dptr<T>(),
-                                              ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+      PReluForwardSingleAlphaGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                                      ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+          elem_cnt, x->dptr<T>(), alpha->dptr<T>(), y->mut_dptr<T>());
     } else {
       const int batch = x->shape().At(0);
       const int channels = x->shape().At(1);
       const int32_t inner_size = elem_cnt / batch / channels;
-      PReluForwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+      PReluForwardMultiAlphaGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                                     ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), y->mut_dptr<T>());
     }
   }
@@ -134,16 +123,17 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
     const int32_t alpha_size = alpha->shape().elem_cnt();
 
     if (alpha_size == 1) {
-      OF_CUDA_CHECK(cuda::elementwise::Ternary(
-          ScalarPreluGradFunctor<T>(), elem_cnt, dx->mut_dptr<T>(), x->dptr<T>(), dy->dptr<T>(),
-          alpha->dptr<T>(), ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+      PReluBackwardSingleAlphaGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                                       ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+          elem_cnt, x->dptr<T>(), alpha->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>(),
+          alpha_diff->mut_dptr<T>());
     } else {
       const int batch = x->shape().At(0);
       const int channels = x->shape().At(1);
       const int32_t inner_size = elem_cnt / batch / channels;
 
-      PReluBackwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+      PReluBackwardMultiAlphaGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                                      ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), dy->dptr<T>(),
           dx->mut_dptr<T>(), alpha_diff->mut_dptr<T>());
     }
