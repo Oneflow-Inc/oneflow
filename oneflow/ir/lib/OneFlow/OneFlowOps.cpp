@@ -29,6 +29,15 @@ limitations under the License.
 using namespace mlir;
 using namespace mlir::oneflow;
 
+::mlir::OperandRange UserOp::dataInputOperands() { return data_input(); }
+::mlir::OperandRange UserOp::ctrlInputOperands() { return ctrl_inputs(); }
+::mlir::ResultRange UserOp::dataOutputResults() { return data_output(); }
+::mlir::Value UserOp::ctrlOutputResult() { return ctrl_output(); }
+::mlir::OperandRange SystemOp::dataInputOperands() { return data_input(); }
+::mlir::OperandRange SystemOp::ctrlInputOperands() { return ctrl_inputs(); }
+::mlir::ResultRange SystemOp::dataOutputResults() { return data_output(); }
+::mlir::Value SystemOp::ctrlOutputResult() { return ctrl_output(); }
+
 static mlir::ParseResult parseConstantOp(mlir::OpAsmParser& parser, mlir::OperationState& result) {
   mlir::DenseElementsAttr value;
   if (parser.parseOptionalAttrDict(result.attributes)

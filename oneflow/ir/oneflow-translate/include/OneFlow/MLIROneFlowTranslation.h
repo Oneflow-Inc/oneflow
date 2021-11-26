@@ -32,16 +32,16 @@ using UserOpArgDefs = const ::google::protobuf::RepeatedPtrField<::oneflow::User
 namespace mlir {
 
 // TODO: wrap in a helper namespace
-std::pair<unsigned, unsigned> getODSResultIndexAndLength(Operation* op, unsigned index);
-::mlir::Operation::result_range getODSResults(Operation* op, unsigned index);
-llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op);
-ResultRange GetDataOutputResults(Operation* op);
+
 LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
                                   ::oneflow::UserOpConf* user_conf);
 LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
                                    ::oneflow::UserOpConf* user_conf);
-LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf);
+ResultRange GetDataOutputResults(Operation* op);
 OperandRange GetDataInputOperands(Operation* op);
+LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf);
+llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op);
+
 class Importer {
  public:
   Importer(MLIRContext* context, ModuleOp module)

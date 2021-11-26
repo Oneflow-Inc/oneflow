@@ -28,4 +28,25 @@ def UserOpCompatibleInterface : OpInterface<"UserOpCompatible"> {
   ];
 }
 
+def ControlEdgeCompatibleInterface : OpInterface<"ControlEdgeCompatible"> {
+  let description = [{
+    Interface to getting control edges
+  }];
+
+  let methods = [
+    InterfaceMethod<"",
+        "::mlir::OperandRange", "dataInputOperands", (ins)
+    >,
+    InterfaceMethod<"",
+        "::mlir::OperandRange", "ctrlInputOperands", (ins)
+    >,
+    InterfaceMethod<"",
+        "::mlir::ResultRange", "dataOutputResults", (ins)
+    >,
+    InterfaceMethod<"",
+        "::mlir::Value", "ctrlOutputResult", (ins)
+    >
+  ];
+}
+
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWINTERFACES_H_

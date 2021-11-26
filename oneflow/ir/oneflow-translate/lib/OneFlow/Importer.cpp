@@ -64,8 +64,35 @@ namespace mlir {
 
 using PbMessage = google::protobuf::Message;
 
-bool IsOpaqueOp(Operation* op) {
-  return llvm::dyn_cast<oneflow::UserOp>(op) || llvm::dyn_cast<oneflow::SystemOp>(op);
+OperandRange GetDataInputOperands(Operation* op) {
+  if (auto cec = dyn_cast<ControlEdgeCompatible>(op)) {
+    return cec.dataInputOperands();
+  } else {
+    return op->getOperands();
+  }
+}
+
+llvm::Optional<OperandRange> GetCtrlIntputOperands(Operation* op) {
+  if (auto cec = dyn_cast<ControlEdgeCompatible>(op)) {
+    return cec.ctrlInputOperands();
+  } else {
+    return llvm::None;
+  }
+}
+
+ResultRange GetDataOutputResults(Operation* op) {
+  if (auto cec = dyn_cast<ControlEdgeCompatible>(op)) {
+    return cec.dataOutputResults();
+  } else {
+    return op->getResults();
+  }
+}
+
+llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op) {
+  if (auto cec = dyn_cast<ControlEdgeCompatible>(op)) {
+    if (auto ctrl_out = cec.ctrlOutputResult()) { return ctrl_out.cast<OpResult>(); }
+  }
+  return llvm::None;
 }
 
 LogicalResult StringifyDataType(::oneflow::DataType value, std::string& stringified) {
@@ -217,37 +244,6 @@ LogicalResult Importer::AddResultSegmentSizes(int32_t output_lbns_size,
       "result_segment_sizes",
       GetBuilder().getI32VectorAttr({output_lbns_size, 1} /* {data_out_size, ctrl_out_size} */)));
   return success();
-}
-
-std::pair<unsigned, unsigned> getODSOperandIndexAndLength(Operation* op, unsigned index) {
-  auto sizeAttr = op->getAttrOfType<::mlir::DenseIntElementsAttr>("operand_segment_sizes");
-
-  unsigned start = 0;
-  for (unsigned i = 0; i < index; ++i) start += (*(sizeAttr.begin() + i)).getZExtValue();
-  unsigned size = (*(sizeAttr.begin() + index)).getZExtValue();
-  return {start, size};
-}
-
-::mlir::Operation::operand_range getODSOperands(Operation* op, unsigned index) {
-  auto valueRange = getODSOperandIndexAndLength(op, index);
-  return {std::next(op->operand_begin(), valueRange.first),
-          std::next(op->operand_begin(), valueRange.first + valueRange.second)};
-}
-
-OperandRange GetDataInputOperands(Operation* op) {
-  if (IsOpaqueOp(op)) {
-    return getODSOperands(op, 0);
-  } else {
-    return op->getOperands();
-  }
-}
-
-llvm::Optional<OperandRange> GetCtrlIntputOperands(Operation* op) {
-  if (IsOpaqueOp(op)) {
-    return getODSOperands(op, 1);
-  } else {
-    return llvm::None;
-  }
 }
 
 LogicalResult Importer::AppendCtrlOutType(llvm::SmallVector<Type, 8>& out_types) {
@@ -667,43 +663,6 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
     }
   }
   return success();
-}
-
-std::pair<unsigned, unsigned> getODSResultIndexAndLength(Operation* op, unsigned index) {
-  auto sizeAttr = op->getAttrOfType<::mlir::DenseIntElementsAttr>("result_segment_sizes");
-
-  unsigned start = 0;
-  for (unsigned i = 0; i < index; ++i) start += (*(sizeAttr.begin() + i)).getZExtValue();
-  unsigned size = (*(sizeAttr.begin() + index)).getZExtValue();
-  return {start, size};
-}
-
-::mlir::Operation::result_range getODSResults(Operation* op, unsigned index) {
-  auto valueRange = getODSResultIndexAndLength(op, index);
-  return {std::next(op->result_begin(), valueRange.first),
-          std::next(op->result_begin(), valueRange.first + valueRange.second)};
-}
-
-llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op) {
-  if (IsOpaqueOp(op)) {
-    auto ctrl_output_result = getODSResults(op, 1);
-    if (ctrl_output_result.empty()) {
-      return llvm::None;
-    } else {
-      assert(ctrl_output_result.size() == 1);
-      return ctrl_output_result.back();
-    }
-  } else {
-    return llvm::None;
-  }
-}
-
-ResultRange GetDataOutputResults(Operation* op) {
-  if (IsOpaqueOp(op)) {
-    return getODSResults(op, 0);
-  } else {
-    return op->getOpResults();
-  }
 }
 
 }  // namespace mlir

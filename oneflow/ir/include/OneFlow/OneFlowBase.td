@@ -53,7 +53,7 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
 }
 
 class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_BaseOp<mnemonic, !listconcat(traits, [AttrSizedOperandSegments, AttrSizedResultSegments])> {
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<ControlEdgeCompatibleInterface>])> {
   let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
   let ctrl_output = (outs Optional<AnyType>:$ctrl_output);
   let trait_attrs = (ins
@@ -77,7 +77,7 @@ class OneFlow_UserBaseOp<string mnemonic, list<OpTrait> traits = []> :
 // 1. We only need to erase operand_segment/result_segment_sizes when we are creating a concrete user op
 // 2. Isolating data and ctrl make debug easier and produced IR more human-readable
 class OneFlow_UserBaseWithCtrlOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_UserBaseOp<mnemonic, !listconcat(traits, [AttrSizedOperandSegments, AttrSizedResultSegments])> {
+        OneFlow_UserBaseOp<mnemonic, !listconcat(traits, [AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<ControlEdgeCompatibleInterface>])> {
     let summary = "";
     let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
     let ctrl_output = (outs Optional<AnyType>:$ctrl_output);

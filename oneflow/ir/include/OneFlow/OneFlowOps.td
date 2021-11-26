@@ -9,14 +9,8 @@ include "mlir/Pass/PassBase.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "OneFlowBase.td"
 
-def OneFlow_UserOp : OneFlow_UserBaseOp<"user", [AttrSizedOperandSegments, AttrSizedResultSegments]> {
+def OneFlow_UserOp : OneFlow_UserBaseWithCtrlOp<"user", [AttrSizedOperandSegments, AttrSizedResultSegments]> {
     let summary = "";
-    let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
-    let ctrl_output = (outs Optional<AnyType>:$ctrl_output);
-    let trait_attrs = (ins
-      I32ElementsAttr:$operand_segment_sizes,
-      I32ElementsAttr:$result_segment_sizes
-    );
     let attrs = (ins
       StrArrayAttr:$output_lbns
     );

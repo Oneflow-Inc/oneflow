@@ -180,7 +180,7 @@ LogicalResult JobImporter::InsertOpResults(const ::oneflow::OperatorConf& op,
                  << " != data_results size: " << data_results.size() << "\n"
                  << op.DebugString();
     created_op->getAttrDictionary().dump();
-    // created_op->dump();
+    created_op->dump();
     return failure();
   }
   for (const auto& data_out : llvm::enumerate(data_results)) {
