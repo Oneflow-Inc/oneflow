@@ -187,6 +187,14 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
       state.addOperands(op.getODSOperands(0) /* data in */);
       state.addTypes(op.getODSResults(0 /* data out */).getTypes());
       if (auto created = rewriter.createOperation(state)) {
+        if (created->hasTrait<mlir::OpTrait::AttrSizedOperandSegments>() == false) {
+          created->removeAttr(
+              mlir::OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr());
+        }
+        if (created->hasTrait<mlir::OpTrait::AttrSizedResultSegments>() == false) {
+          created->removeAttr(
+              mlir::OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr());
+        }
         if (created->isRegistered()) {
           rewriter.replaceOp(op, created->getResults());
         } else {
