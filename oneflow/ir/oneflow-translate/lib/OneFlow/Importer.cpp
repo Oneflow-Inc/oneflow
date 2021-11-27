@@ -464,12 +464,11 @@ llvm::Optional<std::string> GetOutputLbn(OpResult result) {
                .succeeded());
     const auto result_number = result.getResultNumber();
     uint32_t size_sum = 0;
-    uint32_t bn_i = -1;
     for (const auto& name_size_tuple : llvm::zip(def_op_keys, def_op_sizes)) {
       auto name = std::get<0>(name_size_tuple);
       auto size = std::get<1>(name_size_tuple);
-      if ((size_sum + size) >= result_number) {
-        bn_i = result_number - size_sum;
+      if ((size_sum + size) > result_number) {
+        const uint32_t bn_i = result_number - size_sum;
         return def_op->getAttrOfType<StringAttr>("op_name").str() + "/" + name + "_"
                + std::to_string(bn_i);
       }
