@@ -315,33 +315,24 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
       out_types.push_back(GetTensorTypeOfLbn(output_lbn));
     }
   }
-  if (op_type_name == "constant") {
-    if (failed(AddOperandSegmentSizes(0, op.ctrl_in_op_name_size(), attr_vec))) {
-      return failure();
-    }
-    ArrayRef<NamedAttribute> named_attributes(attr_vec);
-    created_op = GetBuilder().create<oneflow::ConstantOp>(
-        FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0), out_types, operands,
-        named_attributes);
-  } else {
-    if (failed(AppendCtrlOutType(out_types))) { return failure(); }
-    OperationState state(FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0), "oneflow.user");
-    uint32_t data_input_size = 0;
-    uint32_t data_output_size = 0;
-    for (const auto& input : op.user_conf().input()) { data_input_size += input.second.s().size(); }
-    for (const auto& output : op.user_conf().output()) {
-      data_output_size += output.second.s().size();
-    }
-    if (failed(AddOperandSegmentSizes(data_input_size, op.ctrl_in_op_name_size(), attr_vec))) {
-      return failure();
-    }
-    if (failed(AddResultSegmentSizes(data_output_size, attr_vec))) { return failure(); }
-    ArrayRef<NamedAttribute> named_attributes(attr_vec);
-    state.addAttributes(named_attributes);
-    state.addOperands(operands);
-    state.addTypes(out_types);
-    created_op = GetBuilder().createOperation(state);
+
+  if (failed(AppendCtrlOutType(out_types))) { return failure(); }
+  OperationState state(FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0), "oneflow.user");
+  uint32_t data_input_size = 0;
+  uint32_t data_output_size = 0;
+  for (const auto& input : op.user_conf().input()) { data_input_size += input.second.s().size(); }
+  for (const auto& output : op.user_conf().output()) {
+    data_output_size += output.second.s().size();
   }
+  if (failed(AddOperandSegmentSizes(data_input_size, op.ctrl_in_op_name_size(), attr_vec))) {
+    return failure();
+  }
+  if (failed(AddResultSegmentSizes(data_output_size, attr_vec))) { return failure(); }
+  ArrayRef<NamedAttribute> named_attributes(attr_vec);
+  state.addAttributes(named_attributes);
+  state.addOperands(operands);
+  state.addTypes(out_types);
+  created_op = GetBuilder().createOperation(state);
 
   if (created_op == nullptr) {
     GetModule()->emitError("fail to create " + op.user_conf().op_type_name()
