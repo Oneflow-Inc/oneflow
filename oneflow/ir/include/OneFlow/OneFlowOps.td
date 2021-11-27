@@ -68,10 +68,7 @@ def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceM
 
 // JIT ops
 
-def OneFlow_MlirJitOp : OneFlow_UserBaseOp<"mlir_jit", [
-      CallOpInterface
-    ]
-  > {
+def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpInterfaceMethods<UserOpCompatibleInterface> ] > {
   let attrs = (ins
     FlatSymbolRefAttr:$callee,
     StrAttr:$mlir_assembly
@@ -96,6 +93,10 @@ def OneFlow_MlirJitOp : OneFlow_UserBaseOp<"mlir_jit", [
     CallInterfaceCallable getCallableForCallee() {
       return (*this)->getAttrOfType<SymbolRefAttr>("callee");
     }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<uint32_t> val({0}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
+    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<uint32_t> val({0}); return &val; }
   }];
   let assemblyFormat = [{
     $callee `(` $data_input `)` attr-dict `:` functional-type($data_input, results)
