@@ -433,7 +433,8 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
     if (full_keys->size() == 1) {
       full_sizes.push_back(GetSingleSegmentSize<Trait>(op));
     } else {
-      // TODO: support deduction of single variadic
+      op->emitError("TODO: support deduction of single variadic");
+      return failure();
       full_sizes.resize(full_keys->size(), 1);
     }
   }
