@@ -365,28 +365,18 @@ LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf)
 }
 
 template<template<typename T> class Trait>
-LogicalResult GetFullKeys(Operation*, std::vector<std::string>&);
+const std::vector<std::string>* GetFullKeys(UserOpCompatible&);
 
 template<>
-LogicalResult GetFullKeys<OpTrait::AttrSizedOperandSegments>(Operation* op,
-                                                             std::vector<std::string>& full_keys) {
-  if (auto uc = dyn_cast<UserOpCompatible>(op)) {
-    assert(full_keys.size() == 0);
-    full_keys.insert(full_keys.end(), uc.inputKeys()->begin(), uc.inputKeys()->end());
-    return success();
-  }
-  return failure();
+const std::vector<std::string>* GetFullKeys<OpTrait::AttrSizedOperandSegments>(
+    UserOpCompatible& op) {
+  return op.inputKeys();
 }
 
 template<>
-LogicalResult GetFullKeys<OpTrait::AttrSizedResultSegments>(Operation* op,
-                                                            std::vector<std::string>& full_keys) {
-  if (auto uc = dyn_cast<UserOpCompatible>(op)) {
-    assert(full_keys.size() == 0);
-    full_keys.insert(full_keys.end(), uc.outputKeys()->begin(), uc.outputKeys()->end());
-    return success();
-  }
-  return failure();
+const std::vector<std::string>* GetFullKeys<OpTrait::AttrSizedResultSegments>(
+    UserOpCompatible& op) {
+  return op.outputKeys();
 }
 
 template<template<typename T> class Trait>
@@ -405,11 +395,12 @@ StringRef GetSegmentSizeAttr<OpTrait::AttrSizedResultSegments>() {
 template<template<typename T> class Trait>
 LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::string>& keys,
                                             std::vector<int32_t>& sizes) {
-  std::vector<std::string> full_keys{};
+  const std::vector<std::string>* full_keys = nullptr;
   std::vector<int32_t> full_sizes{};
-  if (failed(GetFullKeys<Trait>(op, full_keys))) {
-    op->dump();
-    op->emitError("bn order not found");
+  if (auto uc = dyn_cast<UserOpCompatible>(op)) {
+    full_keys = GetFullKeys<Trait>(uc);
+  } else {
+    op->emitError("interface UserOpCompatible not supported");
     return failure();
   }
   if (op->hasTrait<Trait>()) {
@@ -417,18 +408,18 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
     const DenseIntElementsAttr& size_attr = op->getAttrOfType<DenseIntElementsAttr>(attr_name);
     if (!size_attr) return failure();
     auto segment_sizes = size_attr.getValues<int32_t>();
-    if (full_keys.size() != segment_sizes.size()) {
+    if (full_keys->size() != segment_sizes.size()) {
       op->emitError() << "fail to convert op inputs, attr_name: " << attr_name
-                      << ", full_keys: " << full_keys.size()
+                      << ", full_keys: " << full_keys->size()
                       << ", segment_sizes: " << segment_sizes.size() << ", name: " << op->getName();
       op->dump();
       return failure();
     };
     full_sizes = {segment_sizes.begin(), segment_sizes.end()};
   } else {
-    full_sizes.resize(full_keys.size(), 1);
+    full_sizes.resize(full_keys->size(), 1);
   }
-  for (const auto& key_size_tuple : llvm::zip(full_keys, full_sizes)) {
+  for (const auto& key_size_tuple : llvm::zip(*full_keys, full_sizes)) {
     const std::string& key = std::get<0>(key_size_tuple);
     const int32_t size = std::get<1>(key_size_tuple);
     if (size > 0) {
