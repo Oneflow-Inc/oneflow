@@ -168,8 +168,8 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
     // 3. enable the reuse of established MLIR infra like built-in traits
     if (IsCtrlOutTrimmed(op) && IsCtrlInAbsent(op)) {
       NamedAttrList attributes(op->getAttrDictionary());
-      attributes.erase("input_sizes");
-      attributes.erase("output_sizes");
+      attributes.erase(op.input_sizesAttrName());
+      attributes.erase(op.output_sizesAttrName());
       attributes.erase(mlir::OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr());
       attributes.erase(mlir::OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr());
       llvm::SmallVector<int32_t> input_sizes, output_sizes;
