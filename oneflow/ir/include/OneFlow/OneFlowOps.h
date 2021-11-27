@@ -39,6 +39,30 @@ OpFoldResult foldInvolutionOfIdenticalPlacement(Operation* op);
 }  // namespace impl
 
 template<typename ConcreteType>
+class IsOpConfCompatible : public TraitBase<ConcreteType, IsOpConfCompatible> {
+ public:
+  static StringRef getOpNameAttr() { return "op_name"; }
+  static StringRef getDeviceTagAttr() { return "device_tag"; }
+  static StringRef getDeviceNameAttr() { return "device_name"; }
+  static StringRef getScopeSymbolIDAttr() { return "scope_symbol_id"; }
+  static StringRef getHierarchyAttr() { return "hierarchy"; }
+  static LogicalResult verifyTrait(Operation* op) {
+    for (auto attr : {
+             getOpNameAttr(),
+             getDeviceTagAttr(),
+         }) {
+      if (!op->hasAttrOfType<StringAttr>(attr)) {
+        return op->emitError("expected operation to have attribute: " + attr);
+      }
+    }
+    if (!op->hasAttrOfType<ArrayAttr>(getDeviceNameAttr())) {
+      return op->emitError("expected operation to have attribute: " + getDeviceNameAttr());
+    }
+    return success();
+  }
+};
+
+template<typename ConcreteType>
 class IsIdempotentOfIdenticalPlacement
     : public TraitBase<ConcreteType, IsIdempotentOfIdenticalPlacement> {
  public:
@@ -49,11 +73,12 @@ class IsIdempotentOfIdenticalPlacement
                   "expected operation to take one operand");
     static_assert(ConcreteType::template hasTrait<SameOperandsAndResultType>(),
                   "expected operation to preserve type");
+    static_assert(ConcreteType::template hasTrait<OpTrait::IsOpConfCompatible>(),
+                  "expected operation to be op conf compatible");
     return impl::verifyIsIdempotent(op);
   }
 
   static OpFoldResult foldTrait(Operation* op, ArrayRef<Attribute> operands) {
-    assert(op->hasAttr("device_name"));
     return impl::foldIdempotentOfIdenticalPlacement(op);
   }
 };
@@ -69,11 +94,12 @@ class IsInvolutionOfIdenticalPlacement
                   "expected operation to take one operand");
     static_assert(ConcreteType::template hasTrait<SameOperandsAndResultType>(),
                   "expected operation to preserve type");
+    static_assert(ConcreteType::template hasTrait<OpTrait::IsOpConfCompatible>(),
+                  "expected operation to be op conf compatible");
     return impl::verifyIsInvolution(op);
   }
 
   static OpFoldResult foldTrait(Operation* op, ArrayRef<Attribute> operands) {
-    assert(op->hasAttr("device_name"));
     return impl::foldInvolutionOfIdenticalPlacement(op);
   }
 };

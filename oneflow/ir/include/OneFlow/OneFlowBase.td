@@ -21,9 +21,11 @@ def ShapeArrayAttr : TypedArrayAttrBase<AnyI64ElementsAttr,
   let constBuilderCall = "$_builder.getArrayAttr(llvm::to_vector<8>(llvm::map_range(values, [this](auto v) -> Attribute { return DenseIntElementsAttr::get($0); })))";
 }
 
+def OneFlow_IsOpConfCompatible : NativeOpTrait<"IsOpConfCompatible">;
+
 class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
-        Op<OneFlow_Dialect, mnemonic, traits> {
-  dag sys_attrs = (ins
+        Op<OneFlow_Dialect, mnemonic, !listconcat(traits, [OneFlow_IsOpConfCompatible])> {
+  dag op_conf_attrs = (ins
     StrAttr:$op_name,
     StrAttr:$device_tag,
     StrArrayAttr:$device_name, // TODO: change device_name to dict and parse the literal fmt like "0:0-0"
@@ -40,7 +42,7 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
   let arguments = !con(
       input,
       ctrl_input,
-      sys_attrs,
+      op_conf_attrs,
       trait_attrs,
       user_op_attrs,
       attrs

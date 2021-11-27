@@ -194,8 +194,11 @@ LogicalResult JobImporter::InsertOpResults(const ::oneflow::OperatorConf& op,
                         data_out.value().dyn_cast<OpResult>()});
   }
   if (auto ctrl_out = GetCtrlOutputResult(created_op)) {
-    op_name2ctrl_result_.insert({created_op->getAttrOfType<StringAttr>("op_name").getValue().str(),
-                                 ctrl_out->dyn_cast<OpResult>()});
+    op_name2ctrl_result_.insert(
+        {created_op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
+             .getValue()
+             .str(),
+         ctrl_out->dyn_cast<OpResult>()});
   }
   return success();
 }
@@ -205,10 +208,11 @@ LogicalResult JobImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
   const ::oneflow::ParallelConf& pc = job_wrapper_.ParallelConf4OpName(op.name());
   std::vector<llvm::StringRef> device_vec = {pc.device_name().begin(), pc.device_name().end()};
   attr_vec.push_back(
-      GetBuilder().getNamedAttr("device_name", GetBuilder().getStrArrayAttr(device_vec)));
+      GetBuilder().getNamedAttr(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
+                                GetBuilder().getStrArrayAttr(device_vec)));
   if (pc.has_hierarchy()) {
     attr_vec.push_back(GetBuilder().getNamedAttr(
-        "hierarchy",
+        OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(),
         GetBuilder().getI64ArrayAttr({pc.hierarchy().dim().begin(), pc.hierarchy().dim().end()})));
   }
   return success();

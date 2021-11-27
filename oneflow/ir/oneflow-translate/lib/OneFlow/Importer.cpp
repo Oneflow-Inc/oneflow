@@ -254,13 +254,16 @@ LogicalResult Importer::AppendCtrlOutType(llvm::SmallVector<Type, 8>& out_types)
 
 LogicalResult Importer::AddOpConf(const ::oneflow::OperatorConf& op,
                                   std::vector<NamedAttribute>& attr_vec) {
-  attr_vec.push_back(GetBuilder().getNamedAttr("op_name", GetBuilder().getStringAttr(op.name())));
+  attr_vec.push_back(GetBuilder().getNamedAttr(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
+                                               GetBuilder().getStringAttr(op.name())));
   if (op.has_device_tag()) {
     attr_vec.push_back(
-        GetBuilder().getNamedAttr("device_tag", GetBuilder().getStringAttr(op.device_tag())));
+        GetBuilder().getNamedAttr(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
+                                  GetBuilder().getStringAttr(op.device_tag())));
   }
-  attr_vec.push_back(GetBuilder().getNamedAttr(
-      "scope_symbol_id", GetBuilder().getI64IntegerAttr(op.scope_symbol_id())));
+  attr_vec.push_back(
+      GetBuilder().getNamedAttr(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
+                                GetBuilder().getI64IntegerAttr(op.scope_symbol_id())));
   return success();
 }
 
@@ -353,7 +356,10 @@ LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf)
   if (auto ctrl_ins = GetCtrlIntputOperands(op)) {
     for (auto ctrl_in : ctrl_ins.getValue()) {
       op_conf.add_ctrl_in_op_name(
-          ctrl_in.getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
+          ctrl_in.getDefiningOp()
+              ->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
+              .getValue()
+              .str());
     }
   }
   return success();
@@ -476,8 +482,9 @@ llvm::Optional<std::string> GetOutputLbn(OpResult result) {
       auto size = std::get<1>(name_size_tuple);
       if ((size_sum + size) > result_number) {
         const uint32_t bn_i = result_number - size_sum;
-        return def_op->getAttrOfType<StringAttr>("op_name").str() + "/" + name + "_"
-               + std::to_string(bn_i);
+        return def_op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
+                   .str()
+               + "/" + name + "_" + std::to_string(bn_i);
       }
       size_sum += size;
     }
@@ -587,8 +594,10 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
                  .succeeded());
       for (const auto& s : keys) { op_conf.mutable_user_conf()->add_output_order(s); }
     }
-    if (id.strref().equals("callee") || id.strref().equals("device_name")
-        || id.strref().equals("hierarchy") || id.strref().equals("output_lbns")
+    if (id.strref().equals("callee")
+        || id.strref().equals(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr())
+        || id.strref().equals(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr())
+        || id.strref().equals("output_lbns")
         || id.strref().equals(OpTrait::IsAlternative<void>::getOpTypeNameAttr())
         || id.strref().equals(
             mlir::OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr())
@@ -597,12 +606,15 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
       continue;
     }
     // convert op conf attributes
-    else if (id.strref().equals("op_name")) {
-      std::string op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
+    else if (id.strref().equals(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())) {
+      std::string op_name =
+          op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
+              .getValue()
+              .str();
       op_conf.set_name(op_name);
-    } else if (id.strref().equals("device_tag")) {
+    } else if (id.strref().equals(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr())) {
       op_conf.set_device_tag(user_op_adaptor.device_tag().getValue().str());
-    } else if (id.strref().equals("scope_symbol_id")) {
+    } else if (id.strref().equals(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr())) {
       op_conf.set_scope_symbol_id(user_op_adaptor.scope_symbol_id().getInt());
     }
     // convert user conf attributes
