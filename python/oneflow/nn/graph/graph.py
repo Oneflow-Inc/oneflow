@@ -487,7 +487,8 @@ class Graph(object):
                 + str(round(compile_and_init_end - compile_and_init_start, 2))
                 + "s."
                 + "\n"
-                + "The total time consumed to complete build graph, compiling plan and init graph runtime:"
+                +self._shallow_repr()
+                + " The total time consumed to complete build graph, compiling plan and init graph runtime:"
                 + str(round(compile_and_init_end - build_graph_start, 2))
                 + "s."
                 + "\n",
