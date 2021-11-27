@@ -14,16 +14,12 @@ def UserOpCompatibleInterface : OpInterface<"UserOpCompatible"> {
         return ConcreteOp::inputKeys();
     }]>,
     StaticInterfaceMethod<"",
-        "const std::vector<uint32_t>*", "inputMinimums", (ins), [{
-        return ConcreteOp::inputMinimums();
-    }]>,
-    StaticInterfaceMethod<"",
         "const std::vector<std::string>*", "outputKeys", (ins), [{
         return ConcreteOp::outputKeys();
     }]>,
-    StaticInterfaceMethod<"",
-        "const std::vector<uint32_t>*", "outputMinimums", (ins), [{
-        return ConcreteOp::outputMinimums();
+    InterfaceMethod<"",
+        "std::pair<unsigned, unsigned>", "getODSOperandIndexAndLength", (ins "unsigned":$index), [{
+        return $_op.getODSOperandIndexAndLength(index);
     }]>
   ];
 }

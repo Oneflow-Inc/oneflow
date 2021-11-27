@@ -410,12 +410,12 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
                                             std::vector<int32_t>& sizes) {
   const std::vector<std::string>* full_keys = nullptr;
   std::vector<int32_t> full_sizes{};
-  if (auto uc = dyn_cast<UserOpCompatible>(op)) {
-    full_keys = GetFullKeys<Trait>(uc);
-  } else {
+  auto uc = dyn_cast<UserOpCompatible>(op);
+  if (!uc) {
     op->emitError("interface UserOpCompatible not supported");
     return failure();
   }
+  full_keys = GetFullKeys<Trait>(uc);
   if (op->hasTrait<Trait>()) {
     const StringRef attr_name = GetSegmentSizeAttr<Trait>();
     const DenseIntElementsAttr& size_attr = op->getAttrOfType<DenseIntElementsAttr>(attr_name);
@@ -433,9 +433,9 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
     if (full_keys->size() == 1) {
       full_sizes.push_back(GetSingleSegmentSize<Trait>(op));
     } else {
-      op->emitError("TODO: support deduction of single variadic");
-      return failure();
-      full_sizes.resize(full_keys->size(), 1);
+      for (const auto& key : llvm::enumerate(*full_keys)) {
+        full_sizes.push_back(uc.getODSOperandIndexAndLength(key.index()).second);
+      }
     }
   }
   for (const auto& key_size_tuple : llvm::zip(*full_keys, full_sizes)) {
