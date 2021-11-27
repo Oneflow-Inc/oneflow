@@ -202,6 +202,7 @@ void MarkClusterIdPass::Run(XrtGraph* graph, const XrtPassOptions& options) {
   } else {
     ClusteringSubgraphs(clustering_options, XrtEngine::TENSORRT);
     ClusteringSubgraphs(clustering_options, XrtEngine::XLA);
+    ClusteringSubgraphs(clustering_options, XrtEngine::OPENVINO);
   }
 
   RemoveInvalidClusterNodes(clustering_options);

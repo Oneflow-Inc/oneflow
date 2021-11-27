@@ -13,23 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/xrt/passes/pass.h"
+#include "oneflow/xrt/openvino/ops/op_context.h"
+#include "oneflow/xrt/openvino/ops/op_kernel.h"
 
 namespace oneflow {
 namespace xrt {
+namespace openvino {
 
-bool CheckUseXrtEngine(const ClusteringOptions& options, const XrtEngine& engine) {
-  XrtEngineOptionBit bit = [&]() {
-    switch (engine) {
-      case XrtEngine::XLA: return XrtEngineOptionBit::kUseXlaJit;
-      case XrtEngine::TENSORRT: return XrtEngineOptionBit::kUseTensorRT;
-      case XrtEngine::OPENVINO: return XrtEngineOptionBit::kUseOpenVINO;
-      default: return XrtEngineOptionBit::kUseDefault;
-    }
-  }();
+class ArgumentOp : public OpenvinoOpKernel {
+ public:
+  void Compile(OpenvinoOpContext* ctx) override {}
+};
 
-  return options.engine & (1U << bit);
-}
+REGISTER_OPENVINO_OP_KERNEL(Argument, ArgumentOp).Finalize();
 
+}  // namespace openvino
 }  // namespace xrt
 }  // namespace oneflow
