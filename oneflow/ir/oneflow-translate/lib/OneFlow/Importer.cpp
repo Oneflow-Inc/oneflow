@@ -285,9 +285,6 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
     GetModule().emitError("Not a user op. op name: " + op.name());
     return failure();
   }
-  const ::oneflow::UserOpConf& user_conf = op.user_conf();
-  const std::string& op_type_name = user_conf.op_type_name();
-
   std::vector<NamedAttribute> attr_vec;
   if (failed(AddOpConf(op, attr_vec))) { return failure(); }
   if (failed(AddDeviceName(op, attr_vec))) { return failure(); }
@@ -471,7 +468,7 @@ llvm::Optional<std::string> GetOutputLbn(OpResult result) {
     for (const auto& name_size_tuple : llvm::zip(def_op_keys, def_op_sizes)) {
       auto name = std::get<0>(name_size_tuple);
       auto size = std::get<1>(name_size_tuple);
-      if (size_sum + size >= result_number) {
+      if ((size_sum + size) >= result_number) {
         bn_i = result_number - size_sum;
         return def_op->getAttrOfType<StringAttr>("op_name").str() + "/" + name + "_"
                + std::to_string(bn_i);
