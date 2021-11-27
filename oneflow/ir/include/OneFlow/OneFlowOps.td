@@ -59,8 +59,8 @@ def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceM
   );
   let output = (outs AnyType:$out);
   let extraClassDeclaration = [{
-    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<uint32_t> val({2}); return &val; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "in"}); return &val; }
+    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
     static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<uint32_t> val({1}); return &val; }
   }];

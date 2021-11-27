@@ -73,12 +73,14 @@ class TestMLIROptimizations(flow.unittest.TestCase):
 # CHECK: %1 = "oneflow.fused_scale_tril"
 # CHECK-LABEL: FuseTrilScaleJob
 # CHECK: %0 = "oneflow.fused_scale_tril"
+# CHECK: %1 = "oneflow.fused_scale_tril"
 
 # CHECK-LABEL: FuseTrilScaleJob
 # CHECK: %0 = "oneflow.fused_scale_tril"
 # CHECK: %1 = "oneflow.fused_scale_tril"
 # CHECK-LABEL: FuseTrilScaleJob
 # CHECK: %0 = "oneflow.fused_scale_tril"
+# CHECK: %1 = "oneflow.fused_scale_tril"
 
 # TODO: check why second fused_scale_tril is erased
 if __name__ == "__main__":
