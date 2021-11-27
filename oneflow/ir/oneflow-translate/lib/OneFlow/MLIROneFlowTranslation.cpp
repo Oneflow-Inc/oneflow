@@ -134,7 +134,7 @@ LogicalResult JobImporter::AddUserOpInputOutputSegments(const ::oneflow::Operato
   if (op.has_user_conf() == false) return failure();
   const auto& user_conf = op.user_conf();
   const ::oneflow::UserOpDef& op_def = job_wrapper_.GetUserOpDef(op.user_conf().op_type_name());
-  static const auto UserOpOperationName =
+  const auto UserOpOperationName =
       OperationName(oneflow::UserOp::getOperationName(), GetMLIRContext());
   attr_vec.push_back(GetBuilder().getNamedAttr(
       oneflow::UserOp::input_sizesAttrName(UserOpOperationName),
