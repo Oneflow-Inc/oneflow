@@ -78,6 +78,19 @@ class IsInvolutionOfIdenticalPlacement
   }
 };
 
+template<typename ConcreteType>
+class IsAlternative : public TraitBase<ConcreteType, IsAlternative> {
+ public:
+  static StringRef getOpTypeNameAttr() { return "op_type_name"; }
+  static LogicalResult verifyTrait(Operation* op) {
+    if (op->hasAttrOfType<StringAttr>(getOpTypeNameAttr())) {
+      return success();
+    } else {
+      return op->emitError("expected operation to have attribute: " + getOpTypeNameAttr());
+    }
+  }
+};
+
 }  // namespace OpTrait
 
 }  // namespace mlir

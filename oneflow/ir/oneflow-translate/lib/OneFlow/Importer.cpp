@@ -234,14 +234,15 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
 LogicalResult Importer::AddOperandSegmentSizes(int32_t input_lbns_size, int32_t ctrl_in_size,
                                                std::vector<NamedAttribute>& attr_vec) {
   attr_vec.push_back(GetBuilder().getNamedAttr(
-      "operand_segment_sizes", GetBuilder().getI32VectorAttr({input_lbns_size, ctrl_in_size})));
+      mlir::OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr(),
+      GetBuilder().getI32VectorAttr({input_lbns_size, ctrl_in_size})));
   return success();
 }
 
 LogicalResult Importer::AddResultSegmentSizes(int32_t output_lbns_size,
                                               std::vector<NamedAttribute>& attr_vec) {
   attr_vec.push_back(GetBuilder().getNamedAttr(
-      "result_segment_sizes",
+      mlir::OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr(),
       GetBuilder().getI32VectorAttr({output_lbns_size, 1} /* {data_out_size, ctrl_out_size} */)));
   return success();
 }
@@ -288,8 +289,9 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   std::vector<NamedAttribute> attr_vec;
   if (failed(AddOpConf(op, attr_vec))) { return failure(); }
   if (failed(AddDeviceName(op, attr_vec))) { return failure(); }
-  attr_vec.push_back(GetBuilder().getNamedAttr(
-      "op_type_name", GetBuilder().getStringAttr(op.user_conf().op_type_name())));
+  attr_vec.push_back(
+      GetBuilder().getNamedAttr(OpTrait::IsAlternative<void>::getOpTypeNameAttr(),
+                                GetBuilder().getStringAttr(op.user_conf().op_type_name())));
   std::vector<::mlir::Value> operand_vec;
   if (failed(namedAttributesFromUserOp(op, attr_vec))) { return failure(); }
   const auto& op_def = GetUserOpDef(op.user_conf().op_type_name());
@@ -562,12 +564,9 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
                                                 ::oneflow::OperatorConf& op_conf) {
   auto user_conf = op_conf.mutable_user_conf();
   std::string op_type_name = op->getName().stripDialect().str();
-  if (op->hasAttrOfType<StringAttr>("op_type_name")) {
-    auto op_type_name_ = op->getAttrOfType<StringAttr>("op_type_name");
-    assert(op_type_name_.size());
-    op_type_name = op_type_name_.getValue().str();
-  } else if (op_type_name == "add_n2") {
-    op_type_name = "add_n";
+  if (op->hasTrait<OpTrait::IsAlternative>()) {
+    op_type_name =
+        op->getAttrOfType<StringAttr>(OpTrait::IsAlternative<void>::getOpTypeNameAttr()).str();
   }
   op_conf.mutable_user_conf()->set_op_type_name(op_type_name);
   for (auto id_attr : op->getAttrDictionary()) {
@@ -589,10 +588,12 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
       for (const auto& s : keys) { op_conf.mutable_user_conf()->add_output_order(s); }
     }
     if (id.strref().equals("callee") || id.strref().equals("device_name")
-        || id.strref().equals("hierarchy") || id.strref().equals("input_lbn_segment_sizes")
-        || id.strref().equals("output_lbns") || id.strref().equals("output_lbn_segment_sizes")
-        || id.strref().equals("operand_segment_sizes")
-        || id.strref().equals("result_segment_sizes")) {
+        || id.strref().equals("hierarchy") || id.strref().equals("output_lbns")
+        || id.strref().equals(OpTrait::IsAlternative<void>::getOpTypeNameAttr())
+        || id.strref().equals(
+            mlir::OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr())
+        || id.strref().equals(
+            mlir::OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr())) {
       continue;
     }
     // convert op conf attributes
@@ -609,7 +610,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
       auto attr_name = id.str();
       Attribute attr = id_attr.second;
       auto user_attr = ::oneflow::AttrValue();
-      ::oneflow::AttrType attr_type = QueryAttrType(op->getName().stripDialect().str(), attr_name);
+      const ::oneflow::AttrType attr_type = QueryAttrType(op_type_name, attr_name);
       if (attr_type == ::oneflow::kAtInt32) {
         user_attr.set_at_int32(attr.dyn_cast<IntegerAttr>().getSInt());
       } else if (attr_type == ::oneflow::kAtInt64) {

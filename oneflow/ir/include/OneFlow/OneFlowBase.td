@@ -62,7 +62,9 @@ class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
   );
 }
 
-class OneFlow_UserBaseOp<string mnemonic, list<OpTrait> traits = []> :
+def OneFlow_AlternativeOp : NativeOpTrait<"IsAlternative">;
+
+class OneFlow_UserBaseOp<string mnemonic, list<OpTrait> traits = [OneFlow_AlternativeOp]> :
         OneFlow_BaseOp<mnemonic, traits> {
     let summary = "";
     let user_op_attrs = (ins

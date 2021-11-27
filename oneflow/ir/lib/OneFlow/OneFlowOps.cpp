@@ -56,8 +56,9 @@ LogicalResult TrimRedundantCtrl(OpType& op, PatternRewriter& rewriter) {
     const int32_t num_data_outputs =
         *(op.result_segment_sizes().template getValues<uint32_t>()).begin();
     NamedAttrList attributes(op->getAttrDictionary());
-    attributes.erase("result_segment_sizes");
-    attributes.append("result_segment_sizes", rewriter.getI32VectorAttr({num_data_outputs, 0}));
+    attributes.erase(mlir::OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr());
+    attributes.append(mlir::OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr(),
+                      rewriter.getI32VectorAttr({num_data_outputs, 0}));
     if (auto created =
             rewriter.create<OpType>(op->getLoc(), op.getODSResults(0 /* data out */).getTypes(),
                                     op->getOperands(), attributes)) {
@@ -74,7 +75,9 @@ LogicalResult TrimRedundantCtrl(OpType& op, PatternRewriter& rewriter) {
 bool IsCtrlOutTrimmed(oneflow::UserOp& op) { return !op.ctrl_output(); }
 
 bool IsCtrlInAbsent(oneflow::UserOp& op) {
-  if (!op->hasAttrOfType<::mlir::DenseIntElementsAttr>("operand_segment_sizes")) op.dump();
+  if (!op->hasAttrOfType<::mlir::DenseIntElementsAttr>(
+          mlir::OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr()))
+    op.dump();
   return op.ctrl_inputs().empty();
 }
 
@@ -158,7 +161,6 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
       : OpRewritePattern<oneflow::UserOp>(context, /*benefit=*/1) {}
   mlir::LogicalResult matchAndRewrite(oneflow::UserOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    auto op_type_name = op.op_type_name();
     if (succeeded(TrimRedundantCtrl(op, rewriter))) { return success(); }
     // In principle, a concrete user op has no ctrl input/output. Some benefits:
     // 1. simplify things
@@ -168,21 +170,22 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
       NamedAttrList attributes(op->getAttrDictionary());
       attributes.erase("input_sizes");
       attributes.erase("output_sizes");
-      attributes.erase("operand_segment_sizes");
-      attributes.erase("result_segment_sizes");
-      attributes.erase("op_type_name");  // TODO: use trait to mark this attr name
+      attributes.erase(mlir::OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr());
+      attributes.erase(mlir::OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr());
       llvm::SmallVector<int32_t> input_sizes, output_sizes;
       getValuesFromIntArrayAttribute(op.input_sizes(), input_sizes);
       getValuesFromIntArrayAttribute(op.output_sizes(), output_sizes);
       if (!input_sizes.empty()) {
-        attributes.push_back(
-            rewriter.getNamedAttr("operand_segment_sizes", rewriter.getI32VectorAttr(input_sizes)));
+        attributes.push_back(rewriter.getNamedAttr(
+            mlir::OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr(),
+            rewriter.getI32VectorAttr(input_sizes)));
       }
       if (!output_sizes.empty()) {
-        attributes.push_back(
-            rewriter.getNamedAttr("result_segment_sizes", rewriter.getI32VectorAttr(output_sizes)));
+        attributes.push_back(rewriter.getNamedAttr(
+            mlir::OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr(),
+            rewriter.getI32VectorAttr(output_sizes)));
       }
-      OperationState state(op->getLoc(), "oneflow." + op_type_name.str());
+      OperationState state(op->getLoc(), "oneflow." + op.op_type_name().str());
       state.addAttributes(attributes);
       state.addOperands(op.getODSOperands(0) /* data in */);
       state.addTypes(op.getODSResults(0 /* data out */).getTypes());
@@ -195,13 +198,15 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
           created->removeAttr(
               mlir::OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr());
         }
-        if (created->isRegistered()) {
-          rewriter.replaceOp(op, created->getResults());
-        } else {
-          op->emitError("Fail to convert opaque user op to concrete op: " + op.op_type_name());
-          op->dump();
-          return failure();
+        if (created->hasTrait<OpTrait::IsAlternative>() == false) {
+          created->removeAttr(OpTrait::IsAlternative<void>::getOpTypeNameAttr());
         }
+        rewriter.replaceOp(op, created->getResults());
+      } else {
+        op->emitError("Fail to convert opaque user op to concrete op when creating: "
+                      + op.op_type_name());
+        op->dump();
+        return failure();
       }
     }
     return success();
@@ -232,13 +237,21 @@ struct ConvertAddOpWithArity : public mlir::OpRewritePattern<oneflow::AddNOp> {
       : OpRewritePattern<oneflow::AddNOp>(context, /*benefit=*/1) {}
   mlir::LogicalResult matchAndRewrite(oneflow::AddNOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    if (op.in().size() == 2) {
-      rewriter.replaceOpWithNewOp<Add2Op>(op, op->getResultTypes(), op.getOperands(),
-                                          op->getAttrs());
-      return success();
-    } else {
-      return failure();
+    const auto arity = op.in().size();
+    if (arity == 2) {
+      NamedAttrList attributes = op->getAttrs();
+      attributes.push_back(rewriter.getNamedAttr(OpTrait::IsAlternative<void>::getOpTypeNameAttr(),
+                                                 rewriter.getStringAttr("add_n")));
+      if (auto created_op = rewriter.replaceOpWithNewOp<Add2Op>(op, op->getResultTypes(),
+                                                                op.getOperands(), attributes)) {
+        return success();
+      } else {
+        op->emitError("Fail to convert add op with arity: ") << arity;
+        op->dump();
+        return failure();
+      }
     }
+    return failure();
   }
 };
 
