@@ -112,20 +112,18 @@
 
 #ifdef GET_ONEFLOW_ASSIGN_OP_DEFINITIONS
 
-def OneFlow_AssignOp : OneFlow_BaseOp<"assign", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AssignOp : OneFlow_BaseOp<"assign", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$ref,
     AnyType:$value
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"ref", "value"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
-def OneFlow_AssignIfOp : OneFlow_BaseOp<"assign_if", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AssignIfOp : OneFlow_BaseOp<"assign_if", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$ref,
     AnyType:$value,
@@ -133,13 +131,11 @@ def OneFlow_AssignIfOp : OneFlow_BaseOp<"assign_if", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"ref", "value", "condition"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
-def OneFlow_AssignIfNotOp : OneFlow_BaseOp<"assign_if_not", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AssignIfNotOp : OneFlow_BaseOp<"assign_if_not", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$ref,
     AnyType:$value,
@@ -147,13 +143,11 @@ def OneFlow_AssignIfNotOp : OneFlow_BaseOp<"assign_if_not", [NoSideEffect, Decla
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"ref", "value", "condition"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
-def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$ref,
     AnyType:$value
@@ -165,9 +159,7 @@ def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", [NoSid
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"ref", "value"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -206,9 +198,7 @@ class OneFlow_NormalizationAddReluBaseOp : OneFlow_BaseOp<"normalization_add_rel
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "addend", "moving_mean", "moving_variance", "gamma", "beta"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 0, 0, 0, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y", "reserve_space", "mean", "inv_variance"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 0, 0, 0, 1, 1}); return &val; }
   }];
 }
 
@@ -233,9 +223,7 @@ def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", [NoSideEffect, DeclareOpInter
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -249,9 +237,7 @@ def OneFlow_CastLikeOp : OneFlow_BaseOp<"cast_like", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "dtype_like"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -268,9 +254,7 @@ def OneFlow_CeluGradOp : OneFlow_BaseOp<"celu_grad", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -287,9 +271,7 @@ def OneFlow_DiagGradOp : OneFlow_BaseOp<"diag_grad", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -306,9 +288,7 @@ def OneFlow_DropoutGradOp : OneFlow_BaseOp<"dropout_grad", [NoSideEffect, Declar
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "mask"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -322,9 +302,7 @@ def OneFlow_ElementwiseMaximumOp : OneFlow_BaseOp<"elementwise_maximum", [NoSide
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -338,9 +316,7 @@ def OneFlow_ElementwiseMinimumOp : OneFlow_BaseOp<"elementwise_minimum", [NoSide
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -357,9 +333,7 @@ def OneFlow_EluGradOp : OneFlow_BaseOp<"elu_grad", [NoSideEffect, DeclareOpInter
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -373,9 +347,7 @@ def OneFlow_FloordivOp : OneFlow_BaseOp<"floordiv", [NoSideEffect, DeclareOpInte
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -389,9 +361,7 @@ def OneFlow_GeluGradOp : OneFlow_BaseOp<"gelu_grad", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -410,9 +380,7 @@ def OneFlow_GridSampleOp : OneFlow_BaseOp<"grid_sample", [NoSideEffect, DeclareO
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "grid"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -426,9 +394,7 @@ def OneFlow_HardsigmoidGradOp : OneFlow_BaseOp<"hardsigmoid_grad", [NoSideEffect
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -442,9 +408,7 @@ def OneFlow_HardswishGradOp : OneFlow_BaseOp<"hardswish_grad", [NoSideEffect, De
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -462,9 +426,7 @@ def OneFlow_L1L2RegularizeGradientOp : OneFlow_BaseOp<"l1_l2_regularize_gradient
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -481,9 +443,7 @@ def OneFlow_LeakyReluGradOp : OneFlow_BaseOp<"leaky_relu_grad", [NoSideEffect, D
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -503,9 +463,7 @@ def OneFlow_MaskedFillOp : OneFlow_BaseOp<"masked_fill", [NoSideEffect, DeclareO
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "mask"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -519,9 +477,7 @@ def OneFlow_MishGradOp : OneFlow_BaseOp<"mish_grad", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -535,9 +491,7 @@ def OneFlow_MultiplyOp : OneFlow_BaseOp<"multiply", [NoSideEffect, DeclareOpInte
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -556,9 +510,7 @@ def OneFlow_NarrowGradOp : OneFlow_BaseOp<"narrow_grad", [NoSideEffect, DeclareO
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "like"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -572,9 +524,7 @@ def OneFlow_PowOp : OneFlow_BaseOp<"pow", [NoSideEffect, DeclareOpInterfaceMetho
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -588,9 +538,7 @@ def OneFlow_PreluOp : OneFlow_BaseOp<"prelu", [NoSideEffect, DeclareOpInterfaceM
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "alpha"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -604,9 +552,7 @@ def OneFlow_ReluGradOp : OneFlow_BaseOp<"relu_grad", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"y", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -620,9 +566,7 @@ def OneFlow_SeluGradOp : OneFlow_BaseOp<"selu_grad", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -636,9 +580,7 @@ def OneFlow_SigmoidGradOp : OneFlow_BaseOp<"sigmoid_grad", [NoSideEffect, Declar
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"y", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -652,9 +594,7 @@ def OneFlow_SiluGradOp : OneFlow_BaseOp<"silu_grad", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -668,9 +608,7 @@ def OneFlow_TfPreluOp : OneFlow_BaseOp<"tf_prelu", [NoSideEffect, DeclareOpInter
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "alpha"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -689,9 +627,7 @@ def OneFlow_UnfoldTensorGradOp : OneFlow_BaseOp<"unfold_tensor_grad", [NoSideEff
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -705,9 +641,7 @@ def OneFlow_XdivyOp : OneFlow_BaseOp<"xdivy", [NoSideEffect, DeclareOpInterfaceM
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -721,9 +655,7 @@ def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", [NoSideEffect, DeclareOpInterfaceM
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -745,9 +677,7 @@ def OneFlow_BroadcastAddOp : OneFlow_BaseOp<"broadcast_add", [NoSideEffect, Decl
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -761,9 +691,7 @@ def OneFlow_BroadcastDivOp : OneFlow_BaseOp<"broadcast_div", [NoSideEffect, Decl
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -778,9 +706,7 @@ def OneFlow_BroadcastDivGradOp : OneFlow_BaseOp<"broadcast_div_grad", [NoSideEff
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"y", "z", "dz"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -794,9 +720,7 @@ def OneFlow_BroadcastEqualOp : OneFlow_BaseOp<"broadcast_equal", [NoSideEffect, 
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -810,9 +734,7 @@ def OneFlow_BroadcastFloorModOp : OneFlow_BaseOp<"broadcast_floor_mod", [NoSideE
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -826,9 +748,7 @@ def OneFlow_BroadcastFmodOp : OneFlow_BaseOp<"broadcast_fmod", [NoSideEffect, De
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -842,9 +762,7 @@ def OneFlow_BroadcastGreaterOp : OneFlow_BaseOp<"broadcast_greater", [NoSideEffe
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -858,9 +776,7 @@ def OneFlow_BroadcastGreaterEqualOp : OneFlow_BaseOp<"broadcast_greater_equal", 
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -874,9 +790,7 @@ def OneFlow_BroadcastLessOp : OneFlow_BaseOp<"broadcast_less", [NoSideEffect, De
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -890,9 +804,7 @@ def OneFlow_BroadcastLessEqualOp : OneFlow_BaseOp<"broadcast_less_equal", [NoSid
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -909,9 +821,7 @@ def OneFlow_BroadcastLikeOp : OneFlow_BaseOp<"broadcast_like", [NoSideEffect, De
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "like"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -925,9 +835,7 @@ def OneFlow_BroadcastLogicalAndOp : OneFlow_BaseOp<"broadcast_logical_and", [NoS
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -941,9 +849,7 @@ def OneFlow_BroadcastLogicalOrOp : OneFlow_BaseOp<"broadcast_logical_or", [NoSid
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -957,9 +863,7 @@ def OneFlow_BroadcastLogicalXorOp : OneFlow_BaseOp<"broadcast_logical_xor", [NoS
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -973,9 +877,7 @@ def OneFlow_BroadcastMaximumOp : OneFlow_BaseOp<"broadcast_maximum", [NoSideEffe
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -989,9 +891,7 @@ def OneFlow_BroadcastMinimumOp : OneFlow_BaseOp<"broadcast_minimum", [NoSideEffe
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -1005,9 +905,7 @@ def OneFlow_BroadcastMulOp : OneFlow_BaseOp<"broadcast_mul", [NoSideEffect, Decl
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -1021,9 +919,7 @@ def OneFlow_BroadcastNotEqualOp : OneFlow_BaseOp<"broadcast_not_equal", [NoSideE
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -1037,9 +933,7 @@ def OneFlow_BroadcastPowOp : OneFlow_BaseOp<"broadcast_pow", [NoSideEffect, Decl
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -1055,9 +949,7 @@ def OneFlow_BroadcastPowXGradOp : OneFlow_BaseOp<"broadcast_pow_x_grad", [NoSide
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "z", "dz"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1}); return &val; }
   }];
 }
 
@@ -1073,9 +965,7 @@ def OneFlow_BroadcastPowYGradOp : OneFlow_BaseOp<"broadcast_pow_y_grad", [NoSide
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "z", "dz"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1}); return &val; }
   }];
 }
 
@@ -1089,9 +979,7 @@ def OneFlow_BroadcastSubOp : OneFlow_BaseOp<"broadcast_sub", [NoSideEffect, Decl
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -1122,9 +1010,7 @@ def OneFlow_ConvBiasGradOp : OneFlow_BaseOp<"conv_bias_grad", [NoSideEffect, Dec
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"bias_diff"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -1149,9 +1035,7 @@ def OneFlow_ConvDataGradOp : OneFlow_BaseOp<"conv_data_grad", [NoSideEffect, Dec
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "filter", "x_like", "_add_to_output"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 0}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 0}); return &val; }
   }];
 }
 
@@ -1174,9 +1058,7 @@ def OneFlow_ConvFilterGradOp : OneFlow_BaseOp<"conv_filter_grad", [NoSideEffect,
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"filter_diff"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -1200,9 +1082,7 @@ def OneFlow_Deconv1DOp : OneFlow_BaseOp<"deconv1d", [NoSideEffect, DeclareOpInte
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "weight"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -1226,9 +1106,7 @@ def OneFlow_Deconv2DOp : OneFlow_BaseOp<"deconv2d", [NoSideEffect, DeclareOpInte
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "weight"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -1252,9 +1130,7 @@ def OneFlow_Deconv3DOp : OneFlow_BaseOp<"deconv3d", [NoSideEffect, DeclareOpInte
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "weight"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -1280,9 +1156,7 @@ def OneFlow_BinaryCrossEntropyOp : OneFlow_BaseOp<"binary_cross_entropy", [NoSid
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target", "weight"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0}); return &val; }
   }];
 }
 
@@ -1301,9 +1175,7 @@ def OneFlow_BinaryCrossEntropyGradOp : OneFlow_BaseOp<"binary_cross_entropy_grad
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target", "weight", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0, 1}); return &val; }
   }];
 }
 
@@ -1326,9 +1198,7 @@ def OneFlow_BinaryCrossEntropyWithLogitsOp : OneFlow_BaseOp<"binary_cross_entrop
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target", "weight", "pos_weight"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0, 0}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0, 0}); return &val; }
   }];
 }
 
@@ -1352,9 +1222,7 @@ def OneFlow_BinaryCrossEntropyWithLogitsGradOp : OneFlow_BaseOp<"binary_cross_en
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target", "weight", "pos_weight", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0, 0, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0, 0, 1}); return &val; }
   }];
 }
 
@@ -1368,9 +1236,7 @@ def OneFlow_SigmoidCrossEntropyOp : OneFlow_BaseOp<"sigmoid_cross_entropy", [NoS
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "label"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"loss"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -1385,9 +1251,7 @@ def OneFlow_SigmoidCrossEntropyGradOp : OneFlow_BaseOp<"sigmoid_cross_entropy_gr
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "loss_diff", "label"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"prediction_diff"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -1404,9 +1268,7 @@ def OneFlow_SparseCrossEntropyOp : OneFlow_BaseOp<"sparse_cross_entropy", [NoSid
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "label"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -1424,9 +1286,7 @@ def OneFlow_SparseCrossEntropyGradOp : OneFlow_BaseOp<"sparse_cross_entropy_grad
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "label", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"prediction_diff"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -1443,9 +1303,7 @@ def OneFlow_SparseCrossEntropyMsOp : OneFlow_BaseOp<"sparse_cross_entropy_ms", [
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "label"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -1463,9 +1321,7 @@ def OneFlow_SparseCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_cross_entropy_ms
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "label", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"prediction_diff"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -1489,9 +1345,7 @@ def OneFlow_NvtxEndOp : OneFlow_BaseOp<"nvtx_end", [NoSideEffect, DeclareOpInter
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -1507,9 +1361,7 @@ def OneFlow_NvtxStartOp : OneFlow_BaseOp<"nvtx_start", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -1545,9 +1397,7 @@ def OneFlow_COCOReaderOp : OneFlow_BaseOp<"COCOReader", [NoSideEffect, DeclareOp
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"image", "image_id", "image_size", "gt_bbox", "gt_label", "gt_segm", "gt_segm_index"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
   }];
 }
 
@@ -1569,9 +1419,7 @@ def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", [NoSideEffect, D
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
   }];
 }
 
@@ -1591,9 +1439,7 @@ def OneFlow_OneRecReaderOp : OneFlow_BaseOp<"OneRecReader", [NoSideEffect, Decla
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
   }];
 }
 
@@ -1611,9 +1457,7 @@ def OneFlow_CtcGreedyDecoderOp : OneFlow_BaseOp<"ctc_greedy_decoder", [NoSideEff
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"log_probs", "input_lengths"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"decoded", "neg_sum_logits"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -1639,9 +1483,7 @@ def OneFlow_MegatronGptMmapDataLoaderOp : OneFlow_BaseOp<"megatron_gpt_mmap_data
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"iteration"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({0}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({0}); return &val; }
   }];
 }
 
@@ -1657,9 +1499,7 @@ def OneFlow_OfrecordBytesDecoderOp : OneFlow_BaseOp<"ofrecord_bytes_decoder", [N
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -1686,9 +1526,7 @@ def OneFlow_OfrecordImageClassificationReaderOp : OneFlow_BaseOp<"ofrecord_image
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"image", "label"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
   }];
 }
 
@@ -1705,9 +1543,7 @@ def OneFlow_OfrecordImageDecoderOp : OneFlow_BaseOp<"ofrecord_image_decoder", [N
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -1729,9 +1565,7 @@ def OneFlow_OfrecordImageDecoderRandomCropOp : OneFlow_BaseOp<"ofrecord_image_de
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -1751,9 +1585,7 @@ def OneFlow_OfrecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", [NoSid
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -1776,9 +1608,7 @@ def OneFlow_OnerecDecoderOp : OneFlow_BaseOp<"onerec_decoder", [NoSideEffect, De
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -1803,9 +1633,7 @@ def OneFlow_InTopKOp : OneFlow_BaseOp<"in_top_k", [NoSideEffect, DeclareOpInterf
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"targets", "predictions"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -1822,9 +1650,7 @@ def OneFlow_NmsOp : OneFlow_BaseOp<"nms", [NoSideEffect, DeclareOpInterfaceMetho
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -1839,9 +1665,7 @@ def OneFlow_ObjectBboxFlipOp : OneFlow_BaseOp<"object_bbox_flip", [NoSideEffect,
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"bbox", "image_size", "flip_code"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -1855,9 +1679,7 @@ def OneFlow_ObjectBboxScaleOp : OneFlow_BaseOp<"object_bbox_scale", [NoSideEffec
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"bbox", "scale"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -1872,9 +1694,7 @@ def OneFlow_ObjectSegmentationPolygonFlipOp : OneFlow_BaseOp<"object_segmentatio
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"poly", "image_size", "flip_code"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -1888,9 +1708,7 @@ def OneFlow_ObjectSegmentationPolygonScaleOp : OneFlow_BaseOp<"object_segmentati
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"poly", "scale"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -1905,9 +1723,7 @@ def OneFlow_ObjectSegmentationPolygonToMaskOp : OneFlow_BaseOp<"object_segmentat
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"poly", "poly_index", "image_size"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -1924,9 +1740,7 @@ def OneFlow_TopKOp : OneFlow_BaseOp<"top_k", [NoSideEffect, DeclareOpInterfaceMe
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -1953,9 +1767,7 @@ def OneFlow_EagerBToSOp : OneFlow_BaseOp<"eager_b_to_s", [NoSideEffect, DeclareO
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -1975,9 +1787,7 @@ def OneFlow_EagerNaiveSToSOp : OneFlow_BaseOp<"eager_naive_s_to_s", [NoSideEffec
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -1993,9 +1803,7 @@ def OneFlow_EagerNcclAllGatherOp : OneFlow_BaseOp<"eager_nccl_all_gather", [NoSi
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2012,9 +1820,7 @@ def OneFlow_EagerNcclAllReduceOp : OneFlow_BaseOp<"eager_nccl_all_reduce", [NoSi
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2031,9 +1837,7 @@ def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", [NoSid
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2050,9 +1854,7 @@ def OneFlow_EagerNcclReduceOp : OneFlow_BaseOp<"eager_nccl_reduce", [NoSideEffec
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2069,9 +1871,7 @@ def OneFlow_EagerNcclReduceScatterOp : OneFlow_BaseOp<"eager_nccl_reduce_scatter
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2089,9 +1889,7 @@ def OneFlow_EagerNcclS2sOp : OneFlow_BaseOp<"eager_nccl_s2s", [NoSideEffect, Dec
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2109,9 +1907,7 @@ def OneFlow_EagerPToBOp : OneFlow_BaseOp<"eager_p_to_b", [NoSideEffect, DeclareO
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2130,9 +1926,7 @@ def OneFlow_EagerPToSOp : OneFlow_BaseOp<"eager_p_to_s", [NoSideEffect, DeclareO
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2151,9 +1945,7 @@ def OneFlow_EagerSToBOp : OneFlow_BaseOp<"eager_s_to_b", [NoSideEffect, DeclareO
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2170,9 +1962,7 @@ def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", [NoS
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2210,9 +2000,7 @@ def OneFlow_CudnnFusedNormalizationAddReluOp : OneFlow_BaseOp<"cudnn_fused_norma
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "addend", "moving_mean", "moving_variance", "gamma", "beta"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 0, 0, 0, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y", "reserve_space", "mean", "inv_variance"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 0, 0, 0, 1, 1}); return &val; }
   }];
 }
 
@@ -2239,9 +2027,7 @@ def OneFlow_CudnnFusedNormalizationAddReluGradOp : OneFlow_BaseOp<"cudnn_fused_n
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy", "mean", "inv_variance", "gamma", "beta", "reserve_space", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1, 1, 1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"gamma_diff", "beta_diff", "dx", "addend_diff"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1, 1, 1, 1, 1}); return &val; }
   }];
 }
 
@@ -2258,9 +2044,7 @@ def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", [NoSideEf
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -2278,9 +2062,7 @@ def OneFlow_FusedBiasAddGeluGradOp : OneFlow_BaseOp<"fused_bias_add_gelu_grad", 
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -2300,9 +2082,7 @@ def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale"
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b", "mask", "_add_to_output"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 0}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 0}); return &val; }
   }];
 }
 
@@ -2319,9 +2099,7 @@ def OneFlow_FusedCastScaleOp : OneFlow_BaseOp<"fused_cast_scale", [NoSideEffect,
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "scale_by_tensor"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -2339,9 +2117,7 @@ def OneFlow_FusedScaleMaskSoftmaxOp : OneFlow_BaseOp<"fused_scale_mask_softmax",
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "mask"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -2362,9 +2138,7 @@ def OneFlow_FusedScaleMaskSoftmaxDropoutOp : OneFlow_BaseOp<"fused_scale_mask_so
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "mask", "dropout_mask"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y", "softmax_y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -2384,9 +2158,7 @@ def OneFlow_FusedScaleMaskSoftmaxDropoutGradOp : OneFlow_BaseOp<"fused_scale_mas
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"softmax_y", "dy", "mask", "dropout_mask"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1}); return &val; }
   }];
 }
 
@@ -2404,9 +2176,7 @@ def OneFlow_FusedScaleMaskSoftmaxGradOp : OneFlow_BaseOp<"fused_scale_mask_softm
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"y", "dy", "mask"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -2428,9 +2198,7 @@ def OneFlow_FusedScaleTrilOp : OneFlow_BaseOp<"fused_scale_tril", [NoSideEffect,
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2448,9 +2216,7 @@ def OneFlow_FusedSelfAttentionQueryMulKeyAndValueOp : OneFlow_BaseOp<"fused_self
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"hidden_states"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"query_mul_key", "value"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2468,9 +2234,7 @@ def OneFlow_FusedSelfAttentionQueryMulKeyAndValueGradOp : OneFlow_BaseOp<"fused_
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"query_mul_key_grad", "value_grad", "hidden_states"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"hidden_states_grad"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -2491,9 +2255,7 @@ def OneFlow_FusedTrilScaleSoftmaxMaskScaleOp : OneFlow_BaseOp<"fused_tril_scale_
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "mask"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y", "softmax_y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -2513,9 +2275,7 @@ def OneFlow_FusedTrilScaleSoftmaxMaskScaleGradOp : OneFlow_BaseOp<"fused_tril_sc
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"softmax_y", "dy", "mask"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -2542,9 +2302,7 @@ def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy", "mean", "inv_variance", "gamma", "beta", "reserve_space", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1, 1, 1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"gamma_diff", "beta_diff", "dx", "addend_diff"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1, 1, 1, 1, 1}); return &val; }
   }];
 }
 
@@ -2559,72 +2317,56 @@ def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_
 def OneFlow_AbsOp : OneFlow_IdempotentBaseOp<"abs", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
 def OneFlow_CeilOp : OneFlow_IdempotentBaseOp<"ceil", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
 def OneFlow_FloorOp : OneFlow_IdempotentBaseOp<"floor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
 def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"like"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
 def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
 def OneFlow_RintOp : OneFlow_IdempotentBaseOp<"rint", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
 def OneFlow_RoundOp : OneFlow_IdempotentBaseOp<"round", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
 def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2645,9 +2387,7 @@ def OneFlow_AmpWhiteIdentityOp : OneFlow_BaseOp<"amp_white_identity", [NoSideEff
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2660,9 +2400,7 @@ def OneFlow_IdentityOp : OneFlow_BaseOp<"identity", [NoSideEffect, DeclareOpInte
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2678,9 +2416,7 @@ def OneFlow_IdentityBufferOp : OneFlow_BaseOp<"identity_buffer", [NoSideEffect, 
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2693,9 +2429,7 @@ def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", [NoSideEffect, De
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2722,9 +2456,7 @@ def OneFlow_ImageBatchAlignOp : OneFlow_BaseOp<"image_batch_align", [NoSideEffec
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2741,9 +2473,7 @@ def OneFlow_ImageDecodeOp : OneFlow_BaseOp<"image_decode", [NoSideEffect, Declar
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2757,9 +2487,7 @@ def OneFlow_ImageFlipOp : OneFlow_BaseOp<"image_flip", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "flip_code"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -2779,9 +2507,7 @@ def OneFlow_ImageRandomCropOp : OneFlow_BaseOp<"image_random_crop", [NoSideEffec
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2803,9 +2529,7 @@ def OneFlow_ImageResizeKeepAspectRatioOp : OneFlow_BaseOp<"image_resize_keep_asp
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out", "size", "scale"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2826,9 +2550,7 @@ def OneFlow_ImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", [NoSi
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out", "scale"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2852,9 +2574,7 @@ def OneFlow_ArgSortOp : OneFlow_BaseOp<"arg_sort", [NoSideEffect, DeclareOpInter
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2867,9 +2587,7 @@ def OneFlow_ArgmaxOp : OneFlow_BaseOp<"argmax", [NoSideEffect, DeclareOpInterfac
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2886,9 +2604,7 @@ def OneFlow_ArgwhereOp : OneFlow_BaseOp<"argwhere", [NoSideEffect, DeclareOpInte
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output", "output_size"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -2902,9 +2618,7 @@ def OneFlow_BatchGatherOp : OneFlow_BaseOp<"batch_gather", [NoSideEffect, Declar
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "indices"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -2921,9 +2635,7 @@ def OneFlow_DimGatherOp : OneFlow_BaseOp<"dim_gather", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "index"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -2941,9 +2653,7 @@ def OneFlow_DimScatterAddOp : OneFlow_BaseOp<"dim_scatter_add", [NoSideEffect, D
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "index", "src"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -2961,9 +2671,7 @@ def OneFlow_DimScatterAddLikeOp : OneFlow_BaseOp<"dim_scatter_add_like", [NoSide
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"like", "index", "src"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -2981,9 +2689,7 @@ def OneFlow_DimScatterAddScalarOp : OneFlow_BaseOp<"dim_scatter_add_scalar", [No
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "index"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3001,9 +2707,7 @@ def OneFlow_DimScatterMulOp : OneFlow_BaseOp<"dim_scatter_mul", [NoSideEffect, D
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "index", "src"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -3021,9 +2725,7 @@ def OneFlow_DimScatterMulScalarOp : OneFlow_BaseOp<"dim_scatter_mul_scalar", [No
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "index"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3041,9 +2743,7 @@ def OneFlow_DimScatterUpdateOp : OneFlow_BaseOp<"dim_scatter_update", [NoSideEff
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "index", "src"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -3061,9 +2761,7 @@ def OneFlow_DimScatterUpdateScalarOp : OneFlow_BaseOp<"dim_scatter_update_scalar
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "index"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3080,9 +2778,7 @@ def OneFlow_GatherOp : OneFlow_BaseOp<"gather", [NoSideEffect, DeclareOpInterfac
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "indices"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3096,9 +2792,7 @@ def OneFlow_GatherNdOp : OneFlow_BaseOp<"gather_nd", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"params", "indices"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3114,9 +2808,7 @@ def OneFlow_GenerateRandomBatchPermutationIndicesOp : OneFlow_BaseOp<"generate_r
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -3135,9 +2827,7 @@ def OneFlow_ImageTargetResizeOp : OneFlow_BaseOp<"image_target_resize", [NoSideE
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out", "size", "scale"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -3155,9 +2845,7 @@ def OneFlow_LogicalSliceOp : OneFlow_BaseOp<"logical_slice", [NoSideEffect, Decl
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -3174,9 +2862,7 @@ def OneFlow_ScatterNdOp : OneFlow_BaseOp<"scatter_nd", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"indices", "updates"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3191,9 +2877,7 @@ def OneFlow_ScatterNdLikeOp : OneFlow_BaseOp<"scatter_nd_like", [NoSideEffect, D
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"like", "indices", "updates"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -3211,9 +2895,7 @@ def OneFlow_SliceOp : OneFlow_BaseOp<"slice", [NoSideEffect, DeclareOpInterfaceM
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -3232,9 +2914,7 @@ def OneFlow_SliceGradOp : OneFlow_BaseOp<"slice_grad", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "like"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3249,9 +2929,7 @@ def OneFlow_TensorScatterNdAddOp : OneFlow_BaseOp<"tensor_scatter_nd_add", [NoSi
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"params", "updates", "indices"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -3266,9 +2944,7 @@ def OneFlow_TensorScatterNdUpdateOp : OneFlow_BaseOp<"tensor_scatter_nd_update",
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"params", "updates", "indices"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -3285,9 +2961,7 @@ def OneFlow_UnsortedBatchSegmentSumOp : OneFlow_BaseOp<"unsorted_batch_segment_s
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"data", "segment_ids"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3305,9 +2979,7 @@ def OneFlow_UnsortedSegmentSumOp : OneFlow_BaseOp<"unsorted_segment_sum", [NoSid
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"data", "segment_ids"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3325,9 +2997,7 @@ def OneFlow_UnsortedSegmentSumLikeOp : OneFlow_BaseOp<"unsorted_segment_sum_like
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"data", "segment_ids", "like"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -3342,9 +3012,7 @@ def OneFlow_WhereOp : OneFlow_BaseOp<"where", [NoSideEffect, DeclareOpInterfaceM
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"condition", "x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -3364,9 +3032,7 @@ def OneFlow_WhereScalarXOp : OneFlow_BaseOp<"where_scalar_x", [NoSideEffect, Dec
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"condition", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3389,9 +3055,7 @@ def OneFlow_WhereScalarXyOp : OneFlow_BaseOp<"where_scalar_xy", [NoSideEffect, D
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"condition"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -3411,9 +3075,7 @@ def OneFlow_WhereScalarYOp : OneFlow_BaseOp<"where_scalar_y", [NoSideEffect, Dec
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"condition", "x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3428,18 +3090,14 @@ def OneFlow_WhereScalarYOp : OneFlow_BaseOp<"where_scalar_y", [NoSideEffect, Dec
 def OneFlow_NegativeOp : OneFlow_InvolutionBaseOp<"negative", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
 def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -3468,9 +3126,7 @@ def OneFlow_CombinedMarginLossOp : OneFlow_BaseOp<"combined_margin_loss", [NoSid
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "label"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y", "theta"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3491,9 +3147,7 @@ def OneFlow_CombinedMarginLossGradOp : OneFlow_BaseOp<"combined_margin_loss_grad
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "label", "theta"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -3515,9 +3169,7 @@ def OneFlow_CtcLossOp : OneFlow_BaseOp<"ctc_loss", [NoSideEffect, DeclareOpInter
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"log_probs", "targets", "input_lengths", "target_lengths"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"loss", "alpha"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1}); return &val; }
   }];
 }
 
@@ -3541,9 +3193,7 @@ def OneFlow_CtcLossGradOp : OneFlow_BaseOp<"ctc_loss_grad", [NoSideEffect, Decla
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"grad_out", "log_probs", "targets", "input_lengths", "target_lengths", "loss", "alpha"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1, 1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"grad"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1, 1, 1, 1}); return &val; }
   }];
 }
 
@@ -3559,9 +3209,7 @@ def OneFlow_DynamicLossScaleScheduleOp : OneFlow_BaseOp<"dynamic_loss_scale_sche
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"count_not_finite", "loss_scale", "good_step_counter"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -3579,9 +3227,7 @@ def OneFlow_KlDivLossOp : OneFlow_BaseOp<"kl_div_loss", [NoSideEffect, DeclareOp
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3600,9 +3246,7 @@ def OneFlow_KlDivLossGradOp : OneFlow_BaseOp<"kl_div_loss_grad", [NoSideEffect, 
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -3620,9 +3264,7 @@ def OneFlow_SmoothL1LossOp : OneFlow_BaseOp<"smooth_l1_loss", [NoSideEffect, Dec
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3641,9 +3283,7 @@ def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", [NoSideEf
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -3665,9 +3305,7 @@ def OneFlow_AbsGradOp : OneFlow_BaseOp<"abs_grad", [NoSideEffect, DeclareOpInter
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3681,9 +3319,7 @@ def OneFlow_CeilGradOp : OneFlow_BaseOp<"ceil_grad", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3696,9 +3332,7 @@ def OneFlow_ErfOp : OneFlow_BaseOp<"erf", [NoSideEffect, DeclareOpInterfaceMetho
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -3712,9 +3346,7 @@ def OneFlow_ErfGradOp : OneFlow_BaseOp<"erf_grad", [NoSideEffect, DeclareOpInter
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3727,9 +3359,7 @@ def OneFlow_ExpOp : OneFlow_BaseOp<"exp", [NoSideEffect, DeclareOpInterfaceMetho
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -3743,9 +3373,7 @@ def OneFlow_ExpGradOp : OneFlow_BaseOp<"exp_grad", [NoSideEffect, DeclareOpInter
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3762,9 +3390,7 @@ def OneFlow_ExpandGradOp : OneFlow_BaseOp<"expand_grad", [NoSideEffect, DeclareO
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -3777,9 +3403,7 @@ def OneFlow_Expm1Op : OneFlow_BaseOp<"expm1", [NoSideEffect, DeclareOpInterfaceM
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -3793,9 +3417,7 @@ def OneFlow_Expm1GradOp : OneFlow_BaseOp<"expm1_grad", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3809,9 +3431,7 @@ def OneFlow_FloorGradOp : OneFlow_BaseOp<"floor_grad", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3826,9 +3446,7 @@ def OneFlow_FloordivXGradOp : OneFlow_BaseOp<"floordiv_x_grad", [NoSideEffect, D
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "dz"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -3843,9 +3461,7 @@ def OneFlow_FloordivYGradOp : OneFlow_BaseOp<"floordiv_y_grad", [NoSideEffect, D
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "dz"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -3858,9 +3474,7 @@ def OneFlow_LgammaOp : OneFlow_BaseOp<"lgamma", [NoSideEffect, DeclareOpInterfac
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -3874,9 +3488,7 @@ def OneFlow_LgammaGradOp : OneFlow_BaseOp<"lgamma_grad", [NoSideEffect, DeclareO
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3889,9 +3501,7 @@ def OneFlow_LogOp : OneFlow_BaseOp<"log", [NoSideEffect, DeclareOpInterfaceMetho
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -3904,9 +3514,7 @@ def OneFlow_Log1pOp : OneFlow_BaseOp<"log1p", [NoSideEffect, DeclareOpInterfaceM
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -3920,9 +3528,7 @@ def OneFlow_Log1pGradOp : OneFlow_BaseOp<"log1p_grad", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3936,9 +3542,7 @@ def OneFlow_LogGradOp : OneFlow_BaseOp<"log_grad", [NoSideEffect, DeclareOpInter
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3951,9 +3555,7 @@ def OneFlow_LogSigmoidOp : OneFlow_BaseOp<"log_sigmoid", [NoSideEffect, DeclareO
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -3967,9 +3569,7 @@ def OneFlow_LogSigmoidGradOp : OneFlow_BaseOp<"log_sigmoid_grad", [NoSideEffect,
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3983,9 +3583,7 @@ def OneFlow_NegativeGradOp : OneFlow_BaseOp<"negative_grad", [NoSideEffect, Decl
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -3999,9 +3597,7 @@ def OneFlow_ReciprocalGradOp : OneFlow_BaseOp<"reciprocal_grad", [NoSideEffect, 
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -4014,9 +3610,7 @@ def OneFlow_ReciprocalNoNanOp : OneFlow_BaseOp<"reciprocal_no_nan", [NoSideEffec
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -4030,9 +3624,7 @@ def OneFlow_ReciprocalNoNanGradOp : OneFlow_BaseOp<"reciprocal_no_nan_grad", [No
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -4046,9 +3638,7 @@ def OneFlow_RintGradOp : OneFlow_BaseOp<"rint_grad", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -4062,9 +3652,7 @@ def OneFlow_RoundGradOp : OneFlow_BaseOp<"round_grad", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -4077,9 +3665,7 @@ def OneFlow_RsqrtOp : OneFlow_BaseOp<"rsqrt", [NoSideEffect, DeclareOpInterfaceM
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -4093,9 +3679,7 @@ def OneFlow_RsqrtGradOp : OneFlow_BaseOp<"rsqrt_grad", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -4108,9 +3692,7 @@ def OneFlow_SigmoidV2Op : OneFlow_BaseOp<"sigmoid_v2", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -4124,9 +3706,7 @@ def OneFlow_SigmoidV2GradOp : OneFlow_BaseOp<"sigmoid_v2_grad", [NoSideEffect, D
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -4140,9 +3720,7 @@ def OneFlow_SignGradOp : OneFlow_BaseOp<"sign_grad", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -4155,9 +3733,7 @@ def OneFlow_SoftplusOp : OneFlow_BaseOp<"softplus", [NoSideEffect, DeclareOpInte
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -4171,9 +3747,7 @@ def OneFlow_SoftplusGradOp : OneFlow_BaseOp<"softplus_grad", [NoSideEffect, Decl
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -4187,9 +3761,7 @@ def OneFlow_SoftsignGradOp : OneFlow_BaseOp<"softsign_grad", [NoSideEffect, Decl
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -4202,9 +3774,7 @@ def OneFlow_SqrtOp : OneFlow_BaseOp<"sqrt", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -4218,9 +3788,7 @@ def OneFlow_SqrtGradOp : OneFlow_BaseOp<"sqrt_grad", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -4233,9 +3801,7 @@ def OneFlow_SquareOp : OneFlow_BaseOp<"square", [NoSideEffect, DeclareOpInterfac
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -4249,9 +3815,7 @@ def OneFlow_SquareGradOp : OneFlow_BaseOp<"square_grad", [NoSideEffect, DeclareO
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -4266,9 +3830,7 @@ def OneFlow_XlogyXGradOp : OneFlow_BaseOp<"xlogy_x_grad", [NoSideEffect, Declare
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "dz"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -4283,9 +3845,7 @@ def OneFlow_XlogyYGradOp : OneFlow_BaseOp<"xlogy_y_grad", [NoSideEffect, Declare
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "dz"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -4313,9 +3873,7 @@ def OneFlow_BatchMatmulOp : OneFlow_BaseOp<"batch_matmul", [NoSideEffect, Declar
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b", "_add_to_output"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0}); return &val; }
   }];
 }
 
@@ -4335,9 +3893,7 @@ def OneFlow_BroadcastMatmulOp : OneFlow_BaseOp<"broadcast_matmul", [NoSideEffect
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b", "_add_to_output"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0}); return &val; }
   }];
 }
 
@@ -4355,9 +3911,7 @@ def OneFlow_BroadcastMatmulGradBOp : OneFlow_BaseOp<"broadcast_matmul_grad_b", [
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b", "_add_to_output"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0}); return &val; }
   }];
 }
 
@@ -4377,9 +3931,7 @@ def OneFlow_DistributedPartialFcSampleOp : OneFlow_BaseOp<"distributed_partial_f
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"weight", "label"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"mapped_label", "sampled_label", "sampled_weight"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -4394,9 +3946,7 @@ def OneFlow_DistributedPartialFcSampleDisableBoxingOp : OneFlow_BaseOp<"distribu
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"sampled_weight_diff", "sampled_label"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"boxing_disabled_sampled_weight_diff", "boxing_disabled_sampled_label"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -4409,9 +3959,7 @@ def OneFlow_ErfcOp : OneFlow_BaseOp<"erfc", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -4425,9 +3973,7 @@ def OneFlow_ErfcGradOp : OneFlow_BaseOp<"erfc_grad", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -4447,9 +3993,7 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [NoSideEffect, DeclareOpInterfac
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b", "_add_to_output"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0}); return &val; }
   }];
 }
 
@@ -4475,9 +4019,7 @@ def OneFlow_CategoricalOrdinalEncodeOp : OneFlow_BaseOp<"CategoricalOrdinalEncod
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"table", "size", "in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -4490,9 +4032,7 @@ def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", [NoSideEffect, DeclareOpInterfaceMe
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({2}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({2}); return &val; }
   }];
   let hasCanonicalizer = 1;
 }
@@ -4513,9 +4053,7 @@ def OneFlow_ArangeOp : OneFlow_BaseOp<"arange", [NoSideEffect, DeclareOpInterfac
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
   }];
 }
 
@@ -4532,9 +4070,7 @@ def OneFlow_CoinFlipOp : OneFlow_BaseOp<"coin_flip", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
   }];
 }
 
@@ -4551,9 +4087,7 @@ def OneFlow_ConcatOp : OneFlow_BaseOp<"concat", [NoSideEffect, DeclareOpInterfac
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({2}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({2}); return &val; }
   }];
 }
 
@@ -4571,9 +4105,7 @@ def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [NoSideEffect, DeclareOpInte
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
   }];
 }
 
@@ -4591,9 +4123,7 @@ def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", [NoSideEffect, DeclareOpInterf
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "mask", "_add_to_output"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0}); return &val; }
   }];
 }
 
@@ -4612,9 +4142,7 @@ def OneFlow_ElementwiseMaximumBackwardOp : OneFlow_BaseOp<"elementwise_maximum_b
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dz", "x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -4633,9 +4161,7 @@ def OneFlow_ElementwiseMinimumBackwardOp : OneFlow_BaseOp<"elementwise_minimum_b
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dz", "x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -4650,9 +4176,7 @@ def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", [NoSideEffect, DeclareOpInterfaceM
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
   }];
 }
 
@@ -4668,9 +4192,7 @@ def OneFlow_EyeOp : OneFlow_BaseOp<"eye", [NoSideEffect, DeclareOpInterfaceMetho
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
   }];
 }
 
@@ -4691,9 +4213,7 @@ def OneFlow_GridSampleGradOp : OneFlow_BaseOp<"grid_sample_grad", [NoSideEffect,
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"doutput", "input", "grid"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dinput", "dgrid"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -4706,9 +4226,7 @@ def OneFlow_MultiCountNotFiniteOp : OneFlow_BaseOp<"multi_count_not_finite", [No
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -4721,9 +4239,7 @@ def OneFlow_MultiSquareSumOp : OneFlow_BaseOp<"multi_square_sum", [NoSideEffect,
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -4743,9 +4259,7 @@ def OneFlow_NllOp : OneFlow_BaseOp<"nll", [NoSideEffect, DeclareOpInterfaceMetho
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target", "weight"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out", "total_weight"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0}); return &val; }
   }];
 }
 
@@ -4766,9 +4280,7 @@ def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", [NoSideEffect, DeclareOpInter
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target", "total_weight", "weight", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 0, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 0, 1}); return &val; }
   }];
 }
 
@@ -4783,9 +4295,7 @@ def OneFlow_PowXGradOp : OneFlow_BaseOp<"pow_x_grad", [NoSideEffect, DeclareOpIn
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "dz"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -4800,9 +4310,7 @@ def OneFlow_PowYGradOp : OneFlow_BaseOp<"pow_y_grad", [NoSideEffect, DeclareOpIn
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "dz"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -4818,9 +4326,7 @@ def OneFlow_PreluGradOp : OneFlow_BaseOp<"prelu_grad", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x", "alpha"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx", "alpha_diff"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -4834,9 +4340,7 @@ def OneFlow_RandpermOp : OneFlow_BaseOp<"randperm", [NoSideEffect, DeclareOpInte
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
   }];
 }
 
@@ -4853,9 +4357,7 @@ def OneFlow_RecvOp : OneFlow_BaseOp<"recv", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
   }];
 }
 
@@ -4868,9 +4370,7 @@ def OneFlow_SendOp : OneFlow_BaseOp<"send", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -4887,9 +4387,7 @@ def OneFlow_SplitLikeOp : OneFlow_BaseOp<"split_like", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "like"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 2}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 2}); return &val; }
   }];
 }
 
@@ -4906,9 +4404,7 @@ def OneFlow_SspVariableProxyOp : OneFlow_BaseOp<"ssp_variable_proxy", [NoSideEff
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"var"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"ref", "value"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -4924,9 +4420,7 @@ def OneFlow_TfPreluGradOp : OneFlow_BaseOp<"tf_prelu_grad", [NoSideEffect, Decla
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x", "alpha"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx", "alpha_diff"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -4943,9 +4437,7 @@ def OneFlow_UniformOp : OneFlow_BaseOp<"uniform", [NoSideEffect, DeclareOpInterf
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
   }];
 }
 
@@ -4962,9 +4454,7 @@ def OneFlow_UniformIntOp : OneFlow_BaseOp<"uniform_int", [NoSideEffect, DeclareO
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
   }];
 }
 
@@ -4983,9 +4473,7 @@ def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", [NoSideEff
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y", "idx", "count", "num_unique"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -5000,9 +4488,7 @@ def OneFlow_XdivyXGradOp : OneFlow_BaseOp<"xdivy_x_grad", [NoSideEffect, Declare
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "dz"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -5017,9 +4503,7 @@ def OneFlow_XdivyYGradOp : OneFlow_BaseOp<"xdivy_y_grad", [NoSideEffect, Declare
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "dz"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -5044,9 +4528,7 @@ def OneFlow__ncclLogical_2DSameDim0All2allOp : OneFlow_BaseOp<"_nccl_logical_2D_
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -5059,9 +4541,7 @@ def OneFlow__ncclLogical_2DSameDim0AllGatherOp : OneFlow_BaseOp<"_nccl_logical_2
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -5077,9 +4557,7 @@ def OneFlow__ncclLogical_2DSameDim0AllGatherNoncontinuousOp : OneFlow_BaseOp<"_n
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -5092,9 +4570,7 @@ def OneFlow__ncclLogical_2DSameDim0AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -5107,9 +4583,7 @@ def OneFlow__ncclLogical_2DSameDim1AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -5122,9 +4596,7 @@ def OneFlow__ncclLogicalAllGatherOp : OneFlow_BaseOp<"_nccl_logical_all_gather",
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -5140,9 +4612,7 @@ def OneFlow__ncclLogicalAllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -5155,9 +4625,7 @@ def OneFlow__ncclLogicalAllReduceOp : OneFlow_BaseOp<"_nccl_logical_all_reduce",
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -5170,9 +4638,7 @@ def OneFlow__ncclLogicalReduceScatterOp : OneFlow_BaseOp<"_nccl_logical_reduce_s
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -5189,9 +4655,7 @@ def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", [NoSideEffec
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -5224,9 +4688,7 @@ def OneFlow_CropMirrorNormalizeFromTensorbufferOp : OneFlow_BaseOp<"crop_mirror_
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "mirror"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 0}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 0}); return &val; }
   }];
 }
 
@@ -5251,9 +4713,7 @@ def OneFlow_CropMirrorNormalizeFromUint8Op : OneFlow_BaseOp<"crop_mirror_normali
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "mirror"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 0}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 0}); return &val; }
   }];
 }
 
@@ -5270,9 +4730,7 @@ def OneFlow_ImageNormalizeOp : OneFlow_BaseOp<"image_normalize", [NoSideEffect, 
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -5290,9 +4748,7 @@ def OneFlow_L2NormalizeOp : OneFlow_BaseOp<"l2_normalize", [NoSideEffect, Declar
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y", "square_x_sum"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -5311,9 +4767,7 @@ def OneFlow_L2NormalizeGradOp : OneFlow_BaseOp<"l2_normalize_grad", [NoSideEffec
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "y", "square_x_sum"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -5341,9 +4795,7 @@ def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", [NoSideEffect, AttrSizedO
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "beta", "gamma"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 0, 0}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y", "mean", "inv_variance", "normalized"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 0, 0}); return &val; }
   }];
 }
 
@@ -5364,9 +4816,7 @@ def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", [NoSideEffect, D
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x", "mean", "inv_variance", "_add_to_output"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1, 0}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1, 0}); return &val; }
   }];
 }
 
@@ -5391,9 +4841,7 @@ def OneFlow_LayerNormParamGradOp : OneFlow_BaseOp<"layer_norm_param_grad", [NoSi
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "normalized", "gamma"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 0, 0}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"normalized_diff", "beta_diff", "gamma_diff", "reduce_buf"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 0, 0}); return &val; }
   }];
 }
 
@@ -5410,9 +4858,7 @@ def OneFlow_NormalOp : OneFlow_BaseOp<"normal", [NoSideEffect, DeclareOpInterfac
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
   }];
 }
 
@@ -5442,9 +4888,7 @@ def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [NoSideEffect, Att
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "moving_mean", "moving_variance", "gamma", "beta", "_add_to_output"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 0, 0, 1, 1, 0}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y", "mean", "inv_variance"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 0, 0, 1, 1, 0}); return &val; }
   }];
 }
 
@@ -5467,9 +4911,7 @@ def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", [NoSideEf
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy", "mean", "inv_variance", "gamma"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"gamma_diff", "beta_diff", "dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1, 1}); return &val; }
   }];
 }
 
@@ -5481,7 +4923,7 @@ def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", [NoSideEf
 
 #ifdef GET_ONEFLOW_OPTIMIZER_OP_DEFINITIONS
 
-def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -5506,13 +4948,11 @@ def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", [NoSideEffect, At
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff", "learning_rate", "scale_by_tensor", "skip_if", "train_step", "sum"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0, 0, 0, 0, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0, 0, 0, 0, 1}); return &val; }
   }];
 }
 
-def OneFlow_AdamBiasCorrectionFactorOp : OneFlow_BaseOp<"adam_bias_correction_factor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AdamBiasCorrectionFactorOp : OneFlow_BaseOp<"adam_bias_correction_factor", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$train_step
   );
@@ -5524,13 +4964,11 @@ def OneFlow_AdamBiasCorrectionFactorOp : OneFlow_BaseOp<"adam_bias_correction_fa
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"train_step"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
-def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -5562,13 +5000,11 @@ def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", [NoSideEffect, AttrSize
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff", "learning_rate", "scale_by_tensor", "skip_if", "bias_correction1", "bias_correction2", "m", "v", "max_v"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0, 0, 0, 0, 0, 1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0, 0, 0, 0, 0, 1, 1, 1}); return &val; }
   }];
 }
 
-def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_update", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff_indices,
@@ -5594,13 +5030,11 @@ def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_upda
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff_indices", "model_diff_values", "learning_rate", "bias_correction1", "bias_correction2", "m", "v", "max_v"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1, 0, 0, 1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1, 0, 0, 1, 1, 1}); return &val; }
   }];
 }
 
-def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momentum_update", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momentum_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff_indices,
@@ -5614,13 +5048,11 @@ def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momen
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff_indices", "model_diff_values", "learning_rate", "momentum"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1, 1}); return &val; }
   }];
 }
 
-def OneFlow_IndexedSlicesSgdUpdateOp : OneFlow_BaseOp<"indexed_slices_sgd_update", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_IndexedSlicesSgdUpdateOp : OneFlow_BaseOp<"indexed_slices_sgd_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff_indices,
@@ -5632,13 +5064,11 @@ def OneFlow_IndexedSlicesSgdUpdateOp : OneFlow_BaseOp<"indexed_slices_sgd_update
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff_indices", "model_diff_values", "learning_rate"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1}); return &val; }
   }];
 }
 
-def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$m,
     AnyType:$v,
@@ -5664,13 +5094,11 @@ def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", [NoSideEffect, AttrSize
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"m", "v", "beta1_t", "beta2_t", "model", "model_diff", "learning_rate", "scale_by_tensor", "skip_if"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1, 1, 1, 1, 0, 0}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1, 1, 1, 1, 0, 0}); return &val; }
   }];
 }
 
-def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -5693,13 +5121,11 @@ def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", [NoSideEffect, AttrSize
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff", "learning_rate", "momentum", "scale_by_tensor", "skip_if"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1, 0, 0}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1, 0, 0}); return &val; }
   }];
 }
 
-def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -5721,13 +5147,11 @@ def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", [NoSideEffect, 
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff", "momentum", "learning_rate", "scale_by_tensor", "skip_if"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 0, 0, 0}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 0, 0, 0}); return &val; }
   }];
 }
 
-def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -5752,13 +5176,11 @@ def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", [NoSideEffect, At
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff", "learning_rate", "scale_by_tensor", "skip_if", "mean_square", "mean_gradient"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0, 0, 0, 1, 0}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0, 0, 0, 1, 0}); return &val; }
   }];
 }
 
-def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -5778,13 +5200,11 @@ def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", [NoSideEffect, AttrSizedO
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff", "learning_rate", "scale_by_tensor", "skip_if"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0, 0, 0}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 0, 0, 0}); return &val; }
   }];
 }
 
-def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$update
@@ -5799,9 +5219,7 @@ def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", [NoSideEffect, Declar
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "update"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -5827,9 +5245,7 @@ def OneFlow_ConstantPad1DOp : OneFlow_BaseOp<"constant_pad1d", [NoSideEffect, De
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -5847,9 +5263,7 @@ def OneFlow_ConstantPad1DGradOp : OneFlow_BaseOp<"constant_pad1d_grad", [NoSideE
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -5867,9 +5281,7 @@ def OneFlow_ConstantPad2DOp : OneFlow_BaseOp<"constant_pad2d", [NoSideEffect, De
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -5887,9 +5299,7 @@ def OneFlow_ConstantPad2DGradOp : OneFlow_BaseOp<"constant_pad2d_grad", [NoSideE
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -5907,9 +5317,7 @@ def OneFlow_ConstantPad3DOp : OneFlow_BaseOp<"constant_pad3d", [NoSideEffect, De
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -5927,9 +5335,7 @@ def OneFlow_ConstantPad3DGradOp : OneFlow_BaseOp<"constant_pad3d_grad", [NoSideE
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -5948,9 +5354,7 @@ def OneFlow_PadOp : OneFlow_BaseOp<"pad", [NoSideEffect, DeclareOpInterfaceMetho
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -5969,9 +5373,7 @@ def OneFlow_PadGradOp : OneFlow_BaseOp<"pad_grad", [NoSideEffect, DeclareOpInter
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -5987,9 +5389,7 @@ def OneFlow_ReflectionPad2DOp : OneFlow_BaseOp<"reflection_pad2d", [NoSideEffect
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6005,9 +5405,7 @@ def OneFlow_ReflectionPad2DGradOp : OneFlow_BaseOp<"reflection_pad2d_grad", [NoS
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6023,9 +5421,7 @@ def OneFlow_ReplicationPad2DOp : OneFlow_BaseOp<"replication_pad2d", [NoSideEffe
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6041,9 +5437,7 @@ def OneFlow_ReplicationPad2DGradOp : OneFlow_BaseOp<"replication_pad2d_grad", [N
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6063,9 +5457,7 @@ def OneFlow_SamePaddingOp : OneFlow_BaseOp<"same_padding", [NoSideEffect, Declar
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6086,9 +5478,7 @@ def OneFlow_SamePaddingGradOp : OneFlow_BaseOp<"same_padding_grad", [NoSideEffec
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x_like", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -6114,9 +5504,7 @@ def OneFlow_HierarchicalParallelCastOp : OneFlow_BaseOp<"hierarchical_parallel_c
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6130,9 +5518,7 @@ def OneFlow_HierarchicalParallelCastLikeOp : OneFlow_BaseOp<"hierarchical_parall
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "like"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -6149,9 +5535,7 @@ def OneFlow_ParallelCastOp : OneFlow_BaseOp<"parallel_cast", [NoSideEffect, Decl
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6175,9 +5559,7 @@ def OneFlow_AdaptiveAvgPool1DOp : OneFlow_BaseOp<"adaptive_avg_pool1d", [NoSideE
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6194,9 +5576,7 @@ def OneFlow_AdaptiveAvgPool1DGradOp : OneFlow_BaseOp<"adaptive_avg_pool1d_grad",
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -6212,9 +5592,7 @@ def OneFlow_AdaptiveAvgPool2DOp : OneFlow_BaseOp<"adaptive_avg_pool2d", [NoSideE
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6231,9 +5609,7 @@ def OneFlow_AdaptiveAvgPool2DGradOp : OneFlow_BaseOp<"adaptive_avg_pool2d_grad",
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -6249,9 +5625,7 @@ def OneFlow_AdaptiveAvgPool3DOp : OneFlow_BaseOp<"adaptive_avg_pool3d", [NoSideE
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6268,9 +5642,7 @@ def OneFlow_AdaptiveAvgPool3DGradOp : OneFlow_BaseOp<"adaptive_avg_pool3d_grad",
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -6346,9 +5718,7 @@ def OneFlow_FakeQuantizationOp : OneFlow_BaseOp<"fake_quantization", [NoSideEffe
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "scale", "zero_point"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -6368,9 +5738,7 @@ def OneFlow_MinMaxObserverOp : OneFlow_BaseOp<"min_max_observer", [NoSideEffect,
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"scale", "zero_point"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6395,9 +5763,7 @@ def OneFlow_MovingAverageMinMaxObserverOp : OneFlow_BaseOp<"moving_average_min_m
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "current_train_step", "moving_max", "moving_min"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"scale", "zero_point"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1, 1}); return &val; }
   }];
 }
 
@@ -6417,9 +5783,7 @@ def OneFlow_QuantizationOp : OneFlow_BaseOp<"quantization", [NoSideEffect, Decla
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "scale", "zero_point"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -6443,9 +5807,7 @@ def OneFlow_IndexedSlicesReduceSumOp : OneFlow_BaseOp<"indexed_slices_reduce_sum
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x_indices", "x_values"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y_indices", "y_values", "num_unique"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -6462,9 +5824,7 @@ def OneFlow_ReduceAllOp : OneFlow_BaseOp<"reduce_all", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input_tensor"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output_tensor"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6481,9 +5841,7 @@ def OneFlow_ReduceAnyOp : OneFlow_BaseOp<"reduce_any", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input_tensor"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output_tensor"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6500,9 +5858,7 @@ def OneFlow_ReduceMaxOp : OneFlow_BaseOp<"reduce_max", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input_tensor"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output_tensor"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6520,9 +5876,7 @@ def OneFlow_ReduceMaxDeviceStageOp : OneFlow_BaseOp<"reduce_max_device_stage", [
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out", "mask", "count"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6540,9 +5894,7 @@ def OneFlow_ReduceMaxDeviceStageGradOp : OneFlow_BaseOp<"reduce_max_device_stage
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"out_diff", "mask", "count"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"in_diff"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -6561,9 +5913,7 @@ def OneFlow_ReduceMaxGlobalStageOp : OneFlow_BaseOp<"reduce_max_global_stage", [
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "device_count"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out", "mask"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -6582,9 +5932,7 @@ def OneFlow_ReduceMaxGlobalStageGradOp : OneFlow_BaseOp<"reduce_max_global_stage
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"out_diff", "mask", "device_count"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"in_diff"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -6601,9 +5949,7 @@ def OneFlow_ReduceMinOp : OneFlow_BaseOp<"reduce_min", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input_tensor"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output_tensor"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6621,9 +5967,7 @@ def OneFlow_ReduceMinDeviceStageOp : OneFlow_BaseOp<"reduce_min_device_stage", [
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out", "mask", "count"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6641,9 +5985,7 @@ def OneFlow_ReduceMinDeviceStageGradOp : OneFlow_BaseOp<"reduce_min_device_stage
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"out_diff", "mask", "count"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"in_diff"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -6662,9 +6004,7 @@ def OneFlow_ReduceMinGlobalStageOp : OneFlow_BaseOp<"reduce_min_global_stage", [
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "device_count"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out", "mask"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -6683,9 +6023,7 @@ def OneFlow_ReduceMinGlobalStageGradOp : OneFlow_BaseOp<"reduce_min_global_stage
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"out_diff", "mask", "device_count"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"in_diff"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -6702,9 +6040,7 @@ def OneFlow_ReduceProdOp : OneFlow_BaseOp<"reduce_prod", [NoSideEffect, DeclareO
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input_tensor"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output_tensor"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6721,9 +6057,7 @@ def OneFlow_ReduceSumOp : OneFlow_BaseOp<"reduce_sum", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input_tensor"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output_tensor"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6740,9 +6074,7 @@ def OneFlow_ReduceSumLikeOp : OneFlow_BaseOp<"reduce_sum_like", [NoSideEffect, D
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "like"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -6766,9 +6098,7 @@ def OneFlow_ReshapeOp : OneFlow_BaseOp<"reshape", [NoSideEffect, DeclareOpInterf
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6782,9 +6112,7 @@ def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", [NoSideEffect, Declar
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "like"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -6811,9 +6139,7 @@ def OneFlow_ClipByScalarOp : OneFlow_BaseOp<"clip_by_scalar", [NoSideEffect, Dec
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6833,9 +6159,7 @@ def OneFlow_ClipByScalarGradOp : OneFlow_BaseOp<"clip_by_scalar_grad", [NoSideEf
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -6852,9 +6176,7 @@ def OneFlow_ClipByScalarMaxOp : OneFlow_BaseOp<"clip_by_scalar_max", [NoSideEffe
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6872,9 +6194,7 @@ def OneFlow_ClipByScalarMaxGradOp : OneFlow_BaseOp<"clip_by_scalar_max_grad", [N
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -6891,9 +6211,7 @@ def OneFlow_ClipByScalarMinOp : OneFlow_BaseOp<"clip_by_scalar_min", [NoSideEffe
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6911,9 +6229,7 @@ def OneFlow_ClipByScalarMinGradOp : OneFlow_BaseOp<"clip_by_scalar_min_grad", [N
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -6932,9 +6248,7 @@ def OneFlow_ScalarAddOp : OneFlow_BaseOp<"scalar_add", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -6948,9 +6262,7 @@ def OneFlow_ScalarAddByTensorOp : OneFlow_BaseOp<"scalar_add_by_tensor", [NoSide
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "scalar"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -6964,9 +6276,7 @@ def OneFlow_ScalarDivByTensorOp : OneFlow_BaseOp<"scalar_div_by_tensor", [NoSide
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "scalar"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -6985,9 +6295,7 @@ def OneFlow_ScalarFloordivOp : OneFlow_BaseOp<"scalar_floordiv", [NoSideEffect, 
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7006,9 +6314,7 @@ def OneFlow_ScalarFmodOp : OneFlow_BaseOp<"scalar_fmod", [NoSideEffect, DeclareO
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7027,9 +6333,7 @@ def OneFlow_ScalarLogicalAndOp : OneFlow_BaseOp<"scalar_logical_and", [NoSideEff
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7048,9 +6352,7 @@ def OneFlow_ScalarLogicalEqualOp : OneFlow_BaseOp<"scalar_logical_equal", [NoSid
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7069,9 +6371,7 @@ def OneFlow_ScalarLogicalGreaterOp : OneFlow_BaseOp<"scalar_logical_greater", [N
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7090,9 +6390,7 @@ def OneFlow_ScalarLogicalGreaterEqualOp : OneFlow_BaseOp<"scalar_logical_greater
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7111,9 +6409,7 @@ def OneFlow_ScalarLogicalLessOp : OneFlow_BaseOp<"scalar_logical_less", [NoSideE
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7132,9 +6428,7 @@ def OneFlow_ScalarLogicalLessEqualOp : OneFlow_BaseOp<"scalar_logical_less_equal
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7153,9 +6447,7 @@ def OneFlow_ScalarLogicalNotEqualOp : OneFlow_BaseOp<"scalar_logical_not_equal",
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7174,9 +6466,7 @@ def OneFlow_ScalarLogicalOrOp : OneFlow_BaseOp<"scalar_logical_or", [NoSideEffec
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7195,9 +6485,7 @@ def OneFlow_ScalarLogicalXorOp : OneFlow_BaseOp<"scalar_logical_xor", [NoSideEff
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7216,9 +6504,7 @@ def OneFlow_ScalarMulOp : OneFlow_BaseOp<"scalar_mul", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7232,9 +6518,7 @@ def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", [NoSide
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "scalar"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -7253,9 +6537,7 @@ def OneFlow_ScalarPowOp : OneFlow_BaseOp<"scalar_pow", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7275,9 +6557,7 @@ def OneFlow_ScalarPowGradOp : OneFlow_BaseOp<"scalar_pow_grad", [NoSideEffect, D
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -7291,9 +6571,7 @@ def OneFlow_ScalarSubByTensorOp : OneFlow_BaseOp<"scalar_sub_by_tensor", [NoSide
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "scalar"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -7314,9 +6592,7 @@ def OneFlow_LogSoftmaxOp : OneFlow_BaseOp<"log_softmax", [NoSideEffect, DeclareO
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"prob"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7330,9 +6606,7 @@ def OneFlow_LogSoftmaxGradOp : OneFlow_BaseOp<"log_softmax_grad", [NoSideEffect,
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prob", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -7345,9 +6619,7 @@ def OneFlow_SoftmaxOp : OneFlow_BaseOp<"softmax", [NoSideEffect, DeclareOpInterf
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7362,9 +6634,7 @@ def OneFlow_SoftmaxCrossEntropyOp : OneFlow_BaseOp<"softmax_cross_entropy", [NoS
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "label"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"prob", "out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -7379,9 +6649,7 @@ def OneFlow_SoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"softmax_cross_entropy_gr
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "label", "prob"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"prediction_diff"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -7395,9 +6663,7 @@ def OneFlow_SoftmaxGradOp : OneFlow_BaseOp<"softmax_grad", [NoSideEffect, Declar
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"y", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -7415,9 +6681,7 @@ def OneFlow_SparseSoftmaxCrossEntropyOp : OneFlow_BaseOp<"sparse_softmax_cross_e
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "label"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"prob", "out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -7435,9 +6699,7 @@ def OneFlow_SparseSoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"sparse_softmax_cro
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"label", "dy", "prob"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"prediction_diff"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -7455,9 +6717,7 @@ def OneFlow_SparseSoftmaxCrossEntropyMsOp : OneFlow_BaseOp<"sparse_softmax_cross
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "label"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"prob", "out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -7475,9 +6735,7 @@ def OneFlow_SparseSoftmaxCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_softmax_c
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"label", "dy", "prob"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"prediction_diff"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -7495,18 +6753,14 @@ def OneFlow_CreateSummaryWriterOp : OneFlow_BaseOp<"create_summary_writer", [NoS
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
   }];
 }
 
 def OneFlow_FlushSummaryWriterOp : OneFlow_BaseOp<"flush_summary_writer", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
   }];
 }
 
@@ -7518,9 +6772,7 @@ def OneFlow_SummaryWriteHistogramOp : OneFlow_BaseOp<"summary_write_histogram", 
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "step", "tag"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -7532,9 +6784,7 @@ def OneFlow_SummaryWriteImageOp : OneFlow_BaseOp<"summary_write_image", [NoSideE
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "step", "tag"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -7545,9 +6795,7 @@ def OneFlow_SummaryWritePbOp : OneFlow_BaseOp<"summary_write_pb", [NoSideEffect,
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "step"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -7559,9 +6807,7 @@ def OneFlow_SummaryWriteScalarOp : OneFlow_BaseOp<"summary_write_scalar", [NoSid
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "step", "tag"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -7586,9 +6832,7 @@ def OneFlow_GenTensorBufferOp : OneFlow_BaseOp<"gen_tensor_buffer", [NoSideEffec
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
   }];
 }
 
@@ -7606,9 +6850,7 @@ def OneFlow_TensorBufferToListOfTensorsOp : OneFlow_BaseOp<"tensor_buffer_to_lis
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7626,9 +6868,7 @@ def OneFlow_TensorBufferToListOfTensorsV2Op : OneFlow_BaseOp<"tensor_buffer_to_l
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7645,9 +6885,7 @@ def OneFlow_TensorBufferToTensorOp : OneFlow_BaseOp<"tensor_buffer_to_tensor", [
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7663,9 +6901,7 @@ def OneFlow_TensorToTensorBufferOp : OneFlow_BaseOp<"tensor_to_tensor_buffer", [
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7689,9 +6925,7 @@ def OneFlow_TestDataTypeAttrOp : OneFlow_BaseOp<"TestDataTypeAttr", [NoSideEffec
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7701,9 +6935,7 @@ def OneFlow_TestDynamicSourceOp : OneFlow_BaseOp<"TestDynamicSource", [NoSideEff
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
   }];
 }
 
@@ -7721,9 +6953,7 @@ def OneFlow_TestListDataTypeAndListShapeAndListStringAttrOp : OneFlow_BaseOp<"Te
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7737,9 +6967,7 @@ def OneFlow_TestMultiInputOp : OneFlow_BaseOp<"TestMultiInput", [NoSideEffect, D
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x1", "x2"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -7755,9 +6983,7 @@ def OneFlow_TestMultiInputGradOp : OneFlow_BaseOp<"TestMultiInputGrad", [NoSideE
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x1", "x2", "y_diff"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"x1_diff", "x2_diff"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -7771,9 +6997,7 @@ def OneFlow_TestMultiOutputOrderOp : OneFlow_BaseOp<"TestMultiOutputOrder", [NoS
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out1", "out2"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7786,9 +7010,7 @@ def OneFlow_TestRandomSourceOp : OneFlow_BaseOp<"TestRandomSource", [NoSideEffec
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
   }];
 }
 
@@ -7804,9 +7026,7 @@ def OneFlow_TestReshapeOp : OneFlow_BaseOp<"TestReshape", [NoSideEffect, Declare
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7816,9 +7036,7 @@ def OneFlow_TestSourceOp : OneFlow_BaseOp<"TestSource", [NoSideEffect, DeclareOp
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
   }];
 }
 
@@ -7831,9 +7049,7 @@ def OneFlow_TestSourceMultiGpuFixedOutNumOp : OneFlow_BaseOp<"TestSourceMultiGpu
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({}); return &val; }
   }];
 }
 
@@ -7846,9 +7062,7 @@ def OneFlow_CcreluOp : OneFlow_BaseOp<"ccrelu", [NoSideEffect, DeclareOpInterfac
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7862,9 +7076,7 @@ def OneFlow_CcreluGradOp : OneFlow_BaseOp<"ccrelu_grad", [NoSideEffect, DeclareO
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"y", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -7877,9 +7089,7 @@ def OneFlow_CpuOnlyReluTestOp : OneFlow_BaseOp<"cpu_only_relu_test", [NoSideEffe
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7896,9 +7106,7 @@ def OneFlow_TestUserOpAttrAutoTypeOp : OneFlow_BaseOp<"test_user_op_attr_auto_ty
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7919,9 +7127,7 @@ def OneFlow_AcosOp : OneFlow_BaseOp<"acos", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7935,9 +7141,7 @@ def OneFlow_AcosGradOp : OneFlow_BaseOp<"acos_grad", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -7950,9 +7154,7 @@ def OneFlow_AcoshOp : OneFlow_BaseOp<"acosh", [NoSideEffect, DeclareOpInterfaceM
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7966,9 +7168,7 @@ def OneFlow_AcoshGradOp : OneFlow_BaseOp<"acosh_grad", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -7981,9 +7181,7 @@ def OneFlow_AsinOp : OneFlow_BaseOp<"asin", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -7997,9 +7195,7 @@ def OneFlow_AsinGradOp : OneFlow_BaseOp<"asin_grad", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -8012,9 +7208,7 @@ def OneFlow_AsinhOp : OneFlow_BaseOp<"asinh", [NoSideEffect, DeclareOpInterfaceM
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8028,9 +7222,7 @@ def OneFlow_AsinhGradOp : OneFlow_BaseOp<"asinh_grad", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -8043,9 +7235,7 @@ def OneFlow_AtanOp : OneFlow_BaseOp<"atan", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8059,9 +7249,7 @@ def OneFlow_Atan2Op : OneFlow_BaseOp<"atan2", [NoSideEffect, DeclareOpInterfaceM
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -8076,9 +7264,7 @@ def OneFlow_Atan2XGradOp : OneFlow_BaseOp<"atan2_x_grad", [NoSideEffect, Declare
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "dz"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -8093,9 +7279,7 @@ def OneFlow_Atan2YGradOp : OneFlow_BaseOp<"atan2_y_grad", [NoSideEffect, Declare
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "dz"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1, 1}); return &val; }
   }];
 }
 
@@ -8109,9 +7293,7 @@ def OneFlow_AtanGradOp : OneFlow_BaseOp<"atan_grad", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -8124,9 +7306,7 @@ def OneFlow_AtanhOp : OneFlow_BaseOp<"atanh", [NoSideEffect, DeclareOpInterfaceM
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8140,9 +7320,7 @@ def OneFlow_AtanhGradOp : OneFlow_BaseOp<"atanh_grad", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -8155,9 +7333,7 @@ def OneFlow_CosOp : OneFlow_BaseOp<"cos", [NoSideEffect, DeclareOpInterfaceMetho
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8171,9 +7347,7 @@ def OneFlow_CosGradOp : OneFlow_BaseOp<"cos_grad", [NoSideEffect, DeclareOpInter
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -8186,9 +7360,7 @@ def OneFlow_CoshOp : OneFlow_BaseOp<"cosh", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8202,9 +7374,7 @@ def OneFlow_CoshGradOp : OneFlow_BaseOp<"cosh_grad", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -8221,9 +7391,7 @@ def OneFlow_HardtanhOp : OneFlow_BaseOp<"hardtanh", [NoSideEffect, DeclareOpInte
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8241,9 +7409,7 @@ def OneFlow_HardtanhGradOp : OneFlow_BaseOp<"hardtanh_grad", [NoSideEffect, Decl
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"y", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -8256,9 +7422,7 @@ def OneFlow_SinOp : OneFlow_BaseOp<"sin", [NoSideEffect, DeclareOpInterfaceMetho
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8272,9 +7436,7 @@ def OneFlow_SinGradOp : OneFlow_BaseOp<"sin_grad", [NoSideEffect, DeclareOpInter
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -8287,9 +7449,7 @@ def OneFlow_SinhOp : OneFlow_BaseOp<"sinh", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8303,9 +7463,7 @@ def OneFlow_SinhGradOp : OneFlow_BaseOp<"sinh_grad", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -8318,9 +7476,7 @@ def OneFlow_TanOp : OneFlow_BaseOp<"tan", [NoSideEffect, DeclareOpInterfaceMetho
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8334,9 +7490,7 @@ def OneFlow_TanGradOp : OneFlow_BaseOp<"tan_grad", [NoSideEffect, DeclareOpInter
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -8349,9 +7503,7 @@ def OneFlow_TanhOp : OneFlow_BaseOp<"tanh", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8365,9 +7517,7 @@ def OneFlow_TanhGradOp : OneFlow_BaseOp<"tanh_grad", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -8391,9 +7541,7 @@ def OneFlow_AccOp : OneFlow_BaseOp<"acc", [NoSideEffect, DeclareOpInterfaceMetho
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8410,9 +7558,7 @@ def OneFlow_AffineGridOp : OneFlow_BaseOp<"affine_grid", [NoSideEffect, DeclareO
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"theta"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"grid"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8429,9 +7575,7 @@ def OneFlow_AffineGridGradOp : OneFlow_BaseOp<"affine_grid_grad", [NoSideEffect,
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dgrid"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dtheta"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8449,9 +7593,7 @@ def OneFlow_BernoulliOp : OneFlow_BaseOp<"bernoulli", [NoSideEffect, DeclareOpIn
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8467,9 +7609,7 @@ def OneFlow_CastOp : OneFlow_BaseOp<"cast", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8482,9 +7622,7 @@ def OneFlow_CastToStaticShapeOp : OneFlow_BaseOp<"cast_to_static_shape", [NoSide
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8497,9 +7635,7 @@ def OneFlow_CastToTickOp : OneFlow_BaseOp<"cast_to_tick", [NoSideEffect, Declare
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8515,9 +7651,7 @@ def OneFlow_CeluOp : OneFlow_BaseOp<"celu", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8534,9 +7668,7 @@ def OneFlow_CopyOp : OneFlow_BaseOp<"copy", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8549,9 +7681,7 @@ def OneFlow_CountNotFiniteOp : OneFlow_BaseOp<"count_not_finite", [NoSideEffect,
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8567,9 +7697,7 @@ def OneFlow_DiagOp : OneFlow_BaseOp<"diag", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8585,9 +7713,7 @@ def OneFlow_EluOp : OneFlow_BaseOp<"elu", [NoSideEffect, DeclareOpInterfaceMetho
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8604,9 +7730,7 @@ def OneFlow_ExpandOp : OneFlow_BaseOp<"expand", [NoSideEffect, DeclareOpInterfac
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8622,9 +7746,7 @@ def OneFlow_ExpandDimsOp : OneFlow_BaseOp<"expand_dims", [NoSideEffect, DeclareO
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8641,9 +7763,7 @@ def OneFlow_FlattenOp : OneFlow_BaseOp<"flatten", [NoSideEffect, DeclareOpInterf
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8659,9 +7779,7 @@ def OneFlow_FlipOp : OneFlow_BaseOp<"flip", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8677,9 +7795,7 @@ def OneFlow_FlipGradOp : OneFlow_BaseOp<"flip_grad", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8699,9 +7815,7 @@ def OneFlow_FoldOp : OneFlow_BaseOp<"fold", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8714,9 +7828,7 @@ def OneFlow_GeluOp : OneFlow_BaseOp<"gelu", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8729,9 +7841,7 @@ def OneFlow_HardsigmoidOp : OneFlow_BaseOp<"hardsigmoid", [NoSideEffect, Declare
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8744,9 +7854,7 @@ def OneFlow_HardswishOp : OneFlow_BaseOp<"hardswish", [NoSideEffect, DeclareOpIn
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8762,9 +7870,7 @@ def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8777,9 +7883,7 @@ def OneFlow_LogicalNotOp : OneFlow_BaseOp<"logical_not", [NoSideEffect, DeclareO
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8792,9 +7896,7 @@ def OneFlow_MishOp : OneFlow_BaseOp<"mish", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8812,9 +7914,7 @@ def OneFlow_NarrowOp : OneFlow_BaseOp<"narrow", [NoSideEffect, DeclareOpInterfac
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8835,9 +7935,7 @@ def OneFlow_OneHotOp : OneFlow_BaseOp<"one_hot", [NoSideEffect, DeclareOpInterfa
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"indices"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8853,9 +7951,7 @@ def OneFlow_PackOp : OneFlow_BaseOp<"pack", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8872,9 +7968,7 @@ def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", [NoSideEffect,
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"like"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8890,9 +7984,7 @@ def OneFlow_RepeatOp : OneFlow_BaseOp<"repeat", [NoSideEffect, DeclareOpInterfac
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8909,9 +8001,7 @@ def OneFlow_RollOp : OneFlow_BaseOp<"roll", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8924,9 +8014,7 @@ def OneFlow_SeluOp : OneFlow_BaseOp<"selu", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8939,9 +8027,7 @@ def OneFlow_SigmoidOp : OneFlow_BaseOp<"sigmoid", [NoSideEffect, DeclareOpInterf
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8954,9 +8040,7 @@ def OneFlow_SiluOp : OneFlow_BaseOp<"silu", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8969,9 +8053,7 @@ def OneFlow_SoftsignOp : OneFlow_BaseOp<"softsign", [NoSideEffect, DeclareOpInte
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -8987,9 +8069,7 @@ def OneFlow_SortOp : OneFlow_BaseOp<"sort", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -9002,9 +8082,7 @@ def OneFlow_SquareSumOp : OneFlow_BaseOp<"square_sum", [NoSideEffect, DeclareOpI
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -9020,9 +8098,7 @@ def OneFlow_SqueezeOp : OneFlow_BaseOp<"squeeze", [NoSideEffect, DeclareOpInterf
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -9038,9 +8114,7 @@ def OneFlow_TransposeOp : OneFlow_BaseOp<"transpose", [NoSideEffect, DeclareOpIn
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -9059,9 +8133,7 @@ def OneFlow_TrilOp : OneFlow_BaseOp<"tril", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -9077,9 +8149,7 @@ def OneFlow_TriuOp : OneFlow_BaseOp<"triu", [NoSideEffect, DeclareOpInterfaceMet
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -9099,9 +8169,7 @@ def OneFlow_UnfoldOp : OneFlow_BaseOp<"unfold", [NoSideEffect, DeclareOpInterfac
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -9119,9 +8187,7 @@ def OneFlow_UnfoldTensorOp : OneFlow_BaseOp<"unfold_tensor", [NoSideEffect, Decl
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -9137,9 +8203,7 @@ def OneFlow_UnpackOp : OneFlow_BaseOp<"unpack", [NoSideEffect, DeclareOpInterfac
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -9152,9 +8216,7 @@ def OneFlow_ZeroLikeOp : OneFlow_BaseOp<"zero_like", [NoSideEffect, DeclareOpInt
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"like"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -9182,9 +8244,7 @@ def OneFlow_UpsampleOp : OneFlow_BaseOp<"upsample", [NoSideEffect, DeclareOpInte
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -9203,9 +8263,7 @@ def OneFlow_UpsampleBicubic2DOp : OneFlow_BaseOp<"upsample_bicubic_2d", [NoSideE
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -9225,9 +8283,7 @@ def OneFlow_UpsampleBicubic2DGradOp : OneFlow_BaseOp<"upsample_bicubic_2d_grad",
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -9246,9 +8302,7 @@ def OneFlow_UpsampleBilinear2DOp : OneFlow_BaseOp<"upsample_bilinear_2d", [NoSid
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -9268,9 +8322,7 @@ def OneFlow_UpsampleBilinear2DGradOp : OneFlow_BaseOp<"upsample_bilinear_2d_grad
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -9291,9 +8343,7 @@ def OneFlow_UpsampleGradOp : OneFlow_BaseOp<"upsample_grad", [NoSideEffect, Decl
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -9311,9 +8361,7 @@ def OneFlow_UpsampleLinear1DOp : OneFlow_BaseOp<"upsample_linear_1d", [NoSideEff
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -9332,9 +8380,7 @@ def OneFlow_UpsampleLinear1DGradOp : OneFlow_BaseOp<"upsample_linear_1d_grad", [
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -9351,9 +8397,7 @@ def OneFlow_UpsampleNearest1DOp : OneFlow_BaseOp<"upsample_nearest_1d", [NoSideE
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -9371,9 +8415,7 @@ def OneFlow_UpsampleNearest1DGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad",
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -9391,9 +8433,7 @@ def OneFlow_UpsampleNearest2DOp : OneFlow_BaseOp<"upsample_nearest_2d", [NoSideE
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -9412,9 +8452,7 @@ def OneFlow_UpsampleNearest2DGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad",
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -9433,9 +8471,7 @@ def OneFlow_UpsampleNearest3DOp : OneFlow_BaseOp<"upsample_nearest_3d", [NoSideE
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -9455,9 +8491,7 @@ def OneFlow_UpsampleNearest3DGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad",
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
@@ -9477,9 +8511,7 @@ def OneFlow_UpsampleTrilinear3DOp : OneFlow_BaseOp<"upsample_trilinear_3d", [NoS
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1}); return &val; }
   }];
 }
 
@@ -9500,9 +8532,7 @@ def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_gr
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
-    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
     static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
-    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<std::uint32_t> val({1, 1}); return &val; }
   }];
 }
 
