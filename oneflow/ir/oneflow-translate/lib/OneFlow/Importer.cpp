@@ -557,6 +557,20 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
     auto id = id_attr.first;
     // mlir only attrs
     // TODO: find a way to skip attrs like callee in a declarative way
+    {
+      std::vector<std::string> keys{};
+      std::vector<int32_t> sizes{};
+      assert(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(op, keys, sizes)
+                 .succeeded());
+      for (const auto& s : keys) { op_conf.mutable_user_conf()->add_input_order(s); }
+    }
+    {
+      std::vector<std::string> keys{};
+      std::vector<int32_t> sizes{};
+      assert(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys, sizes)
+                 .succeeded());
+      for (const auto& s : keys) { op_conf.mutable_user_conf()->add_output_order(s); }
+    }
     if (id.strref().equals("callee") || id.strref().equals("device_name")
         || id.strref().equals("hierarchy") || id.strref().equals("input_lbn_segment_sizes")
         || id.strref().equals("output_lbns") || id.strref().equals("output_lbn_segment_sizes")
@@ -572,18 +586,6 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
       op_conf.set_device_tag(user_op_adaptor.device_tag().getValue().str());
     } else if (id.strref().equals("scope_symbol_id")) {
       op_conf.set_scope_symbol_id(user_op_adaptor.scope_symbol_id().getInt());
-    } else if (id.strref().equals("input_lbn_segment_keys")) {
-      std::vector<std::string> keys{};
-      std::vector<int32_t> sizes{};
-      assert(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(op, keys, sizes)
-                 .succeeded());
-      for (const auto& s : keys) { op_conf.mutable_user_conf()->add_input_order(s); }
-    } else if (id.strref().equals("output_lbn_segment_keys")) {
-      std::vector<std::string> keys{};
-      std::vector<int32_t> sizes{};
-      assert(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys, sizes)
-                 .succeeded());
-      for (const auto& s : keys) { op_conf.mutable_user_conf()->add_output_order(s); }
     }
     // convert user conf attributes
     else {
