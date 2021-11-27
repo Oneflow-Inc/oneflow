@@ -325,12 +325,7 @@ LogicalResult JobImporter::TryToUpdateJob() {
       ::oneflow::OperatorConf op_conf = job_wrapper_.OpConf4OpName(op_name);
       for (const auto& ibn : llvm::enumerate(op->getAttrOfType<ArrayAttr>("input_bns"))) {
         auto result = GetDataInputOperands(op)[ibn.index()].dyn_cast<OpResult>();
-        std::string new_val =
-            result.getDefiningOp()
-                ->getAttrOfType<ArrayAttr>("output_lbns")[result.getResultNumber()]
-                .dyn_cast<StringAttr>()
-                .getValue()
-                .str();
+        std::string new_val = GetOutputLbn(result).getValue();
         job_wrapper_.ReplaceInputLbnInOpCustomizedConf(
             &op_conf, ibn.value().dyn_cast<StringAttr>().getValue().str(), new_val);
       }

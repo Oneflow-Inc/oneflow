@@ -41,6 +41,7 @@ ResultRange GetDataOutputResults(Operation* op);
 OperandRange GetDataInputOperands(Operation* op);
 LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf);
 llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op);
+llvm::Optional<std::string> GetOutputLbn(OpResult result);
 
 class Importer {
  public:
