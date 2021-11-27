@@ -147,7 +147,9 @@ class OneRecDataset final : public Dataset<TensorBuffer> {
 
   std::vector<std::string> GetLocalFilePaths() {
     std::vector<std::string> ret;
-    for (int i = range_.begin(); i < range_.end(); ++i) { ret.push_back(data_file_paths_.at(i)); }
+    for (int i = range_.begin(); i < range_.end(); ++i) {
+      ret.emplace_back(data_file_paths_.at(i));
+    }
     return ret;
   }
 

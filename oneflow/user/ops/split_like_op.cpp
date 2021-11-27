@@ -45,7 +45,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
     }
     DimVector out_i_dim_vec = like_i_desc.shape().dim_vec();
     FOR_RANGE(int64_t, j, like_num_axes, in_num_axes) {
-      out_i_dim_vec.push_back(in_desc.shape().At(j));
+      out_i_dim_vec.emplace_back(in_desc.shape().At(j));
     }
     *out_i_desc->mut_shape() = Shape(out_i_dim_vec);
     out_i_desc->set_is_dynamic(like_i_desc.is_dynamic());

@@ -34,6 +34,7 @@ Maybe<const std::vector<Symbol<cfg::SbpParallel>>&> GetSbpTuple(Symbol<cfg::NdSb
   auto iter = map.find(nd_sbp);
   if (iter == map.end()) {
     std::vector<Symbol<cfg::SbpParallel>> sbp_tuple;
+    sbp_tuple.reserve(nd_sbp->sbp_parallel().size());
     for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
       sbp_tuple.push_back(SymbolOf(sbp_parallel));
     }

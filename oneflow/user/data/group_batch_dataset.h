@@ -55,7 +55,7 @@ class GroupBatchDataset final : public Dataset<LoadTarget> {
       int64_t next_group_id = group_fn_(next_sample_vec[0]);
       if (group_id == -1) { group_id = next_group_id; }
       if (group_id == next_group_id) {
-        ret.push_back(std::move(next_sample_vec[0]));
+        ret.emplace_back(std::move(next_sample_vec[0]));
       } else {
         auto group_it = group_id2buffered_samples_.find(next_group_id);
         if (group_it == group_id2buffered_samples_.end()) {
@@ -68,9 +68,9 @@ class GroupBatchDataset final : public Dataset<LoadTarget> {
           std::swap(batch_sample.data, next_sample_vec);
           batch_sample.data.reserve(batch_size_);
           batch_sample.order = order_count_++;
-          batch_sample_list.push_back(std::move(batch_sample));
+          batch_sample_list.emplace_back(std::move(batch_sample));
         } else {
-          batch_sample_list.back().data.push_back(std::move(next_sample_vec[0]));
+          batch_sample_list.back().data.emplace_back(std::move(next_sample_vec[0]));
         }
       }
     }

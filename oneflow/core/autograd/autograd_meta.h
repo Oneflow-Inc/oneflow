@@ -65,7 +65,7 @@ class AutogradMeta final {
   void set_requires_grad(bool requires_grad) { requires_grad_ = requires_grad; }
   void set_retain_grad(bool retain_grad) { retain_grad_ = retain_grad; }
   void set_is_leaf(bool is_leaf) { is_leaf_ = is_leaf; }
-  void add_hook(const Hook& hook) { hooks_.push_back(hook); }
+  void add_hook(const Hook& hook) { hooks_.emplace_back(hook); }
 
  private:
   bool is_leaf_;
