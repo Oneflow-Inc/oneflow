@@ -393,6 +393,19 @@ StringRef GetSegmentSizeAttr<OpTrait::AttrSizedResultSegments>() {
 }
 
 template<template<typename T> class Trait>
+int32_t GetSingleSegmentSize(Operation*);
+
+template<>
+int32_t GetSingleSegmentSize<OpTrait::AttrSizedOperandSegments>(Operation* op) {
+  return op->getNumOperands();
+}
+
+template<>
+int32_t GetSingleSegmentSize<OpTrait::AttrSizedResultSegments>(Operation* op) {
+  return op->getNumResults();
+}
+
+template<template<typename T> class Trait>
 LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::string>& keys,
                                             std::vector<int32_t>& sizes) {
   const std::vector<std::string>* full_keys = nullptr;
@@ -417,7 +430,12 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
     };
     full_sizes = {segment_sizes.begin(), segment_sizes.end()};
   } else {
-    full_sizes.resize(full_keys->size(), 1);
+    if (full_keys->size() == 1) {
+      full_sizes.push_back(GetSingleSegmentSize<Trait>(op));
+    } else {
+      // TODO: support deduction of single variadic
+      full_sizes.resize(full_keys->size(), 1);
+    }
   }
   for (const auto& key_size_tuple : llvm::zip(*full_keys, full_sizes)) {
     const std::string& key = std::get<0>(key_size_tuple);
