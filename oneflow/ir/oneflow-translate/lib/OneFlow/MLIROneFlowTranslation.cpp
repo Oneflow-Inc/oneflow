@@ -134,11 +134,13 @@ LogicalResult JobImporter::AddUserOpInputOutputSegments(const ::oneflow::Operato
   if (op.has_user_conf() == false) return failure();
   const auto& user_conf = op.user_conf();
   const ::oneflow::UserOpDef& op_def = job_wrapper_.GetUserOpDef(op.user_conf().op_type_name());
+  static const auto UserOpOperationName =
+      OperationName(oneflow::UserOp::getOperationName(), GetMLIRContext());
   attr_vec.push_back(GetBuilder().getNamedAttr(
-      "input_sizes",
+      oneflow::UserOp::input_sizesAttrName(UserOpOperationName),
       GetBuilder().getI32ArrayAttr(GetSizesFromArgs(user_conf.input(), op_def.input()))));
   attr_vec.push_back(GetBuilder().getNamedAttr(
-      "output_sizes",
+      oneflow::UserOp::output_sizesAttrName(UserOpOperationName),
       GetBuilder().getI32ArrayAttr(GetSizesFromArgs(user_conf.output(), op_def.output()))));
   auto output_lbns = GetOutputLbns(op, op_def.output());
   attr_vec.push_back(GetBuilder().getNamedAttr(
