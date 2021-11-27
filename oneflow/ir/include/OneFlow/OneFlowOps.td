@@ -9,7 +9,7 @@ include "mlir/Pass/PassBase.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "OneFlowBase.td"
 
-def OneFlow_UserOp : OneFlow_UserBaseWithCtrlOp<"user", [AttrSizedOperandSegments, AttrSizedResultSegments]> {
+def OneFlow_UserOp : OneFlow_UserBaseWithCtrlOp<"user", []> {
     let summary = "";
     let attrs = (ins
       StrArrayAttr:$output_lbns
