@@ -137,7 +137,7 @@ file(GLOB_RECURSE oneflow_all_src
   "${PROJECT_SOURCE_DIR}/oneflow/user/*.*"
   "${PROJECT_SOURCE_DIR}/oneflow/api/*.*"
   "${PROJECT_SOURCE_DIR}/oneflow/extension/python/*.*")
-if (WITH_XLA OR WITH_TENSORRT)
+if (WITH_XLA OR WITH_TENSORRT OR WITH_OPENVINO)
   file(GLOB_RECURSE oneflow_xrt_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/*.*")
   if (NOT WITH_XLA)
     file(GLOB_RECURSE xla_removing_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/xla/*.*")
@@ -145,9 +145,13 @@ if (WITH_XLA OR WITH_TENSORRT)
   if (NOT WITH_TENSORRT)
     file(GLOB_RECURSE trt_removing_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/tensorrt/*.*")
   endif ()
+  if (NOT WITH_OPENVINO)
+    file(GLOB_RECURSE openvino_removing_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/openvino/*.*")
+  endif ()
 
   list(APPEND xrt_removing_srcs ${xla_removing_src})
   list(APPEND xrt_removing_srcs ${trt_removing_src})
+  list(APPEND xrt_removing_srcs ${openvino_removing_src})
   # message(STATUS "removing_srcs: ${xrt_removing_srcs}")
   foreach (removing_file ${xrt_removing_srcs})
     list(REMOVE_ITEM oneflow_xrt_src ${removing_file})
