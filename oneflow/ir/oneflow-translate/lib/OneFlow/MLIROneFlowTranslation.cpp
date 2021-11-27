@@ -87,6 +87,9 @@ class JobImporter : Importer {
                                     const std::string& attr_name) override {
     return job_wrapper_.QueryAttrType(op_type_name, attr_name);
   }
+  ::oneflow::UserOpDef GetUserOpDef(const std::string& op_type_name) const override {
+    return job_wrapper_.GetUserOpDef(op_type_name);
+  }
 
  private:
   std::unordered_map<std::string, mlir::OpResult> lbn2result_;

@@ -292,10 +292,13 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
       "op_type_name", GetBuilder().getStringAttr(op.user_conf().op_type_name())));
   std::vector<::mlir::Value> operand_vec;
   if (failed(namedAttributesFromUserOp(op, attr_vec))) { return failure(); }
-  for (const auto& key : op.user_conf().input_order()) {
-    auto& value = op.user_conf().input().at(key);
+  const auto& op_def = GetUserOpDef(op.user_conf().op_type_name());
+  for (const auto& arg_def : op_def.input()) {
+    const auto& key = arg_def.name();
+    auto it = op.user_conf().input().find(key);
+    if (it == op.user_conf().input().end()) { continue; }
     int32_t index = 0;
-    for (const std::string& lbn : value.s()) {
+    for (const std::string& lbn : it->second.s()) {
       if (failed(AppendDataInOperand(key, index, lbn, operand_vec))) { return failure(); }
       index += 1;
     }
@@ -306,9 +309,11 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   Operation* created_op = nullptr;
 
   auto out_types = llvm::SmallVector<Type, 8>();
-  for (const auto& key : op.user_conf().output_order()) {
-    auto& value = op.user_conf().output().at(key);
-    for (const auto& output_lbn : value.s()) {
+  for (const auto& arg_def : op_def.output()) {
+    const auto& key = arg_def.name();
+    auto it = op.user_conf().output().find(key);
+    if (it == op.user_conf().output().end()) { continue; }
+    for (const auto& output_lbn : it->second.s()) {
       out_types.push_back(GetTensorTypeOfLbn(output_lbn));
     }
   }

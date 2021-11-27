@@ -101,6 +101,7 @@ class Importer {
   Location& GetRootLocation() { return unknown_loc_; }
   virtual ::oneflow::AttrType QueryAttrType(const std::string& op_type_name,
                                             const std::string& attr_name) = 0;
+  virtual ::oneflow::UserOpDef GetUserOpDef(const std::string& op_type_name) const = 0;
   virtual Type GetTensorTypeOfLbn(const std::string& lbn) = 0;
   LogicalResult ConvertUserOpAttributes(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
                                         ::oneflow::OperatorConf& op_conf);
