@@ -20,6 +20,10 @@ def UserOpCompatibleInterface : OpInterface<"UserOpCompatible"> {
     InterfaceMethod<"",
         "std::pair<unsigned, unsigned>", "getODSOperandIndexAndLength", (ins "unsigned":$index), [{
         return $_op.getODSOperandIndexAndLength(index);
+    }]>,
+    InterfaceMethod<"",
+        "std::pair<unsigned, unsigned>", "getODSResultIndexAndLength", (ins "unsigned":$index), [{
+        return $_op.getODSResultIndexAndLength(index);
     }]>
   ];
 }

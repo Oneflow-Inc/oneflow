@@ -380,6 +380,21 @@ const std::vector<std::string>* GetFullKeys<OpTrait::AttrSizedResultSegments>(
 }
 
 template<template<typename T> class Trait>
+std::pair<unsigned, unsigned> getODSIndexAndLength(UserOpCompatible& op, unsigned index);
+
+template<>
+std::pair<unsigned, unsigned> getODSIndexAndLength<OpTrait::AttrSizedOperandSegments>(
+    UserOpCompatible& op, unsigned index) {
+  return op.getODSOperandIndexAndLength(index);
+}
+
+template<>
+std::pair<unsigned, unsigned> getODSIndexAndLength<OpTrait::AttrSizedResultSegments>(
+    UserOpCompatible& op, unsigned index) {
+  return op.getODSResultIndexAndLength(index);
+}
+
+template<template<typename T> class Trait>
 StringRef GetSegmentSizeAttr();
 
 template<>
@@ -434,7 +449,7 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
       full_sizes.push_back(GetSingleSegmentSize<Trait>(op));
     } else {
       for (const auto& key : llvm::enumerate(*full_keys)) {
-        full_sizes.push_back(uc.getODSOperandIndexAndLength(key.index()).second);
+        full_sizes.push_back(getODSIndexAndLength<Trait>(uc, key.index()).second);
       }
     }
   }
