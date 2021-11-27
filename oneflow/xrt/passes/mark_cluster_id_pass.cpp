@@ -70,7 +70,7 @@ void MarkClusterIdPass::BuildClusterNodesAndEdges(XrtGraph* graph) {
     auto cluster_node = BuildClusterNode(node, cluster_id);
     root_nodes_.insert(cluster_node.get());
     cluster_nodes[node->unique_id()] = cluster_node.get();
-    allocated_nodes_.push_back(std::move(cluster_node));
+    allocated_nodes_.emplace_back(std::move(cluster_node));
   });
 
   for (ClusterNode* start : root_nodes_) {
@@ -83,7 +83,7 @@ void MarkClusterIdPass::BuildClusterNodesAndEdges(XrtGraph* graph) {
 
       start->AddOutEdge(cluster_edge.get());
       end->AddInEdge(cluster_edge.get());
-      allocated_edges_.push_back(std::move(cluster_edge));
+      allocated_edges_.emplace_back(std::move(cluster_edge));
     }
   }
 }
@@ -99,7 +99,7 @@ void MarkClusterIdPass::ClusteringSubgraphs(const ClusteringOptions& options,
           || node->IsOptimizer(engine) /* skip model update op */) {
         return;
       }
-      ordered_nodes.push_back(node);
+      ordered_nodes.emplace_back(node);
     });
 
     // for (ClusterNode *node : ordered_nodes) {
@@ -186,7 +186,7 @@ void MarkClusterIdPass::RemoveInvalidClusterNodes(const ClusteringOptions& optio
   for (ClusterNode* node : root_nodes_) {
     if (node->engine() == XrtEngine::DEFAULT || node->size() < min_nodes
         || node->size() > max_nodes) {
-      removing_clusters.push_back(node);
+      removing_clusters.emplace_back(node);
     }
   }
   for (ClusterNode* node : removing_clusters) { root_nodes_.erase(node); }
@@ -202,6 +202,7 @@ void MarkClusterIdPass::Run(XrtGraph* graph, const XrtPassOptions& options) {
   } else {
     ClusteringSubgraphs(clustering_options, XrtEngine::TENSORRT);
     ClusteringSubgraphs(clustering_options, XrtEngine::XLA);
+    ClusteringSubgraphs(clustering_options, XrtEngine::OPENVINO);
   }
 
   RemoveInvalidClusterNodes(clustering_options);
