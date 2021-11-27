@@ -261,9 +261,9 @@ LogicalResult JobImporter::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
   if (failed(AppendCtrlOutType(out_types))) { return failure(); }
   state.addOperands(operand_vec);
   state.addTypes(out_types);
-  auto created_op = GetBuilder().createOperation(state);
-  if (failed(InsertOpResults(op, created_op))) { return failure(); }
-  if (!created_op) {
+  if (auto created_op = GetBuilder().createOperation(state)) {
+    if (failed(InsertOpResults(op, created_op))) { return failure(); }
+  } else {
     GetModule()->emitError("fail to create op, name: " + op.name());
     return failure();
   }
