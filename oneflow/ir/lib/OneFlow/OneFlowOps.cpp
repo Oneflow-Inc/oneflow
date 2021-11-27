@@ -288,10 +288,9 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
 
 void NormalizationAddReluOp::build(::mlir::OpBuilder& odsBuilder, ::mlir::OperationState& odsState,
                                    Value x, Value addend, Value moving_mean, Value moving_variance,
-                                   Value gamma, Value beta, StringRef op_name, BoolAttr trainable,
-                                   StringRef device_tag, ArrayAttr device_name,
-                                   IntegerAttr scope_symbol_id, ArrayAttr hierarchy,
-                                   DenseElementsAttr operand_segment_sizes,
+                                   Value gamma, Value beta, StringRef op_name, StringRef device_tag,
+                                   ArrayAttr device_name, IntegerAttr scope_symbol_id,
+                                   ArrayAttr hierarchy, DenseElementsAttr operand_segment_sizes,
                                    DenseElementsAttr result_segment_sizes, IntegerAttr axis,
                                    FloatAttr epsilon, BoolAttr training, FloatAttr momentum) {
   odsState.addOperands(x);
@@ -305,7 +304,6 @@ void NormalizationAddReluOp::build(::mlir::OpBuilder& odsBuilder, ::mlir::Operat
                                                      (moving_variance ? 1 : 0), 1, 1}));
 
   odsState.addAttribute(op_nameAttrName(odsState.name), odsBuilder.getStringAttr(op_name));
-  if (trainable) { odsState.addAttribute(trainableAttrName(odsState.name), trainable); }
   odsState.addAttribute(device_tagAttrName(odsState.name), odsBuilder.getStringAttr(device_tag));
   odsState.addAttribute(device_nameAttrName(odsState.name), device_name);
   if (scope_symbol_id) {

@@ -36,7 +36,6 @@ def OneFlow_NormalizationAddReluOp : OneFlow_NormalizationAddReluBaseOp {
       "Value":$gamma,
       "Value":$beta,
       "StringRef":$op_name,
-      "BoolAttr":$trainable,
       "StringRef":$device_tag,
       "ArrayAttr":$device_name,
       "IntegerAttr":$scope_symbol_id,

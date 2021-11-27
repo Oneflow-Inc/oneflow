@@ -25,7 +25,6 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, traits> {
   dag sys_attrs = (ins
     StrAttr:$op_name,
-    OptionalAttr<BoolAttr>:$trainable,
     StrAttr:$device_tag,
     StrArrayAttr:$device_name, // TODO: change device_name to dict and parse the literal fmt like "0:0-0"
     OptionalAttr<I64Attr>:$scope_symbol_id,
