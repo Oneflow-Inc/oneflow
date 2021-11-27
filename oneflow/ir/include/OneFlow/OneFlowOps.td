@@ -10,11 +10,11 @@ include "mlir/Interfaces/CallInterfaces.td"
 include "OneFlowBase.td"
 
 def OneFlow_UserOp : OneFlow_UserBaseWithCtrlOp<"user", []> {
-    let summary = "";
-    let attrs = (ins
-      StrArrayAttr:$output_lbns
-    );
-    let hasCanonicalizer = 1;
+  let summary = "";
+  let attrs = (ins
+    StrArrayAttr:$output_lbns
+  );
+  let hasCanonicalizer = 1;
 }
 
 def OneFlow_SystemOp : OneFlow_Op<"system", []> {
