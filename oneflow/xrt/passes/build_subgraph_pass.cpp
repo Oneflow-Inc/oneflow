@@ -150,7 +150,7 @@ void BuildSubGraphPass::DivideArgumentNodes(XrtGraph* sub_graph) {
   // Find all argument nodes
   std::vector<XrtNode*> argument_nodes;
   for (XrtNode* node : sub_graph->Nodes()) {
-    if (node->type() == _ArgumentOpType) { argument_nodes.push_back(node); }
+    if (node->type() == _ArgumentOpType) { argument_nodes.emplace_back(node); }
   }
   // Start to divide nodes
   int argument_id = 0;

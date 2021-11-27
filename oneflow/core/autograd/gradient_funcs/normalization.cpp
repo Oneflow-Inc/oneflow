@@ -139,9 +139,9 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
     DimVector dim_vec;
     for (int i = 0; i < x->shape()->NumAxes(); ++i) {
       if (i != ctx->axis) {
-        dim_vec.push_back(1);
+        dim_vec.emplace_back(1);
       } else {
-        dim_vec.push_back(x->shape()->At(ctx->axis));
+        dim_vec.emplace_back(x->shape()->At(ctx->axis));
       }
     }
     Shape shape(dim_vec);

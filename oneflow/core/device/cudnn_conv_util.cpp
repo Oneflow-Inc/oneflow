@@ -152,7 +152,7 @@ perf_t CudnnConvAlgoGetOrInfer(const CudnnConvParams& params,
       if (perf_it != key_it->second.cend()) { return perf_it->second; }
     }
     perf_t perf = InferFn(p);
-    (*store)[params_without_ws].push_back(std::make_pair(p.max_ws_size, perf));
+    (*store)[params_without_ws].emplace_back(std::make_pair(p.max_ws_size, perf));
     return perf;
   };
   return ThreadLocalCachedCall(cache_size, InferWithCache, params);

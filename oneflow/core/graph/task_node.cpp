@@ -330,7 +330,7 @@ void TaskNode::ConsumeRegst(const std::string& name) {
 
 void TaskNode::ConsumeRegst(const std::string& name, const std::shared_ptr<RegstDesc>& regst) {
   regst->AddConsumer(this);
-  consumed_regsts_[name].push_back(regst);
+  consumed_regsts_[name].emplace_back(regst);
 }
 
 void TaskNode::UpdateTaskId() {
@@ -359,6 +359,7 @@ std::shared_ptr<RegstDesc> TaskEdge::GetSoleRegst() const {
 
 std::vector<std::shared_ptr<RegstDesc>> TaskEdge::GetRegsts() const {
   std::vector<std::shared_ptr<RegstDesc>> regst_descs;
+  regst_descs.reserve(name_in_producer2regst_.size());
   for (auto& pair : name_in_producer2regst_) { regst_descs.emplace_back(pair.second); }
   return regst_descs;
 }
