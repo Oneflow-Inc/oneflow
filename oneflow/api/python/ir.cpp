@@ -52,7 +52,7 @@ std::string convertToCamelFromSnakeCase(const std::string& input, bool capitaliz
   return output;
 }
 
-std::string GetMLIRAttrType(const AttrType& attr_type) {
+std::string GetMLIRAttrTypeName(const AttrType& attr_type) {
   if (attr_type == ::oneflow::kAtInt32) {
     return "SI32Attr";
   } else if (attr_type == ::oneflow::kAtInt64) {
@@ -85,6 +85,73 @@ std::string GetMLIRAttrType(const AttrType& attr_type) {
     LOG(FATAL) << "fail to convert: " << attr_type;
     return "failure";
   }
+}
+
+std::string GetDefaultValue(const ::oneflow::AttrValue& attr_val) {
+  if (attr_val.has_at_string()) {
+    return "\\\"" + attr_val.at_string() + "\\\"";
+  } else if (attr_val.has_at_int32()) {
+    return std::to_string(attr_val.at_int32());
+  } else if (attr_val.has_at_int64()) {
+    return std::to_string(attr_val.at_int64());
+  } else if (attr_val.has_at_float()) {
+    return std::to_string(attr_val.at_float());
+  } else if (attr_val.has_at_double()) {
+    return std::to_string(attr_val.at_double());
+  } else if (attr_val.has_at_bool()) {
+    return attr_val.at_bool() ? "true" : "false";
+  } else if (attr_val.has_at_list_int32()) {
+    std::string ret = "{";
+    const auto& list = attr_val.at_list_int32().val();
+    for (auto it = list.begin(); it != list.end(); ++it) {
+      ret += std::to_string(*it) + (std::next(it) == list.end() ? "" : ", ");
+    }
+    ret += "}";
+    return ret;
+  } else if (attr_val.has_at_list_int64()) {
+    std::string ret = "{";
+    const auto& list = attr_val.at_list_int64().val();
+    for (auto it = list.begin(); it != list.end(); ++it) {
+      ret += std::to_string(*it) + (std::next(it) == list.end() ? "" : ", ");
+    }
+    ret += "}";
+    return ret;
+  } else if (attr_val.has_at_list_float()) {
+    std::string ret = "{";
+    const auto& list = attr_val.at_list_float().val();
+    for (auto it = list.begin(); it != list.end(); ++it) {
+      ret += std::to_string(*it) + (std::next(it) == list.end() ? "" : ", ");
+    }
+    ret += "}";
+    return ret;
+  } else if (attr_val.has_at_list_string()) {
+    std::string ret = "{";
+    const auto& list = attr_val.at_list_string().val();
+    for (auto it = list.begin(); it != list.end(); ++it) {
+      ret += "\"" + *it + "\"" + (std::next(it) == list.end() ? "" : ", ");
+    }
+    ret += "}";
+    return ret;
+  } else if (attr_val.has_at_data_type()) {
+    return std::to_string(attr_val.at_data_type());
+  }
+  LOG(FATAL) << "fail to convert value_case: " << attr_val.value_case() << "\n"
+             << attr_val.DebugString();
+}
+
+std::string GetMLIRAttrType(const ::oneflow::UserOpDef_AttrDef& attr_def) {
+  const AttrType& attr_type = attr_def.type();
+  std::string name = GetMLIRAttrTypeName(attr_type);
+  auto is_default_supported =
+      attr_def.default_val().has_at_bool() || attr_def.default_val().has_at_int32()
+      || attr_def.default_val().has_at_int64() || attr_def.default_val().has_at_float()
+      || attr_def.default_val().has_at_double()
+      || (attr_def.default_val().has_at_string() && attr_def.default_val().at_string().size() > 0);
+  if (attr_def.has_default_val() && is_default_supported) {
+    name =
+        "DefaultValuedAttr<" + name + ", " + "\"" + GetDefaultValue(attr_def.default_val()) + "\">";
+  }
+  return name;
 }
 
 const std::set<std::string>& GetIdempotentOps() {
@@ -286,10 +353,12 @@ std::string GetBaseOp(const std::string& op_name) {
   }
 }
 
+bool ShouldSkipOperandAndResultsAndAttrs(const std::string& op_name) {
+  return IsInvolutionOp(op_name) || IsIdempotentOp(op_name);
+}
+
 bool ShouldGenEmptyBody(const std::string& op_name) {
-  return false;
-  // return IsInvolutionOp(op_name) || IsIdempotentOp(op_name) || IsPoolOp(op_name)
-  //        || IsConvOp(op_name);
+  return IsPoolOp(op_name) || IsConvOp(op_name);
 }
 
 void PrintArgDef(const UserOpDef_ArgDef& arg_def) {
@@ -315,12 +384,17 @@ uint32_t NumMultipleVariadic(
   return num_variadic_op;
 }
 
-bool HasMultipleVariadic(
+bool HasAtLeastTwoVariadic(
     const ::google::protobuf::RepeatedPtrField<::oneflow::UserOpDef_ArgDef>& arg_defs) {
   return NumMultipleVariadic(arg_defs) > 1;
 }
 
-std::string GetOperandOrder(
+bool HasVariadic(
+    const ::google::protobuf::RepeatedPtrField<::oneflow::UserOpDef_ArgDef>& arg_defs) {
+  return NumMultipleVariadic(arg_defs) > 0;
+}
+
+std::string GetOperandKeys(
     const ::google::protobuf::RepeatedPtrField<::oneflow::UserOpDef_ArgDef>& arg_defs) {
   std::string ret = "{";
   for (auto it = arg_defs.begin(); it != arg_defs.end(); ++it) {
@@ -331,14 +405,41 @@ std::string GetOperandOrder(
   return ret;
 }
 
+std::string GetOperandMinimums(
+    const ::google::protobuf::RepeatedPtrField<::oneflow::UserOpDef_ArgDef>& arg_defs) {
+  std::string ret = "{";
+  for (auto it = arg_defs.begin(); it != arg_defs.end(); ++it) {
+    uint32_t min = 0;
+    if (it->is_optional()) {
+      min = 0;
+    } else if (it->has_num_as_min()) {
+      min = it->num();
+    } else {
+      min = 1;
+    }
+    ret += std::to_string(min);
+    if (std::next(it) != arg_defs.end()) { ret += ", "; }
+  }
+  ret += "}";
+  return ret;
+}
+
 // TODO: use MLIR Interfaces it implement this
+void PrintReturnStaticVal(const std::string& type, const std::string& func_name,
+                          const std::string& val) {
+  std::cout << "    static const " + type + "* " + func_name + "() { static " + type + " val(" + val
+                   + "); return &val; }\n";
+}
 void PrintExtraClassDeclaration(const oneflow::UserOpDef& op_def) {
+  return;
   std::cout << "  let extraClassDeclaration = [{"
             << "\n";
-  std::cout << "    static std::vector<std::string> inputOrder() { return "
-            << GetOperandOrder(op_def.input()) << "; }\n";
-  std::cout << "    static std::vector<std::string> outputOrder() { return "
-            << GetOperandOrder(op_def.output()) << "; }\n";
+  PrintReturnStaticVal("std::vector<std::string>", "inputKeys", GetOperandKeys(op_def.input()));
+  PrintReturnStaticVal("std::vector<std::uint32_t>", "inputMinimums",
+                       GetOperandMinimums(op_def.input()));
+  PrintReturnStaticVal("std::vector<std::string>", "outputKeys", GetOperandKeys(op_def.output()));
+  PrintReturnStaticVal("std::vector<std::uint32_t>", "outputMinimums",
+                       GetOperandMinimums(op_def.input()));
   std::cout << "  }];"
             << "\n";
 }
@@ -351,8 +452,8 @@ void PrintHasCanonicalizer(const std::string& op_name) {
 }
 
 void PrintTraitAttrs(const oneflow::UserOpDef& op_def) {
-  const bool need_operand_segment_sizes = HasMultipleVariadic(op_def.input());
-  const bool need_result_segment_sizes = HasMultipleVariadic(op_def.output());
+  const bool need_operand_segment_sizes = HasAtLeastTwoVariadic(op_def.input());
+  const bool need_result_segment_sizes = HasAtLeastTwoVariadic(op_def.output());
   if (need_operand_segment_sizes || need_result_segment_sizes) {
     std::cout << "  let trait_attrs = (ins"
               << "\n";
@@ -383,7 +484,12 @@ void PrintBody(const oneflow::user_op::OpRegistryResult& r) {
   std::cout << "{"
             << "\n";
   // inputs
-  if (op_def.input().size()) {
+  const bool should_skip_operand_and_results_and_attrs =
+      ShouldSkipOperandAndResultsAndAttrs(r.op_type_name);
+  const bool should_skip_operand = should_skip_operand_and_results_and_attrs;
+  const bool should_skip_result = should_skip_operand_and_results_and_attrs;
+  const bool should_skip_attrs = should_skip_operand_and_results_and_attrs;
+  if (op_def.input().size() && !should_skip_operand) {
     std::cout << "  let input = (ins"
               << "\n";
     for (auto it = op_def.input().begin(); it != op_def.input().end(); ++it) {
@@ -394,7 +500,7 @@ void PrintBody(const oneflow::user_op::OpRegistryResult& r) {
               << "\n";
   }
   // outputs
-  if (op_def.output().size()) {
+  if (op_def.output().size() && !should_skip_result) {
     std::cout << "  let output = (outs"
               << "\n";
     for (auto it = op_def.output().begin(); it != op_def.output().end(); ++it) {
@@ -405,11 +511,11 @@ void PrintBody(const oneflow::user_op::OpRegistryResult& r) {
               << "\n";
   }
   // attrs
-  if (op_def.attr().size()) {
+  if (op_def.attr().size() && !should_skip_attrs) {
     std::cout << "  let attrs = (ins"
               << "\n";
     for (auto it = op_def.attr().begin(); it != op_def.attr().end(); ++it) {
-      std::cout << "    " << GetMLIRAttrType(it->type()) << ":$" << it->name()
+      std::cout << "    " << GetMLIRAttrType(*it) << ":$" << it->name()
                 << (std::next(it) == op_def.attr().end() ? "" : ",") << "\n";
     }
     std::cout << "  );"
@@ -425,6 +531,10 @@ void PrintBody(const oneflow::user_op::OpRegistryResult& r) {
 
 bool ShouldGenBaseClass(const std::string& op_name) { return op_name == "normalization_add_relu"; }
 
+bool HasSideEffect(const std::string& op_name) {
+  return IsAssignOp(op_name) || IsOptimizerOp(op_name);
+}
+
 std::string GetOpClassName(const std::string& op_name) {
   std::string ret = "";
   if (IsPoolOp(op_name)) {
@@ -438,18 +548,23 @@ std::string GetOpClassName(const std::string& op_name) {
   return PostProcessClassName(ret);
 }
 
-std::string GetTraits(const oneflow::UserOpDef& op_def) {
+std::string GetTraits(const oneflow::user_op::OpRegistryResult& r) {
+  const oneflow::UserOpDef& op_def = r.op_def;
   std::string ret{};
-  const bool need_operand_segment_sizes = HasMultipleVariadic(op_def.input());
-  const bool need_result_segment_sizes = HasMultipleVariadic(op_def.output());
-  if (need_operand_segment_sizes) { ret += "AttrSizedOperandSegments"; }
+  if (HasSideEffect(r.op_type_name) == false) { ret += "NoSideEffect"; }
+  const bool need_operand_segment_sizes = HasAtLeastTwoVariadic(op_def.input());
+  const bool need_result_segment_sizes = HasAtLeastTwoVariadic(op_def.output());
+  if (need_operand_segment_sizes) {
+    if (ret != "") ret += ", ";
+    ret += "AttrSizedOperandSegments";
+  }
 
   if (need_result_segment_sizes) {
     if (ret != "") ret += ", ";
     ret += "AttrSizedResultSegments";
   }
   if (ret != "") ret += ", ";
-  ret += "DeclareOpInterfaceMethods<BnOrderOpInterface>";
+  ret += "DeclareOpInterfaceMethods<UserOpCompatibleInterface>";
   return ret;
 }
 
@@ -464,7 +579,7 @@ void PrintODSFromOpRegistryResults(const std::map<K, V>& results) {
     auto op_class_name = GetOpClassName(kv.first);
     std::cout << (ShouldGenBaseClass(r.op_type_name) ? "class" : "def") << " OneFlow_"
               << op_class_name << "Op : " << GetBaseOp(r.op_type_name) << "<\"" << kv.first
-              << "\", [" + GetTraits(r.op_def) + "]> ";  // TODO: add traits
+              << "\", [" + GetTraits(r) + "]> ";  // TODO: add traits
     if (ShouldGenEmptyBody(r.op_type_name)) {
       std::cout << "{}\n";
     } else {
