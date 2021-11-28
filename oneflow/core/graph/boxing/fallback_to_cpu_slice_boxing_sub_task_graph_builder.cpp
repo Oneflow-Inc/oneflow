@@ -36,7 +36,7 @@ Maybe<SubTskGphBuilderStatus> FallbackToCpuSliceBoxingSubTskGphBuilder::Build(
     TaskNode* in_node = sorted_in_tasks.at(in_id);
     TaskNode* proxy_on_src_host = ctx->task_graph()->GetProxyNode(
         in_node, lbi,
-        GetNodeCPUMemZoneId(dynamic_cast<TaskNode*>(in_node)->MemZoneId121().node_index()));
+        GetNodeCPUMemZoneId(in_node->MemZoneId121().rank()));
     cpu_in_tasks.push_back(proxy_on_src_host);
   }
   status.push_back(SubTskGphBuilderStatus("MoveToCpu", "-"));
