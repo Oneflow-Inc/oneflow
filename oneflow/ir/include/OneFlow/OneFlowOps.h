@@ -24,6 +24,7 @@ limitations under the License.
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
 
+#include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/OneFlowInterfaces.h.inc"
 #include "OneFlow/OneFlowEnums.h.inc"
 
@@ -116,6 +117,20 @@ class IsAlternative : public TraitBase<ConcreteType, IsAlternative> {
 };
 
 }  // namespace OpTrait
+
+template<typename T>
+inline std::string GetOpTypeName(T op) {
+  std::string op_type_name = op->getName().stripDialect().str();
+  if (op->template hasTrait<OpTrait::IsAlternative>()) {
+    op_type_name =
+        op->template getAttrOfType<StringAttr>(OpTrait::IsAlternative<void>::getOpTypeNameAttr())
+            .str();
+  }
+  if (auto alternative_name = dyn_cast<HasAlternativeOpTypeName>(op)) {
+    op_type_name = alternative_name.getOriginalOpTypeName();
+  }
+  return op_type_name;
+}
 
 }  // namespace mlir
 

@@ -17,6 +17,7 @@ endforeach()
 add_mlir_dialect_library(MLIROneFlow
   OneFlowDialect.cpp
   OneFlowOps.cpp
+  OneFlowSupport.cpp
   Conversion/OneFlowToTosa.cpp
   Conversion/SCFToGPU.cpp
   Conversion/PTXToCubin.cpp
@@ -40,6 +41,7 @@ add_mlir_dialect_library(MLIROneFlow
   MLIRReconcileUnrealizedCasts
   ${MLIR_GPU_LIBS}
   MLIRIR
+  oneflow
 )
 
 if(WITH_MLIR_CUDA_CODEGEN)

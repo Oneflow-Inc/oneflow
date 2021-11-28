@@ -44,6 +44,7 @@ limitations under the License.
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/MLIROneFlowTranslation.h"
 #include "OneFlow/Passes.h"
+#include "OneFlow/OneFlowSupport.h"
 
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
@@ -570,11 +571,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
                                                 oneflow::UserOpAdaptor& user_op_adaptor,
                                                 ::oneflow::OperatorConf& op_conf) {
   auto user_conf = op_conf.mutable_user_conf();
-  std::string op_type_name = op->getName().stripDialect().str();
-  if (op->hasTrait<OpTrait::IsAlternative>()) {
-    op_type_name =
-        op->getAttrOfType<StringAttr>(OpTrait::IsAlternative<void>::getOpTypeNameAttr()).str();
-  }
+  std::string op_type_name = GetOpTypeName(op);
   op_conf.mutable_user_conf()->set_op_type_name(op_type_name);
   for (auto id_attr : op->getAttrDictionary()) {
     auto id = id_attr.first;

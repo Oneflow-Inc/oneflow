@@ -50,14 +50,11 @@ def OneFlow_NormalizationAddReluOp : OneFlow_NormalizationAddReluBaseOp {
   ];
 }
 
-def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, OneFlow_AlternativeOp]> {
+def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>]> {
   let summary = "";
   let input = (ins
     AnyType:$in0,
     AnyType:$in1
-  );
-  let trait_attrs = (ins
-    DefaultValuedAttr<StrAttr, "\"add_n\"">:$op_type_name
   );
   let output = (outs AnyType:$out);
   let extraClassDeclaration = [{

@@ -25,6 +25,7 @@ limitations under the License.
 #include "llvm/ADT/StringSet.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
+#include "oneflow/ir/include/OneFlow/OneFlowSupport.h"
 
 using namespace mlir;
 using namespace mlir::oneflow;
@@ -360,6 +361,8 @@ void NormalizationAddReluOp::build(::mlir::OpBuilder& odsBuilder, ::mlir::Operat
   /*mean */ odsState.addTypes(x.getType());
   /*inv_variance */ odsState.addTypes(x.getType());
 }
+
+std::string Add2Op::getOriginalOpTypeName() { return "add_n"; }
 
 #include "OneFlow/OneFlowEnums.cpp.inc"
 

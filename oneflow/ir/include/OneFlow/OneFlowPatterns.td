@@ -227,8 +227,7 @@ def NormalizationAddReluPattern : Pattern<
       $add_device_tag,
       $add_device_name,
       $add_scope_symbol_id,
-      $add_hierarchy,
-      $add_op_type_name
+      $add_hierarchy
     ),
     $relu_op_name,
     $relu_device_tag,

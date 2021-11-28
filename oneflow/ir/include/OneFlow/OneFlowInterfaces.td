@@ -11,11 +11,13 @@ def UserOpCompatibleInterface : OpInterface<"UserOpCompatible"> {
   let methods = [
     StaticInterfaceMethod<"",
         "const std::vector<std::string>*", "inputKeys", (ins), [{
-        return ConcreteOp::inputKeys();
+        static std::vector<std::string> val(mlir::oneflow::support::GetInputKeys(ConcreteOp::getOperationName().split('.').second.str()));
+        return &val;
     }]>,
     StaticInterfaceMethod<"",
         "const std::vector<std::string>*", "outputKeys", (ins), [{
-        return ConcreteOp::outputKeys();
+        static std::vector<std::string> val(mlir::oneflow::support::GetOutputKeys(ConcreteOp::getOperationName().split('.').second.str()));
+        return &val;
     }]>,
     InterfaceMethod<"",
         "std::pair<unsigned, unsigned>", "getODSOperandIndexAndLength", (ins "unsigned":$index), [{
@@ -25,6 +27,18 @@ def UserOpCompatibleInterface : OpInterface<"UserOpCompatible"> {
         "std::pair<unsigned, unsigned>", "getODSResultIndexAndLength", (ins "unsigned":$index), [{
         return $_op.getODSResultIndexAndLength(index);
     }]>
+  ];
+}
+
+def AlternativeOpTypeNameInterface : OpInterface<"HasAlternativeOpTypeName"> {
+  let description = [{
+    Interface to getting control edges
+  }];
+
+  let methods = [
+    StaticInterfaceMethod<"",
+        "std::string", "getOriginalOpTypeName", (ins)
+    >,
   ];
 }
 
