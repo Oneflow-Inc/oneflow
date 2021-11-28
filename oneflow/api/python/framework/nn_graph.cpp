@@ -29,8 +29,6 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-namespace {}  // namespace
-
 ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
   using namespace oneflow;
   py::class_<NNGraph, std::shared_ptr<NNGraph>>(m, "CNNGraph")
