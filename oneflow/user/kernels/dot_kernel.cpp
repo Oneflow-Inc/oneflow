@@ -24,6 +24,18 @@ namespace {
 
 using namespace ep::primitive;
 
+template<typename Context>
+std::unique_ptr<BroadcastMatmul> NewBroadcastMatmulPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
+  return ep::primitive::NewPrimitive<BroadcastMatmulFactory>(ctx->device_type(), data_type, BlasTransposeType::N, BlasTransposeType::N, 2);
+}
+
+auto BroadcastMatmulPrimitiveExists() {
+  return hob::make_custom("BroadcastMatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewBroadcastMatmulPrimitive(&ctx).operator bool();
+  });
+}
+
 class DotKernel final : public user_op::OpKernel {
  public:
   DotKernel() = default;
@@ -36,11 +48,7 @@ class DotKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t n = x->shape().elem_cnt();
     CHECK(n <= INT_MAX);
-
-    const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
-    auto primitive = NewPrimitive<BroadcastMatmulFactory>(
-        ctx->device_type(), data_type, BlasTransposeType::N, BlasTransposeType::N, 2);
-
+    auto primitive = NewBroadcastMatmulPrimitive(ctx);
     std::vector<int64_t> dim1{1, n};
     std::vector<int64_t> dim2{n, 1};
     std::vector<int64_t> dim3{1, 1};
@@ -50,9 +58,8 @@ class DotKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DOT_KERNEL(device, dtype)                                                  \
-  REGISTER_USER_KERNEL("dot").SetCreateFn<DotKernel>().SetIsMatchedHob(AddPrimitiveExists() \
-                                                                       == true);
+ 
+REGISTER_USER_KERNEL("dot").SetCreateFn<DotKernel>().SetIsMatchedHob(BroadcastMatmulPrimitiveExists() == true);
 
 }  // namespace
 
