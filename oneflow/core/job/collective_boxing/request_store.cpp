@@ -32,9 +32,9 @@ RequestEntry::RequestEntry(const RequestDesc& desc) : desc_(desc) {
   for (int64_t global_rank = 0; global_rank < desc.device_set().device().size(); ++global_rank) {
     const DeviceDesc& device = desc.device_set().device(global_rank);
     if (device.machine_id() == GlobalProcessCtx::Rank()) {
-      local_device_vec_.push_back(device);
+      local_device_vec_.emplace_back(device);
       global_rank2local_rank_.emplace(global_rank, local_rank2global_rank_.size());
-      local_rank2global_rank_.push_back(global_rank);
+      local_rank2global_rank_.emplace_back(global_rank);
     }
     node_ids.emplace(device.machine_id());
   }
