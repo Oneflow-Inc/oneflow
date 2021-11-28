@@ -56,9 +56,10 @@ class AddNFunctor {
         std::shared_ptr<TensorTuple> outs = std::make_shared<TensorTuple>(1);
         outs->at(0) = partial_inputs.at(0);
         JUST(OpInterpUtil::Dispatch(*op_.at(size - 1), partial_inputs, outs.get()));
-        outputs.push_back(outs->at(0));
+        outputs.emplace_back(outs->at(0));
       } else {
-        outputs.push_back(JUST(OpInterpUtil::Dispatch<Tensor>(*op_.at(size - 1), partial_inputs)));
+        outputs.emplace_back(
+            JUST(OpInterpUtil::Dispatch<Tensor>(*op_.at(size - 1), partial_inputs)));
       }
     }
     if (outputs.size() == 1) { return outputs.at(0); }
@@ -595,6 +596,7 @@ class Transpose2dimFunctor {
     MutableAttrMap attrs;
     const int64_t ndim = x->shape()->NumAxes();
     std::vector<int32_t> permute;
+    permute.reserve(ndim);
     int32_t dim_0 = dim0;
     int32_t dim_1 = dim1;
 
@@ -605,7 +607,7 @@ class Transpose2dimFunctor {
         << "Invalid dim0:" << dim_0 << " len(shape):" << ndim;
     CHECK_OR_RETURN(dim_1 >= 0 && dim1 < ndim)
         << "Invalid dim1:" << dim_1 << " len(shape):" << ndim;
-    for (int32_t i = 0; i < ndim; ++i) { permute.push_back(i); }
+    for (int32_t i = 0; i < ndim; ++i) { permute.emplace_back(i); }
     std::swap(permute[dim_0], permute[dim_1]);
 
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
@@ -800,9 +802,9 @@ class VectorNormFunctor {
       dim_check = *JUST(input_dim);
       for (int i = 0; i < dim_check.size(); ++i) {
         if (dim_check[i] >= 0) {
-          dim.push_back(dim_check[i]);
+          dim.emplace_back(dim_check[i]);
         } else {
-          dim.push_back(dim_check[i] + x->shape()->NumAxes());
+          dim.emplace_back(dim_check[i] + x->shape()->NumAxes());
         }
       }
     }
@@ -892,11 +894,12 @@ class ScalarMatrixNormFunctor {
       dtype_val = x->dtype();
     }
     std::vector<int32_t> dim_tmp;
+    dim_tmp.reserve(axis);
     for (int i = 0; i < axis; ++i) {
       if (input_dim[i] >= 0) {
-        dim_tmp.push_back(input_dim[i]);
+        dim_tmp.emplace_back(input_dim[i]);
       } else {
-        dim_tmp.push_back(input_dim[i] + num_dims);
+        dim_tmp.emplace_back(input_dim[i] + num_dims);
       }
     }
     std::vector<int32_t> dim(2);
@@ -956,9 +959,9 @@ class MatrixNormFunctor {
     std::vector<int32_t> dim_tmp(axis);
     for (int i = 0; i < axis; ++i) {
       if (input_dim[i] >= 0) {
-        dim_tmp.push_back(input_dim[i]);
+        dim_tmp.emplace_back(input_dim[i]);
       } else {
-        dim_tmp.push_back(input_dim[i] + num_dims);
+        dim_tmp.emplace_back(input_dim[i] + num_dims);
       }
     }
     if (ord == "nuc") {
@@ -1421,9 +1424,10 @@ class StandardDeviationFunctor {
                            const Optional<std::vector<int32_t>>& dim,
                            const Optional<bool>& unbiased, const Optional<bool>& keepdim) const {
     const int32_t ndim = input->shape()->NumAxes();
-    std::vector<int32_t> axis(0);
+    std::vector<int32_t> axis;
+    axis.reserve(ndim);
     if (dim.has_value() == false) {
-      for (int i = 0; i < ndim; ++i) { axis.push_back(i); }
+      for (int i = 0; i < ndim; ++i) { axis.emplace_back(i); }
     } else {
       std::vector<int32_t>& dims = *JUST(dim);
       CHECK_GE_OR_RETURN(ndim, dims.size())
@@ -1507,9 +1511,10 @@ class VarianceFunctor {
                            const Optional<std::vector<int32_t>>& dim,
                            const Optional<bool>& unbiased, const Optional<bool>& keepdim) const {
     const int32_t ndim = input->shape()->NumAxes();
-    std::vector<int32_t> axis(0);
+    std::vector<int32_t> axis;
+    axis.reserve(ndim);
     if (dim.has_value() == false) {
-      for (int i = 0; i < ndim; ++i) { axis.push_back(i); }
+      for (int i = 0; i < ndim; ++i) { axis.emplace_back(i); }
     } else {
       std::vector<int32_t>& dims = *JUST(dim);
       CHECK_GE_OR_RETURN(ndim, dims.size())

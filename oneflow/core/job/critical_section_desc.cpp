@@ -81,7 +81,7 @@ void CriticalSectionDesc::UpdateJobId2CriticalSectionIds() {
   FOR_RANGE(int64_t, i, 0, critical_sections_.size()) {
     const auto& critical_section = *critical_sections_.at(i);
     int64_t job_id = critical_section.job_id();
-    job_id2critical_section_ids_[job_id].push_back(i);
+    job_id2critical_section_ids_[job_id].emplace_back(i);
     max_job_id = std::max(max_job_id, job_id);
   }
   job_id2critical_section_ids_.resize(max_job_id + 1);

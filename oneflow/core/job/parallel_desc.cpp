@@ -135,7 +135,7 @@ Maybe<void> ParallelDesc::SetMachineIdAndDeviceIdsByParsingDeviceName(
     if (!(*machine_id2sorted_dev_phy_ids_)[mchn_id]) {
       (*machine_id2sorted_dev_phy_ids_)[mchn_id] = std::make_shared<std::vector<int64_t>>();
     }
-    (*machine_id2sorted_dev_phy_ids_)[mchn_id]->push_back(dev_phy_id);
+    (*machine_id2sorted_dev_phy_ids_)[mchn_id]->emplace_back(dev_phy_id);
   }
   return Maybe<void>::Ok();
 }
@@ -243,7 +243,7 @@ void ParallelDesc::ClearUp() {
   sorted_machine_ids_.clear();
   parallel_num_ = 0;
   for (auto& pair : *machine_id2sorted_dev_phy_ids_) {
-    sorted_machine_ids_.push_back(pair.first);
+    sorted_machine_ids_.emplace_back(pair.first);
     SortAndRemoveDuplication((pair.second).get());
     parallel_num_ += pair.second->size();
   }
@@ -400,14 +400,15 @@ Maybe<Symbol<ParallelDesc>> RawReplaceDeviceType(Symbol<ParallelDesc> parallel_d
 Maybe<std::string> RawPlacementToString(Symbol<ParallelDesc> placement) {
   std::string device_type = placement->device_tag() == "gpu" ? "\"cuda\"" : "\"cpu\"";
   std::vector<int64_t> sorted_node_ids;
+  sorted_node_ids.reserve(placement->sorted_machine_ids().size());
   HashMap<int64_t, std::vector<int64_t>> node_id2sorted_dev_phy_ids;
   for (int64_t machine_id : placement->sorted_machine_ids()) {
     int64_t node_id = GlobalProcessCtx::NodeId(machine_id);
     if (!std::count(sorted_node_ids.begin(), sorted_node_ids.end(), node_id)) {
-      sorted_node_ids.push_back(node_id);
+      sorted_node_ids.emplace_back(node_id);
     }
     for (int64_t device_id : placement->sorted_dev_phy_ids(machine_id)) {
-      node_id2sorted_dev_phy_ids[node_id].push_back(device_id);
+      node_id2sorted_dev_phy_ids[node_id].emplace_back(device_id);
     }
   }
   std::string machine_device_ids = "{";

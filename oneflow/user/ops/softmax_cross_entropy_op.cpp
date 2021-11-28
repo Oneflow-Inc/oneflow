@@ -37,7 +37,7 @@ REGISTER_USER_OP("softmax_cross_entropy")
       const int64_t num_out_axes = prediction_desc.shape().NumAxes() - 1;
       DimVector out_dim_vector;
       FOR_RANGE(int64_t, i, 0, num_out_axes) {
-        out_dim_vector.push_back(prediction_desc.shape().At(i));
+        out_dim_vector.emplace_back(prediction_desc.shape().At(i));
       }
       *ctx->OutputShape("prob", 0) = ctx->InputShape("prediction", 0);
       *ctx->OutputIsDynamic("prob", 0) = ctx->InputIsDynamic("prediction", 0);

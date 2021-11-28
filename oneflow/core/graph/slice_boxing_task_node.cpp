@@ -72,7 +72,7 @@ void SliceBoxingTaskNode::InferProducedDataRegstTimeShape() {
 
 void SliceBoxingTaskNode::SetInDataEdgeSlice(const TaskEdge* edge, const TensorSliceView& slice) {
   CHECK(in_data_edge2slice_.emplace(edge, slice).second);
-  ordered_in_data_edges_.push_back(edge);
+  ordered_in_data_edges_.emplace_back(edge);
 }
 
 void SliceBoxingTaskNode::ConnectToSrcNodeWithSlice(TaskNode* src, TaskEdge* edge,

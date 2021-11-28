@@ -303,7 +303,7 @@ def _exp(self):
 
 
 def _expand_as(input, other):
-    return flow.expand(input, other.size())
+    return flow.expand(input, *other.size())
 
 
 def _acos(self):

@@ -320,7 +320,7 @@ GraphTask::GraphTask(const TensorTuple& outputs, bool retain_graph, bool create_
   roots_.reserve(outputs.size());
   for (const auto& out_tensor : outputs) {
     FunctionNode* node = out_tensor->mut_grad_fn_node().get();
-    roots_.push_back(node);
+    roots_.emplace_back(node);
     dependencies_.insert(std::make_pair(node, 0));
   }
 }

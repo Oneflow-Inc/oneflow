@@ -95,7 +95,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
                 in_node, lbi, dynamic_cast<TaskNode*>(out_node)->MemZoneId121());
             out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), in_slice);
           }
-          out_nodes->push_back(out_node);
+          out_nodes->emplace_back(out_node);
         }
       };
   const auto BuildSubTaskGphS2S = [&ctx, &lbi, &CreateSliceBoxingNode, &GetSliceCopyNode, &NewEdge](
@@ -123,7 +123,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
             slice_copy_node, lbi, dynamic_cast<TaskNode*>(out_node)->MemZoneId121());
         out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), intersection);
       }
-      out_nodes->push_back(out_node);
+      out_nodes->emplace_back(out_node);
     }
   };
   const auto BuildSubTaskGphP2S = [&ctx, &lbi, &CreateSliceBoxingNode, &GetSliceCopyNode, &NewEdge](
@@ -149,7 +149,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
             slice_copy_node, lbi, dynamic_cast<TaskNode*>(out_node)->MemZoneId121());
         out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), intersection);
       }
-      out_nodes->push_back(out_node);
+      out_nodes->emplace_back(out_node);
     }
   };
 
@@ -169,7 +169,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
                 in_node, lbi, dynamic_cast<TaskNode*>(out_node)->MemZoneId121());
             out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), slice);
           }
-          out_nodes->push_back(out_node);
+          out_nodes->emplace_back(out_node);
         }
       };
 
@@ -192,7 +192,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
           slice_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
           TaskNode* out_node = ctx->task_graph()->GetProxyNode(slice_node, lbi, out_pd, out_id);
 
-          out_nodes->push_back(out_node);
+          out_nodes->emplace_back(out_node);
         }
       };
 
