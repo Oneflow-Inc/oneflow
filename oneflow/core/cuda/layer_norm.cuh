@@ -590,7 +590,7 @@ __global__ void LayerNormBlockSMemImpl(LOAD load, STORE store, const int64_t row
   auto* buf = reinterpret_cast<ComputeType*>(shared_buf);
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
-  const int num_packs = cols / pack_size;
+  const int num_packs = static_cast<int>(cols) / pack_size;
   for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
     ComputeType thread_mean = 0;
     ComputeType thread_m2 = 0;
@@ -747,7 +747,7 @@ __global__ void LayerNormBlockUncachedImpl(LOAD load, STORE store, const int64_t
                                            ComputeType* mean, ComputeType* inv_variance) {
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
-  const int num_packs = cols / pack_size;
+  const int num_packs = static_cast<int>(cols) / pack_size;
   for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
     ComputeType thread_mean = 0;
     ComputeType thread_m2 = 0;
@@ -832,7 +832,7 @@ template<typename LOAD, typename STORE, typename ComputeType>
 inline cudaError_t DispatchLayerNorm(cudaStream_t stream, LOAD load, STORE store,
                                      const int64_t rows, const int64_t cols, const double epsilon,
                                      ComputeType* mean, ComputeType* inv_variance) {
-  if (cols <= 1024) {
+  if (cols <= 2048) {
     return DispatchLayerNormWarpImpl<LOAD, STORE, ComputeType>(stream, load, store, rows, cols,
                                                                epsilon, mean, inv_variance);
   } else {
@@ -1130,7 +1130,7 @@ __global__ void LayerNormGradBlockSMemImpl(LOAD_X load_x, LOAD_DY load_dy, STORE
   auto* dy_buf = x_buf + cols;
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
-  const int num_packs = cols / pack_size;
+  const int num_packs = static_cast<int>(cols) / pack_size;
   for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
     ComputeType sum_loss1 = 0;
     ComputeType sum_loss2 = 0;
@@ -1294,7 +1294,7 @@ __global__ void LayerNormGradBlockUncachedImpl(LOAD_X load_x, LOAD_DY load_dy, S
                                                const int64_t cols) {
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
-  const int num_packs = cols / pack_size;
+  const int num_packs = static_cast<int>(cols) / pack_size;
   const ComputeType cols_reciprocal = static_cast<ComputeType>(1) / cols;
   for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
     const ComputeType mean_val = mean[row];
