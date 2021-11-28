@@ -86,8 +86,8 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
     std::vector<std::string> input_bns{};
     std::vector<std::string> input_lbns{};
     for (auto e : node->in_edges()) {
-      for (auto lbi_ibn_pair : e->lbi2ibns()) {
-        for (auto ibn : lbi_ibn_pair.second) {
+      for (const auto& lbi_ibn_pair : e->lbi2ibns()) {
+        for (const auto& ibn : lbi_ibn_pair.second) {
           input_bns.push_back(ibn);
           input_lbns.push_back(GenLogicalBlobName(lbi_ibn_pair.first));
         }
