@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
 #include "oneflow/core/job/collective_boxing/scheduler.h"
-#include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/id_manager.h"
@@ -39,6 +38,7 @@ limitations under the License.
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/user/summary/events_writer.h"
 #include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
 
 #ifdef WITH_CUDA
 #include "oneflow/core/device/cuda_device_descriptor.h"
@@ -108,6 +108,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   Global<ResourceDesc, ForSession>::New(config_proto.resource(),
                                         GlobalProcessCtx::NumOfProcessPerNode());
   Global<IDMgr>::New();
+  Global<TaskStreamIndexManager>::New();
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     Global<AvailableMemDesc>::New();
     if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
@@ -134,7 +135,6 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Global<RuntimeJobDescs>::New();
     Global<summary::EventsWriter>::New();
     Global<boxing::collective::Scheduler>::New();
-    Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
   }
 
   return Maybe<void>::Ok();
@@ -152,7 +152,6 @@ Maybe<void> SessionGlobalObjectsScope::EagerInit(const ConfigProto& config_proto
 SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   {
     // NOTE(chengcheng): Delete Global Runtime objects.
-    Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
     Global<boxing::collective::Scheduler>::Delete();
     Global<summary::EventsWriter>::Delete();
     Global<RuntimeJobDescs>::Delete();
@@ -173,6 +172,7 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
     Global<JobName2JobId>::Delete();
     Global<AvailableMemDesc>::Delete();
   }
+  Global<TaskStreamIndexManager>::Delete();
   Global<IDMgr>::Delete();
   Global<ResourceDesc, ForSession>::Delete();
   Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),

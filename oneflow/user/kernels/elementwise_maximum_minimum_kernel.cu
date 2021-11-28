@@ -16,6 +16,7 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/user/kernels/elementwise_maximum_minimum_kernel.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -29,26 +30,27 @@ __global__ void ElementwiseXimumGradGpuKernel(int64_t elem_cnt, const T* dz, con
 }
 
 template<template<typename> class Opt, typename T>
-struct ElemwiseXimumGradFunctor<DeviceType::kGPU, Opt, T> final {
-  void operator()(DeviceCtx* ctx, int64_t elem_cnt, const T* dz, const T* x, const T* y, T* dx,
+struct ElemwiseXimumGradFunctor<DeviceType::kCUDA, Opt, T> final {
+  void operator()(ep::Stream* stream, int64_t elem_cnt, const T* dz, const T* x, const T* y, T* dx,
                   T* dy) {
     ElementwiseXimumGradGpuKernel<Opt, T>
-        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            elem_cnt, dz, x, y, dx, dy);
+        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+           stream->As<ep::CudaStream>()->cuda_stream()>>>(elem_cnt, dz, x, y, dx, dy);
   }
 };
 
 template<template<typename> class Opt, typename T>
-struct ElemwiseXimumFunctor<DeviceType::kGPU, Opt, T> final {
-  void operator()(DeviceCtx* ctx, int64_t elem_cnt, T* z, const T* x, const T* y) {
-    OF_CUDA_CHECK(cuda::elementwise::Binary(Opt<T>(), elem_cnt, z, x, y, ctx->cuda_stream()));
+struct ElemwiseXimumFunctor<DeviceType::kCUDA, Opt, T> final {
+  void operator()(ep::Stream* stream, int64_t elem_cnt, T* z, const T* x, const T* y) {
+    OF_CUDA_CHECK(cuda::elementwise::Binary(Opt<T>(), elem_cnt, z, x, y,
+                                            stream->As<ep::CudaStream>()->cuda_stream()));
   }
 };
 }  // namespace
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MAXIMUM_KERNELS, (DeviceType::kGPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MAXIMUM_KERNELS, (DeviceType::kCUDA),
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MINIMUM_KERNELS, (DeviceType::kGPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MINIMUM_KERNELS, (DeviceType::kCUDA),
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
 }  // namespace oneflow
 #endif  // WITH_CUDA

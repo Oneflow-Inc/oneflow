@@ -14,17 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/constant.h"
-#include "oneflow/core/job/plan_util.h"
-#include "oneflow/core/job/env_desc.h"
-#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/job/plan_util.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/memory/chunk_manager.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
-#include "oneflow/core/graph/id_serialization.h"
 
 namespace oneflow {
 
@@ -178,7 +177,7 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
     }
 
     for (const ChunkProto* exist_chunk : exist_chunks) {
-      all_chunks.push_back(*exist_chunk);
+      all_chunks.emplace_back(*exist_chunk);
       CHECK(unique_chunk_ids.insert(exist_chunk->chunk_id()).second);
     }
 
@@ -208,7 +207,7 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
         ++remain_block_it;
       }
 
-      all_chunks.push_back(new_chunk);
+      all_chunks.emplace_back(new_chunk);
       CHECK(unique_chunk_ids.insert(new_chunk.chunk_id()).second);
 
       Global<ChunkMgr>::Get()->AddChunkProto(new_chunk);
@@ -325,7 +324,7 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     }
   }
 
-  if (CHECK_JUST(GlobalMultiClientEnv())) {
+  if (CHECK_JUST(IsMultiClient())) {
     GenChunkForMultiNNGraphMemoryReuseInMultiClient(plan, &mem_block_id2mem_block);
   } else {
     CHECK(variable_op_names.empty());
@@ -451,23 +450,23 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
   auto InsertNodeDefByTaskProto = [&](const TaskProto& task_proto, const std::string& node_def,
                                       const std::string& pass_tag) {
     if (task_proto.task_type() == TaskType::kCopyCommNet) {
-      copy_comm_net_node_list.push_back(node_def);
+      copy_comm_net_node_list.emplace_back(node_def);
       return;
     }
     if (pass_tag == kNoPassTag) {
       const StreamId stream_id = PlanUtil::GetStreamId(task_proto);
-      if (stream_id.device_id().device_type() == DeviceType::kGPU) {
+      if (stream_id.device_id().device_type() == DeviceType::kCUDA) {
         machine_id2job_id_device_id2node_list[task_proto.machine_id()][task_proto.job_id()]
                                              [stream_id.device_id().device_index()]
-                                                 .push_back(node_def);
+                                                 .emplace_back(node_def);
         machine_id2device_id2node_list_job_ids[task_proto.machine_id()].insert(task_proto.job_id());
       } else {
-        machine_id2job_id2host_node_list[task_proto.machine_id()][task_proto.job_id()].push_back(
+        machine_id2job_id2host_node_list[task_proto.machine_id()][task_proto.job_id()].emplace_back(
             node_def);
         machine_id2host_node_list_job_ids[task_proto.machine_id()].insert(task_proto.job_id());
       }
     } else if (pass_tag == kMainOp) {
-      main_node_list.push_back(node_def);
+      main_node_list.emplace_back(node_def);
     } else {
       UNIMPLEMENTED();
     }
@@ -497,7 +496,7 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
       const RegstDescProto& regst = pair.second;
       for (int64_t consumer_task_id : regst.consumer_task_id()) {
-        task_id2producer_task_ids[consumer_task_id].push_back(task_proto.task_id());
+        task_id2producer_task_ids[consumer_task_id].emplace_back(task_proto.task_id());
       }
     }
   }
@@ -783,7 +782,7 @@ void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
         if (all_visited.count(node_on_in_edge) != 0) { return; }
         in_cnt += 1;
       });
-      if (in_cnt == 0) { src_nodes.push_back(node); }
+      if (in_cnt == 0) { src_nodes.emplace_back(node); }
     });
     if (src_nodes.empty()) { break; }
     auto ForEachNodeOnInEdge = [&](const PlanTaskNode* node,
@@ -814,7 +813,7 @@ void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
                                     [&](const PlanTaskNode* node) {
                                       visited.insert(node);
                                       if (IsCollectiveBoxingNode(node)) {
-                                        collective_boxing_nodes.push_back(node);
+                                        collective_boxing_nodes.emplace_back(node);
                                       }
                                     });
     if (collective_boxing_nodes.empty()) { break; }
@@ -949,7 +948,7 @@ const oneflow::OpAttribute& PlanUtil::GetOpAttribute(const Plan* plan, int64_t j
   }
 }
 
-void PlanUtil::PopulateOpAttibute(
+void PlanUtil::PopulateOpAttribute(
     Plan* plan,
     const PbMap<int64_t, ::oneflow::OpAttributeRefTable>& job_id2op_attribute_ref_table) {
   for (auto& task : *plan->mutable_task()) {
@@ -974,7 +973,7 @@ void PlanUtil::PopulateOpAttibute(
 }
 
 /*static*/ StreamId PlanUtil::GetStreamId(const TaskProto& task) {
-  return DeserializeStreamIdFromInt64(task.thrd_id());
+  return DecodeStreamIdFromInt64(task.thrd_id());
 }
 
 /*static*/ int64_t PlanUtil::GetDeviceIndex(const TaskProto& task) {

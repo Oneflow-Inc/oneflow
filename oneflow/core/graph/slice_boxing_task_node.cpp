@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
-#include "oneflow/core/graph/id_serialization.h"
 
 namespace oneflow {
 
@@ -73,7 +72,7 @@ void SliceBoxingTaskNode::InferProducedDataRegstTimeShape() {
 
 void SliceBoxingTaskNode::SetInDataEdgeSlice(const TaskEdge* edge, const TensorSliceView& slice) {
   CHECK(in_data_edge2slice_.emplace(edge, slice).second);
-  ordered_in_data_edges_.push_back(edge);
+  ordered_in_data_edges_.emplace_back(edge);
 }
 
 void SliceBoxingTaskNode::ConnectToSrcNodeWithSlice(TaskNode* src, TaskEdge* edge,

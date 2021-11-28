@@ -83,20 +83,6 @@ class _FusedBatchNorm(_FusedNormBase):
 
     def forward(self, x, addend=None):
         self._check_input_dim(x)
-        # TODO(zwx): Use `tensor.device_type()` method to help checking if x is on cpu.
-        # Using `if x.device == flow.device("cpu"):` will fail as consistent tensor has
-        # no device, however using `x.is_cuda` is not a good choice.
-        if addend is None:
-            if not x.is_cuda:
-                # TODO(zzk) add CPU version.
-                raise NotImplementedError(
-                    "Fused batchnorm version can be only used in GPU"
-                )
-        else:
-            if not x.is_cuda and not addend.is_cuda:
-                raise NotImplementedError(
-                    "Fused batchnorm version can be only used in GPU"
-                )
 
         if self.training:
             is_training = True

@@ -36,7 +36,7 @@ void GetOpName2JobId2TaskProtos(
           PlanUtil::GetOpAttribute(plan, task->job_id(), kernel_conf).op_conf().name();
       if (op_names.find(op_name) != op_names.end()) {
         CHECK(task->has_parallel_ctx());
-        (*op_name2job_id2task_protos)[op_name][task->job_id()].push_back(task);
+        (*op_name2job_id2task_protos)[op_name][task->job_id()].emplace_back(task);
       }
     }
   }
@@ -105,8 +105,9 @@ std::vector<HashSet<int64_t>> GetMutualExclusionJobGroups(
     const std::vector<std::shared_ptr<Job>>& jobs) {
   int64_t job_size = jobs.size();
   std::vector<HashSet<int64_t>> job_groups;
+  job_groups.reserve(job_size);
   if (Global<const InterJobReuseMemStrategy>::Get()->has_reuse_mem_priority()) {
-    job_groups.push_back(HashSet<int64_t>());
+    job_groups.emplace_back(HashSet<int64_t>());
     FOR_RANGE(int64_t, i, 0, job_size) { job_groups.front().emplace(i); }
     return job_groups;
   }

@@ -26,8 +26,7 @@ namespace test {
 
 namespace {
 
-// clang-format off
-INTRUSIVE_BEGIN(Foo);
+class Foo final : public intrusive::Base {
  public:
   int x() const { return x_; }
   void set_x(int val) { x_ = val; }
@@ -36,13 +35,14 @@ INTRUSIVE_BEGIN(Foo);
   Foo() : intrusive_ref_(), x_(), hook_() {}
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
+  intrusive::Ref intrusive_ref_;
   // fields
-  INTRUSIVE_DEFINE_FIELD(int, x_);
+  int x_;
+
+ public:
   // list hooks
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, hook_);
-INTRUSIVE_END(Foo);
-// clang-format on
+  intrusive::ListHook hook_;
+};
 
 using ChannelFoo = intrusive::Channel<INTRUSIVE_FIELD(Foo, hook_)>;
 
@@ -83,14 +83,14 @@ void TestChannel(ThreadHandlerType ThreadHandler) {
   std::vector<std::vector<int>> visits;
   for (int i = 0; i < receiver_num; ++i) {
     std::vector<int> visit_i;
-    for (int j = 0; j < range_num; j++) { visit_i.push_back(0); }
-    visits.push_back(visit_i);
+    for (int j = 0; j < range_num; j++) { visit_i.emplace_back(0); }
+    visits.emplace_back(visit_i);
   }
   for (int i = 0; i < sender_num; ++i) {
-    senders.push_back(std::thread(CallFromSenderThread, &condition_list, Range(0, range_num)));
+    senders.emplace_back(std::thread(CallFromSenderThread, &condition_list, Range(0, range_num)));
   }
   for (int i = 0; i < receiver_num; ++i) {
-    receivers.push_back(std::thread(ThreadHandler, &visits[i], &condition_list));
+    receivers.emplace_back(std::thread(ThreadHandler, &visits[i], &condition_list));
   }
   for (std::thread& this_thread : senders) { this_thread.join(); }
   condition_list.Close();

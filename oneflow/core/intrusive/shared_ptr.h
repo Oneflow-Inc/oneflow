@@ -25,7 +25,6 @@ namespace intrusive {
 template<typename T>
 class shared_ptr final {
  public:
-  static_assert(T::__has_intrusive_ref__, "T is not a intrusive-referenced class");
   using value_type = T;
   shared_ptr() : ptr_(nullptr) {}
   shared_ptr(value_type* ptr) : ptr_(nullptr) { Reset(ptr); }
@@ -47,7 +46,7 @@ class shared_ptr final {
     return ret;
   }
 
-  operator bool() const { return ptr_ != nullptr; }
+  explicit operator bool() const { return ptr_ != nullptr; }
   value_type* get() const { return ptr_; }
   const value_type& Get() const { return *ptr_; }
   const value_type* operator->() const { return ptr_; }

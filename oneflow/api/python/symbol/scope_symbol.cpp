@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
+#include "oneflow/api/python/framework/throw.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/scope.h"
@@ -36,7 +37,13 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::init([](int64_t symbol_id, const std::shared_ptr<cfg::ScopeProto>& symbol_conf) {
         return CreateScopeSymbol(symbol_id, symbol_conf).GetPtrOrThrow();
       }))
-      .def_property_readonly("symbol_id", [](const Scope& x) { return x.symbol_id().GetOrThrow(); })
+      .def_property_readonly("symbol_id",
+                             [](const Scope& x) {
+                               if (!x.symbol_id().has_value()) {
+                                 THROW(RuntimeError) << "symbol_id not initialized";
+                               }
+                               return CHECK_JUST(x.symbol_id());
+                             })
       .def_property_readonly("_proto_str",
                              [](const Scope& x) { return PbMessage2TxtString(x.scope_proto()); })
       .def("auto_increment_id", &Scope::auto_increment_id)

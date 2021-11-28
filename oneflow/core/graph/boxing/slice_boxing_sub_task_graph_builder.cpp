@@ -19,10 +19,7 @@ limitations under the License.
 #include "oneflow/core/graph/slice_boxing_task_node.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
-#include "oneflow/core/common/id_util.h"
-#include "oneflow/core/graph/id_serialization.h"
-#include "oneflow/core/device/stream_index.h"
-#include "oneflow/core/primitive/include/copy_nd.h"
+#include "oneflow/core/graph/task_stream_id.h"
 
 namespace oneflow {
 
@@ -75,18 +72,11 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
                    SliceBoxingTaskMode mode) -> SliceBoxingTaskNode* {
     SliceBoxingTaskNode* node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
     const int64_t machine_id = CHECK_JUST(pd.MachineId4ParallelId(parallel_id));
-    int64_t dev_id = -1;
-    if (pd.device_type() == DeviceType::kCPU) {
-      dev_id = DeviceId::kCPUDeviceIndex;
-    } else {
-      dev_id = CHECK_JUST(pd.DeviceId4ParallelId(parallel_id));
-    }
-    DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), pd.device_type(),
-                       static_cast<DeviceId::device_index_t>(dev_id)};
-    auto* stream_index_generator =
-        Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
-    auto stream_index = stream_index_generator->GenerateComputeStreamIndex();
-    int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
+    int64_t device_index = (pd.device_type() == DeviceType::kCPU)
+                               ? 0
+                               : CHECK_JUST(pd.DeviceId4ParallelId(parallel_id));
+    int64_t thrd_id = EncodeStreamIdToInt64(
+        GenerateComputeTaskStreamId(machine_id, pd.device_type(), device_index));
     node->Init(lbi, slice, mode, machine_id, thrd_id);
     return node;
   };
@@ -122,7 +112,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
                 in_node, lbi, dynamic_cast<TaskNode*>(out_node)->MemZoneId121());
             out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), in_slice);
           }
-          out_nodes->push_back(out_node);
+          out_nodes->emplace_back(out_node);
         }
       };
   const auto BuildSubTaskGphS2S = [&ctx, &lbi, &CreateSliceBoxingNode, &GetSliceCopyNode, &NewEdge](
@@ -150,7 +140,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
             slice_copy_node, lbi, dynamic_cast<TaskNode*>(out_node)->MemZoneId121());
         out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), intersection);
       }
-      out_nodes->push_back(out_node);
+      out_nodes->emplace_back(out_node);
     }
   };
   const auto BuildSubTaskGphP2S = [&ctx, &lbi, &CreateSliceBoxingNode, &GetSliceCopyNode, &NewEdge](
@@ -176,7 +166,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
             slice_copy_node, lbi, dynamic_cast<TaskNode*>(out_node)->MemZoneId121());
         out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), intersection);
       }
-      out_nodes->push_back(out_node);
+      out_nodes->emplace_back(out_node);
     }
   };
 
@@ -196,7 +186,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
                 in_node, lbi, dynamic_cast<TaskNode*>(out_node)->MemZoneId121());
             out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), slice);
           }
-          out_nodes->push_back(out_node);
+          out_nodes->emplace_back(out_node);
         }
       };
 
@@ -219,7 +209,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
           slice_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
           TaskNode* out_node = ctx->task_graph()->GetProxyNode(slice_node, lbi, out_pd, out_id);
 
-          out_nodes->push_back(out_node);
+          out_nodes->emplace_back(out_node);
         }
       };
 

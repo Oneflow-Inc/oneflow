@@ -13,9 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from contextlib import contextmanager
 import os
 import warnings
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from pathlib import Path
+import pickle
 
 import numpy as np
 from google.protobuf import text_format
@@ -25,11 +28,14 @@ import oneflow as flow
 import oneflow._oneflow_internal
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 import oneflow.framework.dtype as dtype_util
+import oneflow.framework.id_util as id_util
 import pickle
 
 SNAPSHOT_DONE_FILENAME = "snapshot_done"
 META_INFO_FILENAME = "meta"
+PICKLE_FILENAME = "pickled_data"
 DATA_FILENAME = "out"
+PROTOCOL_VERSION = 1
 
 
 class FileBackendVariableBlob:
@@ -96,6 +102,21 @@ class FileBackendVariableBlob:
         ).reshape(self.shape)
 
 
+def _save_tensor_to_disk(tensor: "oneflow.Tensor", dir_name: Union[str, Path]) -> None:
+    os.makedirs(dir_name, exist_ok=True)
+    meta_info = variable_meta_info_pb.VariableMetaInfo()
+    meta_info.shape.dim[:] = tensor.shape
+    meta_info.data_type = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(
+        tensor.dtype
+    )
+    data_path = os.path.join(dir_name, DATA_FILENAME)
+    with open(data_path, "wb") as f:
+        f.write(tensor.numpy().tobytes())
+
+    with open(os.path.join(dir_name, META_INFO_FILENAME), "w") as f:
+        f.write(text_format.MessageToString(meta_info))
+
+
 ValueContainer = Union[FileBackendVariableBlob, np.ndarray, "oneflow.Tensor"]
 
 
@@ -117,7 +138,7 @@ def _LoadSingleVariable(
         else:
             loaded = flow.tensor([]).to("cuda")
         loaded = loaded.to_consistent(
-            flow.placement("cuda", {0: [0]}), flow.sbp.broadcast
+            flow.placement("cuda", [consistent_src_rank]), flow.sbp.broadcast
         )
         return loaded
 
@@ -134,8 +155,58 @@ def _broadcast_py_object(obj, src: int = 0):
         return pickle.loads(flow._oneflow_internal.cpu_broadcast(None, src))
 
 
-def Load(
-    path: str, consistent_src_rank: Optional[int] = None,
+# NOTE(jianhao):
+# (de)serializing a container of consistent tensors requires the order
+# of those tensors are the same across all ranks.
+def tensor_getstate(self):
+    if save_load_path is not None:
+        # save_load_path is not None means setstate/getstate is called inside
+        # flow.save or flow.load
+        assert isinstance(save_load_path, Path)
+        if consistent_src_dsk_rank is None:
+            assert self.is_local
+            rel_dir_name = id_util.UniqueStr("tensor_")
+            abs_dir_name = save_load_path / rel_dir_name
+
+            tensor = self
+        else:
+            assert not self.is_local
+            rel_dir_name = f"consistent_tensor_{self.consistent_id()}"
+            abs_dir_name = save_load_path / rel_dir_name
+
+            tensor = self.to_consistent(
+                sbp=[flow.sbp.broadcast] * len(self.sbp)
+            ).to_local()
+        if (
+            consistent_src_dsk_rank is None
+            or consistent_src_dsk_rank == flow.env.get_rank()
+        ):
+            _save_tensor_to_disk(tensor, abs_dir_name)
+
+        return {"path": rel_dir_name}
+    else:
+        # save_load_path is None means setstate/getstate is called inside
+        # methods other than flow.save/load, for example, copy.deepcopy
+        assert (
+            self.is_local
+        ), "copy.deepcopy and similar methods only support local tensors"
+        return {"data": self.numpy(), "dtype": self.dtype}
+
+
+def tensor_setstate(self, pickle_dict):
+    if save_load_path is not None:
+        assert isinstance(save_load_path, Path)
+        rel_dir_name = pickle_dict["path"]
+        abs_dir_name = save_load_path / rel_dir_name
+        self.__init__(_LoadSingleVariable(str(abs_dir_name), consistent_src_dsk_rank))
+    else:
+        return self.__init__(
+            flow.tensor(pickle_dict["data"], dtype=pickle_dict["dtype"])
+        )
+
+
+def legacy_load(
+    path: Union[str, Path], consistent_src_rank: Optional[int] = None,
 ) -> Dict[str, "flow.Tensor"]:
     assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
     rank = flow.env.get_rank()
@@ -160,48 +231,92 @@ def Load(
     return var_dict
 
 
-def save(
-    var_dict: Dict[str, "flow.Tensor"],
-    path: str,
-    consistent_dst_rank: Optional[int] = None,
-) -> None:
-    consistent_mode = consistent_dst_rank is not None
-    for (name, var) in var_dict.items():
-        if consistent_mode:
-            assert (
-                var.is_consistent
-            ), f"consistent tensor is needed, but {name} is a local tensor"
-            var_dict[name] = var.to_consistent(sbp=flow.sbp.broadcast).to_local()
-        else:
-            assert (
-                not var.is_consistent
-            ), f"local tensor is needed, but {name} is a consistent tensor"
+@contextmanager
+def tensor_pickling_context(path: Path, consistent_src_dst_rank: int):
+    global save_load_path
+    global consistent_src_dsk_rank
+    consistent_src_dsk_rank = consistent_src_dst_rank
+    save_load_path = path
+    try:
+        yield
+    finally:
+        consistent_src_dsk_rank = None
+        save_load_path = None
 
+
+def load(path: str, consistent_src_rank: Optional[int] = None,) -> Any:
+    r"""Loads an object saved with oneflow.save() from a directory.
+
+    Args:
+        path (str): The directory containing the object
+        consistent_src_rank (int, optional): The source rank for 
+            loading consistent tensors. When specified, only the 
+            process whose rank == consistent_src_rank will really
+            read the files in `path`, and tensors in the loaded
+            object will be consistent with placement = 
+            `flow.placement('cuda', [consistent_src_rank])`
+
+    Returns:
+        The loaded object
+    """
+    path: Path = Path(path)
+    assert path.is_dir(), "Directory {} doesn't exist!".format(path)
+    pickle_path = path / PICKLE_FILENAME
     rank = flow.env.get_rank()
-    if consistent_mode and rank != consistent_dst_rank:
-        return
+    if consistent_src_rank is None or consistent_src_rank == rank:
+        is_legacy = not pickle_path.exists()
+        if consistent_src_rank is not None:
+            _broadcast_py_object(is_legacy, consistent_src_rank)
+    else:
+        is_legacy = _broadcast_py_object(None, consistent_src_rank)
+    if is_legacy:
+        return legacy_load(path, consistent_src_rank)
 
-    os.makedirs(path, exist_ok=True)
+    if consistent_src_rank is not None:
+        if rank == consistent_src_rank:
+            pickle_bytes = pickle_path.read_bytes()
+            _broadcast_py_object(pickle_bytes, consistent_src_rank)
+        else:
+            pickle_bytes = _broadcast_py_object(None, consistent_src_rank)
+    else:
+        pickle_bytes = pickle_path.read_bytes()
 
-    for (name, var) in var_dict.items():
-        meta_info = variable_meta_info_pb.VariableMetaInfo()
-        meta_info.shape.dim[:] = var.shape
-        meta_info.data_type = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(
-            var.dtype
-        )
-        var_dir = os.path.join(path, name)
-        param_path = os.path.join(var_dir, DATA_FILENAME)
-        os.makedirs(os.path.dirname(param_path))
-        with open(param_path, "wb") as f:
-            f.write(var.numpy().tobytes())
+    with tensor_pickling_context(path, consistent_src_rank):
+        res = pickle.loads(pickle_bytes)
+    assert res["protocol_version"] == PROTOCOL_VERSION
+    return res["data"]
 
-        with open(os.path.join(var_dir, META_INFO_FILENAME), "w") as f:
-            f.write(text_format.MessageToString(meta_info))
-    with open(os.path.join(path, SNAPSHOT_DONE_FILENAME), "w"):
-        pass
+
+def save(
+    obj: Any, path: Union[str, Path], consistent_dst_rank: Optional[int] = None,
+) -> None:
+    r"""Save an object to a directory.
+
+    Args:
+        obj: The object to be saved
+        path (str): The directory in which the object is saved
+        consistent_dst_rank (int, optional): The destination rank for 
+            saving consistent tensors. When specified, whole tensors
+            will be saved by the process whose rank == 
+            consistent_src_rank, while other processes will not do any
+            disk I/O.
+    """
+    path: Path = Path(path)
+    obj = {"protocol_version": PROTOCOL_VERSION, "data": obj}
+    with tensor_pickling_context(path, consistent_dst_rank):
+        pickled_bytes = pickle.dumps(obj)
+    rank = flow.env.get_rank()
+    if consistent_dst_rank is None or consistent_dst_rank == rank:
+        path.mkdir(exist_ok=True)
+        pickle_path = path / PICKLE_FILENAME
+        pickle_path.write_bytes(pickled_bytes)
 
 
 def generate_values_by_initializer(initializer, shape, dtype):
     np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(dtype))
     length = _ElemCnt(shape)
     return np.array(initializer(length)).astype(np_dtype).reshape(shape)
+
+
+save_load_path = None
+consistent_src_dsk_rank = None

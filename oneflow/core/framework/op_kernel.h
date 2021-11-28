@@ -26,10 +26,10 @@ limitations under the License.
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/infer_util.h"
-#include "oneflow/core/device/device_context.h"
-#include "oneflow/core/stream/stream_context.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 
@@ -37,48 +37,12 @@ class JobDesc;
 
 namespace user_op {
 
-class KernelCreateContext {
- public:
-  virtual ~KernelCreateContext() = default;
-
-  const std::string& input(const std::string& arg_name, int32_t index) const {
-    return user_op_conf().input(arg_name, index);
-  }
-  const std::string& output(const std::string& arg_name, int32_t index) const {
-    return user_op_conf().output(arg_name, index);
-  }
-  bool has_input(const std::string& arg_name, int32_t index) const {
-    return user_op_conf().has_input(arg_name, index);
-  }
-  bool has_output(const std::string& arg_name, int32_t index) const {
-    return user_op_conf().has_output(arg_name, index);
-  }
-  int32_t input_size(const std::string& arg_name) const {
-    return user_op_conf().input_size(arg_name);
-  }
-  int32_t output_size(const std::string& arg_name) const {
-    return user_op_conf().output_size(arg_name);
-  }
-  const std::string& op_name() const { return user_op_conf().op_name(); }
-  const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
-  const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
-  template<typename T>
-  const T& Attr(const std::string& attr_name) const {
-    return AttrValueCast<T>(*Attr4Name(attr_name));
-  }
-
- protected:
-  virtual const UserOpConfWrapper& user_op_conf() const = 0;
-  virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
-};
-
 class KernelInitContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelInitContext);
   virtual ~KernelInitContext() = default;
 
-  virtual DeviceCtx* device_ctx() = 0;
-  virtual StreamContext* stream_ctx() = 0;
+  virtual ep::Stream* stream() = 0;
 
   virtual DeviceType device_type() const = 0;
   virtual const ParallelContext& parallel_ctx() const = 0;
@@ -142,8 +106,7 @@ class KernelInferContext {
   virtual DeviceType device_type() const = 0;
   virtual const ParallelContext& parallel_ctx() const = 0;
 
-  virtual DeviceCtx* device_ctx() = 0;
-  virtual StreamContext* stream_ctx() = 0;
+  virtual ep::Stream* stream() = 0;
   virtual Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) = 0;
   virtual const ShapeView& ShapeView4ArgNameAndIndex(const std::string& arg_name,
                                                      int32_t arg_index) = 0;
@@ -202,8 +165,7 @@ class KernelComputeContext {
   virtual ~KernelComputeContext() = default;
 
   virtual Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) = 0;
-  virtual DeviceCtx* device_ctx() = 0;
-  virtual StreamContext* stream_ctx() = 0;
+  virtual ep::Stream* stream() = 0;
 
   virtual const TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                        int32_t index) const = 0;
@@ -280,20 +242,11 @@ class OpKernel {
  private:
   template<typename T>
   friend OpKernel* NewOpKernel();
-  template<typename T>
-  friend OpKernel* NewOpKernelWithCtx(KernelCreateContext* ctx);
 };
 
 template<typename T>
 OpKernel* NewOpKernel() {
   return new T();
-}
-
-class KernelCreateContext;
-
-template<typename T>
-OpKernel* NewOpKernelWithCtx(KernelCreateContext* ctx) {
-  return new T(ctx);
 }
 
 }  // namespace user_op

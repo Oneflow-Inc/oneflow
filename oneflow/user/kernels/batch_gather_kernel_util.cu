@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/batch_gather_kernel_util.h"
 #include "oneflow/core/cuda/atomic.cuh"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #include <assert.h>
 
 namespace oneflow {
@@ -56,48 +57,46 @@ __global__ void BatchGatherBackwardGpu(const int64_t elem_cnt, const T* out_diff
 }  // namespace
 
 template<typename T, typename K>
-struct BatchGatherKernelUtilImpl<DeviceType::kGPU, T, K> final {
-  static void Forward(DeviceCtx* ctx, const T* in, const K* indices, const Shape& flat_out_shape,
-                      const int64_t gather_dim_size, T* out);
-  static void Backward(DeviceCtx* ctx, const T* out_diff, const K* indices,
+struct BatchGatherKernelUtilImpl<DeviceType::kCUDA, T, K> final {
+  static void Forward(ep::Stream* stream, const T* in, const K* indices,
+                      const Shape& flat_out_shape, const int64_t gather_dim_size, T* out);
+  static void Backward(ep::Stream* stream, const T* out_diff, const K* indices,
                        const Shape& flat_out_diff_shape, const int64_t gather_dim_size, T* in_diff);
 };
 
 template<typename T, typename K>
-void BatchGatherKernelUtilImpl<DeviceType::kGPU, T, K>::Forward(DeviceCtx* ctx, const T* in,
-                                                                const K* indices,
-                                                                const Shape& flat_out_shape,
-                                                                const int64_t gather_dim_size,
-                                                                T* out) {
+void BatchGatherKernelUtilImpl<DeviceType::kCUDA, T, K>::Forward(ep::Stream* stream, const T* in,
+                                                                 const K* indices,
+                                                                 const Shape& flat_out_shape,
+                                                                 const int64_t gather_dim_size,
+                                                                 T* out) {
   const int64_t batch_num = flat_out_shape.At(0);
   const int64_t indices_num = flat_out_shape.At(1);
   const int64_t instance_size = flat_out_shape.At(2);
   const int64_t elem_cnt = batch_num * indices_num * instance_size;
-  BatchGatherForwardGpu<T, K>
-      <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          elem_cnt, in, indices, indices_num, instance_size, gather_dim_size, out);
+  BatchGatherForwardGpu<T, K><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                                stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      elem_cnt, in, indices, indices_num, instance_size, gather_dim_size, out);
 }
 
 template<typename T, typename K>
-void BatchGatherKernelUtilImpl<DeviceType::kGPU, T, K>::Backward(DeviceCtx* ctx, const T* out_diff,
-                                                                 const K* indices,
-                                                                 const Shape& flat_out_diff_shape,
-                                                                 const int64_t gather_dim_size,
-                                                                 T* in_diff) {
+void BatchGatherKernelUtilImpl<DeviceType::kCUDA, T, K>::Backward(
+    ep::Stream* stream, const T* out_diff, const K* indices, const Shape& flat_out_diff_shape,
+    const int64_t gather_dim_size, T* in_diff) {
   const int64_t batch_num = flat_out_diff_shape.At(0);
   const int64_t indices_num = flat_out_diff_shape.At(1);
   const int64_t instance_size = flat_out_diff_shape.At(2);
   const int64_t elem_cnt = batch_num * indices_num * instance_size;
-  BatchGatherBackwardGpu<T, K>
-      <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          elem_cnt, out_diff, indices, indices_num, instance_size, gather_dim_size, in_diff);
+  BatchGatherBackwardGpu<T, K><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                                 stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      elem_cnt, out_diff, indices, indices_num, instance_size, gather_dim_size, in_diff);
 }
 
-#define INSTANTIATE_BATCH_GATHER_KERNEL_UTIL_IMPL_GPU(in_type_pair, index_type_pair)          \
-  template struct BatchGatherKernelUtilImpl<DeviceType::kGPU, OF_PP_PAIR_FIRST(in_type_pair), \
+#define INSTANTIATE_BATCH_GATHER_KERNEL_UTIL_IMPL_CUDA(in_type_pair, index_type_pair)          \
+  template struct BatchGatherKernelUtilImpl<DeviceType::kCUDA, OF_PP_PAIR_FIRST(in_type_pair), \
                                             OF_PP_PAIR_FIRST(index_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BATCH_GATHER_KERNEL_UTIL_IMPL_GPU,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BATCH_GATHER_KERNEL_UTIL_IMPL_CUDA,
                                  FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ);
-#undef INSTANTIATE_BATCH_GATHER_KERNEL_UTIL_IMPL_GPU
+#undef INSTANTIATE_BATCH_GATHER_KERNEL_UTIL_IMPL_CUDA
 
 }  // namespace oneflow

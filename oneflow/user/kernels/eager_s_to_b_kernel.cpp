@@ -53,8 +53,6 @@ class EagerSToBOpKernelState final : public user_op::OpKernelState {
   explicit EagerSToBOpKernelState(user_op::KernelInitContext* ctx) { Init(ctx); }
   ~EagerSToBOpKernelState() override = default;
 
-  MemoryCopier* memory_copier() const { return memory_copier_.get(); }
-
   const std::vector<std::pair<int64_t, std::shared_ptr<TensorSliceCopier>>>&
   sorted_elem_cnt2in_tensor_slice_copier_pair() const {
     return sorted_elem_cnt2in_tensor_slice_copier_pair_;
@@ -101,15 +99,14 @@ class EagerSToBOpKernelState final : public user_op::OpKernelState {
         const TensorSliceView& intersection = out_slice.Intersect(in_slice);
         CHECK(!intersection.IsEmpty());
         sorted_p2p_pair_.emplace_back(std::make_pair(src, dst));
-        sorted_elem_cnt2in_tensor_slice_copier_pair_.emplace_back(
-            std::make_pair(intersection.shape().elem_cnt(),
-                           std::make_shared<TensorSliceCopier>(intersection, in_slice, data_type)));
+        sorted_elem_cnt2in_tensor_slice_copier_pair_.emplace_back(std::make_pair(
+            intersection.shape().elem_cnt(),
+            std::make_shared<TensorSliceCopier>(intersection, in_slice, data_type, device_type)));
         sorted_elem_cnt2out_tensor_slice_copier_pair_.emplace_back(std::make_pair(
             intersection.shape().elem_cnt(),
-            std::make_shared<TensorSliceCopier>(out_slice, intersection, data_type)));
+            std::make_shared<TensorSliceCopier>(out_slice, intersection, data_type, device_type)));
       }
     }
-    memory_copier_.reset(NewDefaultMemoryCopier(device_type));
   }
 
   std::vector<std::pair<int64_t, std::shared_ptr<TensorSliceCopier>>>
@@ -117,7 +114,6 @@ class EagerSToBOpKernelState final : public user_op::OpKernelState {
   std::vector<std::pair<int64_t, std::shared_ptr<TensorSliceCopier>>>
       sorted_elem_cnt2out_tensor_slice_copier_pair_;
   std::vector<std::pair<int64_t, int64_t>> sorted_p2p_pair_;
-  std::unique_ptr<MemoryCopier> memory_copier_;
 };
 
 size_t InferEagerSToBKernelTmpBufferSize(user_op::InferContext* ctx) {
@@ -160,7 +156,6 @@ class EagerSToBKernel final : public user_op::OpKernel {
     const auto& sorted_elem_cnt2out_tensor_slice_copier_pair =
         kernel_state->sorted_elem_cnt2out_tensor_slice_copier_pair();
     const auto& sorted_p2p_pair = kernel_state->sorted_p2p_pair();
-    MemoryCopier* memory_copier = kernel_state->memory_copier();
     CHECK_EQ(sorted_elem_cnt2in_tensor_slice_copier_pair.size(), sorted_p2p_pair.size());
     CHECK_EQ(sorted_elem_cnt2out_tensor_slice_copier_pair.size(), sorted_p2p_pair.size());
 
@@ -173,9 +168,9 @@ class EagerSToBKernel final : public user_op::OpKernel {
             sorted_elem_cnt2in_tensor_slice_copier_pair.at(i);
         const auto& elem_cnt = elem_cnt2tensor_slice_copier_pair.first;
         const auto& tensor_slice_copier = elem_cnt2tensor_slice_copier_pair.second;
-        tensor_slice_copier->Copy(ctx->device_ctx(), *memory_copier, tmp_buffer_ptr, in_ptr);
+        tensor_slice_copier->Copy(ctx->stream(), tmp_buffer_ptr, in_ptr);
         CHECK_JUST(Send<device_type>(reinterpret_cast<const void*>(tmp_buffer_ptr), elem_cnt,
-                                     in->data_type(), dst, ctx->device_ctx()));
+                                     in->data_type(), dst, ctx->stream()));
       }
       if (GlobalProcessCtx::Rank() == dst) {
         const auto& elem_cnt2tensor_slice_copier_pair =
@@ -183,8 +178,8 @@ class EagerSToBKernel final : public user_op::OpKernel {
         const auto& elem_cnt = elem_cnt2tensor_slice_copier_pair.first;
         const auto& tensor_slice_copier = elem_cnt2tensor_slice_copier_pair.second;
         CHECK_JUST(
-            Recv<device_type>(tmp_buffer_ptr, elem_cnt, out->data_type(), src, ctx->device_ctx()));
-        tensor_slice_copier->Copy(ctx->device_ctx(), *memory_copier, out_ptr,
+            Recv<device_type>(tmp_buffer_ptr, elem_cnt, out->data_type(), src, ctx->stream()));
+        tensor_slice_copier->Copy(ctx->stream(), out_ptr,
                                   reinterpret_cast<const void*>(tmp_buffer_ptr));
       }
     }
@@ -192,15 +187,15 @@ class EagerSToBKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EAGER_S_TO_B_KERNEL(device)              \
-  REGISTER_USER_KERNEL("eager_s_to_b")                    \
-      .SetCreateFn<EagerSToBKernel<device>>()             \
-      .SetIsMatchedHob(user_op::HobDeviceTag() == device) \
+#define REGISTER_EAGER_S_TO_B_KERNEL(device)               \
+  REGISTER_USER_KERNEL("eager_s_to_b")                     \
+      .SetCreateFn<EagerSToBKernel<device>>()              \
+      .SetIsMatchedHob(user_op::HobDeviceType() == device) \
       .SetInferTmpSizeFn(InferEagerSToBKernelTmpBufferSize);
 
 REGISTER_EAGER_S_TO_B_KERNEL(DeviceType::kCPU)
-#if defined(WITH_CUDA) && HAS_GPU_SEND_RECV
-REGISTER_EAGER_S_TO_B_KERNEL(DeviceType::kGPU)
+#if defined(WITH_CUDA) && HAS_NCCL_SEND_RECV
+REGISTER_EAGER_S_TO_B_KERNEL(DeviceType::kCUDA)
 #endif
 
 }  // namespace oneflow

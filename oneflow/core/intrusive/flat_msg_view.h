@@ -132,7 +132,7 @@ struct FlatMsgViewPatternVec {
   const T* at(int index) const { return vec().at(index); }
   size_t size() const { return vec().size(); }
   void clear() { mut_vec()->clear(); }
-  void push_back(const T* ptr) { mut_vec()->push_back(ptr); }
+  void emplace_back(const T* ptr) { mut_vec()->emplace_back(ptr); }
 
  private:
   using Vec = std::vector<const T*>;
@@ -216,7 +216,7 @@ struct _FlatMsgViewFieldMatcher<true, WalkCtxType, FieldPtrT> {
     while (ctx->is_token_index_valid()) {
       const auto* oneof = ctx->GetOneof();
       if (!oneof->template HasField<FieldType>()) { break; }
-      field->push_back(&oneof->template GetField<FieldType>());
+      field->emplace_back(&oneof->template GetField<FieldType>());
       ctx->increase_token_index();
     }
     return false;
@@ -244,8 +244,8 @@ struct FlatMsgViewUtil {
 
 template<typename FlatMsgViewT, typename ValueType, typename ContainerT, typename Enabled = void>
 struct FlatMsgViewContainerUtil {
-  using FlatMsgOneofField =
-      StructField<ValueType, typename ValueType::__OneofType, ValueType::__kDssFieldOffset>;
+  using FlatMsgOneofField = intrusive::OffsetStructField<ValueType, typename ValueType::__OneofType,
+                                                         ValueType::__kDssFieldOffset>;
   static bool Match(FlatMsgViewT* self, const ContainerT& container) {
     return FlatMsgViewUtil<FlatMsgViewT, FlatMsgOneofField, typename ContainerT::value_type>::Match(
         self, container.data(), container.size());
@@ -254,8 +254,8 @@ struct FlatMsgViewContainerUtil {
 
 template<typename FlatMsgViewT, typename ValueType, typename Enabled>
 struct FlatMsgViewContainerUtil<FlatMsgViewT, ValueType, std::vector<FlatMsg<ValueType>>, Enabled> {
-  using FlatMsgOneofField =
-      StructField<ValueType, typename ValueType::__OneofType, ValueType::__kDssFieldOffset>;
+  using FlatMsgOneofField = intrusive::OffsetStructField<ValueType, typename ValueType::__OneofType,
+                                                         ValueType::__kDssFieldOffset>;
   static_assert(sizeof(ValueType) == sizeof(FlatMsg<ValueType>), "");
   static_assert(alignof(ValueType) == alignof(FlatMsg<ValueType>), "");
   static bool Match(FlatMsgViewT* self, const std::vector<FlatMsg<ValueType>>& container) {
