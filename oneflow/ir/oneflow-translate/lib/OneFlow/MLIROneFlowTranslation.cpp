@@ -144,8 +144,9 @@ LogicalResult JobImporter::AddUserOpInputOutputSegments(const ::oneflow::Operato
       GetBuilder().getI32ArrayAttr(GetSizesFromArgs(user_conf.output(), op_def.output()))));
   auto output_lbns = GetOutputLbns(op, op_def.output());
   attr_vec.push_back(GetBuilder().getNamedAttr(
-      "output_lbns", GetBuilder().getStrArrayAttr(
-                         SmallVector<StringRef, 8>({output_lbns.begin(), output_lbns.end()}))));
+      OpTrait::IsImportCompatible<void>::getOutputLBNsAttr(),
+      GetBuilder().getStrArrayAttr(
+          SmallVector<StringRef, 8>({output_lbns.begin(), output_lbns.end()}))));
   return success();
 }
 
@@ -177,7 +178,8 @@ LogicalResult JobImporter::AppendDataInOperand(const std::string& lbn,
 
 LogicalResult JobImporter::InsertOpResults(const ::oneflow::OperatorConf& op,
                                            Operation* created_op) {
-  auto output_lbns = created_op->getAttrOfType<ArrayAttr>("output_lbns");
+  auto output_lbns =
+      created_op->getAttrOfType<ArrayAttr>(OpTrait::IsImportCompatible<void>::getOutputLBNsAttr());
   auto data_results = GetDataOutputResults(created_op);
   if (output_lbns.size() != data_results.size()) {
     output_lbns.dump();
@@ -247,8 +249,9 @@ LogicalResult JobImporter::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
       "input_bns", GetBuilder().getStrArrayAttr(
                        std::vector<llvm::StringRef>({input_bns.begin(), input_bns.end()}))));
   attr_vec.push_back(GetBuilder().getNamedAttr(
-      "output_lbns", GetBuilder().getStrArrayAttr(
-                         std::vector<llvm::StringRef>({output_lbns.begin(), output_lbns.end()}))));
+      OpTrait::IsImportCompatible<void>::getOutputLBNsAttr(),
+      GetBuilder().getStrArrayAttr(
+          std::vector<llvm::StringRef>({output_lbns.begin(), output_lbns.end()}))));
   OperationState state(FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0), "oneflow.system");
   attr_vec.push_back(
       GetBuilder().getNamedAttr("op_type_case", GetBuilder().getI32IntegerAttr(op.op_type_case())));

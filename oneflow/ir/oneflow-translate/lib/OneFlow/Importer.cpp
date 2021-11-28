@@ -597,7 +597,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
     if (id.strref().equals("callee")
         || id.strref().equals(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr())
         || id.strref().equals(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr())
-        || id.strref().equals("output_lbns")
+        || id.strref().equals(OpTrait::IsImportCompatible<void>::getOutputLBNsAttr())
         || id.strref().equals(OpTrait::IsAlternative<void>::getOpTypeNameAttr())
         || id.strref().equals(
             mlir::OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr())

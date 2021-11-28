@@ -63,6 +63,22 @@ class IsOpConfCompatible : public TraitBase<ConcreteType, IsOpConfCompatible> {
 };
 
 template<typename ConcreteType>
+class IsImportCompatible : public TraitBase<ConcreteType, IsOpConfCompatible> {
+ public:
+  static StringRef getOutputLBNsAttr() { return "output_lbns"; }
+  static LogicalResult verifyTrait(Operation* op) {
+    if (auto output_lbns = op->getAttrOfType<ArrayAttr>(getOutputLBNsAttr())) {
+      if (output_lbns.size() != op->getNumResults()) {
+        return op->emitError("expected number of output lbns to match number of results");
+      }
+    } else {
+      return op->emitError("expected operation to have attribute: " + getOutputLBNsAttr());
+    }
+    return success();
+  }
+};
+
+template<typename ConcreteType>
 class IsIdempotentOfIdenticalPlacement
     : public TraitBase<ConcreteType, IsIdempotentOfIdenticalPlacement> {
  public:

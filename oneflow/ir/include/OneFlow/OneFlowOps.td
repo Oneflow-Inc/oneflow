@@ -9,7 +9,7 @@ include "mlir/Pass/PassBase.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "OneFlowBase.td"
 
-def OneFlow_UserOp : OneFlow_UserBaseWithCtrlOp<"user", []> {
+def OneFlow_UserOp : OneFlow_UserBaseWithCtrlOp<"user", [OneFlow_IsImportCompatible]> {
   let summary = "";
   let attrs = (ins
     StrArrayAttr:$output_lbns
@@ -17,7 +17,7 @@ def OneFlow_UserOp : OneFlow_UserBaseWithCtrlOp<"user", []> {
   let hasCanonicalizer = 1;
 }
 
-def OneFlow_SystemOp : OneFlow_Op<"system", []> {
+def OneFlow_SystemOp : OneFlow_Op<"system", [OneFlow_IsImportCompatible]> {
   let summary = "";
   let attrs = (ins
     StrArrayAttr:$input_bns,
