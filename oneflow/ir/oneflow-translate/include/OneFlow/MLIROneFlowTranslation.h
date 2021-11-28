@@ -26,19 +26,23 @@ limitations under the License.
 #include <functional>
 #include <string>
 
+using UserOpArgs = const ::google::protobuf::Map<std::string, ::oneflow::UserOpConf_ListString>&;
+using UserOpArgDefs = const ::google::protobuf::RepeatedPtrField<::oneflow::UserOpDef_ArgDef>&;
+
 namespace mlir {
 
 // TODO: wrap in a helper namespace
-std::pair<unsigned, unsigned> getODSResultIndexAndLength(Operation* op, unsigned index);
-::mlir::Operation::result_range getODSResults(Operation* op, unsigned index);
-llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op);
-ResultRange GetDataOutputResults(Operation* op);
+
 LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
                                   ::oneflow::UserOpConf* user_conf);
 LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
                                    ::oneflow::UserOpConf* user_conf);
-LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf);
+ResultRange GetDataOutputResults(Operation* op);
 OperandRange GetDataInputOperands(Operation* op);
+LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf);
+llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op);
+llvm::Optional<std::string> GetOutputLbn(OpResult result);
+
 class Importer {
  public:
   Importer(MLIRContext* context, ModuleOp module)
@@ -62,8 +66,8 @@ class Importer {
                                             std::vector<::mlir::Value>& operand_vec) = 0;
   LogicalResult AppendCtrlOutType(llvm::SmallVector<Type, 8>& out_types);
   LogicalResult AddOpConf(const ::oneflow::OperatorConf& op, std::vector<NamedAttribute>& attr_vec);
-  LogicalResult AddUserOpInputOutputSegments(const ::oneflow::OperatorConf& op,
-                                             std::vector<NamedAttribute>& attr_vec);
+  virtual LogicalResult AddUserOpInputOutputSegments(const ::oneflow::OperatorConf& op,
+                                                     std::vector<NamedAttribute>& attr_vec) = 0;
   virtual LogicalResult AddDeviceName(const ::oneflow::OperatorConf& op,
                                       std::vector<NamedAttribute>& attr_vec) = 0;
   LogicalResult AddOperandSegmentSizes(int32_t input_lbns_size, int32_t ctrl_in_size,
@@ -97,6 +101,7 @@ class Importer {
   Location& GetRootLocation() { return unknown_loc_; }
   virtual ::oneflow::AttrType QueryAttrType(const std::string& op_type_name,
                                             const std::string& attr_name) = 0;
+  virtual ::oneflow::UserOpDef GetUserOpDef(const std::string& op_type_name) const = 0;
   virtual Type GetTensorTypeOfLbn(const std::string& lbn) = 0;
   LogicalResult ConvertUserOpAttributes(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
                                         ::oneflow::OperatorConf& op_conf);

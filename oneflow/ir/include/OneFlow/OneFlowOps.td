@@ -9,18 +9,15 @@ include "mlir/Pass/PassBase.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "OneFlowBase.td"
 
-def OneFlow_UserOp : OneFlow_UserBaseOp<"user", [AttrSizedOperandSegments, AttrSizedResultSegments]> {
-    let summary = "";
-    let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
-    let ctrl_output = (outs Optional<AnyType>:$ctrl_output);
-    let trait_attrs = (ins
-      I32ElementsAttr:$operand_segment_sizes,
-      I32ElementsAttr:$result_segment_sizes
-    );
-    let hasCanonicalizer = 1;
+def OneFlow_UserOp : OneFlow_UserBaseWithCtrlOp<"user", [OneFlow_IsImportCompatible]> {
+  let summary = "";
+  let attrs = (ins
+    StrArrayAttr:$output_lbns
+  );
+  let hasCanonicalizer = 1;
 }
 
-def OneFlow_SystemOp : OneFlow_Op<"system", []> {
+def OneFlow_SystemOp : OneFlow_Op<"system", [OneFlow_IsImportCompatible]> {
   let summary = "";
   let attrs = (ins
     StrArrayAttr:$input_bns,
@@ -39,7 +36,6 @@ def OneFlow_NormalizationAddReluOp : OneFlow_NormalizationAddReluBaseOp {
       "Value":$gamma,
       "Value":$beta,
       "StringRef":$op_name,
-      "BoolAttr":$trainable,
       "StringRef":$device_tag,
       "ArrayAttr":$device_name,
       "IntegerAttr":$scope_symbol_id,
@@ -54,25 +50,27 @@ def OneFlow_NormalizationAddReluOp : OneFlow_NormalizationAddReluBaseOp {
   ];
 }
 
-def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, OneFlow_AlternativeOp]> {
   let summary = "";
   let input = (ins
     AnyType:$in0,
     AnyType:$in1
   );
+  let trait_attrs = (ins
+    DefaultValuedAttr<StrAttr, "\"add_n\"">:$op_type_name
+  );
   let output = (outs AnyType:$out);
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<uint32_t> val({1}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
+    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<uint32_t> val({1}); return &val; }
   }];
 }
 
 // JIT ops
 
-def OneFlow_MlirJitOp : OneFlow_UserBaseOp<"mlir_jit", [
-      CallOpInterface
-    ]
-  > {
+def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpInterfaceMethods<UserOpCompatibleInterface> ] > {
   let attrs = (ins
     FlatSymbolRefAttr:$callee,
     StrAttr:$mlir_assembly
@@ -97,6 +95,10 @@ def OneFlow_MlirJitOp : OneFlow_UserBaseOp<"mlir_jit", [
     CallInterfaceCallable getCallableForCallee() {
       return (*this)->getAttrOfType<SymbolRefAttr>("callee");
     }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::uint32_t>* inputMinimums() { static std::vector<uint32_t> val({0}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
+    static const std::vector<std::uint32_t>* outputMinimums() { static std::vector<uint32_t> val({0}); return &val; }
   }];
   let assemblyFormat = [{
     $callee `(` $data_input `)` attr-dict `:` functional-type($data_input, results)

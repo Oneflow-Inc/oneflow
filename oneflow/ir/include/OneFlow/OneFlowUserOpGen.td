@@ -4,9 +4,6 @@
 // #include "OneFlow/OneFlow.assign_ops.cpp.inc"
 // ,
 // #define GET_OP_LIST
-// #include "OneFlow/OneFlow.base_ops.cpp.inc"
-// ,
-// #define GET_OP_LIST
 // #include "OneFlow/OneFlow.binary_ops.cpp.inc"
 // ,
 // #define GET_OP_LIST
@@ -100,9 +97,6 @@
 // #include "OneFlow/OneFlow.tensor_buffer_ops.cpp.inc"
 // ,
 // #define GET_OP_LIST
-// #include "OneFlow/OneFlow.test_ops.cpp.inc"
-// ,
-// #define GET_OP_LIST
 // #include "OneFlow/OneFlow.trigonometric_ops.cpp.inc"
 // ,
 // #define GET_OP_LIST
@@ -118,42 +112,42 @@
 
 #ifdef GET_ONEFLOW_ASSIGN_OP_DEFINITIONS
 
-def OneFlow_AssignOp : OneFlow_BaseOp<"assign", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AssignOp : OneFlow_BaseOp<"assign", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$ref,
     AnyType:$value
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"ref", "value"}; }
-    static std::vector<std::string> outputOrder() { return {}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"ref", "value"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
   }];
 }
 
-def OneFlow_AssignIfOp : OneFlow_BaseOp<"assign_if", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AssignIfOp : OneFlow_BaseOp<"assign_if", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$ref,
     AnyType:$value,
     AnyType:$condition
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"ref", "value", "condition"}; }
-    static std::vector<std::string> outputOrder() { return {}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"ref", "value", "condition"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
   }];
 }
 
-def OneFlow_AssignIfNotOp : OneFlow_BaseOp<"assign_if_not", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AssignIfNotOp : OneFlow_BaseOp<"assign_if_not", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$ref,
     AnyType:$value,
     AnyType:$condition
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"ref", "value", "condition"}; }
-    static std::vector<std::string> outputOrder() { return {}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"ref", "value", "condition"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
   }];
 }
 
-def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$ref,
     AnyType:$value
@@ -164,8 +158,8 @@ def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", [Decla
     SI64ArrayAttr:$step
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"ref", "value"}; }
-    static std::vector<std::string> outputOrder() { return {}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"ref", "value"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
   }];
 }
 
@@ -177,7 +171,7 @@ def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", [Decla
 
 #ifdef GET_ONEFLOW_BASE_OP_DEFINITIONS
 
-class OneFlow_NormalizationAddReluBaseOp : OneFlow_BaseOp<"normalization_add_relu", [AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+class OneFlow_NormalizationAddReluBaseOp : OneFlow_BaseOp<"normalization_add_relu", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     Optional<AnyType>:$addend,
@@ -203,8 +197,8 @@ class OneFlow_NormalizationAddReluBaseOp : OneFlow_BaseOp<"normalization_add_rel
     I32ElementsAttr:$result_segment_sizes
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "addend", "moving_mean", "moving_variance", "gamma", "beta"}; }
-    static std::vector<std::string> outputOrder() { return {"y", "reserve_space", "mean", "inv_variance"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "addend", "moving_mean", "moving_variance", "gamma", "beta"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y", "reserve_space", "mean", "inv_variance"}); return &val; }
   }];
 }
 
@@ -216,7 +210,7 @@ class OneFlow_NormalizationAddReluBaseOp : OneFlow_BaseOp<"normalization_add_rel
 
 #ifdef GET_ONEFLOW_BINARY_OP_DEFINITIONS
 
-def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b
@@ -228,12 +222,12 @@ def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", [DeclareOpInterfaceMethods<Bn
     SI32Attr:$axis
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"a", "b"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_CastLikeOp : OneFlow_BaseOp<"cast_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CastLikeOp : OneFlow_BaseOp<"cast_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$dtype_like
@@ -242,12 +236,12 @@ def OneFlow_CastLikeOp : OneFlow_BaseOp<"cast_like", [DeclareOpInterfaceMethods<
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "dtype_like"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "dtype_like"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_CeluGradOp : OneFlow_BaseOp<"celu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CeluGradOp : OneFlow_BaseOp<"celu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -259,12 +253,12 @@ def OneFlow_CeluGradOp : OneFlow_BaseOp<"celu_grad", [DeclareOpInterfaceMethods<
     F64Attr:$alpha
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_DiagGradOp : OneFlow_BaseOp<"diag_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_DiagGradOp : OneFlow_BaseOp<"diag_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$in
@@ -276,12 +270,12 @@ def OneFlow_DiagGradOp : OneFlow_BaseOp<"diag_grad", [DeclareOpInterfaceMethods<
     SI32Attr:$diagonal
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "in"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_DropoutGradOp : OneFlow_BaseOp<"dropout_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_DropoutGradOp : OneFlow_BaseOp<"dropout_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$mask
@@ -293,12 +287,12 @@ def OneFlow_DropoutGradOp : OneFlow_BaseOp<"dropout_grad", [DeclareOpInterfaceMe
     F32Attr:$scale
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "mask"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "mask"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_ElementwiseMaximumOp : OneFlow_BaseOp<"elementwise_maximum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ElementwiseMaximumOp : OneFlow_BaseOp<"elementwise_maximum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -307,12 +301,12 @@ def OneFlow_ElementwiseMaximumOp : OneFlow_BaseOp<"elementwise_maximum", [Declar
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_ElementwiseMinimumOp : OneFlow_BaseOp<"elementwise_minimum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ElementwiseMinimumOp : OneFlow_BaseOp<"elementwise_minimum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -321,12 +315,12 @@ def OneFlow_ElementwiseMinimumOp : OneFlow_BaseOp<"elementwise_minimum", [Declar
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_EluGradOp : OneFlow_BaseOp<"elu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_EluGradOp : OneFlow_BaseOp<"elu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -338,12 +332,12 @@ def OneFlow_EluGradOp : OneFlow_BaseOp<"elu_grad", [DeclareOpInterfaceMethods<Bn
     F64Attr:$alpha
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_FloordivOp : OneFlow_BaseOp<"floordiv", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_FloordivOp : OneFlow_BaseOp<"floordiv", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -352,12 +346,12 @@ def OneFlow_FloordivOp : OneFlow_BaseOp<"floordiv", [DeclareOpInterfaceMethods<B
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_GeluGradOp : OneFlow_BaseOp<"gelu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_GeluGradOp : OneFlow_BaseOp<"gelu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -366,12 +360,12 @@ def OneFlow_GeluGradOp : OneFlow_BaseOp<"gelu_grad", [DeclareOpInterfaceMethods<
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_GridSampleOp : OneFlow_BaseOp<"grid_sample", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_GridSampleOp : OneFlow_BaseOp<"grid_sample", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$grid
@@ -385,12 +379,12 @@ def OneFlow_GridSampleOp : OneFlow_BaseOp<"grid_sample", [DeclareOpInterfaceMeth
     BoolAttr:$align_corners
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input", "grid"}; }
-    static std::vector<std::string> outputOrder() { return {"output"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "grid"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output"}); return &val; }
   }];
 }
 
-def OneFlow_HardsigmoidGradOp : OneFlow_BaseOp<"hardsigmoid_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_HardsigmoidGradOp : OneFlow_BaseOp<"hardsigmoid_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -399,12 +393,12 @@ def OneFlow_HardsigmoidGradOp : OneFlow_BaseOp<"hardsigmoid_grad", [DeclareOpInt
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_HardswishGradOp : OneFlow_BaseOp<"hardswish_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_HardswishGradOp : OneFlow_BaseOp<"hardswish_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -413,12 +407,12 @@ def OneFlow_HardswishGradOp : OneFlow_BaseOp<"hardswish_grad", [DeclareOpInterfa
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_L1L2RegularizeGradientOp : OneFlow_BaseOp<"l1_l2_regularize_gradient", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_L1L2RegularizeGradientOp : OneFlow_BaseOp<"l1_l2_regularize_gradient", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff
@@ -431,12 +425,12 @@ def OneFlow_L1L2RegularizeGradientOp : OneFlow_BaseOp<"l1_l2_regularize_gradient
     F32Attr:$l2
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"model", "model_diff"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_LeakyReluGradOp : OneFlow_BaseOp<"leaky_relu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_LeakyReluGradOp : OneFlow_BaseOp<"leaky_relu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -448,12 +442,12 @@ def OneFlow_LeakyReluGradOp : OneFlow_BaseOp<"leaky_relu_grad", [DeclareOpInterf
     F32Attr:$alpha
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_MaskedFillOp : OneFlow_BaseOp<"masked_fill", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_MaskedFillOp : OneFlow_BaseOp<"masked_fill", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$mask
@@ -468,12 +462,12 @@ def OneFlow_MaskedFillOp : OneFlow_BaseOp<"masked_fill", [DeclareOpInterfaceMeth
     F64Attr:$float_operand
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "mask"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "mask"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_MishGradOp : OneFlow_BaseOp<"mish_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_MishGradOp : OneFlow_BaseOp<"mish_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -482,12 +476,12 @@ def OneFlow_MishGradOp : OneFlow_BaseOp<"mish_grad", [DeclareOpInterfaceMethods<
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_MultiplyOp : OneFlow_BaseOp<"multiply", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_MultiplyOp : OneFlow_BaseOp<"multiply", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -496,12 +490,12 @@ def OneFlow_MultiplyOp : OneFlow_BaseOp<"multiply", [DeclareOpInterfaceMethods<B
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_NarrowGradOp : OneFlow_BaseOp<"narrow_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_NarrowGradOp : OneFlow_BaseOp<"narrow_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$like
@@ -515,12 +509,12 @@ def OneFlow_NarrowGradOp : OneFlow_BaseOp<"narrow_grad", [DeclareOpInterfaceMeth
     SI64Attr:$length
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "like"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "like"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_PowOp : OneFlow_BaseOp<"pow", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_PowOp : OneFlow_BaseOp<"pow", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -529,12 +523,12 @@ def OneFlow_PowOp : OneFlow_BaseOp<"pow", [DeclareOpInterfaceMethods<BnOrderOpIn
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_PreluOp : OneFlow_BaseOp<"prelu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_PreluOp : OneFlow_BaseOp<"prelu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$alpha
@@ -543,12 +537,12 @@ def OneFlow_PreluOp : OneFlow_BaseOp<"prelu", [DeclareOpInterfaceMethods<BnOrder
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "alpha"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "alpha"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_ReluGradOp : OneFlow_BaseOp<"relu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReluGradOp : OneFlow_BaseOp<"relu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$y,
     AnyType:$dy
@@ -557,12 +551,12 @@ def OneFlow_ReluGradOp : OneFlow_BaseOp<"relu_grad", [DeclareOpInterfaceMethods<
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"y", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"y", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_SeluGradOp : OneFlow_BaseOp<"selu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SeluGradOp : OneFlow_BaseOp<"selu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -571,12 +565,12 @@ def OneFlow_SeluGradOp : OneFlow_BaseOp<"selu_grad", [DeclareOpInterfaceMethods<
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_SigmoidGradOp : OneFlow_BaseOp<"sigmoid_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SigmoidGradOp : OneFlow_BaseOp<"sigmoid_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$y,
     AnyType:$dy
@@ -585,12 +579,12 @@ def OneFlow_SigmoidGradOp : OneFlow_BaseOp<"sigmoid_grad", [DeclareOpInterfaceMe
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"y", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"y", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_SiluGradOp : OneFlow_BaseOp<"silu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SiluGradOp : OneFlow_BaseOp<"silu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -599,12 +593,12 @@ def OneFlow_SiluGradOp : OneFlow_BaseOp<"silu_grad", [DeclareOpInterfaceMethods<
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_TfPreluOp : OneFlow_BaseOp<"tf_prelu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TfPreluOp : OneFlow_BaseOp<"tf_prelu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$alpha
@@ -613,12 +607,12 @@ def OneFlow_TfPreluOp : OneFlow_BaseOp<"tf_prelu", [DeclareOpInterfaceMethods<Bn
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "alpha"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "alpha"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_UnfoldTensorGradOp : OneFlow_BaseOp<"unfold_tensor_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UnfoldTensorGradOp : OneFlow_BaseOp<"unfold_tensor_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -632,12 +626,12 @@ def OneFlow_UnfoldTensorGradOp : OneFlow_BaseOp<"unfold_tensor_grad", [DeclareOp
     SI32Attr:$step
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "x"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_XdivyOp : OneFlow_BaseOp<"xdivy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_XdivyOp : OneFlow_BaseOp<"xdivy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -646,12 +640,12 @@ def OneFlow_XdivyOp : OneFlow_BaseOp<"xdivy", [DeclareOpInterfaceMethods<BnOrder
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -660,8 +654,8 @@ def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", [DeclareOpInterfaceMethods<BnOrder
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
@@ -673,7 +667,7 @@ def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", [DeclareOpInterfaceMethods<BnOrder
 
 #ifdef GET_ONEFLOW_BROADCAST_OP_DEFINITIONS
 
-def OneFlow_BroadcastAddOp : OneFlow_BaseOp<"broadcast_add", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastAddOp : OneFlow_BaseOp<"broadcast_add", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -682,12 +676,12 @@ def OneFlow_BroadcastAddOp : OneFlow_BaseOp<"broadcast_add", [DeclareOpInterface
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastDivOp : OneFlow_BaseOp<"broadcast_div", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastDivOp : OneFlow_BaseOp<"broadcast_div", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -696,12 +690,12 @@ def OneFlow_BroadcastDivOp : OneFlow_BaseOp<"broadcast_div", [DeclareOpInterface
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastDivGradOp : OneFlow_BaseOp<"broadcast_div_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastDivGradOp : OneFlow_BaseOp<"broadcast_div_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$y,
     AnyType:$z,
@@ -711,12 +705,12 @@ def OneFlow_BroadcastDivGradOp : OneFlow_BaseOp<"broadcast_div_grad", [DeclareOp
     AnyType:$dy
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"y", "z", "dz"}; }
-    static std::vector<std::string> outputOrder() { return {"dy"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"y", "z", "dz"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastEqualOp : OneFlow_BaseOp<"broadcast_equal", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastEqualOp : OneFlow_BaseOp<"broadcast_equal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -725,12 +719,12 @@ def OneFlow_BroadcastEqualOp : OneFlow_BaseOp<"broadcast_equal", [DeclareOpInter
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastFloorModOp : OneFlow_BaseOp<"broadcast_floor_mod", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastFloorModOp : OneFlow_BaseOp<"broadcast_floor_mod", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -739,12 +733,12 @@ def OneFlow_BroadcastFloorModOp : OneFlow_BaseOp<"broadcast_floor_mod", [Declare
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastFmodOp : OneFlow_BaseOp<"broadcast_fmod", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastFmodOp : OneFlow_BaseOp<"broadcast_fmod", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -753,12 +747,12 @@ def OneFlow_BroadcastFmodOp : OneFlow_BaseOp<"broadcast_fmod", [DeclareOpInterfa
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastGreaterOp : OneFlow_BaseOp<"broadcast_greater", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastGreaterOp : OneFlow_BaseOp<"broadcast_greater", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -767,12 +761,12 @@ def OneFlow_BroadcastGreaterOp : OneFlow_BaseOp<"broadcast_greater", [DeclareOpI
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastGreaterEqualOp : OneFlow_BaseOp<"broadcast_greater_equal", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastGreaterEqualOp : OneFlow_BaseOp<"broadcast_greater_equal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -781,12 +775,12 @@ def OneFlow_BroadcastGreaterEqualOp : OneFlow_BaseOp<"broadcast_greater_equal", 
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastLessOp : OneFlow_BaseOp<"broadcast_less", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastLessOp : OneFlow_BaseOp<"broadcast_less", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -795,12 +789,12 @@ def OneFlow_BroadcastLessOp : OneFlow_BaseOp<"broadcast_less", [DeclareOpInterfa
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastLessEqualOp : OneFlow_BaseOp<"broadcast_less_equal", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastLessEqualOp : OneFlow_BaseOp<"broadcast_less_equal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -809,12 +803,12 @@ def OneFlow_BroadcastLessEqualOp : OneFlow_BaseOp<"broadcast_less_equal", [Decla
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastLikeOp : OneFlow_BaseOp<"broadcast_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastLikeOp : OneFlow_BaseOp<"broadcast_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$like
@@ -826,12 +820,12 @@ def OneFlow_BroadcastLikeOp : OneFlow_BaseOp<"broadcast_like", [DeclareOpInterfa
     SI32ArrayAttr:$broadcast_axes
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "like"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "like"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastLogicalAndOp : OneFlow_BaseOp<"broadcast_logical_and", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastLogicalAndOp : OneFlow_BaseOp<"broadcast_logical_and", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -840,12 +834,12 @@ def OneFlow_BroadcastLogicalAndOp : OneFlow_BaseOp<"broadcast_logical_and", [Dec
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastLogicalOrOp : OneFlow_BaseOp<"broadcast_logical_or", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastLogicalOrOp : OneFlow_BaseOp<"broadcast_logical_or", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -854,12 +848,12 @@ def OneFlow_BroadcastLogicalOrOp : OneFlow_BaseOp<"broadcast_logical_or", [Decla
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastLogicalXorOp : OneFlow_BaseOp<"broadcast_logical_xor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastLogicalXorOp : OneFlow_BaseOp<"broadcast_logical_xor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -868,12 +862,12 @@ def OneFlow_BroadcastLogicalXorOp : OneFlow_BaseOp<"broadcast_logical_xor", [Dec
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastMaximumOp : OneFlow_BaseOp<"broadcast_maximum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastMaximumOp : OneFlow_BaseOp<"broadcast_maximum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -882,12 +876,12 @@ def OneFlow_BroadcastMaximumOp : OneFlow_BaseOp<"broadcast_maximum", [DeclareOpI
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastMinimumOp : OneFlow_BaseOp<"broadcast_minimum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastMinimumOp : OneFlow_BaseOp<"broadcast_minimum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -896,12 +890,12 @@ def OneFlow_BroadcastMinimumOp : OneFlow_BaseOp<"broadcast_minimum", [DeclareOpI
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastMulOp : OneFlow_BaseOp<"broadcast_mul", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastMulOp : OneFlow_BaseOp<"broadcast_mul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -910,12 +904,12 @@ def OneFlow_BroadcastMulOp : OneFlow_BaseOp<"broadcast_mul", [DeclareOpInterface
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastNotEqualOp : OneFlow_BaseOp<"broadcast_not_equal", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastNotEqualOp : OneFlow_BaseOp<"broadcast_not_equal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -924,12 +918,12 @@ def OneFlow_BroadcastNotEqualOp : OneFlow_BaseOp<"broadcast_not_equal", [Declare
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastPowOp : OneFlow_BaseOp<"broadcast_pow", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastPowOp : OneFlow_BaseOp<"broadcast_pow", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -938,12 +932,12 @@ def OneFlow_BroadcastPowOp : OneFlow_BaseOp<"broadcast_pow", [DeclareOpInterface
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastPowXGradOp : OneFlow_BaseOp<"broadcast_pow_x_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastPowXGradOp : OneFlow_BaseOp<"broadcast_pow_x_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -954,12 +948,12 @@ def OneFlow_BroadcastPowXGradOp : OneFlow_BaseOp<"broadcast_pow_x_grad", [Declar
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "z", "dz"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "z", "dz"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastPowYGradOp : OneFlow_BaseOp<"broadcast_pow_y_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastPowYGradOp : OneFlow_BaseOp<"broadcast_pow_y_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -970,12 +964,12 @@ def OneFlow_BroadcastPowYGradOp : OneFlow_BaseOp<"broadcast_pow_y_grad", [Declar
     AnyType:$dy
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "z", "dz"}; }
-    static std::vector<std::string> outputOrder() { return {"dy"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "z", "dz"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastSubOp : OneFlow_BaseOp<"broadcast_sub", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastSubOp : OneFlow_BaseOp<"broadcast_sub", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -984,8 +978,8 @@ def OneFlow_BroadcastSubOp : OneFlow_BaseOp<"broadcast_sub", [DeclareOpInterface
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
@@ -997,91 +991,13 @@ def OneFlow_BroadcastSubOp : OneFlow_BaseOp<"broadcast_sub", [DeclareOpInterface
 
 #ifdef GET_ONEFLOW_CONV_OP_DEFINITIONS
 
-def OneFlow_Conv1DOp : OneFlow_ConvolutionBaseOp<"conv1d", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in,
-    AnyType:$weight,
-    Optional<AnyType>:$bias,
-    Optional<AnyType>:$bias_multiplier
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    SI32Attr:$filters,
-    SI32ArrayAttr:$padding_before,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$strides,
-    SI32ArrayAttr:$dilation_rate,
-    SI32Attr:$groups
-  );
-  let trait_attrs = (ins
-    I32ElementsAttr:$operand_segment_sizes
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "weight", "bias", "bias_multiplier"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
+def OneFlow_Conv1DOp : OneFlow_ConvolutionBaseOp<"conv1d", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_Conv2DOp : OneFlow_ConvolutionBaseOp<"conv2d", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in,
-    AnyType:$weight,
-    Optional<AnyType>:$bias,
-    Optional<AnyType>:$bias_multiplier
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    SI32Attr:$filters,
-    SI32ArrayAttr:$padding_before,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$strides,
-    SI32ArrayAttr:$dilation_rate,
-    SI32Attr:$groups
-  );
-  let trait_attrs = (ins
-    I32ElementsAttr:$operand_segment_sizes
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "weight", "bias", "bias_multiplier"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
+def OneFlow_Conv2DOp : OneFlow_ConvolutionBaseOp<"conv2d", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_Conv3DOp : OneFlow_ConvolutionBaseOp<"conv3d", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in,
-    AnyType:$weight,
-    Optional<AnyType>:$bias,
-    Optional<AnyType>:$bias_multiplier
-  );
-  let output = (outs
-    AnyType:$out
-  );
-  let attrs = (ins
-    SI32Attr:$filters,
-    SI32ArrayAttr:$padding_before,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$strides,
-    SI32ArrayAttr:$dilation_rate,
-    SI32Attr:$groups
-  );
-  let trait_attrs = (ins
-    I32ElementsAttr:$operand_segment_sizes
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "weight", "bias", "bias_multiplier"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
-  }];
-}
+def OneFlow_Conv3DOp : OneFlow_ConvolutionBaseOp<"conv3d", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_ConvBiasGradOp : OneFlow_BaseOp<"conv_bias_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ConvBiasGradOp : OneFlow_BaseOp<"conv_bias_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -1093,12 +1009,12 @@ def OneFlow_ConvBiasGradOp : OneFlow_BaseOp<"conv_bias_grad", [DeclareOpInterfac
     SI32Attr:$num_spatial_dims
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy"}; }
-    static std::vector<std::string> outputOrder() { return {"bias_diff"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"bias_diff"}); return &val; }
   }];
 }
 
-def OneFlow_ConvDataGradOp : OneFlow_BaseOp<"conv_data_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ConvDataGradOp : OneFlow_BaseOp<"conv_data_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$filter,
@@ -1118,12 +1034,12 @@ def OneFlow_ConvDataGradOp : OneFlow_BaseOp<"conv_data_grad", [DeclareOpInterfac
     SI32Attr:$groups
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "filter", "x_like", "_add_to_output"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "filter", "x_like", "_add_to_output"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_ConvFilterGradOp : OneFlow_BaseOp<"conv_filter_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ConvFilterGradOp : OneFlow_BaseOp<"conv_filter_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -1141,12 +1057,12 @@ def OneFlow_ConvFilterGradOp : OneFlow_BaseOp<"conv_filter_grad", [DeclareOpInte
     SI32Attr:$groups
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "x"}; }
-    static std::vector<std::string> outputOrder() { return {"filter_diff"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"filter_diff"}); return &val; }
   }];
 }
 
-def OneFlow_Deconv1DOp : OneFlow_BaseOp<"deconv1d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_Deconv1DOp : OneFlow_BaseOp<"deconv1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$weight
@@ -1165,12 +1081,12 @@ def OneFlow_Deconv1DOp : OneFlow_BaseOp<"deconv1d", [DeclareOpInterfaceMethods<B
     SI32Attr:$groups
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "weight"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "weight"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_Deconv2DOp : OneFlow_BaseOp<"deconv2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_Deconv2DOp : OneFlow_BaseOp<"deconv2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$weight
@@ -1189,12 +1105,12 @@ def OneFlow_Deconv2DOp : OneFlow_BaseOp<"deconv2d", [DeclareOpInterfaceMethods<B
     SI32Attr:$groups
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "weight"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "weight"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_Deconv3DOp : OneFlow_BaseOp<"deconv3d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_Deconv3DOp : OneFlow_BaseOp<"deconv3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$weight
@@ -1213,8 +1129,8 @@ def OneFlow_Deconv3DOp : OneFlow_BaseOp<"deconv3d", [DeclareOpInterfaceMethods<B
     SI32Attr:$groups
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "weight"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "weight"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
@@ -1226,7 +1142,7 @@ def OneFlow_Deconv3DOp : OneFlow_BaseOp<"deconv3d", [DeclareOpInterfaceMethods<B
 
 #ifdef GET_ONEFLOW_CROSS_ENTROPY_OP_DEFINITIONS
 
-def OneFlow_BinaryCrossEntropyOp : OneFlow_BaseOp<"binary_cross_entropy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BinaryCrossEntropyOp : OneFlow_BaseOp<"binary_cross_entropy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -1239,12 +1155,12 @@ def OneFlow_BinaryCrossEntropyOp : OneFlow_BaseOp<"binary_cross_entropy", [Decla
     StrAttr:$reduction
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input", "target", "weight"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target", "weight"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_BinaryCrossEntropyGradOp : OneFlow_BaseOp<"binary_cross_entropy_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BinaryCrossEntropyGradOp : OneFlow_BaseOp<"binary_cross_entropy_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -1258,12 +1174,12 @@ def OneFlow_BinaryCrossEntropyGradOp : OneFlow_BaseOp<"binary_cross_entropy_grad
     StrAttr:$reduction
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input", "target", "weight", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target", "weight", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_BinaryCrossEntropyWithLogitsOp : OneFlow_BaseOp<"binary_cross_entropy_with_logits", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BinaryCrossEntropyWithLogitsOp : OneFlow_BaseOp<"binary_cross_entropy_with_logits", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -1281,12 +1197,12 @@ def OneFlow_BinaryCrossEntropyWithLogitsOp : OneFlow_BaseOp<"binary_cross_entrop
     I32ElementsAttr:$operand_segment_sizes
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input", "target", "weight", "pos_weight"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target", "weight", "pos_weight"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_BinaryCrossEntropyWithLogitsGradOp : OneFlow_BaseOp<"binary_cross_entropy_with_logits_grad", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BinaryCrossEntropyWithLogitsGradOp : OneFlow_BaseOp<"binary_cross_entropy_with_logits_grad", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -1305,12 +1221,12 @@ def OneFlow_BinaryCrossEntropyWithLogitsGradOp : OneFlow_BaseOp<"binary_cross_en
     I32ElementsAttr:$operand_segment_sizes
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input", "target", "weight", "pos_weight", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target", "weight", "pos_weight", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_SigmoidCrossEntropyOp : OneFlow_BaseOp<"sigmoid_cross_entropy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SigmoidCrossEntropyOp : OneFlow_BaseOp<"sigmoid_cross_entropy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label
@@ -1319,12 +1235,12 @@ def OneFlow_SigmoidCrossEntropyOp : OneFlow_BaseOp<"sigmoid_cross_entropy", [Dec
     AnyType:$loss
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"prediction", "label"}; }
-    static std::vector<std::string> outputOrder() { return {"loss"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "label"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"loss"}); return &val; }
   }];
 }
 
-def OneFlow_SigmoidCrossEntropyGradOp : OneFlow_BaseOp<"sigmoid_cross_entropy_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SigmoidCrossEntropyGradOp : OneFlow_BaseOp<"sigmoid_cross_entropy_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$loss_diff,
@@ -1334,12 +1250,12 @@ def OneFlow_SigmoidCrossEntropyGradOp : OneFlow_BaseOp<"sigmoid_cross_entropy_gr
     AnyType:$prediction_diff
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"prediction", "loss_diff", "label"}; }
-    static std::vector<std::string> outputOrder() { return {"prediction_diff"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "loss_diff", "label"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"prediction_diff"}); return &val; }
   }];
 }
 
-def OneFlow_SparseCrossEntropyOp : OneFlow_BaseOp<"sparse_cross_entropy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SparseCrossEntropyOp : OneFlow_BaseOp<"sparse_cross_entropy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label
@@ -1351,12 +1267,12 @@ def OneFlow_SparseCrossEntropyOp : OneFlow_BaseOp<"sparse_cross_entropy", [Decla
     SI64Attr:$depth
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"prediction", "label"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "label"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_SparseCrossEntropyGradOp : OneFlow_BaseOp<"sparse_cross_entropy_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SparseCrossEntropyGradOp : OneFlow_BaseOp<"sparse_cross_entropy_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label,
@@ -1369,12 +1285,12 @@ def OneFlow_SparseCrossEntropyGradOp : OneFlow_BaseOp<"sparse_cross_entropy_grad
     SI64Attr:$depth
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"prediction", "label", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"prediction_diff"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "label", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"prediction_diff"}); return &val; }
   }];
 }
 
-def OneFlow_SparseCrossEntropyMsOp : OneFlow_BaseOp<"sparse_cross_entropy_ms", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SparseCrossEntropyMsOp : OneFlow_BaseOp<"sparse_cross_entropy_ms", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label
@@ -1386,12 +1302,12 @@ def OneFlow_SparseCrossEntropyMsOp : OneFlow_BaseOp<"sparse_cross_entropy_ms", [
     SI64Attr:$depth
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"prediction", "label"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "label"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_SparseCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_cross_entropy_ms_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SparseCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_cross_entropy_ms_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label,
@@ -1404,8 +1320,8 @@ def OneFlow_SparseCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_cross_entropy_ms
     SI64Attr:$depth
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"prediction", "label", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"prediction_diff"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "label", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"prediction_diff"}); return &val; }
   }];
 }
 
@@ -1417,7 +1333,7 @@ def OneFlow_SparseCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_cross_entropy_ms
 
 #ifdef GET_ONEFLOW_CUDA_OP_DEFINITIONS
 
-def OneFlow_NvtxEndOp : OneFlow_BaseOp<"nvtx_end", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_NvtxEndOp : OneFlow_BaseOp<"nvtx_end", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1428,12 +1344,12 @@ def OneFlow_NvtxEndOp : OneFlow_BaseOp<"nvtx_end", [DeclareOpInterfaceMethods<Bn
     StrAttr:$mark_prefix
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_NvtxStartOp : OneFlow_BaseOp<"nvtx_start", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_NvtxStartOp : OneFlow_BaseOp<"nvtx_start", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1444,8 +1360,8 @@ def OneFlow_NvtxStartOp : OneFlow_BaseOp<"nvtx_start", [DeclareOpInterfaceMethod
     StrAttr:$mark_prefix
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
@@ -1457,7 +1373,7 @@ def OneFlow_NvtxStartOp : OneFlow_BaseOp<"nvtx_start", [DeclareOpInterfaceMethod
 
 #ifdef GET_ONEFLOW_DATASET_OP_DEFINITIONS
 
-def OneFlow_COCOReaderOp : OneFlow_BaseOp<"COCOReader", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_COCOReaderOp : OneFlow_BaseOp<"COCOReader", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$image,
     AnyType:$image_id,
@@ -1480,12 +1396,12 @@ def OneFlow_COCOReaderOp : OneFlow_BaseOp<"COCOReader", [DeclareOpInterfaceMetho
     StrArrayAttr:$nd_sbp
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {}; }
-    static std::vector<std::string> outputOrder() { return {"image", "image_id", "image_size", "gt_bbox", "gt_label", "gt_segm", "gt_segm_index"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"image", "image_id", "image_size", "gt_bbox", "gt_label", "gt_segm", "gt_segm_index"}); return &val; }
   }];
 }
 
-def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -1502,12 +1418,12 @@ def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", [DeclareOpInterf
     StrArrayAttr:$nd_sbp
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_OneRecReaderOp : OneFlow_BaseOp<"OneRecReader", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_OneRecReaderOp : OneFlow_BaseOp<"OneRecReader", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -1522,12 +1438,12 @@ def OneFlow_OneRecReaderOp : OneFlow_BaseOp<"OneRecReader", [DeclareOpInterfaceM
     BoolAttr:$verify_example
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_CtcGreedyDecoderOp : OneFlow_BaseOp<"ctc_greedy_decoder", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CtcGreedyDecoderOp : OneFlow_BaseOp<"ctc_greedy_decoder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$log_probs,
     AnyType:$input_lengths
@@ -1540,12 +1456,12 @@ def OneFlow_CtcGreedyDecoderOp : OneFlow_BaseOp<"ctc_greedy_decoder", [DeclareOp
     BoolAttr:$merge_repeated
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"log_probs", "input_lengths"}; }
-    static std::vector<std::string> outputOrder() { return {"decoded", "neg_sum_logits"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"log_probs", "input_lengths"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"decoded", "neg_sum_logits"}); return &val; }
   }];
 }
 
-def OneFlow_MegatronGptMmapDataLoaderOp : OneFlow_BaseOp<"megatron_gpt_mmap_data_loader", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_MegatronGptMmapDataLoaderOp : OneFlow_BaseOp<"megatron_gpt_mmap_data_loader", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Optional<AnyType>:$iteration
   );
@@ -1566,12 +1482,12 @@ def OneFlow_MegatronGptMmapDataLoaderOp : OneFlow_BaseOp<"megatron_gpt_mmap_data
     StrArrayAttr:$nd_sbp
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"iteration"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"iteration"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_OfrecordBytesDecoderOp : OneFlow_BaseOp<"ofrecord_bytes_decoder", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_OfrecordBytesDecoderOp : OneFlow_BaseOp<"ofrecord_bytes_decoder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1582,12 +1498,12 @@ def OneFlow_OfrecordBytesDecoderOp : OneFlow_BaseOp<"ofrecord_bytes_decoder", [D
     StrAttr:$name
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_OfrecordImageClassificationReaderOp : OneFlow_BaseOp<"ofrecord_image_classification_reader", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_OfrecordImageClassificationReaderOp : OneFlow_BaseOp<"ofrecord_image_classification_reader", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$image,
     AnyType:$label
@@ -1609,12 +1525,12 @@ def OneFlow_OfrecordImageClassificationReaderOp : OneFlow_BaseOp<"ofrecord_image
     SI32Attr:$num_decode_threads_per_machine
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {}; }
-    static std::vector<std::string> outputOrder() { return {"image", "label"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"image", "label"}); return &val; }
   }];
 }
 
-def OneFlow_OfrecordImageDecoderOp : OneFlow_BaseOp<"ofrecord_image_decoder", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_OfrecordImageDecoderOp : OneFlow_BaseOp<"ofrecord_image_decoder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1626,12 +1542,12 @@ def OneFlow_OfrecordImageDecoderOp : OneFlow_BaseOp<"ofrecord_image_decoder", [D
     StrAttr:$color_space
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_OfrecordImageDecoderRandomCropOp : OneFlow_BaseOp<"ofrecord_image_decoder_random_crop", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_OfrecordImageDecoderRandomCropOp : OneFlow_BaseOp<"ofrecord_image_decoder_random_crop", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1648,12 +1564,12 @@ def OneFlow_OfrecordImageDecoderRandomCropOp : OneFlow_BaseOp<"ofrecord_image_de
     F32ArrayAttr:$random_aspect_ratio
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_OfrecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_OfrecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1668,12 +1584,12 @@ def OneFlow_OfrecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", [Decla
     BoolAttr:$truncate
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_OnerecDecoderOp : OneFlow_BaseOp<"onerec_decoder", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_OnerecDecoderOp : OneFlow_BaseOp<"onerec_decoder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1691,8 +1607,8 @@ def OneFlow_OnerecDecoderOp : OneFlow_BaseOp<"onerec_decoder", [DeclareOpInterfa
     AnyI64ElementsAttr:$batch_padding
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
@@ -1704,7 +1620,7 @@ def OneFlow_OnerecDecoderOp : OneFlow_BaseOp<"onerec_decoder", [DeclareOpInterfa
 
 #ifdef GET_ONEFLOW_DETECTION_OP_DEFINITIONS
 
-def OneFlow_InTopKOp : OneFlow_BaseOp<"in_top_k", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_InTopKOp : OneFlow_BaseOp<"in_top_k", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$targets,
     AnyType:$predictions
@@ -1716,12 +1632,12 @@ def OneFlow_InTopKOp : OneFlow_BaseOp<"in_top_k", [DeclareOpInterfaceMethods<BnO
     SI32Attr:$k
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"targets", "predictions"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"targets", "predictions"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_NmsOp : OneFlow_BaseOp<"nms", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_NmsOp : OneFlow_BaseOp<"nms", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1733,12 +1649,12 @@ def OneFlow_NmsOp : OneFlow_BaseOp<"nms", [DeclareOpInterfaceMethods<BnOrderOpIn
     SI32Attr:$keep_n
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ObjectBboxFlipOp : OneFlow_BaseOp<"object_bbox_flip", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ObjectBboxFlipOp : OneFlow_BaseOp<"object_bbox_flip", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$bbox,
     AnyType:$image_size,
@@ -1748,12 +1664,12 @@ def OneFlow_ObjectBboxFlipOp : OneFlow_BaseOp<"object_bbox_flip", [DeclareOpInte
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"bbox", "image_size", "flip_code"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"bbox", "image_size", "flip_code"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ObjectBboxScaleOp : OneFlow_BaseOp<"object_bbox_scale", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ObjectBboxScaleOp : OneFlow_BaseOp<"object_bbox_scale", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$bbox,
     AnyType:$scale
@@ -1762,12 +1678,12 @@ def OneFlow_ObjectBboxScaleOp : OneFlow_BaseOp<"object_bbox_scale", [DeclareOpIn
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"bbox", "scale"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"bbox", "scale"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ObjectSegmentationPolygonFlipOp : OneFlow_BaseOp<"object_segmentation_polygon_flip", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ObjectSegmentationPolygonFlipOp : OneFlow_BaseOp<"object_segmentation_polygon_flip", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$poly,
     AnyType:$image_size,
@@ -1777,12 +1693,12 @@ def OneFlow_ObjectSegmentationPolygonFlipOp : OneFlow_BaseOp<"object_segmentatio
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"poly", "image_size", "flip_code"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"poly", "image_size", "flip_code"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ObjectSegmentationPolygonScaleOp : OneFlow_BaseOp<"object_segmentation_polygon_scale", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ObjectSegmentationPolygonScaleOp : OneFlow_BaseOp<"object_segmentation_polygon_scale", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$poly,
     AnyType:$scale
@@ -1791,12 +1707,12 @@ def OneFlow_ObjectSegmentationPolygonScaleOp : OneFlow_BaseOp<"object_segmentati
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"poly", "scale"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"poly", "scale"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ObjectSegmentationPolygonToMaskOp : OneFlow_BaseOp<"object_segmentation_polygon_to_mask", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ObjectSegmentationPolygonToMaskOp : OneFlow_BaseOp<"object_segmentation_polygon_to_mask", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$poly,
     AnyType:$poly_index,
@@ -1806,12 +1722,12 @@ def OneFlow_ObjectSegmentationPolygonToMaskOp : OneFlow_BaseOp<"object_segmentat
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"poly", "poly_index", "image_size"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"poly", "poly_index", "image_size"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_TopKOp : OneFlow_BaseOp<"top_k", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TopKOp : OneFlow_BaseOp<"top_k", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1823,8 +1739,8 @@ def OneFlow_TopKOp : OneFlow_BaseOp<"top_k", [DeclareOpInterfaceMethods<BnOrderO
     BoolAttr:$sorted
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
@@ -1836,7 +1752,7 @@ def OneFlow_TopKOp : OneFlow_BaseOp<"top_k", [DeclareOpInterfaceMethods<BnOrderO
 
 #ifdef GET_ONEFLOW_EAGER_OP_DEFINITIONS
 
-def OneFlow_EagerBToSOp : OneFlow_BaseOp<"eager_b_to_s", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_EagerBToSOp : OneFlow_BaseOp<"eager_b_to_s", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1850,12 +1766,12 @@ def OneFlow_EagerBToSOp : OneFlow_BaseOp<"eager_b_to_s", [DeclareOpInterfaceMeth
     AnyI64ElementsAttr:$shape
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_EagerNaiveSToSOp : OneFlow_BaseOp<"eager_naive_s_to_s", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_EagerNaiveSToSOp : OneFlow_BaseOp<"eager_naive_s_to_s", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1870,12 +1786,12 @@ def OneFlow_EagerNaiveSToSOp : OneFlow_BaseOp<"eager_naive_s_to_s", [DeclareOpIn
     AnyI64ElementsAttr:$shape
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_EagerNcclAllGatherOp : OneFlow_BaseOp<"eager_nccl_all_gather", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_EagerNcclAllGatherOp : OneFlow_BaseOp<"eager_nccl_all_gather", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1886,12 +1802,12 @@ def OneFlow_EagerNcclAllGatherOp : OneFlow_BaseOp<"eager_nccl_all_gather", [Decl
     StrAttr:$parallel_conf
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_EagerNcclAllReduceOp : OneFlow_BaseOp<"eager_nccl_all_reduce", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_EagerNcclAllReduceOp : OneFlow_BaseOp<"eager_nccl_all_reduce", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1903,12 +1819,12 @@ def OneFlow_EagerNcclAllReduceOp : OneFlow_BaseOp<"eager_nccl_all_reduce", [Decl
     BoolAttr:$async_launch
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1920,12 +1836,12 @@ def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", [Decla
     SI64Attr:$root
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_EagerNcclReduceOp : OneFlow_BaseOp<"eager_nccl_reduce", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_EagerNcclReduceOp : OneFlow_BaseOp<"eager_nccl_reduce", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1937,12 +1853,12 @@ def OneFlow_EagerNcclReduceOp : OneFlow_BaseOp<"eager_nccl_reduce", [DeclareOpIn
     SI64Attr:$root
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_EagerNcclReduceScatterOp : OneFlow_BaseOp<"eager_nccl_reduce_scatter", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_EagerNcclReduceScatterOp : OneFlow_BaseOp<"eager_nccl_reduce_scatter", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1954,12 +1870,12 @@ def OneFlow_EagerNcclReduceScatterOp : OneFlow_BaseOp<"eager_nccl_reduce_scatter
     StrAttr:$op_type
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_EagerNcclS2sOp : OneFlow_BaseOp<"eager_nccl_s2s", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_EagerNcclS2sOp : OneFlow_BaseOp<"eager_nccl_s2s", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1972,12 +1888,12 @@ def OneFlow_EagerNcclS2sOp : OneFlow_BaseOp<"eager_nccl_s2s", [DeclareOpInterfac
     StrAttr:$parallel_conf
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_EagerPToBOp : OneFlow_BaseOp<"eager_p_to_b", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_EagerPToBOp : OneFlow_BaseOp<"eager_p_to_b", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -1990,12 +1906,12 @@ def OneFlow_EagerPToBOp : OneFlow_BaseOp<"eager_p_to_b", [DeclareOpInterfaceMeth
     AnyI64ElementsAttr:$shape
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_EagerPToSOp : OneFlow_BaseOp<"eager_p_to_s", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_EagerPToSOp : OneFlow_BaseOp<"eager_p_to_s", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2009,12 +1925,12 @@ def OneFlow_EagerPToSOp : OneFlow_BaseOp<"eager_p_to_s", [DeclareOpInterfaceMeth
     AnyI64ElementsAttr:$shape
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_EagerSToBOp : OneFlow_BaseOp<"eager_s_to_b", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_EagerSToBOp : OneFlow_BaseOp<"eager_s_to_b", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2028,12 +1944,12 @@ def OneFlow_EagerSToBOp : OneFlow_BaseOp<"eager_s_to_b", [DeclareOpInterfaceMeth
     AnyI64ElementsAttr:$shape
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2045,20 +1961,20 @@ def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", [Dec
     StrAttr:$parallel_conf
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
 #endif // GET_ONEFLOW_EAGER_OP_DEFINITIONS
 
 // Group: FUSED
-// cudnn_fused_normalization_add_relu, cudnn_fused_normalization_add_relu_grad, fused_bias_add_gelu, fused_bias_add_gelu_grad, fused_bias_add_mask_scale, fused_cast_scale, fused_scale_tril, fused_self_attention_query_mul_key_and_value, fused_self_attention_query_mul_key_and_value_grad, fused_tril_scale_softmax_mask_scale, fused_tril_scale_softmax_mask_scale_grad, normalization_add_relu_grad
-// Total: 12
+// cudnn_fused_normalization_add_relu, cudnn_fused_normalization_add_relu_grad, fused_bias_add_gelu, fused_bias_add_gelu_grad, fused_bias_add_mask_scale, fused_cast_scale, fused_scale_mask_softmax, fused_scale_mask_softmax_dropout, fused_scale_mask_softmax_dropout_grad, fused_scale_mask_softmax_grad, fused_scale_tril, fused_self_attention_query_mul_key_and_value, fused_self_attention_query_mul_key_and_value_grad, fused_tril_scale_softmax_mask_scale, fused_tril_scale_softmax_mask_scale_grad, normalization_add_relu_grad
+// Total: 16
 
 #ifdef GET_ONEFLOW_FUSED_OP_DEFINITIONS
 
-def OneFlow_CudnnFusedNormalizationAddReluOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu", [AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CudnnFusedNormalizationAddReluOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     Optional<AnyType>:$addend,
@@ -2083,12 +1999,12 @@ def OneFlow_CudnnFusedNormalizationAddReluOp : OneFlow_BaseOp<"cudnn_fused_norma
     I32ElementsAttr:$result_segment_sizes
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "addend", "moving_mean", "moving_variance", "gamma", "beta"}; }
-    static std::vector<std::string> outputOrder() { return {"y", "reserve_space", "mean", "inv_variance"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "addend", "moving_mean", "moving_variance", "gamma", "beta"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y", "reserve_space", "mean", "inv_variance"}); return &val; }
   }];
 }
 
-def OneFlow_CudnnFusedNormalizationAddReluGradOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CudnnFusedNormalizationAddReluGradOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy,
@@ -2110,12 +2026,12 @@ def OneFlow_CudnnFusedNormalizationAddReluGradOp : OneFlow_BaseOp<"cudnn_fused_n
     F32Attr:$epsilon
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy", "mean", "inv_variance", "gamma", "beta", "reserve_space", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"gamma_diff", "beta_diff", "dx", "addend_diff"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy", "mean", "inv_variance", "gamma", "beta", "reserve_space", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"gamma_diff", "beta_diff", "dx", "addend_diff"}); return &val; }
   }];
 }
 
-def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b
@@ -2127,12 +2043,12 @@ def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", [DeclareO
     SI32Attr:$axis
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"a", "b"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_FusedBiasAddGeluGradOp : OneFlow_BaseOp<"fused_bias_add_gelu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_FusedBiasAddGeluGradOp : OneFlow_BaseOp<"fused_bias_add_gelu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b,
@@ -2145,12 +2061,12 @@ def OneFlow_FusedBiasAddGeluGradOp : OneFlow_BaseOp<"fused_bias_add_gelu_grad", 
     SI32Attr:$axis
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"a", "b", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b,
@@ -2165,12 +2081,12 @@ def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale"
     F32Attr:$scale
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"a", "b", "mask", "_add_to_output"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b", "mask", "_add_to_output"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_FusedCastScaleOp : OneFlow_BaseOp<"fused_cast_scale", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_FusedCastScaleOp : OneFlow_BaseOp<"fused_cast_scale", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$scale_by_tensor
@@ -2182,12 +2098,89 @@ def OneFlow_FusedCastScaleOp : OneFlow_BaseOp<"fused_cast_scale", [DeclareOpInte
     F64Attr:$scale
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "scale_by_tensor"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "scale_by_tensor"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_FusedScaleTrilOp : OneFlow_BaseOp<"fused_scale_tril", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_FusedScaleMaskSoftmaxOp : OneFlow_BaseOp<"fused_scale_mask_softmax", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$mask
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let attrs = (ins
+    F32Attr:$scale_value,
+    F32Attr:$mask_fill_value
+  );
+  let extraClassDeclaration = [{
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "mask"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
+  }];
+}
+
+def OneFlow_FusedScaleMaskSoftmaxDropoutOp : OneFlow_BaseOp<"fused_scale_mask_softmax_dropout", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$mask,
+    AnyType:$dropout_mask
+  );
+  let output = (outs
+    AnyType:$y,
+    AnyType:$softmax_y
+  );
+  let attrs = (ins
+    F32Attr:$scale_value,
+    F32Attr:$mask_fill_value,
+    F32Attr:$dropout_scale_value
+  );
+  let extraClassDeclaration = [{
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "mask", "dropout_mask"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y", "softmax_y"}); return &val; }
+  }];
+}
+
+def OneFlow_FusedScaleMaskSoftmaxDropoutGradOp : OneFlow_BaseOp<"fused_scale_mask_softmax_dropout_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$softmax_y,
+    AnyType:$dy,
+    AnyType:$mask,
+    AnyType:$dropout_mask
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    F32Attr:$scale_value,
+    F32Attr:$dropout_scale_value
+  );
+  let extraClassDeclaration = [{
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"softmax_y", "dy", "mask", "dropout_mask"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
+  }];
+}
+
+def OneFlow_FusedScaleMaskSoftmaxGradOp : OneFlow_BaseOp<"fused_scale_mask_softmax_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$y,
+    AnyType:$dy,
+    AnyType:$mask
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    F32Attr:$scale_value
+  );
+  let extraClassDeclaration = [{
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"y", "dy", "mask"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
+  }];
+}
+
+def OneFlow_FusedScaleTrilOp : OneFlow_BaseOp<"fused_scale_tril", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2204,12 +2197,12 @@ def OneFlow_FusedScaleTrilOp : OneFlow_BaseOp<"fused_scale_tril", [DeclareOpInte
     BoolAttr:$is_floating_scale_value
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_FusedSelfAttentionQueryMulKeyAndValueOp : OneFlow_BaseOp<"fused_self_attention_query_mul_key_and_value", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_FusedSelfAttentionQueryMulKeyAndValueOp : OneFlow_BaseOp<"fused_self_attention_query_mul_key_and_value", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$hidden_states
   );
@@ -2222,12 +2215,12 @@ def OneFlow_FusedSelfAttentionQueryMulKeyAndValueOp : OneFlow_BaseOp<"fused_self
     F32Attr:$alpha
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"hidden_states"}; }
-    static std::vector<std::string> outputOrder() { return {"query_mul_key", "value"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"hidden_states"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"query_mul_key", "value"}); return &val; }
   }];
 }
 
-def OneFlow_FusedSelfAttentionQueryMulKeyAndValueGradOp : OneFlow_BaseOp<"fused_self_attention_query_mul_key_and_value_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_FusedSelfAttentionQueryMulKeyAndValueGradOp : OneFlow_BaseOp<"fused_self_attention_query_mul_key_and_value_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$query_mul_key_grad,
     AnyType:$value_grad,
@@ -2240,12 +2233,12 @@ def OneFlow_FusedSelfAttentionQueryMulKeyAndValueGradOp : OneFlow_BaseOp<"fused_
     F32Attr:$alpha
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"query_mul_key_grad", "value_grad", "hidden_states"}; }
-    static std::vector<std::string> outputOrder() { return {"hidden_states_grad"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"query_mul_key_grad", "value_grad", "hidden_states"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"hidden_states_grad"}); return &val; }
   }];
 }
 
-def OneFlow_FusedTrilScaleSoftmaxMaskScaleOp : OneFlow_BaseOp<"fused_tril_scale_softmax_mask_scale", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_FusedTrilScaleSoftmaxMaskScaleOp : OneFlow_BaseOp<"fused_tril_scale_softmax_mask_scale", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$mask
@@ -2261,12 +2254,12 @@ def OneFlow_FusedTrilScaleSoftmaxMaskScaleOp : OneFlow_BaseOp<"fused_tril_scale_
     F32Attr:$mask_scale_value
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "mask"}; }
-    static std::vector<std::string> outputOrder() { return {"y", "softmax_y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "mask"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y", "softmax_y"}); return &val; }
   }];
 }
 
-def OneFlow_FusedTrilScaleSoftmaxMaskScaleGradOp : OneFlow_BaseOp<"fused_tril_scale_softmax_mask_scale_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_FusedTrilScaleSoftmaxMaskScaleGradOp : OneFlow_BaseOp<"fused_tril_scale_softmax_mask_scale_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$softmax_y,
     AnyType:$dy,
@@ -2281,12 +2274,12 @@ def OneFlow_FusedTrilScaleSoftmaxMaskScaleGradOp : OneFlow_BaseOp<"fused_tril_sc
     F32Attr:$mask_scale_value
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"softmax_y", "dy", "mask"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"softmax_y", "dy", "mask"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy,
@@ -2308,8 +2301,8 @@ def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_
     F32Attr:$epsilon
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy", "mean", "inv_variance", "gamma", "beta", "reserve_space", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"gamma_diff", "beta_diff", "dx", "addend_diff"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy", "mean", "inv_variance", "gamma", "beta", "reserve_space", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"gamma_diff", "beta_diff", "dx", "addend_diff"}); return &val; }
   }];
 }
 
@@ -2321,107 +2314,59 @@ def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_
 
 #ifdef GET_ONEFLOW_IDEMPOTENT_OP_DEFINITIONS
 
-def OneFlow_AbsOp : OneFlow_IdempotentBaseOp<"abs", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
+def OneFlow_AbsOp : OneFlow_IdempotentBaseOp<"abs", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_CeilOp : OneFlow_IdempotentBaseOp<"ceil", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
+def OneFlow_CeilOp : OneFlow_IdempotentBaseOp<"ceil", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_FloorOp : OneFlow_IdempotentBaseOp<"floor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
+def OneFlow_FloorOp : OneFlow_IdempotentBaseOp<"floor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$like
-  );
-  let output = (outs
-    AnyType:$out
-  );
+def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"like"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"like"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$in
-  );
-  let output = (outs
-    AnyType:$out
-  );
+def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_RintOp : OneFlow_IdempotentBaseOp<"rint", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
+def OneFlow_RintOp : OneFlow_IdempotentBaseOp<"rint", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_RoundOp : OneFlow_IdempotentBaseOp<"round", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
+def OneFlow_RoundOp : OneFlow_IdempotentBaseOp<"round", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
+def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
@@ -2433,7 +2378,7 @@ def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", [DeclareOpInterfaceMethods
 
 #ifdef GET_ONEFLOW_IDENTITY_OP_DEFINITIONS
 
-def OneFlow_AmpWhiteIdentityOp : OneFlow_BaseOp<"amp_white_identity", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AmpWhiteIdentityOp : OneFlow_BaseOp<"amp_white_identity", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2441,12 +2386,12 @@ def OneFlow_AmpWhiteIdentityOp : OneFlow_BaseOp<"amp_white_identity", [DeclareOp
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_IdentityOp : OneFlow_BaseOp<"identity", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_IdentityOp : OneFlow_BaseOp<"identity", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2454,12 +2399,12 @@ def OneFlow_IdentityOp : OneFlow_BaseOp<"identity", [DeclareOpInterfaceMethods<B
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_IdentityBufferOp : OneFlow_BaseOp<"identity_buffer", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_IdentityBufferOp : OneFlow_BaseOp<"identity_buffer", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2470,12 +2415,12 @@ def OneFlow_IdentityBufferOp : OneFlow_BaseOp<"identity_buffer", [DeclareOpInter
     SI64Attr:$buffer_size
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Variadic<AnyType>:$in
   );
@@ -2483,8 +2428,8 @@ def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", [DeclareOpInterfa
     Variadic<AnyType>:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
@@ -2496,7 +2441,7 @@ def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", [DeclareOpInterfa
 
 #ifdef GET_ONEFLOW_IMAGE_OP_DEFINITIONS
 
-def OneFlow_ImageBatchAlignOp : OneFlow_BaseOp<"image_batch_align", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ImageBatchAlignOp : OneFlow_BaseOp<"image_batch_align", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2510,12 +2455,12 @@ def OneFlow_ImageBatchAlignOp : OneFlow_BaseOp<"image_batch_align", [DeclareOpIn
     BoolAttr:$dynamic_out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ImageDecodeOp : OneFlow_BaseOp<"image_decode", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ImageDecodeOp : OneFlow_BaseOp<"image_decode", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2527,12 +2472,12 @@ def OneFlow_ImageDecodeOp : OneFlow_BaseOp<"image_decode", [DeclareOpInterfaceMe
     StrAttr:$data_type
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ImageFlipOp : OneFlow_BaseOp<"image_flip", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ImageFlipOp : OneFlow_BaseOp<"image_flip", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$flip_code
@@ -2541,12 +2486,12 @@ def OneFlow_ImageFlipOp : OneFlow_BaseOp<"image_flip", [DeclareOpInterfaceMethod
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "flip_code"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "flip_code"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ImageRandomCropOp : OneFlow_BaseOp<"image_random_crop", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ImageRandomCropOp : OneFlow_BaseOp<"image_random_crop", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2561,12 +2506,12 @@ def OneFlow_ImageRandomCropOp : OneFlow_BaseOp<"image_random_crop", [DeclareOpIn
     F32ArrayAttr:$random_aspect_ratio
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ImageResizeKeepAspectRatioOp : OneFlow_BaseOp<"image_resize_keep_aspect_ratio", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ImageResizeKeepAspectRatioOp : OneFlow_BaseOp<"image_resize_keep_aspect_ratio", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2583,12 +2528,12 @@ def OneFlow_ImageResizeKeepAspectRatioOp : OneFlow_BaseOp<"image_resize_keep_asp
     StrAttr:$interpolation_type
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out", "size", "scale"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out", "size", "scale"}); return &val; }
   }];
 }
 
-def OneFlow_ImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2604,8 +2549,8 @@ def OneFlow_ImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", [Decl
     StrAttr:$interpolation_type
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out", "scale"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out", "scale"}); return &val; }
   }];
 }
 
@@ -2617,7 +2562,7 @@ def OneFlow_ImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", [Decl
 
 #ifdef GET_ONEFLOW_INDICES_OP_DEFINITIONS
 
-def OneFlow_ArgSortOp : OneFlow_BaseOp<"arg_sort", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ArgSortOp : OneFlow_BaseOp<"arg_sort", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2628,12 +2573,12 @@ def OneFlow_ArgSortOp : OneFlow_BaseOp<"arg_sort", [DeclareOpInterfaceMethods<Bn
     StrAttr:$direction
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ArgmaxOp : OneFlow_BaseOp<"argmax", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ArgmaxOp : OneFlow_BaseOp<"argmax", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2641,12 +2586,12 @@ def OneFlow_ArgmaxOp : OneFlow_BaseOp<"argmax", [DeclareOpInterfaceMethods<BnOrd
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ArgwhereOp : OneFlow_BaseOp<"argwhere", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ArgwhereOp : OneFlow_BaseOp<"argwhere", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input
   );
@@ -2658,12 +2603,12 @@ def OneFlow_ArgwhereOp : OneFlow_BaseOp<"argwhere", [DeclareOpInterfaceMethods<B
     StrAttr:$dtype
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input"}; }
-    static std::vector<std::string> outputOrder() { return {"output", "output_size"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output", "output_size"}); return &val; }
   }];
 }
 
-def OneFlow_BatchGatherOp : OneFlow_BaseOp<"batch_gather", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BatchGatherOp : OneFlow_BaseOp<"batch_gather", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$indices
@@ -2672,12 +2617,12 @@ def OneFlow_BatchGatherOp : OneFlow_BaseOp<"batch_gather", [DeclareOpInterfaceMe
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "indices"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "indices"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_DimGatherOp : OneFlow_BaseOp<"dim_gather", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_DimGatherOp : OneFlow_BaseOp<"dim_gather", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$index
@@ -2689,12 +2634,12 @@ def OneFlow_DimGatherOp : OneFlow_BaseOp<"dim_gather", [DeclareOpInterfaceMethod
     SI32Attr:$dim
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input", "index"}; }
-    static std::vector<std::string> outputOrder() { return {"output"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "index"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output"}); return &val; }
   }];
 }
 
-def OneFlow_DimScatterAddOp : OneFlow_BaseOp<"dim_scatter_add", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_DimScatterAddOp : OneFlow_BaseOp<"dim_scatter_add", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$index,
@@ -2707,12 +2652,12 @@ def OneFlow_DimScatterAddOp : OneFlow_BaseOp<"dim_scatter_add", [DeclareOpInterf
     SI32Attr:$dim
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input", "index", "src"}; }
-    static std::vector<std::string> outputOrder() { return {"output"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "index", "src"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output"}); return &val; }
   }];
 }
 
-def OneFlow_DimScatterAddLikeOp : OneFlow_BaseOp<"dim_scatter_add_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_DimScatterAddLikeOp : OneFlow_BaseOp<"dim_scatter_add_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$like,
     AnyType:$index,
@@ -2725,12 +2670,12 @@ def OneFlow_DimScatterAddLikeOp : OneFlow_BaseOp<"dim_scatter_add_like", [Declar
     SI32Attr:$dim
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"like", "index", "src"}; }
-    static std::vector<std::string> outputOrder() { return {"output"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"like", "index", "src"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output"}); return &val; }
   }];
 }
 
-def OneFlow_DimScatterAddScalarOp : OneFlow_BaseOp<"dim_scatter_add_scalar", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_DimScatterAddScalarOp : OneFlow_BaseOp<"dim_scatter_add_scalar", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$index
@@ -2743,12 +2688,12 @@ def OneFlow_DimScatterAddScalarOp : OneFlow_BaseOp<"dim_scatter_add_scalar", [De
     SI32Attr:$dim
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input", "index"}; }
-    static std::vector<std::string> outputOrder() { return {"output"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "index"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output"}); return &val; }
   }];
 }
 
-def OneFlow_DimScatterMulOp : OneFlow_BaseOp<"dim_scatter_mul", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_DimScatterMulOp : OneFlow_BaseOp<"dim_scatter_mul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$index,
@@ -2761,12 +2706,12 @@ def OneFlow_DimScatterMulOp : OneFlow_BaseOp<"dim_scatter_mul", [DeclareOpInterf
     SI32Attr:$dim
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input", "index", "src"}; }
-    static std::vector<std::string> outputOrder() { return {"output"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "index", "src"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output"}); return &val; }
   }];
 }
 
-def OneFlow_DimScatterMulScalarOp : OneFlow_BaseOp<"dim_scatter_mul_scalar", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_DimScatterMulScalarOp : OneFlow_BaseOp<"dim_scatter_mul_scalar", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$index
@@ -2779,12 +2724,12 @@ def OneFlow_DimScatterMulScalarOp : OneFlow_BaseOp<"dim_scatter_mul_scalar", [De
     SI32Attr:$dim
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input", "index"}; }
-    static std::vector<std::string> outputOrder() { return {"output"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "index"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output"}); return &val; }
   }];
 }
 
-def OneFlow_DimScatterUpdateOp : OneFlow_BaseOp<"dim_scatter_update", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_DimScatterUpdateOp : OneFlow_BaseOp<"dim_scatter_update", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$index,
@@ -2797,12 +2742,12 @@ def OneFlow_DimScatterUpdateOp : OneFlow_BaseOp<"dim_scatter_update", [DeclareOp
     SI32Attr:$dim
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input", "index", "src"}; }
-    static std::vector<std::string> outputOrder() { return {"output"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "index", "src"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output"}); return &val; }
   }];
 }
 
-def OneFlow_DimScatterUpdateScalarOp : OneFlow_BaseOp<"dim_scatter_update_scalar", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_DimScatterUpdateScalarOp : OneFlow_BaseOp<"dim_scatter_update_scalar", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$index
@@ -2815,12 +2760,12 @@ def OneFlow_DimScatterUpdateScalarOp : OneFlow_BaseOp<"dim_scatter_update_scalar
     SI32Attr:$dim
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input", "index"}; }
-    static std::vector<std::string> outputOrder() { return {"output"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "index"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output"}); return &val; }
   }];
 }
 
-def OneFlow_GatherOp : OneFlow_BaseOp<"gather", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_GatherOp : OneFlow_BaseOp<"gather", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$indices
@@ -2832,12 +2777,12 @@ def OneFlow_GatherOp : OneFlow_BaseOp<"gather", [DeclareOpInterfaceMethods<BnOrd
     SI64Attr:$axis
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "indices"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "indices"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_GatherNdOp : OneFlow_BaseOp<"gather_nd", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_GatherNdOp : OneFlow_BaseOp<"gather_nd", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$params,
     AnyType:$indices
@@ -2846,12 +2791,12 @@ def OneFlow_GatherNdOp : OneFlow_BaseOp<"gather_nd", [DeclareOpInterfaceMethods<
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"params", "indices"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"params", "indices"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_GenerateRandomBatchPermutationIndicesOp : OneFlow_BaseOp<"generate_random_batch_permutation_indices", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_GenerateRandomBatchPermutationIndicesOp : OneFlow_BaseOp<"generate_random_batch_permutation_indices", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -2862,12 +2807,12 @@ def OneFlow_GenerateRandomBatchPermutationIndicesOp : OneFlow_BaseOp<"generate_r
     SI64Attr:$seed
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_ImageTargetResizeOp : OneFlow_BaseOp<"image_target_resize", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ImageTargetResizeOp : OneFlow_BaseOp<"image_target_resize", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -2881,12 +2826,12 @@ def OneFlow_ImageTargetResizeOp : OneFlow_BaseOp<"image_target_resize", [Declare
     SI32Attr:$max_size
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out", "size", "scale"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out", "size", "scale"}); return &val; }
   }];
 }
 
-def OneFlow_LogicalSliceOp : OneFlow_BaseOp<"logical_slice", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_LogicalSliceOp : OneFlow_BaseOp<"logical_slice", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -2899,12 +2844,12 @@ def OneFlow_LogicalSliceOp : OneFlow_BaseOp<"logical_slice", [DeclareOpInterface
     SI64ArrayAttr:$step
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_ScatterNdOp : OneFlow_BaseOp<"scatter_nd", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ScatterNdOp : OneFlow_BaseOp<"scatter_nd", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$indices,
     AnyType:$updates
@@ -2916,12 +2861,12 @@ def OneFlow_ScatterNdOp : OneFlow_BaseOp<"scatter_nd", [DeclareOpInterfaceMethod
     AnyI64ElementsAttr:$shape
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"indices", "updates"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"indices", "updates"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ScatterNdLikeOp : OneFlow_BaseOp<"scatter_nd_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ScatterNdLikeOp : OneFlow_BaseOp<"scatter_nd_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$like,
     AnyType:$indices,
@@ -2931,12 +2876,12 @@ def OneFlow_ScatterNdLikeOp : OneFlow_BaseOp<"scatter_nd_like", [DeclareOpInterf
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"like", "indices", "updates"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"like", "indices", "updates"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_SliceOp : OneFlow_BaseOp<"slice", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SliceOp : OneFlow_BaseOp<"slice", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -2949,12 +2894,12 @@ def OneFlow_SliceOp : OneFlow_BaseOp<"slice", [DeclareOpInterfaceMethods<BnOrder
     SI64ArrayAttr:$step
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_SliceGradOp : OneFlow_BaseOp<"slice_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SliceGradOp : OneFlow_BaseOp<"slice_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$like
@@ -2968,12 +2913,12 @@ def OneFlow_SliceGradOp : OneFlow_BaseOp<"slice_grad", [DeclareOpInterfaceMethod
     SI64ArrayAttr:$step
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "like"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "like"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_TensorScatterNdAddOp : OneFlow_BaseOp<"tensor_scatter_nd_add", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TensorScatterNdAddOp : OneFlow_BaseOp<"tensor_scatter_nd_add", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$params,
     AnyType:$updates,
@@ -2983,12 +2928,12 @@ def OneFlow_TensorScatterNdAddOp : OneFlow_BaseOp<"tensor_scatter_nd_add", [Decl
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"params", "updates", "indices"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"params", "updates", "indices"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_TensorScatterNdUpdateOp : OneFlow_BaseOp<"tensor_scatter_nd_update", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TensorScatterNdUpdateOp : OneFlow_BaseOp<"tensor_scatter_nd_update", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$params,
     AnyType:$updates,
@@ -2998,12 +2943,12 @@ def OneFlow_TensorScatterNdUpdateOp : OneFlow_BaseOp<"tensor_scatter_nd_update",
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"params", "updates", "indices"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"params", "updates", "indices"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_UnsortedBatchSegmentSumOp : OneFlow_BaseOp<"unsorted_batch_segment_sum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UnsortedBatchSegmentSumOp : OneFlow_BaseOp<"unsorted_batch_segment_sum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$data,
     AnyType:$segment_ids
@@ -3015,12 +2960,12 @@ def OneFlow_UnsortedBatchSegmentSumOp : OneFlow_BaseOp<"unsorted_batch_segment_s
     SI64Attr:$num_segments
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"data", "segment_ids"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"data", "segment_ids"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_UnsortedSegmentSumOp : OneFlow_BaseOp<"unsorted_segment_sum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UnsortedSegmentSumOp : OneFlow_BaseOp<"unsorted_segment_sum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$data,
     AnyType:$segment_ids
@@ -3033,12 +2978,12 @@ def OneFlow_UnsortedSegmentSumOp : OneFlow_BaseOp<"unsorted_segment_sum", [Decla
     SI64Attr:$num_segments
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"data", "segment_ids"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"data", "segment_ids"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_UnsortedSegmentSumLikeOp : OneFlow_BaseOp<"unsorted_segment_sum_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UnsortedSegmentSumLikeOp : OneFlow_BaseOp<"unsorted_segment_sum_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$data,
     AnyType:$segment_ids,
@@ -3051,12 +2996,12 @@ def OneFlow_UnsortedSegmentSumLikeOp : OneFlow_BaseOp<"unsorted_segment_sum_like
     SI64Attr:$axis
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"data", "segment_ids", "like"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"data", "segment_ids", "like"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_WhereOp : OneFlow_BaseOp<"where", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_WhereOp : OneFlow_BaseOp<"where", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$condition,
     AnyType:$x,
@@ -3066,12 +3011,12 @@ def OneFlow_WhereOp : OneFlow_BaseOp<"where", [DeclareOpInterfaceMethods<BnOrder
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"condition", "x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"condition", "x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_WhereScalarXOp : OneFlow_BaseOp<"where_scalar_x", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_WhereScalarXOp : OneFlow_BaseOp<"where_scalar_x", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$condition,
     AnyType:$y
@@ -3086,12 +3031,12 @@ def OneFlow_WhereScalarXOp : OneFlow_BaseOp<"where_scalar_x", [DeclareOpInterfac
     F64Attr:$float_operand
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"condition", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"condition", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_WhereScalarXyOp : OneFlow_BaseOp<"where_scalar_xy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_WhereScalarXyOp : OneFlow_BaseOp<"where_scalar_xy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$condition
   );
@@ -3109,12 +3054,12 @@ def OneFlow_WhereScalarXyOp : OneFlow_BaseOp<"where_scalar_xy", [DeclareOpInterf
     F64Attr:$y_float_operand
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"condition"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"condition"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_WhereScalarYOp : OneFlow_BaseOp<"where_scalar_y", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_WhereScalarYOp : OneFlow_BaseOp<"where_scalar_y", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$condition,
     AnyType:$x
@@ -3129,8 +3074,8 @@ def OneFlow_WhereScalarYOp : OneFlow_BaseOp<"where_scalar_y", [DeclareOpInterfac
     F64Attr:$float_operand
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"condition", "x"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"condition", "x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
@@ -3142,29 +3087,17 @@ def OneFlow_WhereScalarYOp : OneFlow_BaseOp<"where_scalar_y", [DeclareOpInterfac
 
 #ifdef GET_ONEFLOW_INVOLUTION_OP_DEFINITIONS
 
-def OneFlow_NegativeOp : OneFlow_InvolutionBaseOp<"negative", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
+def OneFlow_NegativeOp : OneFlow_InvolutionBaseOp<"negative", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
+def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
@@ -3176,7 +3109,7 @@ def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", [DeclareOpInte
 
 #ifdef GET_ONEFLOW_LOSS_OP_DEFINITIONS
 
-def OneFlow_CombinedMarginLossOp : OneFlow_BaseOp<"combined_margin_loss", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CombinedMarginLossOp : OneFlow_BaseOp<"combined_margin_loss", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$label
@@ -3192,12 +3125,12 @@ def OneFlow_CombinedMarginLossOp : OneFlow_BaseOp<"combined_margin_loss", [Decla
     SI64Attr:$depth
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "label"}; }
-    static std::vector<std::string> outputOrder() { return {"y", "theta"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "label"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y", "theta"}); return &val; }
   }];
 }
 
-def OneFlow_CombinedMarginLossGradOp : OneFlow_BaseOp<"combined_margin_loss_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CombinedMarginLossGradOp : OneFlow_BaseOp<"combined_margin_loss_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$label,
@@ -3213,12 +3146,12 @@ def OneFlow_CombinedMarginLossGradOp : OneFlow_BaseOp<"combined_margin_loss_grad
     SI64Attr:$depth
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "label", "theta"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "label", "theta"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_CtcLossOp : OneFlow_BaseOp<"ctc_loss", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CtcLossOp : OneFlow_BaseOp<"ctc_loss", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$log_probs,
     AnyType:$targets,
@@ -3235,12 +3168,12 @@ def OneFlow_CtcLossOp : OneFlow_BaseOp<"ctc_loss", [DeclareOpInterfaceMethods<Bn
     BoolAttr:$zero_infinity
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"log_probs", "targets", "input_lengths", "target_lengths"}; }
-    static std::vector<std::string> outputOrder() { return {"loss", "alpha"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"log_probs", "targets", "input_lengths", "target_lengths"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"loss", "alpha"}); return &val; }
   }];
 }
 
-def OneFlow_CtcLossGradOp : OneFlow_BaseOp<"ctc_loss_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CtcLossGradOp : OneFlow_BaseOp<"ctc_loss_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$grad_out,
     AnyType:$log_probs,
@@ -3259,12 +3192,12 @@ def OneFlow_CtcLossGradOp : OneFlow_BaseOp<"ctc_loss_grad", [DeclareOpInterfaceM
     BoolAttr:$zero_infinity
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"grad_out", "log_probs", "targets", "input_lengths", "target_lengths", "loss", "alpha"}; }
-    static std::vector<std::string> outputOrder() { return {"grad"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"grad_out", "log_probs", "targets", "input_lengths", "target_lengths", "loss", "alpha"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"grad"}); return &val; }
   }];
 }
 
-def OneFlow_DynamicLossScaleScheduleOp : OneFlow_BaseOp<"dynamic_loss_scale_schedule", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_DynamicLossScaleScheduleOp : OneFlow_BaseOp<"dynamic_loss_scale_schedule", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$count_not_finite,
     AnyType:$loss_scale,
@@ -3275,12 +3208,12 @@ def OneFlow_DynamicLossScaleScheduleOp : OneFlow_BaseOp<"dynamic_loss_scale_sche
     F32Attr:$multiplier
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"count_not_finite", "loss_scale", "good_step_counter"}; }
-    static std::vector<std::string> outputOrder() { return {}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"count_not_finite", "loss_scale", "good_step_counter"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
   }];
 }
 
-def OneFlow_KlDivLossOp : OneFlow_BaseOp<"kl_div_loss", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_KlDivLossOp : OneFlow_BaseOp<"kl_div_loss", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target
@@ -3293,12 +3226,12 @@ def OneFlow_KlDivLossOp : OneFlow_BaseOp<"kl_div_loss", [DeclareOpInterfaceMetho
     BoolAttr:$log_target
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input", "target"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_KlDivLossGradOp : OneFlow_BaseOp<"kl_div_loss_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_KlDivLossGradOp : OneFlow_BaseOp<"kl_div_loss_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -3312,12 +3245,12 @@ def OneFlow_KlDivLossGradOp : OneFlow_BaseOp<"kl_div_loss_grad", [DeclareOpInter
     BoolAttr:$log_target
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input", "target", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_SmoothL1LossOp : OneFlow_BaseOp<"smooth_l1_loss", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SmoothL1LossOp : OneFlow_BaseOp<"smooth_l1_loss", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target
@@ -3330,12 +3263,12 @@ def OneFlow_SmoothL1LossOp : OneFlow_BaseOp<"smooth_l1_loss", [DeclareOpInterfac
     F32Attr:$beta
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input", "target"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -3349,8 +3282,8 @@ def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", [DeclareO
     F32Attr:$beta
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input", "target", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
@@ -3362,7 +3295,7 @@ def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", [DeclareO
 
 #ifdef GET_ONEFLOW_MATH_OP_DEFINITIONS
 
-def OneFlow_AbsGradOp : OneFlow_BaseOp<"abs_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AbsGradOp : OneFlow_BaseOp<"abs_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3371,12 +3304,12 @@ def OneFlow_AbsGradOp : OneFlow_BaseOp<"abs_grad", [DeclareOpInterfaceMethods<Bn
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_CeilGradOp : OneFlow_BaseOp<"ceil_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CeilGradOp : OneFlow_BaseOp<"ceil_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3385,12 +3318,12 @@ def OneFlow_CeilGradOp : OneFlow_BaseOp<"ceil_grad", [DeclareOpInterfaceMethods<
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_ErfOp : OneFlow_BaseOp<"erf", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ErfOp : OneFlow_BaseOp<"erf", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3398,12 +3331,12 @@ def OneFlow_ErfOp : OneFlow_BaseOp<"erf", [DeclareOpInterfaceMethods<BnOrderOpIn
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_ErfGradOp : OneFlow_BaseOp<"erf_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ErfGradOp : OneFlow_BaseOp<"erf_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3412,12 +3345,12 @@ def OneFlow_ErfGradOp : OneFlow_BaseOp<"erf_grad", [DeclareOpInterfaceMethods<Bn
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_ExpOp : OneFlow_BaseOp<"exp", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ExpOp : OneFlow_BaseOp<"exp", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3425,12 +3358,12 @@ def OneFlow_ExpOp : OneFlow_BaseOp<"exp", [DeclareOpInterfaceMethods<BnOrderOpIn
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_ExpGradOp : OneFlow_BaseOp<"exp_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ExpGradOp : OneFlow_BaseOp<"exp_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3439,12 +3372,12 @@ def OneFlow_ExpGradOp : OneFlow_BaseOp<"exp_grad", [DeclareOpInterfaceMethods<Bn
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_ExpandGradOp : OneFlow_BaseOp<"expand_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ExpandGradOp : OneFlow_BaseOp<"expand_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -3456,12 +3389,12 @@ def OneFlow_ExpandGradOp : OneFlow_BaseOp<"expand_grad", [DeclareOpInterfaceMeth
     SI32ArrayAttr:$logical_expand_shape
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_Expm1Op : OneFlow_BaseOp<"expm1", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_Expm1Op : OneFlow_BaseOp<"expm1", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3469,12 +3402,12 @@ def OneFlow_Expm1Op : OneFlow_BaseOp<"expm1", [DeclareOpInterfaceMethods<BnOrder
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_Expm1GradOp : OneFlow_BaseOp<"expm1_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_Expm1GradOp : OneFlow_BaseOp<"expm1_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3483,12 +3416,12 @@ def OneFlow_Expm1GradOp : OneFlow_BaseOp<"expm1_grad", [DeclareOpInterfaceMethod
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_FloorGradOp : OneFlow_BaseOp<"floor_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_FloorGradOp : OneFlow_BaseOp<"floor_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3497,12 +3430,12 @@ def OneFlow_FloorGradOp : OneFlow_BaseOp<"floor_grad", [DeclareOpInterfaceMethod
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_FloordivXGradOp : OneFlow_BaseOp<"floordiv_x_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_FloordivXGradOp : OneFlow_BaseOp<"floordiv_x_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -3512,12 +3445,12 @@ def OneFlow_FloordivXGradOp : OneFlow_BaseOp<"floordiv_x_grad", [DeclareOpInterf
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "dz"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "dz"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_FloordivYGradOp : OneFlow_BaseOp<"floordiv_y_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_FloordivYGradOp : OneFlow_BaseOp<"floordiv_y_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -3527,12 +3460,12 @@ def OneFlow_FloordivYGradOp : OneFlow_BaseOp<"floordiv_y_grad", [DeclareOpInterf
     AnyType:$dy
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "dz"}; }
-    static std::vector<std::string> outputOrder() { return {"dy"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "dz"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
   }];
 }
 
-def OneFlow_LgammaOp : OneFlow_BaseOp<"lgamma", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_LgammaOp : OneFlow_BaseOp<"lgamma", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3540,12 +3473,12 @@ def OneFlow_LgammaOp : OneFlow_BaseOp<"lgamma", [DeclareOpInterfaceMethods<BnOrd
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_LgammaGradOp : OneFlow_BaseOp<"lgamma_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_LgammaGradOp : OneFlow_BaseOp<"lgamma_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3554,12 +3487,12 @@ def OneFlow_LgammaGradOp : OneFlow_BaseOp<"lgamma_grad", [DeclareOpInterfaceMeth
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_LogOp : OneFlow_BaseOp<"log", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_LogOp : OneFlow_BaseOp<"log", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3567,12 +3500,12 @@ def OneFlow_LogOp : OneFlow_BaseOp<"log", [DeclareOpInterfaceMethods<BnOrderOpIn
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_Log1pOp : OneFlow_BaseOp<"log1p", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_Log1pOp : OneFlow_BaseOp<"log1p", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3580,12 +3513,12 @@ def OneFlow_Log1pOp : OneFlow_BaseOp<"log1p", [DeclareOpInterfaceMethods<BnOrder
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_Log1pGradOp : OneFlow_BaseOp<"log1p_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_Log1pGradOp : OneFlow_BaseOp<"log1p_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3594,12 +3527,12 @@ def OneFlow_Log1pGradOp : OneFlow_BaseOp<"log1p_grad", [DeclareOpInterfaceMethod
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_LogGradOp : OneFlow_BaseOp<"log_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_LogGradOp : OneFlow_BaseOp<"log_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3608,12 +3541,12 @@ def OneFlow_LogGradOp : OneFlow_BaseOp<"log_grad", [DeclareOpInterfaceMethods<Bn
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_LogSigmoidOp : OneFlow_BaseOp<"log_sigmoid", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_LogSigmoidOp : OneFlow_BaseOp<"log_sigmoid", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3621,12 +3554,12 @@ def OneFlow_LogSigmoidOp : OneFlow_BaseOp<"log_sigmoid", [DeclareOpInterfaceMeth
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_LogSigmoidGradOp : OneFlow_BaseOp<"log_sigmoid_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_LogSigmoidGradOp : OneFlow_BaseOp<"log_sigmoid_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3635,12 +3568,12 @@ def OneFlow_LogSigmoidGradOp : OneFlow_BaseOp<"log_sigmoid_grad", [DeclareOpInte
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_NegativeGradOp : OneFlow_BaseOp<"negative_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_NegativeGradOp : OneFlow_BaseOp<"negative_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3649,12 +3582,12 @@ def OneFlow_NegativeGradOp : OneFlow_BaseOp<"negative_grad", [DeclareOpInterface
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_ReciprocalGradOp : OneFlow_BaseOp<"reciprocal_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReciprocalGradOp : OneFlow_BaseOp<"reciprocal_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3663,12 +3596,12 @@ def OneFlow_ReciprocalGradOp : OneFlow_BaseOp<"reciprocal_grad", [DeclareOpInter
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_ReciprocalNoNanOp : OneFlow_BaseOp<"reciprocal_no_nan", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReciprocalNoNanOp : OneFlow_BaseOp<"reciprocal_no_nan", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3676,12 +3609,12 @@ def OneFlow_ReciprocalNoNanOp : OneFlow_BaseOp<"reciprocal_no_nan", [DeclareOpIn
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_ReciprocalNoNanGradOp : OneFlow_BaseOp<"reciprocal_no_nan_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReciprocalNoNanGradOp : OneFlow_BaseOp<"reciprocal_no_nan_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3690,12 +3623,12 @@ def OneFlow_ReciprocalNoNanGradOp : OneFlow_BaseOp<"reciprocal_no_nan_grad", [De
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_RintGradOp : OneFlow_BaseOp<"rint_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_RintGradOp : OneFlow_BaseOp<"rint_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3704,12 +3637,12 @@ def OneFlow_RintGradOp : OneFlow_BaseOp<"rint_grad", [DeclareOpInterfaceMethods<
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_RoundGradOp : OneFlow_BaseOp<"round_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_RoundGradOp : OneFlow_BaseOp<"round_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3718,12 +3651,12 @@ def OneFlow_RoundGradOp : OneFlow_BaseOp<"round_grad", [DeclareOpInterfaceMethod
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_RsqrtOp : OneFlow_BaseOp<"rsqrt", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_RsqrtOp : OneFlow_BaseOp<"rsqrt", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3731,12 +3664,12 @@ def OneFlow_RsqrtOp : OneFlow_BaseOp<"rsqrt", [DeclareOpInterfaceMethods<BnOrder
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_RsqrtGradOp : OneFlow_BaseOp<"rsqrt_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_RsqrtGradOp : OneFlow_BaseOp<"rsqrt_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3745,12 +3678,12 @@ def OneFlow_RsqrtGradOp : OneFlow_BaseOp<"rsqrt_grad", [DeclareOpInterfaceMethod
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_SigmoidV2Op : OneFlow_BaseOp<"sigmoid_v2", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SigmoidV2Op : OneFlow_BaseOp<"sigmoid_v2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3758,12 +3691,12 @@ def OneFlow_SigmoidV2Op : OneFlow_BaseOp<"sigmoid_v2", [DeclareOpInterfaceMethod
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_SigmoidV2GradOp : OneFlow_BaseOp<"sigmoid_v2_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SigmoidV2GradOp : OneFlow_BaseOp<"sigmoid_v2_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3772,12 +3705,12 @@ def OneFlow_SigmoidV2GradOp : OneFlow_BaseOp<"sigmoid_v2_grad", [DeclareOpInterf
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_SignGradOp : OneFlow_BaseOp<"sign_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SignGradOp : OneFlow_BaseOp<"sign_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3786,12 +3719,12 @@ def OneFlow_SignGradOp : OneFlow_BaseOp<"sign_grad", [DeclareOpInterfaceMethods<
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_SoftplusOp : OneFlow_BaseOp<"softplus", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SoftplusOp : OneFlow_BaseOp<"softplus", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3799,12 +3732,12 @@ def OneFlow_SoftplusOp : OneFlow_BaseOp<"softplus", [DeclareOpInterfaceMethods<B
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_SoftplusGradOp : OneFlow_BaseOp<"softplus_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SoftplusGradOp : OneFlow_BaseOp<"softplus_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3813,12 +3746,12 @@ def OneFlow_SoftplusGradOp : OneFlow_BaseOp<"softplus_grad", [DeclareOpInterface
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_SoftsignGradOp : OneFlow_BaseOp<"softsign_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SoftsignGradOp : OneFlow_BaseOp<"softsign_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3827,12 +3760,12 @@ def OneFlow_SoftsignGradOp : OneFlow_BaseOp<"softsign_grad", [DeclareOpInterface
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_SqrtOp : OneFlow_BaseOp<"sqrt", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SqrtOp : OneFlow_BaseOp<"sqrt", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3840,12 +3773,12 @@ def OneFlow_SqrtOp : OneFlow_BaseOp<"sqrt", [DeclareOpInterfaceMethods<BnOrderOp
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_SqrtGradOp : OneFlow_BaseOp<"sqrt_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SqrtGradOp : OneFlow_BaseOp<"sqrt_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3854,12 +3787,12 @@ def OneFlow_SqrtGradOp : OneFlow_BaseOp<"sqrt_grad", [DeclareOpInterfaceMethods<
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_SquareOp : OneFlow_BaseOp<"square", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SquareOp : OneFlow_BaseOp<"square", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -3867,12 +3800,12 @@ def OneFlow_SquareOp : OneFlow_BaseOp<"square", [DeclareOpInterfaceMethods<BnOrd
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_SquareGradOp : OneFlow_BaseOp<"square_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SquareGradOp : OneFlow_BaseOp<"square_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -3881,12 +3814,12 @@ def OneFlow_SquareGradOp : OneFlow_BaseOp<"square_grad", [DeclareOpInterfaceMeth
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_XlogyXGradOp : OneFlow_BaseOp<"xlogy_x_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_XlogyXGradOp : OneFlow_BaseOp<"xlogy_x_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -3896,12 +3829,12 @@ def OneFlow_XlogyXGradOp : OneFlow_BaseOp<"xlogy_x_grad", [DeclareOpInterfaceMet
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "dz"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "dz"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_XlogyYGradOp : OneFlow_BaseOp<"xlogy_y_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_XlogyYGradOp : OneFlow_BaseOp<"xlogy_y_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -3911,8 +3844,8 @@ def OneFlow_XlogyYGradOp : OneFlow_BaseOp<"xlogy_y_grad", [DeclareOpInterfaceMet
     AnyType:$dy
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "dz"}; }
-    static std::vector<std::string> outputOrder() { return {"dy"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "dz"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
   }];
 }
 
@@ -3924,7 +3857,7 @@ def OneFlow_XlogyYGradOp : OneFlow_BaseOp<"xlogy_y_grad", [DeclareOpInterfaceMet
 
 #ifdef GET_ONEFLOW_MATMUL_OP_DEFINITIONS
 
-def OneFlow_BatchMatmulOp : OneFlow_BaseOp<"batch_matmul", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BatchMatmulOp : OneFlow_BaseOp<"batch_matmul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b,
@@ -3939,12 +3872,12 @@ def OneFlow_BatchMatmulOp : OneFlow_BaseOp<"batch_matmul", [DeclareOpInterfaceMe
     F64Attr:$alpha
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"a", "b", "_add_to_output"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b", "_add_to_output"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastMatmulOp : OneFlow_BaseOp<"broadcast_matmul", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastMatmulOp : OneFlow_BaseOp<"broadcast_matmul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b,
@@ -3959,12 +3892,12 @@ def OneFlow_BroadcastMatmulOp : OneFlow_BaseOp<"broadcast_matmul", [DeclareOpInt
     F64Attr:$alpha
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"a", "b", "_add_to_output"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b", "_add_to_output"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_BroadcastMatmulGradBOp : OneFlow_BaseOp<"broadcast_matmul_grad_b", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BroadcastMatmulGradBOp : OneFlow_BaseOp<"broadcast_matmul_grad_b", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b,
@@ -3977,12 +3910,12 @@ def OneFlow_BroadcastMatmulGradBOp : OneFlow_BaseOp<"broadcast_matmul_grad_b", [
     F64Attr:$alpha
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"a", "b", "_add_to_output"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b", "_add_to_output"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_DistributedPartialFcSampleOp : OneFlow_BaseOp<"distributed_partial_fc_sample", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_DistributedPartialFcSampleOp : OneFlow_BaseOp<"distributed_partial_fc_sample", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$weight,
     AnyType:$label
@@ -3997,12 +3930,12 @@ def OneFlow_DistributedPartialFcSampleOp : OneFlow_BaseOp<"distributed_partial_f
     SI64Attr:$seed
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"weight", "label"}; }
-    static std::vector<std::string> outputOrder() { return {"mapped_label", "sampled_label", "sampled_weight"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"weight", "label"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"mapped_label", "sampled_label", "sampled_weight"}); return &val; }
   }];
 }
 
-def OneFlow_DistributedPartialFcSampleDisableBoxingOp : OneFlow_BaseOp<"distributed_partial_fc_sample_disable_boxing", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_DistributedPartialFcSampleDisableBoxingOp : OneFlow_BaseOp<"distributed_partial_fc_sample_disable_boxing", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$sampled_weight_diff,
     AnyType:$sampled_label
@@ -4012,12 +3945,12 @@ def OneFlow_DistributedPartialFcSampleDisableBoxingOp : OneFlow_BaseOp<"distribu
     AnyType:$boxing_disabled_sampled_label
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"sampled_weight_diff", "sampled_label"}; }
-    static std::vector<std::string> outputOrder() { return {"boxing_disabled_sampled_weight_diff", "boxing_disabled_sampled_label"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"sampled_weight_diff", "sampled_label"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"boxing_disabled_sampled_weight_diff", "boxing_disabled_sampled_label"}); return &val; }
   }];
 }
 
-def OneFlow_ErfcOp : OneFlow_BaseOp<"erfc", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ErfcOp : OneFlow_BaseOp<"erfc", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4025,12 +3958,12 @@ def OneFlow_ErfcOp : OneFlow_BaseOp<"erfc", [DeclareOpInterfaceMethods<BnOrderOp
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_ErfcGradOp : OneFlow_BaseOp<"erfc_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ErfcGradOp : OneFlow_BaseOp<"erfc_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -4039,12 +3972,12 @@ def OneFlow_ErfcGradOp : OneFlow_BaseOp<"erfc_grad", [DeclareOpInterfaceMethods<
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$a,
     AnyType:$b,
@@ -4059,8 +3992,8 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [DeclareOpInterfaceMethods<BnOrd
     F64Attr:$alpha
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"a", "b", "_add_to_output"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b", "_add_to_output"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
@@ -4072,7 +4005,7 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [DeclareOpInterfaceMethods<BnOrd
 
 #ifdef GET_ONEFLOW_MISC_OP_DEFINITIONS
 
-def OneFlow_CategoricalOrdinalEncodeOp : OneFlow_BaseOp<"CategoricalOrdinalEncode", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CategoricalOrdinalEncodeOp : OneFlow_BaseOp<"CategoricalOrdinalEncode", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$table,
     AnyType:$size,
@@ -4085,12 +4018,12 @@ def OneFlow_CategoricalOrdinalEncodeOp : OneFlow_BaseOp<"CategoricalOrdinalEncod
     BoolAttr:$hash_precomputed
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"table", "size", "in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"table", "size", "in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Variadic<AnyType>:$in
   );
@@ -4098,13 +4031,13 @@ def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", [DeclareOpInterfaceMethods<BnOrderO
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
   let hasCanonicalizer = 1;
 }
 
-def OneFlow_ArangeOp : OneFlow_BaseOp<"arange", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ArangeOp : OneFlow_BaseOp<"arange", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -4119,12 +4052,12 @@ def OneFlow_ArangeOp : OneFlow_BaseOp<"arange", [DeclareOpInterfaceMethods<BnOrd
     StrArrayAttr:$nd_sbp
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_CoinFlipOp : OneFlow_BaseOp<"coin_flip", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CoinFlipOp : OneFlow_BaseOp<"coin_flip", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -4136,12 +4069,12 @@ def OneFlow_CoinFlipOp : OneFlow_BaseOp<"coin_flip", [DeclareOpInterfaceMethods<
     StrArrayAttr:$nd_sbp
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ConcatOp : OneFlow_BaseOp<"concat", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ConcatOp : OneFlow_BaseOp<"concat", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Variadic<AnyType>:$in
   );
@@ -4153,12 +4086,12 @@ def OneFlow_ConcatOp : OneFlow_BaseOp<"concat", [DeclareOpInterfaceMethods<BnOrd
     SI64Attr:$max_dim_size
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -4171,12 +4104,12 @@ def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [DeclareOpInterfaceMethods<B
     StrArrayAttr:$nd_sbp
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$mask,
@@ -4189,12 +4122,12 @@ def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", [DeclareOpInterfaceMethods<BnO
     F32Attr:$scale
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "mask", "_add_to_output"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "mask", "_add_to_output"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ElementwiseMaximumBackwardOp : OneFlow_BaseOp<"elementwise_maximum_backward", [AttrSizedResultSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ElementwiseMaximumBackwardOp : OneFlow_BaseOp<"elementwise_maximum_backward", [NoSideEffect, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dz,
     AnyType:$x,
@@ -4208,12 +4141,12 @@ def OneFlow_ElementwiseMaximumBackwardOp : OneFlow_BaseOp<"elementwise_maximum_b
     I32ElementsAttr:$result_segment_sizes
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dz", "x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"dx", "dy"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dz", "x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx", "dy"}); return &val; }
   }];
 }
 
-def OneFlow_ElementwiseMinimumBackwardOp : OneFlow_BaseOp<"elementwise_minimum_backward", [AttrSizedResultSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ElementwiseMinimumBackwardOp : OneFlow_BaseOp<"elementwise_minimum_backward", [NoSideEffect, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dz,
     AnyType:$x,
@@ -4227,12 +4160,12 @@ def OneFlow_ElementwiseMinimumBackwardOp : OneFlow_BaseOp<"elementwise_minimum_b
     I32ElementsAttr:$result_segment_sizes
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dz", "x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"dx", "dy"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dz", "x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx", "dy"}); return &val; }
   }];
 }
 
-def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -4242,12 +4175,12 @@ def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", [DeclareOpInterfaceMethods<BnOrder
     StrArrayAttr:$nd_sbp
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_EyeOp : OneFlow_BaseOp<"eye", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_EyeOp : OneFlow_BaseOp<"eye", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -4258,12 +4191,12 @@ def OneFlow_EyeOp : OneFlow_BaseOp<"eye", [DeclareOpInterfaceMethods<BnOrderOpIn
     StrArrayAttr:$nd_sbp
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_GridSampleGradOp : OneFlow_BaseOp<"grid_sample_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_GridSampleGradOp : OneFlow_BaseOp<"grid_sample_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$doutput,
     AnyType:$input,
@@ -4279,12 +4212,12 @@ def OneFlow_GridSampleGradOp : OneFlow_BaseOp<"grid_sample_grad", [DeclareOpInte
     BoolAttr:$align_corners
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"doutput", "input", "grid"}; }
-    static std::vector<std::string> outputOrder() { return {"dinput", "dgrid"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"doutput", "input", "grid"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dinput", "dgrid"}); return &val; }
   }];
 }
 
-def OneFlow_MultiCountNotFiniteOp : OneFlow_BaseOp<"multi_count_not_finite", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_MultiCountNotFiniteOp : OneFlow_BaseOp<"multi_count_not_finite", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Variadic<AnyType>:$x
   );
@@ -4292,12 +4225,12 @@ def OneFlow_MultiCountNotFiniteOp : OneFlow_BaseOp<"multi_count_not_finite", [De
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_MultiSquareSumOp : OneFlow_BaseOp<"multi_square_sum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_MultiSquareSumOp : OneFlow_BaseOp<"multi_square_sum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Variadic<AnyType>:$x
   );
@@ -4305,12 +4238,12 @@ def OneFlow_MultiSquareSumOp : OneFlow_BaseOp<"multi_square_sum", [DeclareOpInte
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_NllOp : OneFlow_BaseOp<"nll", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_NllOp : OneFlow_BaseOp<"nll", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -4325,12 +4258,12 @@ def OneFlow_NllOp : OneFlow_BaseOp<"nll", [DeclareOpInterfaceMethods<BnOrderOpIn
     StrAttr:$reduction
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input", "target", "weight"}; }
-    static std::vector<std::string> outputOrder() { return {"out", "total_weight"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target", "weight"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out", "total_weight"}); return &val; }
   }];
 }
 
-def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input,
     AnyType:$target,
@@ -4346,12 +4279,12 @@ def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", [DeclareOpInterfaceMethods<Bn
     StrAttr:$reduction
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input", "target", "total_weight", "weight", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target", "total_weight", "weight", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_PowXGradOp : OneFlow_BaseOp<"pow_x_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_PowXGradOp : OneFlow_BaseOp<"pow_x_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -4361,12 +4294,12 @@ def OneFlow_PowXGradOp : OneFlow_BaseOp<"pow_x_grad", [DeclareOpInterfaceMethods
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "dz"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "dz"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_PowYGradOp : OneFlow_BaseOp<"pow_y_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_PowYGradOp : OneFlow_BaseOp<"pow_y_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -4376,12 +4309,12 @@ def OneFlow_PowYGradOp : OneFlow_BaseOp<"pow_y_grad", [DeclareOpInterfaceMethods
     AnyType:$dy
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "dz"}; }
-    static std::vector<std::string> outputOrder() { return {"dy"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "dz"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
   }];
 }
 
-def OneFlow_PreluGradOp : OneFlow_BaseOp<"prelu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_PreluGradOp : OneFlow_BaseOp<"prelu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x,
@@ -4392,12 +4325,12 @@ def OneFlow_PreluGradOp : OneFlow_BaseOp<"prelu_grad", [DeclareOpInterfaceMethod
     AnyType:$alpha_diff
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "x", "alpha"}; }
-    static std::vector<std::string> outputOrder() { return {"dx", "alpha_diff"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x", "alpha"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx", "alpha_diff"}); return &val; }
   }];
 }
 
-def OneFlow_RandpermOp : OneFlow_BaseOp<"randperm", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_RandpermOp : OneFlow_BaseOp<"randperm", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -4406,12 +4339,12 @@ def OneFlow_RandpermOp : OneFlow_BaseOp<"randperm", [DeclareOpInterfaceMethods<B
     StrAttr:$nd_sbp
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_RecvOp : OneFlow_BaseOp<"recv", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_RecvOp : OneFlow_BaseOp<"recv", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -4423,12 +4356,12 @@ def OneFlow_RecvOp : OneFlow_BaseOp<"recv", [DeclareOpInterfaceMethods<BnOrderOp
     SI64Attr:$device_id
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_SendOp : OneFlow_BaseOp<"send", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SendOp : OneFlow_BaseOp<"send", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4436,12 +4369,12 @@ def OneFlow_SendOp : OneFlow_BaseOp<"send", [DeclareOpInterfaceMethods<BnOrderOp
     SI64Attr:$dst_process_id
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
   }];
 }
 
-def OneFlow_SplitLikeOp : OneFlow_BaseOp<"split_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SplitLikeOp : OneFlow_BaseOp<"split_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     Variadic<AnyType>:$like
@@ -4453,12 +4386,12 @@ def OneFlow_SplitLikeOp : OneFlow_BaseOp<"split_like", [DeclareOpInterfaceMethod
     SI64Attr:$axis
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "like"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "like"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_SspVariableProxyOp : OneFlow_BaseOp<"ssp_variable_proxy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SspVariableProxyOp : OneFlow_BaseOp<"ssp_variable_proxy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$var
   );
@@ -4470,12 +4403,12 @@ def OneFlow_SspVariableProxyOp : OneFlow_BaseOp<"ssp_variable_proxy", [DeclareOp
     SI64Attr:$buffer_size
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"var"}; }
-    static std::vector<std::string> outputOrder() { return {"ref", "value"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"var"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"ref", "value"}); return &val; }
   }];
 }
 
-def OneFlow_TfPreluGradOp : OneFlow_BaseOp<"tf_prelu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TfPreluGradOp : OneFlow_BaseOp<"tf_prelu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x,
@@ -4486,12 +4419,12 @@ def OneFlow_TfPreluGradOp : OneFlow_BaseOp<"tf_prelu_grad", [DeclareOpInterfaceM
     AnyType:$alpha_diff
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "x", "alpha"}; }
-    static std::vector<std::string> outputOrder() { return {"dx", "alpha_diff"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x", "alpha"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx", "alpha_diff"}); return &val; }
   }];
 }
 
-def OneFlow_UniformOp : OneFlow_BaseOp<"uniform", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UniformOp : OneFlow_BaseOp<"uniform", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -4503,12 +4436,12 @@ def OneFlow_UniformOp : OneFlow_BaseOp<"uniform", [DeclareOpInterfaceMethods<BnO
     StrAttr:$nd_sbp
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_UniformIntOp : OneFlow_BaseOp<"uniform_int", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UniformIntOp : OneFlow_BaseOp<"uniform_int", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -4520,12 +4453,12 @@ def OneFlow_UniformIntOp : OneFlow_BaseOp<"uniform_int", [DeclareOpInterfaceMeth
     StrAttr:$nd_sbp
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4539,12 +4472,12 @@ def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", [DeclareOp
     StrAttr:$out_idx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y", "idx", "count", "num_unique"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y", "idx", "count", "num_unique"}); return &val; }
   }];
 }
 
-def OneFlow_XdivyXGradOp : OneFlow_BaseOp<"xdivy_x_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_XdivyXGradOp : OneFlow_BaseOp<"xdivy_x_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -4554,12 +4487,12 @@ def OneFlow_XdivyXGradOp : OneFlow_BaseOp<"xdivy_x_grad", [DeclareOpInterfaceMet
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "dz"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "dz"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_XdivyYGradOp : OneFlow_BaseOp<"xdivy_y_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_XdivyYGradOp : OneFlow_BaseOp<"xdivy_y_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -4569,8 +4502,8 @@ def OneFlow_XdivyYGradOp : OneFlow_BaseOp<"xdivy_y_grad", [DeclareOpInterfaceMet
     AnyType:$dy
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "dz"}; }
-    static std::vector<std::string> outputOrder() { return {"dy"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "dz"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
   }];
 }
 
@@ -4582,7 +4515,7 @@ def OneFlow_XdivyYGradOp : OneFlow_BaseOp<"xdivy_y_grad", [DeclareOpInterfaceMet
 
 #ifdef GET_ONEFLOW_NCCL_OP_DEFINITIONS
 
-def OneFlow__ncclLogical_2DSameDim0All2allOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all2all", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow__ncclLogical_2DSameDim0All2allOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all2all", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4594,12 +4527,12 @@ def OneFlow__ncclLogical_2DSameDim0All2allOp : OneFlow_BaseOp<"_nccl_logical_2D_
     SI64Attr:$out_dim1_split_axis
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow__ncclLogical_2DSameDim0AllGatherOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_gather", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow__ncclLogical_2DSameDim0AllGatherOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_gather", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4607,12 +4540,12 @@ def OneFlow__ncclLogical_2DSameDim0AllGatherOp : OneFlow_BaseOp<"_nccl_logical_2
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow__ncclLogical_2DSameDim0AllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_gather_noncontinuous", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow__ncclLogical_2DSameDim0AllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_gather_noncontinuous", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4623,12 +4556,12 @@ def OneFlow__ncclLogical_2DSameDim0AllGatherNoncontinuousOp : OneFlow_BaseOp<"_n
     SI64Attr:$in_dim1_split_axis
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow__ncclLogical_2DSameDim0AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_reduce", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow__ncclLogical_2DSameDim0AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_reduce", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4636,12 +4569,12 @@ def OneFlow__ncclLogical_2DSameDim0AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow__ncclLogical_2DSameDim1AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim1_all_reduce", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow__ncclLogical_2DSameDim1AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim1_all_reduce", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4649,12 +4582,12 @@ def OneFlow__ncclLogical_2DSameDim1AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow__ncclLogicalAllGatherOp : OneFlow_BaseOp<"_nccl_logical_all_gather", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow__ncclLogicalAllGatherOp : OneFlow_BaseOp<"_nccl_logical_all_gather", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4662,12 +4595,12 @@ def OneFlow__ncclLogicalAllGatherOp : OneFlow_BaseOp<"_nccl_logical_all_gather",
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow__ncclLogicalAllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical_all_gather_noncontinuous", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow__ncclLogicalAllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical_all_gather_noncontinuous", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4678,12 +4611,12 @@ def OneFlow__ncclLogicalAllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical
     SI64Attr:$in_split_axis
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow__ncclLogicalAllReduceOp : OneFlow_BaseOp<"_nccl_logical_all_reduce", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow__ncclLogicalAllReduceOp : OneFlow_BaseOp<"_nccl_logical_all_reduce", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4691,12 +4624,12 @@ def OneFlow__ncclLogicalAllReduceOp : OneFlow_BaseOp<"_nccl_logical_all_reduce",
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow__ncclLogicalReduceScatterOp : OneFlow_BaseOp<"_nccl_logical_reduce_scatter", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow__ncclLogicalReduceScatterOp : OneFlow_BaseOp<"_nccl_logical_reduce_scatter", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4704,12 +4637,12 @@ def OneFlow__ncclLogicalReduceScatterOp : OneFlow_BaseOp<"_nccl_logical_reduce_s
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4721,8 +4654,8 @@ def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", [DeclareOpIn
     SI64Attr:$out_split_axis
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
@@ -4734,7 +4667,7 @@ def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", [DeclareOpIn
 
 #ifdef GET_ONEFLOW_NORMALIZATION_OP_DEFINITIONS
 
-def OneFlow_CropMirrorNormalizeFromTensorbufferOp : OneFlow_BaseOp<"crop_mirror_normalize_from_tensorbuffer", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CropMirrorNormalizeFromTensorbufferOp : OneFlow_BaseOp<"crop_mirror_normalize_from_tensorbuffer", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     Optional<AnyType>:$mirror
@@ -4754,12 +4687,12 @@ def OneFlow_CropMirrorNormalizeFromTensorbufferOp : OneFlow_BaseOp<"crop_mirror_
     StrAttr:$output_dtype
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "mirror"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "mirror"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_CropMirrorNormalizeFromUint8Op : OneFlow_BaseOp<"crop_mirror_normalize_from_uint8", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CropMirrorNormalizeFromUint8Op : OneFlow_BaseOp<"crop_mirror_normalize_from_uint8", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     Optional<AnyType>:$mirror
@@ -4779,12 +4712,12 @@ def OneFlow_CropMirrorNormalizeFromUint8Op : OneFlow_BaseOp<"crop_mirror_normali
     StrAttr:$output_dtype
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "mirror"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "mirror"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ImageNormalizeOp : OneFlow_BaseOp<"image_normalize", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ImageNormalizeOp : OneFlow_BaseOp<"image_normalize", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -4796,12 +4729,12 @@ def OneFlow_ImageNormalizeOp : OneFlow_BaseOp<"image_normalize", [DeclareOpInter
     F32ArrayAttr:$mean
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_L2NormalizeOp : OneFlow_BaseOp<"l2_normalize", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_L2NormalizeOp : OneFlow_BaseOp<"l2_normalize", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -4814,12 +4747,12 @@ def OneFlow_L2NormalizeOp : OneFlow_BaseOp<"l2_normalize", [DeclareOpInterfaceMe
     F32Attr:$epsilon
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y", "square_x_sum"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y", "square_x_sum"}); return &val; }
   }];
 }
 
-def OneFlow_L2NormalizeGradOp : OneFlow_BaseOp<"l2_normalize_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_L2NormalizeGradOp : OneFlow_BaseOp<"l2_normalize_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$y,
@@ -4833,12 +4766,12 @@ def OneFlow_L2NormalizeGradOp : OneFlow_BaseOp<"l2_normalize_grad", [DeclareOpIn
     F32Attr:$epsilon
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "y", "square_x_sum"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "y", "square_x_sum"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     Optional<AnyType>:$beta,
@@ -4861,12 +4794,12 @@ def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", [AttrSizedOperandSegments
     I32ElementsAttr:$operand_segment_sizes
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "beta", "gamma"}; }
-    static std::vector<std::string> outputOrder() { return {"y", "mean", "inv_variance", "normalized"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "beta", "gamma"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y", "mean", "inv_variance", "normalized"}); return &val; }
   }];
 }
 
-def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x,
@@ -4882,12 +4815,12 @@ def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", [DeclareOpInterf
     F64Attr:$epsilon
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "x", "mean", "inv_variance", "_add_to_output"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x", "mean", "inv_variance", "_add_to_output"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_LayerNormParamGradOp : OneFlow_BaseOp<"layer_norm_param_grad", [AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_LayerNormParamGradOp : OneFlow_BaseOp<"layer_norm_param_grad", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     Optional<AnyType>:$normalized,
@@ -4907,12 +4840,12 @@ def OneFlow_LayerNormParamGradOp : OneFlow_BaseOp<"layer_norm_param_grad", [Attr
     I32ElementsAttr:$result_segment_sizes
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "normalized", "gamma"}; }
-    static std::vector<std::string> outputOrder() { return {"normalized_diff", "beta_diff", "gamma_diff", "reduce_buf"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "normalized", "gamma"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"normalized_diff", "beta_diff", "gamma_diff", "reduce_buf"}); return &val; }
   }];
 }
 
-def OneFlow_NormalOp : OneFlow_BaseOp<"normal", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_NormalOp : OneFlow_BaseOp<"normal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -4924,12 +4857,12 @@ def OneFlow_NormalOp : OneFlow_BaseOp<"normal", [DeclareOpInterfaceMethods<BnOrd
     StrAttr:$nd_sbp
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     Optional<AnyType>:$moving_mean,
@@ -4954,12 +4887,12 @@ def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [AttrSizedOperandS
     I32ElementsAttr:$result_segment_sizes
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "moving_mean", "moving_variance", "gamma", "beta", "_add_to_output"}; }
-    static std::vector<std::string> outputOrder() { return {"y", "mean", "inv_variance"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "moving_mean", "moving_variance", "gamma", "beta", "_add_to_output"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y", "mean", "inv_variance"}); return &val; }
   }];
 }
 
-def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy,
@@ -4977,8 +4910,8 @@ def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", [DeclareO
     F32Attr:$epsilon
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy", "mean", "inv_variance", "gamma"}; }
-    static std::vector<std::string> outputOrder() { return {"gamma_diff", "beta_diff", "dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy", "mean", "inv_variance", "gamma"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"gamma_diff", "beta_diff", "dx"}); return &val; }
   }];
 }
 
@@ -4990,7 +4923,7 @@ def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", [DeclareO
 
 #ifdef GET_ONEFLOW_OPTIMIZER_OP_DEFINITIONS
 
-def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -5014,12 +4947,12 @@ def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", [AttrSizedOperand
     I32ElementsAttr:$operand_segment_sizes
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"model", "model_diff", "learning_rate", "scale_by_tensor", "skip_if", "train_step", "sum"}; }
-    static std::vector<std::string> outputOrder() { return {}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff", "learning_rate", "scale_by_tensor", "skip_if", "train_step", "sum"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
   }];
 }
 
-def OneFlow_AdamBiasCorrectionFactorOp : OneFlow_BaseOp<"adam_bias_correction_factor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AdamBiasCorrectionFactorOp : OneFlow_BaseOp<"adam_bias_correction_factor", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$train_step
   );
@@ -5030,12 +4963,12 @@ def OneFlow_AdamBiasCorrectionFactorOp : OneFlow_BaseOp<"adam_bias_correction_fa
     F32Attr:$beta
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"train_step"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"train_step"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -5066,12 +4999,12 @@ def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", [AttrSizedOperandSegmen
     I32ElementsAttr:$operand_segment_sizes
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"model", "model_diff", "learning_rate", "scale_by_tensor", "skip_if", "bias_correction1", "bias_correction2", "m", "v", "max_v"}; }
-    static std::vector<std::string> outputOrder() { return {}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff", "learning_rate", "scale_by_tensor", "skip_if", "bias_correction1", "bias_correction2", "m", "v", "max_v"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
   }];
 }
 
-def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff_indices,
@@ -5096,12 +5029,12 @@ def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_upda
     I32ElementsAttr:$operand_segment_sizes
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"model", "model_diff_indices", "model_diff_values", "learning_rate", "bias_correction1", "bias_correction2", "m", "v", "max_v"}; }
-    static std::vector<std::string> outputOrder() { return {}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff_indices", "model_diff_values", "learning_rate", "bias_correction1", "bias_correction2", "m", "v", "max_v"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
   }];
 }
 
-def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momentum_update", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momentum_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff_indices,
@@ -5114,12 +5047,12 @@ def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momen
     F32Attr:$weight_decay
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"model", "model_diff_indices", "model_diff_values", "learning_rate", "momentum"}; }
-    static std::vector<std::string> outputOrder() { return {}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff_indices", "model_diff_values", "learning_rate", "momentum"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
   }];
 }
 
-def OneFlow_IndexedSlicesSgdUpdateOp : OneFlow_BaseOp<"indexed_slices_sgd_update", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_IndexedSlicesSgdUpdateOp : OneFlow_BaseOp<"indexed_slices_sgd_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff_indices,
@@ -5130,12 +5063,12 @@ def OneFlow_IndexedSlicesSgdUpdateOp : OneFlow_BaseOp<"indexed_slices_sgd_update
     F32Attr:$weight_decay
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"model", "model_diff_indices", "model_diff_values", "learning_rate"}; }
-    static std::vector<std::string> outputOrder() { return {}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff_indices", "model_diff_values", "learning_rate"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
   }];
 }
 
-def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$m,
     AnyType:$v,
@@ -5160,12 +5093,12 @@ def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", [AttrSizedOperandSegmen
     I32ElementsAttr:$operand_segment_sizes
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"m", "v", "beta1_t", "beta2_t", "model", "model_diff", "learning_rate", "scale_by_tensor", "skip_if"}; }
-    static std::vector<std::string> outputOrder() { return {}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"m", "v", "beta1_t", "beta2_t", "model", "model_diff", "learning_rate", "scale_by_tensor", "skip_if"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
   }];
 }
 
-def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -5187,12 +5120,12 @@ def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", [AttrSizedOperandSegmen
     I32ElementsAttr:$operand_segment_sizes
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"model", "model_diff", "learning_rate", "momentum", "scale_by_tensor", "skip_if"}; }
-    static std::vector<std::string> outputOrder() { return {}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff", "learning_rate", "momentum", "scale_by_tensor", "skip_if"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
   }];
 }
 
-def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -5213,12 +5146,12 @@ def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", [AttrSizedOpera
     I32ElementsAttr:$operand_segment_sizes
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"model", "model_diff", "momentum", "learning_rate", "scale_by_tensor", "skip_if"}; }
-    static std::vector<std::string> outputOrder() { return {}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff", "momentum", "learning_rate", "scale_by_tensor", "skip_if"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
   }];
 }
 
-def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -5242,12 +5175,12 @@ def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", [AttrSizedOperand
     I32ElementsAttr:$operand_segment_sizes
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"model", "model_diff", "learning_rate", "scale_by_tensor", "skip_if", "mean_square", "mean_gradient"}; }
-    static std::vector<std::string> outputOrder() { return {}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff", "learning_rate", "scale_by_tensor", "skip_if", "mean_square", "mean_gradient"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
   }];
 }
 
-def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$model,
     AnyType:$model_diff,
@@ -5266,12 +5199,12 @@ def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", [AttrSizedOperandSegments
     I32ElementsAttr:$operand_segment_sizes
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"model", "model_diff", "learning_rate", "scale_by_tensor", "skip_if"}; }
-    static std::vector<std::string> outputOrder() { return {}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff", "learning_rate", "scale_by_tensor", "skip_if"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
   }];
 }
 
-def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$update
@@ -5285,8 +5218,8 @@ def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", [DeclareOpInterfaceMe
     SI64ArrayAttr:$step
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "update"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "update"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
@@ -5298,7 +5231,7 @@ def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", [DeclareOpInterfaceMe
 
 #ifdef GET_ONEFLOW_PADDING_OP_DEFINITIONS
 
-def OneFlow_ConstantPad1DOp : OneFlow_BaseOp<"constant_pad1d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ConstantPad1DOp : OneFlow_BaseOp<"constant_pad1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -5311,12 +5244,12 @@ def OneFlow_ConstantPad1DOp : OneFlow_BaseOp<"constant_pad1d", [DeclareOpInterfa
     SI64Attr:$integral_value
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_ConstantPad1DGradOp : OneFlow_BaseOp<"constant_pad1d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ConstantPad1DGradOp : OneFlow_BaseOp<"constant_pad1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -5329,12 +5262,12 @@ def OneFlow_ConstantPad1DGradOp : OneFlow_BaseOp<"constant_pad1d_grad", [Declare
     SI64Attr:$integral_value
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_ConstantPad2DOp : OneFlow_BaseOp<"constant_pad2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ConstantPad2DOp : OneFlow_BaseOp<"constant_pad2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -5347,12 +5280,12 @@ def OneFlow_ConstantPad2DOp : OneFlow_BaseOp<"constant_pad2d", [DeclareOpInterfa
     SI64Attr:$integral_value
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_ConstantPad2DGradOp : OneFlow_BaseOp<"constant_pad2d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ConstantPad2DGradOp : OneFlow_BaseOp<"constant_pad2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -5365,12 +5298,12 @@ def OneFlow_ConstantPad2DGradOp : OneFlow_BaseOp<"constant_pad2d_grad", [Declare
     SI64Attr:$integral_value
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_ConstantPad3DOp : OneFlow_BaseOp<"constant_pad3d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ConstantPad3DOp : OneFlow_BaseOp<"constant_pad3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -5383,12 +5316,12 @@ def OneFlow_ConstantPad3DOp : OneFlow_BaseOp<"constant_pad3d", [DeclareOpInterfa
     SI64Attr:$integral_value
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_ConstantPad3DGradOp : OneFlow_BaseOp<"constant_pad3d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ConstantPad3DGradOp : OneFlow_BaseOp<"constant_pad3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -5401,12 +5334,12 @@ def OneFlow_ConstantPad3DGradOp : OneFlow_BaseOp<"constant_pad3d_grad", [Declare
     SI64Attr:$integral_value
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_PadOp : OneFlow_BaseOp<"pad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_PadOp : OneFlow_BaseOp<"pad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -5420,12 +5353,12 @@ def OneFlow_PadOp : OneFlow_BaseOp<"pad", [DeclareOpInterfaceMethods<BnOrderOpIn
     SI64Attr:$integral_constant_value
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_PadGradOp : OneFlow_BaseOp<"pad_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_PadGradOp : OneFlow_BaseOp<"pad_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -5439,12 +5372,12 @@ def OneFlow_PadGradOp : OneFlow_BaseOp<"pad_grad", [DeclareOpInterfaceMethods<Bn
     SI64Attr:$integral_constant_value
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_ReflectionPad2DOp : OneFlow_BaseOp<"reflection_pad2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReflectionPad2DOp : OneFlow_BaseOp<"reflection_pad2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -5455,12 +5388,12 @@ def OneFlow_ReflectionPad2DOp : OneFlow_BaseOp<"reflection_pad2d", [DeclareOpInt
     SI64ArrayAttr:$padding
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_ReflectionPad2DGradOp : OneFlow_BaseOp<"reflection_pad2d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReflectionPad2DGradOp : OneFlow_BaseOp<"reflection_pad2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -5471,12 +5404,12 @@ def OneFlow_ReflectionPad2DGradOp : OneFlow_BaseOp<"reflection_pad2d_grad", [Dec
     SI64ArrayAttr:$padding
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_ReplicationPad2DOp : OneFlow_BaseOp<"replication_pad2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReplicationPad2DOp : OneFlow_BaseOp<"replication_pad2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -5487,12 +5420,12 @@ def OneFlow_ReplicationPad2DOp : OneFlow_BaseOp<"replication_pad2d", [DeclareOpI
     SI64ArrayAttr:$padding
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_ReplicationPad2DGradOp : OneFlow_BaseOp<"replication_pad2d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReplicationPad2DGradOp : OneFlow_BaseOp<"replication_pad2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -5503,12 +5436,12 @@ def OneFlow_ReplicationPad2DGradOp : OneFlow_BaseOp<"replication_pad2d_grad", [D
     SI64ArrayAttr:$padding
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_SamePaddingOp : OneFlow_BaseOp<"same_padding", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SamePaddingOp : OneFlow_BaseOp<"same_padding", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -5523,12 +5456,12 @@ def OneFlow_SamePaddingOp : OneFlow_BaseOp<"same_padding", [DeclareOpInterfaceMe
     SI32ArrayAttr:$dilation_rate
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_SamePaddingGradOp : OneFlow_BaseOp<"same_padding_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SamePaddingGradOp : OneFlow_BaseOp<"same_padding_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x_like,
     AnyType:$dy
@@ -5544,8 +5477,8 @@ def OneFlow_SamePaddingGradOp : OneFlow_BaseOp<"same_padding_grad", [DeclareOpIn
     SI32ArrayAttr:$dilation_rate
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x_like", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x_like", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
@@ -5557,7 +5490,7 @@ def OneFlow_SamePaddingGradOp : OneFlow_BaseOp<"same_padding_grad", [DeclareOpIn
 
 #ifdef GET_ONEFLOW_PARALLEL_CAST_OP_DEFINITIONS
 
-def OneFlow_HierarchicalParallelCastOp : OneFlow_BaseOp<"hierarchical_parallel_cast", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_HierarchicalParallelCastOp : OneFlow_BaseOp<"hierarchical_parallel_cast", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5570,12 +5503,12 @@ def OneFlow_HierarchicalParallelCastOp : OneFlow_BaseOp<"hierarchical_parallel_c
     StrArrayAttr:$grad_nd_sbp
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_HierarchicalParallelCastLikeOp : OneFlow_BaseOp<"hierarchical_parallel_cast_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_HierarchicalParallelCastLikeOp : OneFlow_BaseOp<"hierarchical_parallel_cast_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$like
@@ -5584,12 +5517,12 @@ def OneFlow_HierarchicalParallelCastLikeOp : OneFlow_BaseOp<"hierarchical_parall
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "like"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "like"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ParallelCastOp : OneFlow_BaseOp<"parallel_cast", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ParallelCastOp : OneFlow_BaseOp<"parallel_cast", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -5601,8 +5534,8 @@ def OneFlow_ParallelCastOp : OneFlow_BaseOp<"parallel_cast", [DeclareOpInterface
     StrAttr:$grad_sbp_parallel
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
@@ -5614,7 +5547,7 @@ def OneFlow_ParallelCastOp : OneFlow_BaseOp<"parallel_cast", [DeclareOpInterface
 
 #ifdef GET_ONEFLOW_POOL_OP_DEFINITIONS
 
-def OneFlow_AdaptiveAvgPool1DOp : OneFlow_BaseOp<"adaptive_avg_pool1d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AdaptiveAvgPool1DOp : OneFlow_BaseOp<"adaptive_avg_pool1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -5625,45 +5558,12 @@ def OneFlow_AdaptiveAvgPool1DOp : OneFlow_BaseOp<"adaptive_avg_pool1d", [Declare
     SI64ArrayAttr:$output_size
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_AdaptiveAvgPool1DGradOp : OneFlow_BaseOp<"adaptive_avg_pool1d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    SI64ArrayAttr:$output_size
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
-
-def OneFlow_AdaptiveAvgPool2DOp : OneFlow_BaseOp<"adaptive_avg_pool2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    SI64ArrayAttr:$output_size
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
-  }];
-}
-
-def OneFlow_AdaptiveAvgPool2DGradOp : OneFlow_BaseOp<"adaptive_avg_pool2d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AdaptiveAvgPool1DGradOp : OneFlow_BaseOp<"adaptive_avg_pool1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -5675,12 +5575,12 @@ def OneFlow_AdaptiveAvgPool2DGradOp : OneFlow_BaseOp<"adaptive_avg_pool2d_grad",
     SI64ArrayAttr:$output_size
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_AdaptiveAvgPool3DOp : OneFlow_BaseOp<"adaptive_avg_pool3d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AdaptiveAvgPool2DOp : OneFlow_BaseOp<"adaptive_avg_pool2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -5691,12 +5591,12 @@ def OneFlow_AdaptiveAvgPool3DOp : OneFlow_BaseOp<"adaptive_avg_pool3d", [Declare
     SI64ArrayAttr:$output_size
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_AdaptiveAvgPool3DGradOp : OneFlow_BaseOp<"adaptive_avg_pool3d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AdaptiveAvgPool2DGradOp : OneFlow_BaseOp<"adaptive_avg_pool2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -5708,12 +5608,12 @@ def OneFlow_AdaptiveAvgPool3DGradOp : OneFlow_BaseOp<"adaptive_avg_pool3d_grad",
     SI64ArrayAttr:$output_size
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_LazyAvgPool1DOp : OneFlow_LazyPoolBaseOp<"avg_pool_1d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AdaptiveAvgPool3DOp : OneFlow_BaseOp<"adaptive_avg_pool3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -5721,555 +5621,78 @@ def OneFlow_LazyAvgPool1DOp : OneFlow_LazyPoolBaseOp<"avg_pool_1d", [DeclareOpIn
     AnyType:$y
   );
   let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
+    SI64ArrayAttr:$output_size
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_LazyAvgPool1DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_1d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AdaptiveAvgPool3DGradOp : OneFlow_BaseOp<"adaptive_avg_pool3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
-    AnyType:$y,
     AnyType:$dy
   );
   let output = (outs
     AnyType:$dx
   );
   let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
+    SI64ArrayAttr:$output_size
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_LazyAvgPool2DOp : OneFlow_LazyPoolBaseOp<"avg_pool_2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
-  }];
-}
+def OneFlow_LazyAvgPool1DOp : OneFlow_LazyPoolBaseOp<"avg_pool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_LazyAvgPool2DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_2d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
+def OneFlow_LazyAvgPool1DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_LazyAvgPool3DOp : OneFlow_LazyPoolBaseOp<"avg_pool_3d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
-  }];
-}
+def OneFlow_LazyAvgPool2DOp : OneFlow_LazyPoolBaseOp<"avg_pool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_LazyAvgPool3DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_3d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
+def OneFlow_LazyAvgPool2DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool1DOp : OneFlow_EagerPoolBaseOp<"avgpool_1d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    BoolAttr:$ceil_mode,
-    BoolAttr:$count_include_pad,
-    SI64Attr:$divisor_override
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
-  }];
-}
+def OneFlow_LazyAvgPool3DOp : OneFlow_LazyPoolBaseOp<"avg_pool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_1d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    BoolAttr:$ceil_mode,
-    BoolAttr:$count_include_pad,
-    SI64Attr:$divisor_override
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
+def OneFlow_LazyAvgPool3DGradOp : OneFlow_LazyPoolGradBaseOp<"avg_pool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool2DOp : OneFlow_EagerPoolBaseOp<"avgpool_2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    BoolAttr:$ceil_mode,
-    BoolAttr:$count_include_pad,
-    SI64Attr:$divisor_override
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
-  }];
-}
+def OneFlow_EagerAvgPool1DOp : OneFlow_EagerPoolBaseOp<"avgpool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_2d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    BoolAttr:$ceil_mode,
-    BoolAttr:$count_include_pad,
-    SI64Attr:$divisor_override
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
+def OneFlow_EagerAvgPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool3DOp : OneFlow_EagerPoolBaseOp<"avgpool_3d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    BoolAttr:$ceil_mode,
-    BoolAttr:$count_include_pad,
-    SI64Attr:$divisor_override
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
-  }];
-}
+def OneFlow_EagerAvgPool2DOp : OneFlow_EagerPoolBaseOp<"avgpool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_3d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    BoolAttr:$ceil_mode,
-    BoolAttr:$count_include_pad,
-    SI64Attr:$divisor_override
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
+def OneFlow_EagerAvgPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_LazyMaxPool1DOp : OneFlow_LazyPoolBaseOp<"max_pool_1d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
-  }];
-}
+def OneFlow_EagerAvgPool3DOp : OneFlow_EagerPoolBaseOp<"avgpool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_LazyMaxPool1DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_1d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
+def OneFlow_EagerAvgPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_LazyMaxPool2DOp : OneFlow_LazyPoolBaseOp<"max_pool_2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
-  }];
-}
+def OneFlow_LazyMaxPool1DOp : OneFlow_LazyPoolBaseOp<"max_pool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_LazyMaxPool2DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_2d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
+def OneFlow_LazyMaxPool1DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_LazyMaxPool3DOp : OneFlow_LazyPoolBaseOp<"max_pool_3d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
-  }];
-}
+def OneFlow_LazyMaxPool2DOp : OneFlow_LazyPoolBaseOp<"max_pool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_LazyMaxPool3DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_3d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
+def OneFlow_LazyMaxPool2DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool1DOp : OneFlow_EagerPoolBaseOp<"maxpool_1d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y,
-    AnyType:$indice
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    SI32ArrayAttr:$dilation,
-    BoolAttr:$return_indices,
-    BoolAttr:$ceil_mode
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y", "indice"}; }
-  }];
-}
+def OneFlow_LazyMaxPool3DOp : OneFlow_LazyPoolBaseOp<"max_pool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_1d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$indice,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    SI32ArrayAttr:$dilation,
-    BoolAttr:$return_indices,
-    BoolAttr:$ceil_mode
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "indice", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
+def OneFlow_LazyMaxPool3DGradOp : OneFlow_LazyPoolGradBaseOp<"max_pool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool2DOp : OneFlow_EagerPoolBaseOp<"maxpool_2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y,
-    AnyType:$indice
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    SI32ArrayAttr:$dilation,
-    BoolAttr:$return_indices,
-    BoolAttr:$ceil_mode
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y", "indice"}; }
-  }];
-}
+def OneFlow_EagerMaxPool1DOp : OneFlow_EagerPoolBaseOp<"maxpool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_2d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$indice,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    SI32ArrayAttr:$dilation,
-    BoolAttr:$return_indices,
-    BoolAttr:$ceil_mode
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "indice", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
+def OneFlow_EagerMaxPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool3DOp : OneFlow_EagerPoolBaseOp<"maxpool_3d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y,
-    AnyType:$indice
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    SI32ArrayAttr:$dilation,
-    BoolAttr:$return_indices,
-    BoolAttr:$ceil_mode
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y", "indice"}; }
-  }];
-}
+def OneFlow_EagerMaxPool2DOp : OneFlow_EagerPoolBaseOp<"maxpool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_3d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$indice,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    SI32ArrayAttr:$dilation,
-    BoolAttr:$return_indices,
-    BoolAttr:$ceil_mode
-  );
-  let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "indice", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
-  }];
-}
+def OneFlow_EagerMaxPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+
+def OneFlow_EagerMaxPool3DOp : OneFlow_EagerPoolBaseOp<"maxpool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+
+def OneFlow_EagerMaxPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
 #endif // GET_ONEFLOW_POOL_OP_DEFINITIONS
 
@@ -6279,7 +5702,7 @@ def OneFlow_EagerMaxPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_3d_grad"
 
 #ifdef GET_ONEFLOW_QUANTIZATION_OP_DEFINITIONS
 
-def OneFlow_FakeQuantizationOp : OneFlow_BaseOp<"fake_quantization", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_FakeQuantizationOp : OneFlow_BaseOp<"fake_quantization", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$scale,
@@ -6294,12 +5717,12 @@ def OneFlow_FakeQuantizationOp : OneFlow_BaseOp<"fake_quantization", [DeclareOpI
     StrAttr:$quantization_scheme
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "scale", "zero_point"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "scale", "zero_point"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_MinMaxObserverOp : OneFlow_BaseOp<"min_max_observer", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_MinMaxObserverOp : OneFlow_BaseOp<"min_max_observer", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6314,12 +5737,12 @@ def OneFlow_MinMaxObserverOp : OneFlow_BaseOp<"min_max_observer", [DeclareOpInte
     BoolAttr:$per_layer_quantization
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"scale", "zero_point"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"scale", "zero_point"}); return &val; }
   }];
 }
 
-def OneFlow_MovingAverageMinMaxObserverOp : OneFlow_BaseOp<"moving_average_min_max_observer", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_MovingAverageMinMaxObserverOp : OneFlow_BaseOp<"moving_average_min_max_observer", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$current_train_step,
@@ -6339,12 +5762,12 @@ def OneFlow_MovingAverageMinMaxObserverOp : OneFlow_BaseOp<"moving_average_min_m
     F32Attr:$momentum
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "current_train_step", "moving_max", "moving_min"}; }
-    static std::vector<std::string> outputOrder() { return {"scale", "zero_point"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "current_train_step", "moving_max", "moving_min"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"scale", "zero_point"}); return &val; }
   }];
 }
 
-def OneFlow_QuantizationOp : OneFlow_BaseOp<"quantization", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_QuantizationOp : OneFlow_BaseOp<"quantization", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$scale,
@@ -6359,8 +5782,8 @@ def OneFlow_QuantizationOp : OneFlow_BaseOp<"quantization", [DeclareOpInterfaceM
     StrAttr:$quantization_scheme
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "scale", "zero_point"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "scale", "zero_point"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
@@ -6372,7 +5795,7 @@ def OneFlow_QuantizationOp : OneFlow_BaseOp<"quantization", [DeclareOpInterfaceM
 
 #ifdef GET_ONEFLOW_REDUCE_OP_DEFINITIONS
 
-def OneFlow_IndexedSlicesReduceSumOp : OneFlow_BaseOp<"indexed_slices_reduce_sum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_IndexedSlicesReduceSumOp : OneFlow_BaseOp<"indexed_slices_reduce_sum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x_indices,
     AnyType:$x_values
@@ -6383,12 +5806,12 @@ def OneFlow_IndexedSlicesReduceSumOp : OneFlow_BaseOp<"indexed_slices_reduce_sum
     AnyType:$num_unique
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x_indices", "x_values"}; }
-    static std::vector<std::string> outputOrder() { return {"y_indices", "y_values", "num_unique"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x_indices", "x_values"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y_indices", "y_values", "num_unique"}); return &val; }
   }];
 }
 
-def OneFlow_ReduceAllOp : OneFlow_BaseOp<"reduce_all", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReduceAllOp : OneFlow_BaseOp<"reduce_all", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input_tensor
   );
@@ -6400,12 +5823,12 @@ def OneFlow_ReduceAllOp : OneFlow_BaseOp<"reduce_all", [DeclareOpInterfaceMethod
     BoolAttr:$keepdims
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input_tensor"}; }
-    static std::vector<std::string> outputOrder() { return {"output_tensor"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input_tensor"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output_tensor"}); return &val; }
   }];
 }
 
-def OneFlow_ReduceAnyOp : OneFlow_BaseOp<"reduce_any", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReduceAnyOp : OneFlow_BaseOp<"reduce_any", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input_tensor
   );
@@ -6417,12 +5840,12 @@ def OneFlow_ReduceAnyOp : OneFlow_BaseOp<"reduce_any", [DeclareOpInterfaceMethod
     BoolAttr:$keepdims
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input_tensor"}; }
-    static std::vector<std::string> outputOrder() { return {"output_tensor"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input_tensor"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output_tensor"}); return &val; }
   }];
 }
 
-def OneFlow_ReduceMaxOp : OneFlow_BaseOp<"reduce_max", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReduceMaxOp : OneFlow_BaseOp<"reduce_max", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input_tensor
   );
@@ -6434,12 +5857,12 @@ def OneFlow_ReduceMaxOp : OneFlow_BaseOp<"reduce_max", [DeclareOpInterfaceMethod
     BoolAttr:$keepdims
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input_tensor"}; }
-    static std::vector<std::string> outputOrder() { return {"output_tensor"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input_tensor"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output_tensor"}); return &val; }
   }];
 }
 
-def OneFlow_ReduceMaxDeviceStageOp : OneFlow_BaseOp<"reduce_max_device_stage", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReduceMaxDeviceStageOp : OneFlow_BaseOp<"reduce_max_device_stage", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6452,12 +5875,12 @@ def OneFlow_ReduceMaxDeviceStageOp : OneFlow_BaseOp<"reduce_max_device_stage", [
     SI32ArrayAttr:$axis
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out", "mask", "count"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out", "mask", "count"}); return &val; }
   }];
 }
 
-def OneFlow_ReduceMaxDeviceStageGradOp : OneFlow_BaseOp<"reduce_max_device_stage_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReduceMaxDeviceStageGradOp : OneFlow_BaseOp<"reduce_max_device_stage_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$out_diff,
     AnyType:$mask,
@@ -6470,12 +5893,12 @@ def OneFlow_ReduceMaxDeviceStageGradOp : OneFlow_BaseOp<"reduce_max_device_stage
     SI32ArrayAttr:$axis
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"out_diff", "mask", "count"}; }
-    static std::vector<std::string> outputOrder() { return {"in_diff"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"out_diff", "mask", "count"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"in_diff"}); return &val; }
   }];
 }
 
-def OneFlow_ReduceMaxGlobalStageOp : OneFlow_BaseOp<"reduce_max_global_stage", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReduceMaxGlobalStageOp : OneFlow_BaseOp<"reduce_max_global_stage", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$device_count
@@ -6489,12 +5912,12 @@ def OneFlow_ReduceMaxGlobalStageOp : OneFlow_BaseOp<"reduce_max_global_stage", [
     BoolAttr:$keepdims
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "device_count"}; }
-    static std::vector<std::string> outputOrder() { return {"out", "mask"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "device_count"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out", "mask"}); return &val; }
   }];
 }
 
-def OneFlow_ReduceMaxGlobalStageGradOp : OneFlow_BaseOp<"reduce_max_global_stage_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReduceMaxGlobalStageGradOp : OneFlow_BaseOp<"reduce_max_global_stage_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$out_diff,
     AnyType:$mask,
@@ -6508,12 +5931,12 @@ def OneFlow_ReduceMaxGlobalStageGradOp : OneFlow_BaseOp<"reduce_max_global_stage
     BoolAttr:$keepdims
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"out_diff", "mask", "device_count"}; }
-    static std::vector<std::string> outputOrder() { return {"in_diff"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"out_diff", "mask", "device_count"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"in_diff"}); return &val; }
   }];
 }
 
-def OneFlow_ReduceMinOp : OneFlow_BaseOp<"reduce_min", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReduceMinOp : OneFlow_BaseOp<"reduce_min", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input_tensor
   );
@@ -6525,12 +5948,12 @@ def OneFlow_ReduceMinOp : OneFlow_BaseOp<"reduce_min", [DeclareOpInterfaceMethod
     BoolAttr:$keepdims
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input_tensor"}; }
-    static std::vector<std::string> outputOrder() { return {"output_tensor"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input_tensor"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output_tensor"}); return &val; }
   }];
 }
 
-def OneFlow_ReduceMinDeviceStageOp : OneFlow_BaseOp<"reduce_min_device_stage", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReduceMinDeviceStageOp : OneFlow_BaseOp<"reduce_min_device_stage", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6543,12 +5966,12 @@ def OneFlow_ReduceMinDeviceStageOp : OneFlow_BaseOp<"reduce_min_device_stage", [
     SI32ArrayAttr:$axis
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out", "mask", "count"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out", "mask", "count"}); return &val; }
   }];
 }
 
-def OneFlow_ReduceMinDeviceStageGradOp : OneFlow_BaseOp<"reduce_min_device_stage_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReduceMinDeviceStageGradOp : OneFlow_BaseOp<"reduce_min_device_stage_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$out_diff,
     AnyType:$mask,
@@ -6561,12 +5984,12 @@ def OneFlow_ReduceMinDeviceStageGradOp : OneFlow_BaseOp<"reduce_min_device_stage
     SI32ArrayAttr:$axis
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"out_diff", "mask", "count"}; }
-    static std::vector<std::string> outputOrder() { return {"in_diff"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"out_diff", "mask", "count"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"in_diff"}); return &val; }
   }];
 }
 
-def OneFlow_ReduceMinGlobalStageOp : OneFlow_BaseOp<"reduce_min_global_stage", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReduceMinGlobalStageOp : OneFlow_BaseOp<"reduce_min_global_stage", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$device_count
@@ -6580,12 +6003,12 @@ def OneFlow_ReduceMinGlobalStageOp : OneFlow_BaseOp<"reduce_min_global_stage", [
     BoolAttr:$keepdims
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "device_count"}; }
-    static std::vector<std::string> outputOrder() { return {"out", "mask"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "device_count"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out", "mask"}); return &val; }
   }];
 }
 
-def OneFlow_ReduceMinGlobalStageGradOp : OneFlow_BaseOp<"reduce_min_global_stage_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReduceMinGlobalStageGradOp : OneFlow_BaseOp<"reduce_min_global_stage_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$out_diff,
     AnyType:$mask,
@@ -6599,12 +6022,12 @@ def OneFlow_ReduceMinGlobalStageGradOp : OneFlow_BaseOp<"reduce_min_global_stage
     BoolAttr:$keepdims
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"out_diff", "mask", "device_count"}; }
-    static std::vector<std::string> outputOrder() { return {"in_diff"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"out_diff", "mask", "device_count"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"in_diff"}); return &val; }
   }];
 }
 
-def OneFlow_ReduceProdOp : OneFlow_BaseOp<"reduce_prod", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReduceProdOp : OneFlow_BaseOp<"reduce_prod", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input_tensor
   );
@@ -6616,12 +6039,12 @@ def OneFlow_ReduceProdOp : OneFlow_BaseOp<"reduce_prod", [DeclareOpInterfaceMeth
     BoolAttr:$keepdims
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input_tensor"}; }
-    static std::vector<std::string> outputOrder() { return {"output_tensor"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input_tensor"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output_tensor"}); return &val; }
   }];
 }
 
-def OneFlow_ReduceSumOp : OneFlow_BaseOp<"reduce_sum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReduceSumOp : OneFlow_BaseOp<"reduce_sum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input_tensor
   );
@@ -6633,12 +6056,12 @@ def OneFlow_ReduceSumOp : OneFlow_BaseOp<"reduce_sum", [DeclareOpInterfaceMethod
     BoolAttr:$keepdims
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input_tensor"}; }
-    static std::vector<std::string> outputOrder() { return {"output_tensor"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input_tensor"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output_tensor"}); return &val; }
   }];
 }
 
-def OneFlow_ReduceSumLikeOp : OneFlow_BaseOp<"reduce_sum_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReduceSumLikeOp : OneFlow_BaseOp<"reduce_sum_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$like
@@ -6650,8 +6073,8 @@ def OneFlow_ReduceSumLikeOp : OneFlow_BaseOp<"reduce_sum_like", [DeclareOpInterf
     SI32ArrayAttr:$axis
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "like"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "like"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
@@ -6663,7 +6086,7 @@ def OneFlow_ReduceSumLikeOp : OneFlow_BaseOp<"reduce_sum_like", [DeclareOpInterf
 
 #ifdef GET_ONEFLOW_RESHAPE_OP_DEFINITIONS
 
-def OneFlow_ReshapeOp : OneFlow_BaseOp<"reshape", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReshapeOp : OneFlow_BaseOp<"reshape", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6674,12 +6097,12 @@ def OneFlow_ReshapeOp : OneFlow_BaseOp<"reshape", [DeclareOpInterfaceMethods<BnO
     AnyI64ElementsAttr:$shape
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$like
@@ -6688,8 +6111,8 @@ def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", [DeclareOpInterfaceMe
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "like"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "like"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
@@ -6701,7 +6124,7 @@ def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", [DeclareOpInterfaceMe
 
 #ifdef GET_ONEFLOW_SCALAR_OP_DEFINITIONS
 
-def OneFlow_ClipByScalarOp : OneFlow_BaseOp<"clip_by_scalar", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ClipByScalarOp : OneFlow_BaseOp<"clip_by_scalar", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -6715,12 +6138,12 @@ def OneFlow_ClipByScalarOp : OneFlow_BaseOp<"clip_by_scalar", [DeclareOpInterfac
     SI64Attr:$integral_max
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_ClipByScalarGradOp : OneFlow_BaseOp<"clip_by_scalar_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ClipByScalarGradOp : OneFlow_BaseOp<"clip_by_scalar_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -6735,12 +6158,12 @@ def OneFlow_ClipByScalarGradOp : OneFlow_BaseOp<"clip_by_scalar_grad", [DeclareO
     SI64Attr:$integral_max
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "x"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_ClipByScalarMaxOp : OneFlow_BaseOp<"clip_by_scalar_max", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ClipByScalarMaxOp : OneFlow_BaseOp<"clip_by_scalar_max", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -6752,12 +6175,12 @@ def OneFlow_ClipByScalarMaxOp : OneFlow_BaseOp<"clip_by_scalar_max", [DeclareOpI
     SI64Attr:$integral_max
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_ClipByScalarMaxGradOp : OneFlow_BaseOp<"clip_by_scalar_max_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ClipByScalarMaxGradOp : OneFlow_BaseOp<"clip_by_scalar_max_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -6770,12 +6193,12 @@ def OneFlow_ClipByScalarMaxGradOp : OneFlow_BaseOp<"clip_by_scalar_max_grad", [D
     SI64Attr:$integral_max
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "x"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_ClipByScalarMinOp : OneFlow_BaseOp<"clip_by_scalar_min", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ClipByScalarMinOp : OneFlow_BaseOp<"clip_by_scalar_min", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -6787,12 +6210,12 @@ def OneFlow_ClipByScalarMinOp : OneFlow_BaseOp<"clip_by_scalar_min", [DeclareOpI
     SI64Attr:$integral_min
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_ClipByScalarMinGradOp : OneFlow_BaseOp<"clip_by_scalar_min_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ClipByScalarMinGradOp : OneFlow_BaseOp<"clip_by_scalar_min_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -6805,12 +6228,12 @@ def OneFlow_ClipByScalarMinGradOp : OneFlow_BaseOp<"clip_by_scalar_min_grad", [D
     SI64Attr:$integral_min
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "x"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_ScalarAddOp : OneFlow_BaseOp<"scalar_add", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ScalarAddOp : OneFlow_BaseOp<"scalar_add", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6824,12 +6247,12 @@ def OneFlow_ScalarAddOp : OneFlow_BaseOp<"scalar_add", [DeclareOpInterfaceMethod
     F64Attr:$float_operand
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ScalarAddByTensorOp : OneFlow_BaseOp<"scalar_add_by_tensor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ScalarAddByTensorOp : OneFlow_BaseOp<"scalar_add_by_tensor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$scalar
@@ -6838,12 +6261,12 @@ def OneFlow_ScalarAddByTensorOp : OneFlow_BaseOp<"scalar_add_by_tensor", [Declar
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "scalar"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "scalar"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_ScalarDivByTensorOp : OneFlow_BaseOp<"scalar_div_by_tensor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ScalarDivByTensorOp : OneFlow_BaseOp<"scalar_div_by_tensor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$scalar
@@ -6852,12 +6275,12 @@ def OneFlow_ScalarDivByTensorOp : OneFlow_BaseOp<"scalar_div_by_tensor", [Declar
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "scalar"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "scalar"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_ScalarFloordivOp : OneFlow_BaseOp<"scalar_floordiv", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ScalarFloordivOp : OneFlow_BaseOp<"scalar_floordiv", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6871,12 +6294,12 @@ def OneFlow_ScalarFloordivOp : OneFlow_BaseOp<"scalar_floordiv", [DeclareOpInter
     F64Attr:$float_operand
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ScalarFmodOp : OneFlow_BaseOp<"scalar_fmod", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ScalarFmodOp : OneFlow_BaseOp<"scalar_fmod", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6890,12 +6313,12 @@ def OneFlow_ScalarFmodOp : OneFlow_BaseOp<"scalar_fmod", [DeclareOpInterfaceMeth
     F64Attr:$float_operand
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ScalarLogicalAndOp : OneFlow_BaseOp<"scalar_logical_and", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ScalarLogicalAndOp : OneFlow_BaseOp<"scalar_logical_and", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6909,12 +6332,12 @@ def OneFlow_ScalarLogicalAndOp : OneFlow_BaseOp<"scalar_logical_and", [DeclareOp
     F64Attr:$float_operand
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ScalarLogicalEqualOp : OneFlow_BaseOp<"scalar_logical_equal", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ScalarLogicalEqualOp : OneFlow_BaseOp<"scalar_logical_equal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6928,12 +6351,12 @@ def OneFlow_ScalarLogicalEqualOp : OneFlow_BaseOp<"scalar_logical_equal", [Decla
     F64Attr:$float_operand
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ScalarLogicalGreaterOp : OneFlow_BaseOp<"scalar_logical_greater", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ScalarLogicalGreaterOp : OneFlow_BaseOp<"scalar_logical_greater", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6947,12 +6370,12 @@ def OneFlow_ScalarLogicalGreaterOp : OneFlow_BaseOp<"scalar_logical_greater", [D
     F64Attr:$float_operand
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ScalarLogicalGreaterEqualOp : OneFlow_BaseOp<"scalar_logical_greater_equal", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ScalarLogicalGreaterEqualOp : OneFlow_BaseOp<"scalar_logical_greater_equal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6966,12 +6389,12 @@ def OneFlow_ScalarLogicalGreaterEqualOp : OneFlow_BaseOp<"scalar_logical_greater
     F64Attr:$float_operand
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ScalarLogicalLessOp : OneFlow_BaseOp<"scalar_logical_less", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ScalarLogicalLessOp : OneFlow_BaseOp<"scalar_logical_less", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -6985,12 +6408,12 @@ def OneFlow_ScalarLogicalLessOp : OneFlow_BaseOp<"scalar_logical_less", [Declare
     F64Attr:$float_operand
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ScalarLogicalLessEqualOp : OneFlow_BaseOp<"scalar_logical_less_equal", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ScalarLogicalLessEqualOp : OneFlow_BaseOp<"scalar_logical_less_equal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7004,12 +6427,12 @@ def OneFlow_ScalarLogicalLessEqualOp : OneFlow_BaseOp<"scalar_logical_less_equal
     F64Attr:$float_operand
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ScalarLogicalNotEqualOp : OneFlow_BaseOp<"scalar_logical_not_equal", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ScalarLogicalNotEqualOp : OneFlow_BaseOp<"scalar_logical_not_equal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7023,12 +6446,12 @@ def OneFlow_ScalarLogicalNotEqualOp : OneFlow_BaseOp<"scalar_logical_not_equal",
     F64Attr:$float_operand
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ScalarLogicalOrOp : OneFlow_BaseOp<"scalar_logical_or", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ScalarLogicalOrOp : OneFlow_BaseOp<"scalar_logical_or", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7042,12 +6465,12 @@ def OneFlow_ScalarLogicalOrOp : OneFlow_BaseOp<"scalar_logical_or", [DeclareOpIn
     F64Attr:$float_operand
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ScalarLogicalXorOp : OneFlow_BaseOp<"scalar_logical_xor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ScalarLogicalXorOp : OneFlow_BaseOp<"scalar_logical_xor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7061,12 +6484,12 @@ def OneFlow_ScalarLogicalXorOp : OneFlow_BaseOp<"scalar_logical_xor", [DeclareOp
     F64Attr:$float_operand
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ScalarMulOp : OneFlow_BaseOp<"scalar_mul", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ScalarMulOp : OneFlow_BaseOp<"scalar_mul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7080,12 +6503,12 @@ def OneFlow_ScalarMulOp : OneFlow_BaseOp<"scalar_mul", [DeclareOpInterfaceMethod
     F64Attr:$float_operand
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$scalar
@@ -7094,12 +6517,12 @@ def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", [Declar
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "scalar"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "scalar"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_ScalarPowOp : OneFlow_BaseOp<"scalar_pow", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ScalarPowOp : OneFlow_BaseOp<"scalar_pow", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7113,12 +6536,12 @@ def OneFlow_ScalarPowOp : OneFlow_BaseOp<"scalar_pow", [DeclareOpInterfaceMethod
     F64Attr:$float_operand
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ScalarPowGradOp : OneFlow_BaseOp<"scalar_pow_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ScalarPowGradOp : OneFlow_BaseOp<"scalar_pow_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7133,12 +6556,12 @@ def OneFlow_ScalarPowGradOp : OneFlow_BaseOp<"scalar_pow_grad", [DeclareOpInterf
     F64Attr:$float_operand
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_ScalarSubByTensorOp : OneFlow_BaseOp<"scalar_sub_by_tensor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ScalarSubByTensorOp : OneFlow_BaseOp<"scalar_sub_by_tensor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$scalar
@@ -7147,8 +6570,8 @@ def OneFlow_ScalarSubByTensorOp : OneFlow_BaseOp<"scalar_sub_by_tensor", [Declar
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "scalar"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "scalar"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
@@ -7160,7 +6583,7 @@ def OneFlow_ScalarSubByTensorOp : OneFlow_BaseOp<"scalar_sub_by_tensor", [Declar
 
 #ifdef GET_ONEFLOW_SOFTMAX_OP_DEFINITIONS
 
-def OneFlow_LogSoftmaxOp : OneFlow_BaseOp<"log_softmax", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_LogSoftmaxOp : OneFlow_BaseOp<"log_softmax", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7168,12 +6591,12 @@ def OneFlow_LogSoftmaxOp : OneFlow_BaseOp<"log_softmax", [DeclareOpInterfaceMeth
     AnyType:$prob
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"prob"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"prob"}); return &val; }
   }];
 }
 
-def OneFlow_LogSoftmaxGradOp : OneFlow_BaseOp<"log_softmax_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_LogSoftmaxGradOp : OneFlow_BaseOp<"log_softmax_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$prob,
     AnyType:$dy
@@ -7182,12 +6605,12 @@ def OneFlow_LogSoftmaxGradOp : OneFlow_BaseOp<"log_softmax_grad", [DeclareOpInte
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"prob", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prob", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_SoftmaxOp : OneFlow_BaseOp<"softmax", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SoftmaxOp : OneFlow_BaseOp<"softmax", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7195,12 +6618,12 @@ def OneFlow_SoftmaxOp : OneFlow_BaseOp<"softmax", [DeclareOpInterfaceMethods<BnO
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_SoftmaxCrossEntropyOp : OneFlow_BaseOp<"softmax_cross_entropy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SoftmaxCrossEntropyOp : OneFlow_BaseOp<"softmax_cross_entropy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label
@@ -7210,12 +6633,12 @@ def OneFlow_SoftmaxCrossEntropyOp : OneFlow_BaseOp<"softmax_cross_entropy", [Dec
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"prediction", "label"}; }
-    static std::vector<std::string> outputOrder() { return {"prob", "out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "label"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"prob", "out"}); return &val; }
   }];
 }
 
-def OneFlow_SoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"softmax_cross_entropy_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"softmax_cross_entropy_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$label,
@@ -7225,12 +6648,12 @@ def OneFlow_SoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"softmax_cross_entropy_gr
     AnyType:$prediction_diff
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "label", "prob"}; }
-    static std::vector<std::string> outputOrder() { return {"prediction_diff"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "label", "prob"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"prediction_diff"}); return &val; }
   }];
 }
 
-def OneFlow_SoftmaxGradOp : OneFlow_BaseOp<"softmax_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SoftmaxGradOp : OneFlow_BaseOp<"softmax_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$y,
     AnyType:$dy
@@ -7239,12 +6662,12 @@ def OneFlow_SoftmaxGradOp : OneFlow_BaseOp<"softmax_grad", [DeclareOpInterfaceMe
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"y", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"y", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_SparseSoftmaxCrossEntropyOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SparseSoftmaxCrossEntropyOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label
@@ -7257,12 +6680,12 @@ def OneFlow_SparseSoftmaxCrossEntropyOp : OneFlow_BaseOp<"sparse_softmax_cross_e
     SI64Attr:$depth
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"prediction", "label"}; }
-    static std::vector<std::string> outputOrder() { return {"prob", "out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "label"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"prob", "out"}); return &val; }
   }];
 }
 
-def OneFlow_SparseSoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SparseSoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$label,
     AnyType:$dy,
@@ -7275,12 +6698,12 @@ def OneFlow_SparseSoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"sparse_softmax_cro
     SI64Attr:$depth
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"label", "dy", "prob"}; }
-    static std::vector<std::string> outputOrder() { return {"prediction_diff"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"label", "dy", "prob"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"prediction_diff"}); return &val; }
   }];
 }
 
-def OneFlow_SparseSoftmaxCrossEntropyMsOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_ms", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SparseSoftmaxCrossEntropyMsOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_ms", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$prediction,
     AnyType:$label
@@ -7293,12 +6716,12 @@ def OneFlow_SparseSoftmaxCrossEntropyMsOp : OneFlow_BaseOp<"sparse_softmax_cross
     SI64Attr:$depth
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"prediction", "label"}; }
-    static std::vector<std::string> outputOrder() { return {"prob", "out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "label"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"prob", "out"}); return &val; }
   }];
 }
 
-def OneFlow_SparseSoftmaxCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_ms_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SparseSoftmaxCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_ms_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$label,
     AnyType:$dy,
@@ -7311,8 +6734,8 @@ def OneFlow_SparseSoftmaxCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_softmax_c
     SI64Attr:$depth
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"label", "dy", "prob"}; }
-    static std::vector<std::string> outputOrder() { return {"prediction_diff"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"label", "dy", "prob"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"prediction_diff"}); return &val; }
   }];
 }
 
@@ -7324,67 +6747,67 @@ def OneFlow_SparseSoftmaxCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_softmax_c
 
 #ifdef GET_ONEFLOW_SUMMARY_OP_DEFINITIONS
 
-def OneFlow_CreateSummaryWriterOp : OneFlow_BaseOp<"create_summary_writer", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CreateSummaryWriterOp : OneFlow_BaseOp<"create_summary_writer", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let attrs = (ins
     StrAttr:$logdir
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {}; }
-    static std::vector<std::string> outputOrder() { return {}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
   }];
 }
 
-def OneFlow_FlushSummaryWriterOp : OneFlow_BaseOp<"flush_summary_writer", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_FlushSummaryWriterOp : OneFlow_BaseOp<"flush_summary_writer", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {}; }
-    static std::vector<std::string> outputOrder() { return {}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
   }];
 }
 
-def OneFlow_SummaryWriteHistogramOp : OneFlow_BaseOp<"summary_write_histogram", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SummaryWriteHistogramOp : OneFlow_BaseOp<"summary_write_histogram", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$step,
     AnyType:$tag
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "step", "tag"}; }
-    static std::vector<std::string> outputOrder() { return {}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "step", "tag"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
   }];
 }
 
-def OneFlow_SummaryWriteImageOp : OneFlow_BaseOp<"summary_write_image", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SummaryWriteImageOp : OneFlow_BaseOp<"summary_write_image", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$step,
     AnyType:$tag
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "step", "tag"}; }
-    static std::vector<std::string> outputOrder() { return {}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "step", "tag"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
   }];
 }
 
-def OneFlow_SummaryWritePbOp : OneFlow_BaseOp<"summary_write_pb", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SummaryWritePbOp : OneFlow_BaseOp<"summary_write_pb", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$step
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "step"}; }
-    static std::vector<std::string> outputOrder() { return {}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "step"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
   }];
 }
 
-def OneFlow_SummaryWriteScalarOp : OneFlow_BaseOp<"summary_write_scalar", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SummaryWriteScalarOp : OneFlow_BaseOp<"summary_write_scalar", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
     AnyType:$step,
     AnyType:$tag
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in", "step", "tag"}; }
-    static std::vector<std::string> outputOrder() { return {}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "step", "tag"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({}); return &val; }
   }];
 }
 
@@ -7396,7 +6819,7 @@ def OneFlow_SummaryWriteScalarOp : OneFlow_BaseOp<"summary_write_scalar", [Decla
 
 #ifdef GET_ONEFLOW_TENSOR_BUFFER_OP_DEFINITIONS
 
-def OneFlow_GenTensorBufferOp : OneFlow_BaseOp<"gen_tensor_buffer", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_GenTensorBufferOp : OneFlow_BaseOp<"gen_tensor_buffer", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -7408,12 +6831,12 @@ def OneFlow_GenTensorBufferOp : OneFlow_BaseOp<"gen_tensor_buffer", [DeclareOpIn
     BoolAttr:$dynamic_out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_TensorBufferToListOfTensorsOp : OneFlow_BaseOp<"tensor_buffer_to_list_of_tensors", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TensorBufferToListOfTensorsOp : OneFlow_BaseOp<"tensor_buffer_to_list_of_tensors", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7426,12 +6849,12 @@ def OneFlow_TensorBufferToListOfTensorsOp : OneFlow_BaseOp<"tensor_buffer_to_lis
     BoolAttr:$dynamic_out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_TensorBufferToListOfTensorsV2Op : OneFlow_BaseOp<"tensor_buffer_to_list_of_tensors_v2", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TensorBufferToListOfTensorsV2Op : OneFlow_BaseOp<"tensor_buffer_to_list_of_tensors_v2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7444,12 +6867,12 @@ def OneFlow_TensorBufferToListOfTensorsV2Op : OneFlow_BaseOp<"tensor_buffer_to_l
     BoolAttr:$dynamic_out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_TensorBufferToTensorOp : OneFlow_BaseOp<"tensor_buffer_to_tensor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TensorBufferToTensorOp : OneFlow_BaseOp<"tensor_buffer_to_tensor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7461,12 +6884,12 @@ def OneFlow_TensorBufferToTensorOp : OneFlow_BaseOp<"tensor_buffer_to_tensor", [
     StrAttr:$dtype
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_TensorToTensorBufferOp : OneFlow_BaseOp<"tensor_to_tensor_buffer", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TensorToTensorBufferOp : OneFlow_BaseOp<"tensor_to_tensor_buffer", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7477,8 +6900,8 @@ def OneFlow_TensorToTensorBufferOp : OneFlow_BaseOp<"tensor_to_tensor_buffer", [
     SI32Attr:$instance_dims
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
@@ -7490,7 +6913,7 @@ def OneFlow_TensorToTensorBufferOp : OneFlow_BaseOp<"tensor_to_tensor_buffer", [
 
 #ifdef GET_ONEFLOW_TEST_OP_DEFINITIONS
 
-def OneFlow_TestDataTypeAttrOp : OneFlow_BaseOp<"TestDataTypeAttr", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TestDataTypeAttrOp : OneFlow_BaseOp<"TestDataTypeAttr", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7501,22 +6924,22 @@ def OneFlow_TestDataTypeAttrOp : OneFlow_BaseOp<"TestDataTypeAttr", [DeclareOpIn
     StrAttr:$output_type
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_TestDynamicSourceOp : OneFlow_BaseOp<"TestDynamicSource", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TestDynamicSourceOp : OneFlow_BaseOp<"TestDynamicSource", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_TestListDataTypeAndListShapeAndListStringAttrOp : OneFlow_BaseOp<"TestListDataTypeAndListShapeAndListStringAttr", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TestListDataTypeAndListShapeAndListStringAttrOp : OneFlow_BaseOp<"TestListDataTypeAndListShapeAndListStringAttr", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7529,12 +6952,12 @@ def OneFlow_TestListDataTypeAndListShapeAndListStringAttrOp : OneFlow_BaseOp<"Te
     StrArrayAttr:$string_list
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_TestMultiInputOp : OneFlow_BaseOp<"TestMultiInput", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TestMultiInputOp : OneFlow_BaseOp<"TestMultiInput", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x1,
     AnyType:$x2
@@ -7543,12 +6966,12 @@ def OneFlow_TestMultiInputOp : OneFlow_BaseOp<"TestMultiInput", [DeclareOpInterf
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x1", "x2"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x1", "x2"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_TestMultiInputGradOp : OneFlow_BaseOp<"TestMultiInputGrad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TestMultiInputGradOp : OneFlow_BaseOp<"TestMultiInputGrad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x1,
     AnyType:$x2,
@@ -7559,12 +6982,12 @@ def OneFlow_TestMultiInputGradOp : OneFlow_BaseOp<"TestMultiInputGrad", [Declare
     AnyType:$x2_diff
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x1", "x2", "y_diff"}; }
-    static std::vector<std::string> outputOrder() { return {"x1_diff", "x2_diff"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x1", "x2", "y_diff"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"x1_diff", "x2_diff"}); return &val; }
   }];
 }
 
-def OneFlow_TestMultiOutputOrderOp : OneFlow_BaseOp<"TestMultiOutputOrder", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TestMultiOutputOrderOp : OneFlow_BaseOp<"TestMultiOutputOrder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7573,12 +6996,12 @@ def OneFlow_TestMultiOutputOrderOp : OneFlow_BaseOp<"TestMultiOutputOrder", [Dec
     AnyType:$out2
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out1", "out2"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out1", "out2"}); return &val; }
   }];
 }
 
-def OneFlow_TestRandomSourceOp : OneFlow_BaseOp<"TestRandomSource", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TestRandomSourceOp : OneFlow_BaseOp<"TestRandomSource", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -7586,12 +7009,12 @@ def OneFlow_TestRandomSourceOp : OneFlow_BaseOp<"TestRandomSource", [DeclareOpIn
     SI64Attr:$seed
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_TestReshapeOp : OneFlow_BaseOp<"TestReshape", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TestReshapeOp : OneFlow_BaseOp<"TestReshape", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7602,22 +7025,22 @@ def OneFlow_TestReshapeOp : OneFlow_BaseOp<"TestReshape", [DeclareOpInterfaceMet
     AnyI64ElementsAttr:$shape
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_TestSourceOp : OneFlow_BaseOp<"TestSource", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TestSourceOp : OneFlow_BaseOp<"TestSource", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_TestSourceMultiGpuFixedOutNumOp : OneFlow_BaseOp<"TestSourceMultiGpuFixedOutNum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TestSourceMultiGpuFixedOutNumOp : OneFlow_BaseOp<"TestSourceMultiGpuFixedOutNum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );
@@ -7625,12 +7048,12 @@ def OneFlow_TestSourceMultiGpuFixedOutNumOp : OneFlow_BaseOp<"TestSourceMultiGpu
     SI64Attr:$out_num
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_CcreluOp : OneFlow_BaseOp<"ccrelu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CcreluOp : OneFlow_BaseOp<"ccrelu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7638,12 +7061,12 @@ def OneFlow_CcreluOp : OneFlow_BaseOp<"ccrelu", [DeclareOpInterfaceMethods<BnOrd
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_CcreluGradOp : OneFlow_BaseOp<"ccrelu_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CcreluGradOp : OneFlow_BaseOp<"ccrelu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$y,
     AnyType:$dy
@@ -7652,12 +7075,12 @@ def OneFlow_CcreluGradOp : OneFlow_BaseOp<"ccrelu_grad", [DeclareOpInterfaceMeth
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"y", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"y", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_CpuOnlyReluTestOp : OneFlow_BaseOp<"cpu_only_relu_test", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CpuOnlyReluTestOp : OneFlow_BaseOp<"cpu_only_relu_test", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7665,12 +7088,12 @@ def OneFlow_CpuOnlyReluTestOp : OneFlow_BaseOp<"cpu_only_relu_test", [DeclareOpI
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_TestUserOpAttrAutoTypeOp : OneFlow_BaseOp<"test_user_op_attr_auto_type", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TestUserOpAttrAutoTypeOp : OneFlow_BaseOp<"test_user_op_attr_auto_type", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7682,8 +7105,8 @@ def OneFlow_TestUserOpAttrAutoTypeOp : OneFlow_BaseOp<"test_user_op_attr_auto_ty
     SI32Attr:$int2
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
@@ -7695,7 +7118,7 @@ def OneFlow_TestUserOpAttrAutoTypeOp : OneFlow_BaseOp<"test_user_op_attr_auto_ty
 
 #ifdef GET_ONEFLOW_TRIGONOMETRIC_OP_DEFINITIONS
 
-def OneFlow_AcosOp : OneFlow_BaseOp<"acos", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AcosOp : OneFlow_BaseOp<"acos", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7703,12 +7126,12 @@ def OneFlow_AcosOp : OneFlow_BaseOp<"acos", [DeclareOpInterfaceMethods<BnOrderOp
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_AcosGradOp : OneFlow_BaseOp<"acos_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AcosGradOp : OneFlow_BaseOp<"acos_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7717,12 +7140,12 @@ def OneFlow_AcosGradOp : OneFlow_BaseOp<"acos_grad", [DeclareOpInterfaceMethods<
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_AcoshOp : OneFlow_BaseOp<"acosh", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AcoshOp : OneFlow_BaseOp<"acosh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7730,12 +7153,12 @@ def OneFlow_AcoshOp : OneFlow_BaseOp<"acosh", [DeclareOpInterfaceMethods<BnOrder
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_AcoshGradOp : OneFlow_BaseOp<"acosh_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AcoshGradOp : OneFlow_BaseOp<"acosh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7744,12 +7167,12 @@ def OneFlow_AcoshGradOp : OneFlow_BaseOp<"acosh_grad", [DeclareOpInterfaceMethod
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_AsinOp : OneFlow_BaseOp<"asin", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AsinOp : OneFlow_BaseOp<"asin", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7757,12 +7180,12 @@ def OneFlow_AsinOp : OneFlow_BaseOp<"asin", [DeclareOpInterfaceMethods<BnOrderOp
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_AsinGradOp : OneFlow_BaseOp<"asin_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AsinGradOp : OneFlow_BaseOp<"asin_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7771,12 +7194,12 @@ def OneFlow_AsinGradOp : OneFlow_BaseOp<"asin_grad", [DeclareOpInterfaceMethods<
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_AsinhOp : OneFlow_BaseOp<"asinh", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AsinhOp : OneFlow_BaseOp<"asinh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7784,12 +7207,12 @@ def OneFlow_AsinhOp : OneFlow_BaseOp<"asinh", [DeclareOpInterfaceMethods<BnOrder
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_AsinhGradOp : OneFlow_BaseOp<"asinh_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AsinhGradOp : OneFlow_BaseOp<"asinh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7798,12 +7221,12 @@ def OneFlow_AsinhGradOp : OneFlow_BaseOp<"asinh_grad", [DeclareOpInterfaceMethod
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_AtanOp : OneFlow_BaseOp<"atan", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AtanOp : OneFlow_BaseOp<"atan", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7811,12 +7234,12 @@ def OneFlow_AtanOp : OneFlow_BaseOp<"atan", [DeclareOpInterfaceMethods<BnOrderOp
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_Atan2Op : OneFlow_BaseOp<"atan2", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_Atan2Op : OneFlow_BaseOp<"atan2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y
@@ -7825,12 +7248,12 @@ def OneFlow_Atan2Op : OneFlow_BaseOp<"atan2", [DeclareOpInterfaceMethods<BnOrder
     AnyType:$z
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y"}; }
-    static std::vector<std::string> outputOrder() { return {"z"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"z"}); return &val; }
   }];
 }
 
-def OneFlow_Atan2XGradOp : OneFlow_BaseOp<"atan2_x_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_Atan2XGradOp : OneFlow_BaseOp<"atan2_x_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -7840,12 +7263,12 @@ def OneFlow_Atan2XGradOp : OneFlow_BaseOp<"atan2_x_grad", [DeclareOpInterfaceMet
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "dz"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "dz"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_Atan2YGradOp : OneFlow_BaseOp<"atan2_y_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_Atan2YGradOp : OneFlow_BaseOp<"atan2_y_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -7855,12 +7278,12 @@ def OneFlow_Atan2YGradOp : OneFlow_BaseOp<"atan2_y_grad", [DeclareOpInterfaceMet
     AnyType:$dy
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "y", "dz"}; }
-    static std::vector<std::string> outputOrder() { return {"dy"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "y", "dz"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
   }];
 }
 
-def OneFlow_AtanGradOp : OneFlow_BaseOp<"atan_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AtanGradOp : OneFlow_BaseOp<"atan_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7869,12 +7292,12 @@ def OneFlow_AtanGradOp : OneFlow_BaseOp<"atan_grad", [DeclareOpInterfaceMethods<
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_AtanhOp : OneFlow_BaseOp<"atanh", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AtanhOp : OneFlow_BaseOp<"atanh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7882,12 +7305,12 @@ def OneFlow_AtanhOp : OneFlow_BaseOp<"atanh", [DeclareOpInterfaceMethods<BnOrder
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_AtanhGradOp : OneFlow_BaseOp<"atanh_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AtanhGradOp : OneFlow_BaseOp<"atanh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7896,12 +7319,12 @@ def OneFlow_AtanhGradOp : OneFlow_BaseOp<"atanh_grad", [DeclareOpInterfaceMethod
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_CosOp : OneFlow_BaseOp<"cos", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CosOp : OneFlow_BaseOp<"cos", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7909,12 +7332,12 @@ def OneFlow_CosOp : OneFlow_BaseOp<"cos", [DeclareOpInterfaceMethods<BnOrderOpIn
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_CosGradOp : OneFlow_BaseOp<"cos_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CosGradOp : OneFlow_BaseOp<"cos_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7923,12 +7346,12 @@ def OneFlow_CosGradOp : OneFlow_BaseOp<"cos_grad", [DeclareOpInterfaceMethods<Bn
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_CoshOp : OneFlow_BaseOp<"cosh", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CoshOp : OneFlow_BaseOp<"cosh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7936,12 +7359,12 @@ def OneFlow_CoshOp : OneFlow_BaseOp<"cosh", [DeclareOpInterfaceMethods<BnOrderOp
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_CoshGradOp : OneFlow_BaseOp<"cosh_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CoshGradOp : OneFlow_BaseOp<"cosh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -7950,12 +7373,12 @@ def OneFlow_CoshGradOp : OneFlow_BaseOp<"cosh_grad", [DeclareOpInterfaceMethods<
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_HardtanhOp : OneFlow_BaseOp<"hardtanh", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_HardtanhOp : OneFlow_BaseOp<"hardtanh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -7967,12 +7390,12 @@ def OneFlow_HardtanhOp : OneFlow_BaseOp<"hardtanh", [DeclareOpInterfaceMethods<B
     F64Attr:$max_val
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_HardtanhGradOp : OneFlow_BaseOp<"hardtanh_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_HardtanhGradOp : OneFlow_BaseOp<"hardtanh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$y,
     AnyType:$dy
@@ -7985,12 +7408,12 @@ def OneFlow_HardtanhGradOp : OneFlow_BaseOp<"hardtanh_grad", [DeclareOpInterface
     F64Attr:$max_val
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"y", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"y", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_SinOp : OneFlow_BaseOp<"sin", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SinOp : OneFlow_BaseOp<"sin", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -7998,12 +7421,12 @@ def OneFlow_SinOp : OneFlow_BaseOp<"sin", [DeclareOpInterfaceMethods<BnOrderOpIn
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_SinGradOp : OneFlow_BaseOp<"sin_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SinGradOp : OneFlow_BaseOp<"sin_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -8012,12 +7435,12 @@ def OneFlow_SinGradOp : OneFlow_BaseOp<"sin_grad", [DeclareOpInterfaceMethods<Bn
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_SinhOp : OneFlow_BaseOp<"sinh", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SinhOp : OneFlow_BaseOp<"sinh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8025,12 +7448,12 @@ def OneFlow_SinhOp : OneFlow_BaseOp<"sinh", [DeclareOpInterfaceMethods<BnOrderOp
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_SinhGradOp : OneFlow_BaseOp<"sinh_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SinhGradOp : OneFlow_BaseOp<"sinh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -8039,12 +7462,12 @@ def OneFlow_SinhGradOp : OneFlow_BaseOp<"sinh_grad", [DeclareOpInterfaceMethods<
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_TanOp : OneFlow_BaseOp<"tan", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TanOp : OneFlow_BaseOp<"tan", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8052,12 +7475,12 @@ def OneFlow_TanOp : OneFlow_BaseOp<"tan", [DeclareOpInterfaceMethods<BnOrderOpIn
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_TanGradOp : OneFlow_BaseOp<"tan_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TanGradOp : OneFlow_BaseOp<"tan_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -8066,12 +7489,12 @@ def OneFlow_TanGradOp : OneFlow_BaseOp<"tan_grad", [DeclareOpInterfaceMethods<Bn
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_TanhOp : OneFlow_BaseOp<"tanh", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TanhOp : OneFlow_BaseOp<"tanh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8079,12 +7502,12 @@ def OneFlow_TanhOp : OneFlow_BaseOp<"tanh", [DeclareOpInterfaceMethods<BnOrderOp
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_TanhGradOp : OneFlow_BaseOp<"tanh_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TanhGradOp : OneFlow_BaseOp<"tanh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x,
     AnyType:$dy
@@ -8093,8 +7516,8 @@ def OneFlow_TanhGradOp : OneFlow_BaseOp<"tanh_grad", [DeclareOpInterfaceMethods<
     AnyType:$dx
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x", "dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
@@ -8106,7 +7529,7 @@ def OneFlow_TanhGradOp : OneFlow_BaseOp<"tanh_grad", [DeclareOpInterfaceMethods<
 
 #ifdef GET_ONEFLOW_UNARY_OP_DEFINITIONS
 
-def OneFlow_AccOp : OneFlow_BaseOp<"acc", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AccOp : OneFlow_BaseOp<"acc", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8117,12 +7540,12 @@ def OneFlow_AccOp : OneFlow_BaseOp<"acc", [DeclareOpInterfaceMethods<BnOrderOpIn
     SI32Attr:$max_acc_num
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_AffineGridOp : OneFlow_BaseOp<"affine_grid", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AffineGridOp : OneFlow_BaseOp<"affine_grid", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$theta
   );
@@ -8134,12 +7557,12 @@ def OneFlow_AffineGridOp : OneFlow_BaseOp<"affine_grid", [DeclareOpInterfaceMeth
     BoolAttr:$align_corners
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"theta"}; }
-    static std::vector<std::string> outputOrder() { return {"grid"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"theta"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"grid"}); return &val; }
   }];
 }
 
-def OneFlow_AffineGridGradOp : OneFlow_BaseOp<"affine_grid_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_AffineGridGradOp : OneFlow_BaseOp<"affine_grid_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dgrid
   );
@@ -8151,12 +7574,12 @@ def OneFlow_AffineGridGradOp : OneFlow_BaseOp<"affine_grid_grad", [DeclareOpInte
     BoolAttr:$align_corners
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dgrid"}; }
-    static std::vector<std::string> outputOrder() { return {"dtheta"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dgrid"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dtheta"}); return &val; }
   }];
 }
 
-def OneFlow_BernoulliOp : OneFlow_BaseOp<"bernoulli", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_BernoulliOp : OneFlow_BaseOp<"bernoulli", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8169,12 +7592,12 @@ def OneFlow_BernoulliOp : OneFlow_BaseOp<"bernoulli", [DeclareOpInterfaceMethods
     StrAttr:$dtype
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_CastOp : OneFlow_BaseOp<"cast", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CastOp : OneFlow_BaseOp<"cast", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8185,12 +7608,12 @@ def OneFlow_CastOp : OneFlow_BaseOp<"cast", [DeclareOpInterfaceMethods<BnOrderOp
     StrAttr:$dtype
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_CastToStaticShapeOp : OneFlow_BaseOp<"cast_to_static_shape", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CastToStaticShapeOp : OneFlow_BaseOp<"cast_to_static_shape", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input
   );
@@ -8198,12 +7621,12 @@ def OneFlow_CastToStaticShapeOp : OneFlow_BaseOp<"cast_to_static_shape", [Declar
     AnyType:$output
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input"}; }
-    static std::vector<std::string> outputOrder() { return {"output"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output"}); return &val; }
   }];
 }
 
-def OneFlow_CastToTickOp : OneFlow_BaseOp<"cast_to_tick", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CastToTickOp : OneFlow_BaseOp<"cast_to_tick", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8211,12 +7634,12 @@ def OneFlow_CastToTickOp : OneFlow_BaseOp<"cast_to_tick", [DeclareOpInterfaceMet
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_CeluOp : OneFlow_BaseOp<"celu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CeluOp : OneFlow_BaseOp<"celu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8227,12 +7650,12 @@ def OneFlow_CeluOp : OneFlow_BaseOp<"celu", [DeclareOpInterfaceMethods<BnOrderOp
     F64Attr:$alpha
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_CopyOp : OneFlow_BaseOp<"copy", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CopyOp : OneFlow_BaseOp<"copy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8244,12 +7667,12 @@ def OneFlow_CopyOp : OneFlow_BaseOp<"copy", [DeclareOpInterfaceMethods<BnOrderOp
     SI64Attr:$device_id
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_CountNotFiniteOp : OneFlow_BaseOp<"count_not_finite", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_CountNotFiniteOp : OneFlow_BaseOp<"count_not_finite", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8257,12 +7680,12 @@ def OneFlow_CountNotFiniteOp : OneFlow_BaseOp<"count_not_finite", [DeclareOpInte
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_DiagOp : OneFlow_BaseOp<"diag", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_DiagOp : OneFlow_BaseOp<"diag", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8273,12 +7696,12 @@ def OneFlow_DiagOp : OneFlow_BaseOp<"diag", [DeclareOpInterfaceMethods<BnOrderOp
     SI32Attr:$diagonal
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_EluOp : OneFlow_BaseOp<"elu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_EluOp : OneFlow_BaseOp<"elu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8289,12 +7712,12 @@ def OneFlow_EluOp : OneFlow_BaseOp<"elu", [DeclareOpInterfaceMethods<BnOrderOpIn
     F64Attr:$alpha
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ExpandOp : OneFlow_BaseOp<"expand", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ExpandOp : OneFlow_BaseOp<"expand", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8306,12 +7729,12 @@ def OneFlow_ExpandOp : OneFlow_BaseOp<"expand", [DeclareOpInterfaceMethods<BnOrd
     SI32ArrayAttr:$logical_expand_shape
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ExpandDimsOp : OneFlow_BaseOp<"expand_dims", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ExpandDimsOp : OneFlow_BaseOp<"expand_dims", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8322,12 +7745,12 @@ def OneFlow_ExpandDimsOp : OneFlow_BaseOp<"expand_dims", [DeclareOpInterfaceMeth
     SI32Attr:$axis
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_FlattenOp : OneFlow_BaseOp<"flatten", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_FlattenOp : OneFlow_BaseOp<"flatten", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8339,12 +7762,12 @@ def OneFlow_FlattenOp : OneFlow_BaseOp<"flatten", [DeclareOpInterfaceMethods<BnO
     SI32Attr:$end_dim
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_FlipOp : OneFlow_BaseOp<"flip", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_FlipOp : OneFlow_BaseOp<"flip", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8355,12 +7778,12 @@ def OneFlow_FlipOp : OneFlow_BaseOp<"flip", [DeclareOpInterfaceMethods<BnOrderOp
     SI32ArrayAttr:$dims
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_FlipGradOp : OneFlow_BaseOp<"flip_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_FlipGradOp : OneFlow_BaseOp<"flip_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy
   );
@@ -8371,12 +7794,12 @@ def OneFlow_FlipGradOp : OneFlow_BaseOp<"flip_grad", [DeclareOpInterfaceMethods<
     SI32ArrayAttr:$dims
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_FoldOp : OneFlow_BaseOp<"fold", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_FoldOp : OneFlow_BaseOp<"fold", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8391,12 +7814,12 @@ def OneFlow_FoldOp : OneFlow_BaseOp<"fold", [DeclareOpInterfaceMethods<BnOrderOp
     SI32ArrayAttr:$dilation_rate
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_GeluOp : OneFlow_BaseOp<"gelu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_GeluOp : OneFlow_BaseOp<"gelu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8404,12 +7827,12 @@ def OneFlow_GeluOp : OneFlow_BaseOp<"gelu", [DeclareOpInterfaceMethods<BnOrderOp
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_HardsigmoidOp : OneFlow_BaseOp<"hardsigmoid", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_HardsigmoidOp : OneFlow_BaseOp<"hardsigmoid", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8417,12 +7840,12 @@ def OneFlow_HardsigmoidOp : OneFlow_BaseOp<"hardsigmoid", [DeclareOpInterfaceMet
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_HardswishOp : OneFlow_BaseOp<"hardswish", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_HardswishOp : OneFlow_BaseOp<"hardswish", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8430,12 +7853,12 @@ def OneFlow_HardswishOp : OneFlow_BaseOp<"hardswish", [DeclareOpInterfaceMethods
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8446,12 +7869,12 @@ def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", [DeclareOpInterfaceMethod
     F32Attr:$alpha
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_LogicalNotOp : OneFlow_BaseOp<"logical_not", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_LogicalNotOp : OneFlow_BaseOp<"logical_not", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8459,12 +7882,12 @@ def OneFlow_LogicalNotOp : OneFlow_BaseOp<"logical_not", [DeclareOpInterfaceMeth
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_MishOp : OneFlow_BaseOp<"mish", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_MishOp : OneFlow_BaseOp<"mish", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8472,12 +7895,12 @@ def OneFlow_MishOp : OneFlow_BaseOp<"mish", [DeclareOpInterfaceMethods<BnOrderOp
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_NarrowOp : OneFlow_BaseOp<"narrow", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_NarrowOp : OneFlow_BaseOp<"narrow", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8490,12 +7913,12 @@ def OneFlow_NarrowOp : OneFlow_BaseOp<"narrow", [DeclareOpInterfaceMethods<BnOrd
     SI64Attr:$length
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_OneHotOp : OneFlow_BaseOp<"one_hot", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_OneHotOp : OneFlow_BaseOp<"one_hot", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$indices
   );
@@ -8511,12 +7934,12 @@ def OneFlow_OneHotOp : OneFlow_BaseOp<"one_hot", [DeclareOpInterfaceMethods<BnOr
     StrAttr:$dtype
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"indices"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"indices"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_PackOp : OneFlow_BaseOp<"pack", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_PackOp : OneFlow_BaseOp<"pack", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8527,12 +7950,12 @@ def OneFlow_PackOp : OneFlow_BaseOp<"pack", [DeclareOpInterfaceMethods<BnOrderOp
     SI32Attr:$pack_num
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$like
   );
@@ -8544,12 +7967,12 @@ def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", [DeclareOpInte
     SI64Attr:$seed
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"like"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"like"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_RepeatOp : OneFlow_BaseOp<"repeat", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_RepeatOp : OneFlow_BaseOp<"repeat", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8560,12 +7983,12 @@ def OneFlow_RepeatOp : OneFlow_BaseOp<"repeat", [DeclareOpInterfaceMethods<BnOrd
     SI32Attr:$repeat_num
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_RollOp : OneFlow_BaseOp<"roll", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_RollOp : OneFlow_BaseOp<"roll", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8577,12 +8000,12 @@ def OneFlow_RollOp : OneFlow_BaseOp<"roll", [DeclareOpInterfaceMethods<BnOrderOp
     SI32ArrayAttr:$dims
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_SeluOp : OneFlow_BaseOp<"selu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SeluOp : OneFlow_BaseOp<"selu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8590,12 +8013,12 @@ def OneFlow_SeluOp : OneFlow_BaseOp<"selu", [DeclareOpInterfaceMethods<BnOrderOp
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_SigmoidOp : OneFlow_BaseOp<"sigmoid", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SigmoidOp : OneFlow_BaseOp<"sigmoid", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8603,12 +8026,12 @@ def OneFlow_SigmoidOp : OneFlow_BaseOp<"sigmoid", [DeclareOpInterfaceMethods<BnO
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_SiluOp : OneFlow_BaseOp<"silu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SiluOp : OneFlow_BaseOp<"silu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8616,12 +8039,12 @@ def OneFlow_SiluOp : OneFlow_BaseOp<"silu", [DeclareOpInterfaceMethods<BnOrderOp
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_SoftsignOp : OneFlow_BaseOp<"softsign", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SoftsignOp : OneFlow_BaseOp<"softsign", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8629,12 +8052,12 @@ def OneFlow_SoftsignOp : OneFlow_BaseOp<"softsign", [DeclareOpInterfaceMethods<B
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_SortOp : OneFlow_BaseOp<"sort", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SortOp : OneFlow_BaseOp<"sort", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8645,12 +8068,12 @@ def OneFlow_SortOp : OneFlow_BaseOp<"sort", [DeclareOpInterfaceMethods<BnOrderOp
     StrAttr:$direction
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_SquareSumOp : OneFlow_BaseOp<"square_sum", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SquareSumOp : OneFlow_BaseOp<"square_sum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8658,12 +8081,12 @@ def OneFlow_SquareSumOp : OneFlow_BaseOp<"square_sum", [DeclareOpInterfaceMethod
     AnyType:$y
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_SqueezeOp : OneFlow_BaseOp<"squeeze", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_SqueezeOp : OneFlow_BaseOp<"squeeze", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8674,12 +8097,12 @@ def OneFlow_SqueezeOp : OneFlow_BaseOp<"squeeze", [DeclareOpInterfaceMethods<BnO
     SI32ArrayAttr:$axes
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_TransposeOp : OneFlow_BaseOp<"transpose", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TransposeOp : OneFlow_BaseOp<"transpose", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$input
   );
@@ -8690,12 +8113,12 @@ def OneFlow_TransposeOp : OneFlow_BaseOp<"transpose", [DeclareOpInterfaceMethods
     SI32ArrayAttr:$perm
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"input"}; }
-    static std::vector<std::string> outputOrder() { return {"output"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"output"}); return &val; }
   }];
 }
 
-def OneFlow_TrilOp : OneFlow_BaseOp<"tril", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TrilOp : OneFlow_BaseOp<"tril", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8709,12 +8132,12 @@ def OneFlow_TrilOp : OneFlow_BaseOp<"tril", [DeclareOpInterfaceMethods<BnOrderOp
     BoolAttr:$is_floating_fill_value
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_TriuOp : OneFlow_BaseOp<"triu", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_TriuOp : OneFlow_BaseOp<"triu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8725,12 +8148,12 @@ def OneFlow_TriuOp : OneFlow_BaseOp<"triu", [DeclareOpInterfaceMethods<BnOrderOp
     SI64Attr:$diagonal
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_UnfoldOp : OneFlow_BaseOp<"unfold", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UnfoldOp : OneFlow_BaseOp<"unfold", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8745,12 +8168,12 @@ def OneFlow_UnfoldOp : OneFlow_BaseOp<"unfold", [DeclareOpInterfaceMethods<BnOrd
     SI32ArrayAttr:$dilation_rate
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_UnfoldTensorOp : OneFlow_BaseOp<"unfold_tensor", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UnfoldTensorOp : OneFlow_BaseOp<"unfold_tensor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8763,12 +8186,12 @@ def OneFlow_UnfoldTensorOp : OneFlow_BaseOp<"unfold_tensor", [DeclareOpInterface
     SI32Attr:$step
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_UnpackOp : OneFlow_BaseOp<"unpack", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UnpackOp : OneFlow_BaseOp<"unpack", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in
   );
@@ -8779,12 +8202,12 @@ def OneFlow_UnpackOp : OneFlow_BaseOp<"unpack", [DeclareOpInterfaceMethods<BnOrd
     SI32Attr:$unpack_num
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"in"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
-def OneFlow_ZeroLikeOp : OneFlow_BaseOp<"zero_like", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_ZeroLikeOp : OneFlow_BaseOp<"zero_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$like
   );
@@ -8792,8 +8215,8 @@ def OneFlow_ZeroLikeOp : OneFlow_BaseOp<"zero_like", [DeclareOpInterfaceMethods<
     AnyType:$out
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"like"}; }
-    static std::vector<std::string> outputOrder() { return {"out"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"like"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"out"}); return &val; }
   }];
 }
 
@@ -8805,7 +8228,7 @@ def OneFlow_ZeroLikeOp : OneFlow_BaseOp<"zero_like", [DeclareOpInterfaceMethods<
 
 #ifdef GET_ONEFLOW_UPSAMPLE_OP_DEFINITIONS
 
-def OneFlow_UpsampleOp : OneFlow_BaseOp<"upsample", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UpsampleOp : OneFlow_BaseOp<"upsample", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8820,12 +8243,12 @@ def OneFlow_UpsampleOp : OneFlow_BaseOp<"upsample", [DeclareOpInterfaceMethods<B
     StrAttr:$interpolation
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_UpsampleBicubic2DOp : OneFlow_BaseOp<"upsample_bicubic_2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UpsampleBicubic2DOp : OneFlow_BaseOp<"upsample_bicubic_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8839,12 +8262,12 @@ def OneFlow_UpsampleBicubic2DOp : OneFlow_BaseOp<"upsample_bicubic_2d", [Declare
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_UpsampleBicubic2DGradOp : OneFlow_BaseOp<"upsample_bicubic_2d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UpsampleBicubic2DGradOp : OneFlow_BaseOp<"upsample_bicubic_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -8859,12 +8282,12 @@ def OneFlow_UpsampleBicubic2DGradOp : OneFlow_BaseOp<"upsample_bicubic_2d_grad",
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "x"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_UpsampleBilinear2DOp : OneFlow_BaseOp<"upsample_bilinear_2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UpsampleBilinear2DOp : OneFlow_BaseOp<"upsample_bilinear_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8878,12 +8301,12 @@ def OneFlow_UpsampleBilinear2DOp : OneFlow_BaseOp<"upsample_bilinear_2d", [Decla
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_UpsampleBilinear2DGradOp : OneFlow_BaseOp<"upsample_bilinear_2d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UpsampleBilinear2DGradOp : OneFlow_BaseOp<"upsample_bilinear_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -8898,12 +8321,12 @@ def OneFlow_UpsampleBilinear2DGradOp : OneFlow_BaseOp<"upsample_bilinear_2d_grad
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "x"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_UpsampleGradOp : OneFlow_BaseOp<"upsample_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UpsampleGradOp : OneFlow_BaseOp<"upsample_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -8919,12 +8342,12 @@ def OneFlow_UpsampleGradOp : OneFlow_BaseOp<"upsample_grad", [DeclareOpInterface
     StrAttr:$interpolation
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "x"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_UpsampleLinear1DOp : OneFlow_BaseOp<"upsample_linear_1d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UpsampleLinear1DOp : OneFlow_BaseOp<"upsample_linear_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8937,12 +8360,12 @@ def OneFlow_UpsampleLinear1DOp : OneFlow_BaseOp<"upsample_linear_1d", [DeclareOp
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_UpsampleLinear1DGradOp : OneFlow_BaseOp<"upsample_linear_1d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UpsampleLinear1DGradOp : OneFlow_BaseOp<"upsample_linear_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -8956,12 +8379,12 @@ def OneFlow_UpsampleLinear1DGradOp : OneFlow_BaseOp<"upsample_linear_1d_grad", [
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "x"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_UpsampleNearest1DOp : OneFlow_BaseOp<"upsample_nearest_1d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UpsampleNearest1DOp : OneFlow_BaseOp<"upsample_nearest_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -8973,12 +8396,12 @@ def OneFlow_UpsampleNearest1DOp : OneFlow_BaseOp<"upsample_nearest_1d", [Declare
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_UpsampleNearest1DGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UpsampleNearest1DGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -8991,12 +8414,12 @@ def OneFlow_UpsampleNearest1DGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad",
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "x"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_UpsampleNearest2DOp : OneFlow_BaseOp<"upsample_nearest_2d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UpsampleNearest2DOp : OneFlow_BaseOp<"upsample_nearest_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -9009,12 +8432,12 @@ def OneFlow_UpsampleNearest2DOp : OneFlow_BaseOp<"upsample_nearest_2d", [Declare
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_UpsampleNearest2DGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UpsampleNearest2DGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -9028,12 +8451,12 @@ def OneFlow_UpsampleNearest2DGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad",
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "x"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_UpsampleNearest3DOp : OneFlow_BaseOp<"upsample_nearest_3d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UpsampleNearest3DOp : OneFlow_BaseOp<"upsample_nearest_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -9047,12 +8470,12 @@ def OneFlow_UpsampleNearest3DOp : OneFlow_BaseOp<"upsample_nearest_3d", [Declare
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_UpsampleNearest3DGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UpsampleNearest3DGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -9067,12 +8490,12 @@ def OneFlow_UpsampleNearest3DGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad",
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "x"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
-def OneFlow_UpsampleTrilinear3DOp : OneFlow_BaseOp<"upsample_trilinear_3d", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UpsampleTrilinear3DOp : OneFlow_BaseOp<"upsample_trilinear_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$x
   );
@@ -9087,12 +8510,12 @@ def OneFlow_UpsampleTrilinear3DOp : OneFlow_BaseOp<"upsample_trilinear_3d", [Dec
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"x"}; }
-    static std::vector<std::string> outputOrder() { return {"y"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"y"}); return &val; }
   }];
 }
 
-def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_grad", [DeclareOpInterfaceMethods<BnOrderOpInterface>]> {
+def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$dy,
     AnyType:$x
@@ -9108,8 +8531,8 @@ def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_gr
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
-    static std::vector<std::string> inputOrder() { return {"dy", "x"}; }
-    static std::vector<std::string> outputOrder() { return {"dx"}; }
+    static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
+    static const std::vector<std::string>* outputKeys() { static std::vector<std::string> val({"dx"}); return &val; }
   }];
 }
 
