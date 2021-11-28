@@ -51,7 +51,7 @@ class TupleIdentityKernel final : public user_op::OpKernel {
 
 REGISTER_TUPLE_IDENTITY_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_TUPLE_IDENTITY_KERNEL(DeviceType::kGPU)
+REGISTER_TUPLE_IDENTITY_KERNEL(DeviceType::kCUDA)
 #endif
 
 }  // namespace

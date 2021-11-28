@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 template<>
-struct DnnIf<DeviceType::kGPU> {
+struct DnnIf<DeviceType::kCUDA> {
   static void Relu(ep::Stream* stream, const int64_t n, const float* x, float* y);
   static void Relu(ep::Stream* stream, const int64_t n, const double* x, double* y);
   static void Relu(ep::Stream* stream, const int64_t n, const float16* x, float16* y);

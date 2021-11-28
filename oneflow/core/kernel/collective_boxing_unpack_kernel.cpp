@@ -52,7 +52,7 @@ void CollectiveBoxingUnpackKernel::ForwardDataContent(KernelContext* ctx) const 
     }
     transpose_in_dim_vec.insert(transpose_in_dim_vec.begin(), num_ranks);
     std::vector<int32_t> perm;
-    FOR_RANGE(int64_t, i, 1, transpose_in_dim_vec.size()) { perm.push_back(i); }
+    FOR_RANGE(int64_t, i, 1, transpose_in_dim_vec.size()) { perm.emplace_back(i); }
     perm.insert(perm.begin() + src_split_axis, 0);
     auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
         ctx->stream()->device_type(), transpose_in_dim_vec.size());
