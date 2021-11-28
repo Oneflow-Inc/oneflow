@@ -34,8 +34,12 @@ class FuncOp;
 namespace OpTrait {
 
 namespace impl {
+
 OpFoldResult foldIdempotentOfIdenticalPlacement(Operation* op);
 OpFoldResult foldInvolutionOfIdenticalPlacement(Operation* op);
+LogicalResult VerifyIsOpConfCompatible(Operation* op);
+LogicalResult VerifyIsImportCompatible(Operation* op);
+
 }  // namespace impl
 
 template<typename ConcreteType>
@@ -46,36 +50,14 @@ class IsOpConfCompatible : public TraitBase<ConcreteType, IsOpConfCompatible> {
   static StringRef getDeviceNameAttr() { return "device_name"; }
   static StringRef getScopeSymbolIDAttr() { return "scope_symbol_id"; }
   static StringRef getHierarchyAttr() { return "hierarchy"; }
-  static LogicalResult verifyTrait(Operation* op) {
-    for (auto attr : {
-             getOpNameAttr(),
-             getDeviceTagAttr(),
-         }) {
-      if (!op->hasAttrOfType<StringAttr>(attr)) {
-        return op->emitError("expected operation to have attribute: " + attr);
-      }
-    }
-    if (!op->hasAttrOfType<ArrayAttr>(getDeviceNameAttr())) {
-      return op->emitError("expected operation to have attribute: " + getDeviceNameAttr());
-    }
-    return success();
-  }
+  static LogicalResult verifyTrait(Operation* op) { return impl::VerifyIsOpConfCompatible(op); }
 };
 
 template<typename ConcreteType>
-class IsImportCompatible : public TraitBase<ConcreteType, IsOpConfCompatible> {
+class IsImportCompatible : public TraitBase<ConcreteType, IsImportCompatible> {
  public:
   static StringRef getOutputLBNsAttr() { return "output_lbns"; }
-  static LogicalResult verifyTrait(Operation* op) {
-    if (auto output_lbns = op->getAttrOfType<ArrayAttr>(getOutputLBNsAttr())) {
-      if (output_lbns.size() != op->getNumResults()) {
-        return op->emitError("expected number of output lbns to match number of results");
-      }
-    } else {
-      return op->emitError("expected operation to have attribute: " + getOutputLBNsAttr());
-    }
-    return success();
-  }
+  static LogicalResult verifyTrait(Operation* op) { return impl::VerifyIsImportCompatible(op); }
 };
 
 template<typename ConcreteType>
