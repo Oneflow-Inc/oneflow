@@ -35,6 +35,7 @@ option(WITH_COCOAPI "Option to build with COCO API" ON)
 option(BUILD_GIT_VERSION "" ON)
 option(BUILD_PROFILER "" OFF)
 option(OF_SOFTMAX_USE_FAST_MATH "" ON)
+option(OF_LAYER_NORM_USE_FAST_MATH "" ON)
 option(TREAT_WARNINGS_AS_ERRORS "" ON)
 # Reference:
 # https://medium.com/@alasher/colored-c-compiler-output-with-ninja-clang-gcc-10bfe7f2b949
@@ -124,6 +125,9 @@ if (BUILD_PROFILER)
 endif()
 if (OF_SOFTMAX_USE_FAST_MATH)
   add_definitions(-DOF_SOFTMAX_USE_FAST_MATH)
+endif()
+if (OF_LAYER_NORM_USE_FAST_MATH)
+  add_definitions(-DOF_LAYER_NORM_USE_FAST_MATH)
 endif()
 if (OF_FORCE_COLORED_DIAGNOSTICS)
   add_compile_options(
