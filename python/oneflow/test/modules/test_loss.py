@@ -106,19 +106,19 @@ def test_cross_entropy_loss(dim=int):
 @flow.unittest.skip_unless_1n1d()
 class TestCrossEntropyLossModule(flow.unittest.TestCase):
     @autotest()
-    def _test_cross_entropy_loss_with_random_data_dim_2(test_case):
+    def test_cross_entropy_loss_with_random_data_dim_2(test_case):
         return test_cross_entropy_loss(2)
 
     @autotest(check_graph=False)
-    def _test_cross_entropy_loss_with_random_data_dim_3(test_case):
+    def test_cross_entropy_loss_with_random_data_dim_3(test_case):
         return test_cross_entropy_loss(3)
 
     @autotest()
-    def _test_cross_entropy_loss_with_random_data_dim_4(test_case):
+    def test_cross_entropy_loss_with_random_data_dim_4(test_case):
         return test_cross_entropy_loss(4)
 
     @autotest()
-    def _test_cross_entropy_loss_with_random_data_dim_5(test_case):
+    def test_cross_entropy_loss_with_random_data_dim_5(test_case):
         return test_cross_entropy_loss(5)
 
 

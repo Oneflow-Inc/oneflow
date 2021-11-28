@@ -230,7 +230,7 @@ class TestWhere(flow.unittest.TestCase):
         return torch.where(cond > 0, x, y)
 
     @autotest(check_graph=False)
-    def test_flow_where_scalar_x_with_random_data(test_case, check_graph=False):
+    def test_flow_where_scalar_x_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
