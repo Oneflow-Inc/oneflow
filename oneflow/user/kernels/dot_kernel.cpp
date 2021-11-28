@@ -24,7 +24,6 @@ namespace {
 
 using namespace ep::primitive;
 
-template<DeviceType device_type, typename T>
 class DotKernel final : public user_op::OpKernel {
  public:
   DotKernel() = default;
@@ -45,24 +44,15 @@ class DotKernel final : public user_op::OpKernel {
     std::vector<int64_t> dim1{1, n};
     std::vector<int64_t> dim2{n, 1};
     std::vector<int64_t> dim3{1, 1};
-    primitive->Launch(ctx->stream(), 1, 2, dim1.data(), x, 2, dim2.data(), y, 1, 2, dim3.data(),
-                      out);
+    primitive->Launch(ctx->stream(), 1, 2, dim1.data(), x->dptr(), 2, dim2.data(), y->dptr(), 1, 2,
+                      dim3.data(), out->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DOT_KERNEL(device, dtype)                                             \
-  REGISTER_USER_KERNEL("dot").SetCreateFn<DotKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == device)                                             \
-      && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
-
-REGISTER_DOT_KERNEL(DeviceType::kCPU, float)
-REGISTER_DOT_KERNEL(DeviceType::kCPU, double)
-
-#ifdef WITH_CUDA
-REGISTER_DOT_KERNEL(DeviceType::kGPU, float)
-REGISTER_DOT_KERNEL(DeviceType::kGPU, double)
-#endif
+#define REGISTER_DOT_KERNEL(device, dtype)                                                  \
+  REGISTER_USER_KERNEL("dot").SetCreateFn<DotKernel>().SetIsMatchedHob(AddPrimitiveExists() \
+                                                                       == true);
 
 }  // namespace
 

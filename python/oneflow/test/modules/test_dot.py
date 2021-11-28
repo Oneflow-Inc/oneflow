@@ -19,7 +19,7 @@ from collections import OrderedDict
 import numpy as np
 
 from test_util import GenArgList
-import oneflow.experimental as flow
+import oneflow as flow
 
 
 def _test_dot_forward(test_case, device, dtype):
@@ -35,10 +35,7 @@ def _test_dot_forward(test_case, device, dtype):
     test_case.assertTrue(np.allclose(np_out, out.numpy(), rtol=1e-04, atol=1e-10))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestDot(flow.unittest.TestCase):
     def test_fw_dot(test_case):
         arg_dict = OrderedDict()
@@ -49,6 +46,7 @@ class TestDot(flow.unittest.TestCase):
         arg_dict["dtype"] = [np.float32, np.double]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
 
 if __name__ == "__main__":
     unittest.main()
