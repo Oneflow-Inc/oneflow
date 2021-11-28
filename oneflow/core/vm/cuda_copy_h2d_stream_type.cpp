@@ -41,9 +41,15 @@ void CudaCopyH2DStreamType::DeleteInstructionStatus(const Stream& stream,
   ptr->~CudaOptionalEventRecordStatusQuerier();
 }
 
-bool CudaCopyH2DStreamType::QueryInstructionStatusDone(
+bool CudaCopyH2DStreamType::QueryInstructionStatusLaunched(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
-  return CudaOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer().data())->done();
+  return CudaOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer().data())->QueryLaunched();
+}
+
+bool CudaCopyH2DStreamType::QueryInstructionStatusDoneAfterLaunched(
+    const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
+  return CudaOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer().data())
+      ->QueryDoneAfterLaunched();
 }
 
 void CudaCopyH2DStreamType::Compute(Instruction* instruction) const {

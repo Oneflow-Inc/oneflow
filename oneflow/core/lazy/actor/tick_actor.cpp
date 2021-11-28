@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/lazy/actor/naive_actor.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 
@@ -24,7 +25,10 @@ class TickActor final : public NaiveActor {
   ~TickActor() = default;
 
  private:
-  void Act() override {}
+  void Act() override {
+    OF_PROFILER_RANGE_PUSH(std::string("tick-") + exec_kernel_vec().at(0).kernel->op_conf().name());
+    OF_PROFILER_RANGE_POP();
+  }
 };
 
 REGISTER_ACTOR(kTick, TickActor);

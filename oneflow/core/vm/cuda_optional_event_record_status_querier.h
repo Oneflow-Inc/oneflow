@@ -32,7 +32,8 @@ class CudaOptionalEventRecordStatusQuerier {
  public:
   ~CudaOptionalEventRecordStatusQuerier();
 
-  bool done() const { return launched_ && (!cuda_event_ || event_completed()); }
+  bool QueryLaunched() const { return launched_; }
+  bool QueryDoneAfterLaunched() const { return !cuda_event_ || event_completed(); }
   void SetLaunched(DeviceCtx* device_ctx);
 
   void reset_cuda_event(const std::shared_ptr<CudaEvent>& cuda_event) { cuda_event_ = cuda_event; }

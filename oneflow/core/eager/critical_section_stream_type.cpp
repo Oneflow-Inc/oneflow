@@ -41,9 +41,15 @@ void CriticalSectionStreamType::DeleteInstructionStatus(
   ptr->~CriticalSectionStatusQuerier();
 }
 
-bool CriticalSectionStreamType::QueryInstructionStatusDone(
+bool CriticalSectionStreamType::QueryInstructionStatusLaunched(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
-  return CriticalSectionStatusQuerier::Cast(status_buffer.buffer().data())->QueryDone();
+  return CriticalSectionStatusQuerier::Cast(status_buffer.buffer().data())->QueryLaunched();
+}
+
+bool CriticalSectionStreamType::QueryInstructionStatusDoneAfterLaunched(
+    const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
+  return CriticalSectionStatusQuerier::Cast(status_buffer.buffer().data())
+      ->QueryDoneAfterLaunched();
 }
 
 void CriticalSectionStreamType::Compute(Instruction* instruction) const {

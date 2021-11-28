@@ -42,8 +42,8 @@ void CpuStreamType::DeleteInstructionStatus(const Stream& stream,
   ptr->~NaiveInstrStatusQuerier();
 }
 
-bool CpuStreamType::QueryInstructionStatusDone(const Stream& stream,
-                                               const InstructionStatusBuffer& status_buffer) const {
+bool CpuStreamType::QueryInstructionStatusLaunched(
+    const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
   return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
