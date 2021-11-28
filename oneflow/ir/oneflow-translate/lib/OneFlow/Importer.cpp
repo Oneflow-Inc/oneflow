@@ -367,18 +367,24 @@ LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf)
 }
 
 template<template<typename T> class Trait>
-const std::vector<std::string>* GetFullKeys(UserOpCompatible&);
+const std::vector<std::string>* GetFullKeys(UserOpCompatible& uc, Operation* op);
 
 template<>
-const std::vector<std::string>* GetFullKeys<OpTrait::AttrSizedOperandSegments>(
-    UserOpCompatible& op) {
-  return op.inputKeys();
+const std::vector<std::string>* GetFullKeys<OpTrait::AttrSizedOperandSegments>(UserOpCompatible& uc,
+                                                                               Operation* op) {
+  if (auto alternative_name = dyn_cast<HasAlternativeOpTypeName>(op)) {
+    return alternative_name.inputKeys();
+  }
+  return uc.inputKeys();
 }
 
 template<>
-const std::vector<std::string>* GetFullKeys<OpTrait::AttrSizedResultSegments>(
-    UserOpCompatible& op) {
-  return op.outputKeys();
+const std::vector<std::string>* GetFullKeys<OpTrait::AttrSizedResultSegments>(UserOpCompatible& uc,
+                                                                              Operation* op) {
+  if (auto alternative_name = dyn_cast<HasAlternativeOpTypeName>(op)) {
+    return alternative_name.outputKeys();
+  }
+  return uc.outputKeys();
 }
 
 template<template<typename T> class Trait>
@@ -432,7 +438,7 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
     op->emitError("interface UserOpCompatible not supported");
     return failure();
   }
-  full_keys = GetFullKeys<Trait>(uc);
+  full_keys = GetFullKeys<Trait>(uc, op);
   if (op->hasTrait<Trait>()) {
     const StringRef attr_name = GetSegmentSizeAttr<Trait>();
     const DenseIntElementsAttr& size_attr = op->getAttrOfType<DenseIntElementsAttr>(attr_name);

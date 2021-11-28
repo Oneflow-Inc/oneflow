@@ -39,6 +39,16 @@ def AlternativeOpTypeNameInterface : OpInterface<"HasAlternativeOpTypeName"> {
     StaticInterfaceMethod<"",
         "std::string", "getOriginalOpTypeName", (ins)
     >,
+    StaticInterfaceMethod<"",
+        "const std::vector<std::string>*", "inputKeys", (ins), [{
+        static std::vector<std::string> val(mlir::oneflow::support::GetInputKeys(ConcreteOp::getOriginalOpTypeName()));
+        return &val;
+    }]>,
+    StaticInterfaceMethod<"",
+        "const std::vector<std::string>*", "outputKeys", (ins), [{
+        static std::vector<std::string> val(mlir::oneflow::support::GetOutputKeys(ConcreteOp::getOriginalOpTypeName()));
+        return &val;
+    }]>,
   ];
 }
 
