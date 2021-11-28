@@ -187,10 +187,10 @@ class OneFlow_NormalizationAddReluBaseOp : OneFlow_BaseOp<"normalization_add_rel
     Optional<AnyType>:$inv_variance
   );
   let attrs = (ins
-    SI32Attr:$axis,
-    F32Attr:$epsilon,
-    BoolAttr:$training,
-    F32Attr:$momentum
+    DefaultValuedAttr<SI32Attr, "0">:$axis,
+    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon,
+    DefaultValuedAttr<BoolAttr, "false">:$training,
+    DefaultValuedAttr<F32Attr, "0.000000">:$momentum
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes,
@@ -219,7 +219,7 @@ def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", [NoSideEffect, DeclareOpInter
     AnyType:$out
   );
   let attrs = (ins
-    SI32Attr:$axis
+    DefaultValuedAttr<SI32Attr, "0">:$axis
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b"}); return &val; }
@@ -250,7 +250,7 @@ def OneFlow_CeluGradOp : OneFlow_BaseOp<"celu_grad", [NoSideEffect, DeclareOpInt
     AnyType:$dx
   );
   let attrs = (ins
-    F64Attr:$alpha
+    DefaultValuedAttr<F64Attr, "0.000000">:$alpha
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
@@ -267,7 +267,7 @@ def OneFlow_DiagGradOp : OneFlow_BaseOp<"diag_grad", [NoSideEffect, DeclareOpInt
     AnyType:$dx
   );
   let attrs = (ins
-    SI32Attr:$diagonal
+    DefaultValuedAttr<SI32Attr, "0">:$diagonal
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "in"}); return &val; }
@@ -284,7 +284,7 @@ def OneFlow_DropoutGradOp : OneFlow_BaseOp<"dropout_grad", [NoSideEffect, Declar
     AnyType:$dx
   );
   let attrs = (ins
-    F32Attr:$scale
+    DefaultValuedAttr<F32Attr, "0.000000">:$scale
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "mask"}); return &val; }
@@ -329,7 +329,7 @@ def OneFlow_EluGradOp : OneFlow_BaseOp<"elu_grad", [NoSideEffect, DeclareOpInter
     AnyType:$dx
   );
   let attrs = (ins
-    F64Attr:$alpha
+    DefaultValuedAttr<F64Attr, "0.000000">:$alpha
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
@@ -376,7 +376,7 @@ def OneFlow_GridSampleOp : OneFlow_BaseOp<"grid_sample", [NoSideEffect, DeclareO
   let attrs = (ins
     StrAttr:$interpolation_mode,
     StrAttr:$padding_mode,
-    BoolAttr:$align_corners
+    DefaultValuedAttr<BoolAttr, "false">:$align_corners
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "grid"}); return &val; }
@@ -421,8 +421,8 @@ def OneFlow_L1L2RegularizeGradientOp : OneFlow_BaseOp<"l1_l2_regularize_gradient
     AnyType:$out
   );
   let attrs = (ins
-    F32Attr:$l1,
-    F32Attr:$l2
+    DefaultValuedAttr<F32Attr, "0.000000">:$l1,
+    DefaultValuedAttr<F32Attr, "0.000000">:$l2
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff"}); return &val; }
@@ -439,7 +439,7 @@ def OneFlow_LeakyReluGradOp : OneFlow_BaseOp<"leaky_relu_grad", [NoSideEffect, D
     AnyType:$dx
   );
   let attrs = (ins
-    F32Attr:$alpha
+    DefaultValuedAttr<F32Attr, "0.000000">:$alpha
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
@@ -456,10 +456,10 @@ def OneFlow_MaskedFillOp : OneFlow_BaseOp<"masked_fill", [NoSideEffect, DeclareO
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$has_int_operand,
-    BoolAttr:$has_float_operand,
-    SI64Attr:$int_operand,
-    F64Attr:$float_operand
+    DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$int_operand,
+    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "mask"}); return &val; }
@@ -504,9 +504,9 @@ def OneFlow_NarrowGradOp : OneFlow_BaseOp<"narrow_grad", [NoSideEffect, DeclareO
     AnyType:$dx
   );
   let attrs = (ins
-    SI64Attr:$dim,
-    SI64Attr:$start,
-    SI64Attr:$length
+    DefaultValuedAttr<SI64Attr, "0">:$dim,
+    DefaultValuedAttr<SI64Attr, "0">:$start,
+    DefaultValuedAttr<SI64Attr, "0">:$length
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "like"}); return &val; }
@@ -621,9 +621,9 @@ def OneFlow_UnfoldTensorGradOp : OneFlow_BaseOp<"unfold_tensor_grad", [NoSideEff
     AnyType:$dx
   );
   let attrs = (ins
-    SI32Attr:$dimension,
-    SI32Attr:$size,
-    SI32Attr:$step
+    DefaultValuedAttr<SI32Attr, "0">:$dimension,
+    DefaultValuedAttr<SI32Attr, "0">:$size,
+    DefaultValuedAttr<SI32Attr, "0">:$step
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
@@ -1006,7 +1006,7 @@ def OneFlow_ConvBiasGradOp : OneFlow_BaseOp<"conv_bias_grad", [NoSideEffect, Dec
   );
   let attrs = (ins
     StrAttr:$data_format,
-    SI32Attr:$num_spatial_dims
+    DefaultValuedAttr<SI32Attr, "0">:$num_spatial_dims
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
@@ -1025,13 +1025,13 @@ def OneFlow_ConvDataGradOp : OneFlow_BaseOp<"conv_data_grad", [NoSideEffect, Dec
     AnyType:$dx
   );
   let attrs = (ins
-    SI32Attr:$num_spatial_dims,
+    DefaultValuedAttr<SI32Attr, "0">:$num_spatial_dims,
     SI32ArrayAttr:$padding_before,
     StrAttr:$data_format,
     SI32ArrayAttr:$kernel_size,
     SI32ArrayAttr:$strides,
     SI32ArrayAttr:$dilation_rate,
-    SI32Attr:$groups
+    DefaultValuedAttr<SI32Attr, "0">:$groups
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "filter", "x_like", "_add_to_output"}); return &val; }
@@ -1048,13 +1048,13 @@ def OneFlow_ConvFilterGradOp : OneFlow_BaseOp<"conv_filter_grad", [NoSideEffect,
     AnyType:$filter_diff
   );
   let attrs = (ins
-    SI32Attr:$num_spatial_dims,
+    DefaultValuedAttr<SI32Attr, "0">:$num_spatial_dims,
     SI32ArrayAttr:$padding_before,
     StrAttr:$data_format,
     SI32ArrayAttr:$kernel_size,
     SI32ArrayAttr:$strides,
     SI32ArrayAttr:$dilation_rate,
-    SI32Attr:$groups
+    DefaultValuedAttr<SI32Attr, "0">:$groups
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
@@ -1071,14 +1071,14 @@ def OneFlow_Deconv1DOp : OneFlow_BaseOp<"deconv1d", [NoSideEffect, DeclareOpInte
     AnyType:$out
   );
   let attrs = (ins
-    SI32Attr:$filters,
+    DefaultValuedAttr<SI32Attr, "0">:$filters,
     SI32ArrayAttr:$padding_before,
     StrAttr:$data_format,
     SI32ArrayAttr:$kernel_size,
     SI32ArrayAttr:$output_padding,
     SI32ArrayAttr:$strides,
     SI32ArrayAttr:$dilation_rate,
-    SI32Attr:$groups
+    DefaultValuedAttr<SI32Attr, "1">:$groups
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "weight"}); return &val; }
@@ -1095,14 +1095,14 @@ def OneFlow_Deconv2DOp : OneFlow_BaseOp<"deconv2d", [NoSideEffect, DeclareOpInte
     AnyType:$out
   );
   let attrs = (ins
-    SI32Attr:$filters,
+    DefaultValuedAttr<SI32Attr, "0">:$filters,
     SI32ArrayAttr:$padding_before,
     StrAttr:$data_format,
     SI32ArrayAttr:$kernel_size,
     SI32ArrayAttr:$output_padding,
     SI32ArrayAttr:$strides,
     SI32ArrayAttr:$dilation_rate,
-    SI32Attr:$groups
+    DefaultValuedAttr<SI32Attr, "1">:$groups
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "weight"}); return &val; }
@@ -1119,14 +1119,14 @@ def OneFlow_Deconv3DOp : OneFlow_BaseOp<"deconv3d", [NoSideEffect, DeclareOpInte
     AnyType:$out
   );
   let attrs = (ins
-    SI32Attr:$filters,
+    DefaultValuedAttr<SI32Attr, "0">:$filters,
     SI32ArrayAttr:$padding_before,
     StrAttr:$data_format,
     SI32ArrayAttr:$kernel_size,
     SI32ArrayAttr:$output_padding,
     SI32ArrayAttr:$strides,
     SI32ArrayAttr:$dilation_rate,
-    SI32Attr:$groups
+    DefaultValuedAttr<SI32Attr, "1">:$groups
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "weight"}); return &val; }
@@ -1190,7 +1190,7 @@ def OneFlow_BinaryCrossEntropyWithLogitsOp : OneFlow_BaseOp<"binary_cross_entrop
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$has_pos_weight,
+    DefaultValuedAttr<BoolAttr, "false">:$has_pos_weight,
     StrAttr:$reduction
   );
   let trait_attrs = (ins
@@ -1214,7 +1214,7 @@ def OneFlow_BinaryCrossEntropyWithLogitsGradOp : OneFlow_BaseOp<"binary_cross_en
     AnyType:$dx
   );
   let attrs = (ins
-    BoolAttr:$has_pos_weight,
+    DefaultValuedAttr<BoolAttr, "false">:$has_pos_weight,
     StrAttr:$reduction
   );
   let trait_attrs = (ins
@@ -1264,7 +1264,7 @@ def OneFlow_SparseCrossEntropyOp : OneFlow_BaseOp<"sparse_cross_entropy", [NoSid
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$depth
+    DefaultValuedAttr<SI64Attr, "0">:$depth
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "label"}); return &val; }
@@ -1282,7 +1282,7 @@ def OneFlow_SparseCrossEntropyGradOp : OneFlow_BaseOp<"sparse_cross_entropy_grad
     AnyType:$prediction_diff
   );
   let attrs = (ins
-    SI64Attr:$depth
+    DefaultValuedAttr<SI64Attr, "0">:$depth
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "label", "dy"}); return &val; }
@@ -1299,7 +1299,7 @@ def OneFlow_SparseCrossEntropyMsOp : OneFlow_BaseOp<"sparse_cross_entropy_ms", [
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$depth
+    DefaultValuedAttr<SI64Attr, "0">:$depth
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "label"}); return &val; }
@@ -1317,7 +1317,7 @@ def OneFlow_SparseCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_cross_entropy_ms
     AnyType:$prediction_diff
   );
   let attrs = (ins
-    SI64Attr:$depth
+    DefaultValuedAttr<SI64Attr, "0">:$depth
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "label", "dy"}); return &val; }
@@ -1384,15 +1384,15 @@ def OneFlow_COCOReaderOp : OneFlow_BaseOp<"COCOReader", [NoSideEffect, DeclareOp
     AnyType:$gt_segm_index
   );
   let attrs = (ins
-    SI64Attr:$session_id,
+    DefaultValuedAttr<SI64Attr, "0">:$session_id,
     StrAttr:$annotation_file,
     StrAttr:$image_dir,
-    SI64Attr:$batch_size,
-    BoolAttr:$shuffle_after_epoch,
-    SI64Attr:$random_seed,
-    BoolAttr:$group_by_ratio,
-    BoolAttr:$remove_images_without_annotations,
-    BoolAttr:$stride_partition,
+    DefaultValuedAttr<SI64Attr, "0">:$batch_size,
+    DefaultValuedAttr<BoolAttr, "true">:$shuffle_after_epoch,
+    DefaultValuedAttr<SI64Attr, "-1">:$random_seed,
+    DefaultValuedAttr<BoolAttr, "true">:$group_by_ratio,
+    DefaultValuedAttr<BoolAttr, "true">:$remove_images_without_annotations,
+    DefaultValuedAttr<BoolAttr, "false">:$stride_partition,
     StrArrayAttr:$nd_sbp
   );
   let extraClassDeclaration = [{
@@ -1407,14 +1407,14 @@ def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", [NoSideEffect, D
   );
   let attrs = (ins
     StrAttr:$data_dir,
-    SI32Attr:$data_part_num,
-    SI32Attr:$batch_size,
-    StrAttr:$part_name_prefix,
-    SI32Attr:$part_name_suffix_length,
-    BoolAttr:$random_shuffle,
-    SI64Attr:$seed,
-    SI32Attr:$shuffle_buffer_size,
-    BoolAttr:$shuffle_after_epoch,
+    DefaultValuedAttr<SI32Attr, "0">:$data_part_num,
+    DefaultValuedAttr<SI32Attr, "0">:$batch_size,
+    DefaultValuedAttr<StrAttr, "\"part-\"">:$part_name_prefix,
+    DefaultValuedAttr<SI32Attr, "-1">:$part_name_suffix_length,
+    DefaultValuedAttr<BoolAttr, "false">:$random_shuffle,
+    DefaultValuedAttr<SI64Attr, "-1">:$seed,
+    DefaultValuedAttr<SI32Attr, "1024">:$shuffle_buffer_size,
+    DefaultValuedAttr<BoolAttr, "false">:$shuffle_after_epoch,
     StrArrayAttr:$nd_sbp
   );
   let extraClassDeclaration = [{
@@ -1429,13 +1429,13 @@ def OneFlow_OneRecReaderOp : OneFlow_BaseOp<"OneRecReader", [NoSideEffect, Decla
   );
   let attrs = (ins
     StrArrayAttr:$files,
-    SI32Attr:$batch_size,
-    BoolAttr:$random_shuffle,
-    StrAttr:$shuffle_mode,
-    SI64Attr:$seed,
-    SI32Attr:$shuffle_buffer_size,
-    BoolAttr:$shuffle_after_epoch,
-    BoolAttr:$verify_example
+    DefaultValuedAttr<SI32Attr, "0">:$batch_size,
+    DefaultValuedAttr<BoolAttr, "false">:$random_shuffle,
+    DefaultValuedAttr<StrAttr, "\"instance\"">:$shuffle_mode,
+    DefaultValuedAttr<SI64Attr, "-1">:$seed,
+    DefaultValuedAttr<SI32Attr, "1024">:$shuffle_buffer_size,
+    DefaultValuedAttr<BoolAttr, "false">:$shuffle_after_epoch,
+    DefaultValuedAttr<BoolAttr, "true">:$verify_example
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
@@ -1453,7 +1453,7 @@ def OneFlow_CtcGreedyDecoderOp : OneFlow_BaseOp<"ctc_greedy_decoder", [NoSideEff
     AnyType:$neg_sum_logits
   );
   let attrs = (ins
-    BoolAttr:$merge_repeated
+    DefaultValuedAttr<BoolAttr, "false">:$merge_repeated
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"log_probs", "input_lengths"}); return &val; }
@@ -1470,15 +1470,15 @@ def OneFlow_MegatronGptMmapDataLoaderOp : OneFlow_BaseOp<"megatron_gpt_mmap_data
   );
   let attrs = (ins
     StrAttr:$data_file_prefix,
-    SI64Attr:$seq_length,
-    SI64Attr:$label_length,
-    SI64Attr:$num_samples,
-    SI64Attr:$batch_size,
+    DefaultValuedAttr<SI64Attr, "0">:$seq_length,
+    DefaultValuedAttr<SI64Attr, "1">:$label_length,
+    DefaultValuedAttr<SI64Attr, "0">:$num_samples,
+    DefaultValuedAttr<SI64Attr, "0">:$batch_size,
     StrAttr:$dtype,
     SI64ArrayAttr:$split_sizes,
-    SI64Attr:$split_index,
-    BoolAttr:$shuffle,
-    SI64Attr:$random_seed,
+    DefaultValuedAttr<SI64Attr, "0">:$split_index,
+    DefaultValuedAttr<BoolAttr, "false">:$shuffle,
+    DefaultValuedAttr<SI64Attr, "0">:$random_seed,
     StrArrayAttr:$nd_sbp
   );
   let extraClassDeclaration = [{
@@ -1510,19 +1510,19 @@ def OneFlow_OfrecordImageClassificationReaderOp : OneFlow_BaseOp<"ofrecord_image
   );
   let attrs = (ins
     StrAttr:$data_dir,
-    SI32Attr:$data_part_num,
-    SI32Attr:$batch_size,
-    StrAttr:$part_name_prefix,
-    SI32Attr:$part_name_suffix_length,
-    BoolAttr:$random_shuffle,
-    SI64Attr:$seed,
-    SI32Attr:$shuffle_buffer_size,
-    BoolAttr:$shuffle_after_epoch,
-    StrAttr:$color_space,
-    StrAttr:$image_feature_name,
-    StrAttr:$label_feature_name,
-    SI32Attr:$decode_buffer_size_per_thread,
-    SI32Attr:$num_decode_threads_per_machine
+    DefaultValuedAttr<SI32Attr, "0">:$data_part_num,
+    DefaultValuedAttr<SI32Attr, "0">:$batch_size,
+    DefaultValuedAttr<StrAttr, "\"part-\"">:$part_name_prefix,
+    DefaultValuedAttr<SI32Attr, "-1">:$part_name_suffix_length,
+    DefaultValuedAttr<BoolAttr, "false">:$random_shuffle,
+    DefaultValuedAttr<SI64Attr, "-1">:$seed,
+    DefaultValuedAttr<SI32Attr, "1024">:$shuffle_buffer_size,
+    DefaultValuedAttr<BoolAttr, "false">:$shuffle_after_epoch,
+    DefaultValuedAttr<StrAttr, "\"BGR\"">:$color_space,
+    DefaultValuedAttr<StrAttr, "\"encoded\"">:$image_feature_name,
+    DefaultValuedAttr<StrAttr, "\"class/label\"">:$label_feature_name,
+    DefaultValuedAttr<SI32Attr, "8">:$decode_buffer_size_per_thread,
+    DefaultValuedAttr<SI32Attr, "0">:$num_decode_threads_per_machine
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
@@ -1539,7 +1539,7 @@ def OneFlow_OfrecordImageDecoderOp : OneFlow_BaseOp<"ofrecord_image_decoder", [N
   );
   let attrs = (ins
     StrAttr:$name,
-    StrAttr:$color_space
+    DefaultValuedAttr<StrAttr, "\"BGR\"">:$color_space
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -1556,10 +1556,10 @@ def OneFlow_OfrecordImageDecoderRandomCropOp : OneFlow_BaseOp<"ofrecord_image_de
   );
   let attrs = (ins
     StrAttr:$name,
-    StrAttr:$color_space,
-    SI32Attr:$num_attempts,
-    SI64Attr:$seed,
-    BoolAttr:$has_seed,
+    DefaultValuedAttr<StrAttr, "\"BGR\"">:$color_space,
+    DefaultValuedAttr<SI32Attr, "10">:$num_attempts,
+    DefaultValuedAttr<SI64Attr, "-1">:$seed,
+    DefaultValuedAttr<BoolAttr, "false">:$has_seed,
     F32ArrayAttr:$random_area,
     F32ArrayAttr:$random_aspect_ratio
   );
@@ -1580,8 +1580,8 @@ def OneFlow_OfrecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", [NoSid
     StrAttr:$name,
     AnyI64ElementsAttr:$shape,
     StrAttr:$data_type,
-    BoolAttr:$dim1_varying_length,
-    BoolAttr:$truncate
+    DefaultValuedAttr<BoolAttr, "false">:$dim1_varying_length,
+    DefaultValuedAttr<BoolAttr, "false">:$truncate
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -1600,10 +1600,10 @@ def OneFlow_OnerecDecoderOp : OneFlow_BaseOp<"onerec_decoder", [NoSideEffect, De
     StrAttr:$key,
     StrAttr:$data_type,
     AnyI64ElementsAttr:$static_shape,
-    BoolAttr:$is_dynamic,
-    BoolAttr:$has_reshape,
+    DefaultValuedAttr<BoolAttr, "false">:$is_dynamic,
+    DefaultValuedAttr<BoolAttr, "false">:$has_reshape,
     AnyI64ElementsAttr:$reshape,
-    BoolAttr:$has_batch_padding,
+    DefaultValuedAttr<BoolAttr, "false">:$has_batch_padding,
     AnyI64ElementsAttr:$batch_padding
   );
   let extraClassDeclaration = [{
@@ -1629,7 +1629,7 @@ def OneFlow_InTopKOp : OneFlow_BaseOp<"in_top_k", [NoSideEffect, DeclareOpInterf
     AnyType:$out
   );
   let attrs = (ins
-    SI32Attr:$k
+    DefaultValuedAttr<SI32Attr, "0">:$k
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"targets", "predictions"}); return &val; }
@@ -1645,8 +1645,8 @@ def OneFlow_NmsOp : OneFlow_BaseOp<"nms", [NoSideEffect, DeclareOpInterfaceMetho
     AnyType:$out
   );
   let attrs = (ins
-    F32Attr:$iou_threshold,
-    SI32Attr:$keep_n
+    DefaultValuedAttr<F32Attr, "0.000000">:$iou_threshold,
+    DefaultValuedAttr<SI32Attr, "0">:$keep_n
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -1735,8 +1735,8 @@ def OneFlow_TopKOp : OneFlow_BaseOp<"top_k", [NoSideEffect, DeclareOpInterfaceMe
     AnyType:$out
   );
   let attrs = (ins
-    SI32Attr:$k,
-    BoolAttr:$sorted
+    DefaultValuedAttr<SI32Attr, "0">:$k,
+    DefaultValuedAttr<BoolAttr, "false">:$sorted
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -1760,7 +1760,7 @@ def OneFlow_EagerBToSOp : OneFlow_BaseOp<"eager_b_to_s", [NoSideEffect, DeclareO
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$out_split_axis,
+    DefaultValuedAttr<SI64Attr, "-1">:$out_split_axis,
     StrAttr:$in_parallel_conf,
     StrAttr:$out_parallel_conf,
     AnyI64ElementsAttr:$shape
@@ -1779,8 +1779,8 @@ def OneFlow_EagerNaiveSToSOp : OneFlow_BaseOp<"eager_naive_s_to_s", [NoSideEffec
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$in_split_axis,
-    SI64Attr:$out_split_axis,
+    DefaultValuedAttr<SI64Attr, "-1">:$in_split_axis,
+    DefaultValuedAttr<SI64Attr, "-1">:$out_split_axis,
     StrAttr:$in_parallel_conf,
     StrAttr:$out_parallel_conf,
     AnyI64ElementsAttr:$shape
@@ -1816,7 +1816,7 @@ def OneFlow_EagerNcclAllReduceOp : OneFlow_BaseOp<"eager_nccl_all_reduce", [NoSi
   );
   let attrs = (ins
     StrAttr:$parallel_conf,
-    BoolAttr:$async_launch
+    DefaultValuedAttr<BoolAttr, "false">:$async_launch
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -1833,7 +1833,7 @@ def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", [NoSid
   );
   let attrs = (ins
     StrAttr:$parallel_conf,
-    SI64Attr:$root
+    DefaultValuedAttr<SI64Attr, "0">:$root
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -1850,7 +1850,7 @@ def OneFlow_EagerNcclReduceOp : OneFlow_BaseOp<"eager_nccl_reduce", [NoSideEffec
   );
   let attrs = (ins
     StrAttr:$parallel_conf,
-    SI64Attr:$root
+    DefaultValuedAttr<SI64Attr, "0">:$root
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -1867,7 +1867,7 @@ def OneFlow_EagerNcclReduceScatterOp : OneFlow_BaseOp<"eager_nccl_reduce_scatter
   );
   let attrs = (ins
     StrAttr:$parallel_conf,
-    StrAttr:$op_type
+    DefaultValuedAttr<StrAttr, "\"sum\"">:$op_type
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -1883,8 +1883,8 @@ def OneFlow_EagerNcclS2sOp : OneFlow_BaseOp<"eager_nccl_s2s", [NoSideEffect, Dec
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$in_split_axis,
-    SI64Attr:$out_split_axis,
+    DefaultValuedAttr<SI64Attr, "-1">:$in_split_axis,
+    DefaultValuedAttr<SI64Attr, "-1">:$out_split_axis,
     StrAttr:$parallel_conf
   );
   let extraClassDeclaration = [{
@@ -1919,7 +1919,7 @@ def OneFlow_EagerPToSOp : OneFlow_BaseOp<"eager_p_to_s", [NoSideEffect, DeclareO
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$out_split_axis,
+    DefaultValuedAttr<SI64Attr, "-1">:$out_split_axis,
     StrAttr:$in_parallel_conf,
     StrAttr:$out_parallel_conf,
     AnyI64ElementsAttr:$shape
@@ -1938,7 +1938,7 @@ def OneFlow_EagerSToBOp : OneFlow_BaseOp<"eager_s_to_b", [NoSideEffect, DeclareO
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$in_split_axis,
+    DefaultValuedAttr<SI64Attr, "-1">:$in_split_axis,
     StrAttr:$in_parallel_conf,
     StrAttr:$out_parallel_conf,
     AnyI64ElementsAttr:$shape
@@ -1957,7 +1957,7 @@ def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", [NoS
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$in_split_axis,
+    DefaultValuedAttr<SI64Attr, "-1">:$in_split_axis,
     StrAttr:$parallel_conf
   );
   let extraClassDeclaration = [{
@@ -1990,9 +1990,9 @@ def OneFlow_CudnnFusedNormalizationAddReluOp : OneFlow_BaseOp<"cudnn_fused_norma
     Optional<AnyType>:$inv_variance
   );
   let attrs = (ins
-    SI32Attr:$axis,
-    F32Attr:$epsilon,
-    F32Attr:$momentum
+    DefaultValuedAttr<SI32Attr, "0">:$axis,
+    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon,
+    DefaultValuedAttr<F32Attr, "0.000000">:$momentum
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes,
@@ -2022,8 +2022,8 @@ def OneFlow_CudnnFusedNormalizationAddReluGradOp : OneFlow_BaseOp<"cudnn_fused_n
     Optional<AnyType>:$addend_diff
   );
   let attrs = (ins
-    SI32Attr:$axis,
-    F32Attr:$epsilon
+    DefaultValuedAttr<SI32Attr, "0">:$axis,
+    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy", "mean", "inv_variance", "gamma", "beta", "reserve_space", "y"}); return &val; }
@@ -2040,7 +2040,7 @@ def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", [NoSideEf
     AnyType:$out
   );
   let attrs = (ins
-    SI32Attr:$axis
+    DefaultValuedAttr<SI32Attr, "0">:$axis
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b"}); return &val; }
@@ -2058,7 +2058,7 @@ def OneFlow_FusedBiasAddGeluGradOp : OneFlow_BaseOp<"fused_bias_add_gelu_grad", 
     AnyType:$dx
   );
   let attrs = (ins
-    SI32Attr:$axis
+    DefaultValuedAttr<SI32Attr, "0">:$axis
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b", "dy"}); return &val; }
@@ -2077,8 +2077,8 @@ def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale"
     AnyType:$out
   );
   let attrs = (ins
-    SI32Attr:$axis,
-    F32Attr:$scale
+    DefaultValuedAttr<SI32Attr, "0">:$axis,
+    DefaultValuedAttr<F32Attr, "0.000000">:$scale
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b", "mask", "_add_to_output"}); return &val; }
@@ -2095,7 +2095,7 @@ def OneFlow_FusedCastScaleOp : OneFlow_BaseOp<"fused_cast_scale", [NoSideEffect,
     AnyType:$y
   );
   let attrs = (ins
-    F64Attr:$scale
+    DefaultValuedAttr<F64Attr, "1.000000">:$scale
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "scale_by_tensor"}); return &val; }
@@ -2112,8 +2112,8 @@ def OneFlow_FusedScaleMaskSoftmaxOp : OneFlow_BaseOp<"fused_scale_mask_softmax",
     AnyType:$y
   );
   let attrs = (ins
-    F32Attr:$scale_value,
-    F32Attr:$mask_fill_value
+    DefaultValuedAttr<F32Attr, "1.000000">:$scale_value,
+    DefaultValuedAttr<F32Attr, "0.000000">:$mask_fill_value
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "mask"}); return &val; }
@@ -2132,9 +2132,9 @@ def OneFlow_FusedScaleMaskSoftmaxDropoutOp : OneFlow_BaseOp<"fused_scale_mask_so
     AnyType:$softmax_y
   );
   let attrs = (ins
-    F32Attr:$scale_value,
-    F32Attr:$mask_fill_value,
-    F32Attr:$dropout_scale_value
+    DefaultValuedAttr<F32Attr, "1.000000">:$scale_value,
+    DefaultValuedAttr<F32Attr, "0.000000">:$mask_fill_value,
+    DefaultValuedAttr<F32Attr, "1.000000">:$dropout_scale_value
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "mask", "dropout_mask"}); return &val; }
@@ -2153,8 +2153,8 @@ def OneFlow_FusedScaleMaskSoftmaxDropoutGradOp : OneFlow_BaseOp<"fused_scale_mas
     AnyType:$dx
   );
   let attrs = (ins
-    F32Attr:$scale_value,
-    F32Attr:$dropout_scale_value
+    DefaultValuedAttr<F32Attr, "0.000000">:$scale_value,
+    DefaultValuedAttr<F32Attr, "0.000000">:$dropout_scale_value
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"softmax_y", "dy", "mask", "dropout_mask"}); return &val; }
@@ -2172,7 +2172,7 @@ def OneFlow_FusedScaleMaskSoftmaxGradOp : OneFlow_BaseOp<"fused_scale_mask_softm
     AnyType:$dx
   );
   let attrs = (ins
-    F32Attr:$scale_value
+    DefaultValuedAttr<F32Attr, "0.000000">:$scale_value
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"y", "dy", "mask"}); return &val; }
@@ -2188,13 +2188,13 @@ def OneFlow_FusedScaleTrilOp : OneFlow_BaseOp<"fused_scale_tril", [NoSideEffect,
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$diagonal,
-    F64Attr:$floating_fill_value,
-    SI64Attr:$integer_fill_value,
-    BoolAttr:$is_floating_fill_value,
-    F64Attr:$floating_scale_value,
-    SI64Attr:$integer_scale_value,
-    BoolAttr:$is_floating_scale_value
+    DefaultValuedAttr<SI64Attr, "0">:$diagonal,
+    DefaultValuedAttr<F64Attr, "0.000000">:$floating_fill_value,
+    DefaultValuedAttr<SI64Attr, "0">:$integer_fill_value,
+    DefaultValuedAttr<BoolAttr, "false">:$is_floating_fill_value,
+    DefaultValuedAttr<F64Attr, "1.000000">:$floating_scale_value,
+    DefaultValuedAttr<SI64Attr, "1">:$integer_scale_value,
+    DefaultValuedAttr<BoolAttr, "false">:$is_floating_scale_value
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -2211,8 +2211,8 @@ def OneFlow_FusedSelfAttentionQueryMulKeyAndValueOp : OneFlow_BaseOp<"fused_self
     AnyType:$value
   );
   let attrs = (ins
-    SI64Attr:$head_size,
-    F32Attr:$alpha
+    DefaultValuedAttr<SI64Attr, "0">:$head_size,
+    DefaultValuedAttr<F32Attr, "0.000000">:$alpha
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"hidden_states"}); return &val; }
@@ -2230,7 +2230,7 @@ def OneFlow_FusedSelfAttentionQueryMulKeyAndValueGradOp : OneFlow_BaseOp<"fused_
     AnyType:$hidden_states_grad
   );
   let attrs = (ins
-    F32Attr:$alpha
+    DefaultValuedAttr<F32Attr, "0.000000">:$alpha
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"query_mul_key_grad", "value_grad", "hidden_states"}); return &val; }
@@ -2248,10 +2248,10 @@ def OneFlow_FusedTrilScaleSoftmaxMaskScaleOp : OneFlow_BaseOp<"fused_tril_scale_
     AnyType:$softmax_y
   );
   let attrs = (ins
-    SI64Attr:$diagonal,
-    F32Attr:$tril_fill_value,
-    F32Attr:$tril_scale_value,
-    F32Attr:$mask_scale_value
+    DefaultValuedAttr<SI64Attr, "0">:$diagonal,
+    DefaultValuedAttr<F32Attr, "0.000000">:$tril_fill_value,
+    DefaultValuedAttr<F32Attr, "1.000000">:$tril_scale_value,
+    DefaultValuedAttr<F32Attr, "1.000000">:$mask_scale_value
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "mask"}); return &val; }
@@ -2269,9 +2269,9 @@ def OneFlow_FusedTrilScaleSoftmaxMaskScaleGradOp : OneFlow_BaseOp<"fused_tril_sc
     AnyType:$dx
   );
   let attrs = (ins
-    SI64Attr:$diagonal,
-    F32Attr:$tril_scale_value,
-    F32Attr:$mask_scale_value
+    DefaultValuedAttr<SI64Attr, "0">:$diagonal,
+    DefaultValuedAttr<F32Attr, "0.000000">:$tril_scale_value,
+    DefaultValuedAttr<F32Attr, "0.000000">:$mask_scale_value
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"softmax_y", "dy", "mask"}); return &val; }
@@ -2297,8 +2297,8 @@ def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_
     Optional<AnyType>:$addend_diff
   );
   let attrs = (ins
-    SI32Attr:$axis,
-    F32Attr:$epsilon
+    DefaultValuedAttr<SI32Attr, "0">:$axis,
+    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy", "mean", "inv_variance", "gamma", "beta", "reserve_space", "y"}); return &val; }
@@ -2412,7 +2412,7 @@ def OneFlow_IdentityBufferOp : OneFlow_BaseOp<"identity_buffer", [NoSideEffect, 
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$buffer_size
+    DefaultValuedAttr<SI64Attr, "0">:$buffer_size
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -2451,8 +2451,8 @@ def OneFlow_ImageBatchAlignOp : OneFlow_BaseOp<"image_batch_align", [NoSideEffec
   let attrs = (ins
     AnyI64ElementsAttr:$shape,
     StrAttr:$data_type,
-    SI32Attr:$alignment,
-    BoolAttr:$dynamic_out
+    DefaultValuedAttr<SI32Attr, "0">:$alignment,
+    DefaultValuedAttr<BoolAttr, "false">:$dynamic_out
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -2468,7 +2468,7 @@ def OneFlow_ImageDecodeOp : OneFlow_BaseOp<"image_decode", [NoSideEffect, Declar
     AnyType:$out
   );
   let attrs = (ins
-    StrAttr:$color_space,
+    DefaultValuedAttr<StrAttr, "\"BGR\"">:$color_space,
     StrAttr:$data_type
   );
   let extraClassDeclaration = [{
@@ -2499,9 +2499,9 @@ def OneFlow_ImageRandomCropOp : OneFlow_BaseOp<"image_random_crop", [NoSideEffec
     AnyType:$out
   );
   let attrs = (ins
-    SI32Attr:$num_attempts,
-    SI64Attr:$seed,
-    BoolAttr:$has_seed,
+    DefaultValuedAttr<SI32Attr, "10">:$num_attempts,
+    DefaultValuedAttr<SI64Attr, "-1">:$seed,
+    DefaultValuedAttr<BoolAttr, "false">:$has_seed,
     F32ArrayAttr:$random_area,
     F32ArrayAttr:$random_aspect_ratio
   );
@@ -2521,11 +2521,11 @@ def OneFlow_ImageResizeKeepAspectRatioOp : OneFlow_BaseOp<"image_resize_keep_asp
     AnyType:$scale
   );
   let attrs = (ins
-    SI32Attr:$target_size,
-    SI32Attr:$min_size,
-    SI32Attr:$max_size,
-    BoolAttr:$resize_longer,
-    StrAttr:$interpolation_type
+    DefaultValuedAttr<SI32Attr, "0">:$target_size,
+    DefaultValuedAttr<SI32Attr, "0">:$min_size,
+    DefaultValuedAttr<SI32Attr, "0">:$max_size,
+    DefaultValuedAttr<BoolAttr, "false">:$resize_longer,
+    DefaultValuedAttr<StrAttr, "\"bilinear\"">:$interpolation_type
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -2542,11 +2542,11 @@ def OneFlow_ImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", [NoSi
     AnyType:$scale
   );
   let attrs = (ins
-    SI64Attr:$target_width,
-    SI64Attr:$target_height,
-    SI64Attr:$channels,
+    DefaultValuedAttr<SI64Attr, "0">:$target_width,
+    DefaultValuedAttr<SI64Attr, "0">:$target_height,
+    DefaultValuedAttr<SI64Attr, "3">:$channels,
     StrAttr:$data_type,
-    StrAttr:$interpolation_type
+    DefaultValuedAttr<StrAttr, "\"bilinear\"">:$interpolation_type
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -2631,7 +2631,7 @@ def OneFlow_DimGatherOp : OneFlow_BaseOp<"dim_gather", [NoSideEffect, DeclareOpI
     AnyType:$output
   );
   let attrs = (ins
-    SI32Attr:$dim
+    DefaultValuedAttr<SI32Attr, "0">:$dim
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "index"}); return &val; }
@@ -2649,7 +2649,7 @@ def OneFlow_DimScatterAddOp : OneFlow_BaseOp<"dim_scatter_add", [NoSideEffect, D
     AnyType:$output
   );
   let attrs = (ins
-    SI32Attr:$dim
+    DefaultValuedAttr<SI32Attr, "0">:$dim
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "index", "src"}); return &val; }
@@ -2667,7 +2667,7 @@ def OneFlow_DimScatterAddLikeOp : OneFlow_BaseOp<"dim_scatter_add_like", [NoSide
     AnyType:$output
   );
   let attrs = (ins
-    SI32Attr:$dim
+    DefaultValuedAttr<SI32Attr, "0">:$dim
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"like", "index", "src"}); return &val; }
@@ -2684,8 +2684,8 @@ def OneFlow_DimScatterAddScalarOp : OneFlow_BaseOp<"dim_scatter_add_scalar", [No
     AnyType:$output
   );
   let attrs = (ins
-    F32Attr:$src_scalar,
-    SI32Attr:$dim
+    DefaultValuedAttr<F32Attr, "0.000000">:$src_scalar,
+    DefaultValuedAttr<SI32Attr, "0">:$dim
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "index"}); return &val; }
@@ -2703,7 +2703,7 @@ def OneFlow_DimScatterMulOp : OneFlow_BaseOp<"dim_scatter_mul", [NoSideEffect, D
     AnyType:$output
   );
   let attrs = (ins
-    SI32Attr:$dim
+    DefaultValuedAttr<SI32Attr, "0">:$dim
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "index", "src"}); return &val; }
@@ -2720,8 +2720,8 @@ def OneFlow_DimScatterMulScalarOp : OneFlow_BaseOp<"dim_scatter_mul_scalar", [No
     AnyType:$output
   );
   let attrs = (ins
-    F32Attr:$src_scalar,
-    SI32Attr:$dim
+    DefaultValuedAttr<F32Attr, "0.000000">:$src_scalar,
+    DefaultValuedAttr<SI32Attr, "0">:$dim
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "index"}); return &val; }
@@ -2739,7 +2739,7 @@ def OneFlow_DimScatterUpdateOp : OneFlow_BaseOp<"dim_scatter_update", [NoSideEff
     AnyType:$output
   );
   let attrs = (ins
-    SI32Attr:$dim
+    DefaultValuedAttr<SI32Attr, "0">:$dim
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "index", "src"}); return &val; }
@@ -2756,8 +2756,8 @@ def OneFlow_DimScatterUpdateScalarOp : OneFlow_BaseOp<"dim_scatter_update_scalar
     AnyType:$output
   );
   let attrs = (ins
-    F32Attr:$src_scalar,
-    SI32Attr:$dim
+    DefaultValuedAttr<F32Attr, "0.000000">:$src_scalar,
+    DefaultValuedAttr<SI32Attr, "0">:$dim
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "index"}); return &val; }
@@ -2774,7 +2774,7 @@ def OneFlow_GatherOp : OneFlow_BaseOp<"gather", [NoSideEffect, DeclareOpInterfac
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$axis
+    DefaultValuedAttr<SI64Attr, "0">:$axis
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "indices"}); return &val; }
@@ -2804,7 +2804,7 @@ def OneFlow_GenerateRandomBatchPermutationIndicesOp : OneFlow_BaseOp<"generate_r
     AnyType:$y
   );
   let attrs = (ins
-    SI64Attr:$seed
+    DefaultValuedAttr<SI64Attr, "0">:$seed
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
@@ -2822,8 +2822,8 @@ def OneFlow_ImageTargetResizeOp : OneFlow_BaseOp<"image_target_resize", [NoSideE
     AnyType:$scale
   );
   let attrs = (ins
-    SI32Attr:$target_size,
-    SI32Attr:$max_size
+    DefaultValuedAttr<SI32Attr, "0">:$target_size,
+    DefaultValuedAttr<SI32Attr, "0">:$max_size
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -2957,7 +2957,7 @@ def OneFlow_UnsortedBatchSegmentSumOp : OneFlow_BaseOp<"unsorted_batch_segment_s
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$num_segments
+    DefaultValuedAttr<SI64Attr, "0">:$num_segments
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"data", "segment_ids"}); return &val; }
@@ -2974,8 +2974,8 @@ def OneFlow_UnsortedSegmentSumOp : OneFlow_BaseOp<"unsorted_segment_sum", [NoSid
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$axis,
-    SI64Attr:$num_segments
+    DefaultValuedAttr<SI64Attr, "0">:$axis,
+    DefaultValuedAttr<SI64Attr, "0">:$num_segments
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"data", "segment_ids"}); return &val; }
@@ -2993,7 +2993,7 @@ def OneFlow_UnsortedSegmentSumLikeOp : OneFlow_BaseOp<"unsorted_segment_sum_like
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$axis
+    DefaultValuedAttr<SI64Attr, "0">:$axis
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"data", "segment_ids", "like"}); return &val; }
@@ -3025,10 +3025,10 @@ def OneFlow_WhereScalarXOp : OneFlow_BaseOp<"where_scalar_x", [NoSideEffect, Dec
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$has_int_operand,
-    BoolAttr:$has_float_operand,
-    SI64Attr:$int_operand,
-    F64Attr:$float_operand
+    DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$int_operand,
+    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"condition", "y"}); return &val; }
@@ -3044,14 +3044,14 @@ def OneFlow_WhereScalarXyOp : OneFlow_BaseOp<"where_scalar_xy", [NoSideEffect, D
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$has_x_int_operand,
-    BoolAttr:$has_x_float_operand,
-    BoolAttr:$has_y_int_operand,
-    BoolAttr:$has_y_float_operand,
-    SI64Attr:$x_int_operand,
-    F64Attr:$x_float_operand,
-    SI64Attr:$y_int_operand,
-    F64Attr:$y_float_operand
+    DefaultValuedAttr<BoolAttr, "false">:$has_x_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_x_float_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_y_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_y_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$x_int_operand,
+    DefaultValuedAttr<F64Attr, "0.000000">:$x_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$y_int_operand,
+    DefaultValuedAttr<F64Attr, "0.000000">:$y_float_operand
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"condition"}); return &val; }
@@ -3068,10 +3068,10 @@ def OneFlow_WhereScalarYOp : OneFlow_BaseOp<"where_scalar_y", [NoSideEffect, Dec
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$has_int_operand,
-    BoolAttr:$has_float_operand,
-    SI64Attr:$int_operand,
-    F64Attr:$float_operand
+    DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$int_operand,
+    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"condition", "x"}); return &val; }
@@ -3119,10 +3119,10 @@ def OneFlow_CombinedMarginLossOp : OneFlow_BaseOp<"combined_margin_loss", [NoSid
     AnyType:$theta
   );
   let attrs = (ins
-    F32Attr:$m1,
-    F32Attr:$m2,
-    F32Attr:$m3,
-    SI64Attr:$depth
+    DefaultValuedAttr<F32Attr, "0.000000">:$m1,
+    DefaultValuedAttr<F32Attr, "0.000000">:$m2,
+    DefaultValuedAttr<F32Attr, "0.000000">:$m3,
+    DefaultValuedAttr<SI64Attr, "0">:$depth
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "label"}); return &val; }
@@ -3140,10 +3140,10 @@ def OneFlow_CombinedMarginLossGradOp : OneFlow_BaseOp<"combined_margin_loss_grad
     AnyType:$dx
   );
   let attrs = (ins
-    F32Attr:$m1,
-    F32Attr:$m2,
-    F32Attr:$m3,
-    SI64Attr:$depth
+    DefaultValuedAttr<F32Attr, "0.000000">:$m1,
+    DefaultValuedAttr<F32Attr, "0.000000">:$m2,
+    DefaultValuedAttr<F32Attr, "0.000000">:$m3,
+    DefaultValuedAttr<SI64Attr, "0">:$depth
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "label", "theta"}); return &val; }
@@ -3163,9 +3163,9 @@ def OneFlow_CtcLossOp : OneFlow_BaseOp<"ctc_loss", [NoSideEffect, DeclareOpInter
     AnyType:$alpha
   );
   let attrs = (ins
-    SI64Attr:$max_target_length,
-    SI32Attr:$blank,
-    BoolAttr:$zero_infinity
+    DefaultValuedAttr<SI64Attr, "0">:$max_target_length,
+    DefaultValuedAttr<SI32Attr, "0">:$blank,
+    DefaultValuedAttr<BoolAttr, "false">:$zero_infinity
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"log_probs", "targets", "input_lengths", "target_lengths"}); return &val; }
@@ -3187,9 +3187,9 @@ def OneFlow_CtcLossGradOp : OneFlow_BaseOp<"ctc_loss_grad", [NoSideEffect, Decla
     AnyType:$grad
   );
   let attrs = (ins
-    SI64Attr:$max_target_length,
-    SI32Attr:$blank,
-    BoolAttr:$zero_infinity
+    DefaultValuedAttr<SI64Attr, "0">:$max_target_length,
+    DefaultValuedAttr<SI32Attr, "0">:$blank,
+    DefaultValuedAttr<BoolAttr, "false">:$zero_infinity
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"grad_out", "log_probs", "targets", "input_lengths", "target_lengths", "loss", "alpha"}); return &val; }
@@ -3204,8 +3204,8 @@ def OneFlow_DynamicLossScaleScheduleOp : OneFlow_BaseOp<"dynamic_loss_scale_sche
     AnyType:$good_step_counter
   );
   let attrs = (ins
-    SI64Attr:$increment_period,
-    F32Attr:$multiplier
+    DefaultValuedAttr<SI64Attr, "2000">:$increment_period,
+    DefaultValuedAttr<F32Attr, "2.000000">:$multiplier
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"count_not_finite", "loss_scale", "good_step_counter"}); return &val; }
@@ -3223,7 +3223,7 @@ def OneFlow_KlDivLossOp : OneFlow_BaseOp<"kl_div_loss", [NoSideEffect, DeclareOp
   );
   let attrs = (ins
     StrAttr:$reduction,
-    BoolAttr:$log_target
+    DefaultValuedAttr<BoolAttr, "false">:$log_target
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target"}); return &val; }
@@ -3242,7 +3242,7 @@ def OneFlow_KlDivLossGradOp : OneFlow_BaseOp<"kl_div_loss_grad", [NoSideEffect, 
   );
   let attrs = (ins
     StrAttr:$reduction,
-    BoolAttr:$log_target
+    DefaultValuedAttr<BoolAttr, "false">:$log_target
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target", "dy"}); return &val; }
@@ -3260,7 +3260,7 @@ def OneFlow_SmoothL1LossOp : OneFlow_BaseOp<"smooth_l1_loss", [NoSideEffect, Dec
   );
   let attrs = (ins
     StrAttr:$reduction,
-    F32Attr:$beta
+    DefaultValuedAttr<F32Attr, "0.000000">:$beta
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target"}); return &val; }
@@ -3279,7 +3279,7 @@ def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", [NoSideEf
   );
   let attrs = (ins
     StrAttr:$reduction,
-    F32Attr:$beta
+    DefaultValuedAttr<F32Attr, "0.000000">:$beta
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input", "target", "dy"}); return &val; }
@@ -3867,9 +3867,9 @@ def OneFlow_BatchMatmulOp : OneFlow_BaseOp<"batch_matmul", [NoSideEffect, Declar
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$transpose_a,
-    BoolAttr:$transpose_b,
-    F64Attr:$alpha
+    DefaultValuedAttr<BoolAttr, "false">:$transpose_a,
+    DefaultValuedAttr<BoolAttr, "false">:$transpose_b,
+    DefaultValuedAttr<F64Attr, "1.000000">:$alpha
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b", "_add_to_output"}); return &val; }
@@ -3887,9 +3887,9 @@ def OneFlow_BroadcastMatmulOp : OneFlow_BaseOp<"broadcast_matmul", [NoSideEffect
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$transpose_a,
-    BoolAttr:$transpose_b,
-    F64Attr:$alpha
+    DefaultValuedAttr<BoolAttr, "false">:$transpose_a,
+    DefaultValuedAttr<BoolAttr, "false">:$transpose_b,
+    DefaultValuedAttr<F64Attr, "1.000000">:$alpha
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b", "_add_to_output"}); return &val; }
@@ -3907,7 +3907,7 @@ def OneFlow_BroadcastMatmulGradBOp : OneFlow_BaseOp<"broadcast_matmul_grad_b", [
     AnyType:$out
   );
   let attrs = (ins
-    F64Attr:$alpha
+    DefaultValuedAttr<F64Attr, "1.000000">:$alpha
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b", "_add_to_output"}); return &val; }
@@ -3926,8 +3926,8 @@ def OneFlow_DistributedPartialFcSampleOp : OneFlow_BaseOp<"distributed_partial_f
     AnyType:$sampled_weight
   );
   let attrs = (ins
-    SI64Attr:$num_sample,
-    SI64Attr:$seed
+    DefaultValuedAttr<SI64Attr, "0">:$num_sample,
+    DefaultValuedAttr<SI64Attr, "-1">:$seed
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"weight", "label"}); return &val; }
@@ -3987,9 +3987,9 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [NoSideEffect, DeclareOpInterfac
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$transpose_a,
-    BoolAttr:$transpose_b,
-    F64Attr:$alpha
+    DefaultValuedAttr<BoolAttr, "false">:$transpose_a,
+    DefaultValuedAttr<BoolAttr, "false">:$transpose_b,
+    DefaultValuedAttr<F64Attr, "1.000000">:$alpha
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"a", "b", "_add_to_output"}); return &val; }
@@ -4015,7 +4015,7 @@ def OneFlow_CategoricalOrdinalEncodeOp : OneFlow_BaseOp<"CategoricalOrdinalEncod
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$hash_precomputed
+    DefaultValuedAttr<BoolAttr, "false">:$hash_precomputed
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"table", "size", "in"}); return &val; }
@@ -4042,12 +4042,12 @@ def OneFlow_ArangeOp : OneFlow_BaseOp<"arange", [NoSideEffect, DeclareOpInterfac
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$integer_start,
-    SI64Attr:$integer_delta,
-    SI64Attr:$integer_limit,
-    F64Attr:$float_start,
-    F64Attr:$float_delta,
-    F64Attr:$float_limit,
+    DefaultValuedAttr<SI64Attr, "0">:$integer_start,
+    DefaultValuedAttr<SI64Attr, "0">:$integer_delta,
+    DefaultValuedAttr<SI64Attr, "0">:$integer_limit,
+    DefaultValuedAttr<F64Attr, "0.000000">:$float_start,
+    DefaultValuedAttr<F64Attr, "0.000000">:$float_delta,
+    DefaultValuedAttr<F64Attr, "0.000000">:$float_limit,
     StrAttr:$dtype,
     StrArrayAttr:$nd_sbp
   );
@@ -4062,10 +4062,10 @@ def OneFlow_CoinFlipOp : OneFlow_BaseOp<"coin_flip", [NoSideEffect, DeclareOpInt
     AnyType:$out
   );
   let attrs = (ins
-    F32Attr:$probability,
-    SI64Attr:$batch_size,
-    SI64Attr:$seed,
-    BoolAttr:$has_seed,
+    DefaultValuedAttr<F32Attr, "0.500000">:$probability,
+    DefaultValuedAttr<SI64Attr, "0">:$batch_size,
+    DefaultValuedAttr<SI64Attr, "-1">:$seed,
+    DefaultValuedAttr<BoolAttr, "false">:$has_seed,
     StrArrayAttr:$nd_sbp
   );
   let extraClassDeclaration = [{
@@ -4082,8 +4082,8 @@ def OneFlow_ConcatOp : OneFlow_BaseOp<"concat", [NoSideEffect, DeclareOpInterfac
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$axis,
-    SI64Attr:$max_dim_size
+    DefaultValuedAttr<SI64Attr, "0">:$axis,
+    DefaultValuedAttr<SI64Attr, "0">:$max_dim_size
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -4096,9 +4096,9 @@ def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [NoSideEffect, DeclareOpInte
     AnyType:$out
   );
   let attrs = (ins
-    F64Attr:$floating_value,
-    SI64Attr:$integer_value,
-    BoolAttr:$is_floating_value,
+    DefaultValuedAttr<F64Attr, "0.000000">:$floating_value,
+    DefaultValuedAttr<SI64Attr, "0">:$integer_value,
+    DefaultValuedAttr<BoolAttr, "false">:$is_floating_value,
     StrAttr:$dtype,
     AnyI64ElementsAttr:$shape,
     StrArrayAttr:$nd_sbp
@@ -4119,7 +4119,7 @@ def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", [NoSideEffect, DeclareOpInterf
     AnyType:$out
   );
   let attrs = (ins
-    F32Attr:$scale
+    DefaultValuedAttr<F32Attr, "0.000000">:$scale
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "mask", "_add_to_output"}); return &val; }
@@ -4185,8 +4185,8 @@ def OneFlow_EyeOp : OneFlow_BaseOp<"eye", [NoSideEffect, DeclareOpInterfaceMetho
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$rows,
-    SI64Attr:$cols,
+    DefaultValuedAttr<SI64Attr, "0">:$rows,
+    DefaultValuedAttr<SI64Attr, "0">:$cols,
     StrAttr:$dtype,
     StrArrayAttr:$nd_sbp
   );
@@ -4209,7 +4209,7 @@ def OneFlow_GridSampleGradOp : OneFlow_BaseOp<"grid_sample_grad", [NoSideEffect,
   let attrs = (ins
     StrAttr:$interpolation_mode,
     StrAttr:$padding_mode,
-    BoolAttr:$align_corners
+    DefaultValuedAttr<BoolAttr, "false">:$align_corners
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"doutput", "input", "grid"}); return &val; }
@@ -4254,7 +4254,7 @@ def OneFlow_NllOp : OneFlow_BaseOp<"nll", [NoSideEffect, DeclareOpInterfaceMetho
     AnyType:$total_weight
   );
   let attrs = (ins
-    SI64Attr:$ignore_index,
+    DefaultValuedAttr<SI64Attr, "0">:$ignore_index,
     StrAttr:$reduction
   );
   let extraClassDeclaration = [{
@@ -4275,7 +4275,7 @@ def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", [NoSideEffect, DeclareOpInter
     AnyType:$dx
   );
   let attrs = (ins
-    SI64Attr:$ignore_index,
+    DefaultValuedAttr<SI64Attr, "0">:$ignore_index,
     StrAttr:$reduction
   );
   let extraClassDeclaration = [{
@@ -4335,7 +4335,7 @@ def OneFlow_RandpermOp : OneFlow_BaseOp<"randperm", [NoSideEffect, DeclareOpInte
     AnyType:$out
   );
   let attrs = (ins
-    SI32Attr:$n,
+    DefaultValuedAttr<SI32Attr, "0">:$n,
     StrAttr:$nd_sbp
   );
   let extraClassDeclaration = [{
@@ -4349,11 +4349,11 @@ def OneFlow_RecvOp : OneFlow_BaseOp<"recv", [NoSideEffect, DeclareOpInterfaceMet
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$src_process_id,
+    DefaultValuedAttr<SI64Attr, "0">:$src_process_id,
     StrAttr:$dtype,
     AnyI64ElementsAttr:$shape,
     StrAttr:$device_type,
-    SI64Attr:$device_id
+    DefaultValuedAttr<SI64Attr, "0">:$device_id
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
@@ -4366,7 +4366,7 @@ def OneFlow_SendOp : OneFlow_BaseOp<"send", [NoSideEffect, DeclareOpInterfaceMet
     AnyType:$in
   );
   let attrs = (ins
-    SI64Attr:$dst_process_id
+    DefaultValuedAttr<SI64Attr, "0">:$dst_process_id
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -4383,7 +4383,7 @@ def OneFlow_SplitLikeOp : OneFlow_BaseOp<"split_like", [NoSideEffect, DeclareOpI
     Variadic<AnyType>:$out
   );
   let attrs = (ins
-    SI64Attr:$axis
+    DefaultValuedAttr<SI64Attr, "0">:$axis
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "like"}); return &val; }
@@ -4400,7 +4400,7 @@ def OneFlow_SspVariableProxyOp : OneFlow_BaseOp<"ssp_variable_proxy", [NoSideEff
     AnyType:$value
   );
   let attrs = (ins
-    SI64Attr:$buffer_size
+    DefaultValuedAttr<SI64Attr, "1">:$buffer_size
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"var"}); return &val; }
@@ -4429,8 +4429,8 @@ def OneFlow_UniformOp : OneFlow_BaseOp<"uniform", [NoSideEffect, DeclareOpInterf
     AnyType:$out
   );
   let attrs = (ins
-    F64Attr:$from,
-    F64Attr:$to,
+    DefaultValuedAttr<F64Attr, "0.000000">:$from,
+    DefaultValuedAttr<F64Attr, "1.000000">:$to,
     StrAttr:$dtype,
     AnyI64ElementsAttr:$shape,
     StrAttr:$nd_sbp
@@ -4446,8 +4446,8 @@ def OneFlow_UniformIntOp : OneFlow_BaseOp<"uniform_int", [NoSideEffect, DeclareO
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$from,
-    SI64Attr:$to,
+    DefaultValuedAttr<SI64Attr, "0">:$from,
+    DefaultValuedAttr<SI64Attr, "1">:$to,
     StrAttr:$dtype,
     AnyI64ElementsAttr:$shape,
     StrAttr:$nd_sbp
@@ -4523,8 +4523,8 @@ def OneFlow__ncclLogical_2DSameDim0All2allOp : OneFlow_BaseOp<"_nccl_logical_2D_
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$in_dim1_split_axis,
-    SI64Attr:$out_dim1_split_axis
+    DefaultValuedAttr<SI64Attr, "-1">:$in_dim1_split_axis,
+    DefaultValuedAttr<SI64Attr, "-1">:$out_dim1_split_axis
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -4553,7 +4553,7 @@ def OneFlow__ncclLogical_2DSameDim0AllGatherNoncontinuousOp : OneFlow_BaseOp<"_n
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$in_dim1_split_axis
+    DefaultValuedAttr<SI64Attr, "-1">:$in_dim1_split_axis
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -4608,7 +4608,7 @@ def OneFlow__ncclLogicalAllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$in_split_axis
+    DefaultValuedAttr<SI64Attr, "-1">:$in_split_axis
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -4650,8 +4650,8 @@ def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", [NoSideEffec
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$in_split_axis,
-    SI64Attr:$out_split_axis
+    DefaultValuedAttr<SI64Attr, "-1">:$in_split_axis,
+    DefaultValuedAttr<SI64Attr, "-1">:$out_split_axis
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -4676,14 +4676,14 @@ def OneFlow_CropMirrorNormalizeFromTensorbufferOp : OneFlow_BaseOp<"crop_mirror_
     AnyType:$out
   );
   let attrs = (ins
-    StrAttr:$color_space,
-    StrAttr:$output_layout,
+    DefaultValuedAttr<StrAttr, "\"BGR\"">:$color_space,
+    DefaultValuedAttr<StrAttr, "\"NCHW\"">:$output_layout,
     F32ArrayAttr:$mean,
     F32ArrayAttr:$std,
-    SI64Attr:$crop_h,
-    SI64Attr:$crop_w,
-    F32Attr:$crop_pos_x,
-    F32Attr:$crop_pos_y,
+    DefaultValuedAttr<SI64Attr, "0">:$crop_h,
+    DefaultValuedAttr<SI64Attr, "0">:$crop_w,
+    DefaultValuedAttr<F32Attr, "0.500000">:$crop_pos_x,
+    DefaultValuedAttr<F32Attr, "0.500000">:$crop_pos_y,
     StrAttr:$output_dtype
   );
   let extraClassDeclaration = [{
@@ -4701,14 +4701,14 @@ def OneFlow_CropMirrorNormalizeFromUint8Op : OneFlow_BaseOp<"crop_mirror_normali
     AnyType:$out
   );
   let attrs = (ins
-    StrAttr:$color_space,
-    StrAttr:$output_layout,
+    DefaultValuedAttr<StrAttr, "\"BGR\"">:$color_space,
+    DefaultValuedAttr<StrAttr, "\"NCHW\"">:$output_layout,
     F32ArrayAttr:$mean,
     F32ArrayAttr:$std,
-    SI64Attr:$crop_h,
-    SI64Attr:$crop_w,
-    F32Attr:$crop_pos_x,
-    F32Attr:$crop_pos_y,
+    DefaultValuedAttr<SI64Attr, "0">:$crop_h,
+    DefaultValuedAttr<SI64Attr, "0">:$crop_w,
+    DefaultValuedAttr<F32Attr, "0.500000">:$crop_pos_x,
+    DefaultValuedAttr<F32Attr, "0.500000">:$crop_pos_y,
     StrAttr:$output_dtype
   );
   let extraClassDeclaration = [{
@@ -4743,8 +4743,8 @@ def OneFlow_L2NormalizeOp : OneFlow_BaseOp<"l2_normalize", [NoSideEffect, Declar
     AnyType:$square_x_sum
   );
   let attrs = (ins
-    SI32Attr:$axis,
-    F32Attr:$epsilon
+    DefaultValuedAttr<SI32Attr, "0">:$axis,
+    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
@@ -4762,8 +4762,8 @@ def OneFlow_L2NormalizeGradOp : OneFlow_BaseOp<"l2_normalize_grad", [NoSideEffec
     AnyType:$dx
   );
   let attrs = (ins
-    SI32Attr:$axis,
-    F32Attr:$epsilon
+    DefaultValuedAttr<SI32Attr, "0">:$axis,
+    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "y", "square_x_sum"}); return &val; }
@@ -4784,11 +4784,11 @@ def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", [NoSideEffect, AttrSizedO
     Optional<AnyType>:$normalized
   );
   let attrs = (ins
-    BoolAttr:$center,
-    BoolAttr:$scale,
-    SI64Attr:$begin_norm_axis,
-    SI64Attr:$begin_params_axis,
-    F64Attr:$epsilon
+    DefaultValuedAttr<BoolAttr, "false">:$center,
+    DefaultValuedAttr<BoolAttr, "false">:$scale,
+    DefaultValuedAttr<SI64Attr, "0">:$begin_norm_axis,
+    DefaultValuedAttr<SI64Attr, "0">:$begin_params_axis,
+    DefaultValuedAttr<F64Attr, "0.000000">:$epsilon
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
@@ -4811,8 +4811,8 @@ def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", [NoSideEffect, D
     AnyType:$dx
   );
   let attrs = (ins
-    SI64Attr:$begin_norm_axis,
-    F64Attr:$epsilon
+    DefaultValuedAttr<SI64Attr, "0">:$begin_norm_axis,
+    DefaultValuedAttr<F64Attr, "0.000000">:$epsilon
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x", "mean", "inv_variance", "_add_to_output"}); return &val; }
@@ -4833,7 +4833,7 @@ def OneFlow_LayerNormParamGradOp : OneFlow_BaseOp<"layer_norm_param_grad", [NoSi
     Optional<AnyType>:$reduce_buf
   );
   let attrs = (ins
-    SI64Attr:$begin_params_axis
+    DefaultValuedAttr<SI64Attr, "0">:$begin_params_axis
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes,
@@ -4850,8 +4850,8 @@ def OneFlow_NormalOp : OneFlow_BaseOp<"normal", [NoSideEffect, DeclareOpInterfac
     AnyType:$out
   );
   let attrs = (ins
-    F64Attr:$mean,
-    F64Attr:$std,
+    DefaultValuedAttr<F64Attr, "0.000000">:$mean,
+    DefaultValuedAttr<F64Attr, "1.000000">:$std,
     StrAttr:$dtype,
     AnyI64ElementsAttr:$shape,
     StrAttr:$nd_sbp
@@ -4877,10 +4877,10 @@ def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [NoSideEffect, Att
     Optional<AnyType>:$inv_variance
   );
   let attrs = (ins
-    SI32Attr:$axis,
-    F32Attr:$epsilon,
-    BoolAttr:$training,
-    F32Attr:$momentum
+    DefaultValuedAttr<SI32Attr, "0">:$axis,
+    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon,
+    DefaultValuedAttr<BoolAttr, "false">:$training,
+    DefaultValuedAttr<F32Attr, "0.000000">:$momentum
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes,
@@ -4906,8 +4906,8 @@ def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", [NoSideEf
     AnyType:$dx
   );
   let attrs = (ins
-    SI32Attr:$axis,
-    F32Attr:$epsilon
+    DefaultValuedAttr<SI32Attr, "0">:$axis,
+    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy", "mean", "inv_variance", "gamma"}); return &val; }
@@ -4934,14 +4934,14 @@ def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", [AttrSizedOperand
     AnyType:$sum
   );
   let attrs = (ins
-    SI32Attr:$train_step_val,
-    F32Attr:$learning_rate_val,
-    F64Attr:$scale,
-    F32Attr:$l1,
-    F32Attr:$l2,
-    F32Attr:$lr_decay,
-    F32Attr:$weight_decay,
-    F32Attr:$epsilon
+    DefaultValuedAttr<SI32Attr, "0">:$train_step_val,
+    DefaultValuedAttr<F32Attr, "0.000000">:$learning_rate_val,
+    DefaultValuedAttr<F64Attr, "1.000000">:$scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$l1,
+    DefaultValuedAttr<F32Attr, "0.000000">:$l2,
+    DefaultValuedAttr<F32Attr, "0.000000">:$lr_decay,
+    DefaultValuedAttr<F32Attr, "0.000000">:$weight_decay,
+    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
@@ -4960,7 +4960,7 @@ def OneFlow_AdamBiasCorrectionFactorOp : OneFlow_BaseOp<"adam_bias_correction_fa
     AnyType:$out
   );
   let attrs = (ins
-    F32Attr:$beta
+    DefaultValuedAttr<F32Attr, "0.900000">:$beta
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"train_step"}); return &val; }
@@ -4982,18 +4982,18 @@ def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", [AttrSizedOperandSegmen
     AnyType:$max_v
   );
   let attrs = (ins
-    F32Attr:$learning_rate_val,
-    F32Attr:$bias_correction1_val,
-    F32Attr:$bias_correction2_val,
-    F64Attr:$scale,
-    F32Attr:$l1,
-    F32Attr:$l2,
-    F32Attr:$beta1,
-    F32Attr:$beta2,
-    F32Attr:$epsilon,
-    F32Attr:$weight_decay,
-    BoolAttr:$amsgrad,
-    BoolAttr:$do_bias_correction
+    DefaultValuedAttr<F32Attr, "0.000000">:$learning_rate_val,
+    DefaultValuedAttr<F32Attr, "1.000000">:$bias_correction1_val,
+    DefaultValuedAttr<F32Attr, "1.000000">:$bias_correction2_val,
+    DefaultValuedAttr<F64Attr, "1.000000">:$scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$l1,
+    DefaultValuedAttr<F32Attr, "0.000000">:$l2,
+    DefaultValuedAttr<F32Attr, "0.900000">:$beta1,
+    DefaultValuedAttr<F32Attr, "0.999000">:$beta2,
+    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon,
+    DefaultValuedAttr<F32Attr, "0.000000">:$weight_decay,
+    DefaultValuedAttr<BoolAttr, "false">:$amsgrad,
+    DefaultValuedAttr<BoolAttr, "true">:$do_bias_correction
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
@@ -5017,13 +5017,13 @@ def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_upda
     AnyType:$max_v
   );
   let attrs = (ins
-    F32Attr:$learning_rate_val,
-    F32Attr:$beta1,
-    F32Attr:$beta2,
-    F32Attr:$epsilon,
-    F32Attr:$weight_decay,
-    BoolAttr:$amsgrad,
-    BoolAttr:$do_bias_correction
+    DefaultValuedAttr<F32Attr, "0.000000">:$learning_rate_val,
+    DefaultValuedAttr<F32Attr, "0.900000">:$beta1,
+    DefaultValuedAttr<F32Attr, "0.999000">:$beta2,
+    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon,
+    DefaultValuedAttr<F32Attr, "0.000000">:$weight_decay,
+    DefaultValuedAttr<BoolAttr, "false">:$amsgrad,
+    DefaultValuedAttr<BoolAttr, "true">:$do_bias_correction
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
@@ -5043,8 +5043,8 @@ def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momen
     AnyType:$momentum
   );
   let attrs = (ins
-    F32Attr:$beta,
-    F32Attr:$weight_decay
+    DefaultValuedAttr<F32Attr, "0.900000">:$beta,
+    DefaultValuedAttr<F32Attr, "0.000000">:$weight_decay
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff_indices", "model_diff_values", "learning_rate", "momentum"}); return &val; }
@@ -5060,7 +5060,7 @@ def OneFlow_IndexedSlicesSgdUpdateOp : OneFlow_BaseOp<"indexed_slices_sgd_update
     AnyType:$learning_rate
   );
   let attrs = (ins
-    F32Attr:$weight_decay
+    DefaultValuedAttr<F32Attr, "0.000000">:$weight_decay
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"model", "model_diff_indices", "model_diff_values", "learning_rate"}); return &val; }
@@ -5081,13 +5081,13 @@ def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", [AttrSizedOperandSegmen
     Optional<AnyType>:$skip_if
   );
   let attrs = (ins
-    F32Attr:$beta1,
-    F32Attr:$beta2,
-    F32Attr:$epsilon,
-    F64Attr:$scale,
-    F32Attr:$l1,
-    F32Attr:$l2,
-    F32Attr:$weight_decay
+    DefaultValuedAttr<F32Attr, "0.000000">:$beta1,
+    DefaultValuedAttr<F32Attr, "0.000000">:$beta2,
+    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon,
+    DefaultValuedAttr<F64Attr, "1.000000">:$scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$l1,
+    DefaultValuedAttr<F32Attr, "0.000000">:$l2,
+    DefaultValuedAttr<F32Attr, "0.000000">:$weight_decay
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
@@ -5108,13 +5108,13 @@ def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", [AttrSizedOperandSegmen
     Optional<AnyType>:$skip_if
   );
   let attrs = (ins
-    F64Attr:$scale,
-    F32Attr:$l1,
-    F32Attr:$l2,
-    F32Attr:$momentum_beta,
-    F32Attr:$epsilon,
-    F32Attr:$lars_coefficient,
-    F32Attr:$weight_decay
+    DefaultValuedAttr<F64Attr, "1.000000">:$scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$l1,
+    DefaultValuedAttr<F32Attr, "0.000000">:$l2,
+    DefaultValuedAttr<F32Attr, "0.900000">:$momentum_beta,
+    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon,
+    DefaultValuedAttr<F32Attr, "0.000100">:$lars_coefficient,
+    DefaultValuedAttr<F32Attr, "0.000000">:$weight_decay
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
@@ -5135,12 +5135,12 @@ def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", [AttrSizedOpera
     Optional<AnyType>:$skip_if
   );
   let attrs = (ins
-    F32Attr:$learning_rate_val,
-    F64Attr:$scale,
-    F32Attr:$l1,
-    F32Attr:$l2,
-    F32Attr:$beta,
-    F32Attr:$weight_decay
+    DefaultValuedAttr<F32Attr, "0.000000">:$learning_rate_val,
+    DefaultValuedAttr<F64Attr, "1.000000">:$scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$l1,
+    DefaultValuedAttr<F32Attr, "0.000000">:$l2,
+    DefaultValuedAttr<F32Attr, "0.900000">:$beta,
+    DefaultValuedAttr<F32Attr, "0.000000">:$weight_decay
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
@@ -5162,14 +5162,14 @@ def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", [AttrSizedOperand
     Optional<AnyType>:$mean_gradient
   );
   let attrs = (ins
-    F32Attr:$learning_rate_val,
-    F64Attr:$scale,
-    F32Attr:$l1,
-    F32Attr:$l2,
-    BoolAttr:$centered,
-    F32Attr:$epsilon,
-    F32Attr:$decay_rate,
-    F32Attr:$weight_decay
+    DefaultValuedAttr<F32Attr, "0.000000">:$learning_rate_val,
+    DefaultValuedAttr<F64Attr, "1.000000">:$scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$l1,
+    DefaultValuedAttr<F32Attr, "0.000000">:$l2,
+    DefaultValuedAttr<BoolAttr, "false">:$centered,
+    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon,
+    DefaultValuedAttr<F32Attr, "0.990000">:$decay_rate,
+    DefaultValuedAttr<F32Attr, "0.000000">:$weight_decay
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
@@ -5189,11 +5189,11 @@ def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", [AttrSizedOperandSegments
     Optional<AnyType>:$skip_if
   );
   let attrs = (ins
-    F32Attr:$learning_rate_val,
-    F64Attr:$scale,
-    F32Attr:$l1,
-    F32Attr:$l2,
-    F32Attr:$weight_decay
+    DefaultValuedAttr<F32Attr, "0.000000">:$learning_rate_val,
+    DefaultValuedAttr<F64Attr, "1.000000">:$scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$l1,
+    DefaultValuedAttr<F32Attr, "0.000000">:$l2,
+    DefaultValuedAttr<F32Attr, "0.000000">:$weight_decay
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
@@ -5240,8 +5240,8 @@ def OneFlow_ConstantPad1DOp : OneFlow_BaseOp<"constant_pad1d", [NoSideEffect, De
   );
   let attrs = (ins
     SI64ArrayAttr:$padding,
-    F64Attr:$floating_value,
-    SI64Attr:$integral_value
+    DefaultValuedAttr<F64Attr, "0.000000">:$floating_value,
+    DefaultValuedAttr<SI64Attr, "0">:$integral_value
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
@@ -5258,8 +5258,8 @@ def OneFlow_ConstantPad1DGradOp : OneFlow_BaseOp<"constant_pad1d_grad", [NoSideE
   );
   let attrs = (ins
     SI64ArrayAttr:$padding,
-    F64Attr:$floating_value,
-    SI64Attr:$integral_value
+    DefaultValuedAttr<F64Attr, "0.000000">:$floating_value,
+    DefaultValuedAttr<SI64Attr, "0">:$integral_value
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
@@ -5276,8 +5276,8 @@ def OneFlow_ConstantPad2DOp : OneFlow_BaseOp<"constant_pad2d", [NoSideEffect, De
   );
   let attrs = (ins
     SI64ArrayAttr:$padding,
-    F64Attr:$floating_value,
-    SI64Attr:$integral_value
+    DefaultValuedAttr<F64Attr, "0.000000">:$floating_value,
+    DefaultValuedAttr<SI64Attr, "0">:$integral_value
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
@@ -5294,8 +5294,8 @@ def OneFlow_ConstantPad2DGradOp : OneFlow_BaseOp<"constant_pad2d_grad", [NoSideE
   );
   let attrs = (ins
     SI64ArrayAttr:$padding,
-    F64Attr:$floating_value,
-    SI64Attr:$integral_value
+    DefaultValuedAttr<F64Attr, "0.000000">:$floating_value,
+    DefaultValuedAttr<SI64Attr, "0">:$integral_value
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
@@ -5312,8 +5312,8 @@ def OneFlow_ConstantPad3DOp : OneFlow_BaseOp<"constant_pad3d", [NoSideEffect, De
   );
   let attrs = (ins
     SI64ArrayAttr:$padding,
-    F64Attr:$floating_value,
-    SI64Attr:$integral_value
+    DefaultValuedAttr<F64Attr, "0.000000">:$floating_value,
+    DefaultValuedAttr<SI64Attr, "0">:$integral_value
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
@@ -5330,8 +5330,8 @@ def OneFlow_ConstantPad3DGradOp : OneFlow_BaseOp<"constant_pad3d_grad", [NoSideE
   );
   let attrs = (ins
     SI64ArrayAttr:$padding,
-    F64Attr:$floating_value,
-    SI64Attr:$integral_value
+    DefaultValuedAttr<F64Attr, "0.000000">:$floating_value,
+    DefaultValuedAttr<SI64Attr, "0">:$integral_value
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
@@ -5349,8 +5349,8 @@ def OneFlow_PadOp : OneFlow_BaseOp<"pad", [NoSideEffect, DeclareOpInterfaceMetho
   let attrs = (ins
     SI64ArrayAttr:$padding_before,
     SI64ArrayAttr:$padding_after,
-    F64Attr:$floating_constant_value,
-    SI64Attr:$integral_constant_value
+    DefaultValuedAttr<F64Attr, "0.000000">:$floating_constant_value,
+    DefaultValuedAttr<SI64Attr, "0">:$integral_constant_value
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
@@ -5368,8 +5368,8 @@ def OneFlow_PadGradOp : OneFlow_BaseOp<"pad_grad", [NoSideEffect, DeclareOpInter
   let attrs = (ins
     SI64ArrayAttr:$padding_before,
     SI64ArrayAttr:$padding_after,
-    F64Attr:$floating_constant_value,
-    SI64Attr:$integral_constant_value
+    DefaultValuedAttr<F64Attr, "0.000000">:$floating_constant_value,
+    DefaultValuedAttr<SI64Attr, "0">:$integral_constant_value
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy"}); return &val; }
@@ -5712,9 +5712,9 @@ def OneFlow_FakeQuantizationOp : OneFlow_BaseOp<"fake_quantization", [NoSideEffe
     AnyType:$out
   );
   let attrs = (ins
-    StrAttr:$quantization_formula,
-    SI32Attr:$quantization_bit,
-    StrAttr:$quantization_scheme
+    DefaultValuedAttr<StrAttr, "\"google\"">:$quantization_formula,
+    DefaultValuedAttr<SI32Attr, "8">:$quantization_bit,
+    DefaultValuedAttr<StrAttr, "\"symmetric\"">:$quantization_scheme
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "scale", "zero_point"}); return &val; }
@@ -5731,10 +5731,10 @@ def OneFlow_MinMaxObserverOp : OneFlow_BaseOp<"min_max_observer", [NoSideEffect,
     AnyType:$zero_point
   );
   let attrs = (ins
-    StrAttr:$quantization_formula,
-    SI32Attr:$quantization_bit,
-    StrAttr:$quantization_scheme,
-    BoolAttr:$per_layer_quantization
+    DefaultValuedAttr<StrAttr, "\"google\"">:$quantization_formula,
+    DefaultValuedAttr<SI32Attr, "8">:$quantization_bit,
+    DefaultValuedAttr<StrAttr, "\"symmetric\"">:$quantization_scheme,
+    DefaultValuedAttr<BoolAttr, "true">:$per_layer_quantization
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -5754,12 +5754,12 @@ def OneFlow_MovingAverageMinMaxObserverOp : OneFlow_BaseOp<"moving_average_min_m
     AnyType:$zero_point
   );
   let attrs = (ins
-    BoolAttr:$training,
-    StrAttr:$quantization_formula,
-    SI64Attr:$stop_update_after_iters,
-    SI32Attr:$quantization_bit,
-    StrAttr:$quantization_scheme,
-    F32Attr:$momentum
+    DefaultValuedAttr<BoolAttr, "false">:$training,
+    DefaultValuedAttr<StrAttr, "\"google\"">:$quantization_formula,
+    DefaultValuedAttr<SI64Attr, "0">:$stop_update_after_iters,
+    DefaultValuedAttr<SI32Attr, "8">:$quantization_bit,
+    DefaultValuedAttr<StrAttr, "\"symmetric\"">:$quantization_scheme,
+    DefaultValuedAttr<F32Attr, "0.950000">:$momentum
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "current_train_step", "moving_max", "moving_min"}); return &val; }
@@ -5777,9 +5777,9 @@ def OneFlow_QuantizationOp : OneFlow_BaseOp<"quantization", [NoSideEffect, Decla
     AnyType:$out
   );
   let attrs = (ins
-    StrAttr:$quantization_formula,
-    SI32Attr:$quantization_bit,
-    StrAttr:$quantization_scheme
+    DefaultValuedAttr<StrAttr, "\"google\"">:$quantization_formula,
+    DefaultValuedAttr<SI32Attr, "8">:$quantization_bit,
+    DefaultValuedAttr<StrAttr, "\"symmetric\"">:$quantization_scheme
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "scale", "zero_point"}); return &val; }
@@ -5820,7 +5820,7 @@ def OneFlow_ReduceAllOp : OneFlow_BaseOp<"reduce_all", [NoSideEffect, DeclareOpI
   );
   let attrs = (ins
     SI32ArrayAttr:$axis,
-    BoolAttr:$keepdims
+    DefaultValuedAttr<BoolAttr, "false">:$keepdims
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input_tensor"}); return &val; }
@@ -5837,7 +5837,7 @@ def OneFlow_ReduceAnyOp : OneFlow_BaseOp<"reduce_any", [NoSideEffect, DeclareOpI
   );
   let attrs = (ins
     SI32ArrayAttr:$axis,
-    BoolAttr:$keepdims
+    DefaultValuedAttr<BoolAttr, "false">:$keepdims
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input_tensor"}); return &val; }
@@ -5854,7 +5854,7 @@ def OneFlow_ReduceMaxOp : OneFlow_BaseOp<"reduce_max", [NoSideEffect, DeclareOpI
   );
   let attrs = (ins
     SI32ArrayAttr:$axis,
-    BoolAttr:$keepdims
+    DefaultValuedAttr<BoolAttr, "false">:$keepdims
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input_tensor"}); return &val; }
@@ -5909,7 +5909,7 @@ def OneFlow_ReduceMaxGlobalStageOp : OneFlow_BaseOp<"reduce_max_global_stage", [
   );
   let attrs = (ins
     SI32ArrayAttr:$axis,
-    BoolAttr:$keepdims
+    DefaultValuedAttr<BoolAttr, "false">:$keepdims
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "device_count"}); return &val; }
@@ -5928,7 +5928,7 @@ def OneFlow_ReduceMaxGlobalStageGradOp : OneFlow_BaseOp<"reduce_max_global_stage
   );
   let attrs = (ins
     SI32ArrayAttr:$axis,
-    BoolAttr:$keepdims
+    DefaultValuedAttr<BoolAttr, "false">:$keepdims
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"out_diff", "mask", "device_count"}); return &val; }
@@ -5945,7 +5945,7 @@ def OneFlow_ReduceMinOp : OneFlow_BaseOp<"reduce_min", [NoSideEffect, DeclareOpI
   );
   let attrs = (ins
     SI32ArrayAttr:$axis,
-    BoolAttr:$keepdims
+    DefaultValuedAttr<BoolAttr, "false">:$keepdims
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input_tensor"}); return &val; }
@@ -6000,7 +6000,7 @@ def OneFlow_ReduceMinGlobalStageOp : OneFlow_BaseOp<"reduce_min_global_stage", [
   );
   let attrs = (ins
     SI32ArrayAttr:$axis,
-    BoolAttr:$keepdims
+    DefaultValuedAttr<BoolAttr, "false">:$keepdims
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in", "device_count"}); return &val; }
@@ -6019,7 +6019,7 @@ def OneFlow_ReduceMinGlobalStageGradOp : OneFlow_BaseOp<"reduce_min_global_stage
   );
   let attrs = (ins
     SI32ArrayAttr:$axis,
-    BoolAttr:$keepdims
+    DefaultValuedAttr<BoolAttr, "false">:$keepdims
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"out_diff", "mask", "device_count"}); return &val; }
@@ -6036,7 +6036,7 @@ def OneFlow_ReduceProdOp : OneFlow_BaseOp<"reduce_prod", [NoSideEffect, DeclareO
   );
   let attrs = (ins
     SI32ArrayAttr:$axis,
-    BoolAttr:$keepdims
+    DefaultValuedAttr<BoolAttr, "false">:$keepdims
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input_tensor"}); return &val; }
@@ -6053,7 +6053,7 @@ def OneFlow_ReduceSumOp : OneFlow_BaseOp<"reduce_sum", [NoSideEffect, DeclareOpI
   );
   let attrs = (ins
     SI32ArrayAttr:$axis,
-    BoolAttr:$keepdims
+    DefaultValuedAttr<BoolAttr, "false">:$keepdims
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"input_tensor"}); return &val; }
@@ -6132,10 +6132,10 @@ def OneFlow_ClipByScalarOp : OneFlow_BaseOp<"clip_by_scalar", [NoSideEffect, Dec
     AnyType:$y
   );
   let attrs = (ins
-    F64Attr:$floating_min,
-    SI64Attr:$integral_min,
-    F64Attr:$floating_max,
-    SI64Attr:$integral_max
+    DefaultValuedAttr<F64Attr, "0.000000">:$floating_min,
+    DefaultValuedAttr<SI64Attr, "0">:$integral_min,
+    DefaultValuedAttr<F64Attr, "0.000000">:$floating_max,
+    DefaultValuedAttr<SI64Attr, "0">:$integral_max
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
@@ -6152,10 +6152,10 @@ def OneFlow_ClipByScalarGradOp : OneFlow_BaseOp<"clip_by_scalar_grad", [NoSideEf
     AnyType:$dx
   );
   let attrs = (ins
-    F64Attr:$floating_min,
-    SI64Attr:$integral_min,
-    F64Attr:$floating_max,
-    SI64Attr:$integral_max
+    DefaultValuedAttr<F64Attr, "0.000000">:$floating_min,
+    DefaultValuedAttr<SI64Attr, "0">:$integral_min,
+    DefaultValuedAttr<F64Attr, "0.000000">:$floating_max,
+    DefaultValuedAttr<SI64Attr, "0">:$integral_max
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
@@ -6171,8 +6171,8 @@ def OneFlow_ClipByScalarMaxOp : OneFlow_BaseOp<"clip_by_scalar_max", [NoSideEffe
     AnyType:$y
   );
   let attrs = (ins
-    F64Attr:$floating_max,
-    SI64Attr:$integral_max
+    DefaultValuedAttr<F64Attr, "0.000000">:$floating_max,
+    DefaultValuedAttr<SI64Attr, "0">:$integral_max
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
@@ -6189,8 +6189,8 @@ def OneFlow_ClipByScalarMaxGradOp : OneFlow_BaseOp<"clip_by_scalar_max_grad", [N
     AnyType:$dx
   );
   let attrs = (ins
-    F64Attr:$floating_max,
-    SI64Attr:$integral_max
+    DefaultValuedAttr<F64Attr, "0.000000">:$floating_max,
+    DefaultValuedAttr<SI64Attr, "0">:$integral_max
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
@@ -6206,8 +6206,8 @@ def OneFlow_ClipByScalarMinOp : OneFlow_BaseOp<"clip_by_scalar_min", [NoSideEffe
     AnyType:$y
   );
   let attrs = (ins
-    F64Attr:$floating_min,
-    SI64Attr:$integral_min
+    DefaultValuedAttr<F64Attr, "0.000000">:$floating_min,
+    DefaultValuedAttr<SI64Attr, "0">:$integral_min
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
@@ -6224,8 +6224,8 @@ def OneFlow_ClipByScalarMinGradOp : OneFlow_BaseOp<"clip_by_scalar_min_grad", [N
     AnyType:$dx
   );
   let attrs = (ins
-    F64Attr:$floating_min,
-    SI64Attr:$integral_min
+    DefaultValuedAttr<F64Attr, "0.000000">:$floating_min,
+    DefaultValuedAttr<SI64Attr, "0">:$integral_min
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dy", "x"}); return &val; }
@@ -6241,10 +6241,10 @@ def OneFlow_ScalarAddOp : OneFlow_BaseOp<"scalar_add", [NoSideEffect, DeclareOpI
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$has_int_operand,
-    BoolAttr:$has_float_operand,
-    SI64Attr:$int_operand,
-    F64Attr:$float_operand
+    DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$int_operand,
+    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -6288,10 +6288,10 @@ def OneFlow_ScalarFloordivOp : OneFlow_BaseOp<"scalar_floordiv", [NoSideEffect, 
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$has_int_operand,
-    BoolAttr:$has_float_operand,
-    SI64Attr:$int_operand,
-    F64Attr:$float_operand
+    DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$int_operand,
+    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -6307,10 +6307,10 @@ def OneFlow_ScalarFmodOp : OneFlow_BaseOp<"scalar_fmod", [NoSideEffect, DeclareO
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$has_int_operand,
-    BoolAttr:$has_float_operand,
-    SI64Attr:$int_operand,
-    F64Attr:$float_operand
+    DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$int_operand,
+    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -6326,10 +6326,10 @@ def OneFlow_ScalarLogicalAndOp : OneFlow_BaseOp<"scalar_logical_and", [NoSideEff
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$has_int_operand,
-    BoolAttr:$has_float_operand,
-    SI64Attr:$int_operand,
-    F64Attr:$float_operand
+    DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$int_operand,
+    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -6345,10 +6345,10 @@ def OneFlow_ScalarLogicalEqualOp : OneFlow_BaseOp<"scalar_logical_equal", [NoSid
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$has_int_operand,
-    BoolAttr:$has_float_operand,
-    SI64Attr:$int_operand,
-    F64Attr:$float_operand
+    DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$int_operand,
+    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -6364,10 +6364,10 @@ def OneFlow_ScalarLogicalGreaterOp : OneFlow_BaseOp<"scalar_logical_greater", [N
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$has_int_operand,
-    BoolAttr:$has_float_operand,
-    SI64Attr:$int_operand,
-    F64Attr:$float_operand
+    DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$int_operand,
+    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -6383,10 +6383,10 @@ def OneFlow_ScalarLogicalGreaterEqualOp : OneFlow_BaseOp<"scalar_logical_greater
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$has_int_operand,
-    BoolAttr:$has_float_operand,
-    SI64Attr:$int_operand,
-    F64Attr:$float_operand
+    DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$int_operand,
+    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -6402,10 +6402,10 @@ def OneFlow_ScalarLogicalLessOp : OneFlow_BaseOp<"scalar_logical_less", [NoSideE
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$has_int_operand,
-    BoolAttr:$has_float_operand,
-    SI64Attr:$int_operand,
-    F64Attr:$float_operand
+    DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$int_operand,
+    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -6421,10 +6421,10 @@ def OneFlow_ScalarLogicalLessEqualOp : OneFlow_BaseOp<"scalar_logical_less_equal
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$has_int_operand,
-    BoolAttr:$has_float_operand,
-    SI64Attr:$int_operand,
-    F64Attr:$float_operand
+    DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$int_operand,
+    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -6440,10 +6440,10 @@ def OneFlow_ScalarLogicalNotEqualOp : OneFlow_BaseOp<"scalar_logical_not_equal",
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$has_int_operand,
-    BoolAttr:$has_float_operand,
-    SI64Attr:$int_operand,
-    F64Attr:$float_operand
+    DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$int_operand,
+    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -6459,10 +6459,10 @@ def OneFlow_ScalarLogicalOrOp : OneFlow_BaseOp<"scalar_logical_or", [NoSideEffec
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$has_int_operand,
-    BoolAttr:$has_float_operand,
-    SI64Attr:$int_operand,
-    F64Attr:$float_operand
+    DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$int_operand,
+    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -6478,10 +6478,10 @@ def OneFlow_ScalarLogicalXorOp : OneFlow_BaseOp<"scalar_logical_xor", [NoSideEff
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$has_int_operand,
-    BoolAttr:$has_float_operand,
-    SI64Attr:$int_operand,
-    F64Attr:$float_operand
+    DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$int_operand,
+    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -6497,10 +6497,10 @@ def OneFlow_ScalarMulOp : OneFlow_BaseOp<"scalar_mul", [NoSideEffect, DeclareOpI
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$has_int_operand,
-    BoolAttr:$has_float_operand,
-    SI64Attr:$int_operand,
-    F64Attr:$float_operand
+    DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$int_operand,
+    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -6530,10 +6530,10 @@ def OneFlow_ScalarPowOp : OneFlow_BaseOp<"scalar_pow", [NoSideEffect, DeclareOpI
     AnyType:$out
   );
   let attrs = (ins
-    BoolAttr:$has_int_operand,
-    BoolAttr:$has_float_operand,
-    SI64Attr:$int_operand,
-    F64Attr:$float_operand
+    DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$int_operand,
+    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -6550,10 +6550,10 @@ def OneFlow_ScalarPowGradOp : OneFlow_BaseOp<"scalar_pow_grad", [NoSideEffect, D
     AnyType:$dx
   );
   let attrs = (ins
-    BoolAttr:$has_int_operand,
-    BoolAttr:$has_float_operand,
-    SI64Attr:$int_operand,
-    F64Attr:$float_operand
+    DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$int_operand,
+    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x", "dy"}); return &val; }
@@ -6677,7 +6677,7 @@ def OneFlow_SparseSoftmaxCrossEntropyOp : OneFlow_BaseOp<"sparse_softmax_cross_e
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$depth
+    DefaultValuedAttr<SI64Attr, "0">:$depth
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "label"}); return &val; }
@@ -6695,7 +6695,7 @@ def OneFlow_SparseSoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"sparse_softmax_cro
     AnyType:$prediction_diff
   );
   let attrs = (ins
-    SI64Attr:$depth
+    DefaultValuedAttr<SI64Attr, "0">:$depth
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"label", "dy", "prob"}); return &val; }
@@ -6713,7 +6713,7 @@ def OneFlow_SparseSoftmaxCrossEntropyMsOp : OneFlow_BaseOp<"sparse_softmax_cross
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$depth
+    DefaultValuedAttr<SI64Attr, "0">:$depth
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"prediction", "label"}); return &val; }
@@ -6731,7 +6731,7 @@ def OneFlow_SparseSoftmaxCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_softmax_c
     AnyType:$prediction_diff
   );
   let attrs = (ins
-    SI64Attr:$depth
+    DefaultValuedAttr<SI64Attr, "0">:$depth
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"label", "dy", "prob"}); return &val; }
@@ -6828,7 +6828,7 @@ def OneFlow_GenTensorBufferOp : OneFlow_BaseOp<"gen_tensor_buffer", [NoSideEffec
     ShapeArrayAttr:$shape_list,
     F32ArrayAttr:$value_list,
     StrAttr:$data_type,
-    BoolAttr:$dynamic_out
+    DefaultValuedAttr<BoolAttr, "false">:$dynamic_out
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
@@ -6846,7 +6846,7 @@ def OneFlow_TensorBufferToListOfTensorsOp : OneFlow_BaseOp<"tensor_buffer_to_lis
   let attrs = (ins
     AnyI64ElementsAttr:$out_shape,
     StrAttr:$out_dtype,
-    BoolAttr:$dynamic_out
+    DefaultValuedAttr<BoolAttr, "false">:$dynamic_out
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -6864,7 +6864,7 @@ def OneFlow_TensorBufferToListOfTensorsV2Op : OneFlow_BaseOp<"tensor_buffer_to_l
   let attrs = (ins
     ShapeArrayAttr:$out_shapes,
     DTArrayAttr:$out_dtypes,
-    BoolAttr:$dynamic_out
+    DefaultValuedAttr<BoolAttr, "false">:$dynamic_out
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -6897,7 +6897,7 @@ def OneFlow_TensorToTensorBufferOp : OneFlow_BaseOp<"tensor_to_tensor_buffer", [
     AnyType:$out
   );
   let attrs = (ins
-    SI32Attr:$instance_dims
+    DefaultValuedAttr<SI32Attr, "0">:$instance_dims
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -7006,7 +7006,7 @@ def OneFlow_TestRandomSourceOp : OneFlow_BaseOp<"TestRandomSource", [NoSideEffec
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$seed
+    DefaultValuedAttr<SI64Attr, "0">:$seed
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
@@ -7045,7 +7045,7 @@ def OneFlow_TestSourceMultiGpuFixedOutNumOp : OneFlow_BaseOp<"TestSourceMultiGpu
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$out_num
+    DefaultValuedAttr<SI64Attr, "0">:$out_num
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({}); return &val; }
@@ -7101,8 +7101,8 @@ def OneFlow_TestUserOpAttrAutoTypeOp : OneFlow_BaseOp<"test_user_op_attr_auto_ty
     AnyType:$out
   );
   let attrs = (ins
-    SI32Attr:$int1,
-    SI32Attr:$int2
+    DefaultValuedAttr<SI32Attr, "0">:$int1,
+    DefaultValuedAttr<SI32Attr, "0">:$int2
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -7386,8 +7386,8 @@ def OneFlow_HardtanhOp : OneFlow_BaseOp<"hardtanh", [NoSideEffect, DeclareOpInte
     AnyType:$out
   );
   let attrs = (ins
-    F64Attr:$min_val,
-    F64Attr:$max_val
+    DefaultValuedAttr<F64Attr, "0.000000">:$min_val,
+    DefaultValuedAttr<F64Attr, "0.000000">:$max_val
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -7404,8 +7404,8 @@ def OneFlow_HardtanhGradOp : OneFlow_BaseOp<"hardtanh_grad", [NoSideEffect, Decl
     AnyType:$dx
   );
   let attrs = (ins
-    F64Attr:$min_val,
-    F64Attr:$max_val
+    DefaultValuedAttr<F64Attr, "0.000000">:$min_val,
+    DefaultValuedAttr<F64Attr, "0.000000">:$max_val
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"y", "dy"}); return &val; }
@@ -7537,7 +7537,7 @@ def OneFlow_AccOp : OneFlow_BaseOp<"acc", [NoSideEffect, DeclareOpInterfaceMetho
     AnyType:$out
   );
   let attrs = (ins
-    SI32Attr:$max_acc_num
+    DefaultValuedAttr<SI32Attr, "0">:$max_acc_num
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -7554,7 +7554,7 @@ def OneFlow_AffineGridOp : OneFlow_BaseOp<"affine_grid", [NoSideEffect, DeclareO
   );
   let attrs = (ins
     AnyI64ElementsAttr:$size,
-    BoolAttr:$align_corners
+    DefaultValuedAttr<BoolAttr, "false">:$align_corners
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"theta"}); return &val; }
@@ -7571,7 +7571,7 @@ def OneFlow_AffineGridGradOp : OneFlow_BaseOp<"affine_grid_grad", [NoSideEffect,
   );
   let attrs = (ins
     AnyI64ElementsAttr:$size,
-    BoolAttr:$align_corners
+    DefaultValuedAttr<BoolAttr, "false">:$align_corners
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"dgrid"}); return &val; }
@@ -7587,8 +7587,8 @@ def OneFlow_BernoulliOp : OneFlow_BaseOp<"bernoulli", [NoSideEffect, DeclareOpIn
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$seed,
-    BoolAttr:$has_seed,
+    DefaultValuedAttr<SI64Attr, "-1">:$seed,
+    DefaultValuedAttr<BoolAttr, "false">:$has_seed,
     StrAttr:$dtype
   );
   let extraClassDeclaration = [{
@@ -7647,7 +7647,7 @@ def OneFlow_CeluOp : OneFlow_BaseOp<"celu", [NoSideEffect, DeclareOpInterfaceMet
     AnyType:$out
   );
   let attrs = (ins
-    F64Attr:$alpha
+    DefaultValuedAttr<F64Attr, "0.000000">:$alpha
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -7664,7 +7664,7 @@ def OneFlow_CopyOp : OneFlow_BaseOp<"copy", [NoSideEffect, DeclareOpInterfaceMet
   );
   let attrs = (ins
     StrAttr:$device_type,
-    SI64Attr:$device_id
+    DefaultValuedAttr<SI64Attr, "0">:$device_id
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -7693,7 +7693,7 @@ def OneFlow_DiagOp : OneFlow_BaseOp<"diag", [NoSideEffect, DeclareOpInterfaceMet
     AnyType:$out
   );
   let attrs = (ins
-    SI32Attr:$diagonal
+    DefaultValuedAttr<SI32Attr, "0">:$diagonal
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -7709,7 +7709,7 @@ def OneFlow_EluOp : OneFlow_BaseOp<"elu", [NoSideEffect, DeclareOpInterfaceMetho
     AnyType:$out
   );
   let attrs = (ins
-    F64Attr:$alpha
+    DefaultValuedAttr<F64Attr, "0.000000">:$alpha
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -7742,7 +7742,7 @@ def OneFlow_ExpandDimsOp : OneFlow_BaseOp<"expand_dims", [NoSideEffect, DeclareO
     AnyType:$out
   );
   let attrs = (ins
-    SI32Attr:$axis
+    DefaultValuedAttr<SI32Attr, "0">:$axis
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -7758,8 +7758,8 @@ def OneFlow_FlattenOp : OneFlow_BaseOp<"flatten", [NoSideEffect, DeclareOpInterf
     AnyType:$out
   );
   let attrs = (ins
-    SI32Attr:$start_dim,
-    SI32Attr:$end_dim
+    DefaultValuedAttr<SI32Attr, "0">:$start_dim,
+    DefaultValuedAttr<SI32Attr, "-1">:$end_dim
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -7866,7 +7866,7 @@ def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", [NoSideEffect, DeclareOpI
     AnyType:$y
   );
   let attrs = (ins
-    F32Attr:$alpha
+    DefaultValuedAttr<F32Attr, "0.000000">:$alpha
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
@@ -7908,9 +7908,9 @@ def OneFlow_NarrowOp : OneFlow_BaseOp<"narrow", [NoSideEffect, DeclareOpInterfac
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$dim,
-    SI64Attr:$start,
-    SI64Attr:$length
+    DefaultValuedAttr<SI64Attr, "0">:$dim,
+    DefaultValuedAttr<SI64Attr, "0">:$start,
+    DefaultValuedAttr<SI64Attr, "0">:$length
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -7926,11 +7926,11 @@ def OneFlow_OneHotOp : OneFlow_BaseOp<"one_hot", [NoSideEffect, DeclareOpInterfa
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$depth,
-    F64Attr:$floating_on_value,
-    SI64Attr:$integer_on_value,
-    F64Attr:$floating_off_value,
-    SI64Attr:$integer_off_value,
+    DefaultValuedAttr<SI64Attr, "0">:$depth,
+    DefaultValuedAttr<F64Attr, "0.000000">:$floating_on_value,
+    DefaultValuedAttr<SI64Attr, "0">:$integer_on_value,
+    DefaultValuedAttr<F64Attr, "0.000000">:$floating_off_value,
+    DefaultValuedAttr<SI64Attr, "0">:$integer_off_value,
     StrAttr:$dtype
   );
   let extraClassDeclaration = [{
@@ -7947,7 +7947,7 @@ def OneFlow_PackOp : OneFlow_BaseOp<"pack", [NoSideEffect, DeclareOpInterfaceMet
     AnyType:$out
   );
   let attrs = (ins
-    SI32Attr:$pack_num
+    DefaultValuedAttr<SI32Attr, "0">:$pack_num
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -7963,8 +7963,8 @@ def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", [NoSideEffect,
     AnyType:$out
   );
   let attrs = (ins
-    F32Attr:$rate,
-    SI64Attr:$seed
+    DefaultValuedAttr<F32Attr, "0.000000">:$rate,
+    DefaultValuedAttr<SI64Attr, "0">:$seed
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"like"}); return &val; }
@@ -7980,7 +7980,7 @@ def OneFlow_RepeatOp : OneFlow_BaseOp<"repeat", [NoSideEffect, DeclareOpInterfac
     AnyType:$out
   );
   let attrs = (ins
-    SI32Attr:$repeat_num
+    DefaultValuedAttr<SI32Attr, "0">:$repeat_num
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -8126,10 +8126,10 @@ def OneFlow_TrilOp : OneFlow_BaseOp<"tril", [NoSideEffect, DeclareOpInterfaceMet
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$diagonal,
-    F64Attr:$floating_fill_value,
-    SI64Attr:$integer_fill_value,
-    BoolAttr:$is_floating_fill_value
+    DefaultValuedAttr<SI64Attr, "0">:$diagonal,
+    DefaultValuedAttr<F64Attr, "0.000000">:$floating_fill_value,
+    DefaultValuedAttr<SI64Attr, "0">:$integer_fill_value,
+    DefaultValuedAttr<BoolAttr, "false">:$is_floating_fill_value
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -8145,7 +8145,7 @@ def OneFlow_TriuOp : OneFlow_BaseOp<"triu", [NoSideEffect, DeclareOpInterfaceMet
     AnyType:$out
   );
   let attrs = (ins
-    SI64Attr:$diagonal
+    DefaultValuedAttr<SI64Attr, "0">:$diagonal
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -8181,9 +8181,9 @@ def OneFlow_UnfoldTensorOp : OneFlow_BaseOp<"unfold_tensor", [NoSideEffect, Decl
     AnyType:$y
   );
   let attrs = (ins
-    SI32Attr:$dimension,
-    SI32Attr:$size,
-    SI32Attr:$step
+    DefaultValuedAttr<SI32Attr, "0">:$dimension,
+    DefaultValuedAttr<SI32Attr, "0">:$size,
+    DefaultValuedAttr<SI32Attr, "0">:$step
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"x"}); return &val; }
@@ -8199,7 +8199,7 @@ def OneFlow_UnpackOp : OneFlow_BaseOp<"unpack", [NoSideEffect, DeclareOpInterfac
     AnyType:$out
   );
   let attrs = (ins
-    SI32Attr:$unpack_num
+    DefaultValuedAttr<SI32Attr, "0">:$unpack_num
   );
   let extraClassDeclaration = [{
     static const std::vector<std::string>* inputKeys() { static std::vector<std::string> val({"in"}); return &val; }
@@ -8236,9 +8236,9 @@ def OneFlow_UpsampleOp : OneFlow_BaseOp<"upsample", [NoSideEffect, DeclareOpInte
     AnyType:$y
   );
   let attrs = (ins
-    F32Attr:$height_scale,
-    F32Attr:$width_scale,
-    BoolAttr:$align_corners,
+    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
+    DefaultValuedAttr<BoolAttr, "false">:$align_corners,
     StrAttr:$data_format,
     StrAttr:$interpolation
   );
@@ -8256,9 +8256,9 @@ def OneFlow_UpsampleBicubic2DOp : OneFlow_BaseOp<"upsample_bicubic_2d", [NoSideE
     AnyType:$y
   );
   let attrs = (ins
-    F32Attr:$height_scale,
-    F32Attr:$width_scale,
-    BoolAttr:$align_corners,
+    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
+    DefaultValuedAttr<BoolAttr, "false">:$align_corners,
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
@@ -8276,9 +8276,9 @@ def OneFlow_UpsampleBicubic2DGradOp : OneFlow_BaseOp<"upsample_bicubic_2d_grad",
     AnyType:$dx
   );
   let attrs = (ins
-    F32Attr:$height_scale,
-    F32Attr:$width_scale,
-    BoolAttr:$align_corners,
+    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
+    DefaultValuedAttr<BoolAttr, "false">:$align_corners,
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
@@ -8295,9 +8295,9 @@ def OneFlow_UpsampleBilinear2DOp : OneFlow_BaseOp<"upsample_bilinear_2d", [NoSid
     AnyType:$y
   );
   let attrs = (ins
-    F32Attr:$height_scale,
-    F32Attr:$width_scale,
-    BoolAttr:$align_corners,
+    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
+    DefaultValuedAttr<BoolAttr, "false">:$align_corners,
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
@@ -8315,9 +8315,9 @@ def OneFlow_UpsampleBilinear2DGradOp : OneFlow_BaseOp<"upsample_bilinear_2d_grad
     AnyType:$dx
   );
   let attrs = (ins
-    F32Attr:$height_scale,
-    F32Attr:$width_scale,
-    BoolAttr:$align_corners,
+    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
+    DefaultValuedAttr<BoolAttr, "false">:$align_corners,
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
@@ -8335,9 +8335,9 @@ def OneFlow_UpsampleGradOp : OneFlow_BaseOp<"upsample_grad", [NoSideEffect, Decl
     AnyType:$dx
   );
   let attrs = (ins
-    F32Attr:$height_scale,
-    F32Attr:$width_scale,
-    BoolAttr:$align_corners,
+    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
+    DefaultValuedAttr<BoolAttr, "false">:$align_corners,
     StrAttr:$data_format,
     StrAttr:$interpolation
   );
@@ -8355,8 +8355,8 @@ def OneFlow_UpsampleLinear1DOp : OneFlow_BaseOp<"upsample_linear_1d", [NoSideEff
     AnyType:$y
   );
   let attrs = (ins
-    F32Attr:$scale_factor,
-    BoolAttr:$align_corners,
+    DefaultValuedAttr<F32Attr, "0.000000">:$scale_factor,
+    DefaultValuedAttr<BoolAttr, "false">:$align_corners,
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
@@ -8374,8 +8374,8 @@ def OneFlow_UpsampleLinear1DGradOp : OneFlow_BaseOp<"upsample_linear_1d_grad", [
     AnyType:$dx
   );
   let attrs = (ins
-    F32Attr:$scale_factor,
-    BoolAttr:$align_corners,
+    DefaultValuedAttr<F32Attr, "0.000000">:$scale_factor,
+    DefaultValuedAttr<BoolAttr, "false">:$align_corners,
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
@@ -8392,7 +8392,7 @@ def OneFlow_UpsampleNearest1DOp : OneFlow_BaseOp<"upsample_nearest_1d", [NoSideE
     AnyType:$y
   );
   let attrs = (ins
-    F32Attr:$scale_factor,
+    DefaultValuedAttr<F32Attr, "0.000000">:$scale_factor,
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
@@ -8410,7 +8410,7 @@ def OneFlow_UpsampleNearest1DGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad",
     AnyType:$dx
   );
   let attrs = (ins
-    F32Attr:$scale_factor,
+    DefaultValuedAttr<F32Attr, "0.000000">:$scale_factor,
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
@@ -8427,8 +8427,8 @@ def OneFlow_UpsampleNearest2DOp : OneFlow_BaseOp<"upsample_nearest_2d", [NoSideE
     AnyType:$y
   );
   let attrs = (ins
-    F32Attr:$height_scale,
-    F32Attr:$width_scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
@@ -8446,8 +8446,8 @@ def OneFlow_UpsampleNearest2DGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad",
     AnyType:$dx
   );
   let attrs = (ins
-    F32Attr:$height_scale,
-    F32Attr:$width_scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
@@ -8464,9 +8464,9 @@ def OneFlow_UpsampleNearest3DOp : OneFlow_BaseOp<"upsample_nearest_3d", [NoSideE
     AnyType:$y
   );
   let attrs = (ins
-    F32Attr:$depth_scale,
-    F32Attr:$height_scale,
-    F32Attr:$width_scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$depth_scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
@@ -8484,9 +8484,9 @@ def OneFlow_UpsampleNearest3DGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad",
     AnyType:$dx
   );
   let attrs = (ins
-    F32Attr:$depth_scale,
-    F32Attr:$height_scale,
-    F32Attr:$width_scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$depth_scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
@@ -8503,10 +8503,10 @@ def OneFlow_UpsampleTrilinear3DOp : OneFlow_BaseOp<"upsample_trilinear_3d", [NoS
     AnyType:$y
   );
   let attrs = (ins
-    F32Attr:$depth_scale,
-    F32Attr:$height_scale,
-    F32Attr:$width_scale,
-    BoolAttr:$align_corners,
+    DefaultValuedAttr<F32Attr, "0.000000">:$depth_scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
+    DefaultValuedAttr<BoolAttr, "false">:$align_corners,
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
@@ -8524,10 +8524,10 @@ def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_gr
     AnyType:$dx
   );
   let attrs = (ins
-    F32Attr:$depth_scale,
-    F32Attr:$height_scale,
-    F32Attr:$width_scale,
-    BoolAttr:$align_corners,
+    DefaultValuedAttr<F32Attr, "0.000000">:$depth_scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
+    DefaultValuedAttr<BoolAttr, "false">:$align_corners,
     StrAttr:$data_format
   );
   let extraClassDeclaration = [{
