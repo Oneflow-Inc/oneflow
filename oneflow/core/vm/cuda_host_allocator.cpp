@@ -40,7 +40,7 @@ void CudaHostAllocator::Allocate(char** mem_ptr, std::size_t size) {
   if (vec->empty()) {
     char* ptr = nullptr;
     OF_CUDA_CHECK(cudaMallocHost(&ptr, 1 << granularity));
-    vec->push_back(ptr);
+    vec->emplace_back(ptr);
   }
   *mem_ptr = vec->back();
   vec->pop_back();
@@ -53,7 +53,7 @@ void CudaHostAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   CHECK(iter != occupied_ptr2granularity_.end());
   std::size_t granularity = iter->second;
   occupied_ptr2granularity_.erase(iter);
-  granularity2free_ptrs_[granularity].push_back(mem_ptr);
+  granularity2free_ptrs_[granularity].emplace_back(mem_ptr);
 }
 
 }  // namespace vm

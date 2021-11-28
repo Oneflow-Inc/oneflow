@@ -121,7 +121,7 @@ class ClusterMergeNode : public ClusterNode {
     snapshot.from = edge->start();
     snapshot.to = edge->end();
     snapshot.edge = edge;
-    snapshot_edges_.push_back(snapshot);
+    snapshot_edges_.emplace_back(snapshot);
   }
 
   ClusterNode* lhs_;

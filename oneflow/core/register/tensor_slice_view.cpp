@@ -76,6 +76,7 @@ TensorSliceView TensorSliceView::Intersect(const TensorSliceView& other) const {
   if (IsEmpty() || other.IsEmpty()) { return TensorSliceView(); }
   CHECK_EQ(other.range_vec_.size(), range_vec_.size());
   std::vector<Range> intersection_vec;
+  intersection_vec.reserve(range_vec_.size());
   const Range zero(0, 0);
   FOR_RANGE(int64_t, i, 0, range_vec_.size()) {
     const Range intersection = FindIntersectant(range_vec_.at(i), other.range_vec_.at(i));
