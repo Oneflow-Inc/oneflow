@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef WITH_MLIR
 #include <utility>
 #include <vector>
 #include "oneflow/core/graph/op_graph.h"
@@ -181,4 +180,3 @@ REGISTER_JOB_PASS("IRRoundTripBeforeAD", IRRoundTrip<kBeforeAD>);
 REGISTER_JOB_PASS("IRRoundTrip", IRRoundTrip<kAfterAD>);
 
 }  // namespace oneflow
-#endif  // WITH_MLIR
