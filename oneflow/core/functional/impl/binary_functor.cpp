@@ -43,13 +43,25 @@ class AddFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& other, const Scalar& alpha,
                            bool inplace) const {
+    if (IsIntegralDataType(input->dtype()->data_type())
+        && IsIntegralDataType(other->dtype()->data_type()) && alpha.IsFloatingPoint()) {
+      return Error::RuntimeError()
+             << "For integral input tensors, argument alpha must not be a floating point number.";
+    }
     bool input_static_zeros = IsStaticZerosTensor(input);
     if (input_static_zeros || IsStaticZerosTensor(other)) {
       CHECK_OR_RETURN(JUST(input->device()) == JUST(other->device()));
       CHECK_OR_RETURN(*input->shape() == *other->shape());
       CHECK_OR_RETURN(input->dtype() == other->dtype());
       if (input_static_zeros) {
-        return alpha.Value<float>() == 1.0 ? other : JUST(functional::ScalarMul(alpha, other));
+        if ((alpha.IsIntegral() && alpha.Value<int64_t>() == 1)
+            || (alpha.IsFloatingPoint()
+                && std::fabs(alpha.Value<double>() - 1.0)
+                       < std::numeric_limits<double>::epsilon())) {
+          return other;
+        } else {
+          return JUST(functional::ScalarMul(alpha, other));
+        }
       }
       return input;
     }
@@ -57,7 +69,9 @@ class AddFunctor {
     const OpExpr* op = nullptr;
 
     TensorProcessor tensor_processor;
-    if (alpha.Value<float>() == 1.0) {
+    if ((alpha.IsIntegral() && alpha.Value<int64_t>() == 1)
+        || (alpha.IsFloatingPoint()
+            && std::fabs(alpha.Value<double>() - 1.0) < std::numeric_limits<double>::epsilon())) {
       JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({input, other}).Apply());
     } else {
       JUST(tensor_processor.PromoteInputsToCommonDtype(true)

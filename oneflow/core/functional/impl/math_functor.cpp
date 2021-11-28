@@ -127,8 +127,18 @@ class ScalarAddFunctor : public ScalarMathBaseFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Scalar& other,
                            const Scalar& alpha, const bool& inplace) const {
-    return ScalarMathBaseFunctor::operator()(
-        input, Scalar(other.Value<float>() * alpha.Value<float>()), inplace);
+    if (IsIntegralDataType(input->dtype()->data_type()) && other.IsIntegral()
+        && alpha.IsFloatingPoint()) {
+      return Error::RuntimeError()
+             << "For integral input tensors, argument alpha must not be a floating point number.";
+    }
+    Scalar scalar;
+    if (other.IsFloatingPoint() || alpha.IsFloatingPoint()) {
+      scalar = Scalar(other.Value<double>() * alpha.Value<double>());
+    } else {
+      scalar = Scalar(other.Value<int64_t>() * alpha.Value<int64_t>());
+    }
+    return ScalarMathBaseFunctor::operator()(input, scalar, inplace);
   }
 };
 
@@ -136,9 +146,20 @@ class ScalarAdd2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& input, const std::shared_ptr<one::Tensor>& other,
                            const Scalar& alpha) const {
+    if (IsIntegralDataType(other->dtype()->data_type()) && input.IsIntegral()
+        && alpha.IsFloatingPoint()) {
+      return Error::RuntimeError()
+             << "For integral input tensors, argument alpha must not be a floating point number.";
+    }
     std::shared_ptr<one::Tensor> other_;
-    other_ = alpha.Value<float>() == 1.0 ? other : JUST(ScalarMul(alpha, other));
-    return ScalarAdd(other_, input, /*alpha=*/1.0, /*inplace=*/false);
+    if ((alpha.IsIntegral() && alpha.Value<int64_t>() == 1)
+        || (alpha.IsFloatingPoint()
+            && std::fabs(alpha.Value<double>() - 1.0) < std::numeric_limits<double>::epsilon())) {
+      other_ = other;
+    } else {
+      other_ = JUST(ScalarMul(alpha, other));
+    }
+    return ScalarAdd(other_, input, /*alpha=*/1, /*inplace=*/false);
   }
 };
 
@@ -146,14 +167,14 @@ class ScalarSubFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar,
                            bool inplace) const {
-    return ScalarAdd(x, Scalar(-1) * scalar, /*alpha=*/1.0, inplace);
+    return ScalarAdd(x, Scalar(-1) * scalar, /*alpha=*/1, inplace);
   }
 };
 
 class ScalarSub2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
-    return ScalarAdd(JUST(ScalarMul(x, Scalar(-1), false)), scalar, /*alpha=*/1.0,
+    return ScalarAdd(JUST(ScalarMul(x, Scalar(-1), false)), scalar, /*alpha=*/1,
                      /*inplace=*/false);
   }
 };
