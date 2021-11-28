@@ -27,7 +27,7 @@ namespace oneflow {
 namespace {
 
 bool IsCopyNdPrimitiveSupported(DeviceType device_type, int64_t ndims) {
-  auto primitive = primitive::NewPrimitive<primitive::CopyNdFactory>(device_type, ndims);
+  auto primitive = ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(device_type, ndims);
   return primitive.operator bool();
 }
 
