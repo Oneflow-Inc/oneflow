@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/graph/task_stream_id.h"
+#include "oneflow/core/ep/include/primitive/copy_nd.h"
 
 namespace oneflow {
 
