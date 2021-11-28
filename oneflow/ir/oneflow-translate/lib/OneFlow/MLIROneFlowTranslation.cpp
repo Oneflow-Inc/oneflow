@@ -30,6 +30,7 @@ limitations under the License.
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Translation.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Parser.h"
 
 #include "llvm-c/Core.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -80,6 +81,9 @@ class JobImporter : Importer {
                               std::vector<NamedAttribute>& attr_vec) override;
   LogicalResult InsertOpResults(const ::oneflow::OperatorConf& op, Operation*) override;
   LogicalResult ProcessSystemOp(const ::oneflow::OperatorConf& op) override;
+  LogicalResult ProcessVariableOp(const ::oneflow::OperatorConf& op);
+  LogicalResult ProcessInputOp(const ::oneflow::OperatorConf& op_conf);
+  LogicalResult ProcessOutputOp(const ::oneflow::OperatorConf& op_conf);
   LogicalResult ProcessJob();
   LogicalResult TryToUpdateJob();
   Type GetTensorTypeOfLbn(const std::string& lbn) override;
@@ -121,16 +125,15 @@ LogicalResult JobImporter::AppendDataInOperand(const std::string& lbn,
   }
 }
 
-LogicalResult JobImporter::InsertOpResults(const ::oneflow::OperatorConf& op,
-                                           Operation* created_op) {
-  for (auto data_out : llvm::enumerate(GetDataOutputResults(created_op))) {
-    auto output_lbns = created_op->getAttrOfType<ArrayAttr>("output_lbns");
+LogicalResult JobImporter::InsertOpResults(const ::oneflow::OperatorConf& op_conf, Operation* op) {
+  for (const auto& data_out : llvm::enumerate(GetDataOutputResults(op))) {
+    auto output_lbns = op->getAttrOfType<ArrayAttr>("output_lbns");
     auto data_out_index = data_out.index();
     lbn2result_.insert({output_lbns[data_out_index].dyn_cast<StringAttr>().getValue().str(),
                         data_out.value().dyn_cast<OpResult>()});
   }
-  if (auto ctrl_out = GetCtrlOutputResult(created_op)) {
-    op_name2ctrl_result_.insert({created_op->getAttrOfType<StringAttr>("op_name").getValue().str(),
+  if (auto ctrl_out = GetCtrlOutputResult(op)) {
+    op_name2ctrl_result_.insert({op->getAttrOfType<StringAttr>("op_name").getValue().str(),
                                  ctrl_out->dyn_cast<OpResult>()});
   }
   return success();
@@ -167,6 +170,10 @@ LogicalResult JobImporter::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
     GetModule().emitError("Not a sys op. op name: " + op.name());
     return failure();
   }
+  if (op.has_variable_conf()) { return ProcessVariableOp(op); }
+  if (op.has_input_conf()) { return ProcessInputOp(op); }
+  if (op.has_output_conf()) { return ProcessOutputOp(op); }
+
   auto input_bns_lbns = job_wrapper_.InputBns4OpName(op.name());
   auto input_bns = input_bns_lbns.first;
   auto input_lbns = input_bns_lbns.second;
@@ -206,6 +213,317 @@ LogicalResult JobImporter::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
   if (failed(InsertOpResults(op, created_op))) { return failure(); }
   if (!created_op) {
     GetModule()->emitError("fail to create op, name: " + op.name());
+    return failure();
+  }
+  return success();
+}
+
+LogicalResult JobImporter::ProcessVariableOp(const ::oneflow::OperatorConf& op_conf) {
+  if (!op_conf.has_variable_conf()) {
+    GetModule().emitError("Not a variable op. op name: " + op_conf.name());
+    return failure();
+  }
+
+  if (op_conf.variable_conf().has_tick()) {
+    GetModule().emitError("variable op has tick input. op name: " + op_conf.name());
+    return failure();
+  }
+
+  OperationState state(FileLineColLoc::get(GetMLIRContext(), op_conf.name(), 0, 0),
+                       "oneflow.variable");
+  // attrs
+  std::vector<NamedAttribute> attr_vec;
+  if (failed(AddOpConf(op_conf, attr_vec))) { return failure(); }
+  if (failed(AddDeviceName(op_conf, attr_vec))) { return failure(); }
+  // attr output_lbns
+  auto output_lbns_attr = GetBuilder().getStrArrayAttr({op_conf.name() + "/out"});
+  attr_vec.emplace_back(GetBuilder().getNamedAttr("output_lbns", output_lbns_attr));
+  // attr shape
+  auto shape_attr = GetBuilder().getI64VectorAttr(
+      {op_conf.variable_conf().shape().dim().begin(), op_conf.variable_conf().shape().dim().end()});
+  auto shape_named_attr = GetBuilder().getNamedAttr("shape", shape_attr);
+  attr_vec.emplace_back(shape_named_attr);
+  // attr data_type
+  if (op_conf.variable_conf().has_data_type()) {
+    std::string dtype_str;
+    if (failed(StringifyDataType(op_conf.variable_conf().data_type(), dtype_str))) {
+      return failure();
+    }
+    attr_vec.emplace_back(
+        GetBuilder().getNamedAttr("data_type", GetBuilder().getStringAttr(dtype_str)));
+  }
+  // attr model_name
+  if (op_conf.variable_conf().has_model_name()) {
+    const std::string& model_name = op_conf.variable_conf().model_name();
+    attr_vec.emplace_back(
+        GetBuilder().getNamedAttr("model_name", GetBuilder().getStringAttr(model_name)));
+  }
+  // attr l1 l2 regularization
+  if (op_conf.variable_conf().has_regularizer()
+      && op_conf.variable_conf().regularizer().has_l1_l2_conf()) {
+    if (op_conf.variable_conf().regularizer().l1_l2_conf().has_l1()) {
+      float l1_regularization = op_conf.variable_conf().regularizer().l1_l2_conf().l1();
+      attr_vec.emplace_back(GetBuilder().getNamedAttr(
+          "l1_regularization", GetBuilder().getF32FloatAttr(l1_regularization)));
+    }
+    if (op_conf.variable_conf().regularizer().l1_l2_conf().has_l2()) {
+      float l2_regularization = op_conf.variable_conf().regularizer().l1_l2_conf().l2();
+      attr_vec.emplace_back(GetBuilder().getNamedAttr(
+          "l2_regularization", GetBuilder().getF32FloatAttr(l2_regularization)));
+    }
+  }
+  // attr trainable
+  if (op_conf.variable_conf().has_trainable()) {
+    bool trainable = op_conf.variable_conf().trainable();
+    attr_vec.emplace_back(
+        GetBuilder().getNamedAttr("trainable", GetBuilder().getBoolAttr(trainable)));
+  }
+  // attr nd_sbp
+  const std::vector<StringRef> nd_sbp_str_vec{op_conf.variable_conf().nd_sbp().begin(),
+                                              op_conf.variable_conf().nd_sbp().end()};
+  auto nd_sbp_attr = GetBuilder().getStrArrayAttr(makeArrayRef(nd_sbp_str_vec));
+  attr_vec.emplace_back(GetBuilder().getNamedAttr("nd_sbp", nd_sbp_attr));
+  // trait_attr operand_segment_sizes
+  // if (failed(AddOperandSegmentSizes(0, op_conf.ctrl_in_op_name_size(), attr_vec))) {
+  //   return failure();
+  // }
+  // add attrs
+  state.addAttributes(attr_vec);
+  // operands
+  std::vector<::mlir::Value> operand_vec;
+  if (failed(AppendCtrlInOperand(op_conf, operand_vec))) { return failure(); }
+  state.addOperands(operand_vec);
+  // result types
+  llvm::SmallVector<Type, 8> out_types;
+  auto output_lbn = op_conf.name() + "/out";
+  out_types.push_back(GetTensorTypeOfLbn(output_lbn));
+  if (failed(AppendCtrlOutType(out_types))) { return failure(); }
+  state.addTypes(out_types);
+  // create op
+  auto op = GetBuilder().createOperation(state);
+  if (!op) {
+    GetModule()->emitError("fail to create op, name: " + op_conf.name());
+    return failure();
+  }
+  // record result
+  if (op->getNumResults() != 2) {
+    op->emitError("variable op should has two results (out and ctrl_output), but got "
+                  + std::to_string(op->getNumResults()) + "\n");
+    return failure();
+  }
+  if (!lbn2result_.emplace(output_lbn, op->getResult(0)).second) {
+    op->emitError("lbn already exists, lbn: ") << output_lbn;
+    return failure();
+  }
+  if (!op_name2ctrl_result_.emplace(op_conf.name(), op->getResult(1)).second) {
+    op->emitError("ctrl output already exists, op_name: ") << op_conf.name();
+    return failure();
+  }
+  return success();
+}
+
+LogicalResult JobImporter::ProcessInputOp(const ::oneflow::OperatorConf& op_conf) {
+  if (!op_conf.has_input_conf()) {
+    GetModule().emitError("Not a input op. op name: " + op_conf.name());
+    return failure();
+  }
+
+  if (op_conf.input_conf().has_tick()) {
+    GetModule().emitError("input op has tick input. op name: " + op_conf.name());
+    return failure();
+  }
+
+  OperationState state(FileLineColLoc::get(GetMLIRContext(), op_conf.name(), 0, 0),
+                       "oneflow.input");
+  // attrs
+  std::vector<NamedAttribute> attr_vec;
+  if (failed(AddOpConf(op_conf, attr_vec))) { return failure(); }
+  if (failed(AddDeviceName(op_conf, attr_vec))) { return failure(); }
+  // attr output_lbns
+  auto output_lbns_attr = GetBuilder().getStrArrayAttr({op_conf.name() + "/out"});
+  attr_vec.emplace_back(GetBuilder().getNamedAttr("output_lbns", output_lbns_attr));
+  // attr shape
+  if (op_conf.input_conf().blob_conf().has_shape()) {
+    auto shape_attr =
+        GetBuilder().getI64VectorAttr({op_conf.input_conf().blob_conf().shape().dim().begin(),
+                                       op_conf.input_conf().blob_conf().shape().dim().end()});
+    attr_vec.emplace_back(GetBuilder().getNamedAttr("shape", shape_attr));
+  }
+  // attr data_type
+  if (op_conf.input_conf().blob_conf().has_data_type()) {
+    std::string dtype_str;
+    if (failed(StringifyDataType(op_conf.input_conf().blob_conf().data_type(), dtype_str))) {
+      return failure();
+    }
+    attr_vec.emplace_back(
+        GetBuilder().getNamedAttr("data_type", GetBuilder().getStringAttr(dtype_str)));
+  }
+  // attr is_dynamic
+  if (op_conf.input_conf().blob_conf().has_is_dynamic()) {
+    bool is_dynamic = op_conf.input_conf().blob_conf().is_dynamic();
+    attr_vec.emplace_back(
+        GetBuilder().getNamedAttr("is_dynamic", GetBuilder().getBoolAttr(is_dynamic)));
+  }
+  // attr nd_sbp
+  if (op_conf.input_conf().blob_conf().has_nd_sbp()) {
+    std::vector<StringRef> nd_sbp_strref_vec;
+    nd_sbp_strref_vec.reserve(op_conf.input_conf().blob_conf().nd_sbp().sbp_parallel_size());
+    for (const auto& sbp : op_conf.input_conf().blob_conf().nd_sbp().sbp_parallel()) {
+      if (sbp.has_split_parallel()) {
+        nd_sbp_strref_vec.emplace_back("S(" + std::to_string(sbp.split_parallel().axis()) + ")");
+      } else if (sbp.has_broadcast_parallel()) {
+        nd_sbp_strref_vec.emplace_back("B");
+      } else if (sbp.has_partial_sum_parallel()) {
+        nd_sbp_strref_vec.emplace_back("P");
+      } else {
+        GetModule().emitError("unsupported sbp");
+      }
+    }
+    auto nd_sbp_attr = GetBuilder().getStrArrayAttr(makeArrayRef(nd_sbp_strref_vec));
+    attr_vec.emplace_back(GetBuilder().getNamedAttr("nd_sbp", nd_sbp_attr));
+  }
+  // attr job_name
+  if (op_conf.input_conf().has_job_name()) {
+    const std::string& job_name = op_conf.input_conf().job_name();
+    attr_vec.emplace_back(
+        GetBuilder().getNamedAttr("job_name", GetBuilder().getStringAttr(job_name)));
+  }
+  // trait_attr operand_segment_sizes
+  // if (failed(AddOperandSegmentSizes(0, op_conf.ctrl_in_op_name_size(), attr_vec))) {
+  //   return failure();
+  // }
+  // add attrs
+  state.addAttributes(attr_vec);
+  // operands
+  std::vector<::mlir::Value> operand_vec;
+  if (failed(AppendCtrlInOperand(op_conf, operand_vec))) { return failure(); }
+  state.addOperands(operand_vec);
+  // result types
+  llvm::SmallVector<Type, 8> out_types;
+  auto output_lbn = op_conf.name() + "/out";
+  out_types.push_back(GetTensorTypeOfLbn(output_lbn));
+  if (failed(AppendCtrlOutType(out_types))) { return failure(); }
+  state.addTypes(out_types);
+  // create op
+  auto op = GetBuilder().createOperation(state);
+  if (!op) {
+    GetModule()->emitError("fail to create op, name: " + op_conf.name());
+    return failure();
+  }
+  // record result
+  if (op->getNumResults() != 2) {
+    op->emitError("input op should has two results (out and ctrl_output), but got "
+                  + std::to_string(op->getNumResults()) + "\n");
+    return failure();
+  }
+  if (!lbn2result_.emplace(output_lbn, op->getResult(0)).second) {
+    op->emitError("lbn already exists, lbn: ") << output_lbn;
+    return failure();
+  }
+  if (!op_name2ctrl_result_.emplace(op_conf.name(), op->getResult(1)).second) {
+    op->emitError("ctrl output already exists, op_name: ") << op_conf.name();
+    return failure();
+  }
+  return success();
+}
+
+LogicalResult JobImporter::ProcessOutputOp(const ::oneflow::OperatorConf& op_conf) {
+  if (!op_conf.has_output_conf()) {
+    GetModule().emitError("Not a output op. op name: " + op_conf.name());
+    return failure();
+  }
+
+  OperationState state(FileLineColLoc::get(GetMLIRContext(), op_conf.name(), 0, 0),
+                       "oneflow.output");
+  // attrs
+  std::vector<NamedAttribute> attr_vec;
+  if (failed(AddOpConf(op_conf, attr_vec))) { return failure(); }
+  if (failed(AddDeviceName(op_conf, attr_vec))) { return failure(); }
+  // attr output_lbns
+  auto output_lbns_attr = GetBuilder().getStrArrayAttr({op_conf.name() + "/out"});
+  attr_vec.emplace_back(GetBuilder().getNamedAttr("output_lbns", output_lbns_attr));
+  // attr shape
+  if (op_conf.output_conf().blob_conf().has_shape()) {
+    auto shape_attr =
+        GetBuilder().getI64VectorAttr({op_conf.output_conf().blob_conf().shape().dim().begin(),
+                                       op_conf.output_conf().blob_conf().shape().dim().end()});
+    attr_vec.emplace_back(GetBuilder().getNamedAttr("shape", shape_attr));
+  }
+  // attr data_type
+  if (op_conf.output_conf().blob_conf().has_data_type()) {
+    std::string dtype_str;
+    if (failed(StringifyDataType(op_conf.output_conf().blob_conf().data_type(), dtype_str))) {
+      return failure();
+    }
+    attr_vec.emplace_back(
+        GetBuilder().getNamedAttr("data_type", GetBuilder().getStringAttr(dtype_str)));
+  }
+  // attr is_dynamic
+  if (op_conf.output_conf().blob_conf().has_is_dynamic()) {
+    bool is_dynamic = op_conf.output_conf().blob_conf().is_dynamic();
+    attr_vec.emplace_back(
+        GetBuilder().getNamedAttr("is_dynamic", GetBuilder().getBoolAttr(is_dynamic)));
+  }
+  // attr nd_sbp
+  if (op_conf.output_conf().blob_conf().has_nd_sbp()) {
+    std::vector<StringRef> nd_sbp_strref_vec;
+    nd_sbp_strref_vec.reserve(op_conf.output_conf().blob_conf().nd_sbp().sbp_parallel_size());
+    for (const auto& sbp : op_conf.output_conf().blob_conf().nd_sbp().sbp_parallel()) {
+      if (sbp.has_split_parallel()) {
+        nd_sbp_strref_vec.emplace_back("S(" + std::to_string(sbp.split_parallel().axis()) + ")");
+      } else if (sbp.has_broadcast_parallel()) {
+        nd_sbp_strref_vec.emplace_back("B");
+      } else if (sbp.has_partial_sum_parallel()) {
+        nd_sbp_strref_vec.emplace_back("P");
+      } else {
+        GetModule().emitError("unsupported sbp");
+      }
+    }
+    auto nd_sbp_attr = GetBuilder().getStrArrayAttr(makeArrayRef(nd_sbp_strref_vec));
+    attr_vec.emplace_back(GetBuilder().getNamedAttr("nd_sbp", nd_sbp_attr));
+  }
+  // attr job_name
+  if (op_conf.output_conf().has_job_name()) {
+    const std::string& job_name = op_conf.output_conf().job_name();
+    attr_vec.emplace_back(
+        GetBuilder().getNamedAttr("job_name", GetBuilder().getStringAttr(job_name)));
+  }
+  // add attrs
+  state.addAttributes(attr_vec);
+  // operands
+  std::vector<::mlir::Value> operand_vec;
+  auto input_bns_lbns = job_wrapper_.InputBns4OpName(op_conf.name());
+  if (input_bns_lbns.second.size() != 1) {
+    GetModule()->emitError("output op should has only one input, op_name: " + op_conf.name());
+    return failure();
+  }
+  if (failed(AppendDataInOperand(input_bns_lbns.second[0], operand_vec))) { return failure(); }
+  if (failed(AppendCtrlInOperand(op_conf, operand_vec))) { return failure(); }
+  state.addOperands(operand_vec);
+  // result types
+  llvm::SmallVector<Type, 8> out_types;
+  auto output_lbn = op_conf.name() + "/out";
+  out_types.push_back(GetTensorTypeOfLbn(output_lbn));
+  if (failed(AppendCtrlOutType(out_types))) { return failure(); }
+  state.addTypes(out_types);
+  // create op
+  auto op = GetBuilder().createOperation(state);
+  if (!op) {
+    GetModule()->emitError("fail to create op, name: " + op_conf.name());
+    return failure();
+  }
+  // record result
+  if (op->getNumResults() != 2) {
+    op->emitError("output_conf op should has two results (out and ctrl_output), but got "
+                  + std::to_string(op->getNumResults()) + "\n");
+    return failure();
+  }
+  if (!lbn2result_.emplace(output_lbn, op->getResult(0)).second) {
+    op->emitError("lbn already exists, lbn: ") << output_lbn;
+    return failure();
+  }
+  if (!op_name2ctrl_result_.emplace(op_conf.name(), op->getResult(1)).second) {
+    op->emitError("ctrl output already exists, op_name: ") << op_conf.name();
     return failure();
   }
   return success();
@@ -263,7 +581,6 @@ LogicalResult JobImporter::TryToUpdateJob() {
       oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
       UpdatePlacement(op, user_op_adaptor, new_job);
       ::oneflow::OperatorConf op_conf;
-      const std::string op_name = user_op_adaptor.op_name().getValue().str();
       auto user_conf = op_conf.mutable_user_conf();
       if (succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))
           && succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))
@@ -294,6 +611,33 @@ LogicalResult JobImporter::TryToUpdateJob() {
       } else {
         return WalkResult::interrupt();
       }
+    } else if (llvm::dyn_cast<oneflow::VariableOp>(op)) {
+      oneflow::VariableOpAdaptor op_adaptor(op->getOperands(), op->getAttrDictionary());
+      UpdatePlacement(op, op_adaptor, new_job);
+      ::oneflow::OperatorConf op_conf;
+      if (succeeded(ConvertVariableOpConf(op, op_adaptor, &op_conf))) {
+        *(new_job.mutable_net()->add_op()) = op_conf;
+      } else {
+        return WalkResult::interrupt();
+      }
+    } else if (llvm::dyn_cast<oneflow::InputOp>(op)) {
+      oneflow::InputOpAdaptor op_adaptor(op->getOperands(), op->getAttrDictionary());
+      UpdatePlacement(op, op_adaptor, new_job);
+      ::oneflow::OperatorConf op_conf;
+      if (succeeded(ConvertInputOpConf(op, op_adaptor, &op_conf))) {
+        *(new_job.mutable_net()->add_op()) = op_conf;
+      } else {
+        return WalkResult::interrupt();
+      }
+    } else if (llvm::dyn_cast<oneflow::OutputOp>(op)) {
+      oneflow::OutputOpAdaptor op_adaptor(op->getOperands(), op->getAttrDictionary());
+      UpdatePlacement(op, op_adaptor, new_job);
+      ::oneflow::OperatorConf op_conf;
+      if (succeeded(ConvertOutputOpConf(op, op_adaptor, &op_conf))) {
+        *(new_job.mutable_net()->add_op()) = op_conf;
+      } else {
+        return WalkResult::interrupt();
+      }
     } else if (llvm::dyn_cast<ReturnOp>(op) || llvm::dyn_cast<FuncOp>(op)
                || llvm::dyn_cast<ModuleOp>(op)) {
       return WalkResult::advance();
@@ -303,10 +647,21 @@ LogicalResult JobImporter::TryToUpdateJob() {
     } /* convert op conf */
     return WalkResult::advance();
   };
-  SymbolTable symbol_table(GetModule());
-  if (symbol_table.lookup(job_wrapper_.job()->job_conf().job_name())
-          ->walk(convertOps)
-          .wasInterrupted()) {
+  Operation* func_op = nullptr;
+  auto walk_result = GetModule().getOperation()->walk([&func_op](FuncOp op) {
+    if (func_op != nullptr) { return WalkResult::interrupt(); }
+    func_op = op.getOperation();
+    return WalkResult::advance();
+  });
+  if (walk_result.wasInterrupted()) {
+    GetModule()->emitError("find multiply func op");
+    return failure();
+  }
+  if (!func_op) {
+    GetModule()->emitError("find no func op");
+    return failure();
+  }
+  if (func_op->walk(convertOps).wasInterrupted()) {
     return failure();
   } else {
     job_wrapper_.UpdateJob(&new_job);
@@ -371,7 +726,7 @@ void RoundTripOneFlowJob(
       exit(EXIT_FAILURE);
     }
   } else {
-    llvm::errs() << "fail to convert job to IR, job_name: " << job->job_conf().job_name();
+    llvm::errs() << "fail to convert job to IR, job_name: " << job->job_conf().job_name() << "\n";
     exit(EXIT_FAILURE);
   }
 }
@@ -406,7 +761,19 @@ void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::st
     fs << mlir;
     fs.close();
   } else {
-    llvm::errs() << "fail to convert job to IR, job_name: " << job->job_conf().job_name();
+    llvm::errs() << "fail to convert job to IR, job_name: " << job->job_conf().job_name() << "\n";
+    exit(EXIT_FAILURE);
+  }
+}
+
+void LoadJobFromIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::string& path) {
+  MLIRContext context;
+  context.getOrLoadDialect<oneflow::OneFlowDialect>();
+  context.loadDialect<StandardOpsDialect>();
+  OwningModuleRef module = parseSourceFile<ModuleOp>(path, &context);
+  JobImporter imp(job_wrapper, &context, module.get());
+  if (failed(imp.TryToUpdateJob())) {
+    llvm::errs() << "fail to load job from IR";
     exit(EXIT_FAILURE);
   }
 }

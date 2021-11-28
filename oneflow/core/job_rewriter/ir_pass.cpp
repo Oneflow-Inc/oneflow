@@ -179,8 +179,18 @@ REGISTER_JOB_PASS("IRRoundTrip", IRRoundTrip<kAfterAD>);
 
 Maybe<void> SaveJobToIR(Job* job, const std::string& path) {
   // TODO: check path is valid dir
+  if (std::getenv("ONEFLOW_DEBUG_MODE") != nullptr) {
+    TeePersistentLogStream::Create("saved_job")->Write(*job);
+  }
   RoundTripOneFlowJobWrapper<kBeforeAD> job_wrapper(job);
   ::mlir::SaveJobToIR(job_wrapper, path);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> LoadJobFromIR(Job* job, const std::string& path) {
+  job->Clear();
+  RoundTripOneFlowJobWrapper<kBeforeAD> job_wrapper(job);
+  ::mlir::LoadJobFromIR(job_wrapper, path);
   return Maybe<void>::Ok();
 }
 

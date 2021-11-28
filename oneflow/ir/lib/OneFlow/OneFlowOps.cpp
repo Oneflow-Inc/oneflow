@@ -423,6 +423,40 @@ void AddNOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
   results.insert<ConvertAddOpWithArity>(context);
 }
 
+template<typename OpType>
+struct ConcreteSystemOpPattern : public mlir::OpRewritePattern<OpType> {
+  explicit ConcreteSystemOpPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<OpType>(context, /*benefit=*/1) {}
+  mlir::LogicalResult matchAndRewrite(OpType op, mlir::PatternRewriter& rewriter) const override {
+    if (op.ctrl_output() && op.ctrl_output().use_empty()) {
+      NamedAttrList attributes(op->getAttrDictionary());
+      if (auto created = rewriter.create<OpType>(op->getLoc(), op.out().getType(),
+                                                 op->getOperands(), attributes)) {
+        op.out().replaceAllUsesWith(
+            created->getResult(op.out().template cast<OpResult>().getResultNumber()));
+        op->erase();
+        return success();
+      }
+    }
+    return failure();
+  }
+};
+
+void VariableOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
+                                             ::mlir::MLIRContext* context) {
+  results.insert<ConcreteSystemOpPattern<oneflow::VariableOp>>(context);
+}
+
+void InputOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
+                                          ::mlir::MLIRContext* context) {
+  results.insert<ConcreteSystemOpPattern<oneflow::InputOp>>(context);
+}
+
+void OutputOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
+                                          ::mlir::MLIRContext* context) {
+  results.insert<ConcreteSystemOpPattern<oneflow::OutputOp>>(context);
+}
+
 // TODO: merge all ctrl input and output when folding op
 bool HaveIdenticalPlacement(mlir::Operation* a, mlir::Operation* b) {
   UserOpAdaptor adaptor_a(a->getOperands(), a->getAttrDictionary());
@@ -451,10 +485,9 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
 
 void NormalizationAddReluOp::build(::mlir::OpBuilder& odsBuilder, ::mlir::OperationState& odsState,
                                    Value x, Value addend, Value moving_mean, Value moving_variance,
-                                   Value gamma, Value beta, StringRef op_name, BoolAttr trainable,
-                                   StringRef device_tag, ArrayAttr device_name,
-                                   IntegerAttr scope_symbol_id, ArrayAttr hierarchy,
-                                   DenseElementsAttr operand_segment_sizes,
+                                   Value gamma, Value beta, StringRef op_name, StringRef device_tag,
+                                   ArrayAttr device_name, IntegerAttr scope_symbol_id,
+                                   ArrayAttr hierarchy, DenseElementsAttr operand_segment_sizes,
                                    DenseElementsAttr result_segment_sizes, IntegerAttr axis,
                                    FloatAttr epsilon, BoolAttr training, FloatAttr momentum) {
   odsState.addOperands(x);
@@ -468,7 +501,6 @@ void NormalizationAddReluOp::build(::mlir::OpBuilder& odsBuilder, ::mlir::Operat
                                                      (moving_variance ? 1 : 0), 1, 1}));
 
   odsState.addAttribute(op_nameAttrName(odsState.name), odsBuilder.getStringAttr(op_name));
-  if (trainable) { odsState.addAttribute(trainableAttrName(odsState.name), trainable); }
   odsState.addAttribute(device_tagAttrName(odsState.name), odsBuilder.getStringAttr(device_tag));
   odsState.addAttribute(device_nameAttrName(odsState.name), device_name);
   if (scope_symbol_id) {

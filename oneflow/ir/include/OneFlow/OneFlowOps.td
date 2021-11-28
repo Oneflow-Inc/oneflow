@@ -16,7 +16,6 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, traits> {
   dag sys_attrs = (ins
     StrAttr:$op_name,
-    OptionalAttr<BoolAttr>:$trainable,
     StrAttr:$device_tag,
     StrArrayAttr:$device_name, // TODO: change device_name to dict and parse the literal fmt like "0:0-0"
     OptionalAttr<I64Attr>:$scope_symbol_id,
@@ -25,6 +24,7 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
   dag attrs = (ins);
   dag trait_attrs = (ins);
   dag user_op_attrs = (ins);
+  dag custom_attrs = (ins);
   dag input = (ins Variadic<AnyType>:$data_input);
   dag output = (outs Variadic<AnyType>:$data_output);
   dag ctrl_input = (ins);
@@ -35,6 +35,7 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
       sys_attrs,
       trait_attrs,
       user_op_attrs,
+      custom_attrs,
       attrs
   );
   let results = !con(
@@ -590,7 +591,6 @@ def OneFlow_NormalizationAddReluOp : OneFlow_BaseOp<"normalization_add_relu", [A
       "Value":$gamma,
       "Value":$beta,
       "StringRef":$op_name,
-      "BoolAttr":$trainable,
       "StringRef":$device_tag,
       "ArrayAttr":$device_name,
       "IntegerAttr":$scope_symbol_id,
@@ -846,7 +846,6 @@ def MulCastPattern : Pat<
       OneFlow_CastOp : $cast_op
         $cast_x,
         $cast_op_name,
-        $cast_trainable,
         $cast_device_tag,
         $cast_device_name,
         $cast_scope_symbol_id,
@@ -854,7 +853,6 @@ def MulCastPattern : Pat<
     ),
     $scalar,
     $mul_op_name,
-    $mul_trainable,
     $mul_device_tag,
     $mul_device_name,
     $mul_scope_symbol_id,
@@ -876,7 +874,6 @@ def FusedScaleTrilPattern : Pat<
       OneFlow_ScalarMulOp
         $x,
         $scale_op_name,
-        $scale_trainable,
         $scale_device_tag,
         $scale_device_name,
         $scale_scope_symbol_id,
@@ -887,7 +884,6 @@ def FusedScaleTrilPattern : Pat<
         $float_operand
     ),
     $tril_op_name,
-    $tril_trainable,
     $tril_device_tag,
     $tril_device_name,
     $tril_scope_symbol_id,
@@ -899,7 +895,6 @@ def FusedScaleTrilPattern : Pat<
   ),
   (OneFlow_FusedScaleTrilOp $x,
     $tril_op_name,
-    $tril_trainable,
     $tril_device_tag,
     $tril_device_name,
     $tril_scope_symbol_id,
@@ -925,7 +920,6 @@ def FusedScaleTrilPattern2 : Pat<
       OneFlow_TrilOp
       $x,
       $tril_op_name,
-      $tril_trainable,
       $tril_device_tag,
       $tril_device_name,
       $tril_scope_symbol_id,
@@ -936,7 +930,6 @@ def FusedScaleTrilPattern2 : Pat<
       $is_floating_fill_value
     ),
     $scale_op_name,
-    $scale_trainable,
     $scale_device_tag,
     $scale_device_name,
     $scale_scope_symbol_id,
@@ -948,7 +941,6 @@ def FusedScaleTrilPattern2 : Pat<
   ),
   (OneFlow_FusedScaleTrilOp $x,
     $scale_op_name,
-    $scale_trainable,
     $scale_device_tag,
     $scale_device_name,
     $scale_scope_symbol_id,
@@ -975,7 +967,6 @@ def FusedBiasAddDropoutPattern : Pat<
         $a,
         $b,
         $bias_add_op_name,
-        $bias_add_trainable,
         $bias_add_device_tag,
         $bias_add_device_name,
         $bias_add_scope_symbol_id,
@@ -984,7 +975,6 @@ def FusedBiasAddDropoutPattern : Pat<
     ),
     $mask,
     $dropout_op_name,
-    $dropout_trainable,
     $dropout_device_tag,
     $dropout_device_name,
     $dropout_scope_symbol_id,
@@ -993,7 +983,6 @@ def FusedBiasAddDropoutPattern : Pat<
   ),
   (OneFlow_FusedBiasAddMaskScaleOp $a, $b, $mask,
     $dropout_op_name,
-    $dropout_trainable,
     $dropout_device_tag,
     $dropout_device_name,
     $dropout_scope_symbol_id,
@@ -1012,7 +1001,6 @@ def FusedBiasAddGeluPattern : Pat<
         $a,
         $b,
         $bias_add_op_name,
-        $bias_add_trainable,
         $bias_add_device_tag,
         $bias_add_device_name,
         $bias_add_scope_symbol_id,
@@ -1020,7 +1008,6 @@ def FusedBiasAddGeluPattern : Pat<
         $axis
     ),
     $gelu_op_name,
-    $gelu_trainable,
     $gelu_device_tag,
     $gelu_device_name,
     $gelu_scope_symbol_id,
@@ -1028,7 +1015,6 @@ def FusedBiasAddGeluPattern : Pat<
   ),
   (OneFlow_FusedBiasAddGeluOp $a, $b,
     $gelu_op_name,
-    $gelu_trainable,
     $gelu_device_tag,
     $gelu_device_name,
     $gelu_scope_symbol_id,
@@ -1054,7 +1040,6 @@ def NormalizationAddReluPattern : Pattern<
             $bn_beta,
             $bn__add_to_output, // TODO: check this is none
             $bn_op_name,
-            $bn_trainable,
             $bn_device_tag,
             $bn_device_name,
             $bn_scope_symbol_id,
@@ -1068,14 +1053,12 @@ def NormalizationAddReluPattern : Pattern<
       ),
       $addend,
       $add_op_name,
-      $add_trainable,
       $add_device_tag,
       $add_device_name,
       $add_scope_symbol_id,
       $add_hierarchy
     ),
     $relu_op_name,
-    $relu_trainable,
     $relu_device_tag,
     $relu_device_name,
     $relu_scope_symbol_id,
@@ -1090,7 +1073,6 @@ def NormalizationAddReluPattern : Pattern<
     $bn_gamma,
     $bn_beta,
     $bn_op_name,
-    $bn_trainable,
     $bn_device_tag,
     $bn_device_name,
     $bn_scope_symbol_id,
@@ -1138,6 +1120,57 @@ def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
 def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "FuncOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createFuseIntoExistingOpPass()";
+}
+
+class OneFlow_ConcreteSystemOp<string mnemonic, list<OpTrait> traits = []> :
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [])> {
+  let input = (ins);
+  let output = (ins);
+  let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
+  let ctrl_output = (outs Optional<AnyType>:$ctrl_output);
+  let attrs = (ins
+    StrArrayAttr:$output_lbns
+  );
+  let hasCanonicalizer = 1;
+}
+
+def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", []> {
+  let summary = "";
+  let output = (outs AnyType:$out);
+  let custom_attrs = (ins
+    AnyI64ElementsAttr:$shape,
+    OptionalAttr<StrAttr>:$data_type,
+    DefaultValuedAttr<StrAttr, "\"weight\"">:$model_name,
+    DefaultValuedAttr<F32Attr, "0.0f">:$l1_regularization,
+    DefaultValuedAttr<F32Attr, "0.0f">:$l2_regularization,
+    DefaultValuedAttr<BoolAttr, "true">:$trainable,
+    StrArrayAttr:$nd_sbp
+  );
+}
+
+def OneFlow_InputOp : OneFlow_ConcreteSystemOp<"input", []> {
+  let summary = "";
+  let output = (outs AnyType:$out);
+  let custom_attrs = (ins
+    OptionalAttr<AnyI64ElementsAttr>:$shape,
+    OptionalAttr<StrAttr>:$data_type,
+    OptionalAttr<BoolAttr>:$is_dynamic,
+    OptionalAttr<StrArrayAttr>:$nd_sbp,
+    OptionalAttr<StrAttr>:$job_name
+  );
+}
+
+def OneFlow_OutputOp : OneFlow_ConcreteSystemOp<"output", []> {
+  let summary = "";
+  let input = (ins AnyType:$in);
+  let output = (outs AnyType:$out);
+  let custom_attrs = (ins
+    OptionalAttr<AnyI64ElementsAttr>:$shape,
+    OptionalAttr<StrAttr>:$data_type,
+    OptionalAttr<BoolAttr>:$is_dynamic,
+    OptionalAttr<StrArrayAttr>:$nd_sbp,
+    OptionalAttr<StrAttr>:$job_name
+  );
 }
 
 #endif // ONEFLOW_PASSES

@@ -42,6 +42,13 @@ LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_o
                                    ::oneflow::UserOpConf* user_conf);
 LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf);
 OperandRange GetDataInputOperands(Operation* op);
+LogicalResult StringifyDataType(::oneflow::DataType value, std::string& stringified);
+LogicalResult ConvertVariableOpConf(Operation* op, oneflow::VariableOpAdaptor& adaptor,
+                                    ::oneflow::OperatorConf* op_conf);
+LogicalResult ConvertInputOpConf(Operation* op, oneflow::InputOpAdaptor& adaptor,
+                                 ::oneflow::OperatorConf* op_conf);
+LogicalResult ConvertOutputOpConf(Operation* op, oneflow::OutputOpAdaptor& adaptor,
+                                  ::oneflow::OperatorConf* op_conf);
 
 class Importer {
  public:
@@ -144,6 +151,7 @@ void RoundTripOneFlowJob(
 void registerFromOneFlowJobTranslation();
 
 void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::string& path);
+void LoadJobFromIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::string& path);
 
 }  // namespace mlir
 

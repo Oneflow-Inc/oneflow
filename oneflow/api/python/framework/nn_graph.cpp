@@ -74,6 +74,12 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
           CHECK(TxtString2PbMessage(serialized_job, &job));
           return SaveJobToIR(&job, path).GetOrThrow();;
         });
+  m.def("LoadSerializedJobFromIR",
+        [](const std::string& path) {
+          Job job;
+          LoadJobFromIR(&job, path).GetOrThrow();
+          return py::bytes(job.SerializeAsString());
+        });
 }
 
 }  // namespace oneflow

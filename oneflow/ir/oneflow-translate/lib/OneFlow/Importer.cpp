@@ -660,4 +660,182 @@ ResultRange GetDataOutputResults(Operation* op) {
   }
 }
 
+LogicalResult ConvertVariableOpConf(Operation* op, oneflow::VariableOpAdaptor& adaptor,
+                                    ::oneflow::OperatorConf* op_conf) {
+  op_conf->set_name(adaptor.op_name().getValue().str());
+  op_conf->set_device_tag(adaptor.device_tag().getValue().str());
+  op_conf->set_scope_symbol_id(adaptor.scope_symbol_id().getInt());
+  // TODO: process stream_name_hint
+
+  auto* var_op_conf = op_conf->mutable_variable_conf();
+  var_op_conf->set_out("out");
+
+  for (auto elem : adaptor.shape()) {
+    var_op_conf->mutable_shape()->mutable_dim()->Add(elem.getSExtValue());
+  }
+
+  if (op->hasAttr("data_type")) {
+    ::oneflow::DataType dt = ::oneflow::DataType::kInvalidDataType;
+    if (failed(ConvertDT(adaptor.data_type(), dt))) { return failure(); }
+    var_op_conf->set_data_type(dt);
+  }
+
+  if (op->hasAttr("model_name")) {
+    var_op_conf->set_model_name(adaptor.model_name().getValue().str());
+  }
+
+  if (op->hasAttr("l1_regularization")) {
+    var_op_conf->mutable_regularizer()->mutable_l1_l2_conf()->set_l1(
+        adaptor.l1_regularization().getValue().convertToFloat());
+  }
+
+  if (op->hasAttr("l2_regularization")) {
+    var_op_conf->mutable_regularizer()->mutable_l1_l2_conf()->set_l2(
+        adaptor.l2_regularization().getValue().convertToFloat());
+  }
+
+  if (op->hasAttr("trainable")) { var_op_conf->set_trainable(adaptor.trainable().getValue()); }
+
+  for (const auto& sbp : adaptor.nd_sbp()) {
+    var_op_conf->add_nd_sbp(sbp.cast<StringAttr>().getValue().str());
+  }
+
+  // all operands are ctrl_inputs
+  for (const auto& operand : op->getOperands()) {
+    op_conf->add_ctrl_in_op_name(
+        operand.getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
+  }
+
+  // empty initializer
+  var_op_conf->mutable_initializer()->mutable_empty_conf();
+
+  return success();
+}
+
+LogicalResult ConvertInputOpConf(Operation* op, oneflow::InputOpAdaptor& adaptor,
+                                 ::oneflow::OperatorConf* op_conf) {
+  op_conf->set_name(adaptor.op_name().getValue().str());
+  op_conf->set_device_tag(adaptor.device_tag().getValue().str());
+  op_conf->set_scope_symbol_id(adaptor.scope_symbol_id().getInt());
+  // TODO: process stream_name_hint
+
+  auto* input_op_conf = op_conf->mutable_input_conf();
+  input_op_conf->set_out("out");
+
+  if (op->hasAttr("shape")) {
+    for (auto elem : adaptor.shape()) {
+      input_op_conf->mutable_blob_conf()->mutable_shape()->add_dim(elem.getSExtValue());
+    }
+  }
+
+  if (op->hasAttr("data_type")) {
+    ::oneflow::DataType dt = ::oneflow::DataType::kInvalidDataType;
+    if (failed(ConvertDT(adaptor.data_type(), dt))) { return failure(); }
+    input_op_conf->mutable_blob_conf()->set_data_type(dt);
+  }
+
+  if (op->hasAttr("is_dynamic")) {
+    input_op_conf->mutable_blob_conf()->set_is_dynamic(adaptor.is_dynamic().getValue());
+  }
+
+  if (op->hasAttr("nd_sbp")) {
+    auto* nd_sbp = input_op_conf->mutable_blob_conf()->mutable_nd_sbp()->mutable_sbp_parallel();
+    for (const auto& sbp : adaptor.nd_sbp()) {
+      auto sbp_strref = sbp.cast<StringAttr>().getValue();
+      if (sbp_strref.startswith("S")) {
+        if (!(sbp_strref.substr(1, 1) == "(" && sbp_strref.endswith(")"))) {
+          op->emitError("invalid sbp S(x) string value: " + sbp_strref);
+          return failure();
+        }
+        auto split_axis = std::stoi(sbp_strref.substr(2, 1).str());
+        nd_sbp->Add()->mutable_split_parallel()->set_axis(split_axis);
+      } else if (sbp_strref == "B") {
+        nd_sbp->Add()->mutable_broadcast_parallel();
+      } else if (sbp_strref == "P") {
+        nd_sbp->Add()->mutable_partial_sum_parallel();
+      } else {
+        op->emitError("unspported nd_sbp string value: " + sbp_strref);
+        return failure();
+      }
+    }
+  }
+
+  if (op->hasAttr("job_name")) { input_op_conf->set_job_name(adaptor.job_name().getValue().str()); }
+
+  // all operands are ctrl_inputs
+  for (const auto& operand : op->getOperands()) {
+    op_conf->add_ctrl_in_op_name(
+        operand.getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
+  }
+
+  return success();
+}
+
+LogicalResult ConvertOutputOpConf(Operation* op, oneflow::OutputOpAdaptor& adaptor,
+                                  ::oneflow::OperatorConf* op_conf) {
+  op_conf->set_name(adaptor.op_name().getValue().str());
+  op_conf->set_device_tag(adaptor.device_tag().getValue().str());
+  op_conf->set_scope_symbol_id(adaptor.scope_symbol_id().getInt());
+  // TODO: process stream_name_hint
+
+  auto* output_op_conf = op_conf->mutable_output_conf();
+  output_op_conf->set_out("out");
+
+  if (op->hasAttr("shape")) {
+    for (auto elem : adaptor.shape()) {
+      output_op_conf->mutable_blob_conf()->mutable_shape()->add_dim(elem.getSExtValue());
+    }
+  }
+
+  if (op->hasAttr("data_type")) {
+    ::oneflow::DataType dt = ::oneflow::DataType::kInvalidDataType;
+    if (failed(ConvertDT(adaptor.data_type(), dt))) { return failure(); }
+    output_op_conf->mutable_blob_conf()->set_data_type(dt);
+  }
+
+  if (op->hasAttr("is_dynamic")) {
+    output_op_conf->mutable_blob_conf()->set_is_dynamic(adaptor.is_dynamic().getValue());
+  }
+
+  if (op->hasAttr("nd_sbp")) {
+    auto* nd_sbp = output_op_conf->mutable_blob_conf()->mutable_nd_sbp()->mutable_sbp_parallel();
+    for (const auto& sbp : adaptor.nd_sbp()) {
+      auto sbp_strref = sbp.cast<StringAttr>().getValue();
+      if (sbp_strref.startswith("S")) {
+        if (!(sbp_strref.substr(1, 1) == "(" && sbp_strref.endswith(")"))) {
+          op->emitError("invalid sbp S(x) string value: " + sbp_strref);
+          return failure();
+        }
+        auto split_axis = std::stoi(sbp_strref.substr(2, 1).str());
+        nd_sbp->Add()->mutable_split_parallel()->set_axis(split_axis);
+      } else if (sbp_strref == "B") {
+        nd_sbp->Add()->mutable_broadcast_parallel();
+      } else if (sbp_strref == "P") {
+        nd_sbp->Add()->mutable_partial_sum_parallel();
+      } else {
+        op->emitError("unspported nd_sbp string value: " + sbp_strref);
+        return failure();
+      }
+    }
+  }
+
+  if (op->hasAttr("job_name")) {
+    output_op_conf->set_job_name(adaptor.job_name().getValue().str());
+  }
+
+  if (op->getNumOperands() == 0) {
+    op->emitError("output op has at least one input.");
+    return failure();
+  }
+  auto result = op->getOperand(0).dyn_cast<mlir::OpResult>();
+  auto* producer_op = result.getDefiningOp();
+  auto output_lbn = producer_op->getAttrOfType<ArrayAttr>("output_lbns")[result.getResultNumber()];
+  output_op_conf->set_in(output_lbn.dyn_cast<StringAttr>().getValue().str());
+  for (size_t i = 1; i < op->getNumOperands(); ++i) {
+    op_conf->add_ctrl_in_op_name(
+        op->getOperand(i).getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
+  }
+  return success();
+}
+
 }  // namespace mlir
