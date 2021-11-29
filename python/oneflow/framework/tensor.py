@@ -303,7 +303,7 @@ def _exp(self):
 
 
 def _expand_as(input, other):
-    return flow.expand(input, other.size())
+    return flow.expand(input, *other.size())
 
 
 def _acos(self):
@@ -753,6 +753,7 @@ def RegisterMethods():
     Tensor.__format__ = _format
     Tensor.__floordiv__ = _floor_divide
     Tensor.__len__ = _len
+    Tensor.__mod__ = _fmod
     Tensor.uniform_ = _uniform
     Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform

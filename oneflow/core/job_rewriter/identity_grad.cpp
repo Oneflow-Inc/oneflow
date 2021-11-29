@@ -28,7 +28,7 @@ void GenerateIdentityBackwardOpConf(
     IdentityOpConf* identity_op_conf = grad_op.mutable_identity_conf();
     identity_op_conf->set_in(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     identity_op_conf->set_out("out");
-    op_confs->push_back(grad_op);
+    op_confs->emplace_back(grad_op);
     DiffLbi4BnInOp("in")->set_op_name(grad_op.name());
     DiffLbi4BnInOp("in")->set_blob_name(identity_op_conf->out());
   }
@@ -66,7 +66,7 @@ void GenerateCastToMirroredBackwardOpConf(
     bw_op_conf->set_in(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     bw_op_conf->set_out("out");
     GenerateBwSbpParallel(bw_op_conf->mutable_sbp_parallel(), fw_op_conf.sbp_parallel());
-    op_confs->push_back(grad_op);
+    op_confs->emplace_back(grad_op);
     DiffLbi4BnInOp("in")->set_op_name(grad_op.name());
     DiffLbi4BnInOp("in")->set_blob_name(bw_op_conf->out());
   }
@@ -91,7 +91,7 @@ void GenerateCastFromMirroredBackwardOpConf(
     bw_op_conf->set_in(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     bw_op_conf->set_out("out");
     GenerateBwSbpParallel(bw_op_conf->mutable_sbp_parallel(), fw_op_conf.sbp_parallel());
-    op_confs->push_back(grad_op);
+    op_confs->emplace_back(grad_op);
     DiffLbi4BnInOp("in")->set_op_name(grad_op.name());
     DiffLbi4BnInOp("in")->set_blob_name(bw_op_conf->out());
   }
