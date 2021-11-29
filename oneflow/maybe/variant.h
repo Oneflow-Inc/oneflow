@@ -48,81 +48,84 @@ namespace details {
 // 1. for 2 <= N < 4, we use the O(N) algorithm (TrivialRecursiveVisitImpl) for better optimization
 // 2. for N >= 4, we use the O(log N) algorithm (BinarySearchVisitImpl) for less recursion rounds
 
-template<typename R, typename F, typename V>
-R TrivialRecursiveVisitImpl(F&& f, V&& v, InPlaceIndexT<RemoveCVRef<V>::Num - 1>) {
-  // assume v.Index() == N - 1 now
-  return static_cast<R>(
-      std::forward<F>(f)(std::forward<V>(v).template Get<RemoveCVRef<V>::Num - 1>()));
-}
-
-template<typename R, std::size_t I, typename F, typename V,
-         std::enable_if_t<(I < RemoveCVRef<V>::Num - 1), int> = 0>
-R TrivialRecursiveVisitImpl(F&& f, V&& v, InPlaceIndexT<I>) {
-  if (v.Index() == I) {
-    return static_cast<R>(std::forward<F>(f)(std::forward<V>(v).template Get<I>()));
+struct VariantPrivateScope {
+  template<typename R, typename F, typename V>
+  static R TrivialRecursiveVisitImpl(F&& f, V&& v, InPlaceIndexT<RemoveCVRef<V>::Num - 1>) {
+    // assume v.Index() == N - 1 now
+    return static_cast<R>(
+        std::forward<F>(f)(std::forward<V>(v).template Value<RemoveCVRef<V>::Num - 1>()));
   }
 
-  return TrivialRecursiveVisitImpl<R>(std::forward<F>(f), std::forward<V>(v), InPlaceIndex<I + 1>);
-}
+  template<typename R, std::size_t I, typename F, typename V,
+           std::enable_if_t<(I < RemoveCVRef<V>::Num - 1), int> = 0>
+  static R TrivialRecursiveVisitImpl(F&& f, V&& v, InPlaceIndexT<I>) {
+    if (v.Index() == I) {
+      return static_cast<R>(std::forward<F>(f)(std::forward<V>(v).template Value<I>()));
+    }
 
-template<typename R, std::size_t I, typename F, typename V,
-         std::enable_if_t<(I < RemoveCVRef<V>::Num), int> = 0>
-R BinarySearchVisitImpl(F&& f, V&& v, InPlaceIndexT<I>, InPlaceIndexT<I>) {
-  return static_cast<R>(std::forward<F>(f)(std::forward<V>(v).template Get<I>()));
-}
-
-template<typename R, std::size_t I, typename F, typename V,
-         std::enable_if_t<(I + 1 < RemoveCVRef<V>::Num), int> = 0>
-R BinarySearchVisitImpl(F&& f, V&& v, InPlaceIndexT<I>, InPlaceIndexT<I + 1>) {
-  constexpr std::size_t M = (I + I + 1) / 2;
-  constexpr std::size_t N = (M == I) ? I + 1 : I;
-
-  if (v.Index() == M) {
-    return static_cast<R>(std::forward<F>(f)(std::forward<V>(v).template Get<M>()));
-  } else {
-    return static_cast<R>(std::forward<F>(f)(std::forward<V>(v).template Get<N>()));
+    return TrivialRecursiveVisitImpl<R>(std::forward<F>(f), std::forward<V>(v),
+                                        InPlaceIndex<I + 1>);
   }
-}
 
-template<typename R, std::size_t L, std::size_t U, typename F, typename V,
-         std::enable_if_t<(L + 1 < U) && (U < RemoveCVRef<V>::Num), int> = 0>
-R BinarySearchVisitImpl(F&& f, V&& v, InPlaceIndexT<L>, InPlaceIndexT<U>) {
-  constexpr std::size_t M = (L + U) / 2;
-
-  if (v.Index() < M) {
-    return BinarySearchVisitImpl<R>(std::forward<F>(f), std::forward<V>(v), InPlaceIndex<L>,
-                                    InPlaceIndex<M - 1>);
-  } else if (v.Index() > M) {
-    return BinarySearchVisitImpl<R>(std::forward<F>(f), std::forward<V>(v), InPlaceIndex<M + 1>,
-                                    InPlaceIndex<U>);
-  } else {
-    return static_cast<R>(std::forward<F>(f)(std::forward<V>(v).template Get<M>()));
+  template<typename R, std::size_t I, typename F, typename V,
+           std::enable_if_t<(I < RemoveCVRef<V>::Num), int> = 0>
+  static R BinarySearchVisitImpl(F&& f, V&& v, InPlaceIndexT<I>, InPlaceIndexT<I>) {
+    return static_cast<R>(std::forward<F>(f)(std::forward<V>(v).template Value<I>()));
   }
-}
 
-template<typename R, typename F, typename V,
-         std::enable_if_t<RemoveCVRef<V>::Num<4, int> = 0> R VisitImpl(F&& f, V&& v) {
-  return TrivialRecursiveVisitImpl<R>(std::forward<F>(f), std::forward<V>(v), InPlaceIndex<0>);
-}
+  template<typename R, std::size_t I, typename F, typename V,
+           std::enable_if_t<(I + 1 < RemoveCVRef<V>::Num), int> = 0>
+  static R BinarySearchVisitImpl(F&& f, V&& v, InPlaceIndexT<I>, InPlaceIndexT<I + 1>) {
+    constexpr std::size_t M = (I + I + 1) / 2;
+    constexpr std::size_t N = (M == I) ? I + 1 : I;
 
-template<typename R, typename F, typename V, std::enable_if_t<RemoveCVRef<V>::Num >= 4, int> = 0>
-R VisitImpl(F&& f, V&& v) {
-  return BinarySearchVisitImpl<R>(std::forward<F>(f), std::forward<V>(v), InPlaceIndex<0>,
-                                  InPlaceIndex<RemoveCVRef<V>::Num - 1>);
-}
+    if (v.Index() == M) {
+      return static_cast<R>(std::forward<F>(f)(std::forward<V>(v).template Value<M>()));
+    } else {
+      return static_cast<R>(std::forward<F>(f)(std::forward<V>(v).template Value<N>()));
+    }
+  }
+
+  template<typename R, std::size_t L, std::size_t U, typename F, typename V,
+           std::enable_if_t<(L + 1 < U) && (U < RemoveCVRef<V>::Num), int> = 0>
+  static R BinarySearchVisitImpl(F&& f, V&& v, InPlaceIndexT<L>, InPlaceIndexT<U>) {
+    constexpr std::size_t M = (L + U) / 2;
+
+    if (v.Index() < M) {
+      return BinarySearchVisitImpl<R>(std::forward<F>(f), std::forward<V>(v), InPlaceIndex<L>,
+                                      InPlaceIndex<M - 1>);
+    } else if (v.Index() > M) {
+      return BinarySearchVisitImpl<R>(std::forward<F>(f), std::forward<V>(v), InPlaceIndex<M + 1>,
+                                      InPlaceIndex<U>);
+    } else {
+      return static_cast<R>(std::forward<F>(f)(std::forward<V>(v).template Value<M>()));
+    }
+  }
+
+  template<typename R, typename F, typename V,
+           std::enable_if_t<RemoveCVRef<V>::Num<4, int> = 0> static R VisitImpl(F&& f, V&& v) {
+    return TrivialRecursiveVisitImpl<R>(std::forward<F>(f), std::forward<V>(v), InPlaceIndex<0>);
+  }
+
+  template<typename R, typename F, typename V, std::enable_if_t<RemoveCVRef<V>::Num >= 4, int> = 0>
+  static R VisitImpl(F&& f, V&& v) {
+    return BinarySearchVisitImpl<R>(std::forward<F>(f), std::forward<V>(v), InPlaceIndex<0>,
+                                    InPlaceIndex<RemoveCVRef<V>::Num - 1>);
+  }
+};
 
 template<typename R, typename F, typename... Ts>
-struct VisitResultT {
+struct VisitResultS {
   using type = R;
 };
 
 template<typename F, typename... Ts>
-struct VisitResultT<DefaultArgument, F, Ts...> {
+struct VisitResultS<DefaultArgument, F, Ts...> {
   using type = std::common_type_t<decltype(std::declval<F>()(std::declval<Ts>()))...>;
 };
 
 template<typename R, typename F, typename... Ts>
-using VisitResult = typename VisitResultT<R, F, Ts...>::type;
+using VisitResult = typename VisitResultS<R, F, Ts...>::type;
 
 }  // namespace details
 
@@ -177,19 +180,19 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
   template<typename R = DefaultArgument, typename F>
   decltype(auto) Visit(F&& f) & {
     using Result = details::VisitResult<R, F, Ts&...>;
-    return details::VisitImpl<Result>(std::forward<F>(f), *this);
+    return details::VariantPrivateScope::VisitImpl<Result>(std::forward<F>(f), *this);
   }
 
   template<typename R = DefaultArgument, typename F>
   decltype(auto) Visit(F&& f) && {
     using Result = details::VisitResult<R, F, Ts&&...>;
-    return details::VisitImpl<Result>(std::forward<F>(f), std::move(*this));
+    return details::VariantPrivateScope::VisitImpl<Result>(std::forward<F>(f), std::move(*this));
   }
 
   template<typename R = DefaultArgument, typename F>
   decltype(auto) Visit(F&& f) const& {
     using Result = details::VisitResult<R, F, const Ts&...>;
-    return details::VisitImpl<Result>(std::forward<F>(f), *this);
+    return details::VariantPrivateScope::VisitImpl<Result>(std::forward<F>(f), *this);
   }
 
   Variant(const Variant& v) {  // NOLINT(cppcoreguidelines-pro-type-member-init)
@@ -221,40 +224,9 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
 
   std::size_t Index() const { return type_index_; }
 
-  template<typename T>
+  template<typename T, std::enable_if_t<HasType<T>, int> = 0>
   bool Is() const {
     return type_index_ == IndexOfType<T>;
-  }
-
-  // use std::launder while updating to c++17
-  template<typename T, std::enable_if_t<HasType<T>, int> = 0>
-  T& Get() & {
-    return *reinterpret_cast<T*>(storage_);
-  }
-
-  template<typename T, std::enable_if_t<HasType<T>, int> = 0>
-  T&& Get() && {
-    return std::move(*reinterpret_cast<T*>(storage_));
-  }
-
-  template<typename T, std::enable_if_t<HasType<T>, int> = 0>
-  const T& Get() const& {
-    return *reinterpret_cast<const T*>(storage_);
-  }
-
-  template<std::size_t I, std::enable_if_t<(I < Num), int> = 0>
-  TypeByIndex<I>& Get() & {
-    return *reinterpret_cast<TypeByIndex<I>*>(storage_);
-  }
-
-  template<std::size_t I, std::enable_if_t<(I < Num), int> = 0>
-  TypeByIndex<I>&& Get() && {
-    return std::move(*reinterpret_cast<TypeByIndex<I>*>(storage_));
-  }
-
-  template<std::size_t I, std::enable_if_t<(I < Num), int> = 0>
-  const TypeByIndex<I>& Get() const& {
-    return *reinterpret_cast<const TypeByIndex<I>*>(storage_);
   }
 
   ~Variant() { Destory(); }
@@ -262,7 +234,8 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
   bool operator==(const Variant& v) const {
     if (type_index_ != v.type_index_) return false;
 
-    return v.Visit([this](const auto& elem) { return elem == Get<RemoveCVRef<decltype(elem)>>(); });
+    return v.Visit(
+        [this](const auto& elem) { return elem == Value<RemoveCVRef<decltype(elem)>>(); });
   }
 
   bool operator!=(const Variant& v) const { return !operator==(v); }
@@ -271,7 +244,8 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
     if (type_index_ < v.type_index_) return true;
     if (type_index_ > v.type_index_) return false;
 
-    return v.Visit([this](const auto& elem) { return Get<RemoveCVRef<decltype(elem)>>() < elem; });
+    return v.Visit(
+        [this](const auto& elem) { return Value<RemoveCVRef<decltype(elem)>>() < elem; });
   }
 
   bool operator>=(const Variant& v) const { return !(*this < v); }
@@ -280,7 +254,8 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
     if (type_index_ > v.type_index_) return true;
     if (type_index_ < v.type_index_) return false;
 
-    return v.Visit([this](const auto& elem) { return Get<RemoveCVRef<decltype(elem)>>() > elem; });
+    return v.Visit(
+        [this](const auto& elem) { return Value<RemoveCVRef<decltype(elem)>>() > elem; });
   }
 
   bool operator<=(const Variant& v) const { return !(*this > v); }
@@ -289,7 +264,7 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
   friend bool operator==(const Variant& v, const T& x) {
     if (v.type_index_ != IndexOfType<T>) return false;
 
-    return v.Get<T>() == x;
+    return v.Value<T>() == x;
   }
 
   template<typename T, std::enable_if_t<HasType<T>, int> = 0>
@@ -310,11 +285,11 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
   template<typename T, typename... Args>
   T& Emplace(Args&&... args) {
     if (Is<T>()) {
-      return Get<T>() = T(std::forward<Args>(args)...);
+      return Value<T>() = T(std::forward<Args>(args)...);
     } else {
       Destory();
       Construct<T>(std::forward<Args>(args)...);
-      return Get<T>();
+      return Value<T>();
     }
   }
 
@@ -323,11 +298,81 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
     return Emplace<TypeByIndex<I>>(std::forward<Args>(args)...);
   }
 
+  template<typename T, std::enable_if_t<HasType<T>, int> = 0>
+  T& Get() & {
+    OF_MAYBE_ASSERT_EQ(Index(), IndexOfType<T>);
+    return Value<T>();
+  }
+
+  template<typename T, std::enable_if_t<HasType<T>, int> = 0>
+  T&& Get() && {
+    OF_MAYBE_ASSERT_EQ(Index(), IndexOfType<T>);
+    return std::move(*this).template Value<T>();
+  }
+
+  template<typename T, std::enable_if_t<HasType<T>, int> = 0>
+  const T& Get() const& {
+    OF_MAYBE_ASSERT_EQ(Index(), IndexOfType<T>);
+    return Value<T>();
+  }
+
+  template<std::size_t I, std::enable_if_t<(I < Num), int> = 0>
+  TypeByIndex<I>& Get() & {
+    OF_MAYBE_ASSERT_EQ(Index(), I);
+    return Value<I>();
+  }
+
+  template<std::size_t I, std::enable_if_t<(I < Num), int> = 0>
+  TypeByIndex<I>&& Get() && {
+    OF_MAYBE_ASSERT_EQ(Index(), I);
+    return std::move(*this).template Value<I>();
+  }
+
+  template<std::size_t I, std::enable_if_t<(I < Num), int> = 0>
+  const TypeByIndex<I>& Get() const& {
+    OF_MAYBE_ASSERT_EQ(Index(), I);
+    return Value<I>();
+  }
+
+ protected:
+  // use std::launder while updating to c++17
+  template<typename T, std::enable_if_t<HasType<T>, int> = 0>
+  T& Value() & {
+    return *reinterpret_cast<T*>(storage_);
+  }
+
+  template<typename T, std::enable_if_t<HasType<T>, int> = 0>
+  T&& Value() && {
+    return std::move(*reinterpret_cast<T*>(storage_));
+  }
+
+  template<typename T, std::enable_if_t<HasType<T>, int> = 0>
+  const T& Value() const& {
+    return *reinterpret_cast<const T*>(storage_);
+  }
+
+  template<std::size_t I, std::enable_if_t<(I < Num), int> = 0>
+  TypeByIndex<I>& Value() & {
+    return *reinterpret_cast<TypeByIndex<I>*>(storage_);
+  }
+
+  template<std::size_t I, std::enable_if_t<(I < Num), int> = 0>
+  TypeByIndex<I>&& Value() && {
+    return std::move(*reinterpret_cast<TypeByIndex<I>*>(storage_));
+  }
+
+  template<std::size_t I, std::enable_if_t<(I < Num), int> = 0>
+  const TypeByIndex<I>& Value() const& {
+    return *reinterpret_cast<const TypeByIndex<I>*>(storage_);
+  }
+
  private:
   static constexpr const std::size_t size = std::max({sizeof(Ts)...});
 
   alignas(Ts...) unsigned char storage_[size];
   std::uint8_t type_index_;
+
+  friend struct details::VariantPrivateScope;
 
   template<typename T, typename... Args, std::enable_if_t<HasType<T> && IsAggregate<T>, int> = 0>
   void Construct(Args&&... args) {
@@ -362,7 +407,7 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
       using T = RemoveCVRef<decltype(elem)>;
 
       if (Is<T>()) {
-        Get<T>() = std::forward<decltype(elem)>(elem);
+        Value<T>() = std::forward<decltype(elem)>(elem);
       } else {
         Destory();
         Construct<T>(std::forward<decltype(elem)>(elem));
@@ -374,7 +419,7 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
     Visit([this](auto& elem) {
       using T = RemoveCVRef<decltype(elem)>;
 
-      Get<T>().~T();
+      Value<T>().~T();
     });
   }
 };

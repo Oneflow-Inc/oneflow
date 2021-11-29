@@ -24,6 +24,12 @@ limitations under the License.
 #define OF_MAYBE_ASSERT(_cond_) assert(_cond_)
 #endif
 
+// ASSERT_EQ is different from ASSERT in logging / testing framework
+// pre-define it if you use a logging library like glog
+#ifndef OF_MAYBE_ASSERT_EQ
+#define OF_MAYBE_ASSERT_EQ(_lhs_, _rhs_) OF_MAYBE_ASSERT(_lhs_ == _rhs_)
+#endif
+
 #if __GNUC__ >= 7
 #define OF_MAYBE_HAS_IS_AGGREGATE
 // in old versions of clang, __has_builtin(__is_aggregate) returns false

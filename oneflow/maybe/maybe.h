@@ -62,13 +62,13 @@ struct MaybeStorage : Variant<T, E> {
   MaybeStorage(const E& err) : Base(err) {}        // NOLINT(google-explicit-constructor)
   MaybeStorage(E&& err) : Base(std::move(err)) {}  // NOLINT(google-explicit-constructor)
 
-  decltype(auto) Value() & { return this->template Get<T>(); }
-  decltype(auto) Value() const& { return this->template Get<T>(); }
-  decltype(auto) Value() && { return std::move(*this).template Get<T>(); }
+  decltype(auto) Value() & { return this->Base::template Value<T>(); }
+  decltype(auto) Value() const& { return this->Base::template Value<T>(); }
+  decltype(auto) Value() && { return std::move(*this).Base::template Value<T>(); }
 
-  decltype(auto) Error() & { return this->template Get<E>(); }
-  decltype(auto) Error() const& { return this->template Get<E>(); }
-  decltype(auto) Error() && { return std::move(*this).template Get<E>(); }
+  decltype(auto) Error() & { return this->Base::template Value<E>(); }
+  decltype(auto) Error() const& { return this->Base::template Value<E>(); }
+  decltype(auto) Error() && { return std::move(*this).Base::template Value<E>(); }
 
   bool IsOk() const { return this->template Is<T>(); }
 };
@@ -91,13 +91,13 @@ struct MaybeStorage<T, E, std::enable_if_t<std::is_reference<T>::value>>
   explicit MaybeStorage(InPlaceErrorType, Args&&... args)
       : Base(InPlaceType<E>, std::forward<Args>(args)...) {}
 
-  PointedType& Value() { return *this->template Get<UnderlyingType>(); }
+  PointedType& Value() { return *this->Base::template Value<UnderlyingType>(); }
 
-  const PointedType& Value() const { return *this->template Get<UnderlyingType>(); }
+  const PointedType& Value() const { return *this->Base::template Value<UnderlyingType>(); }
 
-  decltype(auto) Error() & { return this->template Get<E>(); }
-  decltype(auto) Error() const& { return this->template Get<E>(); }
-  decltype(auto) Error() && { return std::move(*this).template Get<E>(); }
+  decltype(auto) Error() & { return this->Base::template Value<E>(); }
+  decltype(auto) Error() const& { return this->Base::template Value<E>(); }
+  decltype(auto) Error() && { return std::move(*this).Base::template Value<E>(); }
 
   bool IsOk() const { return this->template Is<UnderlyingType>(); }
 };
