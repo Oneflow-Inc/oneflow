@@ -84,22 +84,6 @@ llvm_config.with_environment(
     os.path.join(config.test_source_root, "../../../python"),
     append_path=True,
 )
-import pathlib
-
-
-llvm_config.with_environment(
-    "LD_LIBRARY_PATH", config.oneflow_obj_root, append_path=True,
-)
-third_party_dirs = [
-    str(filepath.absolute())
-    for filepath in pathlib.Path(
-        os.path.join(config.oneflow_obj_root, "third_party_install")
-    ).glob("**/*")
-    if filepath.is_dir()
-]
-llvm_config.with_environment(
-    "LD_LIBRARY_PATH", third_party_dirs, append_path=True,
-)
 
 tool_dirs = [config.oneflow_tools_dir, config.llvm_tools_dir]
 tools = ["oneflow-opt", "oneflow-translate"]
