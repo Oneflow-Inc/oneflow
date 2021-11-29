@@ -125,12 +125,42 @@ class ScalarMathBaseFunctor {
 class ScalarAddFunctor : public ScalarMathBaseFunctor {
  public:
   ScalarAddFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_add") {}
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Scalar& other,
+                           const Scalar& alpha, const bool& inplace) const {
+    if (IsIntegralDataType(input->dtype()->data_type()) && other.IsIntegral()
+        && alpha.IsFloatingPoint()) {
+      return Error::RuntimeError()
+             << "For integral input tensors, argument alpha must not be a floating point number.";
+    }
+    Scalar scalar;
+    if (other.IsFloatingPoint() || alpha.IsFloatingPoint()) {
+      scalar = Scalar(other.Value<double>() * alpha.Value<double>());
+    } else {
+      scalar = Scalar(other.Value<int64_t>() * alpha.Value<int64_t>());
+    }
+    return ScalarMathBaseFunctor::operator()(input, scalar, inplace);
+  }
 };
 
 class ScalarAdd2Functor {
  public:
-  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
-    return ScalarAdd(x, scalar, /*inplace=*/false);
+  Maybe<Tensor> operator()(const Scalar& input, const std::shared_ptr<one::Tensor>& other,
+                           const Scalar& alpha) const {
+    if (IsIntegralDataType(other->dtype()->data_type()) && input.IsIntegral()
+        && alpha.IsFloatingPoint()) {
+      return Error::RuntimeError()
+             << "For integral input tensors, argument alpha must not be a floating point number.";
+    }
+    std::shared_ptr<one::Tensor> other_;
+    if ((alpha.IsIntegral() && alpha.Value<int64_t>() == 1)
+        || (alpha.IsFloatingPoint()
+            && std::fabs(alpha.Value<double>() - 1.0) < std::numeric_limits<double>::epsilon())) {
+      other_ = other;
+    } else {
+      other_ = JUST(ScalarMul(alpha, other));
+    }
+    return ScalarAdd(other_, input, /*alpha=*/1, /*inplace=*/false);
   }
 };
 
@@ -138,14 +168,15 @@ class ScalarSubFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar,
                            bool inplace) const {
-    return ScalarAdd(x, Scalar(-1) * scalar, inplace);
+    return ScalarAdd(x, Scalar(-1) * scalar, /*alpha=*/1, inplace);
   }
 };
 
 class ScalarSub2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
-    return ScalarAdd(JUST(ScalarMul(x, Scalar(-1), false)), scalar, /*inplace=*/false);
+    return ScalarAdd(JUST(ScalarMul(x, Scalar(-1), false)), scalar, /*alpha=*/1,
+                     /*inplace=*/false);
   }
 };
 
@@ -511,12 +542,12 @@ class TransposeFunctor {
 class EyeFunctor {
  public:
   EyeFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Scalar& n, const Optional<Scalar>& m,
+  Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("n", JUST(n.As<int64_t>())));
-    JUST(attrs.SetAttr<int64_t>("m", JUST(m.value_or(n).As<int64_t>())));
+    JUST(attrs.SetAttr<int64_t>("rows", JUST(rows.As<int64_t>())));
+    JUST(attrs.SetAttr<int64_t>("cols", JUST(cols.value_or(rows).As<int64_t>())));
     JUST(attrs.SetAttr<DataType>("dtype", dtype ? JUST(dtype)->data_type() : DataType::kFloat));
     OpExprInterpContext ctx(attrs);
     ctx.device = device;
@@ -530,13 +561,13 @@ class EyeFunctor {
 class ConsistentEyeFunctor {
  public:
   ConsistentEyeFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Scalar& n, const Optional<Scalar>& m,
+  Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
                            const Optional<Symbol<DType>>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("n", JUST(n.As<int64_t>())));
-    JUST(attrs.SetAttr<int64_t>("m", JUST(m.value_or(n).As<int64_t>())));
+    JUST(attrs.SetAttr<int64_t>("rows", JUST(rows.As<int64_t>())));
+    JUST(attrs.SetAttr<int64_t>("cols", JUST(cols.value_or(rows).As<int64_t>())));
     JUST(attrs.SetAttr<DataType>("dtype", dtype ? JUST(dtype)->data_type() : DataType::kFloat));
     if (LazyMode::is_enabled()) {
       std::vector<std::string> nd_sbp(sbp_tuple.size());
