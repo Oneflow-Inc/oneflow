@@ -82,7 +82,7 @@ Maybe<void> RoiAlignGradSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> RoiAlignArgModifier(user_op::GetInputArgModifier GetInputArgModifierFn,
+Maybe<void> RoiAlignArgModifier(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                 const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* roi_modifier = GetInputArgModifierFn("rois", 0);
   CHECK(roi_modifier != nullptr);
