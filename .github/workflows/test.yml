@@ -558,7 +558,7 @@ jobs:
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/dry_run_test.sh
       - name: Checkout Oneflow-Inc/models
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cuda' }}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
         uses: actions/checkout@v2
         with:
           repository: Oneflow-Inc/models
@@ -567,11 +567,11 @@ jobs:
       - name: ResNet50 Graph DDP test
         id: models-resnet50
         timeout-minutes: 20
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cuda' }}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
         run: |
           docker exec -e ONEFLOW_MODELS_DIR=$PWD/oneflow-models-resnet50 ${{ env.TEST_CONTAINER_NAME }} bash ci/test/test_resnet50_graph_ddp.sh
       - name: Checkout Oneflow-Inc/models
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cuda' }}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
         uses: actions/checkout@v2
         with:
           repository: Oneflow-Inc/models
