@@ -905,9 +905,6 @@ class ToContiguousFunctor {
     op_ = CHECK_JUST(one::OpBuilder("to_contiguous").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
-    // if (CHECK_JUST(IsContiguous(input))) {
-    //   return input;
-    // }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("storage_offset", JUST(input->storage_offset())));
 

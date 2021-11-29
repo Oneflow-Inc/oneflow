@@ -526,9 +526,7 @@ class TransposeFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::vector<int32_t>& permute) const {
-    MutableAttrMap attrs;
     CHECK_EQ_OR_RETURN(input->ndim(), permute.size()) << "number of dims don't match in permute";
-    JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
     int32_t ndims = input->shape()->NumAxes();
     for (int i = 0; i < permute.size(); i++) {
       int32_t dim = permute.at(i);
@@ -540,6 +538,11 @@ class TransposeFunctor {
           << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
           << ndims << " ] but got " << ndims;
     }
+    if (input->is_eager() && input->is_local()) {
+      return ToContiguous(JUST(view::Transpose(input, permute)));
+    }
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 

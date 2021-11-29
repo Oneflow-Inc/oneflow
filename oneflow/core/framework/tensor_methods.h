@@ -42,6 +42,8 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
 Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim,
                     const int64_t& start, const int64_t& length);
 
+Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& permute);
+
 }  // namespace view
 }  // namespace one
 }  // namespace oneflow
