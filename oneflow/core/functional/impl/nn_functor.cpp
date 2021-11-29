@@ -2030,6 +2030,58 @@ class NmsFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class RoiAlignFunctor {
+ public:
+  RoiAlignFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("roi_align").Input("x").Input("rois").Output("y").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& rois, const float& spatial_scale,
+                           const int32_t& pooled_h, const int32_t& pooled_w,
+                           const int32_t& sampling_ratio, const bool& aligned) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("spatial_scale", spatial_scale));
+    JUST(attrs.SetAttr<int32_t>("pooled_h", pooled_h));
+    JUST(attrs.SetAttr<int32_t>("pooled_w", pooled_w));
+    JUST(attrs.SetAttr<int32_t>("sampling_ratio", sampling_ratio));
+    JUST(attrs.SetAttr<bool>("aligned", aligned));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, rois}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class RoiAlignGradFunctor {
+ public:
+  RoiAlignGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("roi_align_grad")
+                         .Input("dy")
+                         .Input("x_like")
+                         .Input("rois")
+                         .Output("dx")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x_like,
+                           const std::shared_ptr<one::Tensor>& rois, const float& spatial_scale,
+                           const int32_t& pooled_h, const int32_t& pooled_w,
+                           const int32_t& sampling_ratio, const bool& aligned) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("spatial_scale", spatial_scale));
+    JUST(attrs.SetAttr<int32_t>("pooled_h", pooled_h));
+    JUST(attrs.SetAttr<int32_t>("pooled_w", pooled_w));
+    JUST(attrs.SetAttr<int32_t>("sampling_ratio", sampling_ratio));
+    JUST(attrs.SetAttr<bool>("aligned", aligned));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x_like, rois}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2096,6 +2148,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PartialFCSampleFunctor>("DistributedPariticalFCSample");
   m.add_functor<impl::PariticalFCSampleDisableBoxing>("DistributedPariticalFCSampleDisableBoxing");
   m.add_functor<impl::NmsFunctor>("Nms");
+  m.add_functor<impl::RoiAlignFunctor>("RoiAlign");
+  m.add_functor<impl::RoiAlignGradFunctor>("RoiAlignGrad");
 };
 
 }  // namespace functional
