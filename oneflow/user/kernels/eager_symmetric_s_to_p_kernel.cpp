@@ -126,7 +126,7 @@ class EagerSymmetricSToPKernel final : public user_op::OpKernel {
 REGISTER_EAGER_SYMMETRIC_S_TO_P_KERNEL(DeviceType::kCPU)
 
 #if defined(WITH_CUDA)
-REGISTER_EAGER_SYMMETRIC_S_TO_P_KERNEL(DeviceType::kGPU)
+REGISTER_EAGER_SYMMETRIC_S_TO_P_KERNEL(DeviceType::kCUDA)
 #endif
 
 }  // namespace oneflow

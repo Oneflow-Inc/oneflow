@@ -55,7 +55,7 @@ class SplitLikeKernel final : public user_op::OpKernel {
         DimVector out_i_dim_vec;
         like_shape_view.ToDimVector(&out_i_dim_vec);
         FOR_RANGE(int64_t, j, like_num_axes, in_num_axes) {
-          out_i_dim_vec.push_back(in_shape_view.At(j));
+          out_i_dim_vec.emplace_back(in_shape_view.At(j));
         }
         mut_shape_view->set_shape(Shape(out_i_dim_vec));
       }

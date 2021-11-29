@@ -121,7 +121,7 @@ bool CanBeMergedInChain(const TaskNode* node) {
   if (IsTaskNodeProducedResgtHasMultiRegstNum(node)) { return false; }
   const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
   if (fw_comp_node == nullptr) { return false; }
-  if (fw_comp_node->device_type() != DeviceType::kGPU) { return false; }
+  if (fw_comp_node->device_type() != DeviceType::kCUDA) { return false; }
   const Operator* op = fw_comp_node->op().get();
   if (IsSpecialOpNotConsiderMergeInChain(op)) { return false; }
   return true;
@@ -302,7 +302,7 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
       }
       comp_task_node->set_thrd_id(EncodeStreamIdToInt64(StreamId{device_id, stream_index}));
       comp_task_node->set_op_node(op_node);
-      sorted_comp_tasks->push_back(comp_task_node);
+      sorted_comp_tasks->emplace_back(comp_task_node);
     }
   }
 }
@@ -564,7 +564,12 @@ void TaskGraph::AddCtrlEdgeBetweenSrcDstTickAndInputOutputInSameRank() {
 
   auto AddCtrlEdge = [&](TaskNode* src, TaskNode* dst) {
     std::string ctrl_regst_name;
-    src->BuildCtrlRegstDesc(dst, &ctrl_regst_name);
+    RegstDesc* ctrl_regst = src->BuildCtrlRegstDesc(dst, &ctrl_regst_name);
+    // NOTE(chengcheng):
+    //   ctrl edge between src subset tick to output is just for restrict order in multi-client
+    //   but this ctrl edge will block src subset tick to delay pipeline, so this ctrl edge must
+    //   at least 2.
+    ctrl_regst->UpdtMinRegstNumIfNeed(2);
     TaskEdge* edge = NewEdge();
     Connect<TaskNode>(src, edge, dst);
     src->BindEdgeWithProducedRegst(edge, ctrl_regst_name);
@@ -731,7 +736,7 @@ void TaskGraph::ForEachGpuDeviceNodes(
     const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const {
   HashMap<std::pair<int64_t, int64_t>, HashSet<TaskNode*>> global_dev_phy_id2nodes;
   ForEachNode([&](TaskNode* task_node) {
-    if (task_node->device_type() != DeviceType::kGPU) { return; }
+    if (task_node->device_type() != DeviceType::kCUDA) { return; }
     int64_t dev_phy_id = task_node->stream_id().device_id().device_index();
     global_dev_phy_id2nodes[{task_node->machine_id(), dev_phy_id}].emplace(task_node);
   });
