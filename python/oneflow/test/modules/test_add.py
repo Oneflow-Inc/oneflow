@@ -80,6 +80,7 @@ def _test_inplace_add(test_case, shape, device):
     of_x_inplace = of_x_inplace.sum()
     of_x_inplace.backward()
     test_case.assertTrue(np.allclose(of_x.grad.numpy(), np.ones(shape), 1e-05, 1e-05))
+
     of_x = flow.tensor(
         np_x, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
@@ -98,6 +99,7 @@ def _test_inplace_add(test_case, shape, device):
     of_x_inplace = of_x_inplace.sum()
     of_x_inplace.backward()
     test_case.assertTrue(np.allclose(of_x.grad.numpy(), np.ones(shape), 1e-05, 1e-05))
+
     of_x = flow.tensor(
         np_x, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
@@ -116,6 +118,7 @@ def _test_inplace_add(test_case, shape, device):
     of_x_inplace = of_x_inplace.sum()
     of_x_inplace.backward()
     test_case.assertTrue(np.allclose(of_x.grad.numpy(), np.ones(shape), 1e-05, 1e-05))
+
     of_x = flow.tensor(
         np_x, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
@@ -134,6 +137,7 @@ def _test_inplace_add(test_case, shape, device):
     of_x_inplace = of_x_inplace.sum()
     of_x_inplace.backward()
     test_case.assertTrue(np.allclose(of_x.grad.numpy(), np.ones(shape), 1e-05, 1e-05))
+
     of_x = flow.tensor(
         np_x, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
