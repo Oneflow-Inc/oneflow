@@ -3088,8 +3088,8 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [NoSideEffect, DeclareOpInterfac
 #endif // GET_ONEFLOW_MATMUL_OP_DEFINITIONS
 
 // Group: MISC
-// CategoricalOrdinalEncode, add_n, arange, coin_flip, concat, constant, dropout, elementwise_maximum_backward, elementwise_minimum_backward, empty, eye, grid_sample_grad, mlir_jit, multi_count_not_finite, multi_square_sum, nll, nll_grad, pow_x_grad, pow_y_grad, prelu_grad, randperm, recv, send, split_like, ssp_variable_proxy, tf_prelu_grad, uniform, uniform_int, unique_with_counts, xdivy_x_grad, xdivy_y_grad
-// Total: 31
+// CategoricalOrdinalEncode, add_n, arange, coin_flip, concat, constant, dropout, elementwise_maximum_backward, elementwise_minimum_backward, empty, eye, grid_sample_grad, multi_count_not_finite, multi_square_sum, nll, nll_grad, pow_x_grad, pow_y_grad, prelu_grad, randperm, recv, send, split_like, ssp_variable_proxy, tf_prelu_grad, uniform, uniform_int, unique_with_counts, xdivy_x_grad, xdivy_y_grad
+// Total: 30
 
 #ifdef GET_ONEFLOW_MISC_OP_DEFINITIONS
 
@@ -4319,332 +4319,65 @@ def OneFlow_ParallelCastOp : OneFlow_BaseOp<"parallel_cast", [NoSideEffect, Decl
 
 #ifdef GET_ONEFLOW_POOL_OP_DEFINITIONS
 
-def OneFlow_AdaptiveAvgPool1DOp : OneFlow_BaseOp<"adaptive_avg_pool1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    SI64ArrayAttr:$output_size
-  );
-}
+def OneFlow_AdaptiveAvgPool1DOp : OneFlow_PoolBaseOp<"adaptive_avg_pool1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_AdaptiveAvgPool1DGradOp : OneFlow_BaseOp<"adaptive_avg_pool1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    SI64ArrayAttr:$output_size
-  );
-}
+def OneFlow_AdaptiveAvgPool1DGradOp : OneFlow_PoolGradBaseOp<"adaptive_avg_pool1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_AdaptiveAvgPool2DOp : OneFlow_BaseOp<"adaptive_avg_pool2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    SI64ArrayAttr:$output_size
-  );
-}
+def OneFlow_AdaptiveAvgPool2DOp : OneFlow_PoolBaseOp<"adaptive_avg_pool2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_AdaptiveAvgPool2DGradOp : OneFlow_BaseOp<"adaptive_avg_pool2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    SI64ArrayAttr:$output_size
-  );
-}
+def OneFlow_AdaptiveAvgPool2DGradOp : OneFlow_PoolGradBaseOp<"adaptive_avg_pool2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_AdaptiveAvgPool3DOp : OneFlow_BaseOp<"adaptive_avg_pool3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    SI64ArrayAttr:$output_size
-  );
-}
+def OneFlow_AdaptiveAvgPool3DOp : OneFlow_PoolBaseOp<"adaptive_avg_pool3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_AdaptiveAvgPool3DGradOp : OneFlow_BaseOp<"adaptive_avg_pool3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    SI64ArrayAttr:$output_size
-  );
-}
+def OneFlow_AdaptiveAvgPool3DGradOp : OneFlow_PoolGradBaseOp<"adaptive_avg_pool3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool1DOp : OneFlow_EagerPoolBaseOp<"avgpool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AvgPool1DOp : OneFlow_PoolBaseOp<"avgpool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AvgPool1DGradOp : OneFlow_PoolGradBaseOp<"avgpool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool2DOp : OneFlow_EagerPoolBaseOp<"avgpool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AvgPool2DOp : OneFlow_PoolBaseOp<"avgpool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AvgPool2DGradOp : OneFlow_PoolGradBaseOp<"avgpool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool3DOp : OneFlow_EagerPoolBaseOp<"avgpool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AvgPool3DOp : OneFlow_PoolBaseOp<"avgpool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AvgPool3DGradOp : OneFlow_PoolGradBaseOp<"avgpool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool1DOp : OneFlow_EagerPoolBaseOp<"maxpool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_MaxPool1DOp : OneFlow_PoolBaseOp<"maxpool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_MaxPool1DGradOp : OneFlow_PoolGradBaseOp<"maxpool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool2DOp : OneFlow_EagerPoolBaseOp<"maxpool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_MaxPool2DOp : OneFlow_PoolBaseOp<"maxpool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_MaxPool2DGradOp : OneFlow_PoolGradBaseOp<"maxpool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool3DOp : OneFlow_EagerPoolBaseOp<"maxpool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_MaxPool3DOp : OneFlow_PoolBaseOp<"maxpool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_MaxPool3DGradOp : OneFlow_PoolGradBaseOp<"maxpool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfAvgPool1DOp : OneFlow_BaseOp<"tf_avg_pool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfAvgPool1DOp : OneFlow_TFPoolBaseOp<"tf_avg_pool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfAvgPool1DGradOp : OneFlow_BaseOp<"tf_avg_pool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfAvgPool1DGradOp : OneFlow_TFPoolGradBaseOp<"tf_avg_pool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfAvgPool2DOp : OneFlow_BaseOp<"tf_avg_pool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfAvgPool2DOp : OneFlow_TFPoolBaseOp<"tf_avg_pool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfAvgPool2DGradOp : OneFlow_BaseOp<"tf_avg_pool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfAvgPool2DGradOp : OneFlow_TFPoolGradBaseOp<"tf_avg_pool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfAvgPool3DOp : OneFlow_BaseOp<"tf_avg_pool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfAvgPool3DOp : OneFlow_TFPoolBaseOp<"tf_avg_pool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfAvgPool3DGradOp : OneFlow_BaseOp<"tf_avg_pool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfAvgPool3DGradOp : OneFlow_TFPoolGradBaseOp<"tf_avg_pool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfMaxPool1DOp : OneFlow_BaseOp<"tf_max_pool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfMaxPool1DOp : OneFlow_TFPoolBaseOp<"tf_max_pool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfMaxPool1DGradOp : OneFlow_BaseOp<"tf_max_pool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfMaxPool1DGradOp : OneFlow_TFPoolGradBaseOp<"tf_max_pool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfMaxPool2DOp : OneFlow_BaseOp<"tf_max_pool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfMaxPool2DOp : OneFlow_TFPoolBaseOp<"tf_max_pool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfMaxPool2DGradOp : OneFlow_BaseOp<"tf_max_pool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfMaxPool2DGradOp : OneFlow_TFPoolGradBaseOp<"tf_max_pool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfMaxPool3DOp : OneFlow_BaseOp<"tf_max_pool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfMaxPool3DOp : OneFlow_TFPoolBaseOp<"tf_max_pool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfMaxPool3DGradOp : OneFlow_BaseOp<"tf_max_pool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfMaxPool3DGradOp : OneFlow_TFPoolGradBaseOp<"tf_max_pool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
 #endif // GET_ONEFLOW_POOL_OP_DEFINITIONS
 
