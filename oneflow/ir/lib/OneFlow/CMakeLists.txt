@@ -31,6 +31,7 @@ add_mlir_dialect_library(MLIROneFlow
 
   DEPENDS
   MLIROneFlowOpsIncGen
+  prepare_oneflow_third_party
 
   LINK_LIBS PUBLIC
   ${dialect_libs}
@@ -41,6 +42,7 @@ add_mlir_dialect_library(MLIROneFlow
   MLIRReconcileUnrealizedCasts
   ${MLIR_GPU_LIBS}
   MLIRIR
+  ${oneflow_third_party_libs}
   oneflow
 )
 
