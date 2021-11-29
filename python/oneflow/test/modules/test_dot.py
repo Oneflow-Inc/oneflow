@@ -20,33 +20,18 @@ import numpy as np
 
 from test_util import GenArgList
 import oneflow as flow
-
-
-def _test_dot_forward(test_case, device, dtype):
-    np_x = np.random.randn(1000).astype(dtype)
-    np_y = np.random.randn(1000).astype(dtype)
-
-    np_out = np.dot(np_x, np_y)
-
-    x = flow.tensor(np_x, device=flow.device(device))
-    y = flow.tensor(np_y, device=flow.device(device))
-
-    out = flow.dot(x, y)
-    test_case.assertTrue(np.allclose(np_out, out.numpy(), rtol=1e-04, atol=1e-10))
-
+from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestDot(flow.unittest.TestCase):
-    def test_fw_dot(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_dot_forward,
-        ]
-        arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["dtype"] = [np.float32, np.double]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
-
+    @autotest(auto_backward=False)
+    def test_dot(test_case):
+        device = random_device()
+        k = random(100, 1000)
+        x = random_pytorch_tensor(ndim=1, dim0=k).to(device)
+        y = random_pytorch_tensor(ndim=1, dim0=k).to(device)
+        z = torch.dot(x, y)
+        return z
 
 if __name__ == "__main__":
     unittest.main()
