@@ -67,6 +67,8 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     message(FATAL_ERROR ${COMPILER_VERSION_ERROR_MSG})
   endif()
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+# Reference:
+# https://releases.llvm.org/11.0.0/tools/clang/docs/OpenMPSupport.html
   if("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 11)
     set(WITH_ONEDNN OFF)
   endif()

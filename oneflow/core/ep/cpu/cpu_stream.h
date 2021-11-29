@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/ep/include/stream.h"
 #ifdef WITH_ONEDNN
-#include "oneapi/dnnl/dnnl.hpp"
+#include <oneapi/dnnl/dnnl.hpp>
 #endif
 
 namespace oneflow {
