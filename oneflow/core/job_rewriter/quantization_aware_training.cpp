@@ -520,7 +520,7 @@ Maybe<void> QuantAwareTraining::InsertFakeQuantOp(const QatConfig& qat_config,
     for (OpEdge* edge : white_set_edges) {
       CHECK_EQ_OR_RETURN(1, edge->lbis().size());
       std::string lbn = GenLogicalBlobName(edge->lbis().front());
-      edges_group_by_lbn[lbn].push_back(edge);
+      edges_group_by_lbn[lbn].emplace_back(edge);
     }
   }
 

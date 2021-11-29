@@ -33,7 +33,7 @@ Maybe<SubTskGphBuilderStatus> NaiveB2BSubTskGphBuilder::Build(
       TaskNode* nearest_in_node = sorted_in_tasks.at(nearest_in_parallel_id);
       TaskNode* proxy =
           ctx->task_graph()->GetProxyNode(nearest_in_node, lbi, out_parallel_desc, out_id);
-      sorted_out_tasks->push_back(proxy);
+      sorted_out_tasks->emplace_back(proxy);
     }
     return TRY(BuildSubTskGphBuilderStatus("NaiveB2BSubTskGphBuilder", ""));
   } else {
