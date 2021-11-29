@@ -38,7 +38,7 @@ std::vector<int64_t>* RegsiteredSessionIds() {
 
 Maybe<void> SetDefaultSessionId(int64_t val) {
   std::vector<int64_t>* ids = RegsiteredSessionIds();
-  ids->push_back(val);
+  ids->emplace_back(val);
   return Maybe<void>::Ok();
 }
 
@@ -61,7 +61,7 @@ std::shared_ptr<vm::cfg::EagerSymbolList> Session::eager_symbol_list() const {
 }
 
 Maybe<void> Session::PushMirroredStrategyEnabled(bool is_mirrored) {
-  is_mirrored_strategy_enabled_stack_->push_back(is_mirrored);
+  is_mirrored_strategy_enabled_stack_->emplace_back(is_mirrored);
   return Maybe<void>::Ok();
 }
 Maybe<void> Session::PopMirroredStrategyEnabled() {

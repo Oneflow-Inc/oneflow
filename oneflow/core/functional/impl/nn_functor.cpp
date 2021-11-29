@@ -151,7 +151,7 @@ class DeConvBaseFunctor {
       for (int i = 0; i < groups; i++) {
         const std::shared_ptr<one::Tensor>& deconv_i = JUST(OpInterpUtil::Dispatch<Tensor>(
             *deconv_op_, {split_x->at(i), split_weight->at(i)}, deconv_attrs));
-        split_out.push_back(deconv_i);
+        split_out.emplace_back(deconv_i);
       }
       deconv_out = JUST(functional::Concat(split_out, 1));
     }
@@ -517,7 +517,7 @@ class MarginRankingLossFunctor : public LossFunctorBase {
             .then(functional::Negative)
             .then(std::bind(functional::Mul, target, std::placeholders::_1))
             .then([&margin](const std::shared_ptr<one::Tensor>& x) {
-              return functional::ScalarAdd(x, Scalar(margin), true);
+              return functional::ScalarAdd(x, Scalar(margin), /*alpha=*/1, /*inplace=*/true);
             })
             .then(std::bind(functional::Clamp, std::placeholders::_1, Scalar(0), NullOpt))
             .call(input_1, input_2);
@@ -909,10 +909,10 @@ class SparseSoftmaxCrossEntropyFunctor {
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
       cfg::SbpParallel sbp;
       sbp.mutable_broadcast_parallel();
-      s0b_sbp_parallels.push_back(logits_nd_sbp.sbp_parallel(0));
-      s0b_sbp_parallels.push_back(sbp);
-      s0s1_sbp_parallels.push_back(logits_nd_sbp.sbp_parallel(0));
-      s0s1_sbp_parallels.push_back(logits_nd_sbp.sbp_parallel(1));
+      s0b_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(0));
+      s0b_sbp_parallels.emplace_back(sbp);
+      s0s1_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(0));
+      s0s1_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(1));
       max_global_stage_input0 = JUST(functional::ToConsistent(
           max_device_stage->at(0), JUST(max_device_stage->at(0)->parallel_desc()),
           s0b_sbp_parallels, s0s1_sbp_parallels));
@@ -1117,24 +1117,26 @@ class TripletMarginLossFunctor {
       if ((reduction != "none") && (reduction != "sum") && (reduction != "mean")) return false;
       return true;
     }());
-    auto da_p = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, positive)))), p, dim, false,
-                                anchor->dtype()));
-    auto da_n = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, negative)))), p, dim, false,
-                                anchor->dtype()));
+    auto da_p = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, positive)), /*alpha=*/1)), p,
+                                dim, /*keepdim=*/false, anchor->dtype()));
+    auto da_n = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, negative)), /*alpha=*/1)), p,
+                                dim, /*keepdim=*/false, anchor->dtype()));
     if (swap) {
-      auto distance_swap = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(positive, negative)))), p,
-                                           dim, false, positive->dtype()));
+      auto distance_swap =
+          JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(positive, negative)), /*alpha=*/1)), p, dim,
+                          /*keepdim=*/false, positive->dtype()));
       da_n = JUST(Minimum(distance_swap, da_n));
     }
     auto triplet_loss =
-        JUST(Clamp(JUST(ScalarAdd(JUST(Sub(da_p, da_n)), margin, false)), 0.0, NullOpt));
+        JUST(Clamp(JUST(ScalarAdd(JUST(Sub(da_p, da_n)), margin, /*alpha=*/1, /*inplace=*/false)),
+                   /*min=*/0.0, NullOpt));
     int32_t ndim = triplet_loss->ndim() - 1;
     std::vector<int32_t> axis(1, ndim);
 
     if (reduction == "mean") {
-      triplet_loss = JUST(ReduceMean(triplet_loss, axis, false));
+      triplet_loss = JUST(ReduceMean(triplet_loss, axis, /*keepdim=*/false));
     } else if (reduction == "sum") {
-      triplet_loss = JUST(ReduceSum(triplet_loss, axis, false));
+      triplet_loss = JUST(ReduceSum(triplet_loss, axis, /*keepdim=*/false));
     }
     return triplet_loss;
   }
