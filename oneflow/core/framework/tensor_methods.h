@@ -39,6 +39,9 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape);
 Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& start,
                     const std::vector<int64_t>& end, const std::vector<int64_t>& step);
 
+Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim,
+                    const int64_t& start, const int64_t& length);
+
 }  // namespace view
 }  // namespace one
 }  // namespace oneflow

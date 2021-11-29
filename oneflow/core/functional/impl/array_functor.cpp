@@ -982,6 +982,9 @@ class NarrowFunctor {
         << " (Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
         << "], but got:" << dim << ")";
     if (narrow_dim < 0) { narrow_dim += ndim; }
+    if (input->is_eager() && input->is_local()) {
+      return ToContiguous(JUST(view::Narrow(input, narrow_dim, start, length)));
+    }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("dim", narrow_dim));
     JUST(attrs.SetAttr<int64_t>("start", start));
