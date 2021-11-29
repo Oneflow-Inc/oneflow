@@ -66,7 +66,8 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
 Maybe<void> InferDataTypeGrad(user_op::InferContext* ctx) {
   const user_op::TensorDesc& prob_desc = ctx->InputTensorDesc("prob", 0);
   const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
-  CHECK_OR_RETURN(IsIndexDataType(label_desc.data_type()));
+  CHECK_OR_RETURN(IsIndexDataType(label_desc.data_type()))
+      << label_desc.data_type() << " is not index data type, op name: " << ctx->op_name();
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   CHECK_EQ_OR_RETURN(dy_desc.data_type(), prob_desc.data_type());
   *ctx->OutputDType("prediction_diff", 0) = prob_desc.data_type();
