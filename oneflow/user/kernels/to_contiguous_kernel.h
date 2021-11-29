@@ -19,16 +19,17 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 
 class ToContiguousUtilParam {
  protected:
-  ToContiguousUtilParam(const DeviceCtx* ctx, const ShapeView& in_shape,
+  ToContiguousUtilParam(ep::Stream* stream, const ShapeView& in_shape,
                         const std::vector<int64_t>& in_stride, const char* in_dptr, char* out_dptr)
-      : ctx(ctx), in_shape(in_shape), in_stride(in_stride), in_dptr(in_dptr), out_dptr(out_dptr) {}
+      : stream(stream), in_shape(in_shape), in_stride(in_stride), in_dptr(in_dptr), out_dptr(out_dptr) {}
 
-  const DeviceCtx* ctx;
+  ep::Stream* stream;
   const ShapeView& in_shape;
   const std::vector<int64_t>& in_stride;
   const char* in_dptr;
@@ -39,9 +40,9 @@ class ToContiguousUtilAttach;
 
 class ToContiguousUtilBase : public ToContiguousUtilParam {
  public:
-  ToContiguousUtilBase(const DeviceCtx* ctx, const ShapeView& in_shape,
+  ToContiguousUtilBase(ep::Stream* stream, const ShapeView& in_shape,
                        const std::vector<int64_t>& in_stride, const char* in_dptr, char* out_dptr)
-      : ToContiguousUtilParam(ctx, in_shape, in_stride, in_dptr, out_dptr),
+      : ToContiguousUtilParam(stream, in_shape, in_stride, in_dptr, out_dptr),
         contiguous_block_size(1),
         contiguous_dim(in_shape.NumAxes() - 1),
         out_stride(in_shape.NumAxes()),
@@ -112,6 +113,6 @@ struct ToContiguousUtil : ToContiguousUtilBase {
   OF_PP_MAKE_TUPLE_SEQ(int64_t) \
   OF_PP_MAKE_TUPLE_SEQ(int8_t)  \
   OF_PP_MAKE_TUPLE_SEQ(uint8_t)
-#define TO_CONTIGUOUS_GPU_SPECIAL_TYPE OF_PP_MAKE_TUPLE_SEQ(float16)
+#define TO_CONTIGUOUS_CUDA_SPECIAL_TYPE OF_PP_MAKE_TUPLE_SEQ(float16)
 
 #endif  // ONEFLOW_USER_KERNELS_TO_CONTIGUOUS_KERNEL_H_

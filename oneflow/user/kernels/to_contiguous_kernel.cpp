@@ -67,7 +67,7 @@ class ToContiguousKernel final : public user_op::OpKernel {
     const char* in_dptr = static_cast<const char*>(in->raw_dptr()) + storage_offset * sizeof(T);
     char* out_dptr = static_cast<char*>(out->mut_raw_dptr());
 
-    ToContiguousUtil<device_type, T>(ctx->device_ctx(), in_shape, in_stride, in_dptr, out_dptr)();
+    ToContiguousUtil<device_type, T>(ctx->stream(), in_shape, in_stride, in_dptr, out_dptr)();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -80,18 +80,18 @@ class ToContiguousKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("in", 0) == GetDataType<T>::value));
 
 #define REGISTER_TO_CONTIGUOUS_CPU_KERNEL(T) REGISTER_TO_CONTIGUOUS_KERNEL(DeviceType::kCPU, T)
-#define REGISTER_TO_CONTIGUOUS_GPU_KERNEL(T) REGISTER_TO_CONTIGUOUS_KERNEL(DeviceType::kGPU, T)
+#define REGISTER_TO_CONTIGUOUS_CUDA_KERNEL(T) REGISTER_TO_CONTIGUOUS_KERNEL(DeviceType::kCUDA, T)
 
 #define REGISTER_TO_CONTIGUOUS_KERNEL_FOR_CPU_TYPES \
   OF_PP_FOR_EACH_TUPLE(REGISTER_TO_CONTIGUOUS_CPU_KERNEL, TO_CONTIGUOUS_TYPES)
 
-#define REGISTER_TO_CONTIGUOUS_KERNEL_FOR_GPU_TYPES       \
-  OF_PP_FOR_EACH_TUPLE(REGISTER_TO_CONTIGUOUS_GPU_KERNEL, \
-                       TO_CONTIGUOUS_TYPES TO_CONTIGUOUS_GPU_SPECIAL_TYPE)
+#define REGISTER_TO_CONTIGUOUS_KERNEL_FOR_CUDA_TYPES       \
+  OF_PP_FOR_EACH_TUPLE(REGISTER_TO_CONTIGUOUS_CUDA_KERNEL, \
+                       TO_CONTIGUOUS_TYPES TO_CONTIGUOUS_CUDA_SPECIAL_TYPE)
 
 REGISTER_TO_CONTIGUOUS_KERNEL_FOR_CPU_TYPES
 #ifdef WITH_CUDA
-REGISTER_TO_CONTIGUOUS_KERNEL_FOR_GPU_TYPES
+REGISTER_TO_CONTIGUOUS_KERNEL_FOR_CUDA_TYPES
 #endif
 
 }  // namespace

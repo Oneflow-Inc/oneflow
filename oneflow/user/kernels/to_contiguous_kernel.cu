@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/user/kernels/to_contiguous_kernel.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -56,7 +57,7 @@ __global__ void to_contiguous(int64_t count, StrideParam<ndim> in_stride,
 }
 
 template<typename T, size_t ndim>
-void to_contiguous_wrapper(const DeviceCtx* ctx, int64_t count,
+void to_contiguous_wrapper(ep::Stream* stream, int64_t count,
                            const std::vector<int64_t>& in_stride, const StrideVector& out_stride,
                            const char* in_dptr, char* out_dptr) {
   StrideParam<ndim> param_in_stride(in_stride.data()), param_out_stride(out_stride.data());
@@ -65,7 +66,7 @@ void to_contiguous_wrapper(const DeviceCtx* ctx, int64_t count,
   auto in_dptr_typed = reinterpret_cast<const T*>(in_dptr);
 
   to_contiguous<T, ndim>
-      <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+      <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
           count, param_in_stride, param_out_stride, in_dptr_typed, out_dptr_typed);
 }
 template<typename T>
@@ -94,25 +95,25 @@ using to_contiguous_fn_map_t =
     decltype(create_to_contiguous_fn_map<T>(std::make_index_sequence<SHAPE_MAX_AXIS_SIZE>{}));
 }  // namespace
 template<typename T>
-struct ToContiguousUtil<DeviceType::kGPU, T> : ToContiguousUtilBase {
+struct ToContiguousUtil<DeviceType::kCUDA, T> : ToContiguousUtilBase {
   using ToContiguousUtilBase::ToContiguousUtilBase;
   static constexpr size_t dsize = sizeof(T);
   static to_contiguous_fn_map_t<T> to_contiguous_fn_map;
   void operator()() {
     if (contiguous_dim == -1) {
       OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr, in_dptr, contiguous_block_size * dsize,
-                                    cudaMemcpyDeviceToDevice, ctx->cuda_stream()));
+                                    cudaMemcpyDeviceToDevice, stream->As<ep::CudaStream>()->cuda_stream()));
     } else {
       const int64_t count = init_out_stride();
       const int ndim = in_shape.NumAxes();
-      to_contiguous_fn_map.call(ndim)(ctx, count, in_stride, out_stride, in_dptr, out_dptr);
+      to_contiguous_fn_map.call(ndim)(stream, count, in_stride, out_stride, in_dptr, out_dptr);
     }
   }
 };
 template<typename T>
-to_contiguous_fn_map_t<T> ToContiguousUtil<DeviceType::kGPU, T>::to_contiguous_fn_map;
-#define INSTANTIATE_TO_CONTIGUOUS_UTILS_FOR_GPU(T) \
-  template struct ToContiguousUtil<DeviceType::kGPU, T>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_TO_CONTIGUOUS_UTILS_FOR_GPU,
-                     TO_CONTIGUOUS_TYPES TO_CONTIGUOUS_GPU_SPECIAL_TYPE)
+to_contiguous_fn_map_t<T> ToContiguousUtil<DeviceType::kCUDA, T>::to_contiguous_fn_map;
+#define INSTANTIATE_TO_CONTIGUOUS_UTILS_FOR_CUDA(T) \
+  template struct ToContiguousUtil<DeviceType::kCUDA, T>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_TO_CONTIGUOUS_UTILS_FOR_CUDA,
+                     TO_CONTIGUOUS_TYPES TO_CONTIGUOUS_CUDA_SPECIAL_TYPE)
 }  // namespace oneflow
