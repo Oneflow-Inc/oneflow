@@ -191,54 +191,51 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
   return output;
 }
 
-Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim,
-                    const int64_t& start, const int64_t& length){
-    
-    const auto& shape = input->shape();
-    const auto& strides = JUST(input->stride());
-    const int64_t ndim = shape->NumAxes();
-    CHECK_GT_OR_RETURN(ndim, 0);
-    CHECK_GE_OR_RETURN(dim, 0);
-    CHECK_GE_OR_RETURN(start, 0);
-    CHECK_GE_OR_RETURN(length, 0);
-    CHECK_GE_OR_RETURN(shape->At(dim), start + length);
+Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, const int64_t& start,
+                     const int64_t& length) {
+  const auto& shape = input->shape();
+  const auto& strides = JUST(input->stride());
+  const int64_t ndim = shape->NumAxes();
+  CHECK_GT_OR_RETURN(ndim, 0);
+  CHECK_GE_OR_RETURN(dim, 0);
+  CHECK_GE_OR_RETURN(start, 0);
+  CHECK_GE_OR_RETURN(length, 0);
+  CHECK_GE_OR_RETURN(shape->At(dim), start + length);
 
-    DimVector dim_vec;
-    dim_vec.insert(dim_vec.end(), shape->dim_vec().cbegin(),
-                    shape->dim_vec().cbegin() + dim);
-    dim_vec.insert(dim_vec.end(), length);
-    dim_vec.insert(dim_vec.end(), shape->dim_vec().cbegin() + dim + 1,
-                    shape->dim_vec().end());
+  DimVector dim_vec;
+  dim_vec.insert(dim_vec.end(), shape->dim_vec().cbegin(), shape->dim_vec().cbegin() + dim);
+  dim_vec.insert(dim_vec.end(), length);
+  dim_vec.insert(dim_vec.end(), shape->dim_vec().cbegin() + dim + 1, shape->dim_vec().end());
 
-    int64_t storage_offset = 0;
-    Shape target_shape(dim_vec);
+  int64_t storage_offset = 0;
+  Shape target_shape(dim_vec);
 
-    StrideVector stride_vec(ndim);
-    for (int i = 0; i < ndim; ++i) {
-      stride_vec[i] = strides->At(i);
-      if(dim==i){
-        storage_offset += start * strides->At(i);
-      }
-    }
+  StrideVector stride_vec(ndim);
+  for (int i = 0; i < ndim; ++i) {
+    stride_vec[i] = strides->At(i);
+    if (dim == i) { storage_offset += start * strides->At(i); }
+  }
 
-    auto output = JUST(BasicView(input, target_shape, Stride(stride_vec), storage_offset));
-    if (input->requires_grad()) {
-      auto backward_fn =
-          std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
-              [=](const TensorTuple& out_grads, TensorTuple* in_grads,
-                  bool create_graph) -> Maybe<void> {
-                autograd::AutoGradMode mode(create_graph);
-                CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-                auto like = JUST(functional::Empty(Shape(input->shape()->dim_vec()), input->dtype(), JUST(input->device())));
-                in_grads->resize(1);
-                in_grads->at(0) = JUST(functional::NarrowGrad(out_grads.at(0), like, dim, start, length));
-                return Maybe<void>::Ok();
-              });
-      TensorTuple outputs{output};
-      JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::narrow_backward", backward_fn,
-                                                              {input}, &outputs));
-    }
-    return output;
+  auto output = JUST(BasicView(input, target_shape, Stride(stride_vec), storage_offset));
+  if (input->requires_grad()) {
+    auto backward_fn =
+        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
+            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                bool create_graph) -> Maybe<void> {
+              autograd::AutoGradMode mode(create_graph);
+              CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+              auto like = JUST(functional::Empty(Shape(input->shape()->dim_vec()), input->dtype(),
+                                                 JUST(input->device())));
+              in_grads->resize(1);
+              in_grads->at(0) =
+                  JUST(functional::NarrowGrad(out_grads.at(0), like, dim, start, length));
+              return Maybe<void>::Ok();
+            });
+    TensorTuple outputs{output};
+    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::narrow_backward", backward_fn,
+                                                            {input}, &outputs));
+  }
+  return output;
 }
 
 void CheckIsPerm(const std::vector<int32_t>& perm) {
@@ -251,7 +248,7 @@ void CheckIsPerm(const std::vector<int32_t>& perm) {
   }
 }
 
-Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& permute){
+Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& permute) {
   const auto& shape = input->shape();
   const auto& strides = JUST(input->stride());
   const int64_t ndim = shape->NumAxes();
@@ -275,9 +272,7 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
                 bool create_graph) -> Maybe<void> {
               std::vector<int32_t> grad_perm;
               grad_perm.resize(ndim);
-              for(int i=0; i<ndim; ++i){
-                grad_perm.at(permute.at(i)) = i;
-              }
+              for (int i = 0; i < ndim; ++i) { grad_perm.at(permute.at(i)) = i; }
               autograd::AutoGradMode mode(create_graph);
               CHECK_EQ_OR_RETURN(out_grads.size(), 1);
               in_grads->resize(1);

@@ -50,7 +50,8 @@ struct OfBlob_CopyBuffer {
   }
 
   template<typename T>
-  static Maybe<void> From(uint64_t of_blob_ptr, size_t storage_offset, const NumPyArrayPtr& array) {
+  static Maybe<void> From(uint64_t of_blob_ptr, int64_t storage_offset,
+                          const NumPyArrayPtr& array) {
     T* buf_ptr = (T*)array.data();
     size_t size = array.size();
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
@@ -59,7 +60,7 @@ struct OfBlob_CopyBuffer {
   }
 
   template<typename T>
-  static Maybe<void> To(uint64_t of_blob_ptr, size_t storage_offset, const NumPyArrayPtr& array) {
+  static Maybe<void> To(uint64_t of_blob_ptr, int64_t storage_offset, const NumPyArrayPtr& array) {
     T* buf_ptr = (T*)array.data();
     size_t size = array.size();
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);

@@ -57,17 +57,16 @@ __global__ void to_contiguous(int64_t count, StrideParam<ndim> in_stride,
 }
 
 template<typename T, size_t ndim>
-void to_contiguous_wrapper(ep::Stream* stream, int64_t count,
-                           const std::vector<int64_t>& in_stride, const StrideVector& out_stride,
-                           const char* in_dptr, char* out_dptr) {
+void to_contiguous_wrapper(ep::Stream* stream, int64_t count, const std::vector<int64_t>& in_stride,
+                           const StrideVector& out_stride, const char* in_dptr, char* out_dptr) {
   StrideParam<ndim> param_in_stride(in_stride.data()), param_out_stride(out_stride.data());
 
   auto out_dptr_typed = reinterpret_cast<T*>(out_dptr);
   auto in_dptr_typed = reinterpret_cast<const T*>(in_dptr);
 
-  to_contiguous<T, ndim>
-      <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-          count, param_in_stride, param_out_stride, in_dptr_typed, out_dptr_typed);
+  to_contiguous<T, ndim><<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
+                           stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      count, param_in_stride, param_out_stride, in_dptr_typed, out_dptr_typed);
 }
 template<typename T>
 using to_contiguous_type =
@@ -102,7 +101,8 @@ struct ToContiguousUtil<DeviceType::kCUDA, T> : ToContiguousUtilBase {
   void operator()() {
     if (contiguous_dim == -1) {
       OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr, in_dptr, contiguous_block_size * dsize,
-                                    cudaMemcpyDeviceToDevice, stream->As<ep::CudaStream>()->cuda_stream()));
+                                    cudaMemcpyDeviceToDevice,
+                                    stream->As<ep::CudaStream>()->cuda_stream()));
     } else {
       const int64_t count = init_out_stride();
       const int ndim = in_shape.NumAxes();

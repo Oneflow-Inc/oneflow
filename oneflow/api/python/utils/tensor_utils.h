@@ -41,7 +41,7 @@ Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t);
 template<typename T>
 inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
     const std::shared_ptr<Tensor>& t, PyObject* array,
-    Maybe<void> (*Copy)(uint64_t, size_t, const NumPyArrayPtr&), const std::string& modifier,
+    Maybe<void> (*Copy)(uint64_t, int64_t, const NumPyArrayPtr&), const std::string& modifier,
     bool block_host_until_done) {
   std::shared_ptr<MirroredTensor> tensor;
   CHECK_OR_RETURN(t->is_eager()) << "eager tensors supported only";
@@ -49,7 +49,7 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
   if (t->is_local()) {
     tensor = JUST(t->AsMirroredTensor());
     // view op could generate none-zero storage_offset
-    storage_offset = size_t(JUST(tensor->eager_blob_object())->storage_offset());
+    storage_offset = JUST(tensor->eager_blob_object())->storage_offset();
   } else {
     const Symbol<ConsistentTensorMeta>& tensor_meta = JUST(t->consistent_tensor_meta());
     const Symbol<cfg::NdSbp>& nd_sbp = tensor_meta->nd_sbp();
@@ -66,7 +66,9 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
   if (block_host_until_done) {
     NumPyArrayPtr array_ptr(array);
     const auto& Callback = std::make_shared<std::function<void(uint64_t)>>(
-        [array_ptr, storage_offset, Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, storage_offset, array_ptr)); });
+        [array_ptr, storage_offset, Copy](uint64_t ofblob_ptr) {
+          CHECK_JUST(Copy(ofblob_ptr, storage_offset, array_ptr));
+        });
     bool is_printed = false;
     JUST(SpinCounter::SpinWait(
         1,
@@ -91,7 +93,9 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
     JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
       return builder->AccessBlobByCallback(
           tensor,
-          [array_ptr, storage_offset, Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, storage_offset, array_ptr)); },
+          [array_ptr, storage_offset, Copy](uint64_t ofblob_ptr) {
+            CHECK_JUST(Copy(ofblob_ptr, storage_offset, array_ptr));
+          },
           modifier);
     }));
   }

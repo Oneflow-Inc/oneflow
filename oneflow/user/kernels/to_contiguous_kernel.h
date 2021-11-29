@@ -27,7 +27,11 @@ class ToContiguousUtilParam {
  protected:
   ToContiguousUtilParam(ep::Stream* stream, const ShapeView& in_shape,
                         const std::vector<int64_t>& in_stride, const char* in_dptr, char* out_dptr)
-      : stream(stream), in_shape(in_shape), in_stride(in_stride), in_dptr(in_dptr), out_dptr(out_dptr) {}
+      : stream(stream),
+        in_shape(in_shape),
+        in_stride(in_stride),
+        in_dptr(in_dptr),
+        out_dptr(out_dptr) {}
 
   ep::Stream* stream;
   const ShapeView& in_shape;
