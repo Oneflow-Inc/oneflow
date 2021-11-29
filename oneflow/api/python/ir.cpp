@@ -16,6 +16,7 @@ limitations under the License.
 
 #ifdef WITH_MLIR
 #include "oneflow/ir/include/OneFlow/Extension.h"
+#include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowRoundTrip.h"
 #endif  // WITH_MLIR
 #include <glog/logging.h>
 #include "oneflow/api/python/of_api_registry.h"
@@ -719,5 +720,10 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
     // std::cout << "#endif // ONEFLOW_USER_OP_GEN\n";
   });
 }
+
+#ifdef WITH_MLIR
+REGISTER_JOB_PASS("IRRoundTripBeforeAD", IRRoundTrip<kBeforeAD>);
+REGISTER_JOB_PASS("IRRoundTrip", IRRoundTrip<kAfterAD>);
+#endif  // WITH_MLIR
 
 }  // namespace oneflow

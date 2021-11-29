@@ -16,7 +16,7 @@ limitations under the License.
 #include <utility>
 #include <vector>
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/core/job_rewriter/job_pass.h"
+#include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowRoundTrip.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 #include "oneflow/core/framework/user_op_def.h"
 #include "oneflow/core/framework/user_op_registry.h"
@@ -25,8 +25,6 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-
-enum IRPassType : int32_t { kBeforeAD = 0, kAfterAD = 1 };
 
 template<IRPassType>
 std::string IRPassTypeName();
@@ -148,35 +146,31 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
   bool is_updated_;
 };
 
-template<IRPassType ir_pass_type>
-class IRRoundTrip final : public JobPass {
- public:
-  IRRoundTrip() = default;
-  ~IRRoundTrip() override = default;
-
-  bool IsEnabled(const JobPassCtx& ctx) const {
-    return ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_ROUND_TRIP", false);
-  }
-  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
-    if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
-    const OpGraph op_graph(*job);
-    RoundTripOneFlowJobWrapper<ir_pass_type> w(job);
-    TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_before_ir_round_trip.prototxt"))
-        ->Write(*job);
-    mlir::RoundTripOneFlowJob(w, [](::oneflow::Job* job, std::string& reason) {
-      // TODO: It is not clear how to define if extra boxing is introduced
-      TODO();
-      return true;
-    });
-    TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_after_ir_round_trip.prototxt"))
-        ->Write(*job);
-    return Maybe<void>::Ok();
-  }
-};
-
 }  // namespace
 
-REGISTER_JOB_PASS("IRRoundTripBeforeAD", IRRoundTrip<kBeforeAD>);
-REGISTER_JOB_PASS("IRRoundTrip", IRRoundTrip<kAfterAD>);
+template<IRPassType ir_pass_type>
+bool IRRoundTrip<ir_pass_type>::IsEnabled(const JobPassCtx& ctx) const {
+  return ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_ROUND_TRIP", false);
+}
+
+template<IRPassType ir_pass_type>
+Maybe<void> IRRoundTrip<ir_pass_type>::Apply(Job* job, JobPassCtx* ctx) const {
+  if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+  const OpGraph op_graph(*job);
+  RoundTripOneFlowJobWrapper<ir_pass_type> w(job);
+  TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_before_ir_round_trip.prototxt"))
+      ->Write(*job);
+  mlir::RoundTripOneFlowJob(w, [](::oneflow::Job* job, std::string& reason) {
+    // TODO: It is not clear how to define if extra boxing is introduced
+    TODO();
+    return true;
+  });
+  TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_after_ir_round_trip.prototxt"))
+      ->Write(*job);
+  return Maybe<void>::Ok();
+}
+
+template class IRRoundTrip<kBeforeAD>;
+template class IRRoundTrip<kAfterAD>;
 
 }  // namespace oneflow
