@@ -149,6 +149,7 @@ from oneflow._C import permute
 from oneflow._C import concat
 from oneflow._C import concat as cat
 from oneflow._C import to
+from oneflow._C import dim_gather as gather
 
 
 from . import sbp
@@ -286,7 +287,6 @@ from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flatten import _flow_flatten as flatten
 from oneflow.nn.modules.flip import flip_op as flip
 from oneflow.nn.modules.floor import floor_op as floor
-from oneflow.nn.modules.gather import gather_op as gather
 from oneflow.nn.modules.gather import gather_nd_op as gather_nd
 from oneflow.nn.modules.comparison import eq_op as eq
 from oneflow.nn.modules.comparison import eq_op as equal
