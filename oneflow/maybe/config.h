@@ -22,6 +22,25 @@ limitations under the License.
 // pre-define it if you use a logging library like glog
 #ifndef OF_MAYBE_ASSERT
 #define OF_MAYBE_ASSERT(_cond_) assert(_cond_)
-#endif  // MAYBE_ASSERT
+#endif
+
+#if __GNUC__ >= 7
+#define OF_MAYBE_HAS_IS_AGGREGATE
+// in old versions of clang, __has_builtin(__is_aggregate) returns false
+#elif __clang__
+#if !__is_identifier(__is_aggregate)
+#define OF_MAYBE_HAS_IS_AGGREGATE
+#endif
+#elif __has_builtin(__is_aggregate)
+#define OF_MAYBE_HAS_IS_AGGREGATE
+#endif
+
+#ifdef OF_MAYBE_HAS_IS_AGGREGATE
+#define OF_MAYBE_IS_AGGREGATE(...) __is_aggregate(__VA_ARGS__)
+#else
+// decay to POD checking if no such builtin (because implementing __is_aggregate need reflection)
+#define OF_MAYBE_IS_AGGREGATE(...) \
+  std::is_standard_layout<__VA_ARGS__>::value&& std::is_trivial<__VA_ARGS__>::value
+#endif
 
 #endif  // ONEFLOW_MAYBE_CONFIG_H_

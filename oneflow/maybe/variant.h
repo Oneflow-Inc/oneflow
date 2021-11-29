@@ -219,48 +219,48 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
     return *this;
   }
 
-  std::size_t Index() const { return index; }
+  std::size_t Index() const { return type_index_; }
 
   template<typename T>
   bool Is() const {
-    return index == IndexOfType<T>;
+    return type_index_ == IndexOfType<T>;
   }
 
   // use std::launder while updating to c++17
   template<typename T, std::enable_if_t<HasType<T>, int> = 0>
   T& Get() & {
-    return *reinterpret_cast<T*>(storage);
+    return *reinterpret_cast<T*>(storage_);
   }
 
   template<typename T, std::enable_if_t<HasType<T>, int> = 0>
   T&& Get() && {
-    return std::move(*reinterpret_cast<T*>(storage));
+    return std::move(*reinterpret_cast<T*>(storage_));
   }
 
   template<typename T, std::enable_if_t<HasType<T>, int> = 0>
   const T& Get() const& {
-    return *reinterpret_cast<const T*>(storage);
+    return *reinterpret_cast<const T*>(storage_);
   }
 
   template<std::size_t I, std::enable_if_t<(I < Num), int> = 0>
   TypeByIndex<I>& Get() & {
-    return *reinterpret_cast<TypeByIndex<I>*>(storage);
+    return *reinterpret_cast<TypeByIndex<I>*>(storage_);
   }
 
   template<std::size_t I, std::enable_if_t<(I < Num), int> = 0>
   TypeByIndex<I>&& Get() && {
-    return std::move(*reinterpret_cast<TypeByIndex<I>*>(storage));
+    return std::move(*reinterpret_cast<TypeByIndex<I>*>(storage_));
   }
 
   template<std::size_t I, std::enable_if_t<(I < Num), int> = 0>
   const TypeByIndex<I>& Get() const& {
-    return *reinterpret_cast<const TypeByIndex<I>*>(storage);
+    return *reinterpret_cast<const TypeByIndex<I>*>(storage_);
   }
 
   ~Variant() { Destory(); }
 
   bool operator==(const Variant& v) const {
-    if (index != v.index) return false;
+    if (type_index_ != v.type_index_) return false;
 
     return v.Visit([this](const auto& elem) { return elem == Get<RemoveCVRef<decltype(elem)>>(); });
   }
@@ -268,8 +268,8 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
   bool operator!=(const Variant& v) const { return !operator==(v); }
 
   bool operator<(const Variant& v) const {
-    if (index < v.index) return true;
-    if (index > v.index) return false;
+    if (type_index_ < v.type_index_) return true;
+    if (type_index_ > v.type_index_) return false;
 
     return v.Visit([this](const auto& elem) { return Get<RemoveCVRef<decltype(elem)>>() < elem; });
   }
@@ -277,8 +277,8 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
   bool operator>=(const Variant& v) const { return !(*this < v); }
 
   bool operator>(const Variant& v) const {
-    if (index > v.index) return true;
-    if (index < v.index) return false;
+    if (type_index_ > v.type_index_) return true;
+    if (type_index_ < v.type_index_) return false;
 
     return v.Visit([this](const auto& elem) { return Get<RemoveCVRef<decltype(elem)>>() > elem; });
   }
@@ -287,7 +287,7 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
 
   template<typename T, std::enable_if_t<HasType<T>, int> = 0>
   friend bool operator==(const Variant& v, const T& x) {
-    if (v.index != IndexOfType<T>) return false;
+    if (v.type_index_ != IndexOfType<T>) return false;
 
     return v.Get<T>() == x;
   }
@@ -326,13 +326,19 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
  private:
   static constexpr const std::size_t size = std::max({sizeof(Ts)...});
 
-  alignas(Ts...) unsigned char storage[size];
-  std::uint8_t index;
+  alignas(Ts...) unsigned char storage_[size];
+  std::uint8_t type_index_;
 
-  template<typename T, typename... Args, std::enable_if_t<HasType<T>, int> = 0>
+  template<typename T, typename... Args, std::enable_if_t<HasType<T> && IsAggregate<T>, int> = 0>
   void Construct(Args&&... args) {
-    new (storage) T{std::forward<Args>(args)...};
-    index = IndexOfType<T>;
+    new (storage_) T{std::forward<Args>(args)...};
+    type_index_ = IndexOfType<T>;
+  }
+
+  template<typename T, typename... Args, std::enable_if_t<HasType<T> && !IsAggregate<T>, int> = 0>
+  void Construct(Args&&... args) {
+    new (storage_) T(std::forward<Args>(args)...);
+    type_index_ = IndexOfType<T>;
   }
 
   template<std::size_t I, typename... Args, std::enable_if_t<(I < Num), int> = 0>
@@ -345,8 +351,8 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
     std::forward<V>(v).Visit([this](auto&& elem) {
       using T = RemoveCVRef<decltype(elem)>;
 
-      new (storage) T(std::forward<decltype(elem)>(elem));
-      index = IndexOfType<T>;
+      new (storage_) T(std::forward<decltype(elem)>(elem));
+      type_index_ = IndexOfType<T>;
     });
   }
 

@@ -21,6 +21,7 @@ limitations under the License.
 #include <type_traits>
 #include <tuple>
 #include <utility>
+#include "config.h"
 
 namespace oneflow {
 
@@ -140,6 +141,9 @@ using ConstRefExceptVoid = typename ConstRefExceptVoidS<T>::type;
 template<typename T>
 using RemoveRValRef =
     std::conditional_t<std::is_rvalue_reference<T>::value, std::remove_reference_t<T>, T>;
+
+template<typename T>
+constexpr bool IsAggregate = OF_MAYBE_IS_AGGREGATE(T);
 
 }  // namespace maybe
 
