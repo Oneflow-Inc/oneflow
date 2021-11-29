@@ -55,8 +55,8 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
     //
     // As we know that dx = dz + dp / z and dy = dz, so it will lead to wrong value
     // for dy if dx is shared with dz.
-    const auto& output =
-        JUST(functional::Add(autograd_meta->acc_grad(), current_grad, /*inplace=*/false));
+    const auto& output = JUST(
+        functional::Add(autograd_meta->acc_grad(), current_grad, /*alpha=*/1, /*inplace=*/false));
     JUST(autograd_meta->set_acc_grad(output));
   } else {
     JUST(autograd_meta->set_acc_grad(current_grad));
@@ -320,7 +320,7 @@ GraphTask::GraphTask(const TensorTuple& outputs, bool retain_graph, bool create_
   roots_.reserve(outputs.size());
   for (const auto& out_tensor : outputs) {
     FunctionNode* node = out_tensor->mut_grad_fn_node().get();
-    roots_.push_back(node);
+    roots_.emplace_back(node);
     dependencies_.insert(std::make_pair(node, 0));
   }
 }

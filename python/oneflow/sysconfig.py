@@ -25,6 +25,8 @@ from oneflow.framework.sysconfig import (
     with_cuda,
     get_cuda_version,
     with_xla,
+    with_openvino,
+    with_tensorrt,
     with_rdma,
 )
 

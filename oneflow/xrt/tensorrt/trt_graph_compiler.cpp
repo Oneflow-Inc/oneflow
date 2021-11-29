@@ -53,7 +53,7 @@ void TrtGraphCompiler::SetupKernelContextParam(const XrtNode* node,
       const Argument& arg = edge->argument();
       const std::string& k = arg.meta_data().produce_key;
       input_output_args.emplace(k, arg);
-      output_names.push_back(k);
+      output_names.emplace_back(k);
     }
   }
 
