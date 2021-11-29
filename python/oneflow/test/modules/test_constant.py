@@ -45,7 +45,7 @@ class TestConstantModule(flow.unittest.TestCase):
         test_case.assertEqual(x.placement, placement)
 
     @autotest(auto_backward=False)
-    def _test_flow_zeros_list_with_random_data(test_case):
+    def test_flow_zeros_list_with_random_data(test_case):
         device = random_device()
         y1 = torch.zeros(random().to(int)).to(device)
         y2 = torch.zeros(random().to(int), random().to(int)).to(device)
@@ -58,7 +58,7 @@ class TestConstantModule(flow.unittest.TestCase):
         return y1, y2, y3, y4
 
     @autotest(auto_backward=False)
-    def _test_flow_ones_list_with_random_data(test_case):
+    def test_flow_ones_list_with_random_data(test_case):
         device = random_device()
         y1 = torch.ones(random().to(int)).to(device)
         y2 = torch.ones(random().to(int), random().to(int)).to(device)
