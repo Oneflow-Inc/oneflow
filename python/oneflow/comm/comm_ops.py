@@ -105,7 +105,7 @@ def all_gather(tensor_list, tensor):
     assert len(tensor_list) == flow.env.get_world_size()
     assert tensor.device.index == flow.env.get_local_rank()
     assert tensor.is_local
-    tensor = tensor.expand([1] + list(tensor.shape))
+    tensor = tensor.expand(*([1] + list(tensor.shape)))
     device_type = tensor.device.type
     tensor = tensor.to_consistent(
         placement=flow.env.all_device_placement(device_type), sbp=flow.sbp.split(0)
@@ -251,7 +251,7 @@ def gather(tensor, gather_list=None, dst=0):
     assert tensor.is_local
     shape = tensor.shape
     dtype = tensor.dtype
-    tensor = tensor.expand([1] + list(shape))
+    tensor = tensor.expand(*([1] + list(shape)))
     device_type = tensor.device.type
     placement = flow.env.all_device_placement(device_type)
     tensor = tensor.to_consistent(

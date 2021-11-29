@@ -123,7 +123,7 @@ REGISTER_USER_OP("gather_nd")
       CHECK_LE_OR_RETURN(index_ndims, params_shape.NumAxes());
       DimVector out_shape_vec(indices_shape.dim_vec().cbegin(), indices_shape.dim_vec().cend() - 1);
       FOR_RANGE(int64_t, i, index_ndims, params_shape.NumAxes()) {
-        out_shape_vec.push_back(params_shape.At(i));
+        out_shape_vec.emplace_back(params_shape.At(i));
       }
       *ctx->OutputShape("out", 0) = Shape(out_shape_vec);
       return Maybe<void>::Ok();

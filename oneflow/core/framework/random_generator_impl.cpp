@@ -258,6 +258,7 @@ Maybe<Tensor> AutoGeneratorImpl::GetState() const {
   state.state_length = 0;
   std::vector<std::shared_ptr<Tensor>> tensor_states;
   std::vector<int64_t> state_sizes;
+  state_sizes.reserve(generators_.size());
   for (auto it = generators_.begin(); it != generators_.end(); ++it) {
     const auto& tensor_state = JUST(it->second->GetState());
     tensor_states.emplace_back(tensor_state);
