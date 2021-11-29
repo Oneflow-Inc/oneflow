@@ -295,37 +295,37 @@ class MovedimVecFunctor {
     int32_t indim = x->shape()->NumAxes();
     int32_t dim = source.size();
 
-    CHECK_EQ_OR_RETURN(source.size(),destination.size());
+    CHECK_EQ_OR_RETURN(source.size(),destination.size())<< "movedim: Invalid source or destination dims: source (" <<
+              source.size() << " dims ) should contain the same number of dims as destination (" << destination.size() <<" dims)";
+
     std::vector<int32_t> source_nopeat(dim);
     std::vector<int32_t> destination_nopeat(dim);
 
     CheckNoRepeat(source,source_nopeat,indim,"source");
     CheckNoRepeat(destination,destination_nopeat,indim,"destination");
+    
+    std::vector<int32_t> order(indim);
+    std::vector<int32_t> source_dims(indim);
+    std::vector<int32_t> destination_dims(indim);
 
-    std::map<int,int> source_map;
-    std::map<int,int> destination_map;
-    std::vector<int32_t> perm(indim);
-    FOR_RANGE(size_t, i, 0, dim){
-      source_map.insert(std::pair<int,int>(source_nopeat[i],0));
-      destination_map.insert(std::pair<int,int>(destination_nopeat[i],0));
-      perm[destination_nopeat[i]] = source_nopeat[i];
+    std::iota(source_dims.begin(), source_dims.end(), 0);
+    std::iota(destination_dims.begin(), destination_dims.end(), 0);
+    
+    for (int32_t i=0 ; i<dim ; i++) {
+      order[destination_nopeat[i]] = source_nopeat[i];
+      source_dims[source_nopeat[i]] = -1;
+      destination_dims[destination_nopeat[i]] = -1;
+    }
+    
+    std::remove(source_dims.begin(), source_dims.end(), -1);
+    std::remove(destination_dims.begin(), destination_dims.end(), -1);
+    
+    int64_t rest_dim = indim - dim;
+    for (int32_t i=0; i<rest_dim; i++) {
+      order[destination_dims[i]] = source_dims[i];
     }
 
-    std::vector<int> item_list;
-    std::vector<int> index_list;
-    FOR_RANGE(size_t, i, 0, indim){
-      if(source_map.find(i)==source_map.end()){
-         item_list.push_back(i);
-      }
-      if(destination_map.find(i)==destination_map.end()){
-         index_list.push_back(i);
-      }
-    }
-
-    FOR_RANGE(size_t, i, 0, indim-dim){
-      perm[index_list[i]] = item_list[i];
-    }
-    return Transpose(x, perm);
+    return Transpose(x, order);
   }
 };
 

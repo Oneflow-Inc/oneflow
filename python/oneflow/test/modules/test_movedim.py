@@ -17,7 +17,7 @@ import oneflow.unittest
 
 class TestMovedim(flow.unittest.TestCase):
     @autotest()
-    def test_flow_diagonal_with_random_data(test_case):
+    def test_flow_movedim_with_vector(test_case):
         device = random_device()
         x = random_pytorch_tensor(
             ndim=4,
@@ -27,6 +27,18 @@ class TestMovedim(flow.unittest.TestCase):
             dim4=random(3, 6),
         ).to(device)
         z = torch.movedim(x, (0,1), (2,3))
+        return z
+    @autotest()
+    def test_flow_movedim_with_vector(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(
+            ndim=4,
+            dim1=random(3, 6),
+            dim2=random(3, 6),
+            dim3=random(3, 6),
+            dim4=random(3, 6),
+        ).to(device)
+        z = torch.movedim(x, 0, 3)
         return z
 
 if __name__ == "__main__":
