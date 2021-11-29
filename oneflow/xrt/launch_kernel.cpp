@@ -163,13 +163,13 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(KernelContext* ctx) const 
     const LogicalBlobId& lbi = BnInOp2Lbi(*this, bn);
     std::string blob_name = xrt::BlobIdToName(lbi);
     xrt::Parameter input = xrt::BuildParameter(*BnInOp2Blob(bn), blob_name);
-    entry_params.push_back(input);
+    entry_params.emplace_back(input);
   }
   for (const std::string& bn : this->op_attribute().output_bns()) {
     const LogicalBlobId& lbi = BnInOp2Lbi(*this, bn);
     std::string blob_name = xrt::BlobIdToName(lbi);
     xrt::Parameter output = xrt::BuildParameter(*BnInOp2Blob(bn), blob_name);
-    return_params.push_back(output);
+    return_params.emplace_back(output);
   }
 
   xrt::XrtDevice device = xrt::DeviceTypeToXrtDevice(device_type);
