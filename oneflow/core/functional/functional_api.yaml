@@ -1012,7 +1012,7 @@
 
 - name: "to_contiguous"
   signature: "Tensor (Tensor x) => ToContiguous"
-  bind_python: True
+  bind_python: False
 
 - name: "slice"
   signature: "Tensor (Tensor x, Int64List start, Int64List stop, Int64List step) => Slice"
