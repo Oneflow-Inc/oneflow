@@ -48,6 +48,14 @@
     ]
   bind_python: true
 
+- name: "mul_"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => InplaceMul",
+      "Tensor (Tensor input, Scalar other) => InplaceScalarMul",
+    ]
+  bind_python: true
+
 - name: "div"
   signature:
     [
