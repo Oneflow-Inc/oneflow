@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/cuda/elementwise.cuh"
-
 namespace oneflow {
 
 namespace {
@@ -333,21 +332,15 @@ __global__ RETURN_VOID_IF_FLOAT PReluBackwardMultiAlphaGpu(
   }
 }
 
-template<int pack_size>
-unsigned int ComputeGridSize(const int32_t block_size, const int64_t elem_cnt) {
-  cudaDeviceProp prop;
-  cudaGetDeviceProperties(&prop, 0);
-  unsigned int blocks_per_sm = prop.maxThreadsPerMultiProcessor / block_size;
-  unsigned int grid_size = ((elem_cnt + block_size - 1) / block_size);
-  grid_size = std::min((unsigned int)prop.multiProcessorCount * blocks_per_sm, grid_size);
-  return grid_size;
-}
-
 template<typename T>
 void DispatchForwardTail(ep::Stream* stream, const int32_t elem_cnt, const int32_t alpha_size,
                          const int32_t inner_size, const T* x, const T* alpha, T* y) {
-  unsigned int grid_size = ComputeGridSize<4>(kBlockSize, elem_cnt);
   constexpr int pack_size = GetPreluPackSize<T>();
+  int grid_size;
+  {
+    cudaError_t err = cuda::elementwise::GetNumBlocks(pack_size, &grid_size);
+    if (err != cudaSuccess) { return; }
+  }
   const int64_t pack_num = elem_cnt / pack_size;
   const int64_t tail_offset = pack_num * pack_size;
   const int64_t n_tail = elem_cnt - tail_offset;
@@ -373,8 +366,12 @@ template<typename T>
 void DispatchBackwardTail(ep::Stream* stream, const int32_t elem_cnt, const int32_t alpha_size,
                           const int32_t inner_size, const T* x, const T* alpha, const T* dy, T* dx,
                           T* alpha_diff) {
-  unsigned int grid_size = ComputeGridSize<4>(kBlockSize, elem_cnt);
   constexpr int pack_size = GetPreluPackSize<T>();
+  int grid_size;
+  {
+    cudaError_t err = cuda::elementwise::GetNumBlocks(pack_size, &grid_size);
+    if (err != cudaSuccess) { return; }
+  }
   const int64_t pack_num = elem_cnt / pack_size;
   const int64_t tail_offset = pack_num * pack_size;
   const int64_t n_tail = elem_cnt - tail_offset;
