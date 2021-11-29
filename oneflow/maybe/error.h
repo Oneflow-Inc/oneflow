@@ -200,15 +200,15 @@ struct StackedError : details::ErrorStackFromContainerBase<StackedError<E, M>> {
   using BaseType = details::ErrorStackFromContainerBase<StackedError<E, M>>;
 
   StackedError(ErrorType error)  // NOLINT(google-explicit-constructor)
-      : error(std::move(error)) {}
+      : error_(std::move(error)) {}
 
-  ErrorType& Error() { return error; }
-  const ErrorType& Error() const { return error; }
+  ErrorType& Error() { return error_; }
+  const ErrorType& Error() const { return error_; }
 
   std::string Dump() {
     std::stringstream res;
-    res << "error occurred: " << error << std::endl;
-    for (const auto& elem : stack) {
+    res << "error occurred: " << error_ << std::endl;
+    for (const auto& elem : stack_) {
       res << "from " << elem.function << " in " << elem.filename << ":" << elem.lineno << ": "
           << elem.message << std::endl;
     }
@@ -217,8 +217,8 @@ struct StackedError : details::ErrorStackFromContainerBase<StackedError<E, M>> {
   }
 
   [[noreturn]] void Abort() {
-    std::cerr << "error occurred: " << error << std::endl;
-    for (const auto& elem : stack) {
+    std::cerr << "error occurred: " << error_ << std::endl;
+    for (const auto& elem : stack_) {
       std::cerr << "from " << elem.function << " in " << elem.filename << ":" << elem.lineno << ": "
                 << elem.message << std::endl;
     }
@@ -226,12 +226,12 @@ struct StackedError : details::ErrorStackFromContainerBase<StackedError<E, M>> {
   }
 
  private:
-  ErrorType error;
-  StackType stack;
+  ErrorType error_;
+  StackType stack_;
 
-  StackType& getStack() { return stack; }
+  StackType& getStack() { return stack_; }
 
-  const StackType& getStack() const { return stack; }
+  const StackType& getStack() const { return stack_; }
 
   friend BaseType;
 };
@@ -242,10 +242,10 @@ struct NoStackError {
   using StackEntryType = void;
 
   NoStackError(ErrorType error)  // NOLINT(google-explicit-constructor)
-      : error(std::move(error)) {}
+      : error_(std::move(error)) {}
 
-  ErrorType& Error() { return error; }
-  const ErrorType& Error() const { return error; }
+  ErrorType& Error() { return error_; }
+  const ErrorType& Error() const { return error_; }
 
   std::size_t StackSize() const { return 0; }
 
@@ -256,18 +256,18 @@ struct NoStackError {
 
   std::string Dump() {
     std::stringstream res;
-    res << error << std::endl;
+    res << error_ << std::endl;
 
     return res.str();
   }
 
   [[noreturn]] void Abort() {
-    std::cerr << error << std::endl;
+    std::cerr << error_ << std::endl;
     std::abort();
   }
 
  private:
-  ErrorType error;
+  ErrorType error_;
 };
 
 }  // namespace simple

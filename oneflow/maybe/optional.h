@@ -39,42 +39,42 @@ namespace details {
 template<typename T, typename = void>
 struct OptionalStorage {
  private:
-  bool has;
-  alignas(T) unsigned char value[sizeof(T)];
+  bool has_;
+  alignas(T) unsigned char value_[sizeof(T)];
 
   using Type = std::remove_const_t<T>;
 
  public:
-  void Init() { has = false; }
+  void Init() { has_ = false; }
 
-  T& Value() & { return *reinterpret_cast<T*>(value); }
+  T& Value() & { return *reinterpret_cast<T*>(value_); }
 
-  Type&& Value() && { return std::move(*const_cast<Type*>(reinterpret_cast<T*>(value))); }
+  Type&& Value() && { return std::move(*const_cast<Type*>(reinterpret_cast<T*>(value_))); }
 
-  const T& Value() const& { return *reinterpret_cast<const T*>(value); }
+  const T& Value() const& { return *reinterpret_cast<const T*>(value_); }
 
-  bool HasValue() const { return has; }
+  bool HasValue() const { return has_; }
 
   void Reset() {
-    if (has) {
-      has = false;
+    if (has_) {
+      has_ = false;
       Value().~T();
     }
   }
 
   void Destory() {
-    if (has) { Value().~T(); }
+    if (has_) { Value().~T(); }
   }
 
   template<typename... Args>
   void Construct(Args&&... args) {
-    new (value) Type{std::forward<Args>(args)...};
-    has = true;
+    new (value_) Type{std::forward<Args>(args)...};
+    has_ = true;
   }
 
   template<typename... Args, typename U = T, std::enable_if_t<!std::is_const<U>::value, int> = 0>
   T& Emplace(Args&&... args) {
-    if (!has) {
+    if (!has_) {
       Construct(std::forward<Args>(args)...);
       return Value();
     } else {
@@ -91,14 +91,14 @@ struct OptionalStorage {
 
   template<typename OS>
   void CopyConstruct(OS&& s) {
-    has = s.has;
+    has_ = s.has_;
 
-    if (has) { new (value) Type(std::forward<OS>(s).Value()); }
+    if (has_) { new (value_) Type(std::forward<OS>(s).Value()); }
   }
 
   template<typename OS>
   void Copy(OS&& s) {
-    if (s.has) {
+    if (s.has_) {
       Emplace(std::forward<OS>(s).Value());
     } else {
       Reset();
@@ -111,28 +111,28 @@ struct OptionalStorage<T, std::enable_if_t<std::is_scalar<T>::value>> {
  private:
   using Type = std::remove_const_t<T>;
 
-  bool has;
-  Type value;
+  bool has_;
+  Type value_;
 
  public:
-  void Init() { has = false; }
+  void Init() { has_ = false; }
 
-  T& Value() & { return value; }
+  T& Value() & { return value_; }
 
-  Type&& Value() && { return std::move(const_cast<Type&>(value)); }
+  Type&& Value() && { return std::move(const_cast<Type&>(value_)); }
 
-  const T& Value() const& { return value; }
+  const T& Value() const& { return value_; }
 
-  bool HasValue() const { return has; }
+  bool HasValue() const { return has_; }
 
-  void Reset() { has = false; }
+  void Reset() { has_ = false; }
 
   void Destory() {}
 
   template<typename U>
   void Construct(const U& v) {
-    value = v;
-    has = true;
+    value_ = v;
+    has_ = true;
   }
 
   template<typename U>
@@ -142,8 +142,8 @@ struct OptionalStorage<T, std::enable_if_t<std::is_scalar<T>::value>> {
   }
 
   void CopyConstruct(const OptionalStorage& s) {
-    has = s.has;
-    value = s.value;
+    has_ = s.has_;
+    value_ = s.value_;
   }
 
   void Copy(const OptionalStorage& s) { CopyConstruct(s); }
@@ -156,29 +156,29 @@ struct OptionalStorage<T, std::enable_if_t<std::is_reference<T>::value>> {
   using Type = std::remove_reference_t<T>;
 
  private:
-  Type* value;
+  Type* value_;
 
  public:
-  void Init() { value = nullptr; }
+  void Init() { value_ = nullptr; }
 
-  T Value() { return *value; }
+  T Value() { return *value_; }
 
-  const Type& Value() const { return *value; }
+  const Type& Value() const { return *value_; }
 
-  bool HasValue() const { return value != nullptr; }
+  bool HasValue() const { return value_ != nullptr; }
 
-  void Reset() { value = nullptr; }
+  void Reset() { value_ = nullptr; }
 
   void Destory() {}
 
-  void Construct(T v) { value = &v; }
+  void Construct(T v) { value_ = &v; }
 
   T Emplace(T v) {
     Construct(v);
     return Value();
   }
 
-  void CopyConstruct(const OptionalStorage& s) { value = s.value; }
+  void CopyConstruct(const OptionalStorage& s) { value_ = s.value_; }
 
   void Copy(const OptionalStorage& s) { CopyConstruct(s); }
 };
@@ -233,15 +233,15 @@ struct OptionalPrivateScope {
 template<typename T>
 struct Optional {
  protected:
-  details::OptionalStorage<T> storage;
+  details::OptionalStorage<T> storage_;
 
   using Type = std::remove_const_t<T>;
 
-  decltype(auto) Value() & { return storage.Value(); }
+  decltype(auto) Value() & { return storage_.Value(); }
 
-  decltype(auto) Value() && { return std::move(storage).Value(); }
+  decltype(auto) Value() && { return std::move(storage_).Value(); }
 
-  decltype(auto) Value() const& { return storage.Value(); }
+  decltype(auto) Value() const& { return storage_.Value(); }
 
   // we DO NOT export Value method, then leave these methods accessable for the JUST macro
   friend struct details::OptionalPrivateScope;
@@ -252,59 +252,59 @@ struct Optional {
 
   using ValueType = T;
 
-  explicit Optional() { storage.Init(); };
+  explicit Optional() { storage_.Init(); };
 
-  Optional(NullOptType) { storage.Init(); }  // NOLINT(google-explicit-constructor)
+  Optional(NullOptType) { storage_.Init(); }  // NOLINT(google-explicit-constructor)
 
-  Optional(const T& v) { storage.Construct(v); }  // NOLINT(google-explicit-constructor)
+  Optional(const T& v) { storage_.Construct(v); }  // NOLINT(google-explicit-constructor)
 
   template<typename U = T, std::enable_if_t<!std::is_reference<U>::value, int> = 0>
   Optional(Type&& v) {  // NOLINT(google-explicit-constructor)
-    storage.Construct(std::move(v));
+    storage_.Construct(std::move(v));
   }
 
-  Optional(const Optional& opt) { storage.CopyConstruct(opt.storage); }
-  Optional(Optional&& opt) noexcept { storage.CopyConstruct(std::move(opt.storage)); }
+  Optional(const Optional& opt) { storage_.CopyConstruct(opt.storage_); }
+  Optional(Optional&& opt) noexcept { storage_.CopyConstruct(std::move(opt.storage_)); }
 
   template<typename... Args>
   explicit Optional(InPlaceT, Args&&... args) {
-    storage.Construct(std::forward<Args>(args)...);
+    storage_.Construct(std::forward<Args>(args)...);
   }
 
-  ~Optional() { storage.Destory(); }
+  ~Optional() { storage_.Destory(); }
 
   Optional& operator=(NullOptType) {
-    storage.Reset();
+    storage_.Reset();
     return *this;
   }
 
   Optional& operator=(const T& v) {
-    storage.Emplace(v);
+    storage_.Emplace(v);
     return *this;
   }
 
   template<typename U = T, std::enable_if_t<!std::is_reference<U>::value, int> = 0>
   Optional& operator=(Type&& v) {
-    storage.Emplace(std::move(v));
+    storage_.Emplace(std::move(v));
     return *this;
   }
 
   template<typename... Args>
   decltype(auto) Emplace(Args&&... args) {
-    return storage.Emplace(std::forward<Args>(args)...);
+    return storage_.Emplace(std::forward<Args>(args)...);
   }
 
   Optional& operator=(const Optional& opt) {
-    storage.Copy(opt.storage);
+    storage_.Copy(opt.storage_);
     return *this;
   }
 
   Optional& operator=(Optional&& opt) noexcept {
-    storage.Copy(std::move(opt.storage));
+    storage_.Copy(std::move(opt.storage_));
     return *this;
   }
 
-  bool HasValue() const { return storage.HasValue(); }
+  bool HasValue() const { return storage_.HasValue(); }
   explicit operator bool() const { return HasValue(); }
 
   bool operator==(const Optional& opt) const {
@@ -441,7 +441,7 @@ struct Optional {
     }
   }
 
-  void Reset() { storage.Reset(); }
+  void Reset() { storage_.Reset(); }
 
   template<typename F>
   auto Map(F&& f) const& {
