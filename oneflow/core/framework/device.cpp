@@ -191,6 +191,7 @@ std::string Device::ToString() const {
 Maybe<Symbol<Device>> Device::MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc) {
   std::string type = Type4DeviceTag(parallel_desc.device_tag());
   std::vector<std::string> machine_device_ids;
+  machine_device_ids.reserve(parallel_desc.parallel_conf().device_name().size());
   for (const auto& item : parallel_desc.parallel_conf().device_name()) {
     machine_device_ids.emplace_back(item);
   }

@@ -130,7 +130,7 @@ std::vector<std::string> PosixFileSystem::ListDir(const std::string& dir) {
   struct dirent* entry;
   while ((entry = readdir(d)) != nullptr) {
     if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) { continue; }
-    result.push_back(entry->d_name);
+    result.emplace_back(entry->d_name);
   }
   closedir(d);
   return result;
