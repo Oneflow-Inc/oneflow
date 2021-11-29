@@ -218,7 +218,8 @@ bool IsIdempotentOp(const std::string& op_name) {
 }
 
 bool IsPoolOp(const std::string& op_name) {
-  return (op_name.rfind("avg", 0) == 0 || op_name.rfind("max", 0) == 0)
+  return (op_name.find("avg") != std::string::npos == 0
+          || op_name.find("max") != std::string::npos == 0)
          && op_name.find("pool") != std::string::npos;
 }
 bool IsEagerOp(const std::string& op_name) { return (op_name.rfind("eager", 0) == 0); }
@@ -234,7 +235,9 @@ bool IsConvOp(const std::string& op_name) {
   return op_name.rfind("conv", 0) == 0 && op_name.find("grad") == std::string::npos;
 }
 
-bool IsLazyPoolOp(const std::string& op_name) { return op_name.find("_pool") != std::string::npos; }
+bool IsLazyPoolOp(const std::string& op_name) {
+  return op_name.find("_pool") != std::string::npos && op_name.find("tf_") != std::string::npos;
+}
 bool IsNCCLOp(const std::string& op_name) { return op_name.find("nccl") != std::string::npos; }
 bool IsOptimizerOp(const std::string& op_name) {
   return (op_name.find("update") != std::string::npos || op_name.find("adam") != std::string::npos)
@@ -326,12 +329,6 @@ std::string PostProcessClassName(const std::string& op_name) {
   return ret;
 }
 
-std::string GetPoolOpClassName(const std::string& op_name) {
-  std::string ret((IsLazyPoolOp(op_name) ? "Lazy" : "Eager")
-                  + convertToCamelFromSnakeCase(op_name, true));
-  return ret;
-}
-
 std::string GetConvOpClassName(const std::string& op_name) {
   std::string ret(convertToCamelFromSnakeCase(op_name, true));
   // NOTE: should change form conv => Convolution ?
@@ -346,7 +343,7 @@ std::string GetBaseOp(const std::string& op_name) {
   } else if (IsConvOp(op_name)) {
     return "OneFlow_ConvolutionBaseOp";
   } else if (IsPoolOp(op_name)) {
-    return "OneFlow_" + std::string(IsLazyPoolOp(op_name) ? "Lazy" : "Eager") + "Pool"
+    return "OneFlow_" + std::string(IsLazyPoolOp(op_name) ? "TF" : "") + "Pool"
            + std::string(IsGradOp(op_name) ? "Grad" : "") + "BaseOp";
   } else {
     return "OneFlow_BaseOp";
@@ -537,9 +534,7 @@ bool HasSideEffect(const std::string& op_name) {
 
 std::string GetOpClassName(const std::string& op_name) {
   std::string ret = "";
-  if (IsPoolOp(op_name)) {
-    ret = GetPoolOpClassName(op_name);
-  } else if (IsConvOp(op_name)) {
+  if (IsConvOp(op_name)) {
     ret = GetConvOpClassName(op_name);
   } else {
     ret = convertToCamelFromSnakeCase(op_name, true);
@@ -572,9 +567,11 @@ bool IsReferencedByOtherDefinitions(const std::string& op_name) {
   return ShouldGenBaseClass(op_name);
 }
 
+bool ShoudSkipOp(const std::string& op_name) { return op_name == "mlir_jit"; }
+
 void PrintODSFromOpRegistryResults(const std::map<K, V>& results) {
   for (const auto& kv : results) {
-    if (kv.first == "mlir_jit") continue;
+    if (ShoudSkipOp(kv.first)) continue;
     const oneflow::user_op::OpRegistryResult& r = kv.second;
     auto op_class_name = GetOpClassName(kv.first);
     std::cout << (ShouldGenBaseClass(r.op_type_name) ? "class" : "def") << " OneFlow_"
@@ -601,6 +598,7 @@ void PrintNamesInResults(const std::map<K, V>& results) {
 void PrintGroupNames(std::map<std::string, std::map<K, V>>& groups) {
   std::cout << "// ";
   for (auto it = groups.begin(); it != groups.end(); ++it) {
+    if (ShoudSkipOp(it->first)) continue;
     std::cout << it->first;
     if (std::next(it) != groups.end()) { std::cout << ";"; }
   }
