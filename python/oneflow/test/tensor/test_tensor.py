@@ -595,7 +595,7 @@ class TestTensor(flow.unittest.TestCase):
         return y
 
     @flow.unittest.skip_unless_1n1d()
-    @autotest()
+    @autotest(check_graph=False)
     def test_arccosh_tensor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(low=2, high=3).to(device)
