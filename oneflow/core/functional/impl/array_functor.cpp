@@ -904,14 +904,17 @@ class ToContiguousFunctor {
   ToContiguousFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("to_contiguous").Input("in").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
+    // if (CHECK_JUST(IsContiguous(input))) {
+    //   return input;
+    // }
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("storage_offset", JUST(x->storage_offset())));
+    JUST(attrs.SetAttr<int64_t>("storage_offset", JUST(input->storage_offset())));
 
-    const auto& stride = JUST(x->stride())->StrideVec();
+    const auto& stride = JUST(input->stride())->StrideVec();
     JUST(attrs.SetAttr<std::vector<int64_t>>("stride", {stride.begin(), stride.end()}));
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
  private:

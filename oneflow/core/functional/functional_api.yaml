@@ -1018,9 +1018,9 @@
   signature: "Tensor (Tensor x, Shape shape) => View"
   bind_python: True
 
-- name: "to_contiguous"
-  signature: "Tensor (Tensor x) => ToContiguous"
-  bind_python: False
+- name: "contiguous"
+  signature: "Tensor (Tensor input) => ToContiguous"
+  bind_python: True
 
 - name: "slice"
   signature: "Tensor (Tensor x, Int64List start, Int64List stop, Int64List step) => Slice"
