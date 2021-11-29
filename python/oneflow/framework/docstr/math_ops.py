@@ -96,7 +96,14 @@ add_docstr(
     .. code-block:: python
         
         >>> import oneflow as flow
-        >>> t = flow.randn(3,2,1)
+        >>> t = flow.Tensor([[[-0.1523],
+                [-0.6242]],
+
+                [[-0.1521],
+                [ 0.5220]],
+
+                [[-0.2166],
+                [ 1.5300]]])
         >>> t
         tensor([[[-0.1523],
                 [-0.6242]],
