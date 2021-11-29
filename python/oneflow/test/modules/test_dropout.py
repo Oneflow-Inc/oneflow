@@ -245,6 +245,7 @@ class TestModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_dropout_fp16_numpy_case(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [test_dropout_numpy_fp16_p0, test_dropout_numpy_fp16_p1]
@@ -264,6 +265,7 @@ class TestModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_dropout_addend_fp16_numpy_case(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
@@ -274,10 +276,18 @@ class TestModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    def test_fixed_dropout(test_case):
+    def test_cpu_fixed_dropout(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             fixed_cpu_seed_dropout_test,
+        ]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_gpu_fixed_dropout(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
             fixed_gpu_seed_dropout_test,
         ]
         for arg in GenArgList(arg_dict):
