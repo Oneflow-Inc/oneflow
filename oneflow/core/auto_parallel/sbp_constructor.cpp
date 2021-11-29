@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/sbp_util.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "sbp_collector.h"
 
@@ -257,7 +258,6 @@ void SbpConstructor::LoadLbi2SbpEdge(const OpGraph& op_graph) {
   };
 }
 
-// TODO: Change the checking from cfg::SbpSignature to cfg::NdSbpSignature
 Maybe<void> SbpConstructor::CheckSbpAgreement(const Job& job) {
   Job new_job;
   new_job.CopyFrom(job);
@@ -265,20 +265,19 @@ Maybe<void> SbpConstructor::CheckSbpAgreement(const Job& job) {
   // Compare sbp in job
   JUST(op_graph.TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
     const std::string& op_name = op_node->op().op_name();
-    const cfg::SbpSignature& auto_parallel_sbp =
-        cfg::SbpSignature(job.job_parallel_view_conf().op_name2sbp_signature_conf().at(op_name));
-    const cfg::SbpSignature& new_sbp = op_node->sbp_signature();
-    CHECK_EQ_OR_RETURN(auto_parallel_sbp.bn_in_op2sbp_parallel_size(),
-                       new_sbp.bn_in_op2sbp_parallel_size());
-    for (const auto& iter : auto_parallel_sbp.bn_in_op2sbp_parallel()) {
-      const cfg::SbpParallel& new_sbp_parallel = new_sbp.bn_in_op2sbp_parallel().at(iter.first);
-      const cfg::SbpParallel& auto_parallel_sbp = iter.second;
+    const cfg::NdSbpSignature& auto_parallel_sbp = cfg::NdSbpSignature(
+        job.job_parallel_view_conf().op_name2nd_sbp_signature_conf().at(op_name));
+    const cfg::NdSbpSignature& new_sbp = op_node->nd_sbp_signature();
+    CHECK_EQ_OR_RETURN(auto_parallel_sbp.bn_in_op2nd_sbp_size(), new_sbp.bn_in_op2nd_sbp_size());
+    for (const auto& iter : auto_parallel_sbp.bn_in_op2nd_sbp()) {
+      const cfg::NdSbp& new_sbp_parallel = new_sbp.bn_in_op2nd_sbp().at(iter.first);
+      const cfg::NdSbp& auto_parallel_sbp = iter.second;
       // According error message, we can find op_type in op_conf.proto with type_id and locate
       // the error op type.
       const std::string& error_mgs =
           "Op: `" + op_name + "`(type_id: " + std::to_string(op_node->op().op_conf().op_type_case())
-          + ") changed sbp from " + SbpParallelToString(auto_parallel_sbp) + "(AutoParallel) to "
-          + SbpParallelToString(new_sbp_parallel) + "(OpGraph) with blob_name: `" + iter.first
+          + ") changed sbp from " + NdSbpParallelToString(auto_parallel_sbp) + "(AutoParallel) to "
+          + NdSbpParallelToString(new_sbp_parallel) + "(OpGraph) with blob_name: `" + iter.first
           + "`.";
       CHECK_OR_RETURN(new_sbp_parallel == auto_parallel_sbp) << error_mgs;
     }
