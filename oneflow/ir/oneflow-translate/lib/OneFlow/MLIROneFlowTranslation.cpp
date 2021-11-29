@@ -48,6 +48,8 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/common/util.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <google/protobuf/text_format.h>
@@ -364,7 +366,9 @@ void RoundTripOneFlowJob(
   // TODO: Add flag in job desc to decide whether to run mlir optimizer
   if (succeeded(imp.ProcessJob())) {
     if (failed(ApplyRoundTripPatterns(job_wrapper, &context, module))) { exit(EXIT_FAILURE); }
-    if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
+    if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) {
+      module->print(llvm::outs());
+    }
     // TODO: Add flag in oneflow to define if failure in MLIR is allowed
     if (failed(imp.TryToUpdateJob())) {
       llvm::errs() << "fail to update job with IR, job will stay intact, job_name: "
