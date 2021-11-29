@@ -178,6 +178,62 @@ def test_dropout_addend_numpy_fp16_p1(test_case, shape):
     )
 
 
+def fixed_cpu_seed_dropout_test(test_case):
+    gen1 = flow.Generator()
+    gen1.manual_seed(5)
+    dropped_array1 = np.array(
+        [
+            [0.000000, 0.000000, 1.333333],
+            [1.333333, 0.000000, 1.333333],
+            [1.333333, 1.333333, 1.333333],
+        ]
+    ).astype(np.float32)
+    dropout1 = flow.nn.Dropout(p=0.25, generator=gen1)
+    x = flow.ones((3, 3), dtype=flow.float32)
+    out1 = dropout1(x)
+    test_case.assertTrue(
+        np.allclose(out1.numpy(), dropped_array1, atol=1e-4, rtol=1e-4)
+    )
+    gen2 = flow.Generator()
+    gen2.manual_seed(7)
+    dropout2 = flow.nn.Dropout(p=0.5, generator=gen2)
+    dropped_array2 = np.array(
+        [[0.0, 0.0, 2.0], [0.0, 0.0, 2.0], [2.0, 0.0, 2.0]]
+    ).astype(np.float32)
+    out2 = dropout2(x)
+    test_case.assertTrue(
+        np.allclose(out2.numpy(), dropped_array2, atol=1e-4, rtol=1e-4)
+    )
+
+
+def fixed_gpu_seed_dropout_test(test_case):
+    gen1 = flow.Generator()
+    gen1.manual_seed(5)
+    dropped_array1 = np.array(
+        [[1.2500, 0.0000, 1.2500], [1.2500, 1.2500, 1.2500], [1.2500, 1.2500, 1.2500]]
+    ).astype(np.float32)
+    dropout1 = flow.nn.Dropout(p=0.2, generator=gen1).to("cuda")
+    x = flow.ones((3, 3), dtype=flow.float32).to("cuda")
+    out1 = dropout1(x)
+    test_case.assertTrue(
+        np.allclose(out1.numpy(), dropped_array1, atol=1e-4, rtol=1e-4)
+    )
+    gen2 = flow.Generator()
+    gen2.manual_seed(7)
+    dropout2 = flow.nn.Dropout(p=0.7, generator=gen2).to("cuda")
+    dropped_array2 = np.array(
+        [
+            [3.333333, 3.333333, 0.000000],
+            [0.000000, 0.000000, 0.000000],
+            [0.000000, 0.000000, 0.000000],
+        ]
+    ).astype(np.float32)
+    out2 = dropout2(x)
+    test_case.assertTrue(
+        np.allclose(out2.numpy(), dropped_array2, atol=1e-4, rtol=1e-4)
+    )
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
     def test_dropout_numpy_case(test_case):
@@ -217,6 +273,15 @@ class TestModule(flow.unittest.TestCase):
         arg_dict["shape"] = [[2, 44, 66], [1, 2, 7], [5, 32, 74], [8, 125, 63]]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    def test_fixed_dropout(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            fixed_cpu_seed_dropout_test,
+            fixed_gpu_seed_dropout_test,
+        ]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case)
 
 
 if __name__ == "__main__":
