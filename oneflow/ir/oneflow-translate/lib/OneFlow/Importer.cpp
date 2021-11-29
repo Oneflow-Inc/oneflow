@@ -474,8 +474,13 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
 
 llvm::Optional<std::string> GetOutputLbn(OpResult result) {
   const auto def_op = result.getDefiningOp();
-  if (auto sys_op = llvm::dyn_cast<oneflow::SystemOp>(def_op)) {
-    return sys_op.output_lbns()[result.getResultNumber()].dyn_cast<StringAttr>().getValue().str();
+  if (def_op->hasTrait<OpTrait::IsImportCompatible>()) {
+    return def_op
+        ->getAttrOfType<ArrayAttr>(
+            OpTrait::IsImportCompatible<void>::getOutputLBNsAttr())[result.getResultNumber()]
+        .dyn_cast<StringAttr>()
+        .getValue()
+        .str();
   } else {
     std::vector<std::string> def_op_keys{};
     std::vector<int32_t> def_op_sizes{};
