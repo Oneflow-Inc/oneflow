@@ -35,7 +35,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
         m = torch.nn.BatchNorm1d(
             num_features=channel, track_running_stats=random().to(bool)
         ).to(device)
-        m.train(True)
+        m.train(random())
         x = random_pytorch_tensor(
             ndim=3, dim0=random(1, 4), dim1=channel, requires_grad=True
         ).to(device)
