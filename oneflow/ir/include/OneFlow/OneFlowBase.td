@@ -120,7 +120,7 @@ class OneFlow_ConvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
     );
 }
 
-class OneFlow_LazyPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_TFPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
     let summary = "OneFlow Lazy Pooling operation";
     let input = (ins AnyType:$x);
@@ -136,7 +136,7 @@ class OneFlow_LazyPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
   );
 }
 
-class OneFlow_LazyPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_TFPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
   let summary = "OneFlow Lazy Pooling Grad operation";
   let input = (ins
@@ -157,7 +157,7 @@ class OneFlow_LazyPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
 }
 
 
-class OneFlow_EagerPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_PoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
   let summary = "OneFlow Eager Pooling operation";
   let input = (ins AnyType:$x);
@@ -173,7 +173,7 @@ class OneFlow_EagerPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
   );
 }
 
-class OneFlow_EagerPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_PoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
   let summary = "OneFlow Eager Pooling Grad operation";
   let input = (ins

@@ -172,9 +172,9 @@ class OneFlow_NormalizationAddReluBaseOp : OneFlow_BaseOp<"normalization_add_rel
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
-    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon,
+    DefaultValuedAttr<F32Attr, "0.">:$epsilon,
     DefaultValuedAttr<BoolAttr, "false">:$training,
-    DefaultValuedAttr<F32Attr, "0.000000">:$momentum
+    DefaultValuedAttr<F32Attr, "0.">:$momentum
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes,
@@ -222,7 +222,7 @@ def OneFlow_CeluGradOp : OneFlow_BaseOp<"celu_grad", [NoSideEffect, DeclareOpInt
     AnyType:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "0.000000">:$alpha
+    DefaultValuedAttr<F64Attr, "0.">:$alpha
   );
 }
 
@@ -248,7 +248,7 @@ def OneFlow_DropoutGradOp : OneFlow_BaseOp<"dropout_grad", [NoSideEffect, Declar
     AnyType:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$scale
+    DefaultValuedAttr<F32Attr, "0.">:$scale
   );
 }
 
@@ -281,7 +281,7 @@ def OneFlow_EluGradOp : OneFlow_BaseOp<"elu_grad", [NoSideEffect, DeclareOpInter
     AnyType:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "0.000000">:$alpha
+    DefaultValuedAttr<F64Attr, "0.">:$alpha
   );
 }
 
@@ -349,8 +349,8 @@ def OneFlow_L1L2RegularizeGradientOp : OneFlow_BaseOp<"l1_l2_regularize_gradient
     AnyType:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$l1,
-    DefaultValuedAttr<F32Attr, "0.000000">:$l2
+    DefaultValuedAttr<F32Attr, "0.">:$l1,
+    DefaultValuedAttr<F32Attr, "0.">:$l2
   );
 }
 
@@ -363,7 +363,7 @@ def OneFlow_LeakyReluGradOp : OneFlow_BaseOp<"leaky_relu_grad", [NoSideEffect, D
     AnyType:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$alpha
+    DefaultValuedAttr<F32Attr, "0.">:$alpha
   );
 }
 
@@ -379,7 +379,7 @@ def OneFlow_MaskedFillOp : OneFlow_BaseOp<"masked_fill", [NoSideEffect, DeclareO
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
 }
 
@@ -1301,7 +1301,7 @@ def OneFlow_NmsOp : OneFlow_BaseOp<"nms", [NoSideEffect, DeclareOpInterfaceMetho
     AnyType:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$iou_threshold,
+    DefaultValuedAttr<F32Attr, "0.">:$iou_threshold,
     DefaultValuedAttr<SI32Attr, "0">:$keep_n
   );
 }
@@ -1571,8 +1571,8 @@ def OneFlow_CudnnFusedNormalizationAddReluOp : OneFlow_BaseOp<"cudnn_fused_norma
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
-    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon,
-    DefaultValuedAttr<F32Attr, "0.000000">:$momentum
+    DefaultValuedAttr<F32Attr, "0.">:$epsilon,
+    DefaultValuedAttr<F32Attr, "0.">:$momentum
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes,
@@ -1599,7 +1599,7 @@ def OneFlow_CudnnFusedNormalizationAddReluGradOp : OneFlow_BaseOp<"cudnn_fused_n
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
-    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon
+    DefaultValuedAttr<F32Attr, "0.">:$epsilon
   );
 }
 
@@ -1642,7 +1642,7 @@ def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale"
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
-    DefaultValuedAttr<F32Attr, "0.000000">:$scale
+    DefaultValuedAttr<F32Attr, "0.">:$scale
   );
 }
 
@@ -1655,7 +1655,7 @@ def OneFlow_FusedCastScaleOp : OneFlow_BaseOp<"fused_cast_scale", [NoSideEffect,
     AnyType:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "1.000000">:$scale
+    DefaultValuedAttr<F64Attr, "1.">:$scale
   );
 }
 
@@ -1668,8 +1668,8 @@ def OneFlow_FusedScaleMaskSoftmaxOp : OneFlow_BaseOp<"fused_scale_mask_softmax",
     AnyType:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "1.000000">:$scale_value,
-    DefaultValuedAttr<F32Attr, "0.000000">:$mask_fill_value
+    DefaultValuedAttr<F32Attr, "1.">:$scale_value,
+    DefaultValuedAttr<F32Attr, "0.">:$mask_fill_value
   );
 }
 
@@ -1684,9 +1684,9 @@ def OneFlow_FusedScaleMaskSoftmaxDropoutOp : OneFlow_BaseOp<"fused_scale_mask_so
     AnyType:$softmax_y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "1.000000">:$scale_value,
-    DefaultValuedAttr<F32Attr, "0.000000">:$mask_fill_value,
-    DefaultValuedAttr<F32Attr, "1.000000">:$dropout_scale_value
+    DefaultValuedAttr<F32Attr, "1.">:$scale_value,
+    DefaultValuedAttr<F32Attr, "0.">:$mask_fill_value,
+    DefaultValuedAttr<F32Attr, "1.">:$dropout_scale_value
   );
 }
 
@@ -1701,8 +1701,8 @@ def OneFlow_FusedScaleMaskSoftmaxDropoutGradOp : OneFlow_BaseOp<"fused_scale_mas
     AnyType:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$scale_value,
-    DefaultValuedAttr<F32Attr, "0.000000">:$dropout_scale_value
+    DefaultValuedAttr<F32Attr, "0.">:$scale_value,
+    DefaultValuedAttr<F32Attr, "0.">:$dropout_scale_value
   );
 }
 
@@ -1716,7 +1716,7 @@ def OneFlow_FusedScaleMaskSoftmaxGradOp : OneFlow_BaseOp<"fused_scale_mask_softm
     AnyType:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$scale_value
+    DefaultValuedAttr<F32Attr, "0.">:$scale_value
   );
 }
 
@@ -1729,10 +1729,10 @@ def OneFlow_FusedScaleTrilOp : OneFlow_BaseOp<"fused_scale_tril", [NoSideEffect,
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$diagonal,
-    DefaultValuedAttr<F64Attr, "0.000000">:$floating_fill_value,
+    DefaultValuedAttr<F64Attr, "0.">:$floating_fill_value,
     DefaultValuedAttr<SI64Attr, "0">:$integer_fill_value,
     DefaultValuedAttr<BoolAttr, "false">:$is_floating_fill_value,
-    DefaultValuedAttr<F64Attr, "1.000000">:$floating_scale_value,
+    DefaultValuedAttr<F64Attr, "1.">:$floating_scale_value,
     DefaultValuedAttr<SI64Attr, "1">:$integer_scale_value,
     DefaultValuedAttr<BoolAttr, "false">:$is_floating_scale_value
   );
@@ -1748,7 +1748,7 @@ def OneFlow_FusedSelfAttentionQueryMulKeyAndValueOp : OneFlow_BaseOp<"fused_self
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$head_size,
-    DefaultValuedAttr<F32Attr, "0.000000">:$alpha
+    DefaultValuedAttr<F32Attr, "0.">:$alpha
   );
 }
 
@@ -1762,7 +1762,7 @@ def OneFlow_FusedSelfAttentionQueryMulKeyAndValueGradOp : OneFlow_BaseOp<"fused_
     AnyType:$hidden_states_grad
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$alpha
+    DefaultValuedAttr<F32Attr, "0.">:$alpha
   );
 }
 
@@ -1777,9 +1777,9 @@ def OneFlow_FusedTrilScaleSoftmaxMaskScaleOp : OneFlow_BaseOp<"fused_tril_scale_
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$diagonal,
-    DefaultValuedAttr<F32Attr, "0.000000">:$tril_fill_value,
-    DefaultValuedAttr<F32Attr, "1.000000">:$tril_scale_value,
-    DefaultValuedAttr<F32Attr, "1.000000">:$mask_scale_value
+    DefaultValuedAttr<F32Attr, "0.">:$tril_fill_value,
+    DefaultValuedAttr<F32Attr, "1.">:$tril_scale_value,
+    DefaultValuedAttr<F32Attr, "1.">:$mask_scale_value
   );
 }
 
@@ -1794,8 +1794,8 @@ def OneFlow_FusedTrilScaleSoftmaxMaskScaleGradOp : OneFlow_BaseOp<"fused_tril_sc
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$diagonal,
-    DefaultValuedAttr<F32Attr, "0.000000">:$tril_scale_value,
-    DefaultValuedAttr<F32Attr, "0.000000">:$mask_scale_value
+    DefaultValuedAttr<F32Attr, "0.">:$tril_scale_value,
+    DefaultValuedAttr<F32Attr, "0.">:$mask_scale_value
   );
 }
 
@@ -1818,7 +1818,7 @@ def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
-    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon
+    DefaultValuedAttr<F32Attr, "0.">:$epsilon
   );
 }
 
@@ -2100,7 +2100,7 @@ def OneFlow_DimScatterAddScalarOp : OneFlow_BaseOp<"dim_scatter_add_scalar", [No
     AnyType:$output
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$src_scalar,
+    DefaultValuedAttr<F32Attr, "0.">:$src_scalar,
     DefaultValuedAttr<SI32Attr, "0">:$dim
   );
 }
@@ -2128,7 +2128,7 @@ def OneFlow_DimScatterMulScalarOp : OneFlow_BaseOp<"dim_scatter_mul_scalar", [No
     AnyType:$output
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$src_scalar,
+    DefaultValuedAttr<F32Attr, "0.">:$src_scalar,
     DefaultValuedAttr<SI32Attr, "0">:$dim
   );
 }
@@ -2156,7 +2156,7 @@ def OneFlow_DimScatterUpdateScalarOp : OneFlow_BaseOp<"dim_scatter_update_scalar
     AnyType:$output
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$src_scalar,
+    DefaultValuedAttr<F32Attr, "0.">:$src_scalar,
     DefaultValuedAttr<SI32Attr, "0">:$dim
   );
 }
@@ -2364,7 +2364,7 @@ def OneFlow_WhereScalarXOp : OneFlow_BaseOp<"where_scalar_x", [NoSideEffect, Dec
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
 }
 
@@ -2381,9 +2381,9 @@ def OneFlow_WhereScalarXyOp : OneFlow_BaseOp<"where_scalar_xy", [NoSideEffect, D
     DefaultValuedAttr<BoolAttr, "false">:$has_y_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_y_float_operand,
     DefaultValuedAttr<SI64Attr, "0">:$x_int_operand,
-    DefaultValuedAttr<F64Attr, "0.000000">:$x_float_operand,
+    DefaultValuedAttr<F64Attr, "0.">:$x_float_operand,
     DefaultValuedAttr<SI64Attr, "0">:$y_int_operand,
-    DefaultValuedAttr<F64Attr, "0.000000">:$y_float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$y_float_operand
   );
 }
 
@@ -2399,7 +2399,7 @@ def OneFlow_WhereScalarYOp : OneFlow_BaseOp<"where_scalar_y", [NoSideEffect, Dec
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
 }
 
@@ -2435,9 +2435,9 @@ def OneFlow_CombinedMarginLossOp : OneFlow_BaseOp<"combined_margin_loss", [NoSid
     AnyType:$theta
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$m1,
-    DefaultValuedAttr<F32Attr, "0.000000">:$m2,
-    DefaultValuedAttr<F32Attr, "0.000000">:$m3,
+    DefaultValuedAttr<F32Attr, "0.">:$m1,
+    DefaultValuedAttr<F32Attr, "0.">:$m2,
+    DefaultValuedAttr<F32Attr, "0.">:$m3,
     DefaultValuedAttr<SI64Attr, "0">:$depth
   );
 }
@@ -2452,9 +2452,9 @@ def OneFlow_CombinedMarginLossGradOp : OneFlow_BaseOp<"combined_margin_loss_grad
     AnyType:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$m1,
-    DefaultValuedAttr<F32Attr, "0.000000">:$m2,
-    DefaultValuedAttr<F32Attr, "0.000000">:$m3,
+    DefaultValuedAttr<F32Attr, "0.">:$m1,
+    DefaultValuedAttr<F32Attr, "0.">:$m2,
+    DefaultValuedAttr<F32Attr, "0.">:$m3,
     DefaultValuedAttr<SI64Attr, "0">:$depth
   );
 }
@@ -2505,7 +2505,7 @@ def OneFlow_DynamicLossScaleScheduleOp : OneFlow_BaseOp<"dynamic_loss_scale_sche
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "2000">:$increment_period,
-    DefaultValuedAttr<F32Attr, "2.000000">:$multiplier
+    DefaultValuedAttr<F32Attr, "2.">:$multiplier
   );
 }
 
@@ -2548,7 +2548,7 @@ def OneFlow_SmoothL1LossOp : OneFlow_BaseOp<"smooth_l1_loss", [NoSideEffect, Dec
   );
   let attrs = (ins
     StrAttr:$reduction,
-    DefaultValuedAttr<F32Attr, "0.000000">:$beta
+    DefaultValuedAttr<F32Attr, "0.">:$beta
   );
 }
 
@@ -2563,7 +2563,7 @@ def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", [NoSideEf
   );
   let attrs = (ins
     StrAttr:$reduction,
-    DefaultValuedAttr<F32Attr, "0.000000">:$beta
+    DefaultValuedAttr<F32Attr, "0.">:$beta
   );
 }
 
@@ -2989,7 +2989,7 @@ def OneFlow_BatchMatmulOp : OneFlow_BaseOp<"batch_matmul", [NoSideEffect, Declar
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$transpose_a,
     DefaultValuedAttr<BoolAttr, "false">:$transpose_b,
-    DefaultValuedAttr<F64Attr, "1.000000">:$alpha
+    DefaultValuedAttr<F64Attr, "1.">:$alpha
   );
 }
 
@@ -3005,7 +3005,7 @@ def OneFlow_BroadcastMatmulOp : OneFlow_BaseOp<"broadcast_matmul", [NoSideEffect
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$transpose_a,
     DefaultValuedAttr<BoolAttr, "false">:$transpose_b,
-    DefaultValuedAttr<F64Attr, "1.000000">:$alpha
+    DefaultValuedAttr<F64Attr, "1.">:$alpha
   );
 }
 
@@ -3019,7 +3019,7 @@ def OneFlow_BroadcastMatmulGradBOp : OneFlow_BaseOp<"broadcast_matmul_grad_b", [
     AnyType:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "1.000000">:$alpha
+    DefaultValuedAttr<F64Attr, "1.">:$alpha
   );
 }
 
@@ -3081,15 +3081,15 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [NoSideEffect, DeclareOpInterfac
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$transpose_a,
     DefaultValuedAttr<BoolAttr, "false">:$transpose_b,
-    DefaultValuedAttr<F64Attr, "1.000000">:$alpha
+    DefaultValuedAttr<F64Attr, "1.">:$alpha
   );
 }
 
 #endif // GET_ONEFLOW_MATMUL_OP_DEFINITIONS
 
 // Group: MISC
-// CategoricalOrdinalEncode, add_n, arange, coin_flip, concat, constant, dropout, elementwise_maximum_backward, elementwise_minimum_backward, empty, eye, grid_sample_grad, mlir_jit, multi_count_not_finite, multi_square_sum, nll, nll_grad, pow_x_grad, pow_y_grad, prelu_grad, randperm, recv, send, split_like, ssp_variable_proxy, tf_prelu_grad, uniform, uniform_int, unique_with_counts, xdivy_x_grad, xdivy_y_grad
-// Total: 31
+// CategoricalOrdinalEncode, add_n, arange, coin_flip, concat, constant, dropout, elementwise_maximum_backward, elementwise_minimum_backward, empty, eye, grid_sample_grad, multi_count_not_finite, multi_square_sum, nll, nll_grad, pow_x_grad, pow_y_grad, prelu_grad, randperm, recv, send, split_like, ssp_variable_proxy, tf_prelu_grad, uniform, uniform_int, unique_with_counts, xdivy_x_grad, xdivy_y_grad
+// Total: 30
 
 #ifdef GET_ONEFLOW_MISC_OP_DEFINITIONS
 
@@ -3125,9 +3125,9 @@ def OneFlow_ArangeOp : OneFlow_BaseOp<"arange", [NoSideEffect, DeclareOpInterfac
     DefaultValuedAttr<SI64Attr, "0">:$integer_start,
     DefaultValuedAttr<SI64Attr, "0">:$integer_delta,
     DefaultValuedAttr<SI64Attr, "0">:$integer_limit,
-    DefaultValuedAttr<F64Attr, "0.000000">:$float_start,
-    DefaultValuedAttr<F64Attr, "0.000000">:$float_delta,
-    DefaultValuedAttr<F64Attr, "0.000000">:$float_limit,
+    DefaultValuedAttr<F64Attr, "0.">:$float_start,
+    DefaultValuedAttr<F64Attr, "0.">:$float_delta,
+    DefaultValuedAttr<F64Attr, "0.">:$float_limit,
     StrAttr:$dtype,
     StrArrayAttr:$nd_sbp
   );
@@ -3138,7 +3138,7 @@ def OneFlow_CoinFlipOp : OneFlow_BaseOp<"coin_flip", [NoSideEffect, DeclareOpInt
     AnyType:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.500000">:$probability,
+    DefaultValuedAttr<F32Attr, "0.5">:$probability,
     DefaultValuedAttr<SI64Attr, "0">:$batch_size,
     DefaultValuedAttr<SI64Attr, "-1">:$seed,
     DefaultValuedAttr<BoolAttr, "false">:$has_seed,
@@ -3164,7 +3164,7 @@ def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [NoSideEffect, DeclareOpInte
     AnyType:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "0.000000">:$floating_value,
+    DefaultValuedAttr<F64Attr, "0.">:$floating_value,
     DefaultValuedAttr<SI64Attr, "0">:$integer_value,
     DefaultValuedAttr<BoolAttr, "false">:$is_floating_value,
     StrAttr:$dtype,
@@ -3183,7 +3183,7 @@ def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", [NoSideEffect, DeclareOpInterf
     AnyType:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$scale
+    DefaultValuedAttr<F32Attr, "0.">:$scale
   );
 }
 
@@ -3418,8 +3418,8 @@ def OneFlow_UniformOp : OneFlow_BaseOp<"uniform", [NoSideEffect, DeclareOpInterf
     AnyType:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "0.000000">:$from,
-    DefaultValuedAttr<F64Attr, "1.000000">:$to,
+    DefaultValuedAttr<F64Attr, "0.">:$from,
+    DefaultValuedAttr<F64Attr, "1.">:$to,
     DefaultValuedAttr<SI64Attr, "0">:$seed,
     StrAttr:$dtype,
     AnyI64ElementsAttr:$shape,
@@ -3613,8 +3613,8 @@ def OneFlow_CropMirrorNormalizeFromTensorbufferOp : OneFlow_BaseOp<"crop_mirror_
     F32ArrayAttr:$std,
     DefaultValuedAttr<SI64Attr, "0">:$crop_h,
     DefaultValuedAttr<SI64Attr, "0">:$crop_w,
-    DefaultValuedAttr<F32Attr, "0.500000">:$crop_pos_x,
-    DefaultValuedAttr<F32Attr, "0.500000">:$crop_pos_y,
+    DefaultValuedAttr<F32Attr, "0.5">:$crop_pos_x,
+    DefaultValuedAttr<F32Attr, "0.5">:$crop_pos_y,
     StrAttr:$output_dtype
   );
 }
@@ -3634,8 +3634,8 @@ def OneFlow_CropMirrorNormalizeFromUint8Op : OneFlow_BaseOp<"crop_mirror_normali
     F32ArrayAttr:$std,
     DefaultValuedAttr<SI64Attr, "0">:$crop_h,
     DefaultValuedAttr<SI64Attr, "0">:$crop_w,
-    DefaultValuedAttr<F32Attr, "0.500000">:$crop_pos_x,
-    DefaultValuedAttr<F32Attr, "0.500000">:$crop_pos_y,
+    DefaultValuedAttr<F32Attr, "0.5">:$crop_pos_x,
+    DefaultValuedAttr<F32Attr, "0.5">:$crop_pos_y,
     StrAttr:$output_dtype
   );
 }
@@ -3663,7 +3663,7 @@ def OneFlow_L2NormalizeOp : OneFlow_BaseOp<"l2_normalize", [NoSideEffect, Declar
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
-    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon
+    DefaultValuedAttr<F32Attr, "0.">:$epsilon
   );
 }
 
@@ -3678,7 +3678,7 @@ def OneFlow_L2NormalizeGradOp : OneFlow_BaseOp<"l2_normalize_grad", [NoSideEffec
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
-    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon
+    DefaultValuedAttr<F32Attr, "0.">:$epsilon
   );
 }
 
@@ -3699,7 +3699,7 @@ def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", [NoSideEffect, AttrSizedO
     DefaultValuedAttr<BoolAttr, "false">:$scale,
     DefaultValuedAttr<SI64Attr, "0">:$begin_norm_axis,
     DefaultValuedAttr<SI64Attr, "0">:$begin_params_axis,
-    DefaultValuedAttr<F64Attr, "0.000000">:$epsilon
+    DefaultValuedAttr<F64Attr, "0.">:$epsilon
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
@@ -3719,7 +3719,7 @@ def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", [NoSideEffect, D
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$begin_norm_axis,
-    DefaultValuedAttr<F64Attr, "0.000000">:$epsilon
+    DefaultValuedAttr<F64Attr, "0.">:$epsilon
   );
 }
 
@@ -3749,8 +3749,8 @@ def OneFlow_NormalOp : OneFlow_BaseOp<"normal", [NoSideEffect, DeclareOpInterfac
     AnyType:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "0.000000">:$mean,
-    DefaultValuedAttr<F64Attr, "1.000000">:$std,
+    DefaultValuedAttr<F64Attr, "0.">:$mean,
+    DefaultValuedAttr<F64Attr, "1.">:$std,
     DefaultValuedAttr<SI64Attr, "0">:$seed,
     StrAttr:$dtype,
     AnyI64ElementsAttr:$shape,
@@ -3774,9 +3774,9 @@ def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [NoSideEffect, Att
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
-    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon,
+    DefaultValuedAttr<F32Attr, "0.">:$epsilon,
     DefaultValuedAttr<BoolAttr, "false">:$training,
-    DefaultValuedAttr<F32Attr, "0.000000">:$momentum
+    DefaultValuedAttr<F32Attr, "0.">:$momentum
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes,
@@ -3799,7 +3799,7 @@ def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", [NoSideEf
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
-    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon
+    DefaultValuedAttr<F32Attr, "0.">:$epsilon
   );
 }
 
@@ -3823,13 +3823,13 @@ def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", [AttrSizedOperand
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$train_step_val,
-    DefaultValuedAttr<F32Attr, "0.000000">:$learning_rate_val,
-    DefaultValuedAttr<F64Attr, "1.000000">:$scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$l1,
-    DefaultValuedAttr<F32Attr, "0.000000">:$l2,
-    DefaultValuedAttr<F32Attr, "0.000000">:$lr_decay,
-    DefaultValuedAttr<F32Attr, "0.000000">:$weight_decay,
-    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon
+    DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
+    DefaultValuedAttr<F64Attr, "1.">:$scale,
+    DefaultValuedAttr<F32Attr, "0.">:$l1,
+    DefaultValuedAttr<F32Attr, "0.">:$l2,
+    DefaultValuedAttr<F32Attr, "0.">:$lr_decay,
+    DefaultValuedAttr<F32Attr, "0.">:$weight_decay,
+    DefaultValuedAttr<F32Attr, "0.">:$epsilon
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
@@ -3844,7 +3844,7 @@ def OneFlow_AdamBiasCorrectionFactorOp : OneFlow_BaseOp<"adam_bias_correction_fa
     AnyType:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.900000">:$beta
+    DefaultValuedAttr<F32Attr, "0.9">:$beta
   );
 }
 
@@ -3862,16 +3862,16 @@ def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", [AttrSizedOperandSegmen
     AnyType:$max_v
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$learning_rate_val,
-    DefaultValuedAttr<F32Attr, "1.000000">:$bias_correction1_val,
-    DefaultValuedAttr<F32Attr, "1.000000">:$bias_correction2_val,
-    DefaultValuedAttr<F64Attr, "1.000000">:$scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$l1,
-    DefaultValuedAttr<F32Attr, "0.000000">:$l2,
-    DefaultValuedAttr<F32Attr, "0.900000">:$beta1,
-    DefaultValuedAttr<F32Attr, "0.999000">:$beta2,
-    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon,
-    DefaultValuedAttr<F32Attr, "0.000000">:$weight_decay,
+    DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
+    DefaultValuedAttr<F32Attr, "1.">:$bias_correction1_val,
+    DefaultValuedAttr<F32Attr, "1.">:$bias_correction2_val,
+    DefaultValuedAttr<F64Attr, "1.">:$scale,
+    DefaultValuedAttr<F32Attr, "0.">:$l1,
+    DefaultValuedAttr<F32Attr, "0.">:$l2,
+    DefaultValuedAttr<F32Attr, "0.9">:$beta1,
+    DefaultValuedAttr<F32Attr, "0.999">:$beta2,
+    DefaultValuedAttr<F32Attr, "0.">:$epsilon,
+    DefaultValuedAttr<F32Attr, "0.">:$weight_decay,
     DefaultValuedAttr<BoolAttr, "false">:$amsgrad,
     DefaultValuedAttr<BoolAttr, "true">:$do_bias_correction
   );
@@ -3893,11 +3893,11 @@ def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_upda
     AnyType:$max_v
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$learning_rate_val,
-    DefaultValuedAttr<F32Attr, "0.900000">:$beta1,
-    DefaultValuedAttr<F32Attr, "0.999000">:$beta2,
-    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon,
-    DefaultValuedAttr<F32Attr, "0.000000">:$weight_decay,
+    DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
+    DefaultValuedAttr<F32Attr, "0.9">:$beta1,
+    DefaultValuedAttr<F32Attr, "0.999">:$beta2,
+    DefaultValuedAttr<F32Attr, "0.">:$epsilon,
+    DefaultValuedAttr<F32Attr, "0.">:$weight_decay,
     DefaultValuedAttr<BoolAttr, "false">:$amsgrad,
     DefaultValuedAttr<BoolAttr, "true">:$do_bias_correction
   );
@@ -3915,8 +3915,8 @@ def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momen
     AnyType:$momentum
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.900000">:$beta,
-    DefaultValuedAttr<F32Attr, "0.000000">:$weight_decay
+    DefaultValuedAttr<F32Attr, "0.9">:$beta,
+    DefaultValuedAttr<F32Attr, "0.">:$weight_decay
   );
 }
 
@@ -3928,7 +3928,7 @@ def OneFlow_IndexedSlicesSgdUpdateOp : OneFlow_BaseOp<"indexed_slices_sgd_update
     AnyType:$learning_rate
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$weight_decay
+    DefaultValuedAttr<F32Attr, "0.">:$weight_decay
   );
 }
 
@@ -3945,13 +3945,13 @@ def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", [AttrSizedOperandSegmen
     Optional<AnyType>:$skip_if
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$beta1,
-    DefaultValuedAttr<F32Attr, "0.000000">:$beta2,
-    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon,
-    DefaultValuedAttr<F64Attr, "1.000000">:$scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$l1,
-    DefaultValuedAttr<F32Attr, "0.000000">:$l2,
-    DefaultValuedAttr<F32Attr, "0.000000">:$weight_decay
+    DefaultValuedAttr<F32Attr, "0.">:$beta1,
+    DefaultValuedAttr<F32Attr, "0.">:$beta2,
+    DefaultValuedAttr<F32Attr, "0.">:$epsilon,
+    DefaultValuedAttr<F64Attr, "1.">:$scale,
+    DefaultValuedAttr<F32Attr, "0.">:$l1,
+    DefaultValuedAttr<F32Attr, "0.">:$l2,
+    DefaultValuedAttr<F32Attr, "0.">:$weight_decay
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
@@ -3968,13 +3968,13 @@ def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", [AttrSizedOperandSegmen
     Optional<AnyType>:$skip_if
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "1.000000">:$scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$l1,
-    DefaultValuedAttr<F32Attr, "0.000000">:$l2,
-    DefaultValuedAttr<F32Attr, "0.900000">:$momentum_beta,
-    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon,
-    DefaultValuedAttr<F32Attr, "0.000100">:$lars_coefficient,
-    DefaultValuedAttr<F32Attr, "0.000000">:$weight_decay
+    DefaultValuedAttr<F64Attr, "1.">:$scale,
+    DefaultValuedAttr<F32Attr, "0.">:$l1,
+    DefaultValuedAttr<F32Attr, "0.">:$l2,
+    DefaultValuedAttr<F32Attr, "0.9">:$momentum_beta,
+    DefaultValuedAttr<F32Attr, "0.">:$epsilon,
+    DefaultValuedAttr<F32Attr, "0.0001">:$lars_coefficient,
+    DefaultValuedAttr<F32Attr, "0.">:$weight_decay
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
@@ -3991,12 +3991,12 @@ def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", [AttrSizedOpera
     Optional<AnyType>:$skip_if
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$learning_rate_val,
-    DefaultValuedAttr<F64Attr, "1.000000">:$scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$l1,
-    DefaultValuedAttr<F32Attr, "0.000000">:$l2,
-    DefaultValuedAttr<F32Attr, "0.900000">:$beta,
-    DefaultValuedAttr<F32Attr, "0.000000">:$weight_decay
+    DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
+    DefaultValuedAttr<F64Attr, "1.">:$scale,
+    DefaultValuedAttr<F32Attr, "0.">:$l1,
+    DefaultValuedAttr<F32Attr, "0.">:$l2,
+    DefaultValuedAttr<F32Attr, "0.9">:$beta,
+    DefaultValuedAttr<F32Attr, "0.">:$weight_decay
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
@@ -4014,14 +4014,14 @@ def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", [AttrSizedOperand
     Optional<AnyType>:$mean_gradient
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$learning_rate_val,
-    DefaultValuedAttr<F64Attr, "1.000000">:$scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$l1,
-    DefaultValuedAttr<F32Attr, "0.000000">:$l2,
+    DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
+    DefaultValuedAttr<F64Attr, "1.">:$scale,
+    DefaultValuedAttr<F32Attr, "0.">:$l1,
+    DefaultValuedAttr<F32Attr, "0.">:$l2,
     DefaultValuedAttr<BoolAttr, "false">:$centered,
-    DefaultValuedAttr<F32Attr, "0.000000">:$epsilon,
-    DefaultValuedAttr<F32Attr, "0.990000">:$decay_rate,
-    DefaultValuedAttr<F32Attr, "0.000000">:$weight_decay
+    DefaultValuedAttr<F32Attr, "0.">:$epsilon,
+    DefaultValuedAttr<F32Attr, "0.99">:$decay_rate,
+    DefaultValuedAttr<F32Attr, "0.">:$weight_decay
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
@@ -4037,11 +4037,11 @@ def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", [AttrSizedOperandSegments
     Optional<AnyType>:$skip_if
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$learning_rate_val,
-    DefaultValuedAttr<F64Attr, "1.000000">:$scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$l1,
-    DefaultValuedAttr<F32Attr, "0.000000">:$l2,
-    DefaultValuedAttr<F32Attr, "0.000000">:$weight_decay
+    DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
+    DefaultValuedAttr<F64Attr, "1.">:$scale,
+    DefaultValuedAttr<F32Attr, "0.">:$l1,
+    DefaultValuedAttr<F32Attr, "0.">:$l2,
+    DefaultValuedAttr<F32Attr, "0.">:$weight_decay
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
@@ -4080,7 +4080,7 @@ def OneFlow_ConstantPad1DOp : OneFlow_BaseOp<"constant_pad1d", [NoSideEffect, De
   );
   let attrs = (ins
     SI64ArrayAttr:$padding,
-    DefaultValuedAttr<F64Attr, "0.000000">:$floating_value,
+    DefaultValuedAttr<F64Attr, "0.">:$floating_value,
     DefaultValuedAttr<SI64Attr, "0">:$integral_value
   );
 }
@@ -4094,7 +4094,7 @@ def OneFlow_ConstantPad1DGradOp : OneFlow_BaseOp<"constant_pad1d_grad", [NoSideE
   );
   let attrs = (ins
     SI64ArrayAttr:$padding,
-    DefaultValuedAttr<F64Attr, "0.000000">:$floating_value,
+    DefaultValuedAttr<F64Attr, "0.">:$floating_value,
     DefaultValuedAttr<SI64Attr, "0">:$integral_value
   );
 }
@@ -4108,7 +4108,7 @@ def OneFlow_ConstantPad2DOp : OneFlow_BaseOp<"constant_pad2d", [NoSideEffect, De
   );
   let attrs = (ins
     SI64ArrayAttr:$padding,
-    DefaultValuedAttr<F64Attr, "0.000000">:$floating_value,
+    DefaultValuedAttr<F64Attr, "0.">:$floating_value,
     DefaultValuedAttr<SI64Attr, "0">:$integral_value
   );
 }
@@ -4122,7 +4122,7 @@ def OneFlow_ConstantPad2DGradOp : OneFlow_BaseOp<"constant_pad2d_grad", [NoSideE
   );
   let attrs = (ins
     SI64ArrayAttr:$padding,
-    DefaultValuedAttr<F64Attr, "0.000000">:$floating_value,
+    DefaultValuedAttr<F64Attr, "0.">:$floating_value,
     DefaultValuedAttr<SI64Attr, "0">:$integral_value
   );
 }
@@ -4136,7 +4136,7 @@ def OneFlow_ConstantPad3DOp : OneFlow_BaseOp<"constant_pad3d", [NoSideEffect, De
   );
   let attrs = (ins
     SI64ArrayAttr:$padding,
-    DefaultValuedAttr<F64Attr, "0.000000">:$floating_value,
+    DefaultValuedAttr<F64Attr, "0.">:$floating_value,
     DefaultValuedAttr<SI64Attr, "0">:$integral_value
   );
 }
@@ -4150,7 +4150,7 @@ def OneFlow_ConstantPad3DGradOp : OneFlow_BaseOp<"constant_pad3d_grad", [NoSideE
   );
   let attrs = (ins
     SI64ArrayAttr:$padding,
-    DefaultValuedAttr<F64Attr, "0.000000">:$floating_value,
+    DefaultValuedAttr<F64Attr, "0.">:$floating_value,
     DefaultValuedAttr<SI64Attr, "0">:$integral_value
   );
 }
@@ -4165,7 +4165,7 @@ def OneFlow_PadOp : OneFlow_BaseOp<"pad", [NoSideEffect, DeclareOpInterfaceMetho
   let attrs = (ins
     SI64ArrayAttr:$padding_before,
     SI64ArrayAttr:$padding_after,
-    DefaultValuedAttr<F64Attr, "0.000000">:$floating_constant_value,
+    DefaultValuedAttr<F64Attr, "0.">:$floating_constant_value,
     DefaultValuedAttr<SI64Attr, "0">:$integral_constant_value
   );
 }
@@ -4180,7 +4180,7 @@ def OneFlow_PadGradOp : OneFlow_BaseOp<"pad_grad", [NoSideEffect, DeclareOpInter
   let attrs = (ins
     SI64ArrayAttr:$padding_before,
     SI64ArrayAttr:$padding_after,
-    DefaultValuedAttr<F64Attr, "0.000000">:$floating_constant_value,
+    DefaultValuedAttr<F64Attr, "0.">:$floating_constant_value,
     DefaultValuedAttr<SI64Attr, "0">:$integral_constant_value
   );
 }
@@ -4394,257 +4394,53 @@ def OneFlow_AdaptiveAvgPool3DGradOp : OneFlow_BaseOp<"adaptive_avg_pool3d_grad",
   );
 }
 
-def OneFlow_EagerAvgPool1DOp : OneFlow_EagerPoolBaseOp<"avgpool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AvgPool1DOp : OneFlow_PoolBaseOp<"avgpool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AvgPool1DGradOp : OneFlow_PoolGradBaseOp<"avgpool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool2DOp : OneFlow_EagerPoolBaseOp<"avgpool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AvgPool2DOp : OneFlow_PoolBaseOp<"avgpool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AvgPool2DGradOp : OneFlow_PoolGradBaseOp<"avgpool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool3DOp : OneFlow_EagerPoolBaseOp<"avgpool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AvgPool3DOp : OneFlow_PoolBaseOp<"avgpool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerAvgPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"avgpool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AvgPool3DGradOp : OneFlow_PoolGradBaseOp<"avgpool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool1DOp : OneFlow_EagerPoolBaseOp<"maxpool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_MaxPool1DOp : OneFlow_PoolBaseOp<"maxpool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool1DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_MaxPool1DGradOp : OneFlow_PoolGradBaseOp<"maxpool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool2DOp : OneFlow_EagerPoolBaseOp<"maxpool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_MaxPool2DOp : OneFlow_PoolBaseOp<"maxpool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool2DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_MaxPool2DGradOp : OneFlow_PoolGradBaseOp<"maxpool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool3DOp : OneFlow_EagerPoolBaseOp<"maxpool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_MaxPool3DOp : OneFlow_PoolBaseOp<"maxpool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_EagerMaxPool3DGradOp : OneFlow_EagerPoolGradBaseOp<"maxpool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_MaxPool3DGradOp : OneFlow_PoolGradBaseOp<"maxpool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfAvgPool1DOp : OneFlow_BaseOp<"tf_avg_pool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfAvgPool1DOp : OneFlow_TFPoolBaseOp<"tf_avg_pool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfAvgPool1DGradOp : OneFlow_BaseOp<"tf_avg_pool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfAvgPool1DGradOp : OneFlow_TFPoolGradBaseOp<"tf_avg_pool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfAvgPool2DOp : OneFlow_BaseOp<"tf_avg_pool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfAvgPool2DOp : OneFlow_TFPoolBaseOp<"tf_avg_pool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfAvgPool2DGradOp : OneFlow_BaseOp<"tf_avg_pool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfAvgPool2DGradOp : OneFlow_TFPoolGradBaseOp<"tf_avg_pool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfAvgPool3DOp : OneFlow_BaseOp<"tf_avg_pool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfAvgPool3DOp : OneFlow_TFPoolBaseOp<"tf_avg_pool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfAvgPool3DGradOp : OneFlow_BaseOp<"tf_avg_pool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfAvgPool3DGradOp : OneFlow_TFPoolGradBaseOp<"tf_avg_pool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfMaxPool1DOp : OneFlow_BaseOp<"tf_max_pool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfMaxPool1DOp : OneFlow_TFPoolBaseOp<"tf_max_pool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfMaxPool1DGradOp : OneFlow_BaseOp<"tf_max_pool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfMaxPool1DGradOp : OneFlow_TFPoolGradBaseOp<"tf_max_pool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfMaxPool2DOp : OneFlow_BaseOp<"tf_max_pool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfMaxPool2DOp : OneFlow_TFPoolBaseOp<"tf_max_pool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfMaxPool2DGradOp : OneFlow_BaseOp<"tf_max_pool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfMaxPool2DGradOp : OneFlow_TFPoolGradBaseOp<"tf_max_pool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfMaxPool3DOp : OneFlow_BaseOp<"tf_max_pool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x
-  );
-  let output = (outs
-    AnyType:$y
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfMaxPool3DOp : OneFlow_TFPoolBaseOp<"tf_max_pool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_TfMaxPool3DGradOp : OneFlow_BaseOp<"tf_max_pool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dy
-  );
-  let output = (outs
-    AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
-  );
-}
+def OneFlow_TfMaxPool3DGradOp : OneFlow_TFPoolGradBaseOp<"tf_max_pool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
 #endif // GET_ONEFLOW_POOL_OP_DEFINITIONS
 
@@ -4703,7 +4499,7 @@ def OneFlow_MovingAverageMinMaxObserverOp : OneFlow_BaseOp<"moving_average_min_m
     DefaultValuedAttr<SI64Attr, "0">:$stop_update_after_iters,
     DefaultValuedAttr<SI32Attr, "8">:$quantization_bit,
     DefaultValuedAttr<StrAttr, "\"symmetric\"">:$quantization_scheme,
-    DefaultValuedAttr<F32Attr, "0.950000">:$momentum
+    DefaultValuedAttr<F32Attr, "0.95">:$momentum
   );
 }
 
@@ -4996,9 +4792,9 @@ def OneFlow_ClipByScalarOp : OneFlow_BaseOp<"clip_by_scalar", [NoSideEffect, Dec
     AnyType:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "0.000000">:$floating_min,
+    DefaultValuedAttr<F64Attr, "0.">:$floating_min,
     DefaultValuedAttr<SI64Attr, "0">:$integral_min,
-    DefaultValuedAttr<F64Attr, "0.000000">:$floating_max,
+    DefaultValuedAttr<F64Attr, "0.">:$floating_max,
     DefaultValuedAttr<SI64Attr, "0">:$integral_max
   );
 }
@@ -5012,9 +4808,9 @@ def OneFlow_ClipByScalarGradOp : OneFlow_BaseOp<"clip_by_scalar_grad", [NoSideEf
     AnyType:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "0.000000">:$floating_min,
+    DefaultValuedAttr<F64Attr, "0.">:$floating_min,
     DefaultValuedAttr<SI64Attr, "0">:$integral_min,
-    DefaultValuedAttr<F64Attr, "0.000000">:$floating_max,
+    DefaultValuedAttr<F64Attr, "0.">:$floating_max,
     DefaultValuedAttr<SI64Attr, "0">:$integral_max
   );
 }
@@ -5027,7 +4823,7 @@ def OneFlow_ClipByScalarMaxOp : OneFlow_BaseOp<"clip_by_scalar_max", [NoSideEffe
     AnyType:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "0.000000">:$floating_max,
+    DefaultValuedAttr<F64Attr, "0.">:$floating_max,
     DefaultValuedAttr<SI64Attr, "0">:$integral_max
   );
 }
@@ -5041,7 +4837,7 @@ def OneFlow_ClipByScalarMaxGradOp : OneFlow_BaseOp<"clip_by_scalar_max_grad", [N
     AnyType:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "0.000000">:$floating_max,
+    DefaultValuedAttr<F64Attr, "0.">:$floating_max,
     DefaultValuedAttr<SI64Attr, "0">:$integral_max
   );
 }
@@ -5054,7 +4850,7 @@ def OneFlow_ClipByScalarMinOp : OneFlow_BaseOp<"clip_by_scalar_min", [NoSideEffe
     AnyType:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "0.000000">:$floating_min,
+    DefaultValuedAttr<F64Attr, "0.">:$floating_min,
     DefaultValuedAttr<SI64Attr, "0">:$integral_min
   );
 }
@@ -5068,7 +4864,7 @@ def OneFlow_ClipByScalarMinGradOp : OneFlow_BaseOp<"clip_by_scalar_min_grad", [N
     AnyType:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "0.000000">:$floating_min,
+    DefaultValuedAttr<F64Attr, "0.">:$floating_min,
     DefaultValuedAttr<SI64Attr, "0">:$integral_min
   );
 }
@@ -5084,7 +4880,7 @@ def OneFlow_ScalarAddOp : OneFlow_BaseOp<"scalar_add", [NoSideEffect, DeclareOpI
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
 }
 
@@ -5119,7 +4915,7 @@ def OneFlow_ScalarFloordivOp : OneFlow_BaseOp<"scalar_floordiv", [NoSideEffect, 
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
 }
 
@@ -5134,7 +4930,7 @@ def OneFlow_ScalarFmodOp : OneFlow_BaseOp<"scalar_fmod", [NoSideEffect, DeclareO
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
 }
 
@@ -5149,7 +4945,7 @@ def OneFlow_ScalarLogicalAndOp : OneFlow_BaseOp<"scalar_logical_and", [NoSideEff
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
 }
 
@@ -5164,7 +4960,7 @@ def OneFlow_ScalarLogicalEqualOp : OneFlow_BaseOp<"scalar_logical_equal", [NoSid
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
 }
 
@@ -5179,7 +4975,7 @@ def OneFlow_ScalarLogicalGreaterOp : OneFlow_BaseOp<"scalar_logical_greater", [N
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
 }
 
@@ -5194,7 +4990,7 @@ def OneFlow_ScalarLogicalGreaterEqualOp : OneFlow_BaseOp<"scalar_logical_greater
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
 }
 
@@ -5209,7 +5005,7 @@ def OneFlow_ScalarLogicalLessOp : OneFlow_BaseOp<"scalar_logical_less", [NoSideE
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
 }
 
@@ -5224,7 +5020,7 @@ def OneFlow_ScalarLogicalLessEqualOp : OneFlow_BaseOp<"scalar_logical_less_equal
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
 }
 
@@ -5239,7 +5035,7 @@ def OneFlow_ScalarLogicalNotEqualOp : OneFlow_BaseOp<"scalar_logical_not_equal",
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
 }
 
@@ -5254,7 +5050,7 @@ def OneFlow_ScalarLogicalOrOp : OneFlow_BaseOp<"scalar_logical_or", [NoSideEffec
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
 }
 
@@ -5269,7 +5065,7 @@ def OneFlow_ScalarLogicalXorOp : OneFlow_BaseOp<"scalar_logical_xor", [NoSideEff
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
 }
 
@@ -5284,7 +5080,7 @@ def OneFlow_ScalarMulOp : OneFlow_BaseOp<"scalar_mul", [NoSideEffect, DeclareOpI
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
 }
 
@@ -5309,7 +5105,7 @@ def OneFlow_ScalarPowOp : OneFlow_BaseOp<"scalar_pow", [NoSideEffect, DeclareOpI
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
 }
 
@@ -5325,7 +5121,7 @@ def OneFlow_ScalarPowGradOp : OneFlow_BaseOp<"scalar_pow_grad", [NoSideEffect, D
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.000000">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
 }
 
@@ -5934,8 +5730,8 @@ def OneFlow_HardtanhOp : OneFlow_BaseOp<"hardtanh", [NoSideEffect, DeclareOpInte
     AnyType:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "0.000000">:$min_val,
-    DefaultValuedAttr<F64Attr, "0.000000">:$max_val
+    DefaultValuedAttr<F64Attr, "0.">:$min_val,
+    DefaultValuedAttr<F64Attr, "0.">:$max_val
   );
 }
 
@@ -5948,8 +5744,8 @@ def OneFlow_HardtanhGradOp : OneFlow_BaseOp<"hardtanh_grad", [NoSideEffect, Decl
     AnyType:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "0.000000">:$min_val,
-    DefaultValuedAttr<F64Attr, "0.000000">:$max_val
+    DefaultValuedAttr<F64Attr, "0.">:$min_val,
+    DefaultValuedAttr<F64Attr, "0.">:$max_val
   );
 }
 
@@ -6127,7 +5923,7 @@ def OneFlow_CeluOp : OneFlow_BaseOp<"celu", [NoSideEffect, DeclareOpInterfaceMet
     AnyType:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "0.000000">:$alpha
+    DefaultValuedAttr<F64Attr, "0.">:$alpha
   );
 }
 
@@ -6173,7 +5969,7 @@ def OneFlow_EluOp : OneFlow_BaseOp<"elu", [NoSideEffect, DeclareOpInterfaceMetho
     AnyType:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "0.000000">:$alpha
+    DefaultValuedAttr<F64Attr, "0.">:$alpha
   );
 }
 
@@ -6290,7 +6086,7 @@ def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", [NoSideEffect, DeclareOpI
     AnyType:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$alpha
+    DefaultValuedAttr<F32Attr, "0.">:$alpha
   );
 }
 
@@ -6335,9 +6131,9 @@ def OneFlow_OneHotOp : OneFlow_BaseOp<"one_hot", [NoSideEffect, DeclareOpInterfa
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$depth,
-    DefaultValuedAttr<F64Attr, "0.000000">:$floating_on_value,
+    DefaultValuedAttr<F64Attr, "0.">:$floating_on_value,
     DefaultValuedAttr<SI64Attr, "0">:$integer_on_value,
-    DefaultValuedAttr<F64Attr, "0.000000">:$floating_off_value,
+    DefaultValuedAttr<F64Attr, "0.">:$floating_off_value,
     DefaultValuedAttr<SI64Attr, "0">:$integer_off_value,
     StrAttr:$dtype
   );
@@ -6363,7 +6159,7 @@ def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", [NoSideEffect,
     AnyType:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$rate,
+    DefaultValuedAttr<F32Attr, "0.">:$rate,
     DefaultValuedAttr<SI64Attr, "0">:$seed
   );
 }
@@ -6483,7 +6279,7 @@ def OneFlow_TrilOp : OneFlow_BaseOp<"tril", [NoSideEffect, DeclareOpInterfaceMet
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$diagonal,
-    DefaultValuedAttr<F64Attr, "0.000000">:$floating_fill_value,
+    DefaultValuedAttr<F64Attr, "0.">:$floating_fill_value,
     DefaultValuedAttr<SI64Attr, "0">:$integer_fill_value,
     DefaultValuedAttr<BoolAttr, "false">:$is_floating_fill_value
   );
@@ -6568,8 +6364,8 @@ def OneFlow_UpsampleOp : OneFlow_BaseOp<"upsample", [NoSideEffect, DeclareOpInte
     AnyType:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
     StrAttr:$data_format,
     StrAttr:$interpolation
@@ -6584,8 +6380,8 @@ def OneFlow_UpsampleBicubic2DOp : OneFlow_BaseOp<"upsample_bicubic_2d", [NoSideE
     AnyType:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
     StrAttr:$data_format
   );
@@ -6600,8 +6396,8 @@ def OneFlow_UpsampleBicubic2DGradOp : OneFlow_BaseOp<"upsample_bicubic_2d_grad",
     AnyType:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
     StrAttr:$data_format
   );
@@ -6615,8 +6411,8 @@ def OneFlow_UpsampleBilinear2DOp : OneFlow_BaseOp<"upsample_bilinear_2d", [NoSid
     AnyType:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
     StrAttr:$data_format
   );
@@ -6631,8 +6427,8 @@ def OneFlow_UpsampleBilinear2DGradOp : OneFlow_BaseOp<"upsample_bilinear_2d_grad
     AnyType:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
     StrAttr:$data_format
   );
@@ -6647,8 +6443,8 @@ def OneFlow_UpsampleGradOp : OneFlow_BaseOp<"upsample_grad", [NoSideEffect, Decl
     AnyType:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
     StrAttr:$data_format,
     StrAttr:$interpolation
@@ -6663,7 +6459,7 @@ def OneFlow_UpsampleLinear1DOp : OneFlow_BaseOp<"upsample_linear_1d", [NoSideEff
     AnyType:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$scale_factor,
+    DefaultValuedAttr<F32Attr, "0.">:$scale_factor,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
     StrAttr:$data_format
   );
@@ -6678,7 +6474,7 @@ def OneFlow_UpsampleLinear1DGradOp : OneFlow_BaseOp<"upsample_linear_1d_grad", [
     AnyType:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$scale_factor,
+    DefaultValuedAttr<F32Attr, "0.">:$scale_factor,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
     StrAttr:$data_format
   );
@@ -6692,7 +6488,7 @@ def OneFlow_UpsampleNearest1DOp : OneFlow_BaseOp<"upsample_nearest_1d", [NoSideE
     AnyType:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$scale_factor,
+    DefaultValuedAttr<F32Attr, "0.">:$scale_factor,
     StrAttr:$data_format
   );
 }
@@ -6706,7 +6502,7 @@ def OneFlow_UpsampleNearest1DGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad",
     AnyType:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$scale_factor,
+    DefaultValuedAttr<F32Attr, "0.">:$scale_factor,
     StrAttr:$data_format
   );
 }
@@ -6719,8 +6515,8 @@ def OneFlow_UpsampleNearest2DOp : OneFlow_BaseOp<"upsample_nearest_2d", [NoSideE
     AnyType:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
     StrAttr:$data_format
   );
 }
@@ -6734,8 +6530,8 @@ def OneFlow_UpsampleNearest2DGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad",
     AnyType:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
     StrAttr:$data_format
   );
 }
@@ -6748,9 +6544,9 @@ def OneFlow_UpsampleNearest3DOp : OneFlow_BaseOp<"upsample_nearest_3d", [NoSideE
     AnyType:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$depth_scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$depth_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
     StrAttr:$data_format
   );
 }
@@ -6764,9 +6560,9 @@ def OneFlow_UpsampleNearest3DGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad",
     AnyType:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$depth_scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$depth_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
     StrAttr:$data_format
   );
 }
@@ -6779,9 +6575,9 @@ def OneFlow_UpsampleTrilinear3DOp : OneFlow_BaseOp<"upsample_trilinear_3d", [NoS
     AnyType:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$depth_scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$depth_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
     StrAttr:$data_format
   );
@@ -6796,9 +6592,9 @@ def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_gr
     AnyType:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.000000">:$depth_scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.000000">:$width_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$depth_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
     StrAttr:$data_format
   );
