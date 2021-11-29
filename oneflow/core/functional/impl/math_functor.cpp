@@ -547,7 +547,7 @@ class ConsistentEyeFunctor {
     ctx->cols = JUST(m.value_or(n).As<int64_t>());
     ctx->dtype = dtype ? JUST(dtype)->data_type() : DataType::kFloat;
     ctx->parallel_desc = placement;
-    ctx->sbp = JUST(GetNdSbp(sbp_tuple));
+    ctx->nd_sbp = JUST(GetNdSbp(sbp_tuple));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }
 
@@ -639,7 +639,7 @@ class ConsistentArangeFunctor {
       ctx->float_delta = JUST(delta.As<double>());
     }
     ctx->parallel_desc = placement;
-    ctx->sbp = JUST(GetNdSbp(sbp_tuple));
+    ctx->nd_sbp = JUST(GetNdSbp(sbp_tuple));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }
 
@@ -1119,7 +1119,7 @@ class ClampGradFunctor {
                            const Optional<Scalar>& max) const {
     CHECK_OR_RETURN(min.has_value() || max.has_value())
         << "Requires one of argument `min` and `max` at least in clip_grad.";
- 
+
     bool is_floating = IsFloatingDataType(x->dtype()->data_type());
     if (!is_floating && !IsIntegralDataType(x->dtype()->data_type())) {
       return Error::RuntimeError() << "Only support floating or integral data type.";
@@ -1242,7 +1242,7 @@ class MaximumFunctor {
   std::shared_ptr<OpExpr> broadcast_maximum_op_;
 };
 
-template <typename T>
+template<typename T>
 class ScalarLogicalBaseFunctor {
  public:
   explicit ScalarLogicalBaseFunctor() {
@@ -1274,7 +1274,7 @@ class ScalarLogicalBaseFunctor {
 
 class ScalarLogicalEqualFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalEqualFunctor> {
  public:
-  using ContextT = ScalarLogicalEqualOpInterpCtx;;
+  using ContextT = ScalarLogicalEqualOpInterpCtx;
   static constexpr const char* op_type_name_ = "scalar_logical_equal";
 };
 
@@ -1288,7 +1288,7 @@ class ScalarLogicalEqual2Functor {
 
 class ScalarLogicalNotEqualFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalNotEqualFunctor> {
  public:
-  using ContextT = ScalarLogicalNotEqualOpInterpCtx;;
+  using ContextT = ScalarLogicalNotEqualOpInterpCtx;
   static constexpr const char* op_type_name_ = "scalar_logical_not_equal";
 };
 
@@ -1302,7 +1302,7 @@ class ScalarLogicalNotEqual2Functor {
 
 class ScalarLogicalGreaterFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalGreaterFunctor> {
  public:
-  using ContextT = ScalarLogicalGreaterOpInterpCtx;;
+  using ContextT = ScalarLogicalGreaterOpInterpCtx;
   static constexpr const char* op_type_name_ = "scalar_logical_greater";
 };
 
@@ -1314,9 +1314,10 @@ class ScalarLogicalGreater2Functor {
   }
 };
 
-class ScalarLogicalGreaterEqualFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalGreaterEqualFunctor> {
+class ScalarLogicalGreaterEqualFunctor
+    : public ScalarLogicalBaseFunctor<ScalarLogicalGreaterEqualFunctor> {
  public:
-  using ContextT = ScalarLogicalGreaterEqualOpInterpCtx;;
+  using ContextT = ScalarLogicalGreaterEqualOpInterpCtx;
   static constexpr const char* op_type_name_ = "scalar_logical_greater_equal";
 };
 
@@ -1330,7 +1331,7 @@ class ScalarLogicalGreaterEqual2Functor {
 
 class ScalarLogicalLessFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalLessFunctor> {
  public:
-  using ContextT = ScalarLogicalLessOpInterpCtx;;
+  using ContextT = ScalarLogicalLessOpInterpCtx;
   static constexpr const char* op_type_name_ = "scalar_logical_less";
 };
 
@@ -1342,9 +1343,10 @@ class ScalarLogicalLess2Functor {
   }
 };
 
-class ScalarLogicalLessEqualFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalLessEqualFunctor> {
+class ScalarLogicalLessEqualFunctor
+    : public ScalarLogicalBaseFunctor<ScalarLogicalLessEqualFunctor> {
  public:
-  using ContextT = ScalarLogicalLessEqualOpInterpCtx;;
+  using ContextT = ScalarLogicalLessEqualOpInterpCtx;
   static constexpr const char* op_type_name_ = "scalar_logical_less_equal";
 };
 
@@ -1358,7 +1360,7 @@ class ScalarLogicalLessEqual2Functor {
 
 class ScalarLogicalAndFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalAndFunctor> {
  public:
-  using ContextT = ScalarLogicalAndOpInterpCtx;;
+  using ContextT = ScalarLogicalAndOpInterpCtx;
   static constexpr const char* op_type_name_ = "scalar_logical_and";
 };
 
@@ -1372,7 +1374,7 @@ class ScalarLogicalAnd2Functor {
 
 class ScalarLogicalOrFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalOrFunctor> {
  public:
-  using ContextT = ScalarLogicalOrOpInterpCtx;;
+  using ContextT = ScalarLogicalOrOpInterpCtx;
   static constexpr const char* op_type_name_ = "scalar_logical_or";
 };
 
@@ -1386,7 +1388,7 @@ class ScalarLogicalOr2Functor {
 
 class ScalarLogicalXorFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalXorFunctor> {
  public:
-  using ContextT = ScalarLogicalXorOpInterpCtx;;
+  using ContextT = ScalarLogicalXorOpInterpCtx;
   static constexpr const char* op_type_name_ = "scalar_logical_xor";
 };
 

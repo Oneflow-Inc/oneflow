@@ -53,7 +53,7 @@ class BiasAddFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-template <typename T>
+template<typename T>
 class ConvBaseFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -117,7 +117,7 @@ class Conv3dFunctor : public ConvBaseFunctor<Conv3dFunctor> {
   }
 };
 
-template <typename T>
+template<typename T>
 class DeConvBaseFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -205,12 +205,10 @@ class MatMulFunctor {
       auto ctx = std::make_shared<BroadcastMatmulOpInterpCtx>();
       ctx->transpose_a = transpose_a;
       ctx->transpose_b = transpose_b;
-      ctx->alpha = alpha;   
+      ctx->alpha = alpha;
       return OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {a, b}, ctx);
     }
-    if (a_shape->NumAxes() > 2) {
-      return BatchMatMul(a, b, transpose_a, transpose_b, alpha);
-    }
+    if (a_shape->NumAxes() > 2) { return BatchMatMul(a, b, transpose_a, transpose_b, alpha); }
     auto ctx = std::make_shared<MatmulOpInterpCtx>();
     ctx->transpose_a = transpose_a;
     ctx->transpose_b = transpose_b;
@@ -1262,7 +1260,8 @@ class NormalizationAddReluFunctor {
       const auto& normalize_result = JUST(OpInterpUtil::Dispatch<one::Tensor>(
           *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta}, ctx));
       if (addend) {
-        return Relu(JUST(Add(normalize_result, JUST(addend), /*inplace=*/false)), /*inplace=*/false);
+        return Relu(JUST(Add(normalize_result, JUST(addend), /*inplace=*/false)),
+                    /*inplace=*/false);
       } else {
         return Relu(normalize_result, /*inplace=*/false);
       }
@@ -1869,8 +1868,8 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
     mask_ctx->rate = rate;
     mask_ctx->seed = gen->current_seed();
     mask_ctx->state = random_mask_like_state;
-    const auto& dropout_mask = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *random_mask_like_op_, {x}, mask_ctx));
+    const auto& dropout_mask =
+        JUST(OpInterpUtil::Dispatch<Tensor>(*random_mask_like_op_, {x}, mask_ctx));
 
     float dropout_scale = 1.0;
     if (rate != 1.0) { dropout_scale = 1.0 / (1.0 - rate); }

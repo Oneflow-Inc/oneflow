@@ -49,7 +49,7 @@ class OpInterpCtx {
  public:
   Optional<Symbol<Device>> device;               // for local op
   Optional<Symbol<ParallelDesc>> parallel_desc;  // for consistent op
-  Optional<Symbol<cfg::NdSbp>> sbp;              // for consistent op
+  Optional<Symbol<cfg::NdSbp>> nd_sbp;           // for consistent op
   Optional<user_op::OpKernelState> state;
 };
 
