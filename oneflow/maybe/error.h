@@ -71,7 +71,15 @@ struct StackedErrorTraits {
   using ErrorType = typename T::ErrorType;
   using StackEntryType = typename T::StackEntryType;
 
-  static const ErrorType& Error(const T& se) { return se.Error(); }
+  template<
+      typename U,
+      std::enable_if_t<
+          std::is_same<T, RemoveCVRef<U>>::value
+              && std::is_same<ErrorType, RemoveCVRef<decltype(std::declval<U>().Error())>>::value,
+          int> = 0>
+  static decltype(auto) Error(U&& se) {
+    return se.Error();
+  }
 
   static std::size_t StackSize(const T& se) { return se.StackSize(); }
 
@@ -107,7 +115,10 @@ struct StackedErrorTraits<std::unique_ptr<T>> {
   using ErrorType = typename PointedTraits::ErrorType;
   using StackEntryType = typename PointedTraits::StackEntryType;
 
-  static const ErrorType& Error(const ValueType& se) { return PointedTraits::Error(*se); }
+  template<typename U, std::enable_if_t<std::is_same<ValueType, RemoveCVRef<U>>::value, int> = 0>
+  static decltype(auto) Error(U&& se) {
+    return PointedTraits::Error(*se);
+  }
 
   static std::size_t StackSize(const ValueType& se) { return PointedTraits::StackSize(*se); }
 
