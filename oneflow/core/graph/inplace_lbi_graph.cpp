@@ -454,7 +454,7 @@ const InplaceLbiEdge* InplaceLbiGraph::FindFirstInterOpRefConflictMutRefEdge(
       size_t in_edges_size_check = 0;
       ForEachInNode(node, [&](const InplaceLbiNode* in_node) {
         node2mut_ref_ancestors[node] = node2mut_ref_ancestors[in_node];
-        if (in_node->IsMutRef(IsValidEdge)) { node2mut_ref_ancestors[node].push_back(in_node); }
+        if (in_node->IsMutRef(IsValidEdge)) { node2mut_ref_ancestors[node].emplace_back(in_node); }
         CHECK_EQ(++in_edges_size_check, 1);
       });
     });
@@ -468,7 +468,7 @@ const InplaceLbiEdge* InplaceLbiGraph::FindFirstInterOpRefConflictMutRefEdge(
       }
     }
     for (const InplaceLbiNode* node : mut_ref_nodes) {
-      if (mut_ref_node2descendents_size[node] == 0) { last_mut_ref_nodes.push_back(node); }
+      if (mut_ref_node2descendents_size[node] == 0) { last_mut_ref_nodes.emplace_back(node); }
     }
   }
   if (last_mut_ref_nodes.size() <= 1) { return nullptr; }

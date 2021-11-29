@@ -124,7 +124,7 @@ class FoldSubgraphBuilder {
 
 FoldSubgraphBuilder::FoldSubgraphBuilder(const XrtGraph& graph, Job* job) : graph_(graph) {
   for (const XrtNode* node : graph_.Nodes()) {
-    if (node->type() == _XrtLaunchOpType) { launch_nodes_.push_back(node); }
+    if (node->type() == _XrtLaunchOpType) { launch_nodes_.emplace_back(node); }
   }
 
   folded_nodes_.resize(launch_nodes_.size());
@@ -132,7 +132,7 @@ FoldSubgraphBuilder::FoldSubgraphBuilder(const XrtGraph& graph, Job* job) : grap
     XrtGraph* sub_graph = launch_nodes_[i]->sub_graph();
     CHECK_NOTNULL(sub_graph);
     for (const XrtNode* sub_node : sub_graph->Nodes()) {
-      if (!sub_node->IsArgumentNode()) { folded_nodes_[i].push_back(sub_node); }
+      if (!sub_node->IsArgumentNode()) { folded_nodes_[i].emplace_back(sub_node); }
     }
   }
   builder_ = std::make_shared<JobBuilder>(job);
@@ -234,6 +234,7 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
       switch (engine) {
         case XrtEngine::XLA: return "XLA";
         case XrtEngine::TENSORRT: return "TENSORRT";
+        case XrtEngine::OPENVINO: return "OPENVINO";
         default: LOG(FATAL) << "Not supported engine " << engine; return "";
       }
     }());

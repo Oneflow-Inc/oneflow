@@ -35,14 +35,14 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
     sorted_lbi_vec_.reserve(lbi_pairs.size());
     for (int64_t i = 0; i < lbi_pairs.size(); ++i) {
       const LbiBlobDescPair& pair = lbi_pairs.at(i);
-      sorted_blob_desc_vec_.push_back(std::make_unique<const BlobDesc>(pair.blob_desc()));
-      sorted_lbi_vec_.push_back(pair.lbi());
+      sorted_blob_desc_vec_.emplace_back(std::make_unique<const BlobDesc>(pair.blob_desc()));
+      sorted_lbi_vec_.emplace_back(pair.lbi());
       lbi2blob_desc_ordinal_.emplace(pair.lbi(), i);
     }
     CHECK(data_regst_desc.has_time_shape());
     data_regst_time_shape_.reset(new Shape(data_regst_desc.time_shape()));
   } else {
-    sorted_blob_desc_vec_.push_back(std::make_unique<const BlobDesc>(BlobDesc(DataType::kChar)));
+    sorted_blob_desc_vec_.emplace_back(std::make_unique<const BlobDesc>(BlobDesc(DataType::kChar)));
   }
 
   if ((proto.mem_case().has_device_cuda_mem())

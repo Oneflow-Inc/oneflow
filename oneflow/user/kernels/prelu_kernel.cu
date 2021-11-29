@@ -87,13 +87,13 @@ class GpuPReluKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_PRELU_KERNEL(dtype)                                              \
+#define REGISTER_CUDA_PRELU_KERNEL(dtype)                                             \
   REGISTER_USER_KERNEL("prelu").SetCreateFn<GpuPReluKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kGPU)                                  \
+      (user_op::HobDeviceType() == DeviceType::kCUDA)                                 \
       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_PRELU_KERNEL(float)
-REGISTER_GPU_PRELU_KERNEL(double)
+REGISTER_CUDA_PRELU_KERNEL(float)
+REGISTER_CUDA_PRELU_KERNEL(double)
 
 template<typename T>
 class GpuPReluGradKernel final : public user_op::OpKernel {
@@ -110,8 +110,14 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     user_op::Tensor* alpha_diff = ctx->Tensor4ArgNameAndIndex("alpha_diff", 0);
 
-    Memset<DeviceType::kGPU>(ctx->stream(), alpha_diff->mut_dptr<T>(), 0,
-                             alpha_diff->shape().elem_cnt() * sizeof(T));
+    const int32_t elem_cnt = x->shape().elem_cnt();
+    const int32_t alpha_size = alpha->shape().elem_cnt();
+    const int batch = x->shape().At(0);
+    const int channels = x->shape().At(1);
+    const int32_t inner_size = elem_cnt / batch / channels;
+
+    Memset<DeviceType::kCUDA>(ctx->stream(), alpha_diff->mut_dptr<T>(), 0,
+                              alpha_diff->shape().elem_cnt() * sizeof(T));
 
     const int32_t elem_cnt = x->shape().elem_cnt();
     const int32_t alpha_size = alpha->shape().elem_cnt();
@@ -134,13 +140,13 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_PRELU_GRAD_KERNEL(dtype)                         \
-  REGISTER_USER_KERNEL("prelu_grad")                                  \
-      .SetCreateFn<GpuPReluGradKernel<dtype>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_CUDA_PRELU_GRAD_KERNEL(dtype)                         \
+  REGISTER_USER_KERNEL("prelu_grad")                                   \
+      .SetCreateFn<GpuPReluGradKernel<dtype>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_PRELU_GRAD_KERNEL(float)
-REGISTER_GPU_PRELU_GRAD_KERNEL(double)
+REGISTER_CUDA_PRELU_GRAD_KERNEL(float)
+REGISTER_CUDA_PRELU_GRAD_KERNEL(double)
 
 }  // namespace oneflow

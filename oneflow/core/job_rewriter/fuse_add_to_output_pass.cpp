@@ -133,7 +133,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
         }
       }
     }
-    delete_ops.push_back(op_conf);
+    delete_ops.emplace_back(op_conf);
   });
   job_builder->DelOps(delete_ops);
   for (const auto& pair : op_name2op_conf) { job_builder->MutOpsOnlyOnce({pair.second}); }
