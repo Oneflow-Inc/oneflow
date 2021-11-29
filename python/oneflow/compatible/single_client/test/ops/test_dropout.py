@@ -69,9 +69,7 @@ def of_run(device_type, x_shape, data_type, rate):
     of_out = DropoutJob().get()
     of_out = test_global_storage.Get("out")
     out_diff = test_global_storage.Get("out_diff")
-    assert np.allclose(
-        [1 - np.count_nonzero(of_out) / of_out.size], [rate], atol=rate / 5
-    )
+    assert np.allclose([1 - np.count_nonzero(of_out) / of_out.size], [rate], atol=1e-4)
     x = test_global_storage.Get("x")
     x_diff = test_global_storage.Get("x_diff")
     out_scale = of_out[np.where(of_out != 0)] / x[np.where(of_out != 0)]
