@@ -152,40 +152,40 @@ using namespace impl;
   m.add_functor<class_name##GradFunctor>(std::string("") + functor_name + "Grad");
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
-  ADD_UNARY_FUNCTOR("Abs");
-  ADD_UNARY_FUNCTOR("Acos");
-  ADD_UNARY_FUNCTOR("Acosh");
-  ADD_UNARY_FUNCTOR("Asin");
-  ADD_UNARY_FUNCTOR("Asinh");
-  ADD_UNARY_FUNCTOR("Atan");
-  ADD_UNARY_FUNCTOR("Atanh");
-  ADD_UNARY_FUNCTOR("Ceil");
-  ADD_UNARY_FUNCTOR("Cos"); //
-  ADD_UNARY_FUNCTOR("Cosh"); //
-  ADD_UNARY_FUNCTOR("Erf");
-  ADD_UNARY_FUNCTOR("Erfc");
-  ADD_UNARY_FUNCTOR("Exp");
-  ADD_UNARY_FUNCTOR("Expm1");
-  ADD_UNARY_FUNCTOR("Floor");
-  ADD_UNARY_FUNCTOR("Lgamma");
-  ADD_UNARY_FUNCTOR("Log");
-  ADD_UNARY_FUNCTOR("Log1p");
-  ADD_UNARY_FUNCTOR("LogSigmoid");
-  ADD_UNARY_FUNCTOR("Negative");
-  ADD_UNARY_FUNCTOR("Reciprocal");
-  ADD_UNARY_FUNCTOR("ReciprocalNoNan");
-  ADD_UNARY_FUNCTOR("Rint");
-  ADD_UNARY_FUNCTOR("Round");
-  ADD_UNARY_FUNCTOR("Rsqrt");
-  ADD_UNARY_FUNCTOR("Sigmoid");
-  ADD_UNARY_FUNCTOR("Sign");
-  ADD_UNARY_FUNCTOR("Sin");
-  ADD_UNARY_FUNCTOR("Sinh");
-  ADD_UNARY_FUNCTOR("Softplus");
-  ADD_UNARY_FUNCTOR("Sqrt");
-  ADD_UNARY_FUNCTOR("Square");
-  ADD_UNARY_FUNCTOR("Tan");
-  ADD_UNARY_FUNCTOR("Tanh");
+  ADD_UNARY_FUNCTOR(Abs, "Abs");
+  ADD_UNARY_FUNCTOR(Acos, "Acos");
+  ADD_UNARY_FUNCTOR(Acosh, "Acosh");
+  ADD_UNARY_FUNCTOR(Asin, "Asin");
+  ADD_UNARY_FUNCTOR(Asinh, "Asinh");
+  ADD_UNARY_FUNCTOR(Atan, "Atan");
+  ADD_UNARY_FUNCTOR(Atanh, "Atanh");
+  ADD_UNARY_FUNCTOR(Ceil, "Ceil");
+  ADD_UNARY_FUNCTOR(Cos, "Cos");
+  ADD_UNARY_FUNCTOR(Cosh, "Cosh");
+  ADD_UNARY_FUNCTOR(Erf, "Erf");
+  ADD_UNARY_FUNCTOR(Erfc, "Erfc");
+  ADD_UNARY_FUNCTOR(Exp, "Exp");
+  ADD_UNARY_FUNCTOR(Expm1, "Expm1");
+  ADD_UNARY_FUNCTOR(Floor, "Floor");
+  ADD_UNARY_FUNCTOR(Lgamma, "Lgamma");
+  ADD_UNARY_FUNCTOR(Log, "Log");
+  ADD_UNARY_FUNCTOR(Log1p, "Log1p");
+  ADD_UNARY_FUNCTOR(LogSigmoid, "LogSigmoid");
+  ADD_UNARY_FUNCTOR(Negative, "Negative");
+  ADD_UNARY_FUNCTOR(Reciprocal, "Reciprocal");
+  ADD_UNARY_FUNCTOR(ReciprocalNoNan, "ReciprocalNoNan");
+  ADD_UNARY_FUNCTOR(Rint, "Rint");
+  ADD_UNARY_FUNCTOR(Round, "Round");
+  ADD_UNARY_FUNCTOR(Rsqrt, "Rsqrt");
+  ADD_UNARY_FUNCTOR(Sigmoid, "Sigmoid");
+  ADD_UNARY_FUNCTOR(Sign, "Sign");
+  ADD_UNARY_FUNCTOR(Sin, "Sin");
+  ADD_UNARY_FUNCTOR(Sinh, "Sinh");
+  ADD_UNARY_FUNCTOR(Softplus, "Softplus");
+  ADD_UNARY_FUNCTOR(Sqrt, "Sqrt");
+  ADD_UNARY_FUNCTOR(Square, "Square");
+  ADD_UNARY_FUNCTOR(Tan, "Tan");
+  ADD_UNARY_FUNCTOR(Tanh, "Tanh");
   m.add_functor<LogicalNotFunctor>("LogicalNot");
   // inplace version of the functors above
   m.add_functor<impl::InplaceAbsFunctor>("Abs_");
@@ -222,6 +222,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::InplaceSquareFunctor>("Square_");
   m.add_functor<impl::InplaceTanFunctor>("Tan_");
   m.add_functor<impl::InplaceTanhFunctor>("Tanh_");
+
+  
 };
 
 #undef ADD_UNARY_FUNCTOR

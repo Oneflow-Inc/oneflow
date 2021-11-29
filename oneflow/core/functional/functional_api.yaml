@@ -434,6 +434,7 @@
   signature: "Tensor (Tensor x, Tensor dy) => TanhGrad"
   bind_python: True
 
+- name: "elu"
   signature: "Tensor (Tensor x, Double alpha) => Elu"
   bind_python: True
 
@@ -467,6 +468,8 @@
 
 - name: "sigmoid_"
   signature: "Tensor (Tensor x) => Sigmoid_"
+  bind_python: True
+
 - name: "sigmoid_grad"
   signature: "Tensor (Tensor x, Tensor dy) => SigmoidGrad"
   bind_python: True
@@ -1199,11 +1202,10 @@
 - name: "abs_"
   signature: "Tensor (Tensor x) => Abs_"
   bind_python: True
-=======
+
 - name: "abs_grad"
   signature: "Tensor (Tensor x, Tensor dy) => AbsGrad"
   bind_python: False
->>>>>>> 203ef5ec9be4d74a4db422f3f4ebc2fb92373fa1
 
 - name: "acos"
   signature: "Tensor (Tensor x) => Acos"
@@ -1330,47 +1332,64 @@
 
 - name: "floor_"
   signature: "Tensor (Tensor x) => Floor_"
+  bind_python: True
+
 - name: "floor_grad"
   signature: "Tensor (Tensor x, Tensor dy) => FloorGrad"
+  bind_python: False
 
 - name: "lgamma"
+  signature: "Tensor (Tensor x) => Lgamma"
   bind_python: True
 
 - name: "lgamma_"
   signature: "Tensor (Tensor x) => Lgamma_"
-- name: "lgamma_grad"
-  signature: "Tensor (Tensor x, Tensor dy) => LgammaGrad"
-
-- name: "log1p"
   bind_python: True
 
-<<<<<<< HEAD
-- name: "log1p_"
-  signature: "Tensor (Tensor x) => Log1p_"
+- name: "lgamma_grad"
+  signature: "Tensor (Tensor x, Tensor dy) => LgammaGrad"
+  bind_python: False
+
+- name: "log1p"
+  signature: "Tensor (Tensor x) => Log1p"
+  bind_python: True
+
 - name: "log1p_grad"
   signature: "Tensor (Tensor x, Tensor dy) => Log1pGrad"
+  bind_python: False
 
 - name: "logsigmoid"
+  signature: "Tensor (Tensor x) => LogSigmoid"
+  bind_python: True
 
 - name: "logsigmoid_"
   signature: "Tensor (Tensor x) => LogSigmoid_"
+  bind_python: True
+
 - name: "logsigmoid_grad"
   signature: "Tensor (Tensor x, Tensor dy) => LogSigmoidGrad"
+  bind_python: False
 
 - name: "rint"
+  signature: "Tensor (Tensor x) => Rint"
   bind_python: True
 
 - name: "rint_"
   signature: "Tensor (Tensor x) => Rint_"
+  bind_python: True
+
 - name: "rint_grad"
   signature: "Tensor (Tensor x, Tensor dy) => RintGrad"
+  bind_python: False
 
 - name: "round"
+  signature: "Tensor (Tensor x) => Round"
   bind_python: True
 
 - name: "round_"
   signature: "Tensor (Tensor x) => Round_"
   bind_python: True
+
 - name: "round_grad"
   signature: "Tensor (Tensor x, Tensor dy) => RoundGrad"
   bind_python: False
