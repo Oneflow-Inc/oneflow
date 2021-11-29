@@ -78,6 +78,20 @@ Maybe<void> SbpConstructor::DumpNdSbpSignatureForJob(const OpGraph& op_graph, Jo
       sbp_signature.ToProto(&(*job->mutable_job_parallel_view_conf()
                                    ->mutable_op_name2sbp_signature_conf())[node->op().op_name()]);
     }
+    // TODO: Specially update sbp conf by using polymorphism function
+    // Update sbp for variable op
+    if (node->op().op_conf().has_variable_conf()) {
+      for (auto& op : *job->mutable_net()->mutable_op()) {
+        if (op.name() == node->op().op_name()) {
+          op.mutable_variable_conf()->clear_nd_sbp();
+          const auto nd_sbp = sbp_node->FinalSbpSignature()->bn_in_op2nd_sbp()["out"];
+          for (int32_t dim = 0; dim < nd_sbp.sbp_parallel_size(); dim++) {
+            op.mutable_variable_conf()->mutable_nd_sbp()->Add(
+                SbpParallelToString(nd_sbp.sbp_parallel(dim)));
+          }
+        }
+      }
+    }
   });
   return Maybe<void>::Ok();
 }
@@ -253,27 +267,20 @@ Maybe<void> SbpConstructor::CheckSbpAgreement(const Job& job) {
     const std::string& op_name = op_node->op().op_name();
     const cfg::SbpSignature& auto_parallel_sbp =
         cfg::SbpSignature(job.job_parallel_view_conf().op_name2sbp_signature_conf().at(op_name));
-    const cfg::SbpSignature& new_sbp = cfg::SbpSignature(
-        new_job.job_parallel_view_conf().op_name2sbp_signature_conf().at(op_name));
+    const cfg::SbpSignature& new_sbp = op_node->sbp_signature();
     CHECK_EQ_OR_RETURN(auto_parallel_sbp.bn_in_op2sbp_parallel_size(),
                        new_sbp.bn_in_op2sbp_parallel_size());
     for (const auto& iter : auto_parallel_sbp.bn_in_op2sbp_parallel()) {
-      cfg::SbpParallel new_sbp_parallel = new_sbp.bn_in_op2sbp_parallel().at(iter.first);
-      const std::string& error_mgs = "Op: `" + op_name + "` changed sbp from "
-                                     + SbpParallelToString(iter.second) + "(AutoParallel) to "
-                                     + SbpParallelToString(new_sbp_parallel) + "(OpGraph).";
-      if (new_sbp_parallel.has_broadcast_parallel()) {
-        CHECK_OR_RETURN(iter.second.has_broadcast_parallel()) << error_mgs;
-      } else if (new_sbp_parallel.has_partial_sum_parallel()) {
-        CHECK_OR_RETURN(iter.second.has_partial_sum_parallel()) << error_mgs;
-      } else if (new_sbp_parallel.has_split_parallel()) {
-        CHECK_OR_RETURN(iter.second.has_split_parallel()) << error_mgs;
-        CHECK_EQ_OR_RETURN(new_sbp_parallel.split_parallel().axis(),
-                           iter.second.split_parallel().axis())
-            << error_mgs;
-      } else {
-        UNIMPLEMENTED_THEN_RETURN();
-      }
+      const cfg::SbpParallel& new_sbp_parallel = new_sbp.bn_in_op2sbp_parallel().at(iter.first);
+      const cfg::SbpParallel& auto_parallel_sbp = iter.second;
+      // According error message, we can find op_type in op_conf.proto with type_id and locate
+      // the error op type.
+      const std::string& error_mgs =
+          "Op: `" + op_name + "`(type_id: " + std::to_string(op_node->op().op_conf().op_type_case())
+          + ") changed sbp from " + SbpParallelToString(auto_parallel_sbp) + "(AutoParallel) to "
+          + SbpParallelToString(new_sbp_parallel) + "(OpGraph) with blob_name: `" + iter.first
+          + "`.";
+      CHECK_OR_RETURN(new_sbp_parallel == auto_parallel_sbp) << error_mgs;
     }
     return Maybe<void>::Ok();
   }));
@@ -352,6 +359,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
                 << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(obn)).shape().elem_cnt();
       std::cout << std::endl;
     }
+    std::cout << std::endl;
   }
 }
 

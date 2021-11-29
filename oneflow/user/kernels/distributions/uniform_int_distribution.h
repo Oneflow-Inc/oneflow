@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_DISTRIBUTIONS_UNIFORM_INT_DISTRIBUTION_H_
 #define ONEFLOW_USER_KERNELS_DISTRIBUTIONS_UNIFORM_INT_DISTRIBUTION_H_
 
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/framework/random_generator.h"
 #ifdef WITH_CUDA
 #include <curand.h>
@@ -35,7 +35,7 @@ class UniformIntDistribution<DeviceType::kCPU, T> final {
   UniformIntDistribution(int64_t low, int64_t high) : low_(low), high_(high) {}
   ~UniformIntDistribution() = default;
 
-  void operator()(DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, T* dptr,
                   const std::shared_ptr<one::Generator>& generator) const;
 
  private:
@@ -51,7 +51,7 @@ class UniformIntDistribution<DeviceType::kGPU, T> final {
   UniformIntDistribution(int64_t low, int64_t high) : low_(low), high_(high) {}
   ~UniformIntDistribution() = default;
 
-  void operator()(DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, T* dptr,
                   const std::shared_ptr<one::Generator>& generator) const;
 
  private:

@@ -547,7 +547,7 @@ Maybe<void> OpGraph::ForEachOpNode(const std::function<Maybe<void>(const OpNode&
 }
 
 // Print the graph with SBP in order
-void OpGraph::PrintSBPGraphDebugInfo() {
+void OpGraph::PrintSBPGraphDebugInfo() const {
   // test debug
   std::cout << "Get Into Print Op Graph" << std::endl;
   // Collect op_node
@@ -600,6 +600,7 @@ void OpGraph::PrintSBPGraphDebugInfo() {
                 << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(obn)).shape().elem_cnt();
       std::cout << std::endl;
     }
+    std::cout << std::endl;
   }
 }
 

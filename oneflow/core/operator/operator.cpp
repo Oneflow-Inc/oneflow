@@ -460,10 +460,15 @@ Maybe<void> Operator::GetSbpSignaturesIf(
     const ParallelDesc& parallel_desc, cfg::SbpSignatureList* sbp_sig_list) const {
   cfg::SbpSignatureList sbp_sig_candidates;
   JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, parallel_desc, &sbp_sig_candidates));
-  SbpSignatureBuilder()
-      .Broadcast(input_bns())
-      .Broadcast(output_bns())
-      .Build(sbp_sig_candidates.mutable_sbp_signature()->Add());
+  // Not supporting partial sbp for some operator
+  // TODO: Instead of adding judgement here, we should override GetSbpSignaturesIf for these kind of
+  // operators
+  if (op_conf().op_type_case() != /*output_op*/ 138) {
+    SbpSignatureBuilder()
+        .Broadcast(input_bns())
+        .Broadcast(output_bns())
+        .Build(sbp_sig_candidates.mutable_sbp_signature()->Add());
+  }
   // filter sbp signatures by logical shape
   FilterAndCheckValidSbpSignatureListByLogicalShape(sbp_sig_candidates, LogicalBlobDesc4Ibn,
                                                     parallel_desc, sbp_sig_list);
