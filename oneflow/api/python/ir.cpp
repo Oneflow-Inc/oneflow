@@ -615,17 +615,18 @@ void PrintGroupNames(std::map<std::string, std::map<K, V>>& groups) {
 }
 
 void PrintIncludes(std::map<std::string, std::map<K, V>>& groups) {
+  std::cout << "/*\n";
   for (auto it = groups.begin(); it != groups.end(); ++it) {
     auto group_name = it->first;
     if (group_name == "BASE") continue;
     if (group_name == "TEST") continue;
     std::transform(group_name.begin(), group_name.end(), group_name.begin(), ::tolower);
     group_name += "_ops";
-    std::cout << "// #define GET_OP_LIST\n";
-    std::cout << "// #include \"OneFlow/OneFlow." << group_name << ".cpp.inc\"\n";
-    if (std::next(it) != groups.end()) { std::cout << "// ,\n"; }
+    std::cout << "#define GET_OP_LIST\n";
+    std::cout << "#include \"OneFlow/OneFlow." << group_name << ".cpp.inc\"\n";
+    if (std::next(it) != groups.end()) { std::cout << ",\n"; }
   }
-  std::cout << "\n\n";
+  std::cout << "*/\n\n";
 }
 
 void GroupOpRegistryResults(const std::map<K, V>& results,
