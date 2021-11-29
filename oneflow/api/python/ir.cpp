@@ -218,8 +218,7 @@ bool IsIdempotentOp(const std::string& op_name) {
 }
 
 bool IsPoolOp(const std::string& op_name) {
-  return (op_name.find("avg") != std::string::npos == 0
-          || op_name.find("max") != std::string::npos == 0)
+  return (op_name.find("avg") != std::string::npos || op_name.find("max") != std::string::npos)
          && op_name.find("pool") != std::string::npos;
 }
 bool IsEagerOp(const std::string& op_name) { return (op_name.rfind("eager", 0) == 0); }
