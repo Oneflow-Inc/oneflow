@@ -539,7 +539,7 @@ class TransposeFunctor {
           << ndims << " ] but got " << ndims;
     }
     if (input->is_eager() && input->is_local()) {
-      return ToContiguous(JUST(view::Transpose(input, permute)));
+      return JUST(view::Transpose(input, permute));
     }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
