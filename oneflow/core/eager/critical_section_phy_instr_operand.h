@@ -132,7 +132,7 @@ class CriticalSectionEndPhyInstrOperand : public PhyInstrOperand {
 
   void ForEachMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
 
-  void ForEachMutMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
+  void ForEachMutMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const {}
 
  private:
   std::shared_ptr<EagerBlobObject> eager_blob_object_;

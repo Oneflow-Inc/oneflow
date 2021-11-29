@@ -279,7 +279,12 @@ class Instruction final : public intrusive::Base {
   void Init(InstructionMsg* instr_msg, Stream* stream,
             const std::shared_ptr<const ParallelDesc>& parallel_desc);
   void Delete();
-  bool Done() const;
+  bool QueryLaunched() const {
+    return stream_type().QueryInstructionStatusLaunched(stream(), status_buffer());
+  }
+  bool QueryDoneAfterLaunched() const {
+    return stream_type().QueryInstructionStatusDoneAfterLaunched(stream(), status_buffer());
+  }
   const StreamType& stream_type() const;
   template<OperandMemZoneModifier mem_zone_modifier>
   const RwMutexedObject* operand_type(const Operand& operand) const {

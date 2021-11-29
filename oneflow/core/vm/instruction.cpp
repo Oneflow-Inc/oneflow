@@ -355,14 +355,10 @@ void Instruction::Init(InstructionMsg* instr_msg, Stream* stream,
 }
 
 void Instruction::Delete() {
+  CHECK(in_edges().size() == 0);
+  CHECK(out_edges().size() == 0);
   instr_msg().instr_type_id().instruction_type().DeleteInstructionStatusIf(this);
   clear_instr_msg();
-  mut_in_edges()->Clear();
-  mut_out_edges()->Clear();
-}
-
-bool Instruction::Done() const {
-  return stream_type().QueryInstructionStatusDone(stream(), status_buffer());
 }
 
 const StreamType& Instruction::stream_type() const { return stream().stream_type(); }
