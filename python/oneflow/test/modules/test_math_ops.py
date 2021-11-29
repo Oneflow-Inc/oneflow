@@ -34,6 +34,22 @@ class TestSinh(flow.unittest.TestCase):
         y = torch.sinh(x)
         return y
 
+    @autotest()
+    def test_flow_inplace_sinh_with_random_data(test_case):
+        device = random_device()
+        x_0 = random_pytorch_tensor().to(device)
+        x = x_0 + 1
+        y = torch.sinh_(x)
+        return y
+
+    @autotest()
+    def test_tensor_inplace_sinh_with_random_data(test_case):
+        device = random_device()
+        x_0 = random_pytorch_tensor().to(device)
+        x = x_0 + 1
+        x.sinh_()
+        return x
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestSin(flow.unittest.TestCase):
@@ -44,9 +60,6 @@ class TestSin(flow.unittest.TestCase):
         y = x.sin()
         return y
 
-
-@flow.unittest.skip_unless_1n1d()
-class TestInplaceSin(flow.unittest.TestCase):
     @autotest()
     def test_flow_inplace_sin_with_random_data(test_case):
         device = random_device()
@@ -54,6 +67,14 @@ class TestInplaceSin(flow.unittest.TestCase):
         y = x + 1  # transform to non-leaf tensor
         y.sin_()
         return y
+
+    @autotest()
+    def test_tensor_inplace_sin_with_random_data(test_case):
+        device = random_device()
+        x_0 = random_pytorch_tensor().to(device)
+        x = x_0 + 1  # transform to non-leaf tensor
+        x.sin_()
+        return x
 
 
 def _test_cos(test_case, shape, device):
@@ -89,6 +110,21 @@ class TestCos(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @autotest
+    def test_flow_inplace_cos(testcase):
+        device = random_device()
+        x_0 = random_pytorch_tensor().to(device)
+        x = x_0 + 1  # transform to non-leaf tensor
+        y = flow.cos_(x)
+        return y
+
+    @autotest
+    def test_tensor_inplace_cos(testcase):
+        device = random_device()
+        x_0 = random_pytorch_tensor().to(device)
+        x = x_0 + 1  # transform to non-leaf tensor
+        x.cos_()
+        return x
 
 @flow.unittest.skip_unless_1n1d()
 class TestLogModule(flow.unittest.TestCase):

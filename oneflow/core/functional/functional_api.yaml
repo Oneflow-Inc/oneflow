@@ -294,6 +294,7 @@
 - name: "reciprocal_no_nan_"
   signature: "Tensor (Tensor x) => ReciprocalNoNan_"
   bind_python: True
+
 - name: "reciprocal_no_nan_grad"
   signature: "Tensor (Tensor x, Tensor dy) => ReciprocalNoNanGrad"
   bind_python: False
@@ -369,6 +370,7 @@
 - name: "rsqrt_"
   signature: "Tensor (Tensor x) => Rsqrt_"
   bind_python: True
+
 - name: "rsqrt_grad"
   signature: "Tensor (Tensor x, Tensor dy) => RsqrtGrad"
   bind_python: False
@@ -418,6 +420,8 @@
 
 - name: "tan_"
   signature: "Tensor (Tensor x) => Tan_"
+  bind_python: True
+
 - name: "tan_grad"
   signature: "Tensor (Tensor x, Tensor dy) => TanGrad"
   bind_python: True
