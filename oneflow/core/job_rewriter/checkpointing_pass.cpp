@@ -88,12 +88,13 @@ void GenConnectedCheckpointingSubgraphs(
     const HashMap<std::string, const OpNode*>& checkpointing_op_name2op_node,
     std::vector<HashSet<const OpNode*>>* checkpointing_subgraphs) {
   HashSet<const OpNode*> visited_nodes;
+  checkpointing_subgraphs->reserve(checkpointing_op_name2op_node.size());
   for (const auto& pair : checkpointing_op_name2op_node) {
     const OpNode* node = pair.second;
     if (visited_nodes.find(node) != visited_nodes.end()) { continue; }
 
     // new subgraph
-    checkpointing_subgraphs->push_back(HashSet<const OpNode*>());
+    checkpointing_subgraphs->emplace_back(HashSet<const OpNode*>());
     CHECK(!checkpointing_subgraphs->empty());
     auto& subgraph = checkpointing_subgraphs->back();
     CHECK(subgraph.empty());
@@ -285,14 +286,14 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
 
     // step 3.5 add fake subgraph ops to job builder
     std::vector<OperatorConf> fake_op_confs;
-    for (auto& pair : fake_op_name2conf) { fake_op_confs.push_back(pair.second); }
+    for (auto& pair : fake_op_name2conf) { fake_op_confs.emplace_back(pair.second); }
     job_builder->AddOps(parallel_conf, fake_op_confs);
   }
 
   // step 4. update bw consumers in job builder only once
   std::vector<OperatorConf> total_bw_consumer_op_confs;
   for (auto& pair : total_bw_consumers_op_name2conf) {
-    total_bw_consumer_op_confs.push_back(pair.second);
+    total_bw_consumer_op_confs.emplace_back(pair.second);
   }
   job_builder->MutOpsOnlyOnce(total_bw_consumer_op_confs);
 

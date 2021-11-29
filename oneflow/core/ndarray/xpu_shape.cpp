@@ -96,9 +96,9 @@ void SimplifyBroadcastShapes(const XpuShape& y, const XpuShape& a, const XpuShap
   CHECK(simplified_y->empty());
   CHECK(simplified_a->empty());
   CHECK(simplified_b->empty());
-  simplified_y->push_back(y.At(0));
-  simplified_a->push_back(a.At(0));
-  simplified_b->push_back(b.At(0));
+  simplified_y->emplace_back(y.At(0));
+  simplified_a->emplace_back(a.At(0));
+  simplified_b->emplace_back(b.At(0));
   bool a_prev_axis_is_broadcast = (a.At(0) == 1);
   bool b_prev_axis_is_broadcast = (b.At(0) == 1);
   FOR_RANGE(int, i, 1, y.NumAxes()) {
@@ -114,9 +114,9 @@ void SimplifyBroadcastShapes(const XpuShape& y, const XpuShape& a, const XpuShap
       simplified_a->back() *= a_dim;
       simplified_b->back() *= b_dim;
     } else {
-      simplified_y->push_back(y_dim);
-      simplified_a->push_back(a_dim);
-      simplified_b->push_back(b_dim);
+      simplified_y->emplace_back(y_dim);
+      simplified_a->emplace_back(a_dim);
+      simplified_b->emplace_back(b_dim);
     }
     a_prev_axis_is_broadcast = a_cur_axis_is_broadcast;
     b_prev_axis_is_broadcast = b_cur_axis_is_broadcast;
