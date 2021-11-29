@@ -87,6 +87,13 @@ std::string GetMLIRAttrTypeName(const AttrType& attr_type) {
   }
 }
 
+template<typename T>
+std::string ToZeroNoTrailing(T f) {
+  std::string str = std::to_string(f);
+  str.erase(str.find_last_not_of('0') + 1, std::string::npos);
+  return str;
+}
+
 std::string GetDefaultValue(const ::oneflow::AttrValue& attr_val) {
   if (attr_val.has_at_string()) {
     return "\\\"" + attr_val.at_string() + "\\\"";
@@ -95,9 +102,9 @@ std::string GetDefaultValue(const ::oneflow::AttrValue& attr_val) {
   } else if (attr_val.has_at_int64()) {
     return std::to_string(attr_val.at_int64());
   } else if (attr_val.has_at_float()) {
-    return std::to_string(attr_val.at_float());
+    return ToZeroNoTrailing(attr_val.at_float());
   } else if (attr_val.has_at_double()) {
-    return std::to_string(attr_val.at_double());
+    return ToZeroNoTrailing(attr_val.at_double());
   } else if (attr_val.has_at_bool()) {
     return attr_val.at_bool() ? "true" : "false";
   } else if (attr_val.has_at_list_int32()) {
@@ -218,7 +225,9 @@ bool IsIdempotentOp(const std::string& op_name) {
 }
 
 bool IsPoolOp(const std::string& op_name) {
-  return (op_name.find("avg") != std::string::npos || op_name.find("max") != std::string::npos)
+  return ((op_name.rfind("avg", 0) == 0 || op_name.rfind("max", 0) == 0)
+          || ((op_name.find("avg") != std::string::npos || op_name.find("max") != std::string::npos)
+              && op_name.rfind("tf", 0) == 0))
          && op_name.find("pool") != std::string::npos;
 }
 bool IsEagerOp(const std::string& op_name) { return (op_name.rfind("eager", 0) == 0); }
@@ -298,7 +307,8 @@ bool IsLossOp(const std::string& op_name) { return (op_name.find("loss") != std:
 bool IsDetectionOp(const std::string& op_name) {
   return (op_name.find("top_k") != std::string::npos || op_name.find("bbox") != std::string::npos
           || op_name.find("segmentation") != std::string::npos
-          || op_name.find("poly") != std::string::npos || op_name.find("nms") != std::string::npos
+          || op_name.find("roi") != std::string::npos || op_name.find("poly") != std::string::npos
+          || op_name.find("nms") != std::string::npos
           || op_name.find("object") != std::string::npos);
 }
 bool IsIndicesOp(const std::string& op_name) {
