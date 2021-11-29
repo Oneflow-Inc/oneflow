@@ -46,7 +46,7 @@ void EndRecordingInstructions() { *RecordingInstructionsFlag() = false; }
 void ClearRecordedInstructions() { RecordedInstructionList()->clear(); }
 
 void RecordInstruction(const intrusive::shared_ptr<vm::InstructionMsg>& instruction) {
-  RecordedInstructionList()->push_back(instruction);
+  RecordedInstructionList()->emplace_back(instruction);
 }
 
 void ReplayInstructions() {
