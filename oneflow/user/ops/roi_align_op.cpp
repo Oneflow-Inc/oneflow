@@ -94,7 +94,7 @@ Maybe<void> RoiAlignArgModifier(user_op::GetInputArgModifier GetInputArgModifier
 }
 
 Maybe<void> GenerateBackwardOpConf4RoiAlign(const user_op::UserOpWrapper& op,
-                                            user_op::AddOpFn AddOp) {
+                                            const user_op::AddOpFn& AddOp) {
   if (op.NeedGenGradTensor4OpInput("x", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper grad_op =
