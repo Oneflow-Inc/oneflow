@@ -66,8 +66,8 @@ class Importer {
                                             std::vector<::mlir::Value>& operand_vec) = 0;
   LogicalResult AppendCtrlOutType(llvm::SmallVector<Type, 8>& out_types);
   LogicalResult AddOpConf(const ::oneflow::OperatorConf& op, std::vector<NamedAttribute>& attr_vec);
-  virtual LogicalResult AddUserOpInputOutputSegments(const ::oneflow::OperatorConf& op,
-                                                     std::vector<NamedAttribute>& attr_vec) = 0;
+  LogicalResult AddUserOpInputOutputSegments(const ::oneflow::OperatorConf& op,
+                                             std::vector<NamedAttribute>& attr_vec);
   virtual LogicalResult AddDeviceName(const ::oneflow::OperatorConf& op,
                                       std::vector<NamedAttribute>& attr_vec) = 0;
   LogicalResult AddOperandSegmentSizes(int32_t input_lbns_size, int32_t ctrl_in_size,
@@ -99,9 +99,6 @@ class Importer {
   MLIRContext* GetMLIRContext() { return context_; }
   ModuleOp& GetModule() { return module_; }
   Location& GetRootLocation() { return unknown_loc_; }
-  virtual ::oneflow::AttrType QueryAttrType(const std::string& op_type_name,
-                                            const std::string& attr_name) = 0;
-  virtual ::oneflow::UserOpDef GetUserOpDef(const std::string& op_type_name) const = 0;
   virtual Type GetTensorTypeOfLbn(const std::string& lbn) = 0;
   LogicalResult ConvertUserOpAttributes(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
                                         ::oneflow::OperatorConf& op_conf);
@@ -127,9 +124,6 @@ class RoundTripOneFlowJobWrapperInterface {
   virtual std::string ReplaceInputLbnInOpCustomizedConf(::oneflow::OperatorConf* op_conf,
                                                         const std::string& ibn,
                                                         const std::string& new_val) const = 0;
-  virtual ::oneflow::AttrType QueryAttrType(const std::string& op_type_name,
-                                            const std::string& attr_name) const = 0;
-  virtual ::oneflow::UserOpDef GetUserOpDef(const std::string& op_type_name) const = 0;
   virtual void QueryLogicalBlob(
       const std::string& lbn, std::function<void(const int64_t* shape_begin,
                                                  const int64_t* shape_end, ::oneflow::DataType dt)>

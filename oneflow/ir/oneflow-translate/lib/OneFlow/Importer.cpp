@@ -37,6 +37,7 @@ limitations under the License.
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -50,6 +51,8 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/framework/user_op_def.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 #include <cstddef>
 #include <cstdint>
 #include <google/protobuf/text_format.h>
@@ -64,6 +67,77 @@ limitations under the License.
 namespace mlir {
 
 using PbMessage = google::protobuf::Message;
+
+namespace {
+
+using namespace ::oneflow;
+const UserOpDef& GetUserOpDef(const std::string& op_type_name) {
+  const user_op::OpRegistryResult* val =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
+  CHECK(val) << " Cannot find op_type_name: " << op_type_name;
+  return val->op_def;
+}
+
+::oneflow::AttrType QueryAttrType(const std::string& op_type_name, const std::string& attr_name) {
+  user_op::UserOpDefWrapper op_def(GetUserOpDef(op_type_name));
+  CHECK(op_def.IsAttrName(attr_name)) << attr_name << " not a attr name for op: " << op_type_name;
+  return op_def.GetAttrType(attr_name);
+}
+
+using SizeVec = SmallVector<int32_t, 8>;
+
+SizeVec GetSizesFromArgs(UserOpArgs args, UserOpArgDefs arg_defs) {
+  SizeVec sizes{};
+  llvm::StringSet<> names({});
+  for (const auto& arg : args) { names.insert(arg.first); }
+  for (const auto& arg_def : arg_defs) {
+    int32_t size = 0;
+    if (names.contains(arg_def.name())) { size = args.at(arg_def.name()).s_size(); }
+    sizes.push_back(size);
+  }
+  return sizes;
+}
+
+std::vector<std::string> GetOutputLbns(const ::oneflow::OperatorConf& op, UserOpArgDefs arg_defs) {
+  SizeVec sizes{};
+  llvm::StringSet<> names_appeared({});
+  std::vector<std::string> output_lbn_vec{};
+  const auto& op_name = op.name();
+  for (const auto& arg : op.user_conf().output()) { names_appeared.insert(arg.first); }
+  for (const auto& arg_def : arg_defs) {
+    const auto& key = arg_def.name();
+    auto result_size = op.user_conf().output().at(key).s_size();
+    if (result_size == 0) { continue; }
+    for (int32_t i = 0; i < result_size; i++) {
+      const auto output_lbn = op_name + "/" + key + "_" + std::to_string(i);
+      output_lbn_vec.push_back(output_lbn);
+    }
+  }
+  return output_lbn_vec;
+}
+
+}  // namespace
+
+LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorConf& op,
+                                                     std::vector<NamedAttribute>& attr_vec) {
+  if (op.has_user_conf() == false) return failure();
+  const auto& user_conf = op.user_conf();
+  const ::oneflow::UserOpDef& op_def = GetUserOpDef(op.user_conf().op_type_name());
+  const auto UserOpOperationName =
+      OperationName(oneflow::UserOp::getOperationName(), GetMLIRContext());
+  attr_vec.push_back(GetBuilder().getNamedAttr(
+      oneflow::UserOp::input_sizesAttrName(UserOpOperationName),
+      GetBuilder().getI32ArrayAttr(GetSizesFromArgs(user_conf.input(), op_def.input()))));
+  attr_vec.push_back(GetBuilder().getNamedAttr(
+      oneflow::UserOp::output_sizesAttrName(UserOpOperationName),
+      GetBuilder().getI32ArrayAttr(GetSizesFromArgs(user_conf.output(), op_def.output()))));
+  auto output_lbns = GetOutputLbns(op, op_def.output());
+  attr_vec.push_back(GetBuilder().getNamedAttr(
+      OpTrait::IsImportCompatible<void>::getOutputLBNsAttr(),
+      GetBuilder().getStrArrayAttr(
+          SmallVector<StringRef, 8>({output_lbns.begin(), output_lbns.end()}))));
+  return success();
+}
 
 OperandRange GetDataInputOperands(Operation* op) {
   if (auto cec = dyn_cast<ControlEdgeCompatible>(op)) {

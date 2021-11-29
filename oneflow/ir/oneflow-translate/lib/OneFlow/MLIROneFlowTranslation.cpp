@@ -30,7 +30,6 @@ limitations under the License.
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Translation.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm-c/Core.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
@@ -70,8 +69,6 @@ class JobImporter : Importer {
               ModuleOp module)
       : Importer(context, module), job_(job_wrapper.job()), job_wrapper_(job_wrapper) {}
   virtual ~JobImporter() = default;
-  LogicalResult AddUserOpInputOutputSegments(const ::oneflow::OperatorConf& op,
-                                             std::vector<NamedAttribute>& attr_vec) override;
   LogicalResult AppendDataInOperand(const std::string& lbn,
                                     std::vector<::mlir::Value>& operand_vec) override;
   LogicalResult AppendCtrlInOperand(const ::oneflow::OperatorConf& op,
@@ -83,13 +80,6 @@ class JobImporter : Importer {
   LogicalResult ProcessJob();
   LogicalResult TryToUpdateJob();
   Type GetTensorTypeOfLbn(const std::string& lbn) override;
-  ::oneflow::AttrType QueryAttrType(const std::string& op_type_name,
-                                    const std::string& attr_name) override {
-    return job_wrapper_.QueryAttrType(op_type_name, attr_name);
-  }
-  ::oneflow::UserOpDef GetUserOpDef(const std::string& op_type_name) const override {
-    return job_wrapper_.GetUserOpDef(op_type_name);
-  }
 
  private:
   std::unordered_map<std::string, mlir::OpResult> lbn2result_;
@@ -97,58 +87,6 @@ class JobImporter : Importer {
   const ::oneflow::Job* job_;
   RoundTripOneFlowJobWrapperInterface& job_wrapper_;
 };
-
-using SizeVec = SmallVector<int32_t, 8>;
-SizeVec GetSizesFromArgs(UserOpArgs args, UserOpArgDefs arg_defs) {
-  SizeVec sizes{};
-  llvm::StringSet<> names({});
-  for (const auto& arg : args) { names.insert(arg.first); }
-  for (const auto& arg_def : arg_defs) {
-    int32_t size = 0;
-    if (names.contains(arg_def.name())) { size = args.at(arg_def.name()).s_size(); }
-    sizes.push_back(size);
-  }
-  return sizes;
-}
-
-std::vector<std::string> GetOutputLbns(const ::oneflow::OperatorConf& op, UserOpArgDefs arg_defs) {
-  SizeVec sizes{};
-  llvm::StringSet<> names_appeared({});
-  std::vector<std::string> output_lbn_vec{};
-  const auto& op_name = op.name();
-  for (const auto& arg : op.user_conf().output()) { names_appeared.insert(arg.first); }
-  for (const auto& arg_def : arg_defs) {
-    const auto& key = arg_def.name();
-    auto result_size = op.user_conf().output().at(key).s_size();
-    if (result_size == 0) { continue; }
-    for (int32_t i = 0; i < result_size; i++) {
-      const auto output_lbn = op_name + "/" + key + "_" + std::to_string(i);
-      output_lbn_vec.push_back(output_lbn);
-    }
-  }
-  return output_lbn_vec;
-}
-
-LogicalResult JobImporter::AddUserOpInputOutputSegments(const ::oneflow::OperatorConf& op,
-                                                        std::vector<NamedAttribute>& attr_vec) {
-  if (op.has_user_conf() == false) return failure();
-  const auto& user_conf = op.user_conf();
-  const ::oneflow::UserOpDef& op_def = job_wrapper_.GetUserOpDef(op.user_conf().op_type_name());
-  const auto UserOpOperationName =
-      OperationName(oneflow::UserOp::getOperationName(), GetMLIRContext());
-  attr_vec.push_back(GetBuilder().getNamedAttr(
-      oneflow::UserOp::input_sizesAttrName(UserOpOperationName),
-      GetBuilder().getI32ArrayAttr(GetSizesFromArgs(user_conf.input(), op_def.input()))));
-  attr_vec.push_back(GetBuilder().getNamedAttr(
-      oneflow::UserOp::output_sizesAttrName(UserOpOperationName),
-      GetBuilder().getI32ArrayAttr(GetSizesFromArgs(user_conf.output(), op_def.output()))));
-  auto output_lbns = GetOutputLbns(op, op_def.output());
-  attr_vec.push_back(GetBuilder().getNamedAttr(
-      OpTrait::IsImportCompatible<void>::getOutputLBNsAttr(),
-      GetBuilder().getStrArrayAttr(
-          SmallVector<StringRef, 8>({output_lbns.begin(), output_lbns.end()}))));
-  return success();
-}
 
 LogicalResult JobImporter::AppendCtrlInOperand(const ::oneflow::OperatorConf& op,
                                                std::vector<::mlir::Value>& operand_vec) {
