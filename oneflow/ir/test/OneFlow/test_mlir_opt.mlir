@@ -18,11 +18,11 @@ module  {
 
 module  {
   func @InvolutionJob() {
-    %data_output = "oneflow.system"() {device_name = ["0:0-0"], device_tag = "gpu", hierarchy = [1], input_bns = [], op_name = "Input_140", op_type_case = 137 : i32, operand_segment_sizes = dense<0> : vector<2xi32>, result_segment_sizes = dense<[1, 0]> : vector<2xi32>, scope_symbol_id = 4611686018427441150 : i64} : () -> tensor<96x96xf32>
+    %data_output = "oneflow.system"() {device_name = ["0:0-0"], device_tag = "gpu", hierarchy = [1], input_bns = [], op_name = "Input_140", op_type_case = 137 : i32, operand_segment_sizes = dense<0> : vector<2xi32>, output_lbns = ["Input_140/out"], result_segment_sizes = dense<[1, 0]> : vector<2xi32>, scope_symbol_id = 4611686018427441150 : i64} : () -> tensor<96x96xf32>
     // CHECK: %data_output = "oneflow.system"()
-    "oneflow.system"(%data_output) {device_name = ["0:0-0"], device_tag = "cpu", hierarchy = [1], input_bns = ["in"], op_name = "Return_153", op_type_case = 146 : i32, operand_segment_sizes = dense<[1, 0]> : vector<2xi32>, result_segment_sizes = dense<0> : vector<2xi32>, scope_symbol_id = 4611686018427445246 : i64} : (tensor<96x96xf32>) -> ()
+    "oneflow.system"(%data_output) {device_name = ["0:0-0"], device_tag = "cpu", hierarchy = [1], input_bns = ["in"], op_name = "Return_153", op_type_case = 146 : i32, operand_segment_sizes = dense<[1, 0]> : vector<2xi32>, output_lbns = [], result_segment_sizes = dense<0> : vector<2xi32>, scope_symbol_id = 4611686018427445246 : i64} : (tensor<96x96xf32>) -> ()
     // CHECK: "oneflow.system"(%data_output)
-    "oneflow.system"(%data_output) {device_name = ["0:0-0"], device_tag = "cpu", hierarchy = [1], input_bns = ["in"], op_name = "Return_154", op_type_case = 146 : i32, operand_segment_sizes = dense<[1, 0]> : vector<2xi32>, result_segment_sizes = dense<0> : vector<2xi32>, scope_symbol_id = 4611686018427445246 : i64} : (tensor<96x96xf32>) -> ()
+    "oneflow.system"(%data_output) {device_name = ["0:0-0"], device_tag = "cpu", hierarchy = [1], input_bns = ["in"], op_name = "Return_154", op_type_case = 146 : i32, operand_segment_sizes = dense<[1, 0]> : vector<2xi32>, output_lbns = [], result_segment_sizes = dense<0> : vector<2xi32>, scope_symbol_id = 4611686018427445246 : i64} : (tensor<96x96xf32>) -> ()
     // CHECK: "oneflow.system"(%data_output)
     return
     // CHECK: return
