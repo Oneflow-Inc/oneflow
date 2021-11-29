@@ -272,16 +272,17 @@ class TransposeFunctor {
 class MovedimVecFunctor {
  public:
   MovedimVecFunctor() = default;
-  Maybe<void> CheckNoRepeat(const std::vector<int32_t>& perm, std::vector<int32_t> &perm_out,int32_t indim) const{  
+  Maybe<void> CheckNoRepeat(const std::vector<int32_t>& perm, std::vector<int32_t> &perm_out, int32_t indim, const std::string &des) const{  
     std::vector<bool> is_used(indim, false);
     FOR_RANGE(size_t, i, 0, perm.size()) {
       int32_t item = perm[i];
       if(item<0){
         item += indim;
       }
-      CHECK_GE_OR_RETURN(item, 0);
-      CHECK_LT_OR_RETURN(item, indim);
-      CHECK_EQ_OR_RETURN(is_used[item], false);
+      CHECK_GE_OR_RETURN(item, 0)<<", Dimension out of range (expected to be in range of ["<<-indim<<", "<<indim-1<<"], but got "<<perm[i]<<")";
+      CHECK_LT_OR_RETURN(item, indim)<<", Dimension out of range (expected to be in range of ["<<-indim<<", "<<indim-1<<"], but got "<<perm[i]<<")";;
+      CHECK_EQ_OR_RETURN(is_used[item], false)<<"repeated dim in "<<des;
+      
       is_used[item] = true;
       perm_out[i] = item;
     }
@@ -298,8 +299,8 @@ class MovedimVecFunctor {
     std::vector<int32_t> source_nopeat(dim);
     std::vector<int32_t> destination_nopeat(dim);
 
-    CheckNoRepeat(source,source_nopeat,indim);
-    CheckNoRepeat(destination,destination_nopeat,indim);
+    CheckNoRepeat(source,source_nopeat,indim,"source");
+    CheckNoRepeat(destination,destination_nopeat,indim,"destination");
 
     std::map<int,int> source_map;
     std::map<int,int> destination_map;
