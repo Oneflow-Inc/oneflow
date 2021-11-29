@@ -114,13 +114,15 @@ struct VariantPrivateScope {
   }
 };
 
+struct AutoDeducedResultType;
+
 template<typename R, typename F, typename... Ts>
 struct VisitResultS {
   using type = R;
 };
 
 template<typename F, typename... Ts>
-struct VisitResultS<DefaultArgument, F, Ts...> {
+struct VisitResultS<AutoDeducedResultType, F, Ts...> {
   using type = std::common_type_t<decltype(std::declval<F>()(std::declval<Ts>()))...>;
 };
 
@@ -177,19 +179,19 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
     Construct<I>(std::forward<Args>(args)...);
   }
 
-  template<typename R = DefaultArgument, typename F>
+  template<typename R = details::AutoDeducedResultType, typename F>
   decltype(auto) Visit(F&& f) & {
     using Result = details::VisitResult<R, F, Ts&...>;
     return details::VariantPrivateScope::VisitImpl<Result>(std::forward<F>(f), *this);
   }
 
-  template<typename R = DefaultArgument, typename F>
+  template<typename R = details::AutoDeducedResultType, typename F>
   decltype(auto) Visit(F&& f) && {
     using Result = details::VisitResult<R, F, Ts&&...>;
     return details::VariantPrivateScope::VisitImpl<Result>(std::forward<F>(f), std::move(*this));
   }
 
-  template<typename R = DefaultArgument, typename F>
+  template<typename R = details::AutoDeducedResultType, typename F>
   decltype(auto) Visit(F&& f) const& {
     using Result = details::VisitResult<R, F, const Ts&...>;
     return details::VariantPrivateScope::VisitImpl<Result>(std::forward<F>(f), *this);

@@ -65,8 +65,6 @@ struct InPlaceIndexT {
 template<std::size_t I>
 constexpr InPlaceIndexT<I> InPlaceIndex;
 
-struct DefaultArgument;
-
 template<class T>
 constexpr void HashCombine(std::size_t& seed, const T& v) {
   std::hash<T> hasher;
