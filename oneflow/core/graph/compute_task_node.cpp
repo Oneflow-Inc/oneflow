@@ -50,7 +50,7 @@ std::vector<CompTaskNode*> GetCompTaskNodesOnEdge(
     nodes.pop();
     CompTaskNode* comp_task_node = dynamic_cast<CompTaskNode*>(node);
     if (comp_task_node) {
-      comp_task_nodes.push_back(comp_task_node);
+      comp_task_nodes.emplace_back(comp_task_node);
     } else {
       (node->*ForEachDataEdge)([&](TaskEdge* task_edge) {
         if (visited_nodes.find((task_edge->*GetNode)()) == visited_nodes.end()) {

@@ -302,7 +302,7 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
       }
       comp_task_node->set_thrd_id(EncodeStreamIdToInt64(StreamId{device_id, stream_index}));
       comp_task_node->set_op_node(op_node);
-      sorted_comp_tasks->push_back(comp_task_node);
+      sorted_comp_tasks->emplace_back(comp_task_node);
     }
   }
 }
@@ -564,7 +564,12 @@ void TaskGraph::AddCtrlEdgeBetweenSrcDstTickAndInputOutputInSameRank() {
 
   auto AddCtrlEdge = [&](TaskNode* src, TaskNode* dst) {
     std::string ctrl_regst_name;
-    src->BuildCtrlRegstDesc(dst, &ctrl_regst_name);
+    RegstDesc* ctrl_regst = src->BuildCtrlRegstDesc(dst, &ctrl_regst_name);
+    // NOTE(chengcheng):
+    //   ctrl edge between src subset tick to output is just for restrict order in multi-client
+    //   but this ctrl edge will block src subset tick to delay pipeline, so this ctrl edge must
+    //   at least 2.
+    ctrl_regst->UpdtMinRegstNumIfNeed(2);
     TaskEdge* edge = NewEdge();
     Connect<TaskNode>(src, edge, dst);
     src->BindEdgeWithProducedRegst(edge, ctrl_regst_name);
