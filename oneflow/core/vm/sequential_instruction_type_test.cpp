@@ -24,7 +24,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/blocking_counter.h"
-#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/test_util.h"
@@ -55,7 +55,7 @@ TEST(SequentialInstruction, front_seq_compute) {
   auto vm_desc = intrusive::make_shared<VmDesc>(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(),
                                       {"NewObject", "ComputeRankFrontSeqCallback"});
-  auto vm = intrusive::make_shared<VirtualMachine>(vm_desc.Get());
+  auto vm = intrusive::make_shared<VirtualMachineEngine>(vm_desc.Get());
   InstructionMsgList list;
   {
     int64_t logical_object_id = TestUtil::NewObject(&list, "cpu", "0:0");
@@ -64,22 +64,26 @@ TEST(SequentialInstruction, front_seq_compute) {
   }
   int64_t sixsixsix = 0;
   {
-    auto instruction = NewInstruction("ComputeRankFrontSeqCallback");
-    instruction->add_int64_operand(GlobalProcessCtx::Rank());
     const auto Callback = [&]() { sixsixsix = 666; };
-    *instruction->mut_phy_instr_operand() = std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
+    const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
+    auto instruction = intrusive::make_shared<InstructionMsg>(
+        vm.Mutable(), "ComputeRankFrontSeqCallback", std::shared_ptr<const ParallelDesc>(),
+        phy_instr_operand);
+    instruction->add_int64_operand(GlobalProcessCtx::Rank());
     list.EmplaceBack(std::move(instruction));
   }
   bool compute_finished = false;
   bool is_666 = false;
   {
-    auto instruction = NewInstruction("CtrlComputeRankFrontSeqCallback");
-    instruction->add_int64_operand(GlobalProcessCtx::Rank());
     const auto Callback = [&]() {
       is_666 = sixsixsix == 666;
       compute_finished = true;
     };
-    *instruction->mut_phy_instr_operand() = std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
+    const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
+    auto instruction = intrusive::make_shared<InstructionMsg>(
+        vm.Mutable(), "CtrlComputeRankFrontSeqCallback", std::shared_ptr<const ParallelDesc>(),
+        phy_instr_operand);
+    instruction->add_int64_operand(GlobalProcessCtx::Rank());
     list.EmplaceBack(std::move(instruction));
   }
   BlockingCounter bc(1);

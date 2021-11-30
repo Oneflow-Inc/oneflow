@@ -29,8 +29,8 @@ __global__ void NdarrayAssignGpu(XpuVarNdarray<T> y, const XpuReducedNdarray<T, 
 }  // namespace
 
 template<typename T, int NDIMS>
-struct NdarrayAssignCoreWrapper<DeviceType::kGPU, T, NDIMS> final {
-  static void Assign(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+struct NdarrayAssignCoreWrapper<DeviceType::kCUDA, T, NDIMS> final {
+  static void Assign(ep::Stream* ctx, const XpuVarNdarray<T>& y,
                      const XpuReducedNdarray<T, NDIMS>& reduced) {
     size_t n = y.host_shape().HostElemNum();
     if (n == 0) { return; }
@@ -39,7 +39,7 @@ struct NdarrayAssignCoreWrapper<DeviceType::kGPU, T, NDIMS> final {
 };
 
 #define INSTANTIATE_NDARRAY_ASSIGN(dtype_pair, NDIMS) \
-  template struct NdarrayAssignCoreWrapper<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype_pair), NDIMS>;
+  template struct NdarrayAssignCoreWrapper<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype_pair), NDIMS>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
     INSTANTIATE_NDARRAY_ASSIGN,
     ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ, DIM_SEQ);

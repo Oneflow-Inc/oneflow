@@ -2,106 +2,22 @@
 #define ONEFLOW_OPS
 
 include "OneFlowDialect.td"
+include "OneFlowEnums.td"
+include "OneFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Pass/PassBase.td"
 include "mlir/Interfaces/CallInterfaces.td"
+include "OneFlowBase.td"
 
-def SI32ArrayAttr : TypedArrayAttrBase<SI32Attr,
-                                      "signed 32-bit integer array attribute"> {
-  let constBuilderCall = "$_builder.getArrayAttr(llvm::to_vector<8>(llvm::map_range(values, [this](int32_t v) -> Attribute { return builder_.getSI32IntegerAttr($0); })))";
-}
-
-class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
-        Op<OneFlow_Dialect, mnemonic, traits> {
-  dag sys_attrs = (ins
-    StrAttr:$op_name,
-    OptionalAttr<BoolAttr>:$trainable,
-    StrAttr:$device_tag,
-    StrArrayAttr:$device_name, // TODO: change device_name to dict and parse the literal fmt like "0:0-0"
-    OptionalAttr<I64Attr>:$scope_symbol_id,
-    OptionalAttr<I64ArrayAttr>:$hierarchy
-  );
-  dag attrs = (ins);
-  dag trait_attrs = (ins);
-  dag user_op_attrs = (ins);
-  dag input = (ins Variadic<AnyType>:$data_input);
-  dag output = (outs Variadic<AnyType>:$data_output);
-  dag ctrl_input = (ins);
-  dag ctrl_output = (outs);
-  let arguments = !con(
-      input,
-      ctrl_input,
-      sys_attrs,
-      trait_attrs,
-      user_op_attrs,
-      attrs
-  );
-  let results = !con(
-    output,
-    ctrl_output
-  );
-}
-
-class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_BaseOp<mnemonic, !listconcat(traits, [AttrSizedOperandSegments, AttrSizedResultSegments])> {
-  let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
-  let ctrl_output = (outs Optional<AnyType>:$ctrl_output);
-  let trait_attrs = (ins
-    I32ElementsAttr:$operand_segment_sizes,
-    I32ElementsAttr:$result_segment_sizes
-  );
-}
-
-class OneFlow_UserBaseOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_BaseOp<mnemonic, traits> {
-    let summary = "";
-    let user_op_attrs = (ins
-      StrAttr:$op_type_name,
-      StrArrayAttr:$input_lbn_segment_keys,
-      I32ArrayAttr:$input_lbn_segment_sizes,
-      StrArrayAttr:$output_lbn_segment_keys,
-      I32ArrayAttr:$output_lbn_segment_sizes,
-      StrArrayAttr:$output_lbns
-    );
-}
-
-// Why don't we merge ctrl in/out and data in/out into operand_segment/result_segment_sizes?
-// 1. We only need to erase operand_segment/result_segment_sizes when we are creating a concrete user op
-// 2. Isolating data and ctrl make debug easier and produced IR more human-readable
-class OneFlow_UserBaseWithCtrlOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_UserBaseOp<mnemonic, !listconcat(traits, [AttrSizedOperandSegments, AttrSizedResultSegments])> {
-    let summary = "";
-    let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
-    let ctrl_output = (outs Optional<AnyType>:$ctrl_output);
-    let trait_attrs = (ins
-      I32ElementsAttr:$operand_segment_sizes,
-      I32ElementsAttr:$result_segment_sizes
-    );
-}
-
-def OneFlow_UserOp : OneFlow_UserBaseOp<"user", [AttrSizedOperandSegments, AttrSizedResultSegments]> {
-    let summary = "";
-    let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
-    let ctrl_output = (outs Optional<AnyType>:$ctrl_output);
-    let trait_attrs = (ins
-      I32ElementsAttr:$operand_segment_sizes,
-      I32ElementsAttr:$result_segment_sizes
-    );
-    let hasCanonicalizer = 1;
-}
-
-// TODO: support ConstantLike trait
-def OneFlow_ConstantOp : OneFlow_UserBaseOp<"constant", [AttrSizedOperandSegments, NoSideEffect]> {
+def OneFlow_UserOp : OneFlow_UserBaseWithCtrlOp<"user", [OneFlow_IsImportCompatible]> {
   let summary = "";
-  let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
   let attrs = (ins
-    OptionalAttr<F64Attr>:$floating_value,
-    OptionalAttr<SI64Attr>:$integer_value
+    StrArrayAttr:$output_lbns
   );
-  let output = (outs AnyTypeOf<[F32Tensor, F64Tensor, I32Tensor, I64Tensor]>);
+  let hasCanonicalizer = 1;
 }
 
-def OneFlow_SystemOp : OneFlow_Op<"system", []> {
+def OneFlow_SystemOp : OneFlow_Op<"system", [OneFlow_IsImportCompatible]> {
   let summary = "";
   let attrs = (ins
     StrArrayAttr:$input_bns,
@@ -110,288 +26,57 @@ def OneFlow_SystemOp : OneFlow_Op<"system", []> {
   let hasCanonicalizer = 1;
 }
 
-def OneFlow_CastOp : OneFlow_BaseOp<"cast", []> {
-  let input = (ins AnyType:$x);
-  let output = (outs AnyType:$y);
+def OneFlow_NormalizationAddReluOp : OneFlow_NormalizationAddReluBaseOp {
+  let builders = [
+    OpBuilder<(ins
+      "Value":$x,
+      "Value":$addend,
+      "Value":$moving_mean,
+      "Value":$moving_variance,
+      "Value":$gamma,
+      "Value":$beta,
+      "StringRef":$op_name,
+      "StringRef":$device_tag,
+      "ArrayAttr":$device_name,
+      "IntegerAttr":$scope_symbol_id,
+      "ArrayAttr":$hierarchy,
+      "DenseElementsAttr":$operand_segment_sizes,
+      "DenseElementsAttr":$result_segment_sizes,
+      "IntegerAttr":$axis,
+      "FloatAttr":$epsilon,
+      "BoolAttr":$training,
+      "FloatAttr":$momentum
+    )>
+  ];
 }
 
-def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", []> {
+def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>]> {
+  let summary = "";
   let input = (ins
-    AnyType:$x,
-    AnyType:$scalar
-  );
-  let output = (outs AnyType:$y);
-}
-
-
-class OneFlow_ScalarMathOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_BaseOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType, NoSideEffect])> {
-    let summary = "OneFlow Scalar Math Ops";
-    let input = (ins AnyType:$x);
-    let output = (outs AnyType:$y);
-    let attrs = (ins
-    BoolAttr:$has_int_operand,
-    BoolAttr:$has_float_operand,
-    SI64Attr:$int_operand,
-    F64Attr:$float_operand
-  );
-}
-
-def OneFlow_ScalarAddOp : OneFlow_ScalarMathOp<"scalar_add", []> {}
-
-def OneFlow_ScalarFloorDivOp : OneFlow_ScalarMathOp<"scalar_floordiv", []> {}
-
-def OneFlow_ScalarFmodOp : OneFlow_ScalarMathOp<"scalar_fmod", []> {}
-
-def OneFlow_ScalarMulOp : OneFlow_ScalarMathOp<"scalar_mul", []> {}
-
-def OneFlow_ScalarPowOp : OneFlow_ScalarMathOp<"scalar_pow", []> {}
-
-class OneFlow_ReduceBaseOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
-    let summary = "OneFlow Reduce Mean Ops";
-    let input = (ins AnyType:$input_tensor);
-    let output = (outs AnyType:$output_tensor);
-    let attrs = (ins
-    SI32ArrayAttr:$axis,
-    BoolAttr:$keepdims
-  );
-}
-
-def OneFlow_ReduceMinOp : OneFlow_ReduceBaseOp<"reduce_min", []> {}
-
-def OneFlow_ReduceMaxOp : OneFlow_ReduceBaseOp<"reduce_max", []> {}
-
-def OneFlow_ReduceSumOp : OneFlow_ReduceBaseOp<"reduce_sum", []> {}
-
-def OneFlow_ReduceProdOp : OneFlow_ReduceBaseOp<"reduce_prod", []> {}
-
-def OneFlow_Reshape : OneFlow_BaseOp<"reshape", []> {
-  let summary = "OneFlow Reshape operation";
-  let description = [{
-  "Reshape the input tensor similar to numpy.reshape."
-  "First input is the data tensor, second input is a shape tensor which specifies the output shape. It outputs the reshaped tensor."
-  "At most one dimension of the new shape can be -1. In this case, the value is"
-  "inferred from the size of the tensor and the remaining dimensions. A dimension"
-  "could also be 0, in which case the actual dimension value is unchanged (i.e. taken"
-  "from the input tensor)."
-  }];
-  let input = (ins
-    AnyType:$in
+    AnyType:$in0,
+    AnyType:$in1
   );
   let output = (outs AnyType:$out);
 }
-
-def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", []> {
-  let input = (ins
-    AnyType:$a,
-    AnyType:$b
-  );
-  let output = (outs AnyType:$out);
-  let attrs = (ins
-    BoolAttr:$transpose_a,
-    BoolAttr:$transpose_b,
-    OptionalAttr<BoolAttr>:$_add_to_output,
-    F64Attr:$alpha
-  );
-}
-
-def OneFlow_Convolution2dOp : OneFlow_BaseOp<"conv2d", []> {
-  let summary = "OneFlow Conv2d operation";
-  let description = [{
-  "The convolution operator consumes an input tensor and a filter, and"
-  "computes the output."
-  }];
-  let input = (ins
-    AnyType:$in,
-    AnyType:$weight
-  );
-  let output = (outs AnyType:$out);
-  let attrs = (ins
-    SI32Attr:$filters,
-    SI32ArrayAttr:$padding_before,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$strides,
-    SI32ArrayAttr:$dilation_rate,
-    DefaultValuedAttr<SI32Attr, "1">:$group
-  );
-}
-
-def OneFlow_ReshapeOp : OneFlow_BaseOp<"bias_add", []> {
-  let summary = "OneFlow Bias Add operation";
-  let input = (ins
-    AnyType:$a,
-    AnyType:$b
-  );
-  let output = (outs AnyType:$out);
-  let attrs = (ins
-    SI32Attr:$axis
-  );
-}
-
-class OneFlow_LazyPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
-    let summary = "OneFlow Lazy Pooling operation";
-    let input = (ins AnyType:$x);
-    let output = (outs AnyType:$y);
-    let attrs = (ins
-    StrAttr:$padding,
-    SI32ArrayAttr:$padding_before,
-    SI32ArrayAttr:$padding_after,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$pool_size,
-    SI32ArrayAttr:$strides,
-    BoolAttr:$ceil_mode
-  );
-}
-
-class OneFlow_EagerPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect])> {
-    let summary = "OneFlow Eager Pooling operation";
-    let input = (ins AnyType:$x);
-    let output = (outs AnyType:$y);
-    let attrs = (ins
-    SI32ArrayAttr:$padding,
-    StrAttr:$data_format,
-    SI32ArrayAttr:$kernel_size,
-    SI32ArrayAttr:$stride,
-    BoolAttr:$ceil_mode,
-    BoolAttr:$count_include_pad,
-    SI64Attr:$divisor_override
-  );
-}
-
-def OneFlow_LazyMaxPool1dOp : OneFlow_LazyPoolBaseOp<"max_pool_1d", []> {}
-
-def OneFlow_LazyMaxPool2dOp : OneFlow_LazyPoolBaseOp<"max_pool_2d", []> {}
-
-def OneFlow_LazyMaxPool3dOp : OneFlow_LazyPoolBaseOp<"max_pool_3d", []> {}
-
-def OneFlow_LazyAvgPool1dOp : OneFlow_LazyPoolBaseOp<"avg_pool_1d", []> {}
-
-def OneFlow_LazyAvgPool2dOp : OneFlow_LazyPoolBaseOp<"avg_pool_2d", []> {}
-
-def OneFlow_LazyAvgPool3dOp : OneFlow_LazyPoolBaseOp<"avg_pool_3d", []> {}
-
-def OneFlow_EagerAvgPool1dOp : OneFlow_EagerPoolBaseOp<"avgpool_1d", []> {}
-
-def OneFlow_EagerAvgPool2dOp : OneFlow_EagerPoolBaseOp<"avgpool_2d", []> {}
-
-def OneFlow_EagerAvgPool3dOp : OneFlow_EagerPoolBaseOp<"avgpool_3d", []> {}
-
-
-def OneFlow_GatherOp : OneFlow_BaseOp<"gather", []> {
-  let input = (ins
-    AnyType:$in,
-    AnyType:$indices
-  );
-  let output = (outs AnyType:$out);
-  let attrs = (ins
-    SI64Attr:$axis
-  );
-}
-
-def OneFlow_GeluGradOp : OneFlow_BaseOp<"gelu_grad", []> {
-  let input = (ins
-    AnyType:$x,
-    AnyType:$dy
-  );
-  let output = (outs AnyType:$dx);
-}
-
-class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_BaseOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType, NoSideEffect])> {
-    let summary = "";
-    let input = (ins AnyType:$x);
-    let output = (outs AnyType:$y);
-}
-
-def OneFlow_GeluOp : OneFlow_UnaryBaseOp<"gelu", []> {}
-
-def OneFlow_RsqrtOp : OneFlow_UnaryBaseOp<"rsqrt", []> {}
-
-def OneFlow_TanhOp : OneFlow_UnaryBaseOp<"tanh", []> {}
-
-// Idempotent ops
-
-def OneFlow_Idempotent : NativeOpTrait<"IsIdempotentOfIdenticalPlacement">;
-
-class OneFlow_IdempotentBaseOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_UnaryBaseOp<mnemonic, !listconcat(traits, [OneFlow_Idempotent])> {
-}
-
-def OneFlow_AbsOp : OneFlow_IdempotentBaseOp<"abs", []> {}
-
-def OneFlow_CeilOp : OneFlow_IdempotentBaseOp<"ceil", []> {}
-
-def OneFlow_FloorOp : OneFlow_IdempotentBaseOp<"floor", []> {}
-
-// TODO: pattern match constant_like to create ones_like when constant_like is port to user op
-def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", []> {}
-
-def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", []> {}
-
-// TODO: pattern match hardtanh to create Relu6 op
-def OneFlow_Relu6Op : OneFlow_IdempotentBaseOp<"relu6", []> {}
-
-def OneFlow_RintOp : OneFlow_IdempotentBaseOp<"rint", []> {}
-
-def OneFlow_RoundOp : OneFlow_IdempotentBaseOp<"round", []> {}
-
-def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", []> {}
-
-// TODO: pattern match constant_like to create zeros_like when constant_like is port to user op
-def OneFlow_ZerosLikeOp : OneFlow_IdempotentBaseOp<"zeros_like", []> {}
-
-// Involution ops
-
-def OneFlow_Involution : NativeOpTrait<"IsInvolutionOfIdenticalPlacement">;
-
-// TODO: add invert, logical_not when they are implemented in OneFlow
-
-class OneFlow_InvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_UnaryBaseOp<mnemonic, !listconcat(traits, [OneFlow_Involution])> {
-}
-
-def OneFlow_NegativeOp : OneFlow_InvolutionBaseOp<"negative", []> {}
-
-def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", []> {}
 
 // JIT ops
 
-def OneFlow_MlirJitOp : OneFlow_UserBaseOp<"mlir_jit", [
-      CallOpInterface
-    ]
-  > {
+def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpInterfaceMethods<UserOpCompatibleInterface> ] > {
   let attrs = (ins
     FlatSymbolRefAttr:$callee,
     StrAttr:$mlir_assembly
   );
   let builders = [
-    OpBuilder<(ins
-      "FuncOp":$callee,
+    OpBuilder<(ins "FuncOp":$callee,
       "NamedAttrList":$attributes,
-      CArg<"ValueRange", "{}">:$data_input
-    ), [{
+      CArg<"ValueRange", "{}">:$data_input), [{
       $_state.addOperands(data_input);
-      $_state.addAttribute("callee",$_builder.getSymbolRefAttr(callee));
+      $_state.addAttributes(attributes);
+      $_state.addAttribute("callee", SymbolRefAttr::get(callee));
       $_state.addTypes(callee.getType().getResults());
-      $_state.addAttributes(attributes);
-    }]>,
-    OpBuilder<(ins
-      "SymbolRefAttr":$callee,
-      "TypeRange":$results,
-      "NamedAttrList":$attributes,
-      CArg<"ValueRange", "{}">:$data_input
-    ), [{
-      $_state.addOperands(data_input);
-      $_state.addAttribute("callee", callee);
-      $_state.addTypes(results);
-      $_state.addAttributes(attributes);
     }]>
   ];
-    let extraClassDeclaration = [{
+  let extraClassDeclaration = [{
     operand_range getArgOperands() {
       return {arg_operand_begin(), arg_operand_end()};
     }
@@ -408,41 +93,6 @@ def OneFlow_MlirJitOp : OneFlow_UserBaseOp<"mlir_jit", [
 }
 
 #endif // ONEFLOW_OPS
-
-#ifndef ONEFLOW_PATTERNS
-#define ONEFLOW_PATTERNS
-
-def IsNotNestedInJit: Constraint<CPred<"(!$0.getDefiningOp()->getParentOfType<FuncOp>()->hasAttr(\"llvm.emit_c_interface\"))">, "">;
-def OutlineMulCast : NativeCodeCall<"OutlineMulCast($_builder, $0, $1)">;
-// TODO: remove attr binding if possible
-def MulCastPattern : Pat<
-  (
-    OneFlow_ScalarMulByTensorOp : $mul_op
-    (
-      OneFlow_CastOp : $cast_op
-        $cast_x,
-        $cast_op_name,
-        $cast_trainable,
-        $cast_device_tag,
-        $cast_device_name,
-        $cast_scope_symbol_id,
-        $cast_hierarchy
-    ),
-    $scalar,
-    $mul_op_name,
-    $mul_trainable,
-    $mul_device_tag,
-    $mul_device_name,
-    $mul_scope_symbol_id,
-    $mul_hierarchy
-  ),
-  (OutlineMulCast $mul_op, $cast_op),
-  [
-    (IsNotNestedInJit $mul_op)
-  ]
->;
-
-#endif // ONEFLOW_PATTERNS
 
 #ifndef ONEFLOW_PASSES
 #define ONEFLOW_PASSES
@@ -468,6 +118,11 @@ def BufferHostRegisterPass : FunctionPass<"buffer-host-register"> {
 def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
   let summary = "move ops could be jitted to jit function";
   let constructor = "mlir::oneflow::createOutlineJitFunctionPass()";
+}
+
+def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "FuncOp"> {
+  let summary = "";
+  let constructor = "mlir::oneflow::createFuseIntoExistingOpPass()";
 }
 
 #endif // ONEFLOW_PASSES

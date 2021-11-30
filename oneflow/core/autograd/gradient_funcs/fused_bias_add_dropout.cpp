@@ -14,9 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/functional/functional.h"
 
@@ -85,7 +82,7 @@ Maybe<void> FusedBiasAddDropout::Apply(const FusedBiasAddDropoutInterpState* ctx
     std::vector<int32_t> reduce_axes_vec;
     reduce_axes_vec.reserve(num_axes);
     for (int i = 0; i < num_axes; ++i) {
-      if (i != ctx->axis) { reduce_axes_vec.push_back(i); }
+      if (i != ctx->axis) { reduce_axes_vec.emplace_back(i); }
     }
     in_grads->at(1) = JUST(functional::ReduceSum(dropout_grad, reduce_axes_vec, false));
   }

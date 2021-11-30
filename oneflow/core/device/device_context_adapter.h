@@ -17,11 +17,12 @@ limitations under the License.
 #define ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_ADAPTER_H_
 
 #include "oneflow/core/device/device_context.h"
-#include "oneflow/core/stream/stream_context.h"
+#include "oneflow/core/stream/include/stream_context.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 
-DeviceCtx* NewDeviceCtxAdapter(StreamContext* ctx);
+DeviceCtx* NewDeviceCtxAdapter(ep::Stream* stream);
 
 }  // namespace oneflow
 

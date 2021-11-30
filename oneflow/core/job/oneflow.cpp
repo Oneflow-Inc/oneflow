@@ -36,7 +36,7 @@ limitations under the License.
 #include "oneflow/core/operator/interface_op_util.h"
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/vm/oneflow_vm.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/profiler/profiler.h"
@@ -487,6 +487,7 @@ Maybe<ReentrantLockBackEdge> MakeMainJobComponent(
   }
   const int64_t num_critial_sections = Global<CriticalSectionDesc>::Get()->CriticalSectionNum();
   std::vector<std::string> snk_tick_op_names;
+  snk_tick_op_names.reserve(num_critial_sections * machine_id_range.size());
   FOR_RANGE(int64_t, i, 0, num_critial_sections) {
     // source tick
     OperatorConf src_tick_op_conf;
@@ -536,7 +537,7 @@ Maybe<ReentrantLockBackEdge> MakeMainJobComponent(
         snk_tick_conf->add_tick(identity_tick_op_conf.name() + "/out");
         snk_tick_conf->set_out("out");
         JUST(job_builder->AddOp(parallel_conf, snk_tick_op_conf));
-        snk_tick_op_names.push_back(snk_tick_op_conf.name());
+        snk_tick_op_names.emplace_back(snk_tick_op_conf.name());
       }
     }
   }
@@ -644,7 +645,7 @@ Maybe<void> MakeMainJob(Job* main_job,
   for (int64_t machine_id : process_ranks) {
     Range sub_range(machine_id, machine_id + 1);
     const auto& in_lbn = wait_and_send_ids_op_conf.name() + "/out";
-    lock_back_edges->push_back(*JUST(MakeMainJobComponent(
+    lock_back_edges->emplace_back(*JUST(MakeMainJobComponent(
         in_lbn, sub_range, &job_builder, identity_tick_op_names, &cb_sink_tick_op_names)));
   }
   OperatorConf callback_notify_esac_op_conf;
@@ -933,7 +934,7 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
   function_jobs.reserve(jobs.size());
   FOR_RANGE(int, i, 0, jobs.size()) {
     JobDesc job_desc(jobs.at(i)->job_conf(), i);
-    if (job_desc.Bool("__is_user_function__")) { function_jobs.push_back(jobs.at(i)); }
+    if (job_desc.Bool("__is_user_function__")) { function_jobs.emplace_back(jobs.at(i)); }
   }
   HashMap<std::string, ParallelBlobConf> push_op_name2parallel_blob_conf;
   FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, function_jobs,

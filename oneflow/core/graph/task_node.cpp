@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_node.h"
-#include "oneflow/core/common/id_util.h"
-#include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
@@ -237,8 +235,8 @@ void TaskNode::ToProto(TaskProto* task_proto) const {
 }
 
 MemZoneId TaskNode::MemZoneId121() const {
-  StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id_);
-  return MemZoneId{stream_id.device_id()};
+  StreamId stream_id = DecodeStreamIdFromInt64(thrd_id_);
+  return stream_id.device_id();
 }
 
 bool TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node, std::string* name) {
@@ -312,7 +310,7 @@ void TaskNode::InitProducedRegstMemCase(RegstDesc* regst) {
 void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
   if (device_type() == DeviceType::kCPU) {
     mem_case->mutable_host_mem();
-  } else if (device_type() == DeviceType::kGPU) {
+  } else if (device_type() == DeviceType::kCUDA) {
     mem_case->mutable_device_cuda_mem()->set_device_id(stream_id().device_id().device_index());
   } else {
     UNIMPLEMENTED();
@@ -320,7 +318,7 @@ void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
 }
 
 void TaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
-  if (mem_case->has_host_mem() && device_type() == DeviceType::kGPU) {
+  if (mem_case->has_host_mem() && device_type() == DeviceType::kCUDA) {
     mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(
         stream_id().device_id().device_index());
   }
@@ -332,15 +330,15 @@ void TaskNode::ConsumeRegst(const std::string& name) {
 
 void TaskNode::ConsumeRegst(const std::string& name, const std::shared_ptr<RegstDesc>& regst) {
   regst->AddConsumer(this);
-  consumed_regsts_[name].push_back(regst);
+  consumed_regsts_[name].emplace_back(regst);
 }
 
 void TaskNode::UpdateTaskId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_id_, -1);
-  StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id_);
+  StreamId stream_id = DecodeStreamIdFromInt64(thrd_id_);
   new_task_id_.reset(new TaskId(Global<IDMgr>::Get()->GetTaskIdGenerator()->Generate(stream_id)));
-  task_id_ = SerializeTaskIdToInt64(*new_task_id_);
+  task_id_ = EncodeTaskIdToInt64(*new_task_id_);
 }
 
 void TaskNode::EraseConsumedRegstsByName(const std::string& name) {
@@ -361,6 +359,7 @@ std::shared_ptr<RegstDesc> TaskEdge::GetSoleRegst() const {
 
 std::vector<std::shared_ptr<RegstDesc>> TaskEdge::GetRegsts() const {
   std::vector<std::shared_ptr<RegstDesc>> regst_descs;
+  regst_descs.reserve(name_in_producer2regst_.size());
   for (auto& pair : name_in_producer2regst_) { regst_descs.emplace_back(pair.second); }
   return regst_descs;
 }

@@ -16,23 +16,25 @@ limitations under the License.
 #ifndef _ONEFLOW_USER_KERNELS_ELEMENTWISE_XPU_KERNEL_CUH_
 #define _ONEFLOW_USER_KERNELS_ELEMENTWISE_XPU_KERNEL_CUH_
 #include "oneflow/core/cuda/elementwise.cuh"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
 template<typename FunctorT, typename OutputT, typename InputA>
-struct UnaryElemwiseXpuLauncher<DeviceType::kGPU, FunctorT, OutputT, InputA> final {
-  void operator()(DeviceCtx* ctx, int64_t elem_cnt, OutputT* out, const InputA* input_a,
+struct UnaryElemwiseXpuLauncher<DeviceType::kCUDA, FunctorT, OutputT, InputA> final {
+  void operator()(ep::Stream* stream, int64_t elem_cnt, OutputT* out, const InputA* input_a,
                   FunctorT functor) {
-    OF_CUDA_CHECK(cuda::elementwise::Unary(functor, elem_cnt, out, input_a, ctx->cuda_stream()));
+    OF_CUDA_CHECK(cuda::elementwise::Unary(functor, elem_cnt, out, input_a,
+                                           stream->As<ep::CudaStream>()->cuda_stream()));
   }
 };
 
 template<typename FunctorT, typename OutputT, typename InputA, typename InputB>
-struct BinaryElemwiseXpuLauncher<DeviceType::kGPU, FunctorT, OutputT, InputA, InputB> final {
-  void operator()(DeviceCtx* ctx, int64_t elem_cnt, OutputT* out, const InputA* input_a,
+struct BinaryElemwiseXpuLauncher<DeviceType::kCUDA, FunctorT, OutputT, InputA, InputB> final {
+  void operator()(ep::Stream* stream, int64_t elem_cnt, OutputT* out, const InputA* input_a,
                   const InputB* input_b, FunctorT functor) {
-    OF_CUDA_CHECK(
-        cuda::elementwise::Binary(functor, elem_cnt, out, input_a, input_b, ctx->cuda_stream()));
+    OF_CUDA_CHECK(cuda::elementwise::Binary(functor, elem_cnt, out, input_a, input_b,
+                                            stream->As<ep::CudaStream>()->cuda_stream()));
   }
 };
 

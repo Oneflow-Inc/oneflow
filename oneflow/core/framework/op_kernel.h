@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/stream/stream_context.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 
@@ -108,6 +109,12 @@ class KernelComputeContext : virtual public OpInfoIf,
   OF_DISALLOW_COPY_AND_MOVE(KernelComputeContext);
   virtual ~KernelComputeContext() = default;
 
+  virtual Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) = 0;
+  virtual ep::Stream* stream() = 0;
+
+  virtual const TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                       int32_t index) const = 0;
+  virtual DeviceType device_type() const = 0;
   virtual const ParallelContext& parallel_ctx() const = 0;
 
  protected:
@@ -171,20 +178,11 @@ class OpKernel {
  private:
   template<typename T>
   friend OpKernel* NewOpKernel();
-  template<typename T>
-  friend OpKernel* NewOpKernelWithCtx(KernelCreateContext* ctx);
 };
 
 template<typename T>
 OpKernel* NewOpKernel() {
   return new T();
-}
-
-class KernelCreateContext;
-
-template<typename T>
-OpKernel* NewOpKernelWithCtx(KernelCreateContext* ctx) {
-  return new T(ctx);
 }
 
 }  // namespace user_op

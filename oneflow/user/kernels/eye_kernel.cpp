@@ -27,23 +27,23 @@ class EyeKernel final : public OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    int64_t m = ctx->Attr<int64_t>("m");
-    int64_t n = ctx->Attr<int64_t>("n");
-    if (m == 0 || n == 0) { return; }
+    int64_t rows = ctx->Attr<int64_t>("rows");
+    int64_t cols = ctx->Attr<int64_t>("cols");
+    if (rows == 0 || cols == 0) { return; }
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     T* out = out_tensor->mut_dptr<T>();
     Memset<device_type>(
-        ctx->device_ctx(), out_tensor->mut_dptr<T>(), 0,
+        ctx->stream(), out_tensor->mut_dptr<T>(), 0,
         out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type()));
-    EyeFunctor<device_type, T>()(ctx->device_ctx(), m, std::min(m, n), out);
+    EyeFunctor<device_type, T>()(ctx->stream(), cols, std::min(cols, rows), out);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_EYE_KERNEL(device, dtype)                                             \
   REGISTER_USER_KERNEL("eye").SetCreateFn<EyeKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device)                                              \
-      & (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
+      (user_op::HobDeviceType() == device)                                             \
+      && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
 #define REGISTER_EYE_KERNELS_WITH_DEVICE(device) \
   REGISTER_EYE_KERNEL(device, uint8_t)           \
@@ -56,9 +56,11 @@ class EyeKernel final : public OpKernel {
 // Register CPU version
 REGISTER_EYE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 
-// // Register GPU version
+// Register CUDA version
 #ifdef WITH_CUDA
-REGISTER_EYE_KERNELS_WITH_DEVICE(DeviceType::kGPU);
+REGISTER_EYE_KERNELS_WITH_DEVICE(DeviceType::kCUDA);
 #endif
+#undef REGISTER_EYE_KERNELS_WITH_DEVICE
+#undef REGISTER_EYE_KERNEL
 }  // namespace user_op
 }  // namespace oneflow

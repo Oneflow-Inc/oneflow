@@ -16,26 +16,27 @@ limitations under the License.
 #include "oneflow/core/thread/thread.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/actor/actor.h"
-#include "oneflow/core/actor/light_actor.h"
-#include "oneflow/core/stream/stream_context.h"
-#include "oneflow/core/stream/execution_context_hook.h"
-#include "oneflow/core/graph/id_serialization.h"
+#include "oneflow/core/lazy/actor/actor.h"
+#include "oneflow/core/lazy/actor/light_actor.h"
+#include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/stream/include/stream_context.h"
 
 namespace oneflow {
 
-Thread::Thread(const StreamId& stream_id) : thrd_id_(SerializeStreamIdToInt64(stream_id)) {
+Thread::Thread(const StreamId& stream_id) : thrd_id_(EncodeStreamIdToInt64(stream_id)) {
   local_msg_queue_enabled_ =
       ParseBooleanFromEnv("ONEFLOW_THREAD_ENABLE_LOCAL_MESSAGE_QUEUE", false);
   light_actor_enabled_ = ParseBooleanFromEnv("ONEFLOW_ACTOR_ENABLE_LIGHT_ACTOR", false);
   StreamContext* stream_ctx =
       NewObj<int, StreamContext, const StreamId&>(stream_id.device_id().device_type(), stream_id);
   stream_ctx_.reset(stream_ctx);
-  actor_thread_ = std::thread([this]() {
-    auto* hook = dynamic_cast<ExecutionContextHook*>(stream_ctx_.get());
-    if (hook != nullptr) { CHECK_JUST(hook->OnExecutionContextSetup()); }
+  actor_thread_ = std::thread([this, &stream_id]() {
+    OF_PROFILER_NAME_THIS_HOST_THREAD("_" + DeviceTypeName(stream_id.device_id().device_type())
+                                      + std::to_string(stream_id.device_id().device_index())
+                                      + "_actor");
+    CHECK_JUST(stream_ctx_->stream()->OnExecutionContextSetup());
     PollMsgChannel();
-    if (hook != nullptr) { CHECK_JUST(hook->OnExecutionContextTeardown()); }
+    CHECK_JUST(stream_ctx_->stream()->OnExecutionContextTeardown());
   });
 }
 

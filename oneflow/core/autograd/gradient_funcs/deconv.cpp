@@ -16,9 +16,7 @@ limitations under the License.
 #include <cstdint>
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -82,9 +80,9 @@ Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdCaptureState* ctx,
     const auto& x = ctx->SavedTensors().at(1);
     std::vector<int64_t> start, stop, step;
     for (int i = 0; i < x->shape()->NumAxes(); i++) {
-      start.push_back(0);
-      stop.push_back(x->shape()->At(i));
-      step.push_back(1);
+      start.emplace_back(0);
+      stop.emplace_back(x->shape()->At(i));
+      step.emplace_back(1);
     }
     const auto& weight = ctx->SavedTensors().at(0);
     if (ctx->ndims == 1) {

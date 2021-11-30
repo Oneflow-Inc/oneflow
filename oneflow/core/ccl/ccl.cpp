@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 namespace ccl {
@@ -160,7 +161,7 @@ DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, DtypeAllReduce, MAKE_ALL_REDUCE_ENTRY,
 template<>
 Maybe<void> AllReduce<DeviceType::kCPU>(const void* in, void* out, size_t elem_cnt, DataType dtype,
                                         ReduceType reduce_type, Symbol<ParallelDesc> parallel_desc,
-                                        DeviceCtx* ctx) {
+                                        ep::Stream* stream) {
   return SwitchDtypeAllReduce(SwitchCase(dtype, reduce_type), in, out, elem_cnt, parallel_desc);
 }
 
@@ -236,13 +237,14 @@ DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, DtypeReduceScatter, MAKE_REDUCE_SCATTER_E
 template<>
 Maybe<void> ReduceScatter<DeviceType::kCPU>(const void* in, void* out, size_t elem_cnt,
                                             DataType dtype, ReduceType reduce_type,
-                                            Symbol<ParallelDesc> parallel_desc, DeviceCtx* ctx) {
+                                            Symbol<ParallelDesc> parallel_desc,
+                                            ep::Stream* stream) {
   return SwitchDtypeReduceScatter(SwitchCase(dtype, reduce_type), in, out, elem_cnt, parallel_desc);
 }
 
 template<>
 Maybe<void> AllGather<DeviceType::kCPU>(const void* in, void* out, size_t elem_cnt, DataType dtype,
-                                        Symbol<ParallelDesc> parallel_desc, DeviceCtx* ctx) {
+                                        Symbol<ParallelDesc> parallel_desc, ep::Stream* stream) {
   char* char_out = reinterpret_cast<char*>(out);
   int64_t parallel_num = parallel_desc->parallel_num();
   size_t chunk_size = elem_cnt * GetSizeOfDataType(dtype);
@@ -292,7 +294,7 @@ Maybe<void> AllGather<DeviceType::kCPU>(const void* in, void* out, size_t elem_c
 template<>
 Maybe<void> Broadcast<DeviceType::kCPU>(const void* in, void* out, size_t elem_cnt, DataType dtype,
                                         int64_t root, Symbol<ParallelDesc> parallel_desc,
-                                        DeviceCtx* ctx) {
+                                        ep::Stream* stream) {
   CHECK_EQ_OR_RETURN(parallel_desc->device_type(), DeviceType::kCPU);
   CHECK_OR_RETURN(IsPODDataType(dtype));
   size_t buffer_size = elem_cnt * GetSizeOfDataType(dtype);
@@ -456,7 +458,7 @@ DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, DtypeReduce, MAKE_REDUCE_ENTRY,
 template<>
 Maybe<void> Reduce<DeviceType::kCPU>(const void* in, void* out, size_t elem_cnt, DataType dtype,
                                      ReduceType reduce_type, int64_t root,
-                                     Symbol<ParallelDesc> parallel_desc, DeviceCtx* ctx) {
+                                     Symbol<ParallelDesc> parallel_desc, ep::Stream* stream) {
   return SwitchDtypeReduce(SwitchCase(dtype, reduce_type), in, out, elem_cnt, root, parallel_desc);
 }
 
@@ -475,7 +477,7 @@ auto* GetNcclCommAndPeerNcclRank = DECORATE(&RawGetNcclCommAndPeerNcclRank, Thre
 
 template<>
 Maybe<void> Send<DeviceType::kCPU>(const void* in, size_t elem_cnt, DataType dtype, int64_t dst,
-                                   DeviceCtx* ctx) {
+                                   ep::Stream* stream) {
   CHECK_OR_RETURN(IsPODDataType(dtype));
   size_t buffer_size = elem_cnt * GetSizeOfDataType(dtype);
   TransportToken transport_token = JUST(TransportToken::NewTransportToken(kTransportTokenTypeData));
@@ -497,13 +499,14 @@ Maybe<void> Send<DeviceType::kCPU>(const void* in, size_t elem_cnt, DataType dty
 
 #ifdef WITH_CUDA
 template<>
-Maybe<void> Send<DeviceType::kGPU>(const void* in, size_t elem_cnt, DataType dtype, int64_t dst,
-                                   DeviceCtx* ctx) {
+Maybe<void> Send<DeviceType::kCUDA>(const void* in, size_t elem_cnt, DataType dtype, int64_t dst,
+                                    ep::Stream* stream) {
 #if NCCL_VERSION_CODE >= 2700
   CHECK_OR_RETURN(IsPODDataType(dtype));
   const auto& comm_and_peer_rank = GetNcclCommAndPeerNcclRank(dst);
   OF_NCCL_CHECK_OR_RETURN(ncclSend(in, elem_cnt, GetNcclDataType(dtype), comm_and_peer_rank.second,
-                                   comm_and_peer_rank.first, ctx->cuda_stream()));
+                                   comm_and_peer_rank.first,
+                                   stream->As<ep::CudaStream>()->cuda_stream()));
   return Maybe<void>::Ok();
 #else
   UNIMPLEMENTED_THEN_RETURN() << "GPU send is only supported when nccl version >= 2.7"
@@ -513,7 +516,7 @@ Maybe<void> Send<DeviceType::kGPU>(const void* in, size_t elem_cnt, DataType dty
 
 template<>
 Maybe<void> Recv<DeviceType::kCPU>(void* out, size_t elem_cnt, DataType dtype, int64_t src,
-                                   DeviceCtx* ctx) {
+                                   ep::Stream* stream) {
   CHECK_OR_RETURN(IsPODDataType(dtype));
   size_t buffer_size = elem_cnt * GetSizeOfDataType(dtype);
   TransportToken transport_token = JUST(TransportToken::NewTransportToken(kTransportTokenTypeData));
@@ -535,13 +538,14 @@ Maybe<void> Recv<DeviceType::kCPU>(void* out, size_t elem_cnt, DataType dtype, i
 
 #ifdef WITH_CUDA
 template<>
-Maybe<void> Recv<DeviceType::kGPU>(void* out, size_t elem_cnt, DataType dtype, int64_t src,
-                                   DeviceCtx* ctx) {
+Maybe<void> Recv<DeviceType::kCUDA>(void* out, size_t elem_cnt, DataType dtype, int64_t src,
+                                    ep::Stream* stream) {
 #if NCCL_VERSION_CODE >= 2700
   CHECK_OR_RETURN(IsPODDataType(dtype));
   const auto& comm_and_peer_rank = GetNcclCommAndPeerNcclRank(src);
   OF_NCCL_CHECK_OR_RETURN(ncclRecv(out, elem_cnt, GetNcclDataType(dtype), comm_and_peer_rank.second,
-                                   comm_and_peer_rank.first, ctx->cuda_stream()));
+                                   comm_and_peer_rank.first,
+                                   stream->As<ep::CudaStream>()->cuda_stream()));
   return Maybe<void>::Ok();
 #else
   UNIMPLEMENTED_THEN_RETURN() << "GPU recv is only supported when nccl version >= 2.7"

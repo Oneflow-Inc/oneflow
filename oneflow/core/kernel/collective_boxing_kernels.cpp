@@ -17,8 +17,7 @@ limitations under the License.
 #include "oneflow/core/job/collective_boxing/scheduler.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
-#include "oneflow/core/device/collective_boxing_device_context.h"
-#include "oneflow/core/actor/collective_boxing_actor_context.h"
+#include "oneflow/core/lazy/actor/collective_boxing_actor_context.h"
 
 namespace oneflow {
 
@@ -26,11 +25,10 @@ using namespace boxing::collective;
 
 namespace {
 
-CollectiveBoxingDeviceCtx* GetCollectiveBoxingDeviceCtx(KernelContext* kernel_ctx) {
-  auto* actor_context_pointer = CHECK_NOTNULL(dynamic_cast<ActorContextProvider*>(kernel_ctx));
-  auto* collective_boxing_actor_context = CHECK_NOTNULL(
-      dynamic_cast<CollectiveBoxingActorContext*>(actor_context_pointer->GetActorContext()));
-  return collective_boxing_actor_context->collective_boxing_device_ctx();
+CollectiveBoxingActorContext* GetCollectiveBoxingActorContext(KernelContext* kernel_ctx) {
+  auto* actor_context_provider = CHECK_NOTNULL(dynamic_cast<ActorContextProvider*>(kernel_ctx));
+  return CHECK_NOTNULL(
+      dynamic_cast<CollectiveBoxingActorContext*>(actor_context_provider->GetActorContext()));
 }
 
 class CollectiveBoxingKernelState final : public KernelState {
@@ -68,33 +66,24 @@ void CollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) const
   RequestHandle* request_handle =
       CHECK_NOTNULL(dynamic_cast<CollectiveBoxingKernelState*>(ctx->state().get()))
           ->request_handle();
-  auto request = std::make_shared<RuntimeRequestInfo>();
+  const void* send_buff = nullptr;
+  void* recv_buff = nullptr;
   const RankDesc& rank_desc = this->op_conf().collective_boxing_generic_conf().rank_desc();
   const DataType data_type = rank_desc.op_desc().data_type();
   if (GenericOpHasInput(rank_desc)) {
     const Blob* in = ctx->BnInOp2Blob("in");
     CHECK_EQ(in->data_type(), data_type);
     CHECK(in->shape() == ShapeView(GenericOpGetInputShape(rank_desc)));
-    request->send_buff = in->dptr();
-  } else {
-    request->send_buff = nullptr;
+    send_buff = in->dptr();
   }
   if (GenericOpHasOutput(rank_desc)) {
     Blob* out = ctx->BnInOp2Blob("out");
     CHECK_EQ(out->data_type(), data_type);
     CHECK(out->shape() == ShapeView(GenericOpGetOutputShape(rank_desc)));
-    request->recv_buff = out->mut_dptr();
-  } else {
-    request->recv_buff = nullptr;
+    recv_buff = out->mut_dptr();
   }
-  auto* device_ctx = GetCollectiveBoxingDeviceCtx(ctx);
-  CHECK_NOTNULL(device_ctx);
-  std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint> checkpoint = device_ctx->AddCheckpoint();
-  request->callback = [checkpoint](const Maybe<void>& status) {
-    CHECK(status.IsOk());
-    checkpoint->SetDone();
-  };
-  Global<Scheduler>::Get()->Schedule(request_handle, request);
+  auto* actor_ctx = GetCollectiveBoxingActorContext(ctx);
+  actor_ctx->Schedule(request_handle, send_buff, recv_buff);
 }
 
 REGISTER_KERNEL(OperatorConf::kCollectiveBoxingGenericConf, CollectiveBoxingGenericKernel);

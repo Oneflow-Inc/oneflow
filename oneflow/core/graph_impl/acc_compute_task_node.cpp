@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/compute_task_node.h"
-#include "oneflow/core/framework/framework.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
 
 namespace oneflow {
 
@@ -50,6 +50,8 @@ void AccCompTaskNode::BuildExecGphAndRegst() {
     CHECK_EQ(blob_desc->is_dynamic(), false);
   });
 }
+
+REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kAcc);
 
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("acc", AccCompTaskNode);
 

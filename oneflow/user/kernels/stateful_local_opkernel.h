@@ -36,7 +36,6 @@ struct LocalCallOpKernelUtil;
 namespace one {
 
 class LocalUserKernelRegContext;
-class LocalUserKernelCreateContext;
 class LocalUserKernelInitContext;
 class LocalUserOpInferContext;
 
@@ -44,8 +43,8 @@ class ConsistentTensorInferResult;
 
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
-using EagerBlobObjectListPtr =
-    std::shared_ptr<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>;
+using EagerBlobObjectListRawPtr = const std::vector<std::shared_ptr<vm::EagerBlobObject>>*;
+using ConsistentTensorInferResultRawPtr = const ConsistentTensorInferResult*;
 
 class EagerBlobObjectTensorView final : public user_op::Tensor {
  public:
@@ -174,9 +173,8 @@ class ZeroCopyBaseContext : virtual public user_op::TensorDescIf,
   const ArgVec& inputs() const override { return input_arg_tuple_->indexed_arg_name_and_index(); }
   const ArgVec& outputs() const override { return output_arg_tuple_->indexed_arg_name_and_index(); }
 
-  void Update(
-      const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-      const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result);
+  void Update(EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
+              ConsistentTensorInferResultRawPtr consistent_tensor_infer_result);
 
  private:
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
@@ -186,9 +184,9 @@ class ZeroCopyBaseContext : virtual public user_op::TensorDescIf,
   std::vector<std::unique_ptr<EagerBlobObjectTensorDescView>> input_tensor_desc_views_;
   std::vector<std::unique_ptr<EagerBlobObjectTensorDescView>> output_tensor_desc_views_;
   std::unique_ptr<EagerBlobObjectTensorView> tmp_buffer_view_;
-  EagerBlobObjectListPtr input_tensors_;
-  EagerBlobObjectListPtr output_tensors_;
-  std::shared_ptr<const ConsistentTensorInferResult> consistent_tensor_infer_result_;
+  EagerBlobObjectListRawPtr input_tensors_;
+  EagerBlobObjectListRawPtr output_tensors_;
+  ConsistentTensorInferResultRawPtr consistent_tensor_infer_result_;
   std::vector<std::unique_ptr<ConsistentTensorMetaTensorDescView>>
       input_consistent_tensor_meta_views_;
   std::vector<std::unique_ptr<ConsistentTensorMetaTensorDescView>>
@@ -304,10 +302,9 @@ class LocalUserKernelComputeContext final : virtual public ZeroCopyBaseContext,
     return ZeroCopyBaseContext::parallel_ctx();
   }
 
-  void Update(
-      const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-      const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result,
-      DeviceCtx* device_ctx);
+  void Update(EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
+              ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
+              DeviceCtx* device_ctx);
 
  private:
   DeviceCtx* device_ctx_;
@@ -325,6 +322,7 @@ class StatefulLocalOpKernel final {
   ~StatefulLocalOpKernel();
   const Symbol<Device>& device() const { return device_; }
   const std::shared_ptr<MemoryCase>& mem_case() const { return device_->mem_case(); }
+  const std::string& op_type_name() const { return op_conf_->user_conf().op_type_name(); }
   const std::vector<int64_t>& input_tuple_indexes4const_ibns() const {
     return input_tuple_indexes4const_ibns_;
   }
@@ -350,27 +348,26 @@ class StatefulLocalOpKernel final {
     return op_infer_ctx_for_scheduler_thread_.get();
   }
 
-  LocalUserOpInferContext* op_infer_ctx_for_main_thread() const {
-    return op_infer_ctx_for_main_thread_.get();
-  }
-
   void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
+
+  Maybe<void> ChooseOpKernel(const user_op::OpKernel** user_opkernel, bool* need_temp_storage,
+                             const AttrMap& attrs, EagerBlobObjectListRawPtr inputs,
+                             EagerBlobObjectListRawPtr outputs,
+                             ConsistentTensorInferResultRawPtr consistent_tensor_infer_result);
 
  private:
   friend struct vm::LocalCallOpKernelUtil;
   StatefulLocalOpKernel() = default;
   LocalUserKernelComputeContext* UpdateComputeContext(
-      const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-      const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result,
-      DeviceCtx* device_ctx);
+      EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
+      ConsistentTensorInferResultRawPtr consistent_tensor_infer_result, DeviceCtx* device_ctx);
 
   user_op::TensorDescInferFn TensorDescInferFn() const;
   user_op::DataTypeInferFn DataTypeInferFn() const;
 
-  void TryInitOpKernelState(
-      const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx,
-      const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-      const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result,
+  void TryInitOpKernelState(const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx,
+      EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
+      ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
       user_op::OpKernelState** state, user_op::OpKernelCache** cache);
 
   vm::EagerBlobObject* mut_temp_blob_object();
@@ -381,10 +378,6 @@ class StatefulLocalOpKernel final {
 
   bool need_check_mem_case() const { return need_check_mem_case_; }
 
-  Maybe<const user_op::OpKernel*> ChooseOpKernel(
-      const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-      const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result);
-
   const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
 
   std::shared_ptr<OperatorConf> op_conf_;
@@ -393,17 +386,19 @@ class StatefulLocalOpKernel final {
   std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
   Symbol<Device> device_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
-  std::unique_ptr<LocalUserKernelCreateContext> create_ctx_;
   std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_scheduler_thread_;
-  std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_main_thread_;
   std::unique_ptr<LocalUserKernelComputeContext> compute_ctx_;
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
   std::shared_ptr<const ArgTuple> output_arg_tuple_;
   bool need_check_mem_case_;
   user_op::TensorDescInferFn tensor_desc_infer_fn_;
   user_op::DataTypeInferFn data_type_infer_fn_;
-  HashMap<const user_op::OpKernelRegistryResult*, std::shared_ptr<const user_op::OpKernel>>
-      op_kernel_map_;
+  // NOTE: every device has its own stateful local opkernel instance,
+  // so only group kernels by dtype
+  std::array<std::vector<std::pair<const user_op::OpKernelRegistryResult*,
+                                   std::shared_ptr<const user_op::OpKernel>>>,
+             DataType_MAX>
+      dtype2cached_kernels_;
   HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelState>> op_kernel_state_map_;
   HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelCache>> op_kernel_cache_map_;
   HashMap<const user_op::OpKernel*, const user_op::InferTmpSizeFn*> infer_tmp_size_fn_map_;
