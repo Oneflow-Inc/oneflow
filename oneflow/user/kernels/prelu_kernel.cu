@@ -26,7 +26,6 @@ constexpr int32_t kBlockSize = 256;
 
 template<typename T>
 constexpr int32_t GetPreluPackSize() {
-  // For float, bfloat16, half.
   return 4;
 };
 
@@ -121,13 +120,13 @@ __global__ void PReluBackwardMultiAlphaGpu(const IndexType elem_cnt, const Index
     *(reinterpret_cast<LoadType*>(dx + linear_index)) = dx_vec.storage;
   }
 
+  IndexType alpha_index = (global_thread_id / inner_size) % alpha_size;
   if (tail && global_thread_id < n_tail) {
     T tail_x_val = tail_x[global_thread_id];
     T tail_dy_val = tail_dy[global_thread_id];
     tail_dx[global_thread_id] =
-        tail_x_val > zero_val ? tail_dy_val
-                              : tail_dy_val * alpha[(global_thread_id / inner_size) % alpha_size];
-    alpha_diff[(global_thread_id / inner_size) % alpha_size] +=
+        tail_x_val > zero_val ? tail_dy_val : tail_dy_val * alpha[alpha_index];
+    alpha_diff[alpha_index] +=
         tail_x_val > zero_val ? zero_val : tail_dy_val * tail_x[global_thread_id];
   }
 }
@@ -144,38 +143,31 @@ void DispatchPreluForwardIndexTail(ep::Stream* stream, const int64_t elem_cnt,
   const int64_t tail_offset = pack_num * pack_size;
   const int64_t n_tail = elem_cnt - tail_offset;
   const bool tail = n_tail > 0 ? true : false;
-  uint64_t inc_offset = 0;
 
-  const int64_t alpha_mul_in = alpha_size * inner_size;
+  const int64_t alpha_inner_size = alpha_size * inner_size;
 
   if (elem_cnt < GetMaxVal<int32_t>()) {
     if (tail) {
-      // If tail, we need generate randnum one more time, so here we add another `1`.
-      inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize + 1;
       PReluForwardMultiAlphaGpu<T, int32_t, pack_size, true>
           <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              elem_cnt, alpha_size, inner_size, alpha_mul_in, n_tail, x, alpha, y,
+              elem_cnt, alpha_size, inner_size, alpha_inner_size, n_tail, x, alpha, y,
               (x + tail_offset), (y + tail_offset));
     } else {
-      inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize;
       PReluForwardMultiAlphaGpu<T, int32_t, pack_size, false>
           <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              elem_cnt, alpha_size, inner_size, alpha_mul_in, n_tail, x, alpha, y, nullptr,
+              elem_cnt, alpha_size, inner_size, alpha_inner_size, n_tail, x, alpha, y, nullptr,
               nullptr);
     }
   } else {
     if (tail) {
-      // If tail, we need generate randnum one more time, so here we add another `1`.
-      inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize + 1;
       PReluForwardMultiAlphaGpu<T, int64_t, pack_size, true>
           <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              elem_cnt, alpha_size, inner_size, alpha_mul_in, n_tail, x, alpha, y,
+              elem_cnt, alpha_size, inner_size, alpha_inner_size, n_tail, x, alpha, y,
               (x + tail_offset), (y + tail_offset));
     } else {
-      inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize;
       PReluForwardMultiAlphaGpu<T, int64_t, pack_size, false>
           <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              elem_cnt, alpha_size, inner_size, alpha_mul_in, n_tail, x, alpha, y, nullptr,
+              elem_cnt, alpha_size, inner_size, alpha_inner_size, n_tail, x, alpha, y, nullptr,
               nullptr);
     }
   }
@@ -192,35 +184,32 @@ void DispatchBackwardIndexTail(ep::Stream* stream, const int64_t elem_cnt, const
   const int64_t tail_offset = pack_num * pack_size;
   const int64_t n_tail = elem_cnt - tail_offset;
   const bool tail = n_tail > 0 ? true : false;
-  uint64_t inc_offset = 0;
 
-  const int64_t alpha_mul_in = alpha_size * inner_size;
+  const int64_t alpha_inner_size = alpha_size * inner_size;
 
   if (elem_cnt < GetMaxVal<int32_t>()) {
     if (tail) {
-      // If tail, we need generate randnum one more time, so here we add another `1`.
       PReluBackwardMultiAlphaGpu<T, int32_t, pack_size, true>
           <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              elem_cnt, alpha_size, inner_size, alpha_mul_in, n_tail, x, alpha, dy, dx, alpha_diff,
-              (x + tail_offset), (dy + tail_offset), (dx + tail_offset));
+              elem_cnt, alpha_size, inner_size, alpha_inner_size, n_tail, x, alpha, dy, dx,
+              alpha_diff, (x + tail_offset), (dy + tail_offset), (dx + tail_offset));
     } else {
       PReluBackwardMultiAlphaGpu<T, int32_t, pack_size, false>
           <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              elem_cnt, alpha_size, inner_size, alpha_mul_in, n_tail, x, alpha, dy, dx, alpha_diff,
-              nullptr, nullptr, nullptr);
+              elem_cnt, alpha_size, inner_size, alpha_inner_size, n_tail, x, alpha, dy, dx,
+              alpha_diff, nullptr, nullptr, nullptr);
     }
   } else {
     if (tail) {
-      // If tail, we need generate randnum one more time, so here we add another `1`.
       PReluBackwardMultiAlphaGpu<T, int64_t, pack_size, true>
           <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              elem_cnt, alpha_size, inner_size, alpha_mul_in, n_tail, x, alpha, dy, dx, alpha_diff,
-              (x + tail_offset), (dy + tail_offset), (dx + tail_offset));
+              elem_cnt, alpha_size, inner_size, alpha_inner_size, n_tail, x, alpha, dy, dx,
+              alpha_diff, (x + tail_offset), (dy + tail_offset), (dx + tail_offset));
     } else {
       PReluBackwardMultiAlphaGpu<T, int64_t, pack_size, false>
           <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              elem_cnt, alpha_size, inner_size, alpha_mul_in, n_tail, x, alpha, dy, dx, alpha_diff,
-              nullptr, nullptr, nullptr);
+              elem_cnt, alpha_size, inner_size, alpha_inner_size, n_tail, x, alpha, dy, dx,
+              alpha_diff, nullptr, nullptr, nullptr);
     }
   }
 }
