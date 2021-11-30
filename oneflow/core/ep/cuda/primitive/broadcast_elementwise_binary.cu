@@ -28,6 +28,8 @@ namespace primitive {
 template<BinaryOp binary_op, typename Src, typename Dst>
 std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary();
 
+namespace {
+
 class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BroadcastElementwiseBinaryFactoryImpl);
@@ -75,7 +77,7 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
 
 REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, BroadcastElementwiseBinaryFactory,
                            BroadcastElementwiseBinaryFactoryImpl);
-
+}  // namespace
 }  // namespace primitive
 }  // namespace ep
 

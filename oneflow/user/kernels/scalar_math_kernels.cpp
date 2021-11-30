@@ -73,17 +73,17 @@ class ScalarMathKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define SCALAR_MATH_SEQ                                                                     \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_add", ep::primitive::BinaryOp::kAdd)                         \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_mul", ep::primitive::BinaryOp::kMul)                         \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_equal", ep::primitive::BinaryOp::kEqual)             \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_not_equal", ep::primitive::BinaryOp::kNotEqual)      \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_greater", ep::primitive::BinaryOp::kLessThan)        \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_greater_equal", ep::primitive::BinaryOp::kLessEqual) \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_less", ep::primitive::BinaryOp::kGreaterThan)        \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_less_equal", ep::primitive::BinaryOp::kGreaterEqual) \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_and", ep::primitive::BinaryOp::kLogicalAnd)          \
-  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_or", ep::primitive::BinaryOp::kLogicalOr)            \
+#define SCALAR_MATH_SEQ                                                                        \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_add", ep::primitive::BinaryOp::kAdd)                            \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_mul", ep::primitive::BinaryOp::kMul)                            \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_equal", ep::primitive::BinaryOp::kEqual)                \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_not_equal", ep::primitive::BinaryOp::kNotEqual)         \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_greater", ep::primitive::BinaryOp::kGreaterThan)        \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_greater_equal", ep::primitive::BinaryOp::kGreaterEqual) \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_less", ep::primitive::BinaryOp::kLessThan)              \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_less_equal", ep::primitive::BinaryOp::kLessEqual)       \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_and", ep::primitive::BinaryOp::kLogicalAnd)             \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_logical_or", ep::primitive::BinaryOp::kLogicalOr)               \
   OF_PP_MAKE_TUPLE_SEQ("scalar_logical_xor", ep::primitive::BinaryOp::kLogicalXor)
 
 #define REGISTER_UNARY_MATH_SCALAR_ELEMWISE_USER_KERNEL(op_name, binary_op)                 \

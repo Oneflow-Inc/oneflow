@@ -67,21 +67,21 @@ class MathBinaryBroadcastKernel final : public user_op::OpKernel, public user_op
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define OP_BROADCAST_ELEMENTWISE_BINARY_PAIR_SEQ                                       \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_add", ep::primitive::BinaryOp::kAdd)                 \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_sub", ep::primitive::BinaryOp::kSub)                 \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_mul", ep::primitive::BinaryOp::kMul)                 \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_div", ep::primitive::BinaryOp::kDiv)                 \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_minimum", ep::primitive::BinaryOp::kMin)             \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_maximum", ep::primitive::BinaryOp::kMax)             \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_equal", ep::primitive::BinaryOp::kEqual)             \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_not_equal", ep::primitive::BinaryOp::kNotEqual)      \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_greater", ep::primitive::BinaryOp::kLessThan)        \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_greater_equal", ep::primitive::BinaryOp::kLessEqual) \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_less", ep::primitive::BinaryOp::kGreaterThan)        \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_less_equal", ep::primitive::BinaryOp::kGreaterEqual) \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_logical_and", ep::primitive::BinaryOp::kLogicalAnd)  \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_logical_or", ep::primitive::BinaryOp::kLogicalOr)    \
+#define OP_BROADCAST_ELEMENTWISE_BINARY_PAIR_SEQ                                          \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_add", ep::primitive::BinaryOp::kAdd)                    \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_sub", ep::primitive::BinaryOp::kSub)                    \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_mul", ep::primitive::BinaryOp::kMul)                    \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_div", ep::primitive::BinaryOp::kDiv)                    \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_minimum", ep::primitive::BinaryOp::kMin)                \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_maximum", ep::primitive::BinaryOp::kMax)                \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_equal", ep::primitive::BinaryOp::kEqual)                \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_not_equal", ep::primitive::BinaryOp::kNotEqual)         \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_greater", ep::primitive::BinaryOp::kGreaterThan)        \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_greater_equal", ep::primitive::BinaryOp::kGreaterEqual) \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_less", ep::primitive::BinaryOp::kLessThan)              \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_less_equal", ep::primitive::BinaryOp::kLessEqual)       \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_logical_and", ep::primitive::BinaryOp::kLogicalAnd)     \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_logical_or", ep::primitive::BinaryOp::kLogicalOr)       \
   OF_PP_MAKE_TUPLE_SEQ("broadcast_logical_xor", ep::primitive::BinaryOp::kLogicalXor)
 
 #define REGISTER_MATH_BINARY_BROADCAST_KERNEL(op_name, binary_op) \
