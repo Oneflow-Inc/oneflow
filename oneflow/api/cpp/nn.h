@@ -14,11 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_API_CPP_API_H_
-#define ONEFLOW_API_CPP_API_H_
+#ifndef ONEFLOW_API_CPP_NN_H_
+#define ONEFLOW_API_CPP_NN_H_
 
-#include "env.h"
-#include "framework.h"
-#include "nn.h"
+#include "nn/functional/activation.h"
 
-#endif  // !ONEFLOW_API_CPP_API_H_
+#endif  // !ONEFLOW_API_CPP_NN_H_
