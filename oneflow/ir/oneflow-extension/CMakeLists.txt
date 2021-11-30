@@ -31,6 +31,7 @@ target_link_libraries(MLIROneFlowExtension
   MLIROneFlow
   MLIRExecutionEngine
   MLIROneFlowTranslation
+  MLIROneFlowJIT
   oneflow
   PUBLIC
   ${MLIR_RUNTIME_LIBS}

@@ -19,8 +19,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
-#include "oneflow/core/framework/op_interpreter/jit_op_interpreter.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/op_arg_util.h"
 #include "oneflow/core/framework/scope_util.h"
@@ -34,6 +32,8 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/ir/oneflow-jit/include/OneFlow/jit_op_interpreter.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 
 namespace oneflow {
 
@@ -232,12 +232,13 @@ llvm::Optional<std::shared_ptr<one::UserOpExpr>> JitInterpreter::GetExpr(Operati
 }
 
 void JitInterpreter::Trace(
-    ir::JitImporter& importer, const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
+    ir::JitImporter& importer, const std::string& func_name,
+    const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
     const std::function<std::vector<std::shared_ptr<one::Tensor>>(void)>& forward_func) {
   Start();
   LOG(ERROR) << "importer reset";
   current_importer_ = &importer;  // TODO: extract function
-  SetJitForwardArgs(arg_tensors);
+  JitFunctionContext jit_function_context_(func_name, arg_tensors);
   auto return_tensors = forward_func();
   CHECK(importer.LowerToOneFlowKernel().succeeded());
   MlirTraceEnd();

@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/ir/include/OneFlow/Extension.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_interpreter/jit_op_interpreter.h"
+#include "oneflow/ir/oneflow-jit/include/OneFlow/jit_op_interpreter.h"
 #include "oneflow/api/python/functional/common.h"
 
 namespace py = pybind11;
@@ -43,7 +43,7 @@ struct Module {
     auto jit_interpreter = dynamic_cast<one::JitInterpreter*>(one::GetJitInterpreter().get());
     *one::MutJitEnabled() = true;
     auto i_this = reinterpret_cast<std::uintptr_t>(this);
-    *one::MutJitFuncName() = "jitModule" + std::to_string(i_this) + "_" + std::to_string(nth_call_);
+    std::string func_name = "jitModule" + std::to_string(i_this) + "_" + std::to_string(nth_call_);
     auto inputs = args.cast<std::vector<std::shared_ptr<one::Tensor>>>();
     auto parameters_generator = py_module_.attr("parameters")();
     std::vector<std::shared_ptr<one::Tensor>> parameters{};
@@ -55,7 +55,7 @@ struct Module {
     arg_tensors.insert(arg_tensors.end(), parameters.begin(), parameters.end());
     py::object ret;
     std::vector<std::shared_ptr<one::Tensor>> tensors_to_materialize{};
-    jit_interpreter->Trace(importer_, arg_tensors, [&]() {
+    jit_interpreter->Trace(importer_, func_name, arg_tensors, [&]() {
       ret = py_module_.attr("forward")(*args, **kwargs);
       if (auto tensor = ret.cast<std::shared_ptr<one::Tensor>>()) {
         tensors_to_materialize.push_back(tensor);
