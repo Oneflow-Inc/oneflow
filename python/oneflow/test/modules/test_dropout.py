@@ -28,21 +28,21 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestDropout(flow.unittest.TestCase):
-    @autotest(auto_backward=False)
+    @autotest()
     def test_dropout(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=random(), dim0=random()).to(device)
         m = torch.nn.Dropout(p=0)
         return m(x)
 
-    @autotest(auto_backward=False)
+    @autotest()
     def test_dropout_p1(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=random(), dim0=random()).to(device)
         m = torch.nn.Dropout(p=1.0)
         return m(x)
 
-    @autotest(auto_backward=False)
+    @autotest()
     def test_dropout_eval(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=random(), dim0=random()).to(device)
