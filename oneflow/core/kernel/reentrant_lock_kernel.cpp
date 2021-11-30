@@ -29,7 +29,7 @@ void ReentrantLockStatus::Init(const KernelConf& kernel_conf) {
   lock_id2queued_request_act_id_.resize(conf.lock_id2intersecting_lock_ids_size());
   lock_id2acquired_num_.resize(conf.lock_id2intersecting_lock_ids_size());
   for (const Int64List& ids : conf.lock_id2intersecting_lock_ids()) {
-    lock_id2intersecting_lock_ids_.push_back(
+    lock_id2intersecting_lock_ids_.emplace_back(
         std::vector<int64_t>(ids.value().begin(), ids.value().end()));
   }
 }
@@ -82,17 +82,12 @@ void ReentrantLockStatus::ReleaseLock(int64_t lock_id, std::queue<int64_t>* unlo
 
 template<typename T>
 void ReentrantLockKernel<T>::VirtualKernelInit(KernelContext* ctx) {
-  ctx->set_state(new ReentrantLockStatus);
+  ctx->set_state(std::make_shared<ReentrantLockStatus>());
 }
 
 template<typename T>
-void ReentrantLockKernel<T>::DestroyState(void* state) const {
-  delete static_cast<ReentrantLockStatus*>(state);
-}
-
-template<typename T>
-void ReentrantLockKernel<T>::ForwardDataContent(const KernelContext* ctx) const {
-  auto* const status = static_cast<ReentrantLockStatus*>(ctx->state());
+void ReentrantLockKernel<T>::ForwardDataContent(KernelContext* ctx) const {
+  auto* const status = CHECK_NOTNULL(dynamic_cast<ReentrantLockStatus*>(ctx->state().get()));
   if (status->cur_ibn() == "start") {
     T lock_id = *ctx->BnInOp2Blob("start")->dptr<T>();
     status->RequestLock(lock_id, status->mut_cur_unlocked_ids());

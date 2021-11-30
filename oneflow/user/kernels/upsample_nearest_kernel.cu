@@ -133,15 +133,15 @@ class UpsampleNearest1DGPUKernel final : public user_op::OpKernel {
     const int64_t in_height = x_tensor->shape().At(2);
     const int64_t out_height = y_tensor->shape().At(2);
     if (in_height == out_height) {
-      Memcpy<DeviceType::kGPU>(
-          ctx->device_ctx(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
+      Memcpy<DeviceType::kCUDA>(
+          ctx->stream(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
           x_tensor->shape().elem_cnt() * GetSizeOfDataType(x_tensor->data_type()));
     } else {
       NdIndexOffsetHelper<int64_t, 3> in_helper(x_tensor->shape().At(0), x_tensor->shape().At(1),
                                                 x_tensor->shape().At(2));
       NdIndexOffsetHelper<int64_t, 3> out_helper(y_tensor->shape().At(0), y_tensor->shape().At(1),
                                                  y_tensor->shape().At(2));
-      RUN_CUDA_KERNEL((UpsampleNearest1DForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+      RUN_CUDA_KERNEL((UpsampleNearest1DForward<T>), ctx->stream(), elem_cnt, elem_cnt,
                       x_tensor->dptr<T>(), in_helper, out_helper, x_tensor->shape().At(2),
                       1.f / height_scale, y_tensor->mut_dptr<T>());
     }
@@ -160,23 +160,23 @@ class UpsampleNearestGrad1DGPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0,
-                             dx_tensor->shape().elem_cnt() * sizeof(T));
+    Memset<DeviceType::kCUDA>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
+                              dx_tensor->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const float height_scale = ctx->Attr<float>("scale_factor");
     const int64_t elem_cnt = dy_tensor->shape().elem_cnt();
     const int64_t in_height = dx_tensor->shape().At(2);
     const int64_t out_height = dy_tensor->shape().At(2);
     if (in_height == out_height) {
-      Memcpy<DeviceType::kGPU>(
-          ctx->device_ctx(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
+      Memcpy<DeviceType::kCUDA>(
+          ctx->stream(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
           dy_tensor->shape().elem_cnt() * GetSizeOfDataType(dy_tensor->data_type()));
     } else {
       NdIndexOffsetHelper<int64_t, 3> dy_helper(dy_tensor->shape().At(0), dy_tensor->shape().At(1),
                                                 dy_tensor->shape().At(2));
       NdIndexOffsetHelper<int64_t, 3> dx_helper(dx_tensor->shape().At(0), dx_tensor->shape().At(1),
                                                 dx_tensor->shape().At(2));
-      RUN_CUDA_KERNEL((UpsampleNearest1DBackward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+      RUN_CUDA_KERNEL((UpsampleNearest1DBackward<T>), ctx->stream(), elem_cnt, elem_cnt,
                       dy_tensor->dptr<T>(), dy_helper, dx_helper, dx_tensor->shape().At(2),
                       1.f / height_scale, dx_tensor->mut_dptr<T>());
     }
@@ -184,18 +184,18 @@ class UpsampleNearestGrad1DGPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UPSAMPNEAREST1D_GPU_KERNEL(dtype)                                     \
-  REGISTER_USER_KERNEL("upsample_nearest_1d")                                          \
-      .SetCreateFn<UpsampleNearest1DGPUKernel<dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("upsample_nearest_1d_grad")                                     \
-      .SetCreateFn<UpsampleNearestGrad1DGPUKernel<dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_UPSAMPNEAREST1D_CUDA_KERNEL(dtype)                                     \
+  REGISTER_USER_KERNEL("upsample_nearest_1d")                                           \
+      .SetCreateFn<UpsampleNearest1DGPUKernel<dtype>>()                                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("upsample_nearest_1d_grad")                                      \
+      .SetCreateFn<UpsampleNearestGrad1DGPUKernel<dtype>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_UPSAMPNEAREST1D_GPU_KERNEL(float)
-REGISTER_UPSAMPNEAREST1D_GPU_KERNEL(double)
+REGISTER_UPSAMPNEAREST1D_CUDA_KERNEL(float)
+REGISTER_UPSAMPNEAREST1D_CUDA_KERNEL(double)
 
 template<typename T>
 class UpsampleNearest2DGPUKernel final : public user_op::OpKernel {
@@ -217,15 +217,15 @@ class UpsampleNearest2DGPUKernel final : public user_op::OpKernel {
     const int64_t out_height = y_tensor->shape().At(2);
     const int64_t out_width = y_tensor->shape().At(3);
     if (in_height == out_height && in_width == out_width) {
-      Memcpy<DeviceType::kGPU>(
-          ctx->device_ctx(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
+      Memcpy<DeviceType::kCUDA>(
+          ctx->stream(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
           x_tensor->shape().elem_cnt() * GetSizeOfDataType(x_tensor->data_type()));
     } else {
       NdIndexOffsetHelper<int64_t, 4> in_helper(x_tensor->shape().At(0), x_tensor->shape().At(1),
                                                 x_tensor->shape().At(2), x_tensor->shape().At(3));
       NdIndexOffsetHelper<int64_t, 4> out_helper(y_tensor->shape().At(0), y_tensor->shape().At(1),
                                                  y_tensor->shape().At(2), y_tensor->shape().At(3));
-      RUN_CUDA_KERNEL((UpsampleNearest2DForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+      RUN_CUDA_KERNEL((UpsampleNearest2DForward<T>), ctx->stream(), elem_cnt, elem_cnt,
                       x_tensor->dptr<T>(), in_helper, out_helper, x_tensor->shape().At(2),
                       x_tensor->shape().At(3), 1.f / height_scale, 1.f / width_scale,
                       y_tensor->mut_dptr<T>());
@@ -245,8 +245,8 @@ class UpsampleNearest2DGradGPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0,
-                             dx_tensor->shape().elem_cnt() * sizeof(T));
+    Memset<DeviceType::kCUDA>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
+                              dx_tensor->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const float height_scale = ctx->Attr<float>("height_scale");
     const float width_scale = ctx->Attr<float>("width_scale");
@@ -256,15 +256,15 @@ class UpsampleNearest2DGradGPUKernel final : public user_op::OpKernel {
     const int64_t out_height = dy_tensor->shape().At(2);
     const int64_t out_width = dy_tensor->shape().At(3);
     if (in_height == out_height && in_width == out_width) {
-      Memcpy<DeviceType::kGPU>(
-          ctx->device_ctx(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
+      Memcpy<DeviceType::kCUDA>(
+          ctx->stream(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
           dy_tensor->shape().elem_cnt() * GetSizeOfDataType(dy_tensor->data_type()));
     } else {
       NdIndexOffsetHelper<int64_t, 4> dy_helper(dy_tensor->shape().At(0), dy_tensor->shape().At(1),
                                                 dy_tensor->shape().At(2), dy_tensor->shape().At(3));
       NdIndexOffsetHelper<int64_t, 4> dx_helper(dx_tensor->shape().At(0), dx_tensor->shape().At(1),
                                                 dx_tensor->shape().At(2), dx_tensor->shape().At(3));
-      RUN_CUDA_KERNEL((UpsampleNearest2DBackward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+      RUN_CUDA_KERNEL((UpsampleNearest2DBackward<T>), ctx->stream(), elem_cnt, elem_cnt,
                       dy_tensor->dptr<T>(), dy_helper, dx_helper, dx_tensor->shape().At(2),
                       dx_tensor->shape().At(3), 1.f / height_scale, 1.f / width_scale,
                       dx_tensor->mut_dptr<T>());
@@ -273,18 +273,18 @@ class UpsampleNearest2DGradGPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UPSAMPLE_NEAREST_2D_GPU_KERNEL(dtype)                                 \
-  REGISTER_USER_KERNEL("upsample_nearest_2d")                                          \
-      .SetCreateFn<UpsampleNearest2DGPUKernel<dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("upsample_nearest_2d_grad")                                     \
-      .SetCreateFn<UpsampleNearest2DGradGPUKernel<dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_UPSAMPLE_NEAREST_2D_CUDA_KERNEL(dtype)                                 \
+  REGISTER_USER_KERNEL("upsample_nearest_2d")                                           \
+      .SetCreateFn<UpsampleNearest2DGPUKernel<dtype>>()                                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("upsample_nearest_2d_grad")                                      \
+      .SetCreateFn<UpsampleNearest2DGradGPUKernel<dtype>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_UPSAMPLE_NEAREST_2D_GPU_KERNEL(float)
-REGISTER_UPSAMPLE_NEAREST_2D_GPU_KERNEL(double)
+REGISTER_UPSAMPLE_NEAREST_2D_CUDA_KERNEL(float)
+REGISTER_UPSAMPLE_NEAREST_2D_CUDA_KERNEL(double)
 
 template<typename T>
 class UpsampleNearest3DGPUKernel final : public user_op::OpKernel {
@@ -307,7 +307,7 @@ class UpsampleNearest3DGPUKernel final : public user_op::OpKernel {
     NdIndexOffsetHelper<int64_t, 5> out_helper(y_tensor->shape().At(0), y_tensor->shape().At(1),
                                                y_tensor->shape().At(2), y_tensor->shape().At(3),
                                                y_tensor->shape().At(4));
-    RUN_CUDA_KERNEL((UpsampleNearest3DForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+    RUN_CUDA_KERNEL((UpsampleNearest3DForward<T>), ctx->stream(), elem_cnt, elem_cnt,
                     x_tensor->dptr<T>(), in_helper, out_helper, x_tensor->shape().At(2),
                     x_tensor->shape().At(3), x_tensor->shape().At(4), 1.f / depth_scale,
                     1.f / height_scale, 1.f / width_scale, y_tensor->mut_dptr<T>());
@@ -326,8 +326,8 @@ class UpsampleNearestGrad3DGPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0,
-                             dx_tensor->shape().elem_cnt() * sizeof(T));
+    Memset<DeviceType::kCUDA>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
+                              dx_tensor->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const float height_scale = ctx->Attr<float>("height_scale");
     const float width_scale = ctx->Attr<float>("width_scale");
@@ -339,7 +339,7 @@ class UpsampleNearestGrad3DGPUKernel final : public user_op::OpKernel {
     NdIndexOffsetHelper<int64_t, 5> dx_helper(dx_tensor->shape().At(0), dx_tensor->shape().At(1),
                                               dx_tensor->shape().At(2), dx_tensor->shape().At(3),
                                               dx_tensor->shape().At(4));
-    RUN_CUDA_KERNEL((UpsampleNearest3DBackward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+    RUN_CUDA_KERNEL((UpsampleNearest3DBackward<T>), ctx->stream(), elem_cnt, elem_cnt,
                     dy_tensor->dptr<T>(), dy_helper, dx_helper, dx_tensor->shape().At(2),
                     dx_tensor->shape().At(3), dx_tensor->shape().At(4), 1.f / depth_scale,
                     1.f / height_scale, 1.f / width_scale, dx_tensor->mut_dptr<T>());
@@ -347,17 +347,17 @@ class UpsampleNearestGrad3DGPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UPSAMPNEAREST3D_GPU_KERNEL(dtype)                                     \
-  REGISTER_USER_KERNEL("upsample_nearest_3d")                                          \
-      .SetCreateFn<UpsampleNearest3DGPUKernel<dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("upsample_nearest_3d_grad")                                     \
-      .SetCreateFn<UpsampleNearestGrad3DGPUKernel<dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_UPSAMPNEAREST3D_CUDA_KERNEL(dtype)                                     \
+  REGISTER_USER_KERNEL("upsample_nearest_3d")                                           \
+      .SetCreateFn<UpsampleNearest3DGPUKernel<dtype>>()                                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("upsample_nearest_3d_grad")                                      \
+      .SetCreateFn<UpsampleNearestGrad3DGPUKernel<dtype>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_UPSAMPNEAREST3D_GPU_KERNEL(float)
-REGISTER_UPSAMPNEAREST3D_GPU_KERNEL(double)
+REGISTER_UPSAMPNEAREST3D_CUDA_KERNEL(float)
+REGISTER_UPSAMPNEAREST3D_CUDA_KERNEL(double)
 
 }  // namespace oneflow

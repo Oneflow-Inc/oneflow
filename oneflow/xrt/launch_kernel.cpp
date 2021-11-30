@@ -79,7 +79,7 @@ xrt::Executable* XrtLaunchKernel<device_type>::BuildExecutable(
   if (!executable) {
     VLOG(2) << "Build executable for launch op " << this->op_conf().name();
     const auto& launch_conf = this->op_conf().xrt_launch_conf();
-    auto graph = xrt::BuildXrtGraph(launch_conf.function(), device_type, this->job_desc());
+    auto graph = xrt::BuildXrtGraph(launch_conf.function(), device_type);
     {
       // Run InferShape pass
       const auto& parallel_ctx = this->kernel_conf().xrt_launch_conf().parallel_ctx();
@@ -100,9 +100,8 @@ xrt::Executable* XrtLaunchKernel<device_type>::BuildExecutable(
       }
       const xrt::util::PbMap<std::string, cfg::SbpSignature>* const_cfg_sbp_signatures_ptr =
           &cfg_sbp_signatures;
-      xrt::RunXrtPass("InferShape", graph.get(), options, &this->job_desc(), &parallel_ctx,
-                      &parallel_desc, const_cfg_sbp_signatures_ptr, &lbn2logical_blob_desc,
-                      &entry_blob_descs);
+      xrt::RunXrtPass("InferShape", graph.get(), options, &parallel_ctx, &parallel_desc,
+                      const_cfg_sbp_signatures_ptr, &lbn2logical_blob_desc, &entry_blob_descs);
       // Update argument meta data
       // xrt::RunXrtPass("UpdateArgMetaData", graph.get(), options,
       //                 &this->job_desc());
@@ -155,12 +154,7 @@ void XrtLaunchKernel<device_type>::MappingParamsToFunctionNames(
 }
 
 template<DeviceType device_type>
-void XrtLaunchKernel<device_type>::VirtualKernelInit(KernelContext* ctx) {
-  job_desc_ = ctx->job_desc();
-}
-
-template<DeviceType device_type>
-void XrtLaunchKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
+void XrtLaunchKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
   const auto BnInOp2Blob = [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); };
   desc_getter_ = BlobDescGetter<device_type>(this, BnInOp2Blob);
   // Prepare input and output parameters
@@ -169,13 +163,13 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(const KernelContext* ctx) 
     const LogicalBlobId& lbi = BnInOp2Lbi(*this, bn);
     std::string blob_name = xrt::BlobIdToName(lbi);
     xrt::Parameter input = xrt::BuildParameter(*BnInOp2Blob(bn), blob_name);
-    entry_params.push_back(input);
+    entry_params.emplace_back(input);
   }
   for (const std::string& bn : this->op_attribute().output_bns()) {
     const LogicalBlobId& lbi = BnInOp2Lbi(*this, bn);
     std::string blob_name = xrt::BlobIdToName(lbi);
     xrt::Parameter output = xrt::BuildParameter(*BnInOp2Blob(bn), blob_name);
-    return_params.push_back(output);
+    return_params.emplace_back(output);
   }
 
   xrt::XrtDevice device = xrt::DeviceTypeToXrtDevice(device_type);
@@ -192,7 +186,7 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(const KernelContext* ctx) 
   run_options.device_ordinal = device_ordinal;
   run_options.return_params = return_params;
   bool block_until_done = true;
-  if (device_type == DeviceType::kGPU) {
+  if (device_type == DeviceType::kCUDA) {
 #ifdef WITH_CUDA
     run_options.stream = ctx->device_ctx()->cuda_stream();
     run_options.device_memory_limit = FLAGS_max_workspace_bytes;
@@ -202,7 +196,7 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(const KernelContext* ctx) 
 #endif  // WITH_CUDA
   }
   if (executable->engine() == xrt::XrtEngine::TENSORRT) {
-    CHECK_EQ(device_type, DeviceType::kGPU);
+    CHECK_EQ(device_type, DeviceType::kCUDA);
     run_options.max_batch_size = FLAGS_max_batch_size;
     run_options.tensorrt_fp16 = FLAGS_tensorrt_fp16;
     run_options.tensorrt_int8 = FLAGS_tensorrt_int8;
@@ -214,11 +208,6 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(const KernelContext* ctx) 
   const std::vector<xrt::Parameter>& results = executable->Results();
   CHECK_EQ(results.size(), return_params.size());
   for (int i = 0; i < results.size(); ++i) { CHECK_EQ(results[i].data(), return_params[i].data()); }
-}
-
-template<DeviceType device_type>
-const JobDesc& XrtLaunchKernel<device_type>::job_desc() const {
-  return *job_desc_;
 }
 
 // ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kXrtLaunchConf, XrtLaunchKernel,

@@ -18,20 +18,28 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_sub_impl(test_case, shape, device):
-    x = flow.Tensor(
-        np.random.randn(*shape), device=flow.device(device), requires_grad=True
+    x = flow.tensor(
+        np.random.randn(*shape),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
     )
-    y = flow.Tensor(
-        np.random.randn(*shape), device=flow.device(device), requires_grad=True
+    y = flow.tensor(
+        np.random.randn(*shape),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
     )
     of_out = flow.sub(x, y)
     np_out = np.subtract(x.numpy(), y.numpy())
@@ -43,27 +51,35 @@ def _test_sub_impl(test_case, shape, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad_x, 1e-05, 1e-05))
     test_case.assertTrue(np.allclose(y.grad.numpy(), np_grad_y, 1e-05, 1e-05))
     x = 5
-    y = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
+    y = flow.tensor(
+        np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
+    )
     of_out = flow.sub(x, y)
     np_out = np.subtract(x, y.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    x = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
+    x = flow.tensor(
+        np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
+    )
     y = 5
     of_out = flow.sub(x, y)
     np_out = np.subtract(x.numpy(), y)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    x = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
-    y = flow.Tensor(np.random.randn(1, 1), device=flow.device(device))
+    x = flow.tensor(
+        np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
+    )
+    y = flow.tensor(
+        np.random.randn(1, 1), dtype=flow.float32, device=flow.device(device)
+    )
     of_out = flow.sub(x, y)
     np_out = np.subtract(x.numpy(), y.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    x = flow.Tensor(np.array([5.0]))
-    y = flow.Tensor(np.random.randn(1, 1))
+    x = flow.tensor(np.array([5.0]), dtype=flow.float32)
+    y = flow.tensor(np.random.randn(1, 1), dtype=flow.float32)
     of_out = flow.sub(x, y)
     np_out = np.subtract(x.numpy(), y.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    x = flow.Tensor(np.random.randn(1, 1), requires_grad=True)
-    y = flow.Tensor(np.array([5.0]), requires_grad=True)
+    x = flow.tensor(np.random.randn(1, 1), dtype=flow.float32, requires_grad=True)
+    y = flow.tensor(np.array([5.0]), dtype=flow.float32, requires_grad=True)
     of_out = flow.sub(x, y)
     np_out = np.subtract(x.numpy(), y.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))

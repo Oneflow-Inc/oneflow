@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/eager/eager_blob_object.h"
@@ -33,9 +34,16 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-void TensorImpl::set_requires_grad(bool requires_grad) {
+Maybe<void> TensorImpl::set_requires_grad(bool requires_grad) {
+  if (requires_grad) {
+    const DataType tensor_dtype = dtype();
+    CHECK_OR_RETURN(IsFloatingDataType(tensor_dtype) || tensor_dtype == DataType::kBFloat16
+                    || tensor_dtype == DataType::kFloat16)
+        << "RuntimeError: only Tensors of floating point can require gradients";
+  }
   requires_grad_ = requires_grad;
   if (autograd_meta_) { autograd_meta_->set_requires_grad(requires_grad); }
+  return Maybe<void>::Ok();
 }
 
 Maybe<Tensor> TensorImpl::acc_grad() const {
@@ -80,7 +88,7 @@ EagerMirroredTensorImpl::~EagerMirroredTensorImpl() {}
 
 EagerMirroredTensorImpl::EagerMirroredTensorImpl(
     const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
-    std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf)
+    const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad, bool is_leaf)
     : MirroredTensorImpl(tensor_meta, requires_grad, is_leaf), tensor_storage_(tensor_storage) {}
 
 Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
@@ -91,6 +99,11 @@ Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
       [eager_blob_object, parallel_desc](const std::shared_ptr<vm::TensorBuffer>&) {
         CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
           JUST(builder->ReleaseTensor(eager_blob_object, parallel_desc));
+          if (JUST(eager_blob_object->compute_local_dep_object())->last_used_device().has_value()) {
+            auto* local_dep_object = JUST(eager_blob_object->compute_local_dep_object());
+            const auto& device = JUST(local_dep_object->producer_op_device());
+            JUST(PutLocalDepObjectToDevicePool(device, local_dep_object));
+          }
           return Maybe<void>::Ok();
         }));
       });
@@ -105,9 +118,17 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(LocalDepObject* dep_obj
   CHECK_OR_RETURN(static_cast<bool>(device()));
   const auto& mem_case = device()->mem_case();
   const auto& mut_shape = std::const_pointer_cast<Shape>(tensor_meta()->shape_ptr());
-  const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
-      mem_case, mut_shape, dtype(), std::make_shared<vm::TensorBuffer>(), dep_object);
-  JUST(set_eager_blob_object(eager_blob_object));
+
+  if (tensor_storage_) {
+    auto tensor_buffer = tensor_storage_->buffer();
+    eager_blob_object_ = std::make_shared<vm::EagerBlobObject>(mem_case, mut_shape, dtype(),
+                                                               tensor_buffer, dep_object);
+  } else {
+    const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
+        mem_case, mut_shape, dtype(), std::make_shared<vm::TensorBuffer>(), dep_object);
+    JUST(set_eager_blob_object(eager_blob_object));
+  }
+  eager_blob_object_->set_storage_offset(tensor_meta()->storage_offset());
   return Maybe<void>::Ok();
 }
 
@@ -160,6 +181,12 @@ MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape
       stride_(std::make_shared<const Stride>(*shape)),
       storage_offset_(0) {}
 
+MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
+                                       Symbol<Device> device,
+                                       const std::shared_ptr<const Stride>& stride,
+                                       int64_t storage_offset)
+    : TensorMeta(shape, dtype), device_(device), stride_(stride), storage_offset_(storage_offset) {}
+
 bool MirroredTensorMeta::operator==(const MirroredTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
   return *this->shape_ptr() == *other.shape_ptr() && this->dtype() == other.dtype()
@@ -206,7 +233,7 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::NdSbp& nd_s
                               const ParallelDesc& parallel_desc,
                               const Optional<int64_t>& parallel_id) {
   if (parallel_id.has_value()) {
-    return GetPhysicalShape(logical_shape, nd_sbp, parallel_desc, JUST(parallel_id.value()));
+    return GetPhysicalShape(logical_shape, nd_sbp, parallel_desc, JUST(parallel_id));
   } else {
     return std::make_shared<Shape>(DimVector(logical_shape.NumAxes(), 0));
   }
@@ -223,13 +250,22 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::NdSbp& nd_s
   const auto& parallel_desc = consistent_tensor_meta->parallel_desc();
   const auto& cur_rank_phy_shape =
       JUST(GetPhysicalShape(*shape, *nd_sbp, *parallel_desc, parallel_id));
-  const auto& cur_rank_phy_tensor_meta =
-      std::make_shared<MirroredTensorMeta>(cur_rank_phy_shape, dtype, device);
-  auto cur_rank_phy_tensor_impl =
-      std::make_shared<EagerMirroredTensorImpl>(cur_rank_phy_tensor_meta, requires_grad, is_leaf);
-  const auto& dep_object = JUST(GetLocalDepObjectFromDevicePool(device));
-  JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(dep_object));
-  const auto& cur_rank_phy_tensor = std::make_shared<MirroredTensor>(cur_rank_phy_tensor_impl);
+  std::shared_ptr<MirroredTensor> cur_rank_phy_tensor;
+  if (parallel_id.has_value()) {
+    const auto& cur_rank_phy_tensor_meta =
+        std::make_shared<MirroredTensorMeta>(cur_rank_phy_shape, dtype, device);
+    auto cur_rank_phy_tensor_impl =
+        std::make_shared<EagerMirroredTensorImpl>(cur_rank_phy_tensor_meta, requires_grad, is_leaf);
+    const auto& dep_object = JUST(GetLocalDepObjectFromDevicePool(device));
+    JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(dep_object));
+    cur_rank_phy_tensor = std::make_shared<MirroredTensor>(cur_rank_phy_tensor_impl);
+  } else {
+    const auto& dtype_symbol = JUST(DType::Get(dtype));
+    const auto& empty = JUST(functional::Empty(*cur_rank_phy_shape, dtype_symbol, device));
+    cur_rank_phy_tensor = JUST(empty->AsMirroredTensor());
+    JUST(cur_rank_phy_tensor->set_requires_grad(requires_grad));
+    cur_rank_phy_tensor->set_is_leaf(is_leaf);
+  }
   auto* tensor_impl =
       new EagerConsistentTensorImpl(consistent_tensor_meta, cur_rank_phy_tensor->requires_grad(),
                                     cur_rank_phy_tensor->is_leaf(), cur_rank_phy_tensor);

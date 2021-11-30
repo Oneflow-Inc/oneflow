@@ -36,10 +36,16 @@ template<typename T>
 using DimOpIndexNdHelper = NdIndexOffsetHelper<T, kDimGatherMaxDimCount>;
 
 #define INSTANTIATE_DIM_SCATTER_FUNCTORS(device_type, opt)               \
+  template struct DimScatterFunctor<device_type, uint8_t, int32_t, opt>; \
+  template struct DimScatterFunctor<device_type, int8_t, int32_t, opt>;  \
   template struct DimScatterFunctor<device_type, int32_t, int32_t, opt>; \
+  template struct DimScatterFunctor<device_type, int64_t, int32_t, opt>; \
   template struct DimScatterFunctor<device_type, float, int32_t, opt>;   \
   template struct DimScatterFunctor<device_type, double, int32_t, opt>;  \
+  template struct DimScatterFunctor<device_type, uint8_t, int64_t, opt>; \
+  template struct DimScatterFunctor<device_type, int8_t, int64_t, opt>;  \
   template struct DimScatterFunctor<device_type, int32_t, int64_t, opt>; \
+  template struct DimScatterFunctor<device_type, int64_t, int64_t, opt>; \
   template struct DimScatterFunctor<device_type, float, int64_t, opt>;   \
   template struct DimScatterFunctor<device_type, double, int64_t, opt>;
 
@@ -54,6 +60,21 @@ struct BinOpAddFunctor {
   }
 };
 
+template<>
+struct BinOpAddFunctor<int8_t> {
+  OF_DEVICE_FUNC static void apply(const int8_t* x, int8_t* y) { *y += *x; }
+};
+
+template<>
+struct BinOpAddFunctor<uint8_t> {
+  OF_DEVICE_FUNC static void apply(const uint8_t* x, uint8_t* y) { *y += *x; }
+};
+
+template<>
+struct BinOpAddFunctor<int64_t> {
+  OF_DEVICE_FUNC static void apply(const int64_t* x, int64_t* y) { *y += *x; }
+};
+
 template<typename T>
 struct BinOpUpdateFunctor {
   OF_DEVICE_FUNC static void apply(const T* x, T* y) { *y = *x; }
@@ -61,7 +82,7 @@ struct BinOpUpdateFunctor {
 
 template<DeviceType device_type, typename IN_T, typename IDX_T, template<typename T> class Opt>
 struct DimScatterFunctor final {
-  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
+  void operator()(ep::Stream* stream, const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& output_nd_helper, const int ndim,
                   const int64_t elem_cnt, const int32_t dim, const int64_t upper_bound,
@@ -82,7 +103,7 @@ OF_DEVICE_FUNC void DoDimScatter(const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
 #if __CUDA_ARCH__
       __trap();
 #else
-      std::cout << "The index element " << idx_elem << " is out of bounds for dimension " << dim
+      std::cerr << "The index element " << idx_elem << " is out of bounds for dimension " << dim
                 << " with size " << upper_bound << std::endl;
       throw Error::CheckFailedError();  // TODO: Remove throw Error.
 #endif

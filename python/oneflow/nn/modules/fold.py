@@ -65,7 +65,7 @@ class Fold(Module):
             >>> fold = flow.nn.Fold(output_size=(4, 4), kernel_size=3, padding=1)
             >>> out = fold(x_tensor)
             >>> out.shape
-            flow.Size([1, 1, 4, 4])
+            oneflow.Size([1, 1, 4, 4])
 
         """
         super(Fold, self).__init__()
@@ -145,7 +145,7 @@ class Unfold(Module):
             >>> unfold = flow.nn.Unfold(kernel_size=3, padding=1)
             >>> out = unfold(x_tensor)
             >>> out.shape
-            flow.Size([1, 9, 16])
+            oneflow.Size([1, 9, 16])
 
         """
         super(Unfold, self).__init__()

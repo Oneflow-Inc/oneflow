@@ -26,7 +26,7 @@ enum CaseCmd {
   kCaseCmdHandleOutput = 2,
 };
 
-struct CaseStatus final {
+struct CaseStatus final : public KernelState {
   CaseStatus() : cmd(kCaseCmdInvalid), cur_selected_id(-1) {}
   ~CaseStatus() = default;
 
@@ -44,8 +44,7 @@ class CaseKernel final : public Kernel {
 
  private:
   void VirtualKernelInit(KernelContext* ctx) override;
-  void DestroyState(void* state) const override;
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 }  // namespace oneflow

@@ -22,11 +22,84 @@ import oneflow as flow
 import oneflow.unittest
 
 
+@flow.unittest.skip_unless_1n2d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+class Test2DeviceConsistentTensorTo(flow.unittest.TestCase):
+    def test_asymmetric_consistent_tensor_clone(test_case):
+        placement = flow.placement("cuda", {0: range(1)})
+        x = flow.ones((4,), placement=placement, sbp=flow.sbp.broadcast)
+        cloned = x.detach().clone()
+        test_case.assertEqual(x.placement, cloned.placement)
+        test_case.assertEqual(x.sbp, cloned.sbp)
+        if flow.env.get_rank() == 0:
+            cloned_local = cloned.to_local()
+            cloned_local[0] = 0
+            test_case.assertEqual(cloned_local[0].numpy().item(), 0)
+            test_case.assertEqual(x.to_local()[0].numpy().item(), 1)
+
+    def test_consistent_tensor_clone(test_case):
+        placement = flow.placement("cuda", {0: range(2)})
+        x = flow.ones((4,), placement=placement, sbp=flow.sbp.broadcast)
+        cloned = x.detach().clone()
+        test_case.assertEqual(x.placement, cloned.placement)
+        test_case.assertEqual(x.sbp, cloned.sbp)
+        cloned_local = cloned.to_local()
+        cloned_local[0] = 0
+        test_case.assertEqual(cloned_local[0].numpy().item(), 0)
+        test_case.assertEqual(x.to_local()[0].numpy().item(), 1)
+
+    def test_consistent_tensor_to(test_case):
+        placement = flow.placement("cuda", {0: range(2)})
+        x = flow.ones((4,), placement=placement, sbp=flow.sbp.broadcast)
+        cloned = x.to(copy=True)
+        test_case.assertEqual(x.placement, cloned.placement)
+        test_case.assertEqual(x.sbp, cloned.sbp)
+        cloned_local = cloned.to_local()
+        cloned_local[0] = 0
+        test_case.assertEqual(cloned_local[0].numpy().item(), 0)
+        test_case.assertEqual(x.to_local()[0].numpy().item(), 1)
+
+
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestTo(flow.unittest.TestCase):
+    def test_consistent_tensor_clone(test_case):
+        x = flow.ones(
+            (4,), placement=flow.placement("cuda", {0: [0]}), sbp=flow.sbp.broadcast
+        )
+        cloned = x.detach().clone()
+        test_case.assertEqual(x.placement, cloned.placement)
+        test_case.assertEqual(x.sbp, cloned.sbp)
+        cloned_local = cloned.to_local()
+        cloned_local[0] = 0
+        test_case.assertEqual(cloned_local[0].numpy().item(), 0)
+        test_case.assertEqual(x.to_local()[0].numpy().item(), 1)
+
+    def test_consistent_tensor_to(test_case):
+        x = flow.ones(
+            (4,), placement=flow.placement("cuda", {0: [0]}), sbp=flow.sbp.broadcast
+        )
+        cloned = x.to(copy=True)
+        test_case.assertEqual(x.placement, cloned.placement)
+        test_case.assertEqual(x.sbp, cloned.sbp)
+        cloned_local = cloned.to_local()
+        cloned_local[0] = 0
+        test_case.assertEqual(cloned_local[0].numpy().item(), 0)
+        test_case.assertEqual(x.to_local()[0].numpy().item(), 1)
+
+    def test_empty_consistent_tensor_to(test_case):
+        x = flow.ones(
+            (0,), placement=flow.placement("cuda", {0: [0]}), sbp=flow.sbp.broadcast
+        )
+        cloned = x.to(copy=True)
+        test_case.assertEqual(x.placement, cloned.placement)
+        test_case.assertEqual(x.sbp, cloned.sbp)
+        cloned_local = cloned.to_local()
+        test_case.assertEqual(tuple(cloned.shape), (0,))
+        test_case.assertEqual(tuple(cloned_local.shape), (0,))
+
     def test_tensor_to_h2d(test_case):
-        input = flow.Tensor(np.random.randn(2, 3, 4, 5))
+        input = flow.tensor(np.random.randn(2, 3, 4, 5), dtype=flow.float32)
         output = input.to(device=flow.device("cuda"))
         test_case.assertEqual(output.device, flow.device("cuda"))
         test_case.assertTrue(
@@ -39,7 +112,9 @@ class TestTo(flow.unittest.TestCase):
         )
 
     def test_tensor_to_d2h(test_case):
-        input = flow.Tensor(np.random.randn(2, 3, 4, 5), device=flow.device("cuda"))
+        input = flow.tensor(
+            np.random.randn(2, 3, 4, 5), dtype=flow.float32, device=flow.device("cuda")
+        )
         output = input.to(device=flow.device("cpu"))
         test_case.assertEqual(output.device, flow.device("cpu"))
         test_case.assertTrue(
@@ -47,7 +122,9 @@ class TestTo(flow.unittest.TestCase):
         )
 
     def test_tensor_to_d2d(test_case):
-        input = flow.Tensor(np.random.randn(2, 3, 4, 5), device=flow.device("cuda"))
+        input = flow.tensor(
+            np.random.randn(2, 3, 4, 5), dtype=flow.float32, device=flow.device("cuda")
+        )
         output = input.to(device=flow.device("cuda:0"))
         test_case.assertEqual(output.device, flow.device("cuda:0"))
         test_case.assertTrue(
@@ -55,7 +132,7 @@ class TestTo(flow.unittest.TestCase):
         )
 
     def test_tensor_to_h2h(test_case):
-        input = flow.Tensor(np.random.randn(2, 3, 4, 5))
+        input = flow.tensor(np.random.randn(2, 3, 4, 5), dtype=flow.float32)
         output = input.to(device=flow.device("cpu"))
         test_case.assertEqual(output.device, flow.device("cpu"))
         test_case.assertTrue(
@@ -63,19 +140,19 @@ class TestTo(flow.unittest.TestCase):
         )
 
     def test_tensor_to_cast(test_case):
-        input = flow.Tensor(np.random.randn(2, 3, 4, 5))
+        input = flow.tensor(np.random.randn(2, 3, 4, 5), dtype=flow.float32)
         output = input.to(dtype=flow.int)
         test_case.assertEqual(output.dtype, flow.int)
 
     def test_tensor_to_cast_h2d(test_case):
-        input = flow.Tensor(np.random.randn(2, 3, 4, 5))
+        input = flow.tensor(np.random.randn(2, 3, 4, 5), dtype=flow.float32)
         output = input.to(device=flow.device("cuda"), dtype=flow.int)
         test_case.assertEqual(output.dtype, flow.int)
         test_case.assertEqual(output.device, flow.device("cuda"))
 
     def test_tensor_using_tensor(test_case):
-        tensor = flow.Tensor(np.random.randn(2, 3, 4, 5), device="cuda", dtype=flow.int)
-        input = flow.Tensor(np.random.randn(2, 3))
+        tensor = flow.tensor(np.random.randn(2, 3, 4, 5), device="cuda", dtype=flow.int)
+        input = flow.tensor(np.random.randn(2, 3))
         output = input.to(tensor)
         test_case.assertEqual(output.dtype, flow.int)
         test_case.assertEqual(output.device, flow.device("cuda"))

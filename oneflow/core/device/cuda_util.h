@@ -73,7 +73,14 @@ const char* NvjpegGetErrorString(nvjpegStatus_t error);
 #define OF_NCCL_CHECK(condition)                                                                \
   for (ncclResult_t _of_nccl_check_status = (condition); _of_nccl_check_status != ncclSuccess;) \
   LOG(FATAL) << "Check failed: " #condition " : " << ncclGetErrorString(_of_nccl_check_status)  \
-             << " (" << _of_nccl_check_status << ") "
+             << " (" << _of_nccl_check_status << "). "                                          \
+             << "To see more detail, please run OneFlow with system variable NCCL_DEBUG=INFO"
+
+#define OF_NCCL_CHECK_OR_RETURN(condition)                                                         \
+  for (ncclResult_t _of_nccl_check_status = (condition); _of_nccl_check_status != ncclSuccess;)    \
+  return Error::CheckFailedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)                 \
+         << "Check failed: " #condition " : " << ncclGetErrorString(_of_nccl_check_status) << " (" \
+         << _of_nccl_check_status << ") "
 
 #if CUDA_VERSION >= 10020
 
@@ -84,9 +91,6 @@ const char* NvjpegGetErrorString(nvjpegStatus_t error);
              << " (" << _of_nvjpeg_check_status << ") "
 
 #endif
-
-template<typename T>
-void CudaCheck(T error);
 
 // CUDA: grid stride looping
 #define CUDA_1D_KERNEL_LOOP(i, n)                                                                 \
@@ -120,37 +124,22 @@ inline int32_t SMBlocksNum4ThreadsNum(const int32_t n) {
                   GetSMCudaMaxBlocksNum());
 }
 
+namespace ep {
+
+class Stream;
+class CudaStream;
+
+}  // namespace ep
+
+cudaStream_t RunCudaKernelGetStream(ep::Stream* stream);
+
 #define RUN_CUDA_KERNEL(func, device_ctx_ptr, thread_num, ...)           \
   func<<<SMBlocksNum4ThreadsNum(thread_num), kCudaThreadsNumPerBlock, 0, \
-         (device_ctx_ptr)->cuda_stream()>>>(__VA_ARGS__)
+         RunCudaKernelGetStream(device_ctx_ptr)>>>(__VA_ARGS__)
 
 size_t GetAvailableGpuMemSize(int dev_id);
 
 void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size);
-
-template<typename T>
-void NumaAwareCudaMallocHost(int32_t dev, T** ptr, size_t size) {
-  NumaAwareCudaMallocHost(dev, reinterpret_cast<void**>(ptr), size);
-}
-
-// Set the CPU affinity to the closest processor(s) of a particular GPU.
-void CudaDeviceSetCpuAffinity(int32_t dev);
-
-#define CUDA_DATA_TYPE_SEQ                 \
-  OF_PP_MAKE_TUPLE_SEQ(float, CUDA_R_32F)  \
-  OF_PP_MAKE_TUPLE_SEQ(double, CUDA_R_64F) \
-  OF_PP_MAKE_TUPLE_SEQ(float16, CUDA_R_16F)
-
-cudaDataType_t GetCudaDataType(DataType);
-
-template<typename T>
-struct CudaDataType;
-
-#define SPECIALIZE_CUDA_DATA_TYPE(type_cpp, type_cuda) \
-  template<>                                           \
-  struct CudaDataType<type_cpp> : std::integral_constant<cudaDataType_t, type_cuda> {};
-OF_PP_FOR_EACH_TUPLE(SPECIALIZE_CUDA_DATA_TYPE, CUDA_DATA_TYPE_SEQ);
-#undef SPECIALIZE_CUDA_DATA_TYPE
 
 class CudaCurrentDeviceGuard final {
  public:
@@ -163,9 +152,32 @@ class CudaCurrentDeviceGuard final {
   int32_t saved_dev_id_ = -1;
 };
 
+class CublasMathModeGuard final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CublasMathModeGuard);
+  CublasMathModeGuard(cublasHandle_t handle, cublasMath_t new_mode);
+  explicit CublasMathModeGuard(cublasHandle_t handle);
+  ~CublasMathModeGuard();
+
+  void SetMathMode(cublasMath_t new_mode);
+
+ private:
+  cublasHandle_t handle_{};
+  cublasMath_t saved_mode_{};
+  cublasMath_t new_mode_{};
+};
+
 int GetCudaSmVersion();
 
 int GetCudaPtxVersion();
+
+int GetCudaDeviceIndex();
+
+int GetCudaDeviceCount();
+
+void InitCudaContextOnce(int device_id);
+
+cudaError_t CudaDriverGetPrimaryCtxActive(int dev, int* active);
 
 }  // namespace oneflow
 

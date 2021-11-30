@@ -136,7 +136,7 @@ Maybe<JobBuilder> WithCalculationPassScope(const std::string& pass_name, Job* jo
     if (exists_op_names.count(op_conf.name()) > 0) { continue; }
     CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
     OF_RETURN_IF_ERROR(scope_storage.MaybeGet(op_conf.scope_symbol_id())) << op_conf.DebugString();
-    scope_id2op_names[op_conf.scope_symbol_id()].push_back(&op_conf);
+    scope_id2op_names[op_conf.scope_symbol_id()].emplace_back(&op_conf);
   }
   const auto& GetNewScopeSymbolId = [&](int64_t old_scope_symbol_id) -> Maybe<int64_t> {
     const auto& old_scope = JUST(scope_storage.MaybeGet(old_scope_symbol_id));
@@ -187,7 +187,6 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
     JUST(ScaleModelDiffByLossInstanceNum(op_graph, job_builder.get(), &model_lbi2model_diff_lbi));
     ScaleModelDiffByLossScale(ctx, op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     JUST(CountNotFiniteIfNeeded(ctx, op_graph, job_builder.get(), model_lbi2model_diff_lbi));
-    RegularizeGradient(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     for (const auto& optimizer_conf : job->job_conf().train_conf().optimizer_conf()) {
       HashMap<LogicalBlobId, LogicalBlobId> cur_model_lbi2model_diff_lbi;
       FilterCurModelLbi2ModelDiffLbiByName(optimizer_conf.variable_op_names(),
@@ -196,6 +195,7 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
         ClipGradient(op_graph, job_builder.get(), &cur_model_lbi2model_diff_lbi,
                      optimizer_conf.clip_conf());
       }
+      RegularizeGradient(op_graph, job_builder.get(), &cur_model_lbi2model_diff_lbi);
       op_graph.ForEachNode([&](OpNode* op_node) {
         const VariableOp* var_op = dynamic_cast<const VariableOp*>(&op_node->op());
         if (var_op == nullptr

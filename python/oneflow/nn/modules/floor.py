@@ -33,17 +33,17 @@ def floor_op(input):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> input = flow.Tensor(np.array([-0.5,  1.5, 0,  0.8]), dtype=flow.float32)
+        >>> input = flow.tensor(np.array([-0.5,  1.5, 0,  0.8]), dtype=flow.float32)
         >>> output = flow.floor(input)
         >>> output.shape
-        flow.Size([4])
+        oneflow.Size([4])
         >>> output.numpy()
         array([-1.,  1.,  0.,  0.], dtype=float32)
         
-        >>> input1 = flow.Tensor(np.array([[0.8, 1.0], [-0.6, 2.5]]), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.array([[0.8, 1.0], [-0.6, 2.5]]), dtype=flow.float32)
         >>> output1 = input1.floor()
         >>> output1.shape
-        flow.Size([2, 2])
+        oneflow.Size([2, 2])
         >>> output1.numpy()
         array([[ 0.,  1.],
                [-1.,  2.]], dtype=float32)

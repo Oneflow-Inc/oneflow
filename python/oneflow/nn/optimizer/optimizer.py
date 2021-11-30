@@ -14,12 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import collections
-from itertools import chain
 import warnings
 from copy import deepcopy
+from itertools import chain
 from typing import Any, Callable, Dict, Union
 
 from oneflow.framework.tensor import Tensor
+from oneflow.nn.graph.block import TensorBlock
 from oneflow.nn.parameter import Parameter
 from oneflow.nn.utils.clip_grad import clip_grad_norm_
 
@@ -28,10 +29,21 @@ class ParamGroup(object):
     def __init__(
         self, parameters: Dict[str, Any], default_options: Dict,
     ):
-        # ParamGroup must be constructed by Dict["params": parameters: List[Parameter or Tensor], "...": ...]
+        # ParamGroup must be constructed by Dict["params": parameters: List[Parameter, Tensor or TensorBlock], "...": ...]
         assert isinstance(parameters, dict) and "params" in parameters
         assert not isinstance(parameters["params"], (Parameter, Tensor))
-        self._parameters = list(parameters["params"])
+        self._parameters = list()
+        for p in parameters["params"]:
+            if isinstance(p, (Parameter, Tensor)):
+                self._parameters.append(p)
+            elif isinstance(p, TensorBlock):
+                # Add parameter from nn.Graph
+                self._parameters.append(p.origin)
+            else:
+                raise ValueError(
+                    "parameters in ParamGroup must be Tensor or TensorBlock."
+                )
+
         self._options = deepcopy(default_options)
         for key in self._options:
             if key in parameters:
@@ -108,13 +120,13 @@ class Optimizer(object):
         }
 
         def cast(param, value):
-            r"""Make a deep copy of value, casting all tensors to device of param."""
+            r"""Make a deep copy of value, casting all tensors to device or placement of param."""
             if isinstance(value, Tensor):
                 if value.is_local:
                     value = value.to(param.device)
                 else:
                     value = value.to_consistent(
-                        placement=value.placement, sbp=value.sbp
+                        placement=param.placement, sbp=param.sbp
                     )
                 return value
             elif isinstance(value, dict):
@@ -191,7 +203,15 @@ class Optimizer(object):
         raise NotImplementedError()
 
     def clip_grad(self):
-        r"""Clips the gradient of parameters in param_groups.
+        r"""Clips gradient norm of an iterable of parameters. 
+        The norm is computed over all gradients together, as if they were concatenated into a single vector.
+        
+        You can set the max_norm and norm_type. 
+
+        For more details, you can refer to the documentation of each optimizer(like Adam, SGD and so on). 
+
+        You can also refer the code in :func:`oneflow.nn.utils.clip_grad_norm_`
+        
         """
         for param_group in self.param_groups:
             if param_group._enable_clip_grad:
@@ -224,25 +244,14 @@ class Optimizer(object):
             3. Optimizers have a different behavior if the gradient is 0 or None
             (in one case it does the step with a gradient of 0 and in the other
             it skips the step altogether).
-
-        Returns:
-            None
-
         """
-        all_grad_is_none = True
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 if param.grad is not None:
-                    all_grad_is_none = False
                     if set_to_none:
                         param.grad = None
                     else:
                         param.grad.zeros_()
-        if all_grad_is_none:
-            warnings.warn(
-                "\nParameters in optimizer do not have gradient.\nPlease check `loss.backward()` is called"
-                "or not,\nor try to declare optimizer after calling `module.to()`"
-            )
 
     def _parse_input_parameters(self, parameters):
         """

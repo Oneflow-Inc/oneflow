@@ -41,11 +41,11 @@ class DimScatterScalarKernel final : public user_op::OpKernel {
     const IN_T src_scalar = static_cast<IN_T>(ctx->Attr<float>("src_scalar"));
 
     if (input_tensor) {
-      Memcpy<device_type>(ctx->device_ctx(), output, input_tensor->dptr<IN_T>(), out_bytes_size);
+      Memcpy<device_type>(ctx->stream(), output, input_tensor->dptr<IN_T>(), out_bytes_size);
     } else if (like_tensor) {
-      Memset<device_type>(ctx->device_ctx(), output, 0, out_bytes_size);
+      Memset<device_type>(ctx->stream(), output, 0, out_bytes_size);
     } else {
-      std::cout << "Unimplemented Error" << std::endl;
+      std::cerr << "Unimplemented Error" << std::endl;
       throw Error::UnimplementedError();  // TODO: Remove throw Error.
     }
 
@@ -68,38 +68,41 @@ class DimScatterScalarKernel final : public user_op::OpKernel {
     }
 
     DimScatterScalarFunctor<device_type, IN_T, IDX_T, Opt>()(
-        ctx->device_ctx(), idx_nd_helper, output_nd_helper, ndim, index_tensor->shape().elem_cnt(),
-        dim, upper_bound, index, src_scalar, output);
+        ctx->stream(), idx_nd_helper, output_nd_helper, ndim, index_tensor->shape().elem_cnt(), dim,
+        upper_bound, index, src_scalar, output);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SCATTERSCALAR_KERNEL(op_type_name, device, dtype, itype, opt)           \
-  REGISTER_USER_KERNEL(op_type_name)                                                     \
-      .SetCreateFn<DimScatterScalarKernel<device, dtype, itype, opt>>()                  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("index", 0) == GetDataType<itype>::value));
+#define REGISTER_SCATTERSCALAR_KERNEL(op_type_name, device, dtype_pair, itype_pair, opt)      \
+  REGISTER_USER_KERNEL(#op_type_name)                                                         \
+      .SetCreateFn<DimScatterScalarKernel<device, OF_PP_PAIR_FIRST(dtype_pair),               \
+                                          OF_PP_PAIR_FIRST(itype_pair), opt>>()               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
+                       && (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair)) \
+                       && (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
 
-#define REGISTER_SCATTER_SCALAR_CPU_KERNELS(op_type_name, opt)                         \
-  REGISTER_SCATTERSCALAR_KERNEL(op_type_name, DeviceType::kCPU, float, int32_t, opt);  \
-  REGISTER_SCATTERSCALAR_KERNEL(op_type_name, DeviceType::kCPU, float, int64_t, opt);  \
-  REGISTER_SCATTERSCALAR_KERNEL(op_type_name, DeviceType::kCPU, double, int32_t, opt); \
-  REGISTER_SCATTERSCALAR_KERNEL(op_type_name, DeviceType::kCPU, double, int64_t, opt);
+#define REGISTER_SCATTER_SCALAR_CPU_KERNELS(dtype_pair, itype_pair)                               \
+  REGISTER_SCATTERSCALAR_KERNEL(dim_scatter_update_scalar, DeviceType::kCPU, dtype_pair,          \
+                                itype_pair, UpdateScalarFunctor);                                 \
+  REGISTER_SCATTERSCALAR_KERNEL(dim_scatter_add_scalar, DeviceType::kCPU, dtype_pair, itype_pair, \
+                                AddScalarFunctor);
 
-#define REGISTER_SCATTER_SCALAR_GPU_KERNELS(op_type_name, opt)                         \
-  REGISTER_SCATTERSCALAR_KERNEL(op_type_name, DeviceType::kGPU, float, int32_t, opt);  \
-  REGISTER_SCATTERSCALAR_KERNEL(op_type_name, DeviceType::kGPU, float, int64_t, opt);  \
-  REGISTER_SCATTERSCALAR_KERNEL(op_type_name, DeviceType::kGPU, double, int32_t, opt); \
-  REGISTER_SCATTERSCALAR_KERNEL(op_type_name, DeviceType::kGPU, double, int64_t, opt);
+#define REGISTER_SCATTER_SCALAR_CUDA_KERNELS(dtype_pair, itype_pair)                               \
+  REGISTER_SCATTERSCALAR_KERNEL(dim_scatter_update_scalar, DeviceType::kCUDA, dtype_pair,          \
+                                itype_pair, UpdateScalarFunctor);                                  \
+  REGISTER_SCATTERSCALAR_KERNEL(dim_scatter_add_scalar, DeviceType::kCUDA, dtype_pair, itype_pair, \
+                                AddScalarFunctor);
 
-REGISTER_SCATTER_SCALAR_CPU_KERNELS("dim_scatter_update_scalar", UpdateScalarFunctor);
-REGISTER_SCATTER_SCALAR_CPU_KERNELS("dim_scatter_add_scalar", AddScalarFunctor);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCATTER_SCALAR_CPU_KERNELS,
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
 
 #ifdef WITH_CUDA
-REGISTER_SCATTER_SCALAR_GPU_KERNELS("dim_scatter_update_scalar", UpdateScalarFunctor);
-REGISTER_SCATTER_SCALAR_GPU_KERNELS("dim_scatter_add_scalar", AddScalarFunctor);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCATTER_SCALAR_CUDA_KERNELS,
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
 #endif  // WITH_CUDA
 
 }  // namespace user_op

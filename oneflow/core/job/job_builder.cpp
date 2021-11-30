@@ -28,6 +28,8 @@ int64_t GetParallelHierarchyNumAxes(
   CHECK(it != op_name2parallel_conf.end());
   if (!it->second->has_hierarchy()) {
     return 1;
+  } else if (it->second->hierarchy().dim_size() == 0) {
+    return 1;
   } else {
     return it->second->hierarchy().dim_size();
   }
@@ -293,9 +295,9 @@ void JobBuilder::AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
   std::vector<OperatorConf> mut_ops;
   for (const auto& op_conf : op_confs) {
     if (op_name2op_conf_.find(op_conf.name()) == op_name2op_conf_.end()) {
-      add_ops.push_back(op_conf);
+      add_ops.emplace_back(op_conf);
     } else {
-      mut_ops.push_back(op_conf);
+      mut_ops.emplace_back(op_conf);
     }
   }
   AddOps(parallel_conf, add_ops);

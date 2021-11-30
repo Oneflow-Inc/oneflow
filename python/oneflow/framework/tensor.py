@@ -19,7 +19,7 @@ import oneflow.framework.check_point_v2 as check_point_v2
 import oneflow.framework.tensor_str as tensor_str_util
 import oneflow.ops.initializer_util as initializer_util
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
-from oneflow.support.blocking import BlockingInfoContext
+import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 
 import numpy as np
 from typing import Union
@@ -47,9 +47,8 @@ def _tensor_numpy(eager_local_tensor):
         dtype=flow.convert_oneflow_dtype_to_numpy_dtype(eager_local_tensor.dtype),
     )
 
-    with BlockingInfoContext() as ctx:
-        if ndarray.size != 0:
-            copy_to_numpy(ndarray)
+    if ndarray.size != 0:
+        copy_to_numpy(ndarray)
     return ndarray
 
 
@@ -65,14 +64,11 @@ def _ndim(self):
 
 
 def _nelement(self):
-    prod = 1
-    for dim in self.shape:
-        prod *= dim
-    return prod
+    return self.shape.numel()
 
 
 def _numel(self):
-    return self.nelement()
+    return self.shape.numel()
 
 
 def _element_size(self):
@@ -162,13 +158,41 @@ def _ne(self, other):
     return self.ne(other)
 
 
-def _getstate(self):
-    assert self.is_local, "Only support local tensor to pickle"
-    return {"data": self.numpy(), "dtype": self.dtype}
+def _and(self, other):
+    return self.logical_and(other)
 
 
-def _setstate(self, pickle_dict):
-    return self.__init__(pickle_dict["data"], dtype=pickle_dict["dtype"])
+def _or(self, other):
+    return self.logical_or(other)
+
+
+def _not(self):
+    return flow._C.logical_not(self)
+
+
+def _xor(self, other):
+    return self.logical_xor(other)
+
+
+def _contiguous(self):
+    # TODO: support stride mechanism
+    return self
+
+
+def _norm(self, ord=None, dim=None, keepdim=False, dtype=None):
+    return flow._C.norm(self, ord, dim, keepdim, dtype=dtype)
+
+
+def _vector_norm(self, ord=2, dim=None, keepdim=False, dtype=None):
+    return flow._C.vector_norm(self, ord, dim, keepdim, dtype=dtype)
+
+
+def _matrix_norm(self, ord="fro", dim=(-2, -1), keepdim=False, dtype=None):
+    return flow._C.matrix_norm(self, ord, dim, keepdim, dtype=dtype)
+
+
+def _transpose(self, dim0, dim1):
+    return flow._C.transpose(self, dim0, dim1)
 
 
 def is_nonzero(input):
@@ -191,14 +215,6 @@ def is_nonzero(input):
         True
         >>> flow.is_nonzero(flow.tensor([3]))
         True
-        >>> flow.is_nonzero(flow.tensor([1, 3, 5]))
-        Traceback (most recent call last):
-        ...
-        RuntimeError: bool value of Tensor with more than one value is ambiguous
-        >>> flow.is_nonzero(flow.tensor([]))
-        Traceback (most recent call last):
-        ...
-        RuntimeError: bool value of Tensor with no values is ambiguous
 
     """
     shape = input.shape
@@ -211,23 +227,27 @@ def is_nonzero(input):
 
 
 def _gt(self, other):
-    return self.gt(other)
+    return flow.gt(self, other)
 
 
 def _lt(self, other):
-    return self.lt(other)
+    return flow.lt(self, other)
 
 
 def _ge(self, other):
-    return self.ge(other)
+    return flow.ge(self, other)
 
 
 def _le(self, other):
-    return self.le(other)
+    return flow.le(self, other)
 
 
 def _mul(self, other):
-    return self.mul(other)
+    return flow.mul(self, other)
+
+
+def _mul_(self, other):
+    return flow._C.mul_(self, other)
 
 
 def _rmul(self, other):
@@ -235,7 +255,11 @@ def _rmul(self, other):
 
 
 def _add(self, other):
-    return self.add(other)
+    return flow.add(self, other)
+
+
+def _add_inplace(self, other):
+    return flow.add(self, other, inplace=True)
 
 
 def _iadd(self, other):
@@ -243,11 +267,11 @@ def _iadd(self, other):
 
 
 def _radd(self, other):
-    return self.add(other)
+    return flow.add(self, other)
 
 
 def _sub(self, other):
-    return self.sub(other)
+    return flow.sub(self, other)
 
 
 def _rsub(self, other):
@@ -255,11 +279,15 @@ def _rsub(self, other):
 
 
 def _truediv(self, other):
-    return self.div(other)
+    return flow.div(self, other)
 
 
 def _rtruediv(self, other):
     return flow.div(other, self)
+
+
+def _floor_divide(self, other):
+    return flow.floor_divide(self, other)
 
 
 def _neg(self):
@@ -270,7 +298,293 @@ def _pow(self, b):
     return flow.pow(self, b)
 
 
+def _abs(self):
+    return flow.abs(self)
+
+
+def _exp(self):
+    return flow.exp(self)
+
+
+def _expand_as(input, other):
+    return flow.expand(input, *other.size())
+
+
+def _acos(self):
+    return flow.acos(self)
+
+
+def _arccos(self):
+    return flow.arccos(self)
+
+
+def _acosh(self):
+    return flow.acosh(self)
+
+
+def _arccosh(self):
+    return flow.arccosh(self)
+
+
+def _atanh(self):
+    return flow.atanh(self)
+
+
+def _atan2(self, other):
+    return flow.atan2(self, other)
+
+
+def _arctanh(self):
+    return flow.arctanh(self)
+
+
+def _sign(self):
+    return flow.sign(self)
+
+
+def _sinh(self):
+    return flow.sinh(self)
+
+
+def _tan(self):
+    return flow.tan(self)
+
+
+def _gelu(self):
+    return flow.gelu(self)
+
+
+def _mish(self):
+    return flow.mish(self)
+
+
+def _sigmoid(self):
+    return flow.sigmoid(self)
+
+
+def _tanh(self):
+    return flow.tanh(self)
+
+
+def _silu(self):
+    return flow.silu(self)
+
+
+def _selu(self):
+    return flow.selu(self)
+
+
+def _softsign(self):
+    return flow.softsign(self)
+
+
+def _cast(self, dtype):
+    return flow.cast(self, dtype)
+
+
+def _diag(self, diagonal=0):
+    return flow.diag(self, diagonal=diagonal)
+
+
+def _log1p(self):
+    return flow.log1p(self)
+
+
+def _reciprocal(self):
+    return flow.reciprocal(self)
+
+
+def _asin(self):
+    return flow.asin(self)
+
+
+def _arcsin(self):
+    return flow.arcsin(self)
+
+
+def _asinh(self):
+    return flow.asinh(self)
+
+
+def _arcsinh(self):
+    return flow.arcsinh(self)
+
+
+def _atan(self):
+    return flow.atan(self)
+
+
+def _arctan(self):
+    return flow.arctan(self)
+
+
+def _ceil(self):
+    return flow.ceil(self)
+
+
+def _clamp(self, min=None, max=None):
+    return flow.clamp(self, min=min, max=max)
+
+
+def _clip(self, min=None, max=None):
+    return flow.clip(self, min=min, max=max)
+
+
+def _cos(self):
+    return flow.cos(self)
+
+
+def _cosh(self):
+    return flow.cosh(self)
+
+
+def _erf(self):
+    return flow.erf(self)
+
+
+def _erfc(self):
+    return flow.erfc(self)
+
+
+def _expm1(self):
+    return flow.expm1(self)
+
+
+def _fmod(self, other):
+    return flow.fmod(self, other)
+
+
+def _log(self):
+    return flow.log(self)
+
+
+def _minimum(self, y):
+    return flow.minimum(self, y)
+
+
+def _maximum(self, y):
+    return flow.maximum(self, y)
+
+
+def _negative(self):
+    return flow._C.negative(self)
+
+
+def _neg(self):
+    return flow._C.negative(self)
+
+
+def _rsqrt(self):
+    return flow.rsqrt(self)
+
+
+def _sqrt(self):
+    return flow.sqrt(self)
+
+
+def _square(self):
+    return flow.square(self)
+
+
+def _var(self, dim=None, unbiased=True, keepdim=False):
+    return flow._C.var(self, dim=dim, unbiased=unbiased, keepdim=keepdim)
+
+
+def _std(self, dim=None, unbiased=True, keepdim=False):
+    return flow._C.std(self, dim=dim, unbiased=unbiased, keepdim=keepdim)
+
+
+def _squeeze(self, dim=None):
+    return flow._C.squeeze(self, dim=dim)
+
+
+def _unfold(self, dimension, size, step):
+    return flow._C.unfold_tensor(self, dimension=dimension, size=size, step=step)
+
+
+def _narrow(self, dimension, start, length):
+    return flow._C.narrow(self, dim=dimension, start=start, length=length)
+
+
+def _unsqueeze(self, dim):
+    return flow._C.unsqueeze(self, dim=dim)
+
+
+def _permute(self, *dims):
+    if len(dims) == 1:
+        new_dims = dims[0]
+        if isinstance(new_dims, int):
+            new_dims = (new_dims,)
+    else:
+        new_dims = dims
+    return flow._C.transpose(self, new_dims)
+
+
+def _matmul(self, other):
+    return flow.matmul(self, other)
+
+
+def _round(self):
+    return flow.round(self)
+
+
+def _softplus(self):
+    return flow.softplus(self)
+
+
+def _tril(self, diagonal=0):
+    return flow.tril(self, diagonal=diagonal)
+
+
+def _triu(self, diagonal=0):
+    return flow.triu(self, diagonal=diagonal)
+
+
+def _relu(self, inplace=False):
+    return flow.relu(self, inplace=inplace)
+
+
+def _softmax(self, dim=None):
+    return flow.softmax(self, dim=dim)
+
+
+def _log_softmax(self, dim=None):
+    return flow.log_softmax(self, dim=dim)
+
+
+def _argmax(self, dim=None, keepdim=None):
+    return flow.argmax(self, dim=dim, keepdim=keepdim)
+
+
+def _argmin(self, dim=None, keepdim=None):
+    return flow.argmin(self, dim=dim, keepdim=keepdim)
+
+
+def _argsort(self, dim=None, descending=None):
+    return flow.argsort(self, dim=dim, descending=descending)
+
+
+def _roll(self, shifts, dims=None):
+    return flow.roll(self, shifts=shifts, dims=dims)
+
+
+def _bmm(self, other):
+    return flow.bmm(self, other)
+
+
+def _len(self):
+    if self.dim() == 0:
+        raise TypeError("len() of a 0-d tensor")
+    return self.shape[0]
+
+
 def _uniform(self, a=0, b=1):
+    if isinstance(a, Tensor):
+        assert a.ndim == 0 and a.nelement() == 1, "a must be a number or scalar tensor!"
+        a = a.numpy().item()
+    if isinstance(b, Tensor):
+        assert b.ndim == 0 and b.nelement() == 1, "b must be a number or scalar tensor!"
+        b = b.numpy().item()
     initializer_conf = flow.random_uniform_initializer(
         minval=a, maxval=b, dtype=self.dtype
     )
@@ -348,7 +662,7 @@ def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
 
 def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
     if random_seed is None:
-        random_seed = flow.default_generator().seed()
+        random_seed = flow.default_generator.seed()
     shape = tuple(tensor.shape)
     initializer = initializer_util.GetInitializer(initializer_conf, random_seed, shape)
 
@@ -358,7 +672,8 @@ def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
     if tensor.is_consistent:
         src_tensor = flow.tensor(np_arr)
         src_tensor = src_tensor.to_consistent(
-            placement=tensor.placement, sbp=flow.sbp.broadcast
+            placement=tensor.placement,
+            sbp=tuple(flow.sbp.broadcast for _ in range(len(tensor.sbp))),
         )
         tensor.copy_(src_tensor)
     else:
@@ -372,15 +687,14 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
     if self.is_consistent:
         assert isinstance(other, Tensor)
         assert other.is_consistent
-        self[:] = other
+        other = other.to_consistent(placement=self.placement, sbp=self.sbp)
+        flow._C.assign_local_tensor(self.to_local(), other.to_local())
     else:
-        if isinstance(other, (Tensor)):
-            src_np = other.numpy()
-        else:
+        if not isinstance(other, (Tensor)):
             assert isinstance(other, np.ndarray)
-            src_np = other
-
-        _copy_from_numpy_to_eager_local_tensor(self, src_np)
+            _copy_from_numpy_to_eager_local_tensor(self, other)
+        else:
+            flow._C.assign_local_tensor(self, other.to(device=self.device))
 
 
 def _get_device(self):
@@ -393,6 +707,10 @@ def _format(self, format_spec):
     if self.dim() == 0:
         return self.numpy().tolist().__format__(format_spec)
     return object.__format__(self, format_spec)
+
+
+def _to(self, *args, **kwargs):
+    return flow._C.to(self, *args, **kwargs)
 
 
 def RegisterMethods():
@@ -411,8 +729,8 @@ def RegisterMethods():
     Tensor.backward = _backward
     Tensor.__getitem__ = _getitem
     Tensor.__setitem__ = _setitem
-    Tensor.__setstate__ = _setstate
-    Tensor.__getstate__ = _getstate
+    Tensor.__setstate__ = check_point_v2.tensor_setstate
+    Tensor.__getstate__ = check_point_v2.tensor_getstate
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
     Tensor.__eq__ = _eq
@@ -422,6 +740,9 @@ def RegisterMethods():
     Tensor.__lt__ = _lt
     Tensor.__ge__ = _ge
     Tensor.__le__ = _le
+    Tensor.__and__ = _and
+    Tensor.__or__ = _or
+    Tensor.__xor__ = _xor
     Tensor.__mul__ = _mul
     Tensor.__rmul__ = _rmul
     Tensor.__add__ = _add
@@ -434,6 +755,9 @@ def RegisterMethods():
     Tensor.__neg__ = _neg
     Tensor.__pow__ = _pow
     Tensor.__format__ = _format
+    Tensor.__floordiv__ = _floor_divide
+    Tensor.__len__ = _len
+    Tensor.__mod__ = _fmod
     Tensor.uniform_ = _uniform
     Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform
@@ -445,6 +769,90 @@ def RegisterMethods():
     Tensor.copy_ = _copy
     Tensor.get_device = _get_device
     Tensor._meta_repr = _meta_repr
+    Tensor.abs = _abs
+    Tensor.exp = _exp
+    Tensor.floor_divide = _floor_divide
+    Tensor.argmax = _argmax
+    Tensor.argmin = _argmin
+    Tensor.argsort = _argsort
+    Tensor.acos = _acos
+    Tensor.arccos = _arccos
+    Tensor.acosh = _acosh
+    Tensor.arccosh = _arccosh
+    Tensor.atanh = _atanh
+    Tensor.atan2 = _atan2
+    Tensor.arctanh = _arctanh
+    Tensor.sign = _sign
+    Tensor.sinh = _sinh
+    Tensor.tan = _tan
+    Tensor.gt = _gt
+    Tensor.ge = _ge
+    Tensor.gelu = _gelu
+    Tensor.mish = _mish
+    Tensor.negative = _negative
+    Tensor.neg = _neg
+    Tensor.sigmoid = _sigmoid
+    Tensor.tanh = _tanh
+    Tensor.silu = _silu
+    Tensor.selu = _selu
+    Tensor.softsign = _softsign
+    Tensor.cast = _cast
+    Tensor.diag = _diag
+    Tensor.log1p = _log1p
+    Tensor.add = _add
+    Tensor.add_ = _add_inplace
+    Tensor.div = _truediv
+    Tensor.mul = _mul
+    Tensor.mul_ = _mul_
+    Tensor.reciprocal = _reciprocal
+    Tensor.sub = _sub
+    Tensor.asin = _asin
+    Tensor.arcsin = _arcsin
+    Tensor.asinh = _asinh
+    Tensor.arcsinh = _arcsinh
+    Tensor.atan = _atan
+    Tensor.arctan = _arctan
+    Tensor.ceil = _ceil
+    Tensor.clamp = _clamp
+    Tensor.clip = _clip
+    Tensor.cos = _cos
+    Tensor.cosh = _cosh
+    Tensor.expand_as = _expand_as
+    Tensor.erf = _erf
+    Tensor.erfc = _erfc
+    Tensor.expm1 = _expm1
+    Tensor.fmod = _fmod
+    Tensor.log = _log
+    Tensor.minimum = _minimum
+    Tensor.maximum = _maximum
+    Tensor.pow = _pow
+    Tensor.rsqrt = _rsqrt
+    Tensor.sqrt = _sqrt
+    Tensor.square = _square
+    Tensor.var = _var
+    Tensor.std = _std
+    Tensor.matmul = _matmul
+    Tensor.round = _round
+    Tensor.softplus = _softplus
+    Tensor.tril = _tril
+    Tensor.triu = _triu
+    Tensor.contiguous = _contiguous
+    Tensor.norm = _norm
+    Tensor.vector_norm = _vector_norm
+    Tensor.matrix_norm = _matrix_norm
+    Tensor.transpose = _transpose
+    Tensor.relu = _relu
+    Tensor.softmax = _softmax
+    Tensor.log_softmax = _log_softmax
+    Tensor.logical_not = _not
+    Tensor.roll = _roll
+    Tensor.bmm = _bmm
+    Tensor.squeeze = _squeeze
+    Tensor.unfold = _unfold
+    Tensor.narrow = _narrow
+    Tensor.unsqueeze = _unsqueeze
+    Tensor.permute = _permute
+    Tensor.to = _to
 
 
 def register_tensor_op(op_name):
@@ -453,7 +861,3 @@ def register_tensor_op(op_name):
         return method
 
     return set_tensor_op
-
-
-def tensor(*args, **kwargs):
-    return flow._oneflow_internal.tensor(*args, **kwargs)

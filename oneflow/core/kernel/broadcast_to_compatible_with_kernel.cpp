@@ -26,12 +26,11 @@ class BroadcastToCompatibleWithKernel final : public Kernel {
   ~BroadcastToCompatibleWithKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type, typename T>
-void BroadcastToCompatibleWithKernel<device_type, T>::ForwardDataContent(
-    const KernelContext* ctx) const {
+void BroadcastToCompatibleWithKernel<device_type, T>::ForwardDataContent(KernelContext* ctx) const {
   const Blob* x = ctx->BnInOp2Blob("x");
   Blob* y = ctx->BnInOp2Blob("y");
   const auto& broadcast_axes =
@@ -45,7 +44,7 @@ void BroadcastToCompatibleWithKernel<device_type, T>::ForwardDataContent(
       CHECK_EQ(x_extend_shape.At(i), 1);
     }
   }
-  NdarrayUtil<device_type, T>::BroadcastTo(ctx->device_ctx(), XpuVarNdarray<T>(y, num_axes),
+  NdarrayUtil<device_type, T>::BroadcastTo(ctx->stream(), XpuVarNdarray<T>(y, num_axes),
                                            XpuVarNdarray<const T>(x, num_axes));
 }
 
@@ -58,7 +57,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTTER_BROADCAST_TO_COMPATIBLE_WITH_KERNEL, 
                                  ARITHMETIC_DATA_TYPE_SEQ)
 
 #if defined(WITH_CUDA)
-REGISTTER_BROADCAST_TO_COMPATIBLE_WITH_KERNEL(DeviceType::kGPU, (float16, DataType::kFloat16))
+REGISTTER_BROADCAST_TO_COMPATIBLE_WITH_KERNEL(DeviceType::kCUDA, (float16, DataType::kFloat16))
 #endif
 
 }  // namespace oneflow

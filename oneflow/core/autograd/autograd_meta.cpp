@@ -34,6 +34,7 @@ Maybe<const std::vector<Symbol<cfg::SbpParallel>>&> GetSbpTuple(Symbol<cfg::NdSb
   auto iter = map.find(nd_sbp);
   if (iter == map.end()) {
     std::vector<Symbol<cfg::SbpParallel>> sbp_tuple;
+    sbp_tuple.reserve(nd_sbp->sbp_parallel().size());
     for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
       sbp_tuple.push_back(SymbolOf(sbp_parallel));
     }
@@ -44,11 +45,11 @@ Maybe<const std::vector<Symbol<cfg::SbpParallel>>&> GetSbpTuple(Symbol<cfg::NdSb
 
 Maybe<Tensor> TensorInfo::zeros() const {
   if (device_.has_value()) {
-    const auto& device = JUST(device_.value());
+    const auto& device = JUST(device_);
     return functional::Constant(*shape_.get(), 0, dtype_, device);
   } else {
-    const auto& parallel_desc = JUST(parallel_desc_.value());
-    const auto& nd_sbp = JUST(nd_sbp_.value());
+    const auto& parallel_desc = JUST(parallel_desc_);
+    const auto& nd_sbp = JUST(nd_sbp_);
     const auto& sbp_tuple = JUST(GetSbpTuple(nd_sbp));
     return functional::ConsistentConstant(*shape_.get(), 0, dtype_, parallel_desc, sbp_tuple);
   }

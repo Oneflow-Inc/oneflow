@@ -223,17 +223,17 @@ class ImageFlipKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
+    const user_op::Tensor* flip_code_tensor = ctx->Tensor4ArgNameAndIndex("flip_code", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     int num_images = in_tensor->shape().elem_cnt();
     CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
 
-    FlipCode flip_code =
-        static_cast<FlipCode>(static_cast<int8_t>(ctx->Attr<int32_t>("flip_code")));
     MultiThreadLoop(num_images, [&](size_t i) {
       const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];
       CHECK_EQ(in_buffer.shape().NumAxes(), 3);
       TensorBuffer* out_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
       out_buffer->CopyFrom(in_buffer);
+      FlipCode flip_code = static_cast<FlipCode>(flip_code_tensor->dptr<int8_t>()[i]);
       if (flip_code != FlipCode::kNonFlip) { FlipImage(out_buffer, flip_code); }
     });
   }
@@ -441,58 +441,59 @@ MakeInplaceProposalFn(const std::string& input_arg_name) {
 
 REGISTER_USER_KERNEL("image_flip")
     .SetCreateFn<ImageFlipKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
-                     & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
-                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     && (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
+                     && (user_op::HobDataType("flip_code", 0) == DataType::kInt8)
+                     && (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
     .SetInplaceProposalFn(MakeInplaceProposalFn("in"));
 
 REGISTER_USER_KERNEL("object_bbox_flip")
     .SetCreateFn<ObjectBboxFlipKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
-                     & (user_op::HobDataType("bbox", 0) == DataType::kTensorBuffer)
-                     & (user_op::HobDataType("image_size", 0) == DataType::kInt32)
-                     & (user_op::HobDataType("flip_code", 0) == DataType::kInt8)
-                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     && (user_op::HobDataType("bbox", 0) == DataType::kTensorBuffer)
+                     && (user_op::HobDataType("image_size", 0) == DataType::kInt32)
+                     && (user_op::HobDataType("flip_code", 0) == DataType::kInt8)
+                     && (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
     .SetInplaceProposalFn(MakeInplaceProposalFn("bbox"));
 
 REGISTER_USER_KERNEL("object_bbox_scale")
     .SetCreateFn<ObjectBboxScaleKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
-                     & (user_op::HobDataType("bbox", 0) == DataType::kTensorBuffer)
-                     & (user_op::HobDataType("scale", 0) == DataType::kFloat)
-                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     && (user_op::HobDataType("bbox", 0) == DataType::kTensorBuffer)
+                     && (user_op::HobDataType("scale", 0) == DataType::kFloat)
+                     && (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
     .SetInplaceProposalFn(MakeInplaceProposalFn("bbox"));
 
 REGISTER_USER_KERNEL("object_segmentation_polygon_flip")
     .SetCreateFn<ObjectSegmentationPolygonFlipKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
-                     & (user_op::HobDataType("poly", 0) == DataType::kTensorBuffer)
-                     & (user_op::HobDataType("image_size", 0) == DataType::kInt32)
-                     & (user_op::HobDataType("flip_code", 0) == DataType::kInt8)
-                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     && (user_op::HobDataType("poly", 0) == DataType::kTensorBuffer)
+                     && (user_op::HobDataType("image_size", 0) == DataType::kInt32)
+                     && (user_op::HobDataType("flip_code", 0) == DataType::kInt8)
+                     && (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
     .SetInplaceProposalFn(MakeInplaceProposalFn("poly"));
 
 REGISTER_USER_KERNEL("object_segmentation_polygon_scale")
     .SetCreateFn<ObjectSegmentationPolygonScaleKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
-                     & (user_op::HobDataType("poly", 0) == DataType::kTensorBuffer)
-                     & (user_op::HobDataType("scale", 0) == DataType::kFloat)
-                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     && (user_op::HobDataType("poly", 0) == DataType::kTensorBuffer)
+                     && (user_op::HobDataType("scale", 0) == DataType::kFloat)
+                     && (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
     .SetInplaceProposalFn(MakeInplaceProposalFn("poly"));
 
 REGISTER_USER_KERNEL("image_normalize")
     .SetCreateFn<ImageNormalize>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
-                     & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
-                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     && (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
+                     && (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
     .SetInplaceProposalFn(MakeInplaceProposalFn("in"));
 
 REGISTER_USER_KERNEL("object_segmentation_polygon_to_mask")
     .SetCreateFn<ObjectSegmentationPolygonToMask>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
-                     & (user_op::HobDataType("poly", 0) == DataType::kTensorBuffer)
-                     & (user_op::HobDataType("poly_index", 0) == DataType::kTensorBuffer)
-                     & (user_op::HobDataType("image_size", 0) == DataType::kInt32)
-                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     && (user_op::HobDataType("poly", 0) == DataType::kTensorBuffer)
+                     && (user_op::HobDataType("poly_index", 0) == DataType::kTensorBuffer)
+                     && (user_op::HobDataType("image_size", 0) == DataType::kInt32)
+                     && (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
 
 }  // namespace oneflow

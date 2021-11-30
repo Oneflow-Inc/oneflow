@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/arg_tuple.h"
+#include "oneflow/core/autograd/autograd_function.h"
 
 namespace oneflow {
 namespace one {
@@ -136,8 +137,13 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   bool has_device_infer_fn() const { return static_cast<bool>(device_infer_fn_); }
   const user_op::DeviceInferFn& device_infer_fn() const { return device_infer_fn_; }
 
-  Maybe<void> InferLogicalShapeAndDType(
+  Maybe<void> InferPhysicalShapeAndDType(
       const AttrMap& attrs, const std::string& device_tag,
+      const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
+      const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
+
+  Maybe<void> InferLogicalShapeAndDType(
+      const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc,
       const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
       const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
   Maybe<Symbol<Device>> InferDevices(const AttrMap& attrs, const TensorTuple& inputs,
@@ -239,14 +245,14 @@ using DistributeCloneOpExpr = BuiltinOpExprImpl<DistributeCloneOpConf>;
 using DistributeConcatOpExpr = BuiltinOpExprImpl<DistributeConcatOpConf>;
 using DistributeAddOpExpr = BuiltinOpExprImpl<DistributeAddOpConf>;
 
-class SelectFirstOpExpr final : public OpExpr {
+class SelectTopNOpExpr final : public OpExpr {
  public:
-  static Maybe<SelectFirstOpExpr> New() {
-    return std::shared_ptr<SelectFirstOpExpr>(new SelectFirstOpExpr());
+  static Maybe<SelectTopNOpExpr> New() {
+    return std::shared_ptr<SelectTopNOpExpr>(new SelectTopNOpExpr());
   }
 
   const std::string& op_type_name() const override {
-    static const std::string kOpTypeName = "select_first";
+    static const std::string kOpTypeName = "select_top_n";
     return kOpTypeName;
   }
 
@@ -255,57 +261,61 @@ class SelectFirstOpExpr final : public OpExpr {
     return 0;
   }
 
-  int output_size() const override { return 1; }
+  int output_size() const override {
+    // output should be resized in apply function
+    return 0;
+  }
 
   Maybe<bool> IsGradDisabled() const override { return false; }
 
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
-  SelectFirstOpExpr() = default;
+  SelectTopNOpExpr() = default;
 
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
 class AutoGradCaptureState;
-// TODO(): Finish the class definition of `FunctionOpExpr`.
-class FunctionOpExpr : public OpExpr {
+
+class FunctionOpExpr final : public OpExpr {
  public:
-  using FType = std::function<Maybe<void>(const std::shared_ptr<AutoGradCaptureState>& /*ctx*/,
-                                          const TensorTuple& /*inputs or out_grads*/,
-                                          TensorTuple* /*outputs or in_grads*/)>;
-
-  FunctionOpExpr(const FType& forward, const FType& backward)
-      : OpExpr(), forward_(forward), backward_(backward) {}
-  virtual ~FunctionOpExpr() = default;
-
-  const std::string& op_type_name() const override {
-    static const std::string& name("function");
-    return name;
+  using FType = AutogradFunctionBase::FType;
+  FunctionOpExpr() = delete;
+  static Maybe<FunctionOpExpr> New(const std::string& func_name, const FType& forward_fn,
+                                   const FType& backward_fn) {
+    return std::shared_ptr<FunctionOpExpr>(new FunctionOpExpr(func_name, forward_fn, backward_fn));
   }
 
+  const std::string& op_type_name() const override { return func_name_; }
+
   int input_size() const override {
-    UNIMPLEMENTED();
+    PRINT_BUG_PROMPT_AND_ABORT() << "You cannot get input_size here.";
     return 0;
   }
   int output_size() const override {
-    UNIMPLEMENTED();
+    PRINT_BUG_PROMPT_AND_ABORT() << "You cannot get output_size here.";
     return 0;
   }
 
-  FType forward() const { return forward_; }
-  FType backward() const { return backward_; }
+  FType forward() const { return forward_fn_; }
+  FType backward() const { return backward_fn_; }
 
-  std::shared_ptr<const AutoGradCaptureState> state() const { return state_; }
-  std::shared_ptr<AutoGradCaptureState> mutable_state() { return state_; }
+  std::shared_ptr<FunctionAutoGradCaptureState> state() const { return state_; }
+  void reset_state() const;
 
   Maybe<bool> IsGradDisabled() const override { return false; }
-  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override { OF_UNIMPLEMENTED(); }
+  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
-  FType forward_;
-  FType backward_;
-  std::shared_ptr<AutoGradCaptureState> state_;
+  FunctionOpExpr(const std::string& func_name, const FType& forward_fn, const FType& backward_fn)
+      : forward_fn_(forward_fn), backward_fn_(backward_fn), func_name_(func_name) {}
+
+  FType forward_fn_;
+  FType backward_fn_;
+  std::string func_name_;
+  mutable std::shared_ptr<FunctionAutoGradCaptureState> state_;
+  mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
 }  // namespace one

@@ -24,9 +24,9 @@ class DecodeRandomKernel final : public Kernel {
   DecodeRandomKernel() : is_init_(false){};
   ~DecodeRandomKernel() = default;
 
-  void Forward(const KernelContext* ctx) const override { ForwardDataContent(ctx); }
+  void Forward(KernelContext* ctx) const override { ForwardDataContent(ctx); }
 
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 
  private:
   void VirtualKernelInit(KernelContext* ctx) override;
@@ -40,10 +40,10 @@ class DecodeRandomKernel final : public Kernel {
 
 namespace {
 
-void RandomFillBlob(DeviceCtx* ctx, DeviceType device_type, const InitializerConf& initializer_conf,
-                    uint32_t random_seed, Blob* blob) {
+void RandomFillBlob(ep::Stream* stream, DeviceType device_type,
+                    const InitializerConf& initializer_conf, uint32_t random_seed, Blob* blob) {
   static const HashMap<std::string,
-                       void (*)(DeviceCtx * ctx, const InitializerConf& initializer_conf,
+                       void (*)(ep::Stream * stream, const InitializerConf& initializer_conf,
                                 uint32_t random_seed, Blob* blob)>
       fill_funcs = {
 #define RANDOM_FILL_ENTRY(type_dev, data_type_pair)         \
@@ -51,7 +51,7 @@ void RandomFillBlob(DeviceCtx* ctx, DeviceType device_type, const InitializerCon
    &KernelUtil<type_dev, OF_PP_PAIR_FIRST(data_type_pair)>::InitializeWithConf},
           OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(RANDOM_FILL_ENTRY, DEVICE_TYPE_SEQ,
                                            ARITHMETIC_DATA_TYPE_SEQ)};
-  fill_funcs.at(GetHashKey(device_type, blob->data_type()))(ctx, initializer_conf, random_seed,
+  fill_funcs.at(GetHashKey(device_type, blob->data_type()))(stream, initializer_conf, random_seed,
                                                             blob);
 }
 
@@ -70,11 +70,11 @@ uint32_t DecodeRandomKernel<device_type>::GenNextRandomSeed() const {
 }
 
 template<DeviceType device_type>
-void DecodeRandomKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
+void DecodeRandomKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
   const DecodeRandomOpConf& conf = this->op_conf().decode_random_conf();
   if (is_init_ == false) {
-    RandomFillBlob(ctx->device_ctx(), device_type, conf.data_initializer(),
-                   this->GenNextRandomSeed(), ctx->BnInOp2Blob("out"));
+    RandomFillBlob(ctx->stream(), device_type, conf.data_initializer(), this->GenNextRandomSeed(),
+                   ctx->BnInOp2Blob("out"));
     is_init_ = true;
   }
 }

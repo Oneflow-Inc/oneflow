@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/user/data/coco_data_reader.h"
 #include "oneflow/user/data/coco_dataset.h"
 #include "oneflow/user/data/distributed_training_dataset.h"
@@ -33,9 +34,10 @@ COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COC
 
   int64_t parallel_id = 0;
   int64_t parallel_num = 0;
-  // NOTE(zwx): IsMirroredParallelContext return true indicate that COCODataReader works by DDP,
-  //     use rank and world size to init DistributedTrainingDataset
-  if (IsMirroredParallelContext(ctx->parallel_ctx())) {
+  // NOTE(zwx): COCODataReader is not consistent since attr nd_sbp is empty,
+  // we assume that it works in DDP
+  auto nd_sbp_str_vec = ctx->Attr<std::vector<std::string>>("nd_sbp");
+  if (nd_sbp_str_vec.empty() && CHECK_JUST(IsMultiClient())) {
     parallel_id = GlobalProcessCtx::Rank();
     parallel_num = GlobalProcessCtx::WorldSize();
   } else {
@@ -74,7 +76,7 @@ COCOMeta::COCOMeta(int64_t session_id, const std::string& annotation_file,
   // initialize image_ids_, image_id2image_ and image_id2anno_ids_
   for (const auto& image : annotation_json_["images"]) {
     int64_t id = image["id"].get<int64_t>();
-    image_ids_.push_back(id);
+    image_ids_.emplace_back(id);
     CHECK(image_id2image_.emplace(id, image).second);
     CHECK(image_id2anno_ids_.emplace(id, std::vector<int64_t>()).second);
   }
@@ -93,7 +95,7 @@ COCOMeta::COCOMeta(int64_t session_id, const std::string& annotation_file,
       }
     }
     CHECK(anno_id2anno_.emplace(id, anno).second);
-    image_id2anno_ids_.at(image_id).push_back(id);
+    image_id2anno_ids_.at(image_id).emplace_back(id);
   }
   // remove images without annotations if necessary
   if (remove_images_without_annotations) {

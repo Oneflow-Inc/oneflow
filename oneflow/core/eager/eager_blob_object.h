@@ -21,6 +21,8 @@ limitations under the License.
 #include "oneflow/core/eager/blob_object.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/memory/memory_allocator.h"
+#include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/tensor_methods.h"
 
 namespace oneflow {
 
@@ -28,15 +30,23 @@ namespace vm {
 
 class TensorBuffer {
  public:
+  TensorBuffer() : non_pod_allocator_(std::make_unique<MemoryAllocator>()) {}
+
+  size_t blob_bytes() const { return blob_bytes_; }
+
   char* blob_dptr() { return blob_dptr_.get(); }
-  void set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>&& blob_dptr) {
+
+  MemoryAllocator* non_pod_allocator() { return non_pod_allocator_.get(); }
+
+  void set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>&& blob_dptr, size_t bytes) {
     blob_dptr_ = std::move(blob_dptr);
+    blob_bytes_ = bytes;
   }
 
-  void reset() { blob_dptr_.reset(); }
-
  private:
+  size_t blob_bytes_;
   std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
+  std::unique_ptr<MemoryAllocator> non_pod_allocator_;
 };
 
 class EagerBlobObject final : public BlobObject {
@@ -54,7 +64,6 @@ class EagerBlobObject final : public BlobObject {
                         Optional<LocalDepObject*>(dep_object)) {}
 
   ~EagerBlobObject() override {
-    non_pod_initer_.reset();
     tensor_buffer_.reset();
     header_buffer_.reset();
     blob_.reset();
@@ -64,18 +73,18 @@ class EagerBlobObject final : public BlobObject {
 
   const Blob& blob() const override { return *blob_; }
   Blob* mut_blob() override { return blob_.get(); }
+
   Maybe<void> TryInitBlob() override;
   Maybe<void> InitBlob();
 
   Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
   Maybe<void> DeallocateBlobDataPtr() override {
-    non_pod_initer_.reset();
-    tensor_buffer_->reset();
+    tensor_buffer_.reset(new TensorBuffer);
     return Maybe<void>::Ok();
   }
 
   Maybe<LocalDepObject*> compute_local_dep_object() const {
-    return compute_local_dep_object_.value();
+    return JUST(compute_local_dep_object_);
   }
 
   std::shared_ptr<TensorBuffer>& tensor_buffer() { return tensor_buffer_; }
@@ -84,17 +93,19 @@ class EagerBlobObject final : public BlobObject {
 
   void set_is_shape_synced(bool val) { is_shape_synced_ = val; }
 
+  int64_t storage_offset() const { return storage_offset_; }
+
+  void set_storage_offset(int64_t storage_offset) { storage_offset_ = storage_offset; }
+
  private:
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
                   const Optional<LocalDepObject*>& dep_object);
-
   std::unique_ptr<Blob> blob_;
   std::unique_ptr<char[]> header_buffer_;
   std::shared_ptr<TensorBuffer> tensor_buffer_;
-  std::size_t blob_body_bytes_;
-  std::unique_ptr<MemoryAllocator> non_pod_initer_;
   std::atomic<bool> is_shape_synced_;
+  int64_t storage_offset_;
   Optional<LocalDepObject*> compute_local_dep_object_;
 };
 

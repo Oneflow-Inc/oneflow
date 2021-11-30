@@ -19,12 +19,12 @@ limitations under the License.
 
 namespace oneflow {
 
-void ProfilerKernelObserver::WillForwardDataContent(const KernelContext* kernel_ctx,
+void ProfilerKernelObserver::WillForwardDataContent(KernelContext* kernel_ctx,
                                                     const Kernel* kernel) {
   OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentStart(kernel_ctx, kernel));
 }
 
-void ProfilerKernelObserver::DidForwardDataContent(const KernelContext* kernel_ctx,
+void ProfilerKernelObserver::DidForwardDataContent(KernelContext* kernel_ctx,
                                                    const Kernel* kernel) {
   OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentEnd(kernel_ctx, kernel));
 }

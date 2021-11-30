@@ -35,7 +35,7 @@ class Flatten(Module):
         >>> m = flow.nn.Flatten()
         >>> output = m(input)
         >>> output.shape
-        flow.Size([32, 25])
+        oneflow.Size([32, 25])
 
     """
 
@@ -68,7 +68,7 @@ def _flow_flatten(input, start_dim: int = 0, end_dim: int = -1):
         >>> input = flow.Tensor(32, 1, 5, 5)
         >>> output = input.flatten(start_dim=1)
         >>> output.shape
-        flow.Size([32, 25])
+        oneflow.Size([32, 25])
 
     """
     return Flatten(start_dim=start_dim, end_dim=end_dim)(input)

@@ -24,7 +24,7 @@ namespace oneflow {
 class EagerKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerKernel);
-  EagerKernel(const JobDesc* job_desc, const KernelConf& kernel_conf);
+  explicit EagerKernel(const KernelConf& kernel_conf);
   ~EagerKernel() = default;
 
   void Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) const;
@@ -35,9 +35,8 @@ class EagerKernel final : public Kernel {
 
  private:
   void InitOpKernel(const KernelConf& kernel_conf);
-  void ForwardDataContent(const KernelContext* kernel_ctx) const override { UNIMPLEMENTED(); }
+  void ForwardDataContent(KernelContext* kernel_ctx) const override { UNIMPLEMENTED(); }
   std::unique_ptr<const user_op::OpKernel> kernel_;
-  const JobDesc* job_desc_;
 };
 
 }  // namespace oneflow

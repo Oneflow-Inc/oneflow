@@ -43,10 +43,14 @@ limitations under the License.
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
-#include "oneflow/core/kernel/kernel_observer_manager.h"
+#include "oneflow/core/kernel/chain_kernel_observer.h"
+#include "oneflow/core/kernel/sync_check_kernel_observer.h"
+#include "oneflow/core/kernel/blob_access_checker_kernel_observer.h"
+#include "oneflow/core/kernel/profiler_kernel_observer.h"
 #ifdef WITH_RDMA
 #include "oneflow/core/platform/include/ibv.h"
 #endif  // WITH_RDMA
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
@@ -172,6 +176,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   if (Global<ResourceDesc, ForEnv>::Get()->enable_debug_mode()) {
     Global<device::NodeDeviceDescriptorManager>::Get()->DumpSummary("devices");
   }
+  Global<ep::DeviceManagerRegistry>::New();
   Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
 #ifdef WITH_CUDA
   Global<EagerNcclCommMgr>::New();
@@ -197,7 +202,20 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
     }
 #endif  // __linux__
   }
-  Global<KernelObserver>::SetAllocated(new KernelObserverManager());
+  {
+    std::vector<std::shared_ptr<KernelObserver>> kernel_observers;
+    if (ParseBooleanFromEnv("ONEFLOW_DEBUG_KERNEL_SYNC_CHECK", false)) {
+      LOG(WARNING)
+          << "Environment variable ONEFLOW_DEBUG_KERNEL_SYNC_CHECK has been set to a truthy "
+             "value, it will impact performance";
+      kernel_observers.emplace_back(new SyncCheckKernelObserver());
+    }
+    if (!ParseBooleanFromEnv("ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER", false)) {
+      kernel_observers.emplace_back(new BlobAccessCheckerKernelObserver());
+    }
+    kernel_observers.emplace_back(new ProfilerKernelObserver());
+    Global<KernelObserver>::SetAllocated(new ChainKernelObserver(kernel_observers));
+  }
   return Maybe<void>::Ok();
 }
 
@@ -226,6 +244,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<EagerNcclCommMgr>::Delete();
 #endif
   Global<ThreadPool>::Delete();
+  Global<ep::DeviceManagerRegistry>::Delete();
   if (Global<ResourceDesc, ForSession>::Get() != nullptr) {
     Global<ResourceDesc, ForSession>::Delete();
   }

@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
-class ReentrantLockStatus final {
+class ReentrantLockStatus final : public KernelState {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReentrantLockStatus);
   ReentrantLockStatus() = default;
@@ -60,10 +60,10 @@ class ReentrantLockStatus final {
   bool TryAcquireLock(int64_t lock_id);
 
   std::string cur_ibn_;
-  int64_t cur_act_id_;
-  bool acquired_lock_to_be_sent_;
-  size_t total_queued_request_lock_num_;
-  size_t total_acquired_lock_num_;
+  int64_t cur_act_id_{};
+  bool acquired_lock_to_be_sent_{};
+  size_t total_queued_request_lock_num_{};
+  size_t total_acquired_lock_num_{};
   std::vector<std::queue<int64_t>> lock_id2queued_request_act_id_;
   std::vector<size_t> lock_id2acquired_num_;
   std::vector<std::vector<int64_t>> lock_id2intersecting_lock_ids_;
@@ -79,8 +79,7 @@ class ReentrantLockKernel final : public Kernel {
 
  private:
   void VirtualKernelInit(KernelContext* ctx) override;
-  void DestroyState(void* state) const override;
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 }  // namespace oneflow

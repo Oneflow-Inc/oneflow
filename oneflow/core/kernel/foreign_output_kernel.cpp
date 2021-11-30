@@ -28,10 +28,10 @@ class ForeignOutputKernel final : public Kernel {
 
  private:
   bool IsStateless() const override { return false; }
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
-void ForeignOutputKernel::ForwardDataContent(const KernelContext* ctx) const {
+void ForeignOutputKernel::ForwardDataContent(KernelContext* ctx) const {
   const auto& buffer_name = op_conf().foreign_output_conf().ofblob_buffer_name();
   std::shared_ptr<JobInstance> foreign_job_instance;
   BufferStatus buffer_status = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get()

@@ -19,7 +19,8 @@ from collections import OrderedDict
 
 import math
 import numpy as np
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 from oneflow.nn.modules import min_max_observer
 from test_util import GenArgList
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
@@ -50,7 +51,7 @@ def gen_quant_scale_for_min_max_cambricon(weight, quantization_bit):
 
 
 def product(tu):
-    return np.prod(tu).astype(np.int).item()
+    return np.prod(tu).astype(np.int32).item()
 
 
 def _check_min_max_observer(
@@ -105,7 +106,7 @@ def _run_test_min_max_observer(
     per_layer_quantization,
 ):
     weight = (np.random.random(weight_shape) - 0.5).astype(np.float32)
-    tensor_weight = flow.Tensor(
+    tensor_weight = flow.tensor(
         weight, device=flow.device(device_type), dtype=flow.float32
     )
     min_max_observer = flow.nn.MinMaxObserver(

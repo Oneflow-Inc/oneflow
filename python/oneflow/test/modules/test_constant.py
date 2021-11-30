@@ -22,7 +22,8 @@ import oneflow as flow
 
 import oneflow.unittest
 from test_util import GenArgList
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_different_dtype(test_case, device, shape):

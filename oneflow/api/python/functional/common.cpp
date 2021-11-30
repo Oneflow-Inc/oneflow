@@ -17,12 +17,12 @@ limitations under the License.
 #include "oneflow/api/python/functional/common.h"
 
 #include "oneflow/api/python/functional/indexing.h"
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/random_generator.h"
-#include "oneflow/core/functional/scalar.h"
 #include "oneflow/core/functional/tensor_index.h"
 
 namespace oneflow {
@@ -107,16 +107,6 @@ bool PyDTypeCheck(PyObject* obj) {
 Maybe<Symbol<DType>> PyUnpackDType(PyObject* obj) {
   auto handle = py::reinterpret_borrow<py::object>(obj);
   return *py::cast<Symbol<DType>*>(handle);
-}
-
-// Shape
-bool PyShapeCheck(PyObject* obj) {
-  auto handle = py::reinterpret_borrow<py::object>(obj);
-  return py::isinstance<Shape>(handle);
-}
-Maybe<Shape> PyUnpackShape(PyObject* obj) {
-  auto handle = py::reinterpret_borrow<py::object>(obj);
-  return py::cast<std::shared_ptr<Shape>>(obj);
 }
 
 // Generator

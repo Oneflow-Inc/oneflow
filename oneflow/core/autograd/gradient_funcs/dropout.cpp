@@ -20,8 +20,9 @@ namespace oneflow {
 namespace one {
 
 struct DropoutCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  float scale;
+  bool requires_grad = true;
+  bool has_addend = false;
+  float rate = 0.0;
 };
 
 class Dropout : public OpExprGradFunction<DropoutCaptureState> {
@@ -49,23 +50,37 @@ Maybe<void> Dropout::Capture(DropoutCaptureState* ctx, const TensorTuple& inputs
   ctx->requires_grad = inputs.at(0)->requires_grad();
 
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  ctx->scale = JUST(composed_attrs.GetAttr<float>("scale"));
-  CHECK_EQ_OR_RETURN(inputs.size(), 2);
+  ctx->rate = JUST(composed_attrs.GetAttr<float>("rate"));
 
-  ctx->SaveTensorForBackward(inputs.at(1));  // mask
+  if (inputs.size() == 1) {
+    ctx->has_addend = false;
+  } else if (inputs.size() == 2) {
+    ctx->has_addend = true;
+  } else {
+    UNIMPLEMENTED();
+  }
+
+  ctx->SaveTensorForBackward(outputs.at(1));  // output mask
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Dropout::Apply(const DropoutCaptureState* ctx, const TensorTuple& out_grads,
                            TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-
+  CHECK_EQ_OR_RETURN(out_grads.size(), 2);  // Output has y and mask.
+  float scale = 0.0f;                       // When dropout rate = 1.0, we set scale as zero.
+  if (ctx->rate < 1.0f) { scale = 1.0f / (1.0f - ctx->rate); }
   const std::shared_ptr<oneflow::one::Tensor>& mask = ctx->SavedTensors().at(0);
-  // mask hava no grad(reqiures_grad=False), but still take a place in in_grads
-  in_grads->resize(2);
-  in_grads->at(0) = JUST(functional::DropoutGrad(out_grads.at(0), mask, ctx->scale));
-  return Maybe<void>::Ok();
+  if (ctx->has_addend) {
+    in_grads->resize(2);
+    in_grads->at(0) = JUST(functional::DropoutGrad(out_grads.at(0), mask, scale));
+    in_grads->at(1) = out_grads.at(0);
+    return Maybe<void>::Ok();
+  } else {
+    in_grads->resize(1);
+    in_grads->at(0) = JUST(functional::DropoutGrad(out_grads.at(0), mask, scale));
+    return Maybe<void>::Ok();
+  }
 }
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("dropout", Dropout);

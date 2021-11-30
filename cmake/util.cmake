@@ -25,7 +25,7 @@ macro(copy_all_files_in_dir source_dir dest_dir target)
       COMMAND ${rsync}
       # NOTE: the trailing slash of source_dir is needed.
       # Reference: https://stackoverflow.com/a/56627246
-      ARGS -a --inplace ${source_dir}/ ${dest_dir})
+      ARGS -a --omit-dir-times --no-perms --no-owner --no-group --inplace ${source_dir}/ ${dest_dir})
   else()
     add_custom_command(TARGET ${target} POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -46,7 +46,7 @@ macro(copy_files file_paths source_dir dest_dir target)
     endforeach()
     add_custom_command(TARGET ${target} POST_BUILD
       COMMAND ${rsync}
-      ARGS -a --inplace --files-from=${CACHE_FILELIST} ${source_dir} ${dest_dir})
+      ARGS -a --omit-dir-times --no-perms --no-owner --no-group --inplace --files-from=${CACHE_FILELIST} ${source_dir} ${dest_dir})
   else()
     foreach(file ${file_paths})
       file(RELATIVE_PATH rel_path "${source_dir}" ${file})
@@ -115,14 +115,19 @@ function(use_mirror)
   if(NOT PARSED_ARGS_URL)
     message(FATAL_ERROR "url required")
   endif(NOT PARSED_ARGS_URL)
+  set(UTIL_PYTHON_EXECUTABLE "python3" CACHE STRING "Python executable to run util")
+  if(Python3_EXECUTABLE)
+    set(UTIL_PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
+  endif(Python3_EXECUTABLE)
   if(DEFINED THIRD_PARTY_MIRROR)
     if(THIRD_PARTY_MIRROR STREQUAL "aliyun")
-      execute_process( 
-        COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tools/package_mirror.py -u ${PARSED_ARGS_URL} 
+      execute_process(
+        COMMAND ${UTIL_PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/package_mirror.py -u ${PARSED_ARGS_URL}
         OUTPUT_VARIABLE temp_url
+        ERROR_VARIABLE err
         RESULT_VARIABLE ret_code)
       if (NOT (ret_code EQUAL "0"))
-        message(FATAL_ERROR "Fail to execute the script package_mirror.py.")
+        message(FATAL_ERROR "Fail to convert mirror url ${CMAKE_CURRENT_SOURCE_DIR}/tools/package_mirror.py. URL: ${PARSED_ARGS_URL}. Error: ${err}. Output: ${temp_url}")
       else()
         set(${PARSED_ARGS_VARIABLE} ${temp_url} PARENT_SCOPE)
       endif()

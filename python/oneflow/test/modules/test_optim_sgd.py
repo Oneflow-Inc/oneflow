@@ -56,8 +56,11 @@ def compare_with_numpy_sgd(
         )
 
         def train_one_iter(grad):
-            grad_tensor = flow.Tensor(
-                grad, requires_grad=False, device=flow.device(device)
+            grad_tensor = flow.tensor(
+                grad,
+                dtype=flow.float32,
+                requires_grad=False,
+                device=flow.device(device),
             )
             loss = flow.sum(x * grad_tensor)
             loss.backward()
@@ -71,13 +74,9 @@ def compare_with_numpy_sgd(
                 state_dict = sgd.state_dict()
                 sgd = flow.optim.SGD([x])
                 if save_load_by_pickle:
-                    with tempfile.NamedTemporaryFile("wb", delete=False) as f:
-                        file_name = f.name
-                        import pickle
-
-                        pickle.dump(state_dict, f)
-                    with open(file_name, "rb") as f:
-                        state_dict = pickle.load(f)
+                    with tempfile.TemporaryDirectory() as save_dir:
+                        flow.save(state_dict, save_dir)
+                        state_dict = flow.load(save_dir)
                 sgd.load_state_dict(state_dict)
         return x
 
@@ -138,8 +137,11 @@ def compare_with_numpy_sgd_clip_grad(
         )
 
         def train_one_iter(grad):
-            grad_tensor = flow.Tensor(
-                grad, requires_grad=False, device=flow.device(device)
+            grad_tensor = flow.tensor(
+                grad,
+                dtype=flow.float32,
+                requires_grad=False,
+                device=flow.device(device),
             )
             loss = flow.sum(x * grad_tensor)
             loss.backward()
@@ -154,13 +156,9 @@ def compare_with_numpy_sgd_clip_grad(
                 state_dict = sgd.state_dict()
                 sgd = flow.optim.SGD([x])
                 if save_load_by_pickle:
-                    with tempfile.NamedTemporaryFile("wb", delete=False) as f:
-                        file_name = f.name
-                        import pickle
-
-                        pickle.dump(state_dict, f)
-                    with open(file_name, "rb") as f:
-                        state_dict = pickle.load(f)
+                    with tempfile.TemporaryDirectory() as save_dir:
+                        flow.save(state_dict, save_dir)
+                        state_dict = flow.load(save_dir)
                 sgd.load_state_dict(state_dict)
         return x
 

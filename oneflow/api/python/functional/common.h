@@ -23,12 +23,12 @@ limitations under the License.
 #include "oneflow/api/python/framework/throw.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/random_generator.h"
-#include "oneflow/core/functional/scalar.h"
 #include "oneflow/core/functional/tensor_index.h"
 
 namespace py = pybind11;
@@ -39,6 +39,7 @@ namespace functional {
 
 struct PyObjectPtrDeleter {
   inline void operator()(PyObject* obj) {
+    py::gil_scoped_acquire acquire;
     if (obj) { Py_DECREF(obj); }
     obj = NULL;
   }
@@ -125,10 +126,6 @@ Maybe<TensorTuple> PyUnpackTensorTuple(PyObject* obj);
 // DType
 bool PyDTypeCheck(PyObject* obj);
 Maybe<Symbol<DType>> PyUnpackDType(PyObject* obj);
-
-// Shape
-bool PyShapeCheck(PyObject* obj);
-Maybe<Shape> PyUnpackShape(PyObject* obj);
 
 // Generator
 bool PyGeneratorCheck(PyObject* obj);

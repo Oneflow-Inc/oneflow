@@ -24,7 +24,7 @@ class NopKernel final : public Kernel {
   ~NopKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelContext* ctx) const override {}
+  void ForwardDataContent(KernelContext* ctx) const override {}
 };
 
 REGISTER_KERNEL(OperatorConf::kVariableConf, NopKernel);

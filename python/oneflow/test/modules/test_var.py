@@ -18,7 +18,8 @@ import unittest
 import oneflow as flow
 from oneflow.test_utils.automated_test_util.generators import random
 import oneflow.unittest
-from automated_test_util import *
+
+from oneflow.test_utils.automated_test_util import *
 
 
 class TestVar(flow.unittest.TestCase):

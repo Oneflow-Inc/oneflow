@@ -18,8 +18,8 @@ from __future__ import absolute_import
 import argparse
 import glob
 import os
-import platform
 import sys
+import numpy as np
 
 from setuptools import find_packages, setup
 from setuptools.command.install import install
@@ -39,7 +39,16 @@ parser.register("type", "bool", lambda v: v.lower() == "true")
 parser.add_argument("--package_name", type=str, default="oneflow")
 args, remain_args = parser.parse_known_args()
 sys.argv = ["setup.py"] + remain_args
-REQUIRED_PACKAGES = ["numpy", "protobuf>=3.9.2", "tqdm", "requests", "pillow"]
+REQUIRED_PACKAGES = [
+    f"numpy>={np.__version__}",
+    "protobuf>=3.9.2",
+    "tqdm",
+    "requests",
+    "pillow",
+]
+# if python version < 3.7.x, than need pip install dataclasses
+if sys.version_info.minor < 7:
+    REQUIRED_PACKAGES.append("dataclasses")
 
 
 class BinaryDistribution(Distribution):

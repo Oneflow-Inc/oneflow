@@ -16,7 +16,7 @@ limitations under the License.
 from typing import Sequence, Tuple
 
 import oneflow as flow
-from oneflow.ops.array_ops import GetSliceAttrs, check_slice_tup_list
+from oneflow.ops.array_ops import parse_slice_tuple_list
 
 
 def slice_op(input, slice_tup_list: Sequence[Tuple[int, int, int]]):
@@ -38,9 +38,9 @@ def slice_op(input, slice_tup_list: Sequence[Tuple[int, int, int]]):
         >>> tup_list = [[None, None, None], [0, 5, 2], [0, 6, 3]]
         >>> y = flow.slice(input, slice_tup_list=tup_list)
         >>> y.shape
-        flow.Size([3, 3, 2])
+        oneflow.Size([3, 3, 2])
     """
-    (start, stop, step) = check_slice_tup_list(slice_tup_list, input.shape)
+    (start, stop, step) = parse_slice_tuple_list(slice_tup_list, input.shape)
     return flow._C.slice(input, start, stop, step)
 
 
@@ -64,7 +64,7 @@ def slice_update_op(input, update, slice_tup_list: Sequence[Tuple[int, int, int]
         >>> y.numpy()
         array([1., 2., 3., 4., 1.], dtype=float32)
     """
-    (start, stop, step) = GetSliceAttrs(slice_tup_list, input.shape)
+    (start, stop, step) = parse_slice_tuple_list(slice_tup_list, input.shape)
     return flow._C.slice_update(input, update, start, stop, step)
 
 
@@ -93,9 +93,9 @@ def logical_slice_assign_op(
 
     """
 
-    (start, stop, step) = GetSliceAttrs(slice_tup_list, input.shape)
+    (start, stop, step) = parse_slice_tuple_list(slice_tup_list, input.shape)
     if update.dtype != input.dtype:
-        update = update.to(dtype=xinput.dtype)
+        update = update.to(dtype=input.dtype)
     return flow._C.logical_slice_assign(input, update, start, stop, step)
 
 

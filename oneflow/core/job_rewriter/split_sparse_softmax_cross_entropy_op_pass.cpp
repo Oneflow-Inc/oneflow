@@ -65,11 +65,7 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
     const std::vector<int32_t> axis_vec(1, split_axis);
 
     std::string op_name = node->op().op_name();
-    const auto& op_nd_sbp_sig = job_builder->NdSbpSignature4OpName(op_name);
-    const auto& nd_sbp_map = op_nd_sbp_sig.bn_in_op2nd_sbp();
-    const auto it = nd_sbp_map.find("prediction_0");
-    CHECK(it != nd_sbp_map.end());
-    const auto& prediction_nd_sbp = it->second;
+    const auto& prediction_nd_sbp = node->NdSbp4BnInOp("prediction_0");
 
     cfg::NdSbp stat_distribution_for_consumer;
 
@@ -166,7 +162,7 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
     if (node->parallel_desc().hierarchy()->NumAxes() > 1) {
       std::vector<std::string> nd_sbp_conf;
       for (const auto& sbp_parallel : stat_distribution_for_consumer.sbp_parallel()) {
-        nd_sbp_conf.push_back(SbpParallelToString(sbp_parallel));
+        nd_sbp_conf.emplace_back(SbpParallelToString(sbp_parallel));
       }
       auto parallel_cast_sum_op =
           user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_reduce_sum_cast_P2B")

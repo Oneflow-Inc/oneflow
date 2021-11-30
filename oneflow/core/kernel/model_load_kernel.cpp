@@ -44,8 +44,8 @@ class ModelLoadKernel final : public Kernel {
   ~ModelLoadKernel() override = default;
 
  private:
-  void Forward(const KernelContext* ctx) const override { ForwardDataContent(ctx); }
-  void ForwardDataContent(const KernelContext* ctx) const override {
+  void Forward(KernelContext* ctx) const override { ForwardDataContent(ctx); }
+  void ForwardDataContent(KernelContext* ctx) const override {
     const ModelLoadOpConf& conf = this->op_conf().model_load_conf();
     const Blob* path_blob = ctx->BnInOp2Blob("path");
     const std::string path(path_blob->dptr<char>(), path_blob->shape_view().elem_cnt());
@@ -58,7 +58,7 @@ class ModelLoadKernel final : public Kernel {
       if (reader.HasKey(key)) {
         reader.Read(key, out_i);
       } else {
-        std::cout << "WARNING! CANNOT find variable path in : " << JoinPath(path, key)
+        std::cerr << "WARNING! CANNOT find variable path in : " << JoinPath(path, key)
                   << ". It will be initialized. \n";
         std::mt19937 random_seed_gen(original_variable_conf.random_seed());
         CHECK(original_variable_conf.has_initializer())

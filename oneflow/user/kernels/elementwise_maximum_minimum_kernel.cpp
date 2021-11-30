@@ -19,7 +19,7 @@ namespace oneflow {
 namespace {
 template<template<typename> class Opt, typename T>
 struct ElemwiseXimumGradFunctor<DeviceType::kCPU, Opt, T> final {
-  void operator()(DeviceCtx* ctx, int64_t elem_cnt, const T* dz, const T* x, const T* y, T* dx,
+  void operator()(ep::Stream* stream, int64_t elem_cnt, const T* dz, const T* x, const T* y, T* dx,
                   T* dy) {
     XPU_1D_KERNEL_LOOP(idx, elem_cnt) {
       Opt<T>()(dz[idx], x[idx], y[idx], dx ? &dx[idx] : nullptr, dy ? &dy[idx] : nullptr);
@@ -29,14 +29,14 @@ struct ElemwiseXimumGradFunctor<DeviceType::kCPU, Opt, T> final {
 
 template<template<typename> class Opt, typename T>
 struct ElemwiseXimumFunctor<DeviceType::kCPU, Opt, T> final {
-  void operator()(DeviceCtx* ctx, int64_t elem_cnt, T* z, const T* x, const T* y) {
+  void operator()(ep::Stream* stream, int64_t elem_cnt, T* z, const T* x, const T* y) {
     FOR_RANGE(int64_t, idx, 0, elem_cnt) { z[idx] = Opt<T>()(x[idx], y[idx]); }
   }
 };
 }  // namespace
 
-REGISTER_MAXIMUM_KERNELS(DeviceType::kCPU, float);
-REGISTER_MAXIMUM_KERNELS(DeviceType::kCPU, double);
-REGISTER_MINIMUM_KERNELS(DeviceType::kCPU, float);
-REGISTER_MINIMUM_KERNELS(DeviceType::kCPU, double);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MAXIMUM_KERNELS, (DeviceType::kCPU),
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MINIMUM_KERNELS, (DeviceType::kCPU),
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
 }  // namespace oneflow

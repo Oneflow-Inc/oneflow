@@ -16,13 +16,17 @@ OneFlow API Reference
     nn
     functional
     module
-    _C
+    autograd
     graph
     linalg
     image
     optim
     utils
+    cuda
     distributed
+    comm
+    placement
+    sbp
 
 
 

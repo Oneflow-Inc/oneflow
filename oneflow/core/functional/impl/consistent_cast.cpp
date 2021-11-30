@@ -25,7 +25,6 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/autograd/autograd_engine.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
@@ -35,7 +34,7 @@ limitations under the License.
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/framework/transport_util.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
-#include "oneflow/core/object_msg/flat_msg.h"
+#include "oneflow/core/intrusive/flat_msg.h"
 #include "oneflow/core/common/flat_shape.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
@@ -54,31 +53,31 @@ namespace {
 // clang-format off
 FLAT_MSG_BEGIN(FlatShapeAndDataType);
   // Methods
-  OF_PUBLIC static Maybe<FlatShapeAndDataType> New() {
+  static Maybe<FlatShapeAndDataType> New() {
     const auto& flat_shape_dtype = std::make_shared<FlatShapeAndDataType>();
     flat_shape_dtype->clear();
     return flat_shape_dtype;
   }
-  OF_PUBLIC static Maybe<FlatShapeAndDataType> New(const Shape& shape, DataType dtype) {
+  static Maybe<FlatShapeAndDataType> New(const Shape& shape, DataType dtype) {
     const auto& flat_shape_dtype = JUST(New());
     JUST(flat_shape_dtype->mutable_shape()->Init(shape));
     flat_shape_dtype->set_dtype(dtype);
     return flat_shape_dtype;
   }
-  OF_PUBLIC Maybe<void> Check(const Shape& shape, DataType dtype) const {
+  Maybe<void> Check(const Shape& shape, DataType dtype) const {
     JUST(this->shape().Check(shape));
     CHECK_EQ_OR_RETURN(this->dtype(), dtype);
     return Maybe<void>::Ok();
   }
-  OF_PUBLIC Maybe<void> ToShape(Shape* shape) const { return this->shape().ToShape(shape); }
-  OF_PUBLIC Maybe<Shape> ToShape() const { return shape().ToShape(); }
-  OF_PUBLIC int64_t At(int i) const { return shape().At(i); }
-  OF_PUBLIC int64_t NumAxes() const { return shape().NumAxes(); }
+  Maybe<void> ToShape(Shape* shape) const { return this->shape().ToShape(shape); }
+  Maybe<Shape> ToShape() const { return shape().ToShape(); }
+  int64_t At(int i) const { return shape().At(i); }
+  int64_t NumAxes() const { return shape().NumAxes(); }
 
+ private:
   // Fields
   FLAT_MSG_DEFINE_OPTIONAL(FlatShape, shape);
   FLAT_MSG_DEFINE_OPTIONAL(DataType, dtype);
-
 FLAT_MSG_END(FlatShapeAndDataType);
 // clang-format on
 
@@ -131,7 +130,7 @@ Maybe<FlatShapeAndDataType> BroadcastShapeAndDtype(const Shape& shape, DataType 
   const auto& rank_group_parallel_desc =
       JUST(RankGroup::GetDefaultParallelDesc(parallel_desc->device_type(), rank_group));
   const auto& process_id2broadcast_group =
-      JUST(GetBroadcastGroupWithoutAcrossNode(parallel_desc, rank_group_parallel_desc));
+      JUST(GetBroadcastGroup(parallel_desc, rank_group_parallel_desc));
   const auto& broadcast_parallel_desc =
       JUST(MapAt(*process_id2broadcast_group, GlobalProcessCtx::Rank()));
 
@@ -248,16 +247,16 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
   std::shared_ptr<one::Tensor> input = x;
   // copy to right device first if input's device type is wrong
   if (JUST(JUST(input->device())->of_type()) != parallel_desc->device_tag()) {
-    LOG(INFO) << "The device_type of the input tensor is different from placement, now copy it to "
-              << Device::Type4DeviceTag(parallel_desc->device_tag());
+    VLOG(2) << "The device_type of the input tensor is different from placement, now copy it to "
+            << Device::Type4DeviceTag(parallel_desc->device_tag());
     input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
                                   GlobalProcessCtx::LocalRank()));
   }
   // copy to default device of the current rank if input's device type is right but not on default
   // device
   if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
-    LOG(INFO) << "The tensor isn't on default device of the current rank., now copy it to "
-              << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
+    VLOG(2) << "The tensor isn't on default device of the current rank., now copy it to "
+            << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
     input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
                                   GlobalProcessCtx::LocalRank()));
   }
@@ -292,12 +291,29 @@ class LocalToConsistentFunctor {
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                            const Shape& shape, const Symbol<DType>& dtype) const {
     CHECK_OR_RETURN(x->is_local());
+    std::shared_ptr<one::Tensor> input = x;
+    // copy to right device first if input's device type is wrong
+    if (JUST(JUST(input->device())->of_type()) != parallel_desc->device_tag()) {
+      VLOG(2) << "The device_type of the input tensor is different from placement, now copy it to "
+              << Device::Type4DeviceTag(parallel_desc->device_tag());
+      input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
+                                    GlobalProcessCtx::LocalRank()));
+    }
+    // copy to default device of the current rank if input's device type is right but not on default
+    // device
+    if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
+      VLOG(2) << "The tensor isn't on default device of the current rank., now copy it to "
+              << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
+      input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
+                                    GlobalProcessCtx::LocalRank()));
+    }
     Symbol<cfg::NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    DisableCheckConsistentTensorMetaScope scope{};
     const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-        *op_, {x}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
+        *op_, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
     return tensor;
   }
 

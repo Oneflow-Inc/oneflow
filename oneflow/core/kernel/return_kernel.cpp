@@ -15,13 +15,12 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
-template<DeviceType device_type>
 class ReturnKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReturnKernel);
@@ -29,14 +28,14 @@ class ReturnKernel final : public Kernel {
   ~ReturnKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelContext* ctx) const override;
-  void ForwardHeader(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
+  void ForwardHeader(KernelContext* ctx) const override;
 };
 
-template<DeviceType device_type>
-void ReturnKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
-  if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
-    const auto& job_name = ctx->job_desc()->job_name();
+void ReturnKernel::ForwardDataContent(KernelContext* ctx) const {
+  if (CHECK_JUST(IsMultiClient())) {
+    CHECK(this->op_conf().return_conf().has_job_name());
+    const auto& job_name = this->op_conf().return_conf().job_name();
     const auto& op_name = this->op_conf().name();
     auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
     auto* buffer = buffer_mgr->Get(GetOutputBufferName(job_name, op_name));
@@ -48,20 +47,19 @@ void ReturnKernel<device_type>::ForwardDataContent(const KernelContext* ctx) con
       job_instance->PullBlobByOpName(reinterpret_cast<uint64_t>(&ofblob), op_name);
     }
   } else {
-    ctx->BnInOp2Blob("out")->CopyDataContentFrom(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
-    ctx->device_ctx()->SyncDevice();
+    AutoMemcpy(ctx->stream(), ctx->BnInOp2Blob("out"), ctx->BnInOp2Blob("in"));
+    CHECK_JUST(ctx->stream()->Sync());
   }
 }
 
-template<DeviceType device_type>
-void ReturnKernel<device_type>::ForwardHeader(const KernelContext* ctx) const {
-  if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+void ReturnKernel::ForwardHeader(KernelContext* ctx) const {
+  if (CHECK_JUST(IsMultiClient())) {
     // Do nothing.
   } else {
-    ctx->BnInOp2Blob("out")->CopyHeaderFrom(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
+    ctx->BnInOp2Blob("out")->CopyHeaderFrom(ctx->BnInOp2Blob("in"));
   }
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kReturnConf, ReturnKernel);
+REGISTER_KERNEL(OperatorConf::kReturnConf, ReturnKernel);
 
 }  // namespace oneflow

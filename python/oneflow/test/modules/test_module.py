@@ -33,6 +33,7 @@ def np_relu(np_arr):
     return np.where(np_arr > 0, np_arr, 0)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestModule(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_nested_module(test_case):
@@ -201,7 +202,7 @@ class TestModule(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(res1.numpy(), res2.numpy()))
 
     @flow.unittest.skip_unless_1n2d()
-    def test_save_and_load_consistent(test_case):
+    def test_save_and_load_consistent_from_nested_dict(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self):
                 super().__init__()
@@ -210,10 +211,14 @@ class TestModule(flow.unittest.TestCase):
             def forward(self):
                 return self.param
 
-        m = CustomModule()
-        m = m.to_consistent(flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast)
-        res1 = m()
-        state_dict = m.state_dict()
+        m1 = CustomModule()
+        m1 = m1.to_consistent(flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast)
+        m2 = CustomModule()
+        m2 = m2.to_consistent(flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast)
+        res1 = m1() + m2()
+        state_dict1 = m1.state_dict()
+        state_dict2 = m2.state_dict()
+        state_dict = {"m1": state_dict1, "m2": state_dict2}
 
         with tempfile.TemporaryDirectory() as f:
             with test_case.assertRaises(Exception):
@@ -225,22 +230,26 @@ class TestModule(flow.unittest.TestCase):
             if rank != consistent_src_dst_rank:
                 test_case.assertEqual(len(os.listdir(f)), 0)
 
-            m = CustomModule()
-            m = m.to_consistent(
+            m1 = CustomModule()
+            m1 = m1.to_consistent(
+                flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast
+            )
+            m2 = CustomModule()
+            m2 = m2.to_consistent(
                 flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast
             )
 
             with test_case.assertRaises(Exception):
                 loaded_state_dict = flow.load(f)
-                m.load_state_dict(loaded_state_dict)
+                m1.load_state_dict(loaded_state_dict["m1"])
 
             loaded_state_dict = flow.load(
                 f, consistent_src_rank=consistent_src_dst_rank
             )
-            test_case.assertEqual(len(loaded_state_dict), 1)
-            test_case.assertEqual(list(loaded_state_dict.keys())[0], "param")
-            m.load_state_dict(loaded_state_dict)
-            res2 = m()
+            test_case.assertEqual(len(loaded_state_dict), 2)
+            m1.load_state_dict(loaded_state_dict["m1"])
+            m2.load_state_dict(loaded_state_dict["m2"])
+            res2 = m1() + m2()
 
         test_case.assertTrue(
             np.array_equal(
@@ -280,8 +289,8 @@ class TestModule(flow.unittest.TestCase):
                 self.param1 = param1
                 self.param2 = param2
 
-        tensor0 = flow.nn.Parameter(flow.Tensor(2, 3, dtype=flow.float64))
-        tensor1 = flow.nn.Parameter(flow.Tensor(2, 3, dtype=flow.float64))
+        tensor0 = flow.nn.Parameter(flow.Tensor(2, 3).to(dtype=flow.float64))
+        tensor1 = flow.nn.Parameter(flow.Tensor(2, 3).to(dtype=flow.float64))
         m = CustomModule(tensor0, tensor1)
         m = m.float()
         state_dict = m.state_dict()

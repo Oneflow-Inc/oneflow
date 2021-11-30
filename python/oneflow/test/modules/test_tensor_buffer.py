@@ -25,7 +25,7 @@ import oneflow.unittest
 
 
 def _test_tensor_buffer_convert(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.rand(16, 24, 32, 36), dtype=flow.float32, device=flow.device(device)
     )
     tensor_buffer = flow.tensor_to_tensor_buffer(input, instance_dims=2)

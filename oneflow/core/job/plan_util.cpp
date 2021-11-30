@@ -14,11 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/constant.h"
-#include "oneflow/core/job/plan_util.h"
-#include "oneflow/core/job/env_desc.h"
-#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/str_util.h"
-#include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/job/plan_util.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/memory/chunk_manager.h"
@@ -178,7 +177,7 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
     }
 
     for (const ChunkProto* exist_chunk : exist_chunks) {
-      all_chunks.push_back(*exist_chunk);
+      all_chunks.emplace_back(*exist_chunk);
       CHECK(unique_chunk_ids.insert(exist_chunk->chunk_id()).second);
     }
 
@@ -208,7 +207,7 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
         ++remain_block_it;
       }
 
-      all_chunks.push_back(new_chunk);
+      all_chunks.emplace_back(new_chunk);
       CHECK(unique_chunk_ids.insert(new_chunk.chunk_id()).second);
 
       Global<ChunkMgr>::Get()->AddChunkProto(new_chunk);
@@ -270,11 +269,6 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     int64_t regst_main_size = rt_regst_desc.TotalMainByteSize4AllRegst();
     int64_t regst_separated_size = rt_regst_desc.TotalSeparatedHeaderByteSize4AllRegst();
 
-    if (is_variable_regst) {
-      CHECK_GT(regst_separated_size,
-               0);  // NOTE(chengcheng): variable regst header ALWAYS separated
-    }
-
     if (mem_block_id2mem_block.find(mem_block_id) == mem_block_id2mem_block.end()) {
       MemBlockProto mem_block;
       mem_block.set_mem_block_id(mem_block_id);
@@ -330,7 +324,7 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     }
   }
 
-  if (CHECK_JUST(GlobalMultiClientEnv())) {
+  if (CHECK_JUST(IsMultiClient())) {
     GenChunkForMultiNNGraphMemoryReuseInMultiClient(plan, &mem_block_id2mem_block);
   } else {
     CHECK(variable_op_names.empty());
@@ -456,23 +450,23 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
   auto InsertNodeDefByTaskProto = [&](const TaskProto& task_proto, const std::string& node_def,
                                       const std::string& pass_tag) {
     if (task_proto.task_type() == TaskType::kCopyCommNet) {
-      copy_comm_net_node_list.push_back(node_def);
+      copy_comm_net_node_list.emplace_back(node_def);
       return;
     }
     if (pass_tag == kNoPassTag) {
-      if (Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task_proto.thrd_id()) == DeviceType::kGPU) {
-        int64_t device_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(task_proto.thrd_id());
+      const StreamId stream_id = PlanUtil::GetStreamId(task_proto);
+      if (stream_id.device_id().device_type() == DeviceType::kCUDA) {
         machine_id2job_id_device_id2node_list[task_proto.machine_id()][task_proto.job_id()]
-                                             [device_id]
-                                                 .push_back(node_def);
+                                             [stream_id.device_id().device_index()]
+                                                 .emplace_back(node_def);
         machine_id2device_id2node_list_job_ids[task_proto.machine_id()].insert(task_proto.job_id());
       } else {
-        machine_id2job_id2host_node_list[task_proto.machine_id()][task_proto.job_id()].push_back(
+        machine_id2job_id2host_node_list[task_proto.machine_id()][task_proto.job_id()].emplace_back(
             node_def);
         machine_id2host_node_list_job_ids[task_proto.machine_id()].insert(task_proto.job_id());
       }
     } else if (pass_tag == kMainOp) {
-      main_node_list.push_back(node_def);
+      main_node_list.emplace_back(node_def);
     } else {
       UNIMPLEMENTED();
     }
@@ -502,7 +496,7 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
       const RegstDescProto& regst = pair.second;
       for (int64_t consumer_task_id : regst.consumer_task_id()) {
-        task_id2producer_task_ids[consumer_task_id].push_back(task_proto.task_id());
+        task_id2producer_task_ids[consumer_task_id].emplace_back(task_proto.task_id());
       }
     }
   }
@@ -757,13 +751,10 @@ struct CollectiveBoxingRequestInfo {
 
 void GetDeviceDesc(const TaskProto* task_proto, boxing::collective::DeviceDesc* device_desc) {
   device_desc->set_machine_id(task_proto->machine_id());
-  const int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(task_proto->task_id());
-  device_desc->set_device_type(Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(thrd_id));
-  if (device_desc->device_type() == DeviceType::kGPU) {
-    device_desc->set_device_id(Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id));
-  } else {
-    UNIMPLEMENTED();
-  }
+  const StreamId stream_id = PlanUtil::GetStreamId(*task_proto);
+  const DeviceId& device_id = stream_id.device_id();
+  device_desc->set_device_type(device_id.device_type());
+  device_desc->set_device_id(device_id.device_index());
 }
 
 }  // namespace
@@ -791,7 +782,7 @@ void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
         if (all_visited.count(node_on_in_edge) != 0) { return; }
         in_cnt += 1;
       });
-      if (in_cnt == 0) { src_nodes.push_back(node); }
+      if (in_cnt == 0) { src_nodes.emplace_back(node); }
     });
     if (src_nodes.empty()) { break; }
     auto ForEachNodeOnInEdge = [&](const PlanTaskNode* node,
@@ -822,7 +813,7 @@ void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
                                     [&](const PlanTaskNode* node) {
                                       visited.insert(node);
                                       if (IsCollectiveBoxingNode(node)) {
-                                        collective_boxing_nodes.push_back(node);
+                                        collective_boxing_nodes.emplace_back(node);
                                       }
                                     });
     if (collective_boxing_nodes.empty()) { break; }
@@ -904,6 +895,40 @@ void PlanUtil::GenRegisterHint(Plan* plan) {
   }
 }
 
+void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
+  HashMap<std::pair<int64_t, int64_t>, int64_t> rank_device2size;
+  auto AddMemSizeByRankDeviceIds = [&](int64_t rank_id, int64_t device_id, int64_t mem_size) {
+    auto key = std::make_pair(rank_id, device_id);
+    auto it = rank_device2size.find(key);
+    if (it == rank_device2size.end()) { it = rank_device2size.emplace(key, 0).first; }
+    it->second += mem_size;
+  };
+
+  for (const ChunkProto& chunk : plan->block_chunk_list().chunk()) {
+    if (chunk.mem_case().has_device_cuda_mem()) {
+      AddMemSizeByRankDeviceIds(chunk.machine_id(), chunk.mem_case().device_cuda_mem().device_id(),
+                                chunk.mem_size());
+    }
+  }
+
+  for (const MemBlockProto& mem_block : plan->block_chunk_list().mem_block()) {
+    if (mem_block.has_chunk_id() || mem_block.has_chunk_offset()) { continue; }
+    if (mem_block.mem_case().has_device_cuda_mem()) {
+      AddMemSizeByRankDeviceIds(mem_block.machine_id(),
+                                mem_block.mem_case().device_cuda_mem().device_id(),
+                                mem_block.mem_size());
+    }
+  }
+
+  for (auto pair : rank_device2size) {
+    int64_t rank_id = pair.first.first;
+    int64_t device_id = pair.first.second;
+    double mem_size = pair.second * 1.0 / 1000000.0;
+    LOG(INFO) << " Plan: " << plan_name << " needs to allocate [ " << mem_size
+              << " MiB ] device memory in Rank: " << rank_id << " , Device: " << device_id << "\n";
+  }
+}
+
 const oneflow::OpAttribute& PlanUtil::GetOpAttribute(const Plan* plan, int64_t job_id,
                                                      const oneflow::KernelConf& kernel_conf) {
   if (kernel_conf.has_op_attribute()) {
@@ -923,7 +948,7 @@ const oneflow::OpAttribute& PlanUtil::GetOpAttribute(const Plan* plan, int64_t j
   }
 }
 
-void PlanUtil::PopulateOpAttibute(
+void PlanUtil::PopulateOpAttribute(
     Plan* plan,
     const PbMap<int64_t, ::oneflow::OpAttributeRefTable>& job_id2op_attribute_ref_table) {
   for (auto& task : *plan->mutable_task()) {
@@ -945,6 +970,14 @@ void PlanUtil::PopulateOpAttibute(
       }
     }
   }
+}
+
+/*static*/ StreamId PlanUtil::GetStreamId(const TaskProto& task) {
+  return DecodeStreamIdFromInt64(task.thrd_id());
+}
+
+/*static*/ int64_t PlanUtil::GetDeviceIndex(const TaskProto& task) {
+  return GetStreamId(task).device_id().device_index();
 }
 
 }  // namespace oneflow

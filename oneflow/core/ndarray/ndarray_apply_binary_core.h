@@ -26,10 +26,10 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T, template<typename> class binary_func>
 struct NdarrayApplyBinaryCoreWrapper final {
-  static void Apply(DeviceCtx* ctx,
+  static void Apply(ep::Stream* stream,
                     const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
                     const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b);
-  static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+  static void InplaceApply(ep::Stream* stream, const XpuVarNdarray<T>& y,
                            const XpuVarNdarray<const T>& x);
 };
 
@@ -38,10 +38,14 @@ struct NdarrayApplyBinaryCore final {
   OF_DEVICE_FUNC static void Apply(size_t n,
                                    typename BinaryFuncTrait<binary_func, T>::return_type* y,
                                    const T* a, const T* b) {
-    XPU_1D_KERNEL_LOOP(i, n) { y[i] = binary_func<T>::Invoke(a[i], b[i]); }
+    XPU_1D_KERNEL_LOOP_BEGIN(i, n);
+    y[i] = binary_func<T>::Invoke(a[i], b[i]);
+    XPU_1D_KERNEL_LOOP_END();
   }
   OF_DEVICE_FUNC static void InplaceApply(size_t n, T* y, const T* x) {
-    XPU_1D_KERNEL_LOOP(i, n) { y[i] = binary_func<T>::Invoke(y[i], x[i]); }
+    XPU_1D_KERNEL_LOOP_BEGIN(i, n);
+    y[i] = binary_func<T>::Invoke(y[i], x[i]);
+    XPU_1D_KERNEL_LOOP_END();
   }
 };
 
