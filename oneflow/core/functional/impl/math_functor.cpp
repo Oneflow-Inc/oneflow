@@ -272,7 +272,7 @@ class TransposeFunctor {
 class MovedimVecFunctor {
  public:
   MovedimVecFunctor() = default;
-  Maybe<void> CheckNoRepeat(const std::vector<int32_t>& perm, std::vector<int32_t> &perm_out, int32_t indim, const std::string &desc) const{  
+  static Maybe<void> CheckNoRepeat(const std::vector<int32_t>& perm, std::vector<int32_t> &perm_out, int32_t indim, const std::string &desc) {  
     std::vector<bool> is_used(indim, false);
     FOR_RANGE(size_t, i, 0, perm.size()) {
       int32_t item = perm[i];
