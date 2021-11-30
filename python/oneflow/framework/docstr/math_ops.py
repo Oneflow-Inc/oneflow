@@ -82,11 +82,12 @@ add_docstr(
     Moves the dimension(s) of input at the position(s) in source to the position(s) in destination.
     Other dimensions of input that are not explicitly moved remain in their original order and appear at the positions not specified in destination.
     The documentation is referenced from:
-        https://pytorch.org/docs/stable/generated/torch.movedim.html#torch.movedim
+        https://pytorch.org/docs/stable/generated/torch.movedim.html#torch.movedim.
+
     Args:
         input (Tensor): the input tensor.
-        source  (int or tuple of python:ints): Original positions of the dims to move. These must be unique. 
-        destination (int or tuple of python:ints) – Destination positions for each of the original dims. These must also be unique.
+        source  (int or a list): Original positions of the dims to move. These must be unique. 
+        destination (int or a list): Destination positions for each of the original dims. These must also be unique.
     
     Returns:
         oneflow.Tensor: the output Tensor.
