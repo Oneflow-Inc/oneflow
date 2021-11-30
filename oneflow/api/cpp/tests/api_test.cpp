@@ -115,6 +115,25 @@ TEST(Api, tensor_from_and_to_blob) {
   TEST_TENSOR_FROM_AND_TO_BLOB(DType::kInt32, int32_t)
   TEST_TENSOR_FROM_AND_TO_BLOB(DType::kInt64, int64_t)
 }
+TEST(Api, tensor_from_and_to_blob) {
+  EnvScope scope;
+
+  const auto shape = RandomShape();
+
+#define TEST_TENSOR_FROM_AND_TO_BLOB(dtype, cpp_dtype)                                           \
+  std::vector<cpp_dtype> data_##cpp_dtype(shape.Count(0)), new_data_##cpp_dtype(shape.Count(0)); \
+  for (int i = 0; i < shape.Count(0); ++i) { data_##cpp_dtype[i] = i; }                          \
+  auto tensor_##cpp_dtype =                                                                      \
+      Tensor::from_blob(data_##cpp_dtype.data(), shape, Device("cpu"), dtype);                   \
+  tensor_##cpp_dtype.copy_to(new_data_##cpp_dtype.data());                                       \
+  ASSERT_EQ(new_data_##cpp_dtype, data_##cpp_dtype);
+
+  TEST_TENSOR_FROM_AND_TO_BLOB(DType::kFloat, float)
+  TEST_TENSOR_FROM_AND_TO_BLOB(DType::kDouble, double)
+  TEST_TENSOR_FROM_AND_TO_BLOB(DType::kInt8, int8_t)
+  TEST_TENSOR_FROM_AND_TO_BLOB(DType::kInt32, int32_t)
+  TEST_TENSOR_FROM_AND_TO_BLOB(DType::kInt64, int64_t)
+}
 
 TEST(Api, tensor_zeros) {
   EnvScope scope;

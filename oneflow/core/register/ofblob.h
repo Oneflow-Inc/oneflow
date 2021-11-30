@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/framework/dtype.h"
 
 namespace oneflow {
 
@@ -88,6 +89,7 @@ inline void OfBlob::AutoMemCopyTo(T* ptr, int64_t len) const {
 
 template<>
 inline void OfBlob::AutoMemCopyTo<void>(void* ptr, int64_t len) const {
+  CHECK_EQ(blob_->shape().elem_cnt() * (DType(blob_->data_type()).bytes().GetOrThrow()), len);
   SyncAutoMemcpy(device_ctx_->stream(), ptr, static_cast<const char*>(blob_->dptr()),
                  len * sizeof(char), mem_case_, blob_->mem_case());
 }
@@ -103,6 +105,7 @@ inline void OfBlob::AutoMemCopyFrom(const T* ptr, int64_t len) const {
 template<>
 inline void OfBlob::AutoMemCopyFrom<void>(const void* ptr, int64_t len) const {
   blob_->blob_access_checker()->CheckBodyMutable();
+  CHECK_EQ(blob_->shape().elem_cnt() * (DType(blob_->data_type()).bytes().GetOrThrow()), len);
   SyncAutoMemcpy(device_ctx_->stream(), static_cast<char*>(blob_->mut_dptr()), ptr,
                  len * sizeof(char), blob_->mem_case(), mem_case_);
 }

@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/api/cpp/device.h"
+#include "oneflow/api/cpp/framework/device.h"
+#include "oneflow/api/common/device.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
-#include "oneflow/api/common/device.h"
 
 namespace oneflow_api {
 
