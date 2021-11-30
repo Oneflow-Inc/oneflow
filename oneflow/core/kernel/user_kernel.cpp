@@ -496,6 +496,7 @@ UserKernel::~UserKernel() = default;
 void UserKernel::InitUserKernel(StreamContext* stream_ctx, DeviceCtx* device_ctx) {
   ctx_.reset(new UserKernelComputeContext(device_ctx, stream_ctx, kernel_conf()));
   infer_ctx_.reset(new UserKernelInferContext(device_ctx, stream_ctx, kernel_conf()));
+  cache_ctx_.reset(new UserKernelInitContext(device_ctx, stream_ctx, kernel_conf()));
   infer_cache_.reset(new user_op::OpKernelInferCache(kernel_conf(), this));
   {
     const std::string& op_type_name =
@@ -521,6 +522,11 @@ const std::shared_ptr<user_op::OpKernelState>& UserKernel::GetOpKernelState() co
 void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                                    user_op::OpKernelState* opkernel_state) const {
   const bool updated = ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
+
+  if (updated) {
+    kernel_->InitOpKernelCache(cache_ctx_.get(), user_op::OpKernelCache::ShapeMayChanged,
+                               &*opkernel_cache_);
+  }
 
 #ifdef WITH_CUDA_GRAPHS
   bool current_scope_capturing = false;

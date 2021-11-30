@@ -22,6 +22,8 @@ limitations under the License.
 
 namespace oneflow {
 
+class Blob;
+
 namespace user_op {
 
 class TensorDesc {
@@ -65,6 +67,24 @@ class NaiveTensorDesc final : public TensorDesc {
   Shape shape_;
   DataType data_type_;
   bool is_dynamic_;
+};
+
+class BlobTensorDescView final : public TensorDesc {
+ public:
+  explicit BlobTensorDescView(Blob* blob) : blob_(blob){};
+  ~BlobTensorDescView() override = default;
+
+  const Shape& shape() const override;
+  Shape* mut_shape() override;
+  DataType data_type() const override;
+  DataType* mut_data_type() override;
+
+  bool is_dynamic() const override;
+  bool* mut_is_dynamic() override;
+  void set_is_dynamic(bool val) override;
+
+ private:
+  Blob* blob_;
 };
 
 }  // namespace user_op
