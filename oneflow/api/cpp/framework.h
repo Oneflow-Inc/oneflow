@@ -14,11 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_API_CPP_API_H_
-#define ONEFLOW_API_CPP_API_H_
+#ifndef ONEFLOW_API_CPP_FRAMEWORK_H_
+#define ONEFLOW_API_CPP_FRAMEWORK_H_
 
-#include "env.h"
-#include "framework.h"
-#include "nn.h"
+#include "framework/device.h"
+#include "framework/shape.h"
+#include "framework/dtype.h"
+#include "framework/tensor.h"
 
-#endif  // !ONEFLOW_API_CPP_API_H_
+#endif  // !ONEFLOW_API_CPP_FRAMEWORK_H_
