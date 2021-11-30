@@ -298,6 +298,9 @@ Maybe<void> NNGraph::DumpToVariable2BlobMap() {
       } else {
         CHECK_OR_RETURN(job_.job_conf().enable_auto_parallel())
             << "Only change sbp when enable auto_parallel.";
+        LOG(INFO) << "Variable with name `" << var_name << "` change sbp from "
+                  << NdSbpParallelToString(*JUST(tensor->nd_sbp())) << " to "
+                  << NdSbpParallelToString(job_nd_sbp);
         std::vector<Symbol<cfg::SbpParallel>> job_sbp_parallels;
         for (int i = 0; i < job_nd_sbp.sbp_parallel_size(); ++i) {
           job_sbp_parallels.emplace_back(job_nd_sbp.sbp_parallel(i));
@@ -305,7 +308,8 @@ Maybe<void> NNGraph::DumpToVariable2BlobMap() {
         const auto& new_tensor = JUST(one::functional::ToConsistent(
             tensor, JUST(tensor->parallel_desc()), job_sbp_parallels, {}));
         JUST(vm::CurrentRankSync());
-        variable_op_name2tensor_.at(var_name) = new_tensor;
+        // Use tensor.set_data inferface and make new TensorImpl instead of the old one.
+        variable_op_name2tensor_.at(var_name)->set_data(new_tensor);
         const std::shared_ptr<one::MirroredTensor> local_var =
             JUST(new_tensor->cur_rank_phy_tensor());
         var_blob = JUST(local_var->eager_blob_object())->mut_blob();
