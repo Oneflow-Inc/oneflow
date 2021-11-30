@@ -222,8 +222,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::InplaceSquareFunctor>("Square_");
   m.add_functor<impl::InplaceTanFunctor>("Tan_");
   m.add_functor<impl::InplaceTanhFunctor>("Tanh_");
-
-  
 };
 
 #undef ADD_UNARY_FUNCTOR

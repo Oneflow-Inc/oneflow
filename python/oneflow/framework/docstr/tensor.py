@@ -121,14 +121,14 @@ add_docstr(
     oneflow.Tensor.negative,
     """
     See :func:`oneflow.negative`
-    """
+    """,
 )
 
 add_docstr(
     oneflow.Tensor.negative_,
     """
     In-place version of :func:`oneflow.Tensor.negative`
-    """
+    """,
 )
 
 add_docstr(
@@ -431,13 +431,6 @@ add_docstr(
     oneflow.Tensor.mul,
     """
     See :func:`oneflow.mul`
-    """,
-)
-
-add_docstr(
-    oneflow.Tensor.negative,
-    """
-    See :func:`oneflow.negative`
     """,
 )
 

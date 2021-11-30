@@ -308,16 +308,20 @@
   signature: "Tensor (Tensor x) => Sin"
   bind_python: True
 
-- name: "sin_grad"
-  signature: "Tensor (Tensor x, Tensor dy) => SinGrad"
-  bind_python: False
-
 - name: "sin_"
   signature: "Tensor (Tensor x) => Sin_"
   bind_python: True
 
+- name: "sin_grad"
+  signature: "Tensor (Tensor x, Tensor dy) => SinGrad"
+  bind_python: False
+
 - name: "cos"
   signature: "Tensor (Tensor x) => Cos"
+  bind_python: True
+
+- name: "cos_"
+  signature: "Tensor (Tensor x) => Cos_"
   bind_python: True
 
 - name: "cos_grad"
@@ -326,6 +330,10 @@
 
 - name: "cosh"
   signature: "Tensor (Tensor x) => Cosh"
+  bind_python: True
+
+- name: "cosh_"
+  signature: "Tensor (Tensor x) => Cosh_"
   bind_python: True
 
 - name: "cosh_grad"
@@ -1261,6 +1269,10 @@
   signature: "Tensor (Tensor x) => Atan"
   bind_python: True
 
+- name: "atan_"
+  signature: "Tensor (Tensor x) => Atan_"
+  bind_python: True
+
 - name: "atan_grad"
   signature: "Tensor (Tensor x, Tensor dy) => AtanGrad"
   bind_python: False
@@ -1362,6 +1374,10 @@
 
 - name: "log1p"
   signature: "Tensor (Tensor x) => Log1p"
+  bind_python: True
+
+- name: "log1p_"
+  signature: "Tensor (Tensor x) => Log1p_"
   bind_python: True
 
 - name: "log1p_grad"

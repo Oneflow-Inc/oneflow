@@ -36,6 +36,31 @@ class TestErfModule(flow.unittest.TestCase):
         y = torch.erf(x)
         return y
 
+    @autotest()
+    def test_tensor_erf_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.erf()
+        return y
+
+    @autotest()
+    def test_flow_inpalce_erf_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        id_x = id(x)
+        torch.erf_(x)
+        test_case.assertTrue(id_x == id(x))
+        return x
+
+    @autotest()
+    def test_tensor_erf_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        id_x = id(x)
+        x.erf_()
+        test_case.assertTrue(id_x == id(x))
+        return x
+
 
 if __name__ == "__main__":
     unittest.main()

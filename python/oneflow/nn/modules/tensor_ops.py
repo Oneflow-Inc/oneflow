@@ -18,6 +18,7 @@ from typing import Union
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 
+
 @register_tensor_op("type_as")
 def type_as_op(input, target):
     r"""Returns this tensor cast to the type of the given tensor.

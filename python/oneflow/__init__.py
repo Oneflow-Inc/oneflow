@@ -66,6 +66,7 @@ from oneflow._C import abs, abs_
 from oneflow._C import exp, exp_
 from oneflow._C import acos, acos_
 from oneflow._C import acos as arccos
+from oneflow._C import acos_ as arccos_
 from oneflow._C import acosh, acosh_
 from oneflow._C import acosh as arccosh
 from oneflow._C import acosh_ as arccosh_
@@ -73,7 +74,7 @@ from oneflow._C import atanh, atanh_
 from oneflow._C import atanh as arctanh
 from oneflow._C import atanh_ as arctanh_
 from oneflow._C import sign, sign_
-from oneflow._C import sinh, sinh
+from oneflow._C import sinh, sinh_
 from oneflow._C import tan, tan_
 from oneflow._C import greater
 from oneflow._C import greater as gt
@@ -101,8 +102,6 @@ from oneflow._C import floor_divide
 from oneflow._C import mul
 from oneflow._C import reciprocal
 from oneflow._C import reciprocal_ as reciprocal_
-from oneflow._C import negative
-from oneflow._C import negative as neg
 from oneflow._C import sub
 from oneflow._C import sin, sin_
 from oneflow._C import asin, asin_
@@ -122,13 +121,14 @@ from oneflow._C import cos, cos_
 from oneflow._C import cosh, cosh_
 from oneflow._C import erf, erf_
 from oneflow._C import erfc, erfc_
-from oneflow._C import expm1, exmp1_
+from oneflow._C import expm1, expm1_
 from oneflow._C import fmod
 from oneflow._C import log, log_
 from oneflow._C import minimum
 from oneflow._C import maximum
 from oneflow._C import negative, negative_
 from oneflow._C import negative as neg
+from oneflow._C import negative_ as neg_
 from oneflow._C import pow
 from oneflow._C import rsqrt, rsqrt_
 from oneflow._C import sqrt, sqrt_

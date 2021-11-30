@@ -298,6 +298,10 @@ def _abs(self):
     return flow.abs(self)
 
 
+def _abs_(self):
+    return flow.abs_(self)
+
+
 def _exp(self):
     return flow.exp(self)
 
@@ -310,20 +314,40 @@ def _acos(self):
     return flow.acos(self)
 
 
+def _acos_(self):
+    return flow.acos_(self)
+
+
 def _arccos(self):
     return flow.arccos(self)
+
+
+def _arccos_(self):
+    return flow.arccos_(self)
 
 
 def _acosh(self):
     return flow.acosh(self)
 
 
+def _acosh_(self):
+    return flow.acosh_(self)
+
+
 def _arccosh(self):
     return flow.arccosh(self)
 
 
+def _arccosh_(self):
+    return flow.arccosh_(self)
+
+
 def _atanh(self):
     return flow.atanh(self)
+
+
+def _atanh_(self):
+    return flow.atanh_(self)
 
 
 def _atan2(self, other):
@@ -334,12 +358,20 @@ def _arctanh(self):
     return flow.arctanh(self)
 
 
+def _arctanh_(self):
+    return flow.arctanh_(self)
+
+
 def _sign(self):
     return flow.sign(self)
 
 
 def _sinh(self):
     return flow.sinh(self)
+
+
+def _sinh_(self):
+    return flow.sinh_(self)
 
 
 def _tan(self):
@@ -394,28 +426,52 @@ def _asin(self):
     return flow.asin(self)
 
 
+def _asin_(self):
+    return flow.asin_(self)
+
+
 def _arcsin(self):
     return flow.arcsin(self)
+
+
+def _arcsin_(self):
+    return flow.arcsin_(self)
 
 
 def _asinh(self):
     return flow.asinh(self)
 
 
-def _arcsinh(self):
-    return flow.arcsinh(self)
+def _asinh_(self):
+    return flow.asinh_(self)
+
+
+def _arcsinh_(self):
+    return flow.arcsinh_(self)
 
 
 def _atan(self):
     return flow.atan(self)
 
 
+def _atan_(self):
+    return flow.atan_(self)
+
+
 def _arctan(self):
     return flow.arctan(self)
 
 
+def _arctan_(self):
+    return flow.arctan_(self)
+
+
 def _ceil(self):
     return flow.ceil(self)
+
+
+def _ceil_(self):
+    return flow.ceil_(self)
 
 
 def _clamp(self, min=None, max=None):
@@ -430,20 +486,40 @@ def _cos(self):
     return flow.cos(self)
 
 
+def _cos_(self):
+    return flow.cos_(self)
+
+
 def _cosh(self):
     return flow.cosh(self)
+
+
+def _cosh_(self):
+    return flow.cosh_(self)
 
 
 def _erf(self):
     return flow.erf(self)
 
 
+def _erf_(self):
+    return flow.erf_(self)
+
+
 def _erfc(self):
     return flow.erfc(self)
 
 
+def _erfc_(self):
+    return flow.erfc_(self)
+
+
 def _expm1(self):
     return flow.expm1(self)
+
+
+def _expm1_(self):
+    return flow.expm1_(self)
 
 
 def _fmod(self, other):
@@ -466,8 +542,16 @@ def _negative(self):
     return flow._C.negative(self)
 
 
+def _negative_(self):
+    return flow._C.negative_(self)
+
+
 def _neg(self):
     return flow._C.negative(self)
+
+
+def _neg_(self):
+    return flow._C.negative_(self)
 
 
 def _rsqrt(self):
@@ -766,27 +850,38 @@ def RegisterMethods():
     Tensor.get_device = _get_device
     Tensor._meta_repr = _meta_repr
     Tensor.abs = _abs
+    Tensor.abs_ = _abs_
     Tensor.exp = _exp
+    Tensor.exp_ = _exp_
     Tensor.floor_divide = _floor_divide
     Tensor.argmax = _argmax
     Tensor.argmin = _argmin
     Tensor.argsort = _argsort
     Tensor.acos = _acos
+    Tensor.acos_ = _acos_
     Tensor.arccos = _arccos
+    Tensor.arccos_ = _arccos_
     Tensor.acosh = _acosh
+    Tensor.acosh_ = _acosh_
     Tensor.arccosh = _arccosh
+    Tensor.arccosh_ = _arccosh_
     Tensor.atanh = _atanh
+    Tensor.atanh_ = _atanh_
     Tensor.atan2 = _atan2
     Tensor.arctanh = _arctanh
+    Tensor.arctanh_ = _arctanh_
     Tensor.sign = _sign
     Tensor.sinh = _sinh
+    Tensor.sinh_ = _sinh_
     Tensor.tan = _tan
     Tensor.gt = _gt
     Tensor.ge = _ge
     Tensor.gelu = _gelu
     Tensor.mish = _mish
     Tensor.negative = _negative
+    Tensor.negative_ = _negative_
     Tensor.neg = _neg
+    Tensor.neg_ = _neg_
     Tensor.sigmoid = _sigmoid
     Tensor.tanh = _tanh
     Tensor.silu = _silu
@@ -802,20 +897,32 @@ def RegisterMethods():
     Tensor.reciprocal = _reciprocal
     Tensor.sub = _sub
     Tensor.asin = _asin
+    Tensor.asin_ = _asin_
     Tensor.arcsin = _arcsin
+    Tensor.arcsin_ = _arcsin_
     Tensor.asinh = _asinh
+    Tensor.asinh_ = _asinh_
     Tensor.arcsinh = _arcsinh
+    Tensor.arcsinh_ = _arcsinh_
     Tensor.atan = _atan
+    Tensor.atan_ = _atan_
     Tensor.arctan = _arctan
+    Tensor.arctan_ = _arctan_
     Tensor.ceil = _ceil
+    Tensor.ceil_ = _ceil_
     Tensor.clamp = _clamp
     Tensor.clip = _clip
     Tensor.cos = _cos
+    Tensor.cos_ = _cos_
     Tensor.cosh = _cosh
+    Tensor.cosh = _cosh_
     Tensor.expand_as = _expand_as
     Tensor.erf = _erf
+    Tensor.erf_ = _erf_
     Tensor.erfc = _erfc
+    Tensor.erfc_ = _erfc_
     Tensor.expm1 = _expm1
+    Tensor.expm1_ = _expm1_
     Tensor.fmod = _fmod
     Tensor.log = _log
     Tensor.minimum = _minimum
