@@ -19,4 +19,4 @@ limitations under the License.
 
 #include "nn/functional/activation.h"
 
-#endif  // ONEFLOW_API_CPP_NN_H_
+#endif  // !ONEFLOW_API_CPP_NN_H_

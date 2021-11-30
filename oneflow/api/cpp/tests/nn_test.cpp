@@ -43,7 +43,7 @@ void TestRelu() {
   const auto target_data = Relu(data);
   std::vector<float> result(shape.Count(0));
 
-  auto tensor = Tensor::from_blob(data.data(), shape, Device("cpu"), DType::kFloat);
+  auto tensor = Tensor::from_buffer(data.data(), shape, Device("cpu"), DType::kFloat);
   auto result_tensor = nn::relu(tensor);
 
   result_tensor.copy_to(result.data());

@@ -64,7 +64,7 @@ TEST(Api, tensor_from_and_to_blob) {
   std::vector<cpp_dtype> data_##cpp_dtype(shape.Count(0)), new_data_##cpp_dtype(shape.Count(0)); \
   for (int i = 0; i < shape.Count(0); ++i) { data_##cpp_dtype[i] = i; }                          \
   auto tensor_##cpp_dtype =                                                                      \
-      Tensor::from_blob(data_##cpp_dtype.data(), shape, Device("cpu"), dtype);                   \
+      Tensor::from_buffer(data_##cpp_dtype.data(), shape, Device("cpu"), dtype);                   \
   tensor_##cpp_dtype.copy_to(new_data_##cpp_dtype.data());                                       \
   ASSERT_EQ(new_data_##cpp_dtype, data_##cpp_dtype);
 

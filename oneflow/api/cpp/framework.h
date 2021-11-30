@@ -22,4 +22,4 @@ limitations under the License.
 #include "framework/dtype.h"
 #include "framework/tensor.h"
 
-#endif  // ONEFLOW_API_CPP_FRAMEWORK_H_
+#endif  // !ONEFLOW_API_CPP_FRAMEWORK_H_

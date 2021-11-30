@@ -69,8 +69,8 @@ void Tensor::zeros_() {
   }).GetOrThrow();
 }
 
-Tensor Tensor::from_blob(const void* blob, const Shape& shape, const Device& device,
-                         const DType& dtype) {
+Tensor Tensor::from_buffer(const void* blob, const Shape& shape, const Device& device,
+                           const DType& dtype) {
   Tensor tensor(shape, device, dtype);
   std::shared_ptr<of::one::MirroredTensor> local_tensor =
       tensor.tensor_->AsMirroredTensor().GetPtrOrThrow();
@@ -87,14 +87,14 @@ Tensor Tensor::from_blob(const void* blob, const Shape& shape, const Device& dev
 }
 
 template<typename T>
-void Tensor::copy_to(T* blob) {
+void Tensor::copy_to(T* buffer) {
   std::shared_ptr<of::one::MirroredTensor> local_tensor =
       tensor_->AsMirroredTensor().GetPtrOrThrow();
   const auto shape = this->shape();
 
   const auto& Callback =
-      std::make_shared<std::function<void(uint64_t)>>([blob, shape](uint64_t ofblob_ptr) {
-        CHECK_JUST(of::BlobBufferCopyUtil<T>::To(ofblob_ptr, blob, shape.Count(0)));
+      std::make_shared<std::function<void(uint64_t)>>([buffer, shape](uint64_t ofblob_ptr) {
+        CHECK_JUST(of::BlobBufferCopyUtil<T>::To(ofblob_ptr, buffer, shape.Count(0)));
       });
 
   bool is_printed = false;
@@ -116,12 +116,13 @@ void Tensor::copy_to(T* blob) {
 
 const std::shared_ptr<oneflow::one::Tensor>& Tensor::__internal_tensor() const { return tensor_; }
 
-#define REGISTER_TO_BLOB(cpp_dtype) template void Tensor::copy_to<cpp_dtype>(cpp_dtype * blob);
+#define REGISTER_TENSOR_COPY_TO(cpp_dtype) \
+  template void Tensor::copy_to<cpp_dtype>(cpp_dtype * buffer);
 
-REGISTER_TO_BLOB(float)
-REGISTER_TO_BLOB(double)
-REGISTER_TO_BLOB(int8_t)
-REGISTER_TO_BLOB(int32_t)
-REGISTER_TO_BLOB(int64_t)
+REGISTER_TENSOR_COPY_TO(float)
+REGISTER_TENSOR_COPY_TO(double)
+REGISTER_TENSOR_COPY_TO(int8_t)
+REGISTER_TENSOR_COPY_TO(int32_t)
+REGISTER_TENSOR_COPY_TO(int64_t)
 
 }  // namespace oneflow_api
