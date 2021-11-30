@@ -272,15 +272,15 @@ class TransposeFunctor {
 class MovedimVecFunctor {
  public:
   MovedimVecFunctor() = default;
-  static Maybe<void> CheckNoRepeat(const std::vector<int32_t>& perm, std::vector<int32_t> &perm_out, int32_t indim, const std::string &desc) {  
-    std::vector<bool> is_used(indim, false);
+  static Maybe<void> CheckNoRepeat(const std::vector<int32_t>& perm, std::vector<int32_t> &perm_out, int32_t ndim, const std::string &desc) {  
+    std::vector<bool> is_used(ndim, false);
     FOR_RANGE(size_t, i, 0, perm.size()) {
       int32_t item = perm[i];
       if(item < 0){
-        item += indim;
+        item += ndim;
       }
-      CHECK_GE_OR_RETURN(item, 0) << ", Dimension out of range (expected to be in range of [" << -indim <<", " <<indim-1<< "], but got "<< perm[i] << ")";
-      CHECK_LT_OR_RETURN(item, indim) << ", Dimension out of range (expected to be in range of [" << -indim <<", " << indim-1 << "], but got " << perm[i] << ")";;
+      CHECK_GE_OR_RETURN(item, 0) << ", Dimension out of range (expected to be in range of [" << -ndim <<", " <<ndim-1<< "], but got "<< perm[i] << ")";
+      CHECK_LT_OR_RETURN(item, ndim) << ", Dimension out of range (expected to be in range of [" << -ndim <<", " << ndim-1 << "], but got " << perm[i] << ")";;
       CHECK_EQ_OR_RETURN(is_used[item], false)<<"repeated dim in "<<desc;
       
       is_used[item] = true;
