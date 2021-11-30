@@ -89,7 +89,7 @@ class EagerPToBKernel final : public user_op::OpKernel {
     const int64_t total_elem_cnt = ctx->Attr<Shape>("shape").elem_cnt();
     const auto& p2p_pair = kernel_state->p2p_pair();
 
-    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
+    Memset<device_type>(ctx->stream(), out->mut_dptr(), 0,
                         total_elem_cnt * GetSizeOfDataType(out->data_type()));
     std::unique_ptr<ep::primitive::Add> add_primitive =
         ep::primitive::NewPrimitive<ep::primitive::AddFactory>(ctx->device_type(), in->data_type());
@@ -99,13 +99,12 @@ class EagerPToBKernel final : public user_op::OpKernel {
       int64_t dst = pair.second;
 
       if (GlobalProcessCtx::Rank() == src) {
-        CHECK_JUST(
-            Send<device_type>(in_ptr, total_elem_cnt, in->data_type(), dst, ctx->device_ctx()));
+        CHECK_JUST(Send<device_type>(in_ptr, total_elem_cnt, in->data_type(), dst, ctx->stream()));
       }
       if (GlobalProcessCtx::Rank() == dst) {
         CHECK_JUST(Recv<device_type>(tmp_buffer_ptr, total_elem_cnt, out->data_type(), src,
-                                     ctx->device_ctx()));
-        add_primitive->Launch(ctx->stream(), tmp_buffer_ptr, out->dptr(), out->mut_dptr(),
+                                     ctx->stream()));
+        add_primitive->Launch(ctx->stream(), out->dptr(), tmp_buffer_ptr, out->mut_dptr(),
                               total_elem_cnt);
       }
     }
@@ -120,8 +119,8 @@ class EagerPToBKernel final : public user_op::OpKernel {
       .SetInferTmpSizeFn(InferEagerPToBKernelTmpBufferSize);
 
 REGISTER_EAGER_P_TO_B_KERNEL(DeviceType::kCPU)
-#if defined(WITH_CUDA) && HAS_GPU_SEND_RECV
-REGISTER_EAGER_P_TO_B_KERNEL(DeviceType::kGPU)
+#if defined(WITH_CUDA) && HAS_NCCL_SEND_RECV
+REGISTER_EAGER_P_TO_B_KERNEL(DeviceType::kCUDA)
 #endif
 
 }  // namespace oneflow

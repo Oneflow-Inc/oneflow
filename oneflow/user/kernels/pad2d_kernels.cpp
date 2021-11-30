@@ -93,7 +93,7 @@ class ReflectionPad2dKernel final : public OpKernel {
     y->shape().ToDimVector(&y_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
 
-    ReflectionPad2dFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper, n_batch,
+    ReflectionPad2dFunctor<device_type, IN_T>()(ctx->stream(), src, dest, index_helper, n_batch,
                                                 n_channel, y_height, y_width, x_height, x_width,
                                                 pad_left, pad_top);
   }
@@ -135,11 +135,11 @@ class ReflectionPad2dGradKernel final : public OpKernel {
     NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
 
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
-    Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
+    Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
-    ReflectionPad2dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
-                                                    n_batch, n_channel, dy_height, dy_width,
-                                                    dx_height, dx_width, pad_left, pad_top);
+    ReflectionPad2dGradFunctor<device_type, IN_T>()(ctx->stream(), src, dest, index_helper, n_batch,
+                                                    n_channel, dy_height, dy_width, dx_height,
+                                                    dx_width, pad_left, pad_top);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -161,8 +161,8 @@ class ReflectionPad2dGradKernel final : public OpKernel {
 
 REGISTER_REFLECTION_PAD2D_WITH_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_REFLECTION_PAD2D_WITH_DEVICE(DeviceType::kGPU)
-REGISTER_REFLECTION_PAD2D_KERNELS(DeviceType::kGPU, float16)
+REGISTER_REFLECTION_PAD2D_WITH_DEVICE(DeviceType::kCUDA)
+REGISTER_REFLECTION_PAD2D_KERNELS(DeviceType::kCUDA, float16)
 #endif
 
 template<DeviceType device_type, typename IN_T>
@@ -199,9 +199,9 @@ class ReplicationPad2dKernel final : public OpKernel {
     y->shape().ToDimVector(&y_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
 
-    ReplicationPad2dFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
-                                                 n_batch, n_channel, y_height, y_width, x_height,
-                                                 x_width, pad_left, pad_top);
+    ReplicationPad2dFunctor<device_type, IN_T>()(ctx->stream(), src, dest, index_helper, n_batch,
+                                                 n_channel, y_height, y_width, x_height, x_width,
+                                                 pad_left, pad_top);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -241,9 +241,9 @@ class ReplicationPad2dGradKernel final : public OpKernel {
     NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
 
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
-    Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
+    Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
-    ReplicationPad2dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
+    ReplicationPad2dGradFunctor<device_type, IN_T>()(ctx->stream(), src, dest, index_helper,
                                                      n_batch, n_channel, dy_height, dy_width,
                                                      dx_height, dx_width, pad_left, pad_top);
   }
@@ -267,8 +267,8 @@ class ReplicationPad2dGradKernel final : public OpKernel {
 
 REGISTER_REPLICATION_PAD2D_WITH_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_REPLICATION_PAD2D_WITH_DEVICE(DeviceType::kGPU)
-REGISTER_REPLICATION_PAD2D_KERNELS(DeviceType::kGPU, float16)
+REGISTER_REPLICATION_PAD2D_WITH_DEVICE(DeviceType::kCUDA)
+REGISTER_REPLICATION_PAD2D_KERNELS(DeviceType::kCUDA, float16)
 #endif
 
 template<DeviceType device_type, typename IN_T>
@@ -307,7 +307,7 @@ class ConstantPad2dKernel final : public OpKernel {
     y->shape().ToDimVector(&y_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
 
-    ConstantPad2dFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper, n_batch,
+    ConstantPad2dFunctor<device_type, IN_T>()(ctx->stream(), src, dest, index_helper, n_batch,
                                               n_channel, y_height, y_width, x_height, x_width,
                                               pad_left, pad_top, constant_value);
   }
@@ -349,11 +349,11 @@ class ConstantPad2dGradKernel final : public OpKernel {
     NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
 
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
-    Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
+    Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
-    ConstantPad2dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
-                                                  n_batch, n_channel, dy_height, dy_width,
-                                                  dx_height, dx_width, pad_left, pad_top);
+    ConstantPad2dGradFunctor<device_type, IN_T>()(ctx->stream(), src, dest, index_helper, n_batch,
+                                                  n_channel, dy_height, dy_width, dx_height,
+                                                  dx_width, pad_left, pad_top);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -375,8 +375,8 @@ class ConstantPad2dGradKernel final : public OpKernel {
 
 REGISTER_CONSTANT_PAD2D_WITH_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_CONSTANT_PAD2D_WITH_DEVICE(DeviceType::kGPU)
-REGISTER_CONSTANT_PAD2D_KERNELS(DeviceType::kGPU, float16)
+REGISTER_CONSTANT_PAD2D_WITH_DEVICE(DeviceType::kCUDA)
+REGISTER_CONSTANT_PAD2D_KERNELS(DeviceType::kCUDA, float16)
 #endif
 
 }  // namespace user_op

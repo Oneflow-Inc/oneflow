@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/user/kernels/loss_kernel_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 namespace user_op {
@@ -209,14 +210,15 @@ class NllKernel final : public user_op::OpKernel {
     T* total_weight = total_weight_blob->mut_dptr<T>();
     const T* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), total_weight, 0, sizeof(T));
+    Memset<DeviceType::kCUDA>(ctx->stream(), total_weight, 0, sizeof(T));
 
     if (reduction == ReductionType::kNone) {
       ComputeNllOutNone<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
-                          ctx->device_ctx()->cuda_stream()>>>(
+                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           num_instances, num_classes, ignore_index, input, target, out, weight, total_weight);
     } else {
-      ComputeNllOutReduce<<<1, kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
+      ComputeNllOutReduce<<<1, kCudaThreadsNumPerBlock, 0,
+                            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           num_instances, num_classes, ignore_index, input, target, out, weight, total_weight,
           reduction == ReductionType::kMean);
     }
@@ -253,11 +255,10 @@ class NllGradKernel final : public user_op::OpKernel {
     const T* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
 
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), dx, 0,
-                             GetCudaAlignedSize(input_elem_cnt * sizeof(T)));
+    Memset<DeviceType::kCUDA>(ctx->stream(), dx, 0, input_elem_cnt * sizeof(T));
 
     ComputeNllGradOut<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
-                        ctx->device_ctx()->cuda_stream()>>>(
+                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         num_instances, num_classes, ignore_index, target, dy, dx, weight, total_weight, reduction);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -267,14 +268,14 @@ class NllGradKernel final : public user_op::OpKernel {
 #define REGISTER_NLL_KERNEL(dtype_pair, ltype_pair)                                            \
   REGISTER_USER_KERNEL("nll")                                                                  \
       .SetCreateFn<NllKernel<OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(ltype_pair)>>()    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                         \
                        && (user_op::HobDataType("target", 0) == OF_PP_PAIR_SECOND(ltype_pair)) \
                        && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
 #define REGISTER_NLL_GRAD_KERNEL(dtype_pair, ltype_pair)                                        \
   REGISTER_USER_KERNEL("nll_grad")                                                              \
       .SetCreateFn<NllGradKernel<OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(ltype_pair)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
                        && (user_op::HobDataType("target", 0) == OF_PP_PAIR_SECOND(ltype_pair))  \
                        && (user_op::HobDataType("dy", 0) == OF_PP_PAIR_SECOND(dtype_pair))      \
                        && (user_op::HobDataType("dx", 0) == OF_PP_PAIR_SECOND(dtype_pair)));

@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/constantpad_kernel_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 namespace user_op {
@@ -62,39 +63,39 @@ __global__ void DoCUDAConstantPad3dGrad(const IN_T* src, IN_T* dest,
 };
 
 template<typename IN_T>
-struct ConstantPad1dFunctor<DeviceType::kGPU, IN_T> final {
-  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+struct ConstantPad1dFunctor<DeviceType::kCUDA, IN_T> final {
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 3>& index_helper, const ShapeView& x_shape,
                   const ShapeView& y_shape, const std::vector<int64_t>& padding,
                   IN_T constant_value) {
     const int64_t c_idx = 1;
     const int64_t w_idx = 2;
 
-    DoCUDAConstantPad1d<IN_T>
-        <<<BlocksNum4ThreadsNum(y_shape.Count(0)), kCudaThreadsNumPerBlock, 0,
-           ctx->cuda_stream()>>>(src, dest, index_helper, y_shape.Count(0), y_shape.At(c_idx),
-                                 y_shape.At(w_idx), x_shape.At(w_idx), padding[0], constant_value);
+    DoCUDAConstantPad1d<IN_T><<<BlocksNum4ThreadsNum(y_shape.Count(0)), kCudaThreadsNumPerBlock, 0,
+                                stream->As<ep::CudaStream>()->cuda_stream()>>>(
+        src, dest, index_helper, y_shape.Count(0), y_shape.At(c_idx), y_shape.At(w_idx),
+        x_shape.At(w_idx), padding[0], constant_value);
   }
 };
 
 // float16 implementation
 template<>
-void ConstantPad1dFunctor<DeviceType::kGPU, float16>::operator()(
-    DeviceCtx* ctx, const float16* src, float16* dest,
+void ConstantPad1dFunctor<DeviceType::kCUDA, float16>::operator()(
+    ep::Stream* stream, const float16* src, float16* dest,
     const NdIndexOffsetHelper<int64_t, 3>& index_helper, const ShapeView& x_shape,
     const ShapeView& y_shape, const std::vector<int64_t>& padding, float16 constant_value) {
   const int64_t c_idx = 1;
   const int64_t w_idx = 2;
-  DoCUDAConstantPad1d<half>
-      <<<BlocksNum4ThreadsNum(y_shape.Count(0)), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), index_helper,
-          y_shape.Count(0), y_shape.At(c_idx), y_shape.At(w_idx), x_shape.At(w_idx), padding[0],
-          static_cast<const half>(constant_value));
+  DoCUDAConstantPad1d<half><<<BlocksNum4ThreadsNum(y_shape.Count(0)), kCudaThreadsNumPerBlock, 0,
+                              stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), index_helper,
+      y_shape.Count(0), y_shape.At(c_idx), y_shape.At(w_idx), x_shape.At(w_idx), padding[0],
+      static_cast<const half>(constant_value));
 }
 
 template<typename IN_T>
-struct ConstantPad3dFunctor<DeviceType::kGPU, IN_T> final {
-  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+struct ConstantPad3dFunctor<DeviceType::kCUDA, IN_T> final {
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 5>& index_helper, const ShapeView& x_shape,
                   const ShapeView& y_shape, const std::vector<int64_t>& padding,
                   IN_T constant_value) {
@@ -104,7 +105,7 @@ struct ConstantPad3dFunctor<DeviceType::kGPU, IN_T> final {
     const int64_t w_idx = 4;
 
     DoCUDAConstantPad3d<IN_T><<<BlocksNum4ThreadsNum(y_shape.Count(0)), kCudaThreadsNumPerBlock, 0,
-                                ctx->cuda_stream()>>>(
+                                stream->As<ep::CudaStream>()->cuda_stream()>>>(
         src, dest, index_helper, y_shape.Count(0), y_shape.At(c_idx), y_shape.At(d_idx),
         y_shape.At(h_idx), y_shape.At(w_idx), x_shape.At(d_idx), x_shape.At(h_idx),
         x_shape.At(w_idx), padding[4], padding[0], padding[2], constant_value);
@@ -113,91 +114,94 @@ struct ConstantPad3dFunctor<DeviceType::kGPU, IN_T> final {
 
 // float16 implementation
 template<>
-void ConstantPad3dFunctor<DeviceType::kGPU, float16>::operator()(
-    DeviceCtx* ctx, const float16* src, float16* dest,
+void ConstantPad3dFunctor<DeviceType::kCUDA, float16>::operator()(
+    ep::Stream* stream, const float16* src, float16* dest,
     const NdIndexOffsetHelper<int64_t, 5>& index_helper, const ShapeView& x_shape,
     const ShapeView& y_shape, const std::vector<int64_t>& padding, float16 constant_value) {
   const int64_t c_idx = 1;
   const int64_t d_idx = 2;
   const int64_t h_idx = 3;
   const int64_t w_idx = 4;
-  DoCUDAConstantPad3d<half>
-      <<<BlocksNum4ThreadsNum(y_shape.Count(0)), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), index_helper,
-          y_shape.Count(0), y_shape.At(c_idx), y_shape.At(d_idx), y_shape.At(h_idx),
-          y_shape.At(w_idx), x_shape.At(d_idx), x_shape.At(h_idx), x_shape.At(w_idx), padding[4],
-          padding[0], padding[2], static_cast<const half>(constant_value));
+  DoCUDAConstantPad3d<half><<<BlocksNum4ThreadsNum(y_shape.Count(0)), kCudaThreadsNumPerBlock, 0,
+                              stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), index_helper,
+      y_shape.Count(0), y_shape.At(c_idx), y_shape.At(d_idx), y_shape.At(h_idx), y_shape.At(w_idx),
+      x_shape.At(d_idx), x_shape.At(h_idx), x_shape.At(w_idx), padding[4], padding[0], padding[2],
+      static_cast<const half>(constant_value));
 }
 
 template<typename IN_T>
-struct ConstantPad1dGradFunctor<DeviceType::kGPU, IN_T> final {
-  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+struct ConstantPad1dGradFunctor<DeviceType::kCUDA, IN_T> final {
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 3>& index_helper, const ShapeView& dy_shape,
                   const ShapeView& dx_shape, const std::vector<int64_t>& padding) {
     const int64_t c_idx = 1;
     const int64_t w_idx = 2;
     DoCUDAConstantPad1dGrad<IN_T>
         <<<BlocksNum4ThreadsNum(dy_shape.Count(0)), kCudaThreadsNumPerBlock, 0,
-           ctx->cuda_stream()>>>(src, dest, index_helper, dy_shape.Count(0), dy_shape.At(c_idx),
-                                 dy_shape.At(w_idx), dx_shape.At(w_idx), padding[0]);
+           stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            src, dest, index_helper, dy_shape.Count(0), dy_shape.At(c_idx), dy_shape.At(w_idx),
+            dx_shape.At(w_idx), padding[0]);
   }
 };
 
 // float16 implementation
 template<>
-void ConstantPad1dGradFunctor<DeviceType::kGPU, float16>::operator()(
-    DeviceCtx* ctx, const float16* src, float16* dest,
+void ConstantPad1dGradFunctor<DeviceType::kCUDA, float16>::operator()(
+    ep::Stream* stream, const float16* src, float16* dest,
     const NdIndexOffsetHelper<int64_t, 3>& index_helper, const ShapeView& dy_shape,
     const ShapeView& dx_shape, const std::vector<int64_t>& padding) {
   const int64_t c_idx = 1;
   const int64_t w_idx = 2;
-  DoCUDAConstantPad1dGrad<half>
-      <<<BlocksNum4ThreadsNum(dy_shape.Count(0)), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), index_helper,
-          dy_shape.Count(0), dy_shape.At(c_idx), dy_shape.At(w_idx), dx_shape.At(w_idx),
-          padding[0]);
+  DoCUDAConstantPad1dGrad<half><<<BlocksNum4ThreadsNum(dy_shape.Count(0)), kCudaThreadsNumPerBlock,
+                                  0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), index_helper,
+      dy_shape.Count(0), dy_shape.At(c_idx), dy_shape.At(w_idx), dx_shape.At(w_idx), padding[0]);
 }
 
 template<typename IN_T>
-struct ConstantPad3dGradFunctor<DeviceType::kGPU, IN_T> final {
-  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+struct ConstantPad3dGradFunctor<DeviceType::kCUDA, IN_T> final {
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 5>& index_helper, const ShapeView& dy_shape,
                   const ShapeView& dx_shape, const std::vector<int64_t>& padding) {
     const int64_t c_idx = 1;
     const int64_t d_idx = 2;
     const int64_t h_idx = 3;
     const int64_t w_idx = 4;
-    DoCUDAConstantPad3dGrad<IN_T><<<BlocksNum4ThreadsNum(dy_shape.Count(0)),
-                                    kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        src, dest, index_helper, dy_shape.Count(0), dy_shape.At(c_idx), dy_shape.At(d_idx),
-        dy_shape.At(h_idx), dy_shape.At(w_idx), dx_shape.At(d_idx), dx_shape.At(h_idx),
-        dx_shape.At(w_idx), padding[4], padding[0], padding[2]);
+    DoCUDAConstantPad3dGrad<IN_T>
+        <<<BlocksNum4ThreadsNum(dy_shape.Count(0)), kCudaThreadsNumPerBlock, 0,
+           stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            src, dest, index_helper, dy_shape.Count(0), dy_shape.At(c_idx), dy_shape.At(d_idx),
+            dy_shape.At(h_idx), dy_shape.At(w_idx), dx_shape.At(d_idx), dx_shape.At(h_idx),
+            dx_shape.At(w_idx), padding[4], padding[0], padding[2]);
   }
 };
 
 // float16 implementation
 template<>
-void ConstantPad3dGradFunctor<DeviceType::kGPU, float16>::operator()(
-    DeviceCtx* ctx, const float16* src, float16* dest,
+void ConstantPad3dGradFunctor<DeviceType::kCUDA, float16>::operator()(
+    ep::Stream* stream, const float16* src, float16* dest,
     const NdIndexOffsetHelper<int64_t, 5>& index_helper, const ShapeView& dy_shape,
     const ShapeView& dx_shape, const std::vector<int64_t>& padding) {
   const int64_t c_idx = 1;
   const int64_t d_idx = 2;
   const int64_t h_idx = 3;
   const int64_t w_idx = 4;
-  DoCUDAConstantPad3dGrad<half>
-      <<<BlocksNum4ThreadsNum(dy_shape.Count(0)), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), index_helper,
-          dy_shape.Count(0), dy_shape.At(c_idx), dy_shape.At(d_idx), dy_shape.At(h_idx),
-          dy_shape.At(w_idx), dx_shape.At(d_idx), dx_shape.At(h_idx), dx_shape.At(w_idx),
-          padding[4], padding[0], padding[2]);
+  DoCUDAConstantPad3dGrad<half><<<BlocksNum4ThreadsNum(dy_shape.Count(0)), kCudaThreadsNumPerBlock,
+                                  0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), index_helper,
+      dy_shape.Count(0), dy_shape.At(c_idx), dy_shape.At(d_idx), dy_shape.At(h_idx),
+      dy_shape.At(w_idx), dx_shape.At(d_idx), dx_shape.At(h_idx), dx_shape.At(w_idx), padding[4],
+      padding[0], padding[2]);
 }
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CONSTANT_PAD_FUNCTOR,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU), PADDING_DATA_TYPE_GPU_SEQ);
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
+                                 PADDING_DATA_TYPE_CUDA_SEQ);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CONSTANT_PAD_GRAD_FUNCTOR,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU), PADDING_DATA_TYPE_GPU_SEQ);
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
+                                 PADDING_DATA_TYPE_CUDA_SEQ);
 
 }  // namespace user_op
 }  // namespace oneflow

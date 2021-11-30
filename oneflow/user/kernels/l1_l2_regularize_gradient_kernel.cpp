@@ -34,7 +34,7 @@ class L1L2RegularizeGradientKernel final : public user_op::OpKernel {
     const auto l1 = ctx->Attr<float>("l1");
     const auto l2 = ctx->Attr<float>("l2");
     L1L2RegularizeGradientKernelUtil<device_type, T>::RegularizeGradient(
-        ctx->device_ctx(), out->shape().elem_cnt(), model->dptr<T>(), model_diff->dptr<T>(),
+        ctx->stream(), out->shape().elem_cnt(), model->dptr<T>(), model_diff->dptr<T>(),
         out->mut_dptr<T>(), l1, l2);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -54,8 +54,8 @@ class L1L2RegularizeGradientKernel final : public user_op::OpKernel {
 REGISTER_L1_L2_REGULARIZE_GRADIENT_KERNEL(DeviceType::kCPU, float)
 REGISTER_L1_L2_REGULARIZE_GRADIENT_KERNEL(DeviceType::kCPU, double)
 #ifdef WITH_CUDA
-REGISTER_L1_L2_REGULARIZE_GRADIENT_KERNEL(DeviceType::kGPU, float)
-REGISTER_L1_L2_REGULARIZE_GRADIENT_KERNEL(DeviceType::kGPU, double)
+REGISTER_L1_L2_REGULARIZE_GRADIENT_KERNEL(DeviceType::kCUDA, float)
+REGISTER_L1_L2_REGULARIZE_GRADIENT_KERNEL(DeviceType::kCUDA, double)
 #endif
 
 }  // namespace

@@ -88,7 +88,7 @@ EagerMirroredTensorImpl::~EagerMirroredTensorImpl() {}
 
 EagerMirroredTensorImpl::EagerMirroredTensorImpl(
     const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
-    std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf)
+    const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad, bool is_leaf)
     : MirroredTensorImpl(tensor_meta, requires_grad, is_leaf), tensor_storage_(tensor_storage) {}
 
 Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
@@ -99,9 +99,9 @@ Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
       [eager_blob_object, parallel_desc](const std::shared_ptr<vm::TensorBuffer>&) {
         CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
           JUST(builder->ReleaseTensor(eager_blob_object, parallel_desc));
-          if (eager_blob_object->last_used_device().has_value()) {
-            const auto& device = JUST(eager_blob_object->producer_op_device());
+          if (JUST(eager_blob_object->compute_local_dep_object())->last_used_device().has_value()) {
             auto* local_dep_object = JUST(eager_blob_object->compute_local_dep_object());
+            const auto& device = JUST(local_dep_object->producer_op_device());
             JUST(PutLocalDepObjectToDevicePool(device, local_dep_object));
           }
           return Maybe<void>::Ok();
@@ -118,9 +118,17 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(LocalDepObject* dep_obj
   CHECK_OR_RETURN(static_cast<bool>(device()));
   const auto& mem_case = device()->mem_case();
   const auto& mut_shape = std::const_pointer_cast<Shape>(tensor_meta()->shape_ptr());
-  const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
-      mem_case, mut_shape, dtype(), std::make_shared<vm::TensorBuffer>(), dep_object);
-  JUST(set_eager_blob_object(eager_blob_object));
+
+  if (tensor_storage_) {
+    auto tensor_buffer = tensor_storage_->buffer();
+    eager_blob_object_ = std::make_shared<vm::EagerBlobObject>(mem_case, mut_shape, dtype(),
+                                                               tensor_buffer, dep_object);
+  } else {
+    const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
+        mem_case, mut_shape, dtype(), std::make_shared<vm::TensorBuffer>(), dep_object);
+    JUST(set_eager_blob_object(eager_blob_object));
+  }
+  eager_blob_object_->set_storage_offset(tensor_meta()->storage_offset());
   return Maybe<void>::Ok();
 }
 
@@ -172,6 +180,12 @@ MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape
       device_(device),
       stride_(std::make_shared<const Stride>(*shape)),
       storage_offset_(0) {}
+
+MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
+                                       Symbol<Device> device,
+                                       const std::shared_ptr<const Stride>& stride,
+                                       int64_t storage_offset)
+    : TensorMeta(shape, dtype), device_(device), stride_(stride), storage_offset_(storage_offset) {}
 
 bool MirroredTensorMeta::operator==(const MirroredTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.

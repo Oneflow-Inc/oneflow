@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
 #include "oneflow/user/kernels/loss_kernel_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 namespace user_op {
@@ -102,32 +103,33 @@ __global__ void ComputeKLDivGradOut(int64_t elem_cnt, float inv_elem_cnt, const 
 }
 
 template<typename T>
-class KLDivKernel : public SimpleLossKernel<DeviceType::kGPU, T, KLDivKernel<T>> {
+class KLDivKernel : public SimpleLossKernel<DeviceType::kCUDA, T, KLDivKernel<T>> {
  public:
   void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
                   const T* target, T* out) const {
     const bool log_target = ctx->Attr<bool>("log_target");
     ComputeKLDivOut<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                      ctx->device_ctx()->cuda_stream()>>>(elem_cnt, input, target, out, log_target);
+                      ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(elem_cnt, input, target,
+                                                                            out, log_target);
   }
 };
 
 template<typename T>
-class KLDivGradKernel : public SimpleLossGradKernel<DeviceType::kGPU, T, KLDivGradKernel<T>> {
+class KLDivGradKernel : public SimpleLossGradKernel<DeviceType::kCUDA, T, KLDivGradKernel<T>> {
  public:
   void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
                   const T* target, const T* dy, T* dx, const ReductionType reduction) const {
     const bool log_target = ctx->Attr<bool>("log_target");
     ComputeKLDivGradOut<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                          ctx->device_ctx()->cuda_stream()>>>(
+                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         elem_cnt, static_cast<float>(1.0 / elem_cnt), input, target, dy, dx, reduction, log_target);
   }
 };
 
 }  // namespace
 
-REGISTER_SIMPLE_LOSS_KERNEL_GPU("kl_div_loss", KLDivKernel)
-REGISTER_SIMPLE_LOSS_GRAD_KERNEL_GPU("kl_div_loss_grad", KLDivGradKernel)
+REGISTER_SIMPLE_LOSS_KERNEL_CUDA("kl_div_loss", KLDivKernel)
+REGISTER_SIMPLE_LOSS_GRAD_KERNEL_CUDA("kl_div_loss_grad", KLDivGradKernel)
 
 }  // namespace user_op
 }  // namespace oneflow

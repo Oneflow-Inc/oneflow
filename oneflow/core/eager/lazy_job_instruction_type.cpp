@@ -93,11 +93,12 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
     const auto& cur_nn_graph = GetCurNNGraph(instruction);
     auto* device_ctx = GetLazyJobDeviceCtx(instruction);
 
+    static thread_local int64_t run_id = 0;
     OF_PROFILER_RANGE_PUSH("WaitUntilQueueEmptyIfFrontNNGraphNotEquals");
     device_ctx->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(cur_nn_graph);
     OF_PROFILER_RANGE_POP();  // WaitUntilQueueEmptyIfFrontNNGraphNotEquals
     {
-      OF_PROFILER_RANGE_PUSH("MakeJobInstance");
+      OF_PROFILER_RANGE_PUSH("i=" + std::to_string(run_id++) + "-MakeJobInstance");
       const auto& job_instance = MakeJobInstance(instruction);
       OF_PROFILER_RANGE_POP();  // MakeJobInstance
       OF_PROFILER_RANGE_PUSH("Send all buffers to BufferMgr");
@@ -160,7 +161,7 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
           if (blob->dptr() == nullptr) {
             end_event_record->Init(std::make_shared<NaiveEventRecord>());
           } else {
-            AutoMemcpy(of_blob->mut_device_ctx(), of_blob->mut_blob(), blob);
+            AutoMemcpy(of_blob->mut_device_ctx()->stream(), of_blob->mut_blob(), blob);
             auto* event_record_provider =
                 CHECK_NOTNULL(dynamic_cast<EventRecordProvider*>(of_blob->mut_device_ctx()));
             end_event_record->Init(event_record_provider->MakeEventRecord());
@@ -187,7 +188,7 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
           if (mut_blob->dptr() == nullptr) {
             end_event_record->Init(std::make_shared<NaiveEventRecord>());
           } else {
-            AutoMemcpy(of_blob->mut_device_ctx(), mut_blob, &of_blob->blob());
+            AutoMemcpy(of_blob->mut_device_ctx()->stream(), mut_blob, &of_blob->blob());
             auto* event_record_provider =
                 CHECK_NOTNULL(dynamic_cast<EventRecordProvider*>(of_blob->mut_device_ctx()));
             end_event_record->Init(event_record_provider->MakeEventRecord());

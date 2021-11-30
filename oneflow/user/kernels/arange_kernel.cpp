@@ -50,7 +50,7 @@ class ArangeKernel final : public OpKernel {
       delta = static_cast<T>(float_delta);
       limit = static_cast<T>(float_limit);
     }
-    ArangeFunctor<device_type, T>()(ctx->device_ctx(), start, delta, arange_elem_cnt, output);
+    ArangeFunctor<device_type, T>()(ctx->stream(), start, delta, arange_elem_cnt, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -73,7 +73,7 @@ REGISTER_ARANGE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 
 // Register GPU version
 #ifdef WITH_CUDA
-REGISTER_ARANGE_KERNELS_WITH_DEVICE(DeviceType::kGPU);
+REGISTER_ARANGE_KERNELS_WITH_DEVICE(DeviceType::kCUDA);
 #endif
 }  // namespace user_op
 }  // namespace oneflow

@@ -22,7 +22,7 @@ target_link_libraries(MLIROneFlowTranslation
   MLIRTranslation
   MLIRSupport
   MLIROneFlow
-  of_protoobj
+  oneflow
 )
 
 if (BUILD_SHARED_LIBS)

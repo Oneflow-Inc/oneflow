@@ -34,6 +34,7 @@ std::vector<TensorSliceView> GetTensorSliceView(const int64_t parallel_num,
     ranges.emplace_back(0, 1);
   }
   std::vector<TensorSliceView> views;
+  views.reserve(parallel_num);
   if (sbp_parallel.has_partial_sum_parallel() || sbp_parallel.has_broadcast_parallel()) {
     FOR_RANGE(int64_t, i, 0, parallel_num) { views.emplace_back(ranges); }
   } else if (sbp_parallel.has_split_parallel()) {
@@ -113,6 +114,7 @@ std::vector<TensorSliceView> GetTensorSliceView(const Shape& parallel_hierarchy,
                                                 const cfg::NdSbp& nd_sbp,
                                                 const Shape& logical_shape) {
   std::vector<TensorSliceView> views;
+  views.reserve(parallel_hierarchy.elem_cnt());
   FOR_RANGE(int64_t, i, 0, parallel_hierarchy.elem_cnt()) {
     views.emplace_back(GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, i));
   }

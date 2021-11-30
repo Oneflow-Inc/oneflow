@@ -152,7 +152,7 @@ void AvgForwardCompute(KernelComputeContext* ctx, const int32_t& dim) {
 
   const int out_elems = out_tensor->shape().elem_cnt();
 
-  RUN_CUDA_KERNEL((AdaptiveAvgPoolCudaKernel<T>), ctx->device_ctx(), out_elems, in_ptr, out_ptr,
+  RUN_CUDA_KERNEL((AdaptiveAvgPoolCudaKernel<T>), ctx->stream(), out_elems, in_ptr, out_ptr,
                   out_elems, in.At(2), in.At(3), in.At(4), out.At(2), out.At(3), out.At(4));
 }
 
@@ -174,8 +174,8 @@ void AvgBackwardCompute(KernelComputeContext* ctx, const int32_t& dim) {
   const int in_elems = in_tensor->shape().elem_cnt();
   const int out_elems = out_tensor->shape().elem_cnt();
 
-  RUN_CUDA_KERNEL((InitPtr<T>), ctx->device_ctx(), in_elems, in_elems, in_ptr);
-  RUN_CUDA_KERNEL((AdaptiveAvgPoolGradCudaKernel<T>), ctx->device_ctx(), out_elems, in_ptr, out_ptr,
+  RUN_CUDA_KERNEL((InitPtr<T>), ctx->stream(), in_elems, in_elems, in_ptr);
+  RUN_CUDA_KERNEL((AdaptiveAvgPoolGradCudaKernel<T>), ctx->stream(), out_elems, in_ptr, out_ptr,
                   out_elems, in.At(2), in.At(3), in.At(4), out.At(2), out.At(3), out.At(4));
 }
 
@@ -254,7 +254,7 @@ class GpuAdaptiveAvgPool3dGradKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(device, dtype)                    \
+#define REGISTER_CUDA_ADAPTIVE_AVGPOOL_KERNEL(device, dtype)                   \
   REGISTER_USER_KERNEL("adaptive_avg_pool1d")                                  \
       .SetCreateFn<GpuAdaptiveAvgPool1dKernel<device, dtype>>()                \
       .SetIsMatchedHob((HobDeviceType() == device)                             \
@@ -268,11 +268,11 @@ class GpuAdaptiveAvgPool3dGradKernel final : public OpKernel {
       .SetIsMatchedHob((HobDeviceType() == device)                             \
                        && (HobDataType("y", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, float);
-REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, double);
-REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, int);
+REGISTER_CUDA_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kCUDA, float);
+REGISTER_CUDA_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kCUDA, double);
+REGISTER_CUDA_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kCUDA, int);
 
-#define REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(device, dtype)            \
+#define REGISTER_CUDA_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(device, dtype)           \
   REGISTER_USER_KERNEL("adaptive_avg_pool1d_grad")                              \
       .SetCreateFn<GpuAdaptiveAvgPool1dGradKernel<device, dtype>>()             \
       .SetIsMatchedHob((HobDeviceType() == device)                              \
@@ -286,9 +286,9 @@ REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, int);
       .SetIsMatchedHob((HobDeviceType() == device)                              \
                        && (HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kGPU, float);
-REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kGPU, double);
-REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kGPU, int);
+REGISTER_CUDA_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kCUDA, float);
+REGISTER_CUDA_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kCUDA, double);
+REGISTER_CUDA_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kCUDA, int);
 
 }  // namespace user_op
 

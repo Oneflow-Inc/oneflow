@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <cub/cub.cuh>
 #include "oneflow/user/kernels/loss_kernel_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 namespace user_op {
@@ -64,27 +65,28 @@ __global__ void ApplyLossReductionImpl<half>(int64_t elem_cnt, double inv_elem_c
 }
 
 template<DeviceType device_type, typename T>
-RETURN_VOID_IF_GPU(device_type)
-ApplyLossReductionIfNeed(DeviceCtx* ctx, int64_t elem_cnt, const T* tmp_out, T* out,
+RETURN_VOID_IF_CUDA(device_type)
+ApplyLossReductionIfNeed(ep::Stream* stream, int64_t elem_cnt, const T* tmp_out, T* out,
                          const ReductionType reduction_type) {
   if (reduction_type == ReductionType::kNone) { return; }
   if ((reduction_type != ReductionType::kMean) && (reduction_type != ReductionType::kSum)) {
     UNIMPLEMENTED();
     return;
   }
-  ApplyLossReductionImpl<<<1, kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+  ApplyLossReductionImpl<<<1, kCudaThreadsNumPerBlock, 0,
+                           stream->As<ep::CudaStream>()->cuda_stream()>>>(
       elem_cnt, static_cast<double>(1.0 / elem_cnt), tmp_out, out,
       reduction_type == ReductionType::kMean);
 }
 
-#define SPECIALIZE_APPLY_LOSS_REDUCTION(device_type, dtype)                              \
-  template RETURN_VOID_IF_GPU(device_type) ApplyLossReductionIfNeed<device_type, dtype>( \
-      DeviceCtx * ctx, int64_t elem_cnt, const dtype* tmp_out, dtype* out,               \
+#define SPECIALIZE_APPLY_LOSS_REDUCTION(device_type, dtype)                               \
+  template RETURN_VOID_IF_CUDA(device_type) ApplyLossReductionIfNeed<device_type, dtype>( \
+      ep::Stream * stream, int64_t elem_cnt, const dtype* tmp_out, dtype* out,            \
       const ReductionType reduction_type);
 
-SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kGPU, half)
-SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kGPU, float)
-SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kGPU, double)
+SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kCUDA, half)
+SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kCUDA, float)
+SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kCUDA, double)
 
 }  // namespace loss
 }  // namespace user_op

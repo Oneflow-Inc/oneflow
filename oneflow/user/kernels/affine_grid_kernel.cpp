@@ -50,8 +50,8 @@ class AffineGridKernel final : public user_op::OpKernel {
                                                    align_corners);
       // Compute each batch
       for (int n = 0; n < N; n++) {
-        NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), CblasNoTrans, CblasTrans, H * W,
-                                           theta_h, theta_w, 1.0, tmp_buffer->dptr<data_type>(),
+        NewKernelUtil<device_type>::OFGemm(ctx->stream(), CblasNoTrans, CblasTrans, H * W, theta_h,
+                                           theta_w, 1.0, tmp_buffer->dptr<data_type>(),
                                            theta->dptr<data_type>() + n * theta_h * theta_w, 0.0,
                                            grid->mut_dptr<data_type>() + n * theta_h * H * W);
       }
@@ -65,7 +65,7 @@ class AffineGridKernel final : public user_op::OpKernel {
                                                    align_corners);
       // Compute each batch
       for (int n = 0; n < N; n++) {
-        NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), CblasNoTrans, CblasTrans, D * H * W,
+        NewKernelUtil<device_type>::OFGemm(ctx->stream(), CblasNoTrans, CblasTrans, D * H * W,
                                            theta_h, theta_w, 1.0, tmp_buffer->dptr<data_type>(),
                                            theta->dptr<data_type>() + n * theta_h * theta_w, 0.0,
                                            grid->mut_dptr<data_type>() + n * theta_h * D * H * W);
@@ -89,8 +89,8 @@ class AffineGridKernel final : public user_op::OpKernel {
 REGISTER_AFFINE_GRID_KERNEL(DeviceType::kCPU, float);
 REGISTER_AFFINE_GRID_KERNEL(DeviceType::kCPU, double);
 #ifdef WITH_CUDA
-REGISTER_AFFINE_GRID_KERNEL(DeviceType::kGPU, float);
-REGISTER_AFFINE_GRID_KERNEL(DeviceType::kGPU, double);
+REGISTER_AFFINE_GRID_KERNEL(DeviceType::kCUDA, float);
+REGISTER_AFFINE_GRID_KERNEL(DeviceType::kCUDA, double);
 #endif
 
 template<DeviceType device_type, typename data_type>
@@ -122,7 +122,7 @@ class AffineGridGradKernel final : public user_op::OpKernel {
       // Compute each batch
       for (int n = 0; n < N; n++) {
         NewKernelUtil<device_type>::OFGemm(
-            ctx->device_ctx(), CblasTrans, CblasNoTrans, dtheta_h, dtheta_w, H * W, 1.0,
+            ctx->stream(), CblasTrans, CblasNoTrans, dtheta_h, dtheta_w, H * W, 1.0,
             dgrid->dptr<data_type>() + n * dtheta_h * H * W, tmp_buffer->dptr<data_type>(), 0.0,
             dtheta->mut_dptr<data_type>() + n * dtheta_h * dtheta_w);
       }
@@ -136,7 +136,7 @@ class AffineGridGradKernel final : public user_op::OpKernel {
       // Compute each batch
       for (int n = 0; n < N; n++) {
         NewKernelUtil<device_type>::OFGemm(
-            ctx->device_ctx(), CblasTrans, CblasNoTrans, dtheta_h, dtheta_w, D * H * W, 1.0,
+            ctx->stream(), CblasTrans, CblasNoTrans, dtheta_h, dtheta_w, D * H * W, 1.0,
             dgrid->dptr<data_type>() + n * dtheta_h * D * H * W, tmp_buffer->dptr<data_type>(), 0.0,
             dtheta->mut_dptr<data_type>() + n * dtheta_h * dtheta_w);
       }
@@ -159,8 +159,8 @@ class AffineGridGradKernel final : public user_op::OpKernel {
 REGISTER_AFFINE_GRID_GRAD_KERNEL(DeviceType::kCPU, float);
 REGISTER_AFFINE_GRID_GRAD_KERNEL(DeviceType::kCPU, double);
 #ifdef WITH_CUDA
-REGISTER_AFFINE_GRID_GRAD_KERNEL(DeviceType::kGPU, float);
-REGISTER_AFFINE_GRID_GRAD_KERNEL(DeviceType::kGPU, double);
+REGISTER_AFFINE_GRID_GRAD_KERNEL(DeviceType::kCUDA, float);
+REGISTER_AFFINE_GRID_GRAD_KERNEL(DeviceType::kCUDA, double);
 #endif
 
 }  // namespace oneflow

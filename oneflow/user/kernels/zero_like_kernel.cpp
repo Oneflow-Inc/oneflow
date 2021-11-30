@@ -27,7 +27,7 @@ class ZeroLikeKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
+    Memset<device_type>(ctx->stream(), out->mut_dptr(), 0,
                         out->shape().elem_cnt() * GetSizeOfDataType(out->data_type()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -40,7 +40,7 @@ class ZeroLikeKernel final : public user_op::OpKernel {
 
 REGISTER_ZERO_LIKE_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_ZERO_LIKE_KERNEL(DeviceType::kGPU)
+REGISTER_ZERO_LIKE_KERNEL(DeviceType::kCUDA)
 #endif
 
 }  // namespace oneflow

@@ -60,9 +60,9 @@ class DimGatherKernel final : public user_op::OpKernel {
     shape2dims(index_tensor->shape());
     DimOpIndexNdHelper<IDX_T> index_nd_helper(shape_vec.data(), ndim);
 
-    DimGatherFunctor<device_type, IN_T, IDX_T>()(
-        ctx->device_ctx(), input_nd_helper, index_nd_helper, ndim, index_tensor->shape().elem_cnt(),
-        dim, index, input, output);
+    DimGatherFunctor<device_type, IN_T, IDX_T>()(ctx->stream(), input_nd_helper, index_nd_helper,
+                                                 ndim, index_tensor->shape().elem_cnt(), dim, index,
+                                                 input, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -81,7 +81,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIM_GATHER_KERNEL, (DeviceType::kCPU),
 
 #ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-    REGISTER_DIM_GATHER_KERNEL, (DeviceType::kGPU),
+    REGISTER_DIM_GATHER_KERNEL, (DeviceType::kCUDA),
     ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 #endif  // WITH_CUDA
 

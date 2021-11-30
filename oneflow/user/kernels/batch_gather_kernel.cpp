@@ -35,7 +35,7 @@ class BatchGatherKernel final : public user_op::OpKernel, public user_op::CudaGr
     const int64_t axis = indices->shape().NumAxes() - 1;
     const Shape flat_out_shape =
         Shape({out->shape().Count(0, axis), out->shape().At(axis), out->shape().Count(axis + 1)});
-    BatchGatherKernelUtilImpl<device_type, T, K>::Forward(ctx->device_ctx(), in->dptr<T>(),
+    BatchGatherKernelUtilImpl<device_type, T, K>::Forward(ctx->stream(), in->dptr<T>(),
                                                           indices->dptr<K>(), flat_out_shape,
                                                           in->shape().At(axis), out->mut_dptr<T>());
   }

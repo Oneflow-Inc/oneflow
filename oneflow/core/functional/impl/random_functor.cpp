@@ -81,8 +81,8 @@ class RandFunctor {
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("low", 0));
-    JUST(attrs.SetAttr<double>("high", 1));
+    JUST(attrs.SetAttr<double>("from", 0));
+    JUST(attrs.SetAttr<double>("to", 1));
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
@@ -118,8 +118,8 @@ class ConsistentRandFunctor {
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("low", 0));
-    JUST(attrs.SetAttr<double>("high", 1));
+    JUST(attrs.SetAttr<double>("from", 0));
+    JUST(attrs.SetAttr<double>("to", 1));
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
@@ -227,8 +227,8 @@ class RandIntFunctor {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<int64_t>("low", low));
-    JUST(attrs.SetAttr<int64_t>("high", high));
+    JUST(attrs.SetAttr<int64_t>("from", low));
+    JUST(attrs.SetAttr<int64_t>("to", high));
     JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
 
@@ -275,8 +275,8 @@ class ConsistentRandIntFunctor {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<int64_t>("low", low));
-    JUST(attrs.SetAttr<int64_t>("high", high));
+    JUST(attrs.SetAttr<int64_t>("from", low));
+    JUST(attrs.SetAttr<int64_t>("to", high));
     JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
 

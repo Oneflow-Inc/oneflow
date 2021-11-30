@@ -19,7 +19,7 @@ namespace oneflow {
 
 template<template<typename T> class BIN_OP, typename T>
 struct ScalarLogicalFunctor<DeviceType::kCPU, BIN_OP, T> final {
-  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const T scalar, const T* in,
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, const T scalar, const T* in,
                   int8_t* out) {
     DoScalarLogical<BIN_OP, T>(elem_cnt, scalar, in, out);
   }
@@ -48,7 +48,7 @@ class ScalarLogicalKernel final : public user_op::OpKernel {
 
     int64_t elem_cnt = out->shape().elem_cnt();
     if (elem_cnt != 0) {
-      ScalarLogicalFunctor<device_type, BIN_OP, T>()(ctx->device_ctx(), elem_cnt, scalar_operand,
+      ScalarLogicalFunctor<device_type, BIN_OP, T>()(ctx->stream(), elem_cnt, scalar_operand,
                                                      in_ptr, out_ptr);
     } else {
       // For 0-d Tensor
@@ -90,7 +90,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_LOGICAL_KERNEL, (DeviceType::kC
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
 
 #ifdef WITH_CUDA
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_LOGICAL_KERNEL, (DeviceType::kGPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_LOGICAL_KERNEL, (DeviceType::kCUDA),
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
 #endif  // WITH_CUDA
 
