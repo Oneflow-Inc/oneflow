@@ -107,12 +107,12 @@ void SliceBoxingAddKernel::ForwardDataContent(KernelContext* ctx) const {
       }
     } else {
       if (in_i->shape() == out->shape()) {
-        primitive->Launch(ctx->stream(), in_i->dptr(), out->dptr(), out->mut_dptr(),
+        primitive->Launch(ctx->stream(), out->dptr(), in_i->dptr(), out->mut_dptr(),
                           out->shape().elem_cnt());
       } else {
         Blob* buf = ctx->BnInOp2Blob("buf");
         this->tensor_slice_copier_vec().at(i)->Copy(ctx->stream(), buf, in_i);
-        primitive->Launch(ctx->stream(), buf->dptr(), out->dptr(), out->mut_dptr(),
+        primitive->Launch(ctx->stream(), out->dptr(), buf->dptr(), out->mut_dptr(),
                           out->shape().elem_cnt());
       }
     }

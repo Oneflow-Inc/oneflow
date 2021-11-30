@@ -43,7 +43,7 @@ class RandomShuffleDataset final : public Dataset<LoadTarget> {
     while (remain_cnt > 0) {
       LoadTargetPtrList sample_list = loader_->Next();
       for (auto& sample_ptr : sample_list) {
-        sample_buffer_.push_back(std::move(sample_ptr));
+        sample_buffer_.emplace_back(std::move(sample_ptr));
         remain_cnt--;
       }
     }
