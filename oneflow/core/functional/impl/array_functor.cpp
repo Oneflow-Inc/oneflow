@@ -477,11 +477,11 @@ class StackFunctor {
 class ExpandFunctor {
  public:
   ExpandFunctor() { op_ = CHECK_JUST(one::OpBuilder("expand").Input("in").Output("out").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Shape& shape) const {
-    CHECK_GE_OR_RETURN(shape.NumAxes(), input->shape()->NumAxes())
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
+    CHECK_GE_OR_RETURN(shape.NumAxes(), x->shape()->NumAxes())
         << "The desired expanded dims should not be less than the input dims.";
-    std::vector<int32_t> in_shape(input->shape()->NumAxes());
-    for (int i = 0; i < in_shape.size(); ++i) { in_shape[i] = input->shape()->At(i); }
+    std::vector<int32_t> in_shape(x->shape()->NumAxes());
+    for (int i = 0; i < in_shape.size(); ++i) { in_shape[i] = x->shape()->At(i); }
 
     // check the parameters
     int shift = shape.NumAxes() - in_shape.size();
@@ -500,13 +500,10 @@ class ExpandFunctor {
     std::vector<int32_t> expand_shape(shape.NumAxes());
     for (int i = 0; i < shape.NumAxes(); ++i) { expand_shape[i] = shape.dim_vec().at(i); }
 
-    if (input->is_eager() && input->is_local()) {
-      return ToContiguous(JUST(view::Expand(input, in_shape, expand_shape)));
-    }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("logical_in_shape", in_shape));
     JUST(attrs.SetAttr<std::vector<int32_t>>("logical_expand_shape", expand_shape));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
