@@ -140,14 +140,23 @@ def test_advanced_indexing(test_case, numpy_x):
 def test_advanced_indexing_array(test_case, numpy_x):
     x = flow.tensor(numpy_x)
 
-    idx = np.array([0, 1])
+    idx = np.array([0, 1], dtype=np.int32)
+    test_case.assertTrue(np.allclose(numpy_x[idx], x[idx].numpy()))
+    idx = np.array([0, 1], dtype=np.int64)
     test_case.assertTrue(np.allclose(numpy_x[idx], x[idx].numpy()))
 
-    idx1 = np.array([0, 1])
-    idx2 = np.array([1, 0])
+    idx1 = np.array([0, 1], dtype=np.int32)
+    idx2 = np.array([1, 0], dtype=np.int32)
+    test_case.assertTrue(np.allclose(numpy_x[idx1, idx2], x[idx1, idx2].numpy()))
+    idx1 = np.array([0, 1], dtype=np.int64)
+    idx2 = np.array([1, 0], dtype=np.int64)
     test_case.assertTrue(np.allclose(numpy_x[idx1, idx2], x[idx1, idx2].numpy()))
 
-    idx = np.array([[0, 1], [0, 1], [1, 0]])
+    idx = np.array([[0, 1], [0, 1], [1, 0]], dtype=np.int32)
+    test_case.assertTrue(np.allclose(numpy_x[idx, :, :], x[idx, :, :].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[idx, idx, :], x[idx, idx, :].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[idx, idx, idx], x[idx, idx, idx].numpy()))
+    idx = np.array([[0, 1], [0, 1], [1, 0]], dtype=np.int64)
     test_case.assertTrue(np.allclose(numpy_x[idx, :, :], x[idx, :, :].numpy()))
     test_case.assertTrue(np.allclose(numpy_x[idx, idx, :], x[idx, idx, :].numpy()))
     test_case.assertTrue(np.allclose(numpy_x[idx, idx, idx], x[idx, idx, idx].numpy()))
