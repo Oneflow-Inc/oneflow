@@ -16,7 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/ep/include/primitive/broadcast_matmul.h"
+#include "oneflow/core/ep/include/primitive/matmul.h"
 
 namespace oneflow {
 
@@ -25,17 +25,16 @@ namespace {
 using namespace ep::primitive;
 
 template<typename Context>
-std::unique_ptr<BroadcastMatmul> NewBroadcastMatmulPrimitive(Context* ctx) {
+std::unique_ptr<Matmul> NewMatmulPrimitive(Context* ctx) {
   const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
-  return ep::primitive::NewPrimitive<BroadcastMatmulFactory>(
-      ctx->device_type(), data_type, BlasTransposeType::N, BlasTransposeType::N, 2);
+  return ep::primitive::NewPrimitive<MatmulFactory>(ctx->device_type(), data_type,
+                                                    BlasTransposeType::N, BlasTransposeType::N);
 }
 
-auto BroadcastMatmulPrimitiveExists() {
-  return hob::make_custom("BroadcastMatmulPrimitiveExists",
-                          [](const user_op::KernelRegContext& ctx) {
-                            return NewBroadcastMatmulPrimitive(&ctx).operator bool();
-                          });
+auto MatmulPrimitiveExists() {
+  return hob::make_custom("MatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewMatmulPrimitive(&ctx).operator bool();
+  });
 }
 
 class DotKernel final : public user_op::OpKernel {
@@ -50,18 +49,15 @@ class DotKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t n = x->shape().elem_cnt();
     CHECK(n <= INT_MAX);
-    auto primitive = NewBroadcastMatmulPrimitive(ctx);
-    std::vector<int64_t> dim1{1, n};
-    std::vector<int64_t> dim2{n, 1};
-    std::vector<int64_t> dim3{1, 1};
-    primitive->Launch(ctx->stream(), 1, 2, dim1.data(), x->dptr(), 2, dim2.data(), y->dptr(), 1, 2,
-                      dim3.data(), out->mut_dptr());
+    auto primitive = NewMatmulPrimitive(ctx);
+
+    primitive->Launch(ctx->stream(), 1, 1, n, 1, x->dptr(), y->dptr(), 0, out->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("dot").SetCreateFn<DotKernel>().SetIsMatchedHob(
-    BroadcastMatmulPrimitiveExists() == true);
+REGISTER_USER_KERNEL("dot").SetCreateFn<DotKernel>().SetIsMatchedHob(MatmulPrimitiveExists()
+                                                                     == true);
 
 }  // namespace
 
