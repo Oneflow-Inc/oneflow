@@ -453,6 +453,8 @@ def _expm1(self):
 def _fmod(self, other):
     return flow.fmod(self, other)
 
+def _flatten(self, start_dim: int = 0, end_dim: int = -1):
+    return flow.flatten(self, start_dim=start_dim, end_dim=end_dim)
 
 def _log(self):
     return flow.log(self)
@@ -822,6 +824,7 @@ def RegisterMethods():
     Tensor.erfc = _erfc
     Tensor.expm1 = _expm1
     Tensor.fmod = _fmod
+    Tensor.flatten = _flatten
     Tensor.log = _log
     Tensor.minimum = _minimum
     Tensor.maximum = _maximum

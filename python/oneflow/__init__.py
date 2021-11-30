@@ -118,6 +118,7 @@ from oneflow._C import erf
 from oneflow._C import erfc
 from oneflow._C import expm1
 from oneflow._C import fmod
+from oneflow._C import flatten
 from oneflow._C import log
 from oneflow._C import minimum
 from oneflow._C import maximum
@@ -284,7 +285,6 @@ from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow.nn.modules.expand import expand_op as expand
 from oneflow.nn.modules.roll import roll_op as roll
-from oneflow.nn.modules.flatten import _flow_flatten as flatten
 from oneflow.nn.modules.flip import flip_op as flip
 from oneflow.nn.modules.floor import floor_op as floor
 from oneflow.nn.modules.gather import gather_op as gather
