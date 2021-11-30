@@ -50,32 +50,32 @@ const XrtNode* XrtGraph::Node(int64_t node_id) const {
 XrtNode* XrtGraph::AddNode() {
   std::unique_ptr<XrtNode> node(new XrtNode);
   node->unique_id_ = nodes_.size();
-  nodes_.push_back(node.get());
-  allocated_nodes_.push_back(std::move(node));
+  nodes_.emplace_back(node.get());
+  allocated_nodes_.emplace_back(std::move(node));
   return nodes_.back();
 }
 
 XrtNode* XrtGraph::AddNode(const google::protobuf::Message& param) {
   std::unique_ptr<XrtNode> node(new XrtNode(param));
   node->unique_id_ = nodes_.size();
-  nodes_.push_back(node.get());
-  allocated_nodes_.push_back(std::move(node));
+  nodes_.emplace_back(node.get());
+  allocated_nodes_.emplace_back(std::move(node));
   return nodes_.back();
 }
 
 XrtEdge* XrtGraph::AddEdge() {
   std::unique_ptr<XrtEdge> edge(new XrtEdge);
   edge->unique_id_ = edges_.size();
-  edges_.push_back(edge.get());
-  allocated_edges_.push_back(std::move(edge));
+  edges_.emplace_back(edge.get());
+  allocated_edges_.emplace_back(std::move(edge));
   return edges_.back();
 }
 
 XrtEdge* XrtGraph::AddEdge(const XrtNode* start, const XrtNode* end) {
   std::unique_ptr<XrtEdge> edge(new XrtEdge(start, end));
   edge->unique_id_ = edges_.size();
-  edges_.push_back(edge.get());
-  allocated_edges_.push_back(std::move(edge));
+  edges_.emplace_back(edge.get());
+  allocated_edges_.emplace_back(std::move(edge));
   return edges_.back();
 }
 
@@ -89,7 +89,7 @@ XrtGraph* XrtGraph::AddSubgraph(int64_t node_id) {
 std::vector<Argument> XrtGraph::Arguments() const {
   std::vector<Argument> arguments;
   for (const XrtEdge* edge : edges_) {
-    if (edge && edge->argument().initialized()) { arguments.push_back(edge->argument()); }
+    if (edge && edge->argument().initialized()) { arguments.emplace_back(edge->argument()); }
   }
   return arguments;
 }

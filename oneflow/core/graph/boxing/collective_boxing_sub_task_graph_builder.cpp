@@ -111,7 +111,7 @@ class NcclCollectiveBoxingAllReduceSubTskGphBuilder final : public SubTskGphBuil
         NcclInitCollectiveNode(collective_node, in_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeAllReduce, -1);
         ctx->task_graph()->ConnectWithLbi(in_node, collective_node, lbi);
-        sorted_out_tasks->push_back(collective_node);
+        sorted_out_tasks->emplace_back(collective_node);
       }
       return TRY(BuildSubTskGphBuilderStatus("NcclCollectiveBoxingAllReduceSubTskGphBuilder", ""));
     } else {
@@ -148,7 +148,7 @@ class NcclCollectiveBoxingReduceScatterSubTskGphBuilder final : public SubTskGph
         NcclInitCollectiveNode(collective_node, in_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeReduceScatter, -1);
         ctx->task_graph()->ConnectWithLbi(in_node, collective_node, lbi);
-        sorted_out_tasks->push_back(collective_node);
+        sorted_out_tasks->emplace_back(collective_node);
       }
       return TRY(
           BuildSubTskGphBuilderStatus("NcclCollectiveBoxingReduceScatterSubTskGphBuilder", ""));
@@ -206,7 +206,7 @@ class NcclCollectiveBoxingP2SNoncontinuousSubTskGphBuilder final : public SubTsk
         unpack_node->Init(machine_id, thrd_id, lbi, logical_blob_desc.shape(), in_sbp_parallel,
                           out_sbp_parallel, in_parallel_desc.parallel_num());
         ctx->task_graph()->ConnectWithLbi(collective_node, unpack_node, lbi);
-        sorted_out_tasks->push_back(unpack_node);
+        sorted_out_tasks->emplace_back(unpack_node);
       }
       return TRY(
           BuildSubTskGphBuilderStatus("NcclCollectiveBoxingP2SNoncontinuousSubTskGphBuilder", ""));
@@ -246,7 +246,7 @@ class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuil
         NcclInitCollectiveNode(collective_node, out_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeAllGather, -1);
         ctx->task_graph()->ConnectWithLbi(in_node_proxy, collective_node, lbi);
-        sorted_out_tasks->push_back(collective_node);
+        sorted_out_tasks->emplace_back(collective_node);
       }
       return TRY(BuildSubTskGphBuilderStatus("NcclCollectiveBoxingAllGatherSubTskGphBuilder", ""));
     } else {
@@ -304,7 +304,7 @@ class NcclCollectiveBoxingS2BNoncontinuousSubTskGphBuilder final : public SubTsk
         unpack_node->Init(machine_id, thrd_id, lbi, logical_blob_desc.shape(), in_sbp_parallel,
                           out_sbp_parallel, in_parallel_desc.parallel_num());
         ctx->task_graph()->ConnectWithLbi(collective_node, unpack_node, lbi);
-        sorted_out_tasks->push_back(unpack_node);
+        sorted_out_tasks->emplace_back(unpack_node);
       }
       return TRY(
           BuildSubTskGphBuilderStatus("NcclCollectiveBoxingS2BNoncontinuousSubTskGphBuilder", ""));
@@ -344,9 +344,9 @@ class NcclCollectiveBoxingReduceSubTskGphBuilder final : public SubTskGphBuilder
                                logical_blob_desc, OpType::kOpTypeReduce, root_parallel_id);
         ctx->task_graph()->ConnectWithLbi(in_node, collective_node, lbi);
         if (i == root_parallel_id) {
-          sorted_out_tasks->push_back(collective_node);
+          sorted_out_tasks->emplace_back(collective_node);
         } else {
-          sorted_ctrl_tasks->at(0).push_back(collective_node);
+          sorted_ctrl_tasks->at(0).emplace_back(collective_node);
         }
       }
       return TRY(BuildSubTskGphBuilderStatus("NcclCollectiveBoxingReduceSubTskGphBuilder", ""));
@@ -404,7 +404,7 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
         NcclInitCollectiveNode(collective_node, out_parallel_desc, out_id, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeAllGather, -1);
         ctx->task_graph()->ConnectWithLbi(slice_node_proxy, collective_node, lbi);
-        sorted_out_tasks->push_back(collective_node);
+        sorted_out_tasks->emplace_back(collective_node);
       }
       return TRY(BuildSubTskGphBuilderStatus(
           "CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder", ""));
@@ -465,7 +465,7 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
           Connect<TaskNode>(gpu_in_node, edge, collective_node);
           gpu_in_node->BindEdgeWithProducedRegst(edge, regst_desc_name);
         }
-        sorted_out_tasks->push_back(collective_node);
+        sorted_out_tasks->emplace_back(collective_node);
       }
       return TRY(BuildSubTskGphBuilderStatus("NcclCollectiveBoxingBroadcastSubTskGphBuilder", ""));
     } else {
@@ -523,7 +523,7 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
         unpack_node->Init(machine_id, thrd_id, lbi, logical_blob_desc.shape(), in_sbp_parallel,
                           out_sbp_parallel, in_parallel_desc.parallel_num());
         ctx->task_graph()->ConnectWithLbi(collective_node, unpack_node, lbi);
-        sorted_out_tasks->push_back(unpack_node);
+        sorted_out_tasks->emplace_back(unpack_node);
       }
       return TRY(BuildSubTskGphBuilderStatus("NcclCollectiveBoxingAll2AllSubTskGphBuilder", ""));
     } else {

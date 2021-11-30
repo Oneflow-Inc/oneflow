@@ -246,6 +246,10 @@ def _mul(self, other):
     return flow.mul(self, other)
 
 
+def _mul_(self, other):
+    return flow._C.mul_(self, other)
+
+
 def _rmul(self, other):
     return self.mul(other)
 
@@ -303,7 +307,7 @@ def _exp(self):
 
 
 def _expand_as(input, other):
-    return flow.expand(input, other.size())
+    return flow.expand(input, *other.size())
 
 
 def _acos(self):
@@ -799,6 +803,7 @@ def RegisterMethods():
     Tensor.add_ = _add_inplace
     Tensor.div = _truediv
     Tensor.mul = _mul
+    Tensor.mul_ = _mul_
     Tensor.reciprocal = _reciprocal
     Tensor.sub = _sub
     Tensor.asin = _asin
