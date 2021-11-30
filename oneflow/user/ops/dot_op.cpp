@@ -19,7 +19,7 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("dot")  // #1 注册OP
+REGISTER_USER_OP("dot")
     .Input("x")
     .Input("y")
     .Output("out")
@@ -47,6 +47,35 @@ REGISTER_USER_OP("dot")  // #1 注册OP
       *ctx->OutputDType("out", 0) = ctx->InputDType("x", 0);
       return Maybe<void>::Ok();
     });
+
+REGISTER_USER_OP_GRAD("dot").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                                                       user_op::AddOpFn AddOp) -> Maybe<void> {
+  if (op.NeedGenGradTensor4OpInput("x", 0)) {
+    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+    user_op::UserOpConfWrapper grad_op =
+        builder.Op("scalar_mul")
+            .Input("x", op.input("y", 0))
+            .Input("scalar", op.GetGradTensorWithOpOutput("out", 0))
+            .Output("y")
+            .Build();
+
+    op.BindGradTensorWithOpInput(grad_op.output("y", 0), "x", 0);
+  }
+
+  if (op.NeedGenGradTensor4OpInput("y", 0)) {
+    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+    user_op::UserOpConfWrapper grad_op =
+        builder.Op("scalar_mul")
+            .Input("x", op.input("x", 0))
+            .Input("scalar", op.GetGradTensorWithOpOutput("out", 0))
+            .Output("y")
+            .Build();
+
+    op.BindGradTensorWithOpInput(grad_op.output("y", 0), "y", 0);
+  }
+  return Maybe<void>::Ok();
+});
+
 }  // namespace
 
 }  // namespace oneflow
