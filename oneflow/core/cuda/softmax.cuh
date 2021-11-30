@@ -230,8 +230,8 @@ __global__ void SoftmaxWarpImpl(LOAD load, STORE store, const int64_t rows, cons
   const int global_thread_group_id = blockIdx.x * blockDim.y + threadIdx.y;
   const int num_global_thread_group = gridDim.x * blockDim.y;
   const int lane_id = threadIdx.x;
-  const int step = num_global_thread_group * rows_per_access;
-  for (int row = global_thread_group_id * rows_per_access; row < rows; row += step) {
+  const int64_t step = num_global_thread_group * rows_per_access;
+  for (int64_t row = global_thread_group_id * rows_per_access; row < rows; row += step) {
     ComputeType thread_max[rows_per_access];
 #pragma unroll
     for (int row_id = 0; row_id < rows_per_access; ++row_id) {
@@ -766,8 +766,8 @@ __global__ void SoftmaxGradWarpImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE store,
   const int global_thread_group_id = blockIdx.x * blockDim.y + threadIdx.y;
   const int num_global_thread_group = gridDim.x * blockDim.y;
   const int lane_id = threadIdx.x;
-  const int step = num_global_thread_group * rows_per_access;
-  for (int row = global_thread_group_id * rows_per_access; row < rows; row += step) {
+  const int64_t step = num_global_thread_group * rows_per_access;
+  for (int64_t row = global_thread_group_id * rows_per_access; row < rows; row += step) {
     ComputeType thread_sum[rows_per_access];
 #pragma unroll
     for (int row_id = 0; row_id < rows_per_access; ++row_id) {
