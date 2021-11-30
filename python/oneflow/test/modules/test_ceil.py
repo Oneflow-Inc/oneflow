@@ -57,10 +57,11 @@ class TestCeilModule(flow.unittest.TestCase):
     def test_inplace_ceil_flow_with_random_data(test_case):
         device = random_device()
         input = random_pytorch_tensor().to(device)
-        id_input = id(input)
-        torch.ceil_(input)
-        test_case.assertTrue(id_input == id(input))
-        return input
+        x = input + 1
+        id_x = id(x)
+        torch.ceil_(x)
+        test_case.assertTrue(id_x == id(x))
+        return x
 
     @autotest(auto_backward=False)
     def test_inplace_ceil_flow_with_0shape_data(test_case):
@@ -75,10 +76,11 @@ class TestCeilModule(flow.unittest.TestCase):
     def test_inplace_ceil_tensor_with_random_data(test_case):
         device = random_device()
         input = random_pytorch_tensor().to(device)
-        id_input = id(input)
-        input.ceil_()
-        test_case.assertTrue(id_input == id(input))
-        return input
+        x = input + 1
+        id_x = id(x)
+        x.ceil_()
+        test_case.assertTrue(id_x == id(x))
+        return x
 
     @autotest(auto_backward=False)
     def test_inplace_ceil_tensor_with_0shape_data(test_case):

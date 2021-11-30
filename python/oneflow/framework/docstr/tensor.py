@@ -382,6 +382,20 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.floor,
+    """
+    See :func:`oneflow.floor`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.floor_,
+    """
+    In-place version of :func:`oneflow.Tensor.floor`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.ge,
     """
     See :func:`oneflow.ge`

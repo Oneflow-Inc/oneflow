@@ -42,7 +42,7 @@ from oneflow._C import sigmoid
 from oneflow._C import prelu
 from oneflow._C import gelu
 from oneflow._C import glu
-from oneflow._C import logsigmoid
+from oneflow._C import logsigmoid, logsigmoid_
 from oneflow._C import softsign
 from oneflow._C import softmax
 from oneflow._C import softplus

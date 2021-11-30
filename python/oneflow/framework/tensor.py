@@ -418,6 +418,10 @@ def _log1p(self):
     return flow.log1p(self)
 
 
+def _log1p_(self):
+    return flow.log1p_(self)
+
+
 def _reciprocal(self):
     return flow.reciprocal(self)
 
@@ -526,8 +530,20 @@ def _fmod(self, other):
     return flow.fmod(self, other)
 
 
+def _floor(self, other):
+    return flow.floor(self)
+
+
+def _floor_(self, other):
+    return flow.floor_(self)
+
+
 def _log(self):
     return flow.log(self)
+
+
+def _log_(self):
+    return flow.log_(self)
 
 
 def _minimum(self, y):
@@ -890,6 +906,7 @@ def RegisterMethods():
     Tensor.cast = _cast
     Tensor.diag = _diag
     Tensor.log1p = _log1p
+    Tensor.log1p_ = _log1p_
     Tensor.add = _add
     Tensor.add_ = _add_inplace
     Tensor.div = _truediv
@@ -924,6 +941,8 @@ def RegisterMethods():
     Tensor.expm1 = _expm1
     Tensor.expm1_ = _expm1_
     Tensor.fmod = _fmod
+    Tensor.floor = _floor
+    Tensor.floor_ = _floor_
     Tensor.log = _log
     Tensor.minimum = _minimum
     Tensor.maximum = _maximum

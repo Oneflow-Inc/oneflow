@@ -1247,3 +1247,45 @@ add_docstr(
         
     """,
 )
+
+add_docstr(
+    oneflow.floor,
+    r"""
+    Returns a new tensor with the arcsine of the elements of :attr:`input`.
+
+    .. math::
+        \\text{out}_{i} = \\lfloor \\text{input}_{i} \\rfloor
+
+    Args:
+        input (Tensor): the input tensor.
+        
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> input = flow.tensor(np.array([-0.5,  1.5, 0,  0.8]), dtype=flow.float32)
+        >>> output = flow.floor(input)
+        >>> output.shape
+        oneflow.Size([4])
+        >>> output.numpy()
+        array([-1.,  1.,  0.,  0.], dtype=float32)
+        
+        >>> input1 = flow.tensor(np.array([[0.8, 1.0], [-0.6, 2.5]]), dtype=flow.float32)
+        >>> output1 = input1.floor()
+        >>> output1.shape
+        oneflow.Size([2, 2])
+        >>> output1.numpy()
+        array([[ 0.,  1.],
+               [-1.,  2.]], dtype=float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow.floor_,
+    r"""
+    In-place version of :func:`oneflow.floor`
+    """
+)

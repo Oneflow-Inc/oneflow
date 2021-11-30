@@ -99,6 +99,7 @@ from oneflow._C import log1p, log1p_
 from oneflow._C import add
 from oneflow._C import div
 from oneflow._C import floor_divide
+from oneflow._C import floor, floor_
 from oneflow._C import mul
 from oneflow._C import reciprocal
 from oneflow._C import reciprocal_ as reciprocal_
@@ -293,7 +294,6 @@ from oneflow.nn.modules.expand import expand_op as expand
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flatten import _flow_flatten as flatten
 from oneflow.nn.modules.flip import flip_op as flip
-from oneflow.nn.modules.floor import floor_op as floor
 from oneflow.nn.modules.gather import gather_op as gather
 from oneflow.nn.modules.gather import gather_nd_op as gather_nd
 from oneflow.nn.modules.comparison import eq_op as eq
