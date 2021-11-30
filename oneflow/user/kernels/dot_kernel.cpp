@@ -16,10 +16,26 @@ limitations under the License.
 
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/ep/include/primitive/matmul.h"
 
 namespace oneflow {
 
 namespace {
+
+using namespace ep::primitive;
+
+template<typename Context>
+std::unique_ptr<Matmul> NewMatmulPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
+  return ep::primitive::NewPrimitive<MatmulFactory>(ctx->device_type(), data_type,
+                                                    BlasTransposeType::N, BlasTransposeType::N);
+}
+
+auto MatmulPrimitiveExists() {
+  return hob::make_custom("MatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewMatmulPrimitive(&ctx).operator bool();
+  });
+}
 
 class DotKernel final : public user_op::OpKernel {
  public:
@@ -33,11 +49,15 @@ class DotKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t n = x->shape().elem_cnt();
     CHECK(n <= INT_MAX);
+    auto primitive = NewMatmulPrimitive(ctx);
+
+    primitive->Launch(ctx->stream(), 1, 1, n, 1, x->dptr(), y->dptr(), 0, out->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("dot").SetCreateFn<DotKernel>().SetIsMatchedHob(true);
+REGISTER_USER_KERNEL("dot").SetCreateFn<DotKernel>().SetIsMatchedHob(MatmulPrimitiveExists()
+                                                                     == true);
 
 }  // namespace
 
