@@ -288,11 +288,8 @@ if (WITH_OPENVINO)
   list(APPEND oneflow_third_party_libs ${OPENVINO_LIBRARIES})
 endif()
 
-message(STATUS "oneflow_third_party_libs: ${oneflow_third_party_libs}")
-
 foreach (oneflow_third_party_lib IN LISTS oneflow_third_party_libs)
-  string(FIND "${oneflow_third_party_lib}" "-l" FLAG_FOUND)
-  if (NOT ("${FLAG_FOUND}" EQUAL 0) AND NOT TARGET ${oneflow_third_party_lib})
+  if (NOT "${oneflow_third_party_lib}" MATCHES "^-l.+" AND NOT TARGET ${oneflow_third_party_lib} AND "${oneflow_third_party_lib}" MATCHES "^\/.+" AND NOT "${oneflow_third_party_lib}" MATCHES "^.+\.framework")
     get_filename_component(IMPORTED_LIB_NAME ${oneflow_third_party_lib} NAME_WE)
     set(IMPORTED_LIB_NAME "imported::${IMPORTED_LIB_NAME}")
     message(STATUS "Creating imported lib: ${oneflow_third_party_lib} => ${IMPORTED_LIB_NAME}")
@@ -304,8 +301,8 @@ foreach (oneflow_third_party_lib IN LISTS oneflow_third_party_libs)
   endif()
 endforeach()
 
-message(STATUS "ONEFLOW_THIRD_PARTY_LIBS_TO_LINK: ${ONEFLOW_THIRD_PARTY_LIBS_TO_LINK}")
 set(oneflow_third_party_libs ${ONEFLOW_THIRD_PARTY_LIBS_TO_LINK})
+message(STATUS "oneflow_third_party_libs: ${oneflow_third_party_libs}")
 
 add_definitions(-DHALF_ENABLE_CPP11_USER_LITERALS=0)
 
