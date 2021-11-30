@@ -13,12 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_API_CPP_NN_FUNCTIONAL_ACTIVATION_H_
+#define ONEFLOW_API_CPP_NN_FUNCTIONAL_ACTIVATION_H_
 
-#ifndef ONEFLOW_API_CPP_API_H_
-#define ONEFLOW_API_CPP_API_H_
+#include "../../framework.h"
 
-#include "env.h"
-#include "framework.h"
-#include "nn.h"
+namespace oneflow_api {
+namespace nn {
 
-#endif  // !ONEFLOW_API_CPP_API_H_
+Tensor relu(const Tensor& tensor);
+
+}
+
+}  // namespace oneflow_api
+
+#endif  // !ONEFLOW_API_CPP_NN_FUNCTIONAL_ACTIVATION_H_
