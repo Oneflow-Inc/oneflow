@@ -21,12 +21,12 @@ namespace ep {
 namespace primitive {
 
 template<typename Src, typename Dst>
-struct BinaryFunctor<DeviceType::kGPU, BinaryOp::kPow, Src, Dst> {
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, Src, Dst> {
   OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const { return pow(src0, src1); }
 };
 
 template<>
-struct BinaryFunctor<DeviceType::kGPU, BinaryOp::kPow, half, half> {
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, half, half> {
   OF_DEVICE_FUNC half operator()(half src0, half src1) const {
     return static_cast<half>(pow(static_cast<float>(src0), static_cast<float>(src1)));
   }
@@ -35,7 +35,7 @@ struct BinaryFunctor<DeviceType::kGPU, BinaryOp::kPow, half, half> {
 #if CUDA_VERSION >= 11000
 
 template<>
-struct BinaryFunctor<DeviceType::kGPU, BinaryOp::kPow, nv_bfloat16, nv_bfloat16> {
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, nv_bfloat16, nv_bfloat16> {
   OF_DEVICE_FUNC nv_bfloat16 operator()(nv_bfloat16 src0, nv_bfloat16 src1) const {
     return static_cast<nv_bfloat16>(pow(static_cast<float>(src0), static_cast<float>(src1)));
   }

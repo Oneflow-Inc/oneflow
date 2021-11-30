@@ -106,7 +106,8 @@ __global__ void BroadcastElementwiseBinaryGpu(
           (src0_pack_size == dst_pack_size) ? src0_pack.elem[j] : src0_pack.elem[0];
       const Src src1_val =
           (src1_pack_size == dst_pack_size) ? src1_pack.elem[j] : src1_pack.elem[0];
-      dst_pack.elem[j] = BinaryFunctor<DeviceType::kGPU, binary_op, Src, Dst>()(src0_val, src1_val);
+      dst_pack.elem[j] =
+          BinaryFunctor<DeviceType::kCUDA, binary_op, Src, Dst>()(src0_val, src1_val);
     }
     dst[offset] = dst_pack.storage;
   }
@@ -267,7 +268,7 @@ template<BinaryOp binary_op, typename Src, typename Dst>
 struct BinaryLhsScalarFunctor {
   __host__ __device__ explicit BinaryLhsScalarFunctor(Src scalar) : scalar(scalar) {}
   __device__ Dst operator()(Src src) const {
-    return BinaryFunctor<DeviceType::kGPU, binary_op, Src, Dst>()(scalar, src);
+    return BinaryFunctor<DeviceType::kCUDA, binary_op, Src, Dst>()(scalar, src);
   }
   const Src scalar;
 };
@@ -276,7 +277,7 @@ template<BinaryOp binary_op, typename Src, typename Dst>
 struct BinaryRhsScalarFunctor {
   __host__ __device__ explicit BinaryRhsScalarFunctor(Src scalar) : scalar(scalar) {}
   __device__ Dst operator()(Src src) const {
-    return BinaryFunctor<DeviceType::kGPU, binary_op, Src, Dst>()(src, scalar);
+    return BinaryFunctor<DeviceType::kCUDA, binary_op, Src, Dst>()(src, scalar);
   }
   const Src scalar;
 };
@@ -319,8 +320,8 @@ void DispatchLaunch(Stream* stream, size_t num_src0_dims, const int64_t* src0_di
   const size_t elem_cnt = std::max(src0_count, src1_count);
   if (IsDimsEquals(num_src0_dims, src0_dims, num_src1_dims, src1_dims)) {
     OF_CUDA_CHECK(
-        (cuda::elementwise::Binary(BinaryFunctor<DeviceType::kGPU, binary_op, Src, Dst>(), elem_cnt,
-                                   dst, src0, src1, cuda_stream->cuda_stream())));
+        (cuda::elementwise::Binary(BinaryFunctor<DeviceType::kCUDA, binary_op, Src, Dst>(),
+                                   elem_cnt, dst, src0, src1, cuda_stream->cuda_stream())));
   } else if (src0_count == 1) {
     OF_CUDA_CHECK((cuda::elementwise::UnaryWithFactory(
         BinaryLhsScalarPtrFunctorFactory<binary_op, Src, Dst>(src0), elem_cnt, dst, src1,

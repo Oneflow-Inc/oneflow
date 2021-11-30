@@ -73,7 +73,7 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
   }
 };
 
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, BroadcastElementwiseBinaryFactory,
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, BroadcastElementwiseBinaryFactory,
                            BroadcastElementwiseBinaryFactoryImpl);
 
 }  // namespace primitive
