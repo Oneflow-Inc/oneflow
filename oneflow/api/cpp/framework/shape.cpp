@@ -22,7 +22,7 @@ namespace oneflow_api {
 namespace of = oneflow;
 namespace {
 
-of::DimVector toOneflowDimVcetor(const std::vector<int64_t>& dim_vec) {
+of::DimVector ToOneflowDimVcetor(const std::vector<int64_t>& dim_vec) {
   return of::DimVector(dim_vec.begin(), dim_vec.end());
 }
 
@@ -31,7 +31,7 @@ of::DimVector toOneflowDimVcetor(const std::vector<int64_t>& dim_vec) {
 Shape::Shape() : shape_(std::make_shared<of::Shape>(of::Shape({0}))) {}
 
 Shape::Shape(const std::vector<int64_t>& dim_vec)
-    : shape_(std::make_shared<of::Shape>(toOneflowDimVcetor(dim_vec))) {}
+    : shape_(std::make_shared<of::Shape>(ToOneflowDimVcetor(dim_vec))) {}
 
 Shape::Shape(const std::initializer_list<int64_t>& dim_vec)
     : shape_(std::make_shared<of::Shape>(dim_vec)) {}

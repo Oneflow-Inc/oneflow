@@ -49,7 +49,7 @@ class Tensor final {
   template<typename T>
   void copy_to(T* buffer);
 
-  static Tensor from_buffer(const void* blob, const Shape& shape, const Device& device,
+  static Tensor from_buffer(const void* buffer, const Shape& shape, const Device& device,
                             const DType& dtype);
 
  private:
