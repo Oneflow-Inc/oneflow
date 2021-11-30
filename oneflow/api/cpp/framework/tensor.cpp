@@ -78,8 +78,8 @@ Tensor Tensor::from_buffer(const void* buffer, const Shape& shape, const Device&
     return builder->AccessBlobByCallback(
         local_tensor,
         [buffer, shape, dtype](uint64_t ofblob_ptr) {
-          CHECK_JUST(of::BlobBufferCopyUtil<char>::From(
-              ofblob_ptr, static_cast<const char*>(buffer), shape.Count(0) * GetDTypeSize(dtype)));
+          CHECK_JUST(of::BlobBufferCopyUtil<void>::From(ofblob_ptr, buffer,
+                                                        shape.Count(0) * GetDTypeSize(dtype)));
         },
         "mut");
   }).GetOrThrow();
