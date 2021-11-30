@@ -279,9 +279,9 @@ class MovedimVecFunctor {
       if(item < 0){
         item += ndim;
       }
-      CHECK_GE_OR_RETURN(item, 0) << ", Dimension out of range (expected to be in range of [" << -ndim <<", " <<ndim-1<< "], but got "<< perm[i] << ")";
-      CHECK_LT_OR_RETURN(item, ndim) << ", Dimension out of range (expected to be in range of [" << -ndim <<", " << ndim-1 << "], but got " << perm[i] << ")";;
-      CHECK_EQ_OR_RETURN(is_used[item], false)<<"repeated dim in "<<desc;
+      CHECK_GE_OR_RETURN(item, 0) << ", Dimension out of range (expected to be in range of [" << -ndim << ", " <<ndim-1<< "], but got " << perm[i] << ")";
+      CHECK_LT_OR_RETURN(item, ndim) << ", Dimension out of range (expected to be in range of [" << -ndim <<", " << ndim-1 << "], but got " << perm[i] << ")";
+      CHECK_EQ_OR_RETURN(is_used[item], false) << "repeated dim in " << desc;
       
       is_used[item] = true;
       perm_out[i] = item;
@@ -295,14 +295,14 @@ class MovedimVecFunctor {
     int32_t ndim = input->shape()->NumAxes();
     int32_t dim = source.size();
 
-    CHECK_EQ_OR_RETURN(source.size(),destination.size())<< "movedim: Invalid source or destination dims: source (" <<
+    CHECK_EQ_OR_RETURN(source.size(),destination.size()) << "movedim: Invalid source or destination dims: source (" <<
               source.size() << " dims ) should contain the same number of dims as destination (" << destination.size() <<" dims)";
 
     std::vector<int32_t> source_nopeat(dim);
     std::vector<int32_t> destination_nopeat(dim);
 
-    CheckNoRepeat(source,source_nopeat,ndim,"source");
-    CheckNoRepeat(destination,destination_nopeat,ndim,"destination");
+    CheckNoRepeat(source, source_nopeat, ndim, "source");
+    CheckNoRepeat(destination, destination_nopeat, ndim, "destination");
     
     std::vector<int32_t> order(ndim);
     std::vector<int32_t> source_dims(ndim);
@@ -321,7 +321,7 @@ class MovedimVecFunctor {
     std::remove(destination_dims.begin(), destination_dims.end(), -1);
     
     int64_t rest_dim = ndim - dim;
-    FOR_RANGE(size_t, i , 0, rest_dim) {
+    FOR_RANGE(size_t, i, 0, rest_dim) {
       order[destination_dims[i]] = source_dims[i];
     }
 
@@ -335,8 +335,8 @@ class MovedimIntFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const int32_t& source,
                            const int32_t& destination ) const {
-    std::vector<int32_t>src{source};
-    std::vector<int32_t>dest{destination};
+    std::vector<int32_t> src{source};
+    std::vector<int32_t> dest{destination};
     return MovedimVec(input,src,dest);
   }
 };
