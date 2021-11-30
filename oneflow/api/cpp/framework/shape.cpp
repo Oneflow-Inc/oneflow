@@ -13,11 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "shape.h"
-#include <memory>
+#include "oneflow/api/cpp/framework/shape.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/shape_vec.h"
-#include "string"
 
 namespace oneflow_api {
 

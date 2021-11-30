@@ -18,10 +18,7 @@ limitations under the License.
 #define ONEFLOW_API_H_
 
 #include "env.h"
-#include "device.h"
-#include "shape.h"
-#include "dtype.h"
-#include "tensor.h"
+#include "framework.h"
 #include "nn.h"
 
 #endif  // ONELFOW_API_H_
