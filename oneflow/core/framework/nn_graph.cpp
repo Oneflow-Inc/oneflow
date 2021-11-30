@@ -288,6 +288,7 @@ Maybe<void> NNGraph::DumpToVariable2BlobMap() {
     CHECK_OR_RETURN(iter != variable_op_name2tensor_.end()) << var_name << " not found.";
     std::shared_ptr<one::Tensor> tensor = iter->second;
     Blob* var_blob = nullptr;
+    // Check sbp whether same or not and allow auto_parallel to change sbp.
     if (tensor->is_consistent()) {
       cfg::NdSbpSignature nd_sbp_signature = cfg::NdSbpSignature(
           job_.job_parallel_view_conf().op_name2nd_sbp_signature_conf().at(var_name));
