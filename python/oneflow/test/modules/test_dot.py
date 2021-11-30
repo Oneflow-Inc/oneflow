@@ -25,16 +25,14 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestDot(flow.unittest.TestCase):
-    # @autotest(auto_backward=False)
     @autotest()
     def test_dot(test_case):
         device = random_device()
-        k = random(2, 6)
-        x = random_pytorch_tensor(ndim=1, dim0=1).to(device)
-        y = random_pytorch_tensor(ndim=1, dim0=1).to(device)
+        k = random(1000, 10000)
+        x = random_pytorch_tensor(ndim=1, dim0=k).to(device)
+        y = random_pytorch_tensor(ndim=1, dim0=k).to(device)
         z = torch.dot(x, y)
         return z
-
 
 if __name__ == "__main__":
     unittest.main()
