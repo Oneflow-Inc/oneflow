@@ -86,9 +86,8 @@ Maybe<void> SbpConstructor::DumpNdSbpSignatureForJob(const OpGraph& op_graph, Jo
         if (op.name() == node->op().op_name()) {
           op.mutable_variable_conf()->clear_nd_sbp();
           const auto nd_sbp = sbp_node->FinalSbpSignature()->bn_in_op2nd_sbp()["out"];
-          for (int32_t dim = 0; dim < nd_sbp.sbp_parallel_size(); dim++) {
-            op.mutable_variable_conf()->mutable_nd_sbp()->Add(
-                SbpParallelToString(nd_sbp.sbp_parallel(dim)));
+          for (const auto& sbp_parallel : nd_sbp.sbp_parallel()) {
+            op.mutable_variable_conf()->mutable_nd_sbp()->Add(SbpParallelToString(sbp_parallel));
           }
         }
       }

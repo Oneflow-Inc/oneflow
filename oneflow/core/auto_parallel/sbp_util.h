@@ -24,19 +24,30 @@ namespace auto_parallel {
 
 // check whether the sbp_parallel is legal
 bool CheckSbpParallel(const cfg::SbpParallel& sbp_parallel);
+// check whether the nd_sbp is legal
+bool CheckNdSbp(const cfg::NdSbp& nd_sbp);
 
 // compute copy cost
 double ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& producer_sbp_parallel,
                                            const cfg::SbpParallel& consumer_sbp_parallel,
                                            const BlobDesc& logical_blob_desc,
-                                           const ParallelDesc& parallel_desc, bool is_same_sbp);
-
-double ComputCopyCostBetweenTwoSbpParallel(const cfg::NdSbp& producer_sbp_parallel,
-                                           const cfg::NdSbp& consumer_sbp_parallel,
-                                           const BlobDesc& logical_blob_desc,
                                            const ParallelDesc& producer_parallel_desc,
                                            const ParallelDesc& consumer_parallel_desc,
                                            bool is_same_sbp);
+double ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
+                                  const cfg::NdSbp& consumer_sbp_parallel,
+                                  const BlobDesc& logical_blob_desc,
+                                  const ParallelDesc& producer_parallel_desc,
+                                  const ParallelDesc& consumer_parallel_desc, bool is_same_sbp);
+// compute copy cost for two SBPs.
+// They may be either different or on different devices.
+double ComputCopyCostBetweenTwoDiffSbpParallel(const cfg::SbpParallel& producer_sbp_parallel,
+                                               const cfg::SbpParallel& consumer_sbp_parallel,
+                                               double logical_blob_size, double parallel_num,
+                                               bool on_same_devices);
+double ComputCopyCostBetweenTwoNdSbp(const cfg::NdSbp& producer_nd_sbp,
+                                     const cfg::NdSbp& consumer_nd_sbp, double logical_blob_size,
+                                     const std::shared_ptr<Shape>& hierarchy, bool on_same_devices);
 
 // Judge whether we need the same SBP for both producer and consumer
 bool IsSameSBP(OpNode* consumer, const std::string& ibn);
