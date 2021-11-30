@@ -374,9 +374,9 @@ std::shared_ptr<ConvOpKernelState<T>> CreateConvOpKernelState(user_op::KernelCom
   FOR_RANGE(uint8_t, dim, 0, 3) {
     int64_t index = static_cast<int64_t>(dim) - (3 - padding_before.size());
     if (index < 0) {
-      state->padding_before_3d_.push_back(0);
+      state->padding_before_3d_.emplace_back(0);
     } else {
-      state->padding_before_3d_.push_back(padding_before.at(index));
+      state->padding_before_3d_.emplace_back(padding_before.at(index));
     }
   }
 
@@ -532,7 +532,7 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
           ep::primitive::NewPrimitive<ep::primitive::AddFactory>(DeviceType::kCPU,
                                                                  add_to_output->data_type());
       CHECK(primitive);
-      primitive->Launch(ctx->stream(), add_to_output->dptr<T>(), dx->dptr<T>(), dx->mut_dptr<T>(),
+      primitive->Launch(ctx->stream(), dx->dptr<T>(), add_to_output->dptr<T>(), dx->mut_dptr<T>(),
                         add_to_output->shape().elem_cnt());
     }
   }

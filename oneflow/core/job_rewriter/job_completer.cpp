@@ -92,13 +92,14 @@ Maybe<void> SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_
     const LogicalBlobId& variable_lbi = variable_op.BnInOp2Lbi(variable_op.SoleObn());
     const OperatorConf* mutable_consumer = nullptr;
     std::vector<const OperatorConf*> naive_consumers;
+    naive_consumers.reserve(op_node->out_edges().size());
     for (OpEdge* edge : op_node->out_edges()) {
       const auto& op_conf = edge->dst_node()->op().op_conf();
       if (IsMutableConsumedLbi(edge->dst_node()->op(), variable_lbi)) {
         CHECK_OR_RETURN(mutable_consumer == nullptr);
         mutable_consumer = &op_conf;
       } else {
-        naive_consumers.push_back(&op_conf);
+        naive_consumers.emplace_back(&op_conf);
       }
     }
     if (mutable_consumer == nullptr) { return Maybe<void>::Ok(); }

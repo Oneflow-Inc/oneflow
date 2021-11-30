@@ -21,21 +21,15 @@ namespace {
 
 REGISTER_USER_OP("dropout")
     .Input("in")
-    .Input("mask")
     .OptionalInput("_add_to_output")
     .Output("out")
-    .Attr<float>("scale")
+    .Output("mask")
+    .Attr<float>("rate")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& in_shape = ctx->InputShape("in", 0);
       *ctx->OutputShape("out", 0) = in_shape;
+      *ctx->OutputShape("mask", 0) = in_shape;
       *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
-      CHECK_EQ_OR_RETURN(ctx->InputShape("mask", 0), in_shape);
-      return Maybe<void>::Ok();
-    })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
-      user_op::InputArgModifier* mask = GetInputArgModifierFn("mask", 0);
-      mask->set_requires_grad(false);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -47,13 +41,13 @@ REGISTER_USER_OP("dropout")
     })
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
                        const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
-      float scale = op_conf.attr<float>("scale");
-      CHECK_GT_OR_RETURN(scale, 1);
+      float rate = op_conf.attr<float>("rate");
+      CHECK_GE_OR_RETURN(rate, 0.0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-      CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kInt8);
+      *ctx->OutputDType("mask", 0) = DataType::kInt8;
       return Maybe<void>::Ok();
     });
 
@@ -96,12 +90,15 @@ REGISTER_USER_OP_GRAD("dropout").SetGenBackwardOpConfFn([](const user_op::UserOp
                                                            user_op::AddOpFn AddOp) -> Maybe<void> {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+    const float rate = op.attr<float>("rate");
+    float scale = 0.0f;  // When dropout rate = 1.0, we set scale as zero.
+    if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
     user_op::UserOpConfWrapper dropout_grad_op =
         builder.Op("dropout_grad")
             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-            .Input("mask", op.input("mask", 0))
+            .Input("mask", op.output("mask", 0))
             .Output("dx")
-            .Attr("scale", op.attr<float>("scale"))
+            .Attr("scale", scale)
             .Build();
     op.BindGradTensorWithOpInput(dropout_grad_op.output("dx", 0), "in", 0);
     AddOp(dropout_grad_op);
