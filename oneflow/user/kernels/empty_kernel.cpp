@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/common/tensor_buffer.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {
@@ -27,27 +29,32 @@ class EmptyKernel final : public OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int64_t elem_cnt = out_tensor->shape().elem_cnt();
-    CHECK_GT(elem_cnt, 0);
-
-    // Do nothing
+    // None POD type need check
+    if (!IsPODAndHalfDataType(GetDataType<T>::value)) {
+      const user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+      CHECK(out->shape().NumAxes() > 0 && out->shape().elem_cnt() == 0)
+          << "None POD Tensor created by empty op must be 0-Size tensor.";
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_EMPTY_XPU_KERNEL(device, dtype)                                           \
   REGISTER_USER_KERNEL("empty").SetCreateFn<EmptyKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device)                                                  \
-      & (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
+      (user_op::HobDeviceType() == device)                                                 \
+      && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
 #define REGISTER_EMPTY_KERNEL(device, dtype_pair) \
   REGISTER_EMPTY_XPU_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_EMPTY_KERNEL, DEVICE_TYPE_SEQ, POD_DATA_TYPE_SEQ)
+#define TB_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(TensorBuffer, DataType::kTensorBuffer)
+#define TOTAL_DATA_TYPE_SEQ ALL_DATA_TYPE_SEQ TB_DATA_TYPE_SEQ
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_EMPTY_KERNEL, DEVICE_TYPE_SEQ, TOTAL_DATA_TYPE_SEQ)
+#undef TOTAL_DATA_TYPE_SEQ
 
+REGISTER_EMPTY_XPU_KERNEL(DeviceType::kCPU, float16);
 #ifdef WITH_CUDA
-REGISTER_EMPTY_XPU_KERNEL(DeviceType::kGPU, float16);
+REGISTER_EMPTY_XPU_KERNEL(DeviceType::kCUDA, float16);
 #endif  // WITH_CUDA
 
 }  // namespace user_op

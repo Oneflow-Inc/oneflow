@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -44,13 +45,14 @@ class DynamicLossScaleScheduleGpuKernel final : public user_op::OpKernel {
   ~DynamicLossScaleScheduleGpuKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* count_not_finite = ctx->Tensor4ArgNameAndIndex("count_not_finite", 0);
     user_op::Tensor* loss_scale = ctx->Tensor4ArgNameAndIndex("loss_scale", 0);
     user_op::Tensor* good_step_counter = ctx->Tensor4ArgNameAndIndex("good_step_counter", 0);
     const auto increment_period = ctx->Attr<int64_t>("increment_period");
     const auto multiplier = ctx->Attr<float>("multiplier");
-    DynamicLossScaleScheduleGpu<<<1, 1, 0, ctx->device_ctx()->cuda_stream()>>>(
+    DynamicLossScaleScheduleGpu<<<1, 1, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         increment_period, multiplier, count_not_finite->dptr<int64_t>(),
         loss_scale->mut_dptr<float>(), good_step_counter->mut_dptr<int64_t>());
   }
@@ -59,6 +61,6 @@ class DynamicLossScaleScheduleGpuKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("dynamic_loss_scale_schedule")
     .SetCreateFn<DynamicLossScaleScheduleGpuKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu"));
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA));
 
 }  // namespace oneflow

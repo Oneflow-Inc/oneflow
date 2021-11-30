@@ -20,10 +20,10 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> InferParallelDistributionFn(user_op::InferParallelDistributionFnContext* ctx) {
+Maybe<void> InferNdSbpFn(user_op::InferNdSbpFnContext* ctx) {
   const Shape& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
   const Shape& out_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape();
-  return ReshapeUserOpUtil::InferParallelDistribution(ctx, in_shape, out_shape);
+  return ReshapeUserOpUtil::InferNdSbp(ctx, in_shape, out_shape);
 }
 
 }  // namespace
@@ -64,14 +64,15 @@ REGISTER_USER_OP("reshape_like")
                                                               {{"like", 0}, {"out", 0}},
                                                               ctx->parallel_num(), &builder);
     })
-    .SetParallelDistributionInferFn(InferParallelDistributionFn)
+    .SetNdSbpInferFn(InferNdSbpFn)
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("reshape_like")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("in", 0)) {
         const auto& in_desc = op.TensorDesc4ArgNameAndIndex("in", 0);
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
@@ -95,6 +96,7 @@ REGISTER_USER_OP_GRAD("reshape_like")
           AddOp(reshape_grad_op);
         }
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

@@ -13,16 +13,37 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/decode_random_kernel.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
+template<DeviceType device_type>
+class DecodeRandomKernel final : public Kernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DecodeRandomKernel);
+  DecodeRandomKernel() : is_init_(false){};
+  ~DecodeRandomKernel() = default;
+
+  void Forward(KernelContext* ctx) const override { ForwardDataContent(ctx); }
+
+  void ForwardDataContent(KernelContext* ctx) const override;
+
+ private:
+  void VirtualKernelInit(KernelContext* ctx) override;
+  uint32_t GenNextRandomSeed() const;
+
+  std::unique_ptr<std::mt19937> gen_;
+  std::unique_ptr<std::uniform_int_distribution<uint32_t>> dis_;
+
+  mutable bool is_init_;
+};
+
 namespace {
 
-void RandomFillBlob(DeviceCtx* ctx, DeviceType device_type, const InitializerConf& initializer_conf,
-                    uint32_t random_seed, Blob* blob) {
+void RandomFillBlob(ep::Stream* stream, DeviceType device_type,
+                    const InitializerConf& initializer_conf, uint32_t random_seed, Blob* blob) {
   static const HashMap<std::string,
-                       void (*)(DeviceCtx * ctx, const InitializerConf& initializer_conf,
+                       void (*)(ep::Stream * stream, const InitializerConf& initializer_conf,
                                 uint32_t random_seed, Blob* blob)>
       fill_funcs = {
 #define RANDOM_FILL_ENTRY(type_dev, data_type_pair)         \
@@ -30,14 +51,14 @@ void RandomFillBlob(DeviceCtx* ctx, DeviceType device_type, const InitializerCon
    &KernelUtil<type_dev, OF_PP_PAIR_FIRST(data_type_pair)>::InitializeWithConf},
           OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(RANDOM_FILL_ENTRY, DEVICE_TYPE_SEQ,
                                            ARITHMETIC_DATA_TYPE_SEQ)};
-  fill_funcs.at(GetHashKey(device_type, blob->data_type()))(ctx, initializer_conf, random_seed,
+  fill_funcs.at(GetHashKey(device_type, blob->data_type()))(stream, initializer_conf, random_seed,
                                                             blob);
 }
 
 }  // namespace
 
 template<DeviceType device_type>
-void DecodeRandomKernel<device_type>::VirtualKernelInit() {
+void DecodeRandomKernel<device_type>::VirtualKernelInit(KernelContext* ctx) {
   gen_.reset(new std::mt19937(this->kernel_conf().decode_random_conf().random_seed()));
   dis_.reset(new std::uniform_int_distribution<uint32_t>());
   is_init_ = false;
@@ -49,12 +70,11 @@ uint32_t DecodeRandomKernel<device_type>::GenNextRandomSeed() const {
 }
 
 template<DeviceType device_type>
-void DecodeRandomKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+void DecodeRandomKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
   const DecodeRandomOpConf& conf = this->op_conf().decode_random_conf();
   if (is_init_ == false) {
-    RandomFillBlob(ctx.device_ctx, device_type, conf.data_initializer(), this->GenNextRandomSeed(),
-                   BnInOp2Blob("out"));
+    RandomFillBlob(ctx->stream(), device_type, conf.data_initializer(), this->GenNextRandomSeed(),
+                   ctx->BnInOp2Blob("out"));
     is_init_ = true;
   }
 }

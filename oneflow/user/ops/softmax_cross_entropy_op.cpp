@@ -37,7 +37,7 @@ REGISTER_USER_OP("softmax_cross_entropy")
       const int64_t num_out_axes = prediction_desc.shape().NumAxes() - 1;
       DimVector out_dim_vector;
       FOR_RANGE(int64_t, i, 0, num_out_axes) {
-        out_dim_vector.push_back(prediction_desc.shape().At(i));
+        out_dim_vector.emplace_back(prediction_desc.shape().At(i));
       }
       *ctx->OutputShape("prob", 0) = ctx->InputShape("prediction", 0);
       *ctx->OutputIsDynamic("prob", 0) = ctx->InputIsDynamic("prediction", 0);
@@ -114,7 +114,8 @@ REGISTER_USER_OP("softmax_cross_entropy_grad")
     });
 
 REGISTER_USER_OP_GRAD("softmax_cross_entropy")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("prediction", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -127,6 +128,7 @@ REGISTER_USER_OP_GRAD("softmax_cross_entropy")
         op.BindGradTensorWithOpInput(grad_op.output("prediction_diff", 0), "prediction", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

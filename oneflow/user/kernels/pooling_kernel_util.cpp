@@ -22,9 +22,9 @@ std::vector<int32_t> Get3DVec(const std::vector<int32_t>& original_vec, int32_t 
   FOR_RANGE(uint8_t, dim, 0, 3) {
     int64_t index = static_cast<int64_t>(dim) - (3 - NDims);
     if (index < 0) {
-      vec.push_back(1);
+      vec.emplace_back(1);
     } else {
-      vec.push_back(original_vec.at(index));
+      vec.emplace_back(original_vec.at(index));
     }
   }
   return vec;
@@ -35,27 +35,51 @@ std::vector<int32_t> Get3DPadVec(const std::vector<int32_t>& original_vec, int32
   FOR_RANGE(uint8_t, dim, 0, 3) {
     int64_t index = static_cast<int64_t>(dim) - (3 - NDims);
     if (index < 0) {
-      vec.push_back(0);
+      vec.emplace_back(0);
     } else {
-      vec.push_back(original_vec.at(index));
+      vec.emplace_back(original_vec.at(index));
     }
   }
   return vec;
 }
 
-PoolingParams3D::PoolingParams3D(const int32_t dim, const ShapeView& x_shape,
-                                 const std::string& data_format, const std::string& padding,
-                                 const std::vector<int32_t>& padding_before,
-                                 const std::vector<int32_t>& padding_after,
-                                 const std::vector<int32_t>& kernel_size,
-                                 const std::vector<int32_t>& stride,
-                                 const std::vector<int32_t>& dilation, const bool return_indices,
-                                 const bool ceil_mode)
+void GetWindowedOutputShape(int64_t input_size, int32_t filter_size, int32_t stride,
+                            int32_t padding, bool ceil_mode, int32_t dilation_rate,
+                            int64_t* output_ptr) {
+  int64_t output_size = (input_size + 2 * padding - dilation_rate * (filter_size - 1) - 1 + stride
+                         + (ceil_mode ? stride - 1 : 0))
+                        / stride;
+
+  if (ceil_mode) {
+    // ensure that the last pooling starts inside the image
+    // needed to avoid problems in ceil mode
+    if ((output_size - 1) * stride >= input_size + padding) { --output_size; }
+  }
+  *output_ptr = output_size;
+}
+
+void Get3DOutputShape(const DimVector& in, const std::vector<int32_t>& pool_size,
+                      const std::vector<int32_t>& strides, const std::vector<int32_t>& padding,
+                      const bool ceil_mode, std::vector<int32_t> dilation_rate, DimVector* out) {
+  out->clear();
+  out->resize(3);
+  FOR_RANGE(size_t, i, 0, 3) {
+    int64_t* out_ptr = &(*out).at(i);
+    GetWindowedOutputShape(in.at(i), pool_size.at(i), strides.at(i), padding.at(i), ceil_mode,
+                           dilation_rate.at(i), out_ptr);
+  }
+}
+
+MaxPoolingParams3D::MaxPoolingParams3D(const int32_t dim, const ShapeView& x_shape,
+                                       const std::string& data_format,
+                                       const std::vector<int32_t>& padding,
+                                       const std::vector<int32_t>& kernel_size,
+                                       const std::vector<int32_t>& stride,
+                                       const std::vector<int32_t>& dilation,
+                                       const bool return_indices, const bool ceil_mode)
     : dim_(dim),
       data_format_(data_format),
-      padding_(padding),
-      padding_before_3d_(Get3DPadVec(padding_before, dim)),
-      padding_after_3d_(Get3DPadVec(padding_after, dim)),
+      padding_(Get3DPadVec(padding, dim)),
       pooling_size_3d_(Get3DVec(kernel_size, dim)),
       stride_3d_(Get3DVec(stride, dim)),
       dilation_3d_(Get3DVec(dilation, dim)),
@@ -63,8 +87,7 @@ PoolingParams3D::PoolingParams3D(const int32_t dim, const ShapeView& x_shape,
       ceil_mode_(ceil_mode) {
   x_3d_ = {GetInDim(x_shape, data_format, 0, dim), GetInDim(x_shape, data_format, 1, dim),
            GetInDim(x_shape, data_format, 2, dim)};
-  Get3DOutputSize(x_3d_, pooling_size_3d_, stride_3d_, padding_, ceil_mode_, &dilation_3d_, &y_3d_,
-                  &padding_before_3d_, &padding_after_3d_);
+  Get3DOutputShape(x_3d_, pooling_size_3d_, stride_3d_, padding_, ceil_mode_, dilation_3d_, &y_3d_);
   if (data_format == "channels_first") {
     channel_num_ = x_shape.At(1);
   } else {
@@ -75,14 +98,13 @@ PoolingParams3D::PoolingParams3D(const int32_t dim, const ShapeView& x_shape,
   batch_num_ = x_shape.At(0);
 }
 
-void PoolingParams3D::Reset(const ShapeView& x_shape) {
+void MaxPoolingParams3D::Reset(const ShapeView& x_shape) {
   x_3d_ = {GetInDim(x_shape, data_format_, 0, dim_), GetInDim(x_shape, data_format_, 1, dim_),
            GetInDim(x_shape, data_format_, 2, dim_)};
-  Get3DOutputSize(x_3d_, pooling_size_3d_, stride_3d_, padding_, ceil_mode_, &dilation_3d_, &y_3d_,
-                  &padding_before_3d_, &padding_after_3d_);
+  Get3DOutputShape(x_3d_, pooling_size_3d_, stride_3d_, padding_, ceil_mode_, dilation_3d_, &y_3d_);
 }
 
-Shape PoolingParams3D::GetYShape() const {
+Shape MaxPoolingParams3D::GetYShape() const {
   DimVector y_dim_vec;
   if (dim_ == 1) {
     y_dim_vec = {y_3d_.at(2)};
@@ -104,11 +126,11 @@ Shape PoolingParams3D::GetYShape() const {
   return Shape(y_dim_vec);
 }
 
-Shape PoolingParams3D::GetXShape5D() const {
+Shape MaxPoolingParams3D::GetXShape5D() const {
   return Shape({batch_num_, channel_num_, x_3d_.at(0), x_3d_.at(1), x_3d_.at(2)});
 }
 
-Shape PoolingParams3D::GetYShape5D() const {
+Shape MaxPoolingParams3D::GetYShape5D() const {
   return Shape({batch_num_, channel_num_, y_3d_.at(0), y_3d_.at(1), y_3d_.at(2)});
 }
 

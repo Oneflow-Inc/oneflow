@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/math_binary_elementwise_func.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -46,14 +47,17 @@ class MathBinaryElementwiseGpuKernel final : public user_op::OpKernel {
   ~MathBinaryElementwiseGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
+    if (n == 0) { return; }
     MathBinaryElementwiseForwardGpu<BinaryFunctor, T>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             n, tensor_x->dptr<T>(), tensor_y->dptr<T>(), tensor_z->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -66,6 +70,7 @@ class MathBinaryElementwiseXGradGpuKernel final : public user_op::OpKernel {
   ~MathBinaryElementwiseXGradGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -73,8 +78,10 @@ class MathBinaryElementwiseXGradGpuKernel final : public user_op::OpKernel {
     user_op::Tensor* tensor_dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
+    if (n == 0) { return; }
     MathBinaryElementwiseBackwardXGradGpu<BinaryFunctor, T>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             n, tensor_x->dptr<T>(), tensor_y->dptr<T>(), tensor_dz->dptr<T>(),
             tensor_dx->mut_dptr<T>());
   }
@@ -88,6 +95,7 @@ class MathBinaryElementwiseYGradGpuKernel final : public user_op::OpKernel {
   ~MathBinaryElementwiseYGradGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -95,37 +103,42 @@ class MathBinaryElementwiseYGradGpuKernel final : public user_op::OpKernel {
     user_op::Tensor* tensor_dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
+    if (n == 0) { return; }
     MathBinaryElementwiseBackwardYGradGpu<BinaryFunctor, T>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             n, tensor_x->dptr<T>(), tensor_y->dptr<T>(), tensor_dz->dptr<T>(),
             tensor_dy->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MATH_BINARY_ELEMENTWISE_GPU_KERNEL_AND_GRAD(math_type_pair, data_type_pair)    \
+#define REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_KERNEL_AND_GRAD(math_type_pair, data_type_pair)   \
   REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(math_type_pair))                                        \
       .SetCreateFn<                                                                             \
           MathBinaryElementwiseGpuKernel<OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor), \
                                          OF_PP_PAIR_FIRST(data_type_pair)>>()                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                       \
-                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)));  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair))); \
                                                                                                 \
   REGISTER_USER_KERNEL((std::string("") + OF_PP_PAIR_FIRST(math_type_pair) + "_x_grad"))        \
       .SetCreateFn<MathBinaryElementwiseXGradGpuKernel<                                         \
           OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor),                                \
           OF_PP_PAIR_FIRST(data_type_pair)>>()                                                  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                       \
-                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)));  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair))); \
   REGISTER_USER_KERNEL((std::string("") + OF_PP_PAIR_FIRST(math_type_pair) + "_y_grad"))        \
       .SetCreateFn<MathBinaryElementwiseYGradGpuKernel<                                         \
           OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor),                                \
           OF_PP_PAIR_FIRST(data_type_pair)>>()                                                  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                       \
-                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)));
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_ELEMENTWISE_GPU_KERNEL_AND_GRAD,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_KERNEL_AND_GRAD,
                                  MATH_BINARY_ELEMENTWISE_FUNC_SEQ, FLOATING_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_KERNEL_AND_GRAD,
+                                 OF_PP_MAKE_TUPLE_SEQ("floordiv", FloorDiv),
+                                 INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
 
 template<template<typename> class BinaryFunctor>
 class MathBinaryElementwiseGpuHalfKernel final : public user_op::OpKernel {
@@ -134,6 +147,7 @@ class MathBinaryElementwiseGpuHalfKernel final : public user_op::OpKernel {
   ~MathBinaryElementwiseGpuHalfKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -143,9 +157,10 @@ class MathBinaryElementwiseGpuHalfKernel final : public user_op::OpKernel {
     half* z = reinterpret_cast<half*>(tensor_z->mut_dptr<float16>());
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
+    if (n == 0) { return; }
     MathBinaryElementwiseForwardGpu<BinaryFunctor, half>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
-            n, x, y, z);
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, y, z);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -157,6 +172,7 @@ class MathBinaryElementwiseXGradGpuHalfKernel final : public user_op::OpKernel {
   ~MathBinaryElementwiseXGradGpuHalfKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -169,9 +185,10 @@ class MathBinaryElementwiseXGradGpuHalfKernel final : public user_op::OpKernel {
     half* dx = reinterpret_cast<half*>(tensor_dx->mut_dptr<float16>());
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
+    if (n == 0) { return; }
     MathBinaryElementwiseBackwardXGradGpu<BinaryFunctor, half>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
-            n, x, y, dz, dx);
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, y, dz, dx);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -183,6 +200,7 @@ class MathBinaryElementwiseYGradGpuHalfKernel final : public user_op::OpKernel {
   ~MathBinaryElementwiseYGradGpuHalfKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -195,31 +213,33 @@ class MathBinaryElementwiseYGradGpuHalfKernel final : public user_op::OpKernel {
     half* dy = reinterpret_cast<half*>(tensor_dy->mut_dptr<float16>());
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
+    if (n == 0) { return; }
     MathBinaryElementwiseBackwardYGradGpu<BinaryFunctor, half>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
-            n, x, y, dz, dy);
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, y, dz, dy);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MATH_BINARY_ELEMENTWISE_GPU_HALF_KERNEL_AND_GRAD(math_type_str, math_func_prefix) \
-  REGISTER_USER_KERNEL(math_type_str)                                                              \
-      .SetCreateFn<MathBinaryElementwiseGpuHalfKernel<OF_PP_CAT(math_func_prefix, Functor)>>()     \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                          \
-                       & (user_op::HobDataType("x", 0) == DataType::kFloat16));                    \
-                                                                                                   \
-  REGISTER_USER_KERNEL((std::string("") + math_type_str + "_x_grad"))                              \
-      .SetCreateFn<                                                                                \
-          MathBinaryElementwiseXGradGpuHalfKernel<OF_PP_CAT(math_func_prefix, Functor)>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                          \
-                       & (user_op::HobDataType("x", 0) == DataType::kFloat16));                    \
-  REGISTER_USER_KERNEL((std::string("") + math_type_str + "_y_grad"))                              \
-      .SetCreateFn<                                                                                \
-          MathBinaryElementwiseYGradGpuHalfKernel<OF_PP_CAT(math_func_prefix, Functor)>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                          \
-                       & (user_op::HobDataType("x", 0) == DataType::kFloat16));
+#define REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_HALF_KERNEL_AND_GRAD(math_type_str,              \
+                                                                   math_func_prefix)           \
+  REGISTER_USER_KERNEL(math_type_str)                                                          \
+      .SetCreateFn<MathBinaryElementwiseGpuHalfKernel<OF_PP_CAT(math_func_prefix, Functor)>>() \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                         \
+                       && (user_op::HobDataType("x", 0) == DataType::kFloat16));               \
+                                                                                               \
+  REGISTER_USER_KERNEL((std::string("") + math_type_str + "_x_grad"))                          \
+      .SetCreateFn<                                                                            \
+          MathBinaryElementwiseXGradGpuHalfKernel<OF_PP_CAT(math_func_prefix, Functor)>>()     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                         \
+                       && (user_op::HobDataType("x", 0) == DataType::kFloat16));               \
+  REGISTER_USER_KERNEL((std::string("") + math_type_str + "_y_grad"))                          \
+      .SetCreateFn<                                                                            \
+          MathBinaryElementwiseYGradGpuHalfKernel<OF_PP_CAT(math_func_prefix, Functor)>>()     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                         \
+                       && (user_op::HobDataType("x", 0) == DataType::kFloat16));
 
-OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_ELEMENTWISE_GPU_HALF_KERNEL_AND_GRAD,
+OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_HALF_KERNEL_AND_GRAD,
                      MATH_BINARY_ELEMENTWISE_FUNC_SEQ)
 
 }  // namespace oneflow

@@ -15,28 +15,34 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/ep/include/primitive/memset.h"
 
 namespace oneflow {
 
-template<DeviceType device_type>
-class BoxingZerosKernel final : public KernelIf<device_type> {
+class BoxingZerosKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingZerosKernel);
   BoxingZerosKernel() = default;
   ~BoxingZerosKernel() override = default;
 
  private:
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void VirtualKernelInit(KernelContext* ctx) override;
+  void ForwardDataContent(KernelContext* ctx) const override;
+
+  std::unique_ptr<ep::primitive::Memset> primitive_;
 };
 
-template<DeviceType device_type>
-void BoxingZerosKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* out = BnInOp2Blob("out");
-  Memset<device_type>(ctx.device_ctx, out->mut_dptr(), 0, out->ByteSizeOfBlobBody());
+void BoxingZerosKernel::VirtualKernelInit(KernelContext* ctx) {
+  primitive_ =
+      ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(this->op_conf().device_tag());
+  CHECK(primitive_);
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kBoxingZerosConf, BoxingZerosKernel);
+void BoxingZerosKernel::ForwardDataContent(KernelContext* ctx) const {
+  Blob* out = ctx->BnInOp2Blob("out");
+  primitive_->Launch(ctx->stream(), out->mut_dptr(), 0, out->ByteSizeOfBlobBody());
+}
+
+REGISTER_KERNEL(OperatorConf::kBoxingZerosConf, BoxingZerosKernel);
 
 }  // namespace oneflow

@@ -113,13 +113,11 @@ void OpArgParallelAttribute::Assign(const std::shared_ptr<OpArgParallelAttribute
 
 void OpArgParallelAttribute::DumpToInterfaceBlobConf(
     std::shared_ptr<cfg::InterfaceBlobConf> interface_blob_conf) const {
-  interface_blob_conf->mutable_parallel_distribution()->clear_sbp_parallel();
+  interface_blob_conf->mutable_nd_sbp()->clear_sbp_parallel();
   if (sbp_parallel_->has_split_parallel()) {
-    *interface_blob_conf->mutable_parallel_distribution()->add_sbp_parallel() = *sbp_parallel_;
+    *interface_blob_conf->mutable_nd_sbp()->add_sbp_parallel() = *sbp_parallel_;
   } else {
-    interface_blob_conf->mutable_parallel_distribution()
-        ->add_sbp_parallel()
-        ->mutable_broadcast_parallel();
+    interface_blob_conf->mutable_nd_sbp()->add_sbp_parallel()->mutable_broadcast_parallel();
   }
 }
 

@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include <cub/cub.cuh>
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
@@ -89,6 +90,7 @@ class GpuL2NormalizeKernel final : public user_op::OpKernel {
   ~GpuL2NormalizeKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -98,19 +100,19 @@ class GpuL2NormalizeKernel final : public user_op::OpKernel {
     int32_t c = x->shape().At(axis);
     int32_t n = x->shape().elem_cnt() / c;
     int32_t d = x->shape().Count(axis + 1);
-    RUN_CUDA_KERNEL((L2NormalizeForward<T>), ctx->device_ctx(), n, n, c, d, static_cast<T>(epsilon),
+    RUN_CUDA_KERNEL((L2NormalizeForward<T>), ctx->stream(), n, n, c, d, static_cast<T>(epsilon),
                     x->dptr<T>(), square_x_sum->mut_dptr<T>(), y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_L2_NORMALIZE_KERNEL(dtype)           \
-  REGISTER_USER_KERNEL("l2_normalize")                    \
-      .SetCreateFn<GpuL2NormalizeKernel<dtype>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+#define REGISTER_CUDA_L2_NORMALIZE_KERNEL(dtype)                       \
+  REGISTER_USER_KERNEL("l2_normalize")                                 \
+      .SetCreateFn<GpuL2NormalizeKernel<dtype>>()                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_L2_NORMALIZE_KERNEL(float)
+REGISTER_CUDA_L2_NORMALIZE_KERNEL(float)
 
 template<typename T>
 class GpuL2NormalizeGradKernel final : public user_op::OpKernel {
@@ -119,6 +121,7 @@ class GpuL2NormalizeGradKernel final : public user_op::OpKernel {
   ~GpuL2NormalizeGradKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -129,19 +132,18 @@ class GpuL2NormalizeGradKernel final : public user_op::OpKernel {
     int32_t c = dy->shape().At(axis);
     int32_t n = dy->shape().elem_cnt() / c;
     int32_t d = dy->shape().Count(axis + 1);
-    RUN_CUDA_KERNEL((L2NormalizeBackward<T>), ctx->device_ctx(), n, n, c, d,
-                    static_cast<T>(epsilon), y->dptr<T>(), dy->dptr<T>(), square_x_sum->dptr<T>(),
-                    dx->mut_dptr<T>());
+    RUN_CUDA_KERNEL((L2NormalizeBackward<T>), ctx->stream(), n, n, c, d, static_cast<T>(epsilon),
+                    y->dptr<T>(), dy->dptr<T>(), square_x_sum->dptr<T>(), dx->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_L2_NORMALIZE_GRAD_KERNEL(dtype)      \
-  REGISTER_USER_KERNEL("l2_normalize_grad")               \
-      .SetCreateFn<GpuL2NormalizeGradKernel<dtype>>()     \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_CUDA_L2_NORMALIZE_GRAD_KERNEL(dtype)                  \
+  REGISTER_USER_KERNEL("l2_normalize_grad")                            \
+      .SetCreateFn<GpuL2NormalizeGradKernel<dtype>>()                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_L2_NORMALIZE_GRAD_KERNEL(float)
+REGISTER_CUDA_L2_NORMALIZE_GRAD_KERNEL(float)
 
 }  // namespace oneflow

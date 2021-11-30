@@ -83,7 +83,7 @@ int32_t UserOpConfWrapper::output_size(const std::string& arg_name) const {
 const std::shared_ptr<const AttrVal>& UserOpConfWrapper::Attr4Name(
     const std::string& attr_name) const {
   const auto& attr = attrs_.Attr4Name(attr_name);
-  CHECK_NOTNULL(attr.get());
+  CHECK(attr.get() != nullptr) << "attr_name: " << attr_name;
   return attr;
 }
 
@@ -184,7 +184,9 @@ void UserOpWrapper::InputGradBind(const user_op::OpArg& input,
 
 UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::InputBind(
     const std::string& arg_name, const std::string& logical_blob_name) {
-  input_[arg_name].push_back(logical_blob_name);
+  if (input_.find(arg_name) == input_.end()) { input_order_.emplace_back(arg_name); }
+  input_[arg_name].emplace_back(logical_blob_name);
+  CHECK_EQ(input_.size(), input_order_.size());
   return *this;
 }
 
@@ -200,11 +202,13 @@ UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Output(const std::string& ar
 UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Output(const std::string& arg_name,
                                                            int32_t num) {
   CHECK(num >= 0);
+  if (output_.find(arg_name) == output_.end()) { output_order_.emplace_back(arg_name); }
   output_[arg_name].resize(num);
   for (int32_t i = 0; i < num; ++i) {
     std::string bn = GenRepeatedBn(arg_name, i);
     output_[arg_name].at(i) = GenLogicalBlobName(op_name_, bn);
   }
+  CHECK_EQ(output_.size(), output_order_.size());
   return *this;
 }
 
@@ -227,6 +231,8 @@ UserOpConfWrapper UserOpConfWrapperBuilder::Build() {
   };
   GenArgs(input_, user_conf->mutable_input());
   GenArgs(output_, user_conf->mutable_output());
+  for (const auto& arg_name : input_order_) { user_conf->add_input_order(arg_name); }
+  for (const auto& arg_name : output_order_) { user_conf->add_output_order(arg_name); }
   for (const auto& pair : attr_) { (*user_conf->mutable_attr())[pair.first] = pair.second; }
   wrapper_ = UserOpConfWrapper(*CHECK_JUST(CheckAndCompleteUserOpConfImpl(op_conf)));
   return wrapper_;
@@ -249,12 +255,11 @@ UserOpConfWrapper& BackwardOpConfContext::GetOp(const std::string& op_name) {
     CHECK(fn_it != op_builder_fns_.end()) << " op_name " << op_name << " has no builder function.";
     CHECK(fn_it->second != nullptr) << " op_name " << op_name << " builder function is null.";
     UserOpConfWrapperBuilder builder(op_name);
-    auto ret =
-        op_builder_results_.emplace(std::make_pair(op_name, std::move(fn_it->second(builder))));
+    auto ret = op_builder_results_.emplace(std::make_pair(op_name, fn_it->second(builder)));
     CHECK(ret.second == true) << " op_name " << op_name << " build result insert failed.";
 
     // add new op conf
-    bw_op_confs_->push_back(ret.first->second.op_conf());
+    bw_op_confs_->emplace_back(ret.first->second.op_conf());
 
     return ret.first->second;
   }
@@ -295,14 +300,29 @@ Maybe<void> CheckArgDefIsValidInUserOpConf(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AddAttrDefaultValueAndCheckValid(const UserOpDef& op_def, OperatorConf* op_conf) {
-  UserOpConf* user_conf = op_conf->mutable_user_conf();
+Maybe<void> CheckUserOpConfArgOrderValid(
+    const OperatorConf& op_conf, const PbMap<std::string, UserOpConf_ListString>& arg_name2lbns,
+    const PbRpf<std::string>& arg_order) {
+  CHECK_EQ_OR_RETURN(arg_name2lbns.size(), arg_order.size())
+      << " op_conf: " << op_conf.DebugString() << " io order is not valid.";
+  HashSet<std::string> arg_names;
+  for (const std::string& arg_name : arg_order) {
+    CHECK_OR_RETURN(arg_names.insert(arg_name).second)
+        << " op_conf: " << op_conf.DebugString() << " io order is not valid.";
+    CHECK_OR_RETURN(arg_name2lbns.find(arg_name) != arg_name2lbns.end())
+        << " op_conf: " << op_conf.DebugString() << " io order is not valid.";
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> AddAttrDefaultValueAndCheckValid(const UserOpDef& op_def, UserOpConf* user_conf,
+                                             const std::string& error_msg_prefix) {
   auto* attr_name2attr = user_conf->mutable_attr();
   HashSet<std::string> op_def_attr_names;
   for (const auto& attr : op_def.attr()) {
     if (attr_name2attr->find(attr.name()) == attr_name2attr->end()) {
       CHECK_OR_RETURN(attr.has_default_val())
-          << " op_name: " << op_conf->name() << " op_type_name: " << user_conf->op_type_name()
+          << error_msg_prefix << " op_type_name: " << user_conf->op_type_name()
           << " must set attr val for attr_name: " << attr.name();
       (*attr_name2attr)[attr.name()] = attr.default_val();
     }
@@ -310,18 +330,32 @@ Maybe<void> AddAttrDefaultValueAndCheckValid(const UserOpDef& op_def, OperatorCo
   }
   for (const auto& pair : user_conf->attr()) {
     CHECK_OR_RETURN(op_def_attr_names.find(pair.first) != op_def_attr_names.end())
-        << " op_name: " << op_conf->name() << " op_type_name: " << user_conf->op_type_name()
+        << error_msg_prefix << " op_type_name: " << user_conf->op_type_name()
         << " has not attr_name: " << pair.first << " in OpDef";
   }
   for (const auto& attr : op_def.attr()) {
     CHECK_OR_RETURN(static_cast<int32_t>(attr.type())
                     == static_cast<int32_t>(attr_name2attr->at(attr.name()).value_case()))
-        << " op_name: " << op_conf->name() << " op_type_name: " << user_conf->op_type_name()
+        << error_msg_prefix << " op_type_name: " << user_conf->op_type_name()
         << " attr_name: " << attr.name()
         << " has different attr type in OpDef and OpConf, it should be with type: "
         << AttrType_Name(attr.type());
   }
   return Maybe<void>::Ok();
+}
+
+Maybe<void> AddAttrDefaultValueAndCheckValid(UserOpConf* user_conf) {
+  const user_op::OpRegistryResult* val =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(user_conf->op_type_name());
+  CHECK_OR_RETURN(val) << " Cannot find op_type_name: " << user_conf->op_type_name();
+  const UserOpDef& op_def = val->op_def;
+  return AddAttrDefaultValueAndCheckValid(op_def, user_conf, "");
+}
+
+Maybe<void> AddAttrDefaultValueAndCheckValid(const UserOpDef& op_def, OperatorConf* op_conf) {
+  UserOpConf* user_conf = op_conf->mutable_user_conf();
+  std::string error_msg_prefix = " op_name: " + op_conf->name();
+  return AddAttrDefaultValueAndCheckValid(op_def, user_conf, error_msg_prefix);
 }
 
 Maybe<void> AddUserOpConfOutputDefaultArg(const UserOpDef& op_def, OperatorConf* op_conf) {
@@ -333,8 +367,10 @@ Maybe<void> AddUserOpConfOutputDefaultArg(const UserOpDef& op_def, OperatorConf*
       for (int32_t i = 0; i < output_arg.num(); ++i) {
         std::string lbn = GenLogicalBlobName(op_conf->name(), GenRepeatedBn(output_arg.name(), i));
         (*(user_conf->mutable_output()))[output_arg.name()].add_s(lbn);
-        CHECK_EQ(i + 1, user_conf->output().at(output_arg.name()).s_size());
+        CHECK_EQ_OR_RETURN(i + 1, user_conf->output().at(output_arg.name()).s_size());
       }
+      user_conf->add_output_order(output_arg.name());
+      CHECK_EQ_OR_RETURN(user_conf->output().size(), user_conf->output_order().size());
     }
   }
   return Maybe<void>::Ok();
@@ -365,6 +401,8 @@ Maybe<OperatorConf> CheckAndCompleteUserOpConfImpl(const OperatorConf& op_conf) 
   // check input and output valid
   JUST(CheckArgDefIsValidInUserOpConf(op_conf, user_conf->input(), op_def.input()));
   JUST(CheckArgDefIsValidInUserOpConf(op_conf, user_conf->output(), op_def.output()));
+  JUST(CheckUserOpConfArgOrderValid(op_conf, user_conf->input(), user_conf->input_order()));
+  JUST(CheckUserOpConfArgOrderValid(op_conf, user_conf->output(), user_conf->output_order()));
   // check attr valid by user
   JUST(val->check_fn(user_op::UserOpDefWrapper(op_def), user_op::UserOpConfWrapper(ret)));
   return ret;

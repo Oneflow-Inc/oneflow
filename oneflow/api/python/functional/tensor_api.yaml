@@ -1,0 +1,38 @@
+# Copyright 2020 The OneFlow Authors. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+- name: "tensor"
+  signature: [
+    "Tensor (PyObject* data, *, DataType dtype=None, Device device=None,
+             Bool requires_grad=False) => TensorWithData",
+    "Tensor (PyObject* data, *, DataType dtype=None, Placement placement,
+             SbpList sbp, Bool requires_grad=False) => ConsistentTensorWithData",
+  ]
+  bind_python: True
+
+- name: "_legacy_tensor_ctor"
+  signature: [
+    "Tensor (*, Device device=None) => TensorEmptyCtor",
+    "Tensor (*, Placement placement, SbpList sbp) => ConsistentTensorEmptyCtor",
+    "Tensor (Tensor other) => TensorWithOtherCtor",
+    "Tensor (PyObject* data, *, Device device=None) => TensorWithDataCtor",
+    "Tensor (PyObject* data, *, Placement placement, SbpList sbp) => ConsistentTensorWithDataCtor",
+    "Tensor (Shape size, *, Device device=None) => TensorWithShapeCtor",
+    "Tensor (Shape size, *, Placement placement, SbpList sbp) => ConsistentTensorWithShapeCtor",
+  ]
+  bind_python: True
+
+- name: "assign_local_tensor"
+  signature: "Void (Tensor ref, Tensor value)=> AssignLocalTensorFunctor"
+  bind_python: True

@@ -124,7 +124,7 @@ class FoldSubgraphBuilder {
 
 FoldSubgraphBuilder::FoldSubgraphBuilder(const XrtGraph& graph, Job* job) : graph_(graph) {
   for (const XrtNode* node : graph_.Nodes()) {
-    if (node->type() == _XrtLaunchOpType) { launch_nodes_.push_back(node); }
+    if (node->type() == _XrtLaunchOpType) { launch_nodes_.emplace_back(node); }
   }
 
   folded_nodes_.resize(launch_nodes_.size());
@@ -132,7 +132,7 @@ FoldSubgraphBuilder::FoldSubgraphBuilder(const XrtGraph& graph, Job* job) : grap
     XrtGraph* sub_graph = launch_nodes_[i]->sub_graph();
     CHECK_NOTNULL(sub_graph);
     for (const XrtNode* sub_node : sub_graph->Nodes()) {
-      if (!sub_node->IsArgumentNode()) { folded_nodes_[i].push_back(sub_node); }
+      if (!sub_node->IsArgumentNode()) { folded_nodes_[i].emplace_back(sub_node); }
     }
   }
   builder_ = std::make_shared<JobBuilder>(job);
@@ -234,6 +234,7 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
       switch (engine) {
         case XrtEngine::XLA: return "XLA";
         case XrtEngine::TENSORRT: return "TENSORRT";
+        case XrtEngine::OPENVINO: return "OPENVINO";
         default: LOG(FATAL) << "Not supported engine " << engine; return "";
       }
     }());
@@ -311,7 +312,7 @@ void FoldSubgraphBuilder::FixupControlInOpNames() {
   };
 
   for (const XrtNode* node : graph_.Nodes()) {
-    auto* op_conf = builder_->MutableOpConf4OpName(node->name());
+    auto* op_conf = CHECK_JUST(builder_->MutableOpConf4OpName(node->name()));
     if (node->sub_graph() == nullptr) {
       auto ctrl_in_op_names = op_conf->ctrl_in_op_name();
       op_conf->clear_ctrl_in_op_name();
@@ -319,7 +320,7 @@ void FoldSubgraphBuilder::FixupControlInOpNames() {
     } else {
       for (const XrtNode* sub_node : node->sub_graph()->Nodes()) {
         if (sub_node->IsArgumentNode()) { continue; }
-        const auto& folded_op_conf = builder_->OpConf4OpName(sub_node->name());
+        const auto& folded_op_conf = CHECK_JUST(builder_->OpConf4OpName(sub_node->name()));
         for (const auto& op_name : folded_op_conf.ctrl_in_op_name()) {
           AddControlInOpName(op_conf, op_name);
         }
@@ -368,7 +369,7 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
       // Fix end input blob name
       const XrtNode* end = edge->end();
       if (end->type() != _XrtLaunchOpType) {
-        auto* op_conf = builder_->MutableOpConf4OpName(end->name());
+        auto* op_conf = CHECK_JUST(builder_->MutableOpConf4OpName(end->name()));
         const std::string& consume_key = arg.meta_data().consume_key;
         SetOpInputBlobName(op_conf, consume_key, arg.name(), fixed_blob_name);
       }
@@ -399,7 +400,7 @@ void FoldSubgraphBuilder::FixupSbpSignatures() {
     builder_->AddSbpSignature4OpName(node->name(), sbp_conf);
 
     // Add function node sbp signatures.
-    auto* op_conf = builder_->MutableOpConf4OpName(node->name());
+    auto* op_conf = CHECK_JUST(builder_->MutableOpConf4OpName(node->name()));
     auto* launch_conf = op_conf->mutable_xrt_launch_conf();
     auto* sbp_signatures = launch_conf->mutable_sbp_signatures();
     for (const auto& node_conf : launch_conf->function().node()) {

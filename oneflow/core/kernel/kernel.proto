@@ -11,11 +11,6 @@ message DecodeRandomKernelConf {
   required uint32 random_seed = 1;
 }
 
-message VariableKernelConf {
-  required bool is_fw_inplace = 1;
-  required bool is_bw_inplace = 2;
-}
-
 message ShapeElemCntKernelConf {
   repeated int32 axis = 1;
 }
@@ -43,7 +38,7 @@ message ImageDecoderRandomCropResizeKernelConf {
 
 message KernelConf {
   required DataType data_type = 2;
-  optional bool need_do_shape = 6 [default = false];
+  required bool all_blobs_are_static = 6;
   required DTypeSignature dtype_signature = 7;
   optional ParallelContext parallel_ctx = 8;
   optional OpAttribute op_attribute = 9;
@@ -55,7 +50,6 @@ message KernelConf {
     XrtLaunchKernelConf xrt_launch_conf = 353;
     SyncDynamicResizeKernelConf sync_dynamic_resize_conf = 360;
 
-    VariableKernelConf variable_conf = 407;
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
     BroadcastToCompatibleWithKernelConf broadcast_to_compatible_with_conf = 428;
     ImageDecoderRandomCropResizeKernelConf image_decoder_random_crop_resize_conf = 429;

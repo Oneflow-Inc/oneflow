@@ -32,10 +32,14 @@ def get_txt(path: str):
 
 
 def check_file(path):
-    with open(path) as f:
+    with open(path, "r", encoding="utf-8") as f:
         content = f.read()
         txt = get_txt(path)
-        if "import doctest" in content and "raise_on_error=True" not in content:
+        if (
+            "import doctest" in content
+            and "raise_on_error=True" not in content
+            and "doctest.DebugRunner" not in content
+        ):
             return ("please add 'doctest.testmod(raise_on_error=True)'", content)
         elif content.count("The OneFlow Authors. All rights reserved.") > 1:
             return ("license_duplicated", content)
@@ -70,12 +74,17 @@ def do_format(x):
     return (x, format_file(x))
 
 
-def glob_files(path):
+def glob_files(path: str = None, excludes=None):
     files = []
     for ext in ("**/*.cpp", "**/*.h", "**/*.hpp", "**/*.cu", "**/*.cuh", "**/*.py"):
         joined = os.path.join(path, ext)
         files.extend(glob.glob(joined, recursive=True))
-    files = [f for f in files if "version.py" not in f]
+    files = [
+        f
+        for f in files
+        if "version.py" not in f and all([not e in f for e in excludes])
+    ]
+    print("[files]", len(files))
     return files
 
 
@@ -85,14 +94,16 @@ if __name__ == "__main__":
     parser.add_argument(
         "-v", "--verbose", default=False, action="store_true", required=False
     )
+    parser.add_argument("--silent", default=False, action="store_true", required=False)
     parser.add_argument(
         "-c", "--check", default=False, action="store_true", required=False
     )
     parser.add_argument(
         "-f", "--fix", default=False, action="store_true", required=False
     )
+    parser.add_argument("--exclude", action="append", default=[])
     args = parser.parse_args()
-    files = glob_files(args.root_path)
+    files = glob_files(args.root_path, excludes=args.exclude)
     assert args.check != args.fix
     with Pool(10) as p:
         if args.check:
@@ -109,4 +120,5 @@ if __name__ == "__main__":
                     if args.verbose:
                         print("license already added:", p)
                 else:
-                    print("license just added:", p)
+                    if args.silent == False:
+                        print("license just added:", p)

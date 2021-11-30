@@ -55,8 +55,8 @@ class OFRecordImageClassificationReaderKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("ofrecord_image_classification_reader")
     .SetCreateFn<OFRecordImageClassificationReaderKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU)
-                     & (user_op::HobDataType("image", 0) == DataType::kTensorBuffer)
-                     & (user_op::HobDataType("label", 0) == DataType::kTensorBuffer));
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     && (user_op::HobDataType("image", 0) == DataType::kTensorBuffer)
+                     && (user_op::HobDataType("label", 0) == DataType::kTensorBuffer));
 
 }  // namespace oneflow

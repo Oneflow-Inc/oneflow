@@ -205,8 +205,9 @@ REGISTER_USER_OP("matmul")
     .SetDataTypeInferFn(InferDataType4Matmul);
 
 REGISTER_USER_OP_GRAD("matmul").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                          user_op::AddOpFn AddOp) {
-  return GenBackwardOpConf4Matmul("matmul", op, AddOp);
+                                                          user_op::AddOpFn AddOp) -> Maybe<void> {
+  GenBackwardOpConf4Matmul("matmul", op, AddOp);
+  return Maybe<void>::Ok();
 });
 
 REGISTER_USER_OP("batch_matmul")
@@ -233,8 +234,10 @@ REGISTER_USER_OP("batch_matmul")
     .SetDataTypeInferFn(InferDataType4Matmul);
 
 REGISTER_USER_OP_GRAD("batch_matmul")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
-      return GenBackwardOpConf4Matmul("batch_matmul", op, AddOp);
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
+      GenBackwardOpConf4Matmul("batch_matmul", op, AddOp);
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("broadcast_matmul")
@@ -272,7 +275,7 @@ REGISTER_USER_OP("broadcast_matmul")
         CHECK_EQ_OR_RETURN(k, b.shape().At(b.shape().NumAxes() - 1));
         n = b.shape().At(b.shape().NumAxes() - 2);
       }
-      out_dim_vec.push_back(n);
+      out_dim_vec.emplace_back(n);
       *out->mut_shape() = Shape(out_dim_vec);
 
       if (ctx->has_input("_add_to_output", 0)) {
@@ -407,11 +410,11 @@ REGISTER_USER_OP("broadcast_matmul_grad_b")
     });
 
 REGISTER_USER_OP_GRAD("broadcast_matmul")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> void {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       bool transpose_a = ctx->FwOp().attr<bool>("transpose_a");
       bool transpose_b = ctx->FwOp().attr<bool>("transpose_b");
       double alpha = ctx->FwOp().attr<double>("alpha");
-      CHECK(!transpose_a);
+      CHECK_OR_RETURN(!transpose_a);
 
       std::string a_grad_op_name = ctx->FwOp().op_name() + "_a_grad";
       ctx->DefineOp(a_grad_op_name,
@@ -453,6 +456,7 @@ REGISTER_USER_OP_GRAD("broadcast_matmul")
       ctx->FwOp().InputGradBind(user_op::OpArg("b", 0), [&]() -> const std::string& {
         return ctx->GetOp(b_grad_op_name).output("out", 0);
       });
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

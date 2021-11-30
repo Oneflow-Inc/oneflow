@@ -20,6 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 #define INSERT_CHECK(expr) CHECK(expr.second)
+#define INSERT_CHECK_OR_RETURN(expr) CHECK_OR_RETURN(expr.second)
 
 template<typename MapT, typename KeyT>
 bool IsKeyFound(const MapT& m, const KeyT& k) {
@@ -66,7 +67,7 @@ class OpConfCache {
   void Put(const OperatorConf& op_conf) { _op_confs_to_update[op_conf.name()] = op_conf; }
   std::vector<OperatorConf> op_confs() {
     std::vector<OperatorConf> ret;
-    for (const auto& x : _op_confs_to_update) { ret.push_back(x.second); }
+    for (const auto& x : _op_confs_to_update) { ret.emplace_back(x.second); }
     return ret;
   }
 };

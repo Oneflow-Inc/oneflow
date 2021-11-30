@@ -58,7 +58,8 @@ REGISTER_USER_OP("bias_add")
     });
 
 REGISTER_USER_OP_GRAD("bias_add")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("a", 0)) {
         op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("out", 0), "a", 0);
       }
@@ -67,7 +68,7 @@ REGISTER_USER_OP_GRAD("bias_add")
         const int32_t bias_add_axis = op.attr<int32_t>("axis");
         std::vector<int32_t> reduce_axes_vec;
         FOR_RANGE(int64_t, i, 0, num_axes) {
-          if (i != bias_add_axis) { reduce_axes_vec.push_back(i); }
+          if (i != bias_add_axis) { reduce_axes_vec.emplace_back(i); }
         }
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         auto grad_op = builder.Op("reduce_sum")
@@ -79,6 +80,7 @@ REGISTER_USER_OP_GRAD("bias_add")
         AddOp(grad_op);
         op.BindGradTensorWithOpInput(grad_op.output("output_tensor", 0), "b", 0);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

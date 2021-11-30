@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
-struct WaitAndSendIdsStatus final {
+struct WaitAndSendIdsStatus final : public KernelState {
   BufferStatus buffer_status_;
   int64_t in_id_;
   int64_t out_idx_;
@@ -29,15 +29,15 @@ struct WaitAndSendIdsStatus final {
 };
 
 template<typename T>
-class WaitAndSendIdsKernel final : public KernelIf<DeviceType::kCPU> {
+class WaitAndSendIdsKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(WaitAndSendIdsKernel);
   WaitAndSendIdsKernel() = default;
   ~WaitAndSendIdsKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void VirtualKernelInit(KernelContext* ctx) override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 }  // namespace oneflow

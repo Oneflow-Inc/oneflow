@@ -23,7 +23,7 @@ namespace oneflow {
 
 RuntimeBlobShapeInferHelper::RuntimeBlobShapeInferHelper(const OperatorConf& op_conf,
                                                          const KernelConf& kernel_conf,
-                                                         const JobDesc* job_desc) {
+                                                         const void* scope) {
   op_ = CHECK_JUST(ConstructOp(op_conf));
   const OpAttribute& op_attribute = kernel_conf.op_attribute();
   if (op_attribute.has_parallel_conf_signature()
@@ -55,7 +55,7 @@ RuntimeBlobShapeInferHelper::RuntimeBlobShapeInferHelper(const OperatorConf& op_
   if (kernel_conf.has_parallel_ctx()) {
     parallel_ctx_.reset(new ParallelContext(kernel_conf.parallel_ctx()));
   }
-  op_infer_cache_key_.job_desc = job_desc;
+  op_infer_cache_key_.scope = scope;
   op_infer_cache_key_.op_conf_sym = op_->GetOpConfWithoutOpNameAndLbn();
   op_infer_cache_key_.ibn_idx2shape_sym.resize(op_->input_bns().size());
   op_infer_cache_key_.dtype_signature_sym = SymbolOf(kernel_conf.dtype_signature());
@@ -84,7 +84,8 @@ BlobDesc* RuntimeBlobShapeInferHelper::BlobDesc4BnInOp(const std::string& bn_in_
   return it->second.get();
 }
 
-void RuntimeBlobShapeInferHelper::InferShape(std::function<Blob*(const std::string&)> BnInOp2Blob) {
+void RuntimeBlobShapeInferHelper::InferShape(
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
   UpdateInputBlobDescs7OpInferCacheKey(BnInOp2Blob);
   auto Infer = [&](const OpInferCacheKey& key) -> std::shared_ptr<const OpInferCacheValue> {
     auto CachedBlobDesc4BnInOp = WithResultCached([&](const std::string& bn_in_op) -> BlobDesc* {

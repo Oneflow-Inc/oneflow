@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -26,16 +26,14 @@ namespace one {
 
 namespace {
 
-struct PoolingInterpState : public OpExprInterpState {
+struct PoolingCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   size_t input_index;
   size_t output_index;
   size_t indice_index;
 
   std::string data_format;
-  std::string padding;
-  std::vector<int32_t> padding_before;
-  std::vector<int32_t> padding_after;
+  std::vector<int32_t> padding;
   std::vector<int32_t> kernel_size;
   std::vector<int32_t> stride;
   std::vector<int32_t> dilation;
@@ -43,13 +41,16 @@ struct PoolingInterpState : public OpExprInterpState {
   bool ceil_mode;
 };
 
-class PoolingNdGrad : public OpExprGradFunction<PoolingInterpState> {
+class PoolingNdGrad : public OpExprGradFunction<PoolingCaptureState> {
  public:
   virtual ~PoolingNdGrad() = default;
+
+  using OpExprGradFunction<PoolingCaptureState>::Init;
+
   Maybe<void> Init(const OpExpr& op, const std::string& mode);
-  Maybe<void> Capture(PoolingInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(PoolingCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const PoolingInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const PoolingCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -65,7 +66,7 @@ Maybe<void> PoolingNdGrad::Init(const OpExpr& op, const std::string& mode) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> PoolingNdGrad::Capture(PoolingInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> PoolingNdGrad::Capture(PoolingCaptureState* ctx, const TensorTuple& inputs,
                                    const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -76,9 +77,7 @@ Maybe<void> PoolingNdGrad::Capture(PoolingInterpState* ctx, const TensorTuple& i
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
-  ctx->padding = JUST(composed_attrs.GetAttr<std::string>("padding"));
-  ctx->padding_before = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding_before"));
-  ctx->padding_after = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding_after"));
+  ctx->padding = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding"));
   ctx->kernel_size = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("kernel_size"));
   ctx->stride = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("stride"));
   ctx->dilation = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("dilation"));
@@ -87,7 +86,7 @@ Maybe<void> PoolingNdGrad::Capture(PoolingInterpState* ctx, const TensorTuple& i
   return Maybe<void>::Ok();
 }
 
-Maybe<void> PoolingNdGrad::Apply(const PoolingInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> PoolingNdGrad::Apply(const PoolingCaptureState* ctx, const TensorTuple& out_grads,
                                  TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_LE_OR_RETURN(out_grads.size(), 2);
@@ -100,8 +99,7 @@ Maybe<void> PoolingNdGrad::Apply(const PoolingInterpState* ctx, const TensorTupl
   in_grads->resize(1);
   in_grads->at(0) = JUST(functional::PoolingNdGrad(
       input, output, indice, out_grads.at(0), mode_, ndims, ctx->data_format, ctx->padding,
-      ctx->padding_before, ctx->padding_after, ctx->kernel_size, ctx->stride, ctx->dilation,
-      ctx->return_indices, ctx->ceil_mode));
+      ctx->kernel_size, ctx->stride, ctx->dilation, ctx->return_indices, ctx->ceil_mode));
 
   return Maybe<void>::Ok();
 }
@@ -113,6 +111,7 @@ class MaxpoolNdGrad final : public PoolingNdGrad {
   Maybe<void> Init(const OpExpr& op) override { return PoolingNdGrad::Init(op, "max"); }
 };
 
+REGISTER_OP_EXPR_GRAD_FUNCTION("maxpool_1d", MaxpoolNdGrad);
 REGISTER_OP_EXPR_GRAD_FUNCTION("maxpool_2d", MaxpoolNdGrad);
 REGISTER_OP_EXPR_GRAD_FUNCTION("maxpool_3d", MaxpoolNdGrad);
 

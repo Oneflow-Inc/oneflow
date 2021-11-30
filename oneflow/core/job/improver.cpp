@@ -22,12 +22,10 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/sharable_mem_block_graph.h"
-#include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/blocking_counter.h"
 
@@ -104,46 +102,6 @@ std::function<void(int64_t, uint64_t)> MakeSetterSetPlanRegstNum(Plan* plan) {
   };
 }
 
-std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathDurations4RegstDescId(
-    const ChainActGraph& graph) {
-  auto regst_desc_id2consumer_id2duration =
-      std::make_shared<HashMap<int64_t, HashMap<int64_t, double>>>();
-  graph.ForEachRegstDescConsumerPathMeanDuration(
-      [&](int64_t regst_desc_id, int64_t consumer_actor_id, double time) {
-        (*regst_desc_id2consumer_id2duration)[regst_desc_id][consumer_actor_id] = time;
-      });
-  auto empty = std::make_shared<const HashMap<int64_t, double>>();
-  return [regst_desc_id2consumer_id2duration,
-          empty](int64_t regst_desc_id) -> const HashMap<int64_t, double>& {
-    const auto& it = regst_desc_id2consumer_id2duration->find(regst_desc_id);
-    if (it == regst_desc_id2consumer_id2duration->end()) {
-      return *empty;
-    } else {
-      return it->second;
-    }
-  };
-}
-
-std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4RegstDescId(
-    const ChainActGraph& graph) {
-  auto regst_desc_id2consumer_id2ii_scale =
-      std::make_shared<HashMap<int64_t, HashMap<int64_t, double>>>();
-  graph.ForEachRegstDescConsumerPathIIScale(
-      [&](int64_t regst_desc_id, int64_t consumer_actor_id, double ii_scale) {
-        (*regst_desc_id2consumer_id2ii_scale)[regst_desc_id][consumer_actor_id] = ii_scale;
-      });
-  auto empty = std::make_shared<const HashMap<int64_t, double>>();
-  return [regst_desc_id2consumer_id2ii_scale,
-          empty](int64_t regst_desc_id) -> const HashMap<int64_t, double>& {
-    const auto& it = regst_desc_id2consumer_id2ii_scale->find(regst_desc_id);
-    if (it == regst_desc_id2consumer_id2ii_scale->end()) {
-      return *empty;
-    } else {
-      return it->second;
-    }
-  };
-}
-
 void TryConnectWithMemSafeGuardCtrlRegstDesc(TaskProto* src_task_proto, TaskProto* dst_task_proto) {
   RegstDescProto* ctrl_regst_desc =
       FindOrCreateProducedCtrlRegstDesc(src_task_proto, "out_ctrl_shared_mem_safe_guard");
@@ -178,7 +136,7 @@ void CollectSinkTaskIds(const HashSet<int64_t>& task_ids,
   };
   sink_task_ids->clear();
   for (int64_t src_task_id : task_ids) {
-    if (!IsReachableToAnyOtherTask(src_task_id)) { sink_task_ids->push_back(src_task_id); }
+    if (!IsReachableToAnyOtherTask(src_task_id)) { sink_task_ids->emplace_back(src_task_id); }
   }
 }
 
@@ -286,7 +244,7 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
       mem_block.add_job_id(job_id);
       mem_block.set_machine_id(machine_id);
       *(mem_block.mutable_mem_case()) =
-          MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(regst_desc->mem_case());
+          MemoryCaseUtil::GetHostMemoryCaseForRegstSeparatedHeader(regst_desc->mem_case());
       mem_block.set_enable_reuse_mem(false);
       mem_block.set_mem_size(regst_separated_size);
       mem_block.set_thrd_id_hint(thrd_id);
@@ -372,7 +330,7 @@ void Improver::MakeMemZoneRegstDescs(const Plan& plan, MemZoneRegstDescs* mz2reg
   for (const auto& task : plan.task()) {
     for (const auto& pair : task.produced_regst_desc()) {
       int64_t mem_zone_id = GetMemoryZoneId(pair.second.mem_case());
-      mz2regst_desc->at(task.machine_id()).at(mem_zone_id).push_back(&pair.second);
+      mz2regst_desc->at(task.machine_id()).at(mem_zone_id).emplace_back(&pair.second);
     }
   }
 }
@@ -391,7 +349,7 @@ Maybe<void> Improver::CheckAllZoneNotOOM(
       if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
         MemZoneId mem_zone = DecodeMemZoneIdFromInt64(mem_zone_id);
         LOG(ERROR) << "machine_id: " << machine_id << ", mem_zone_id: " << mem_zone_id
-                   << ", is_gpu: " << (mem_zone.device_type() == DeviceType::kGPU ? "yes" : "no")
+                   << ", is_gpu: " << (mem_zone.device_type() == DeviceType::kCUDA ? "yes" : "no")
                    << ", CalcMemoryConsumed: " << calc;
       }
       if (calc >= available) {

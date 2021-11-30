@@ -29,8 +29,8 @@ class Buffer final {
   Buffer(size_t max_len) : max_len_(max_len), is_closed_(false) {}
   ~Buffer() = default;
 
-  BufferStatus Send(const T& item);
-  BufferStatus Receive(T* item);
+  BufferStatus Push(const T& item);
+  BufferStatus Pull(T* item);
   BufferStatus TryReceive(T* item);
   void Close();
 
@@ -43,7 +43,7 @@ class Buffer final {
 };
 
 template<typename T>
-BufferStatus Buffer<T>::Send(const T& item) {
+BufferStatus Buffer<T>::Push(const T& item) {
   std::unique_lock<std::mutex> lock(mutex_);
   cond_.wait(lock, [this]() { return queue_.size() < max_len_ || is_closed_; });
   if (is_closed_) { return kBufferStatusErrorClosed; }
@@ -53,7 +53,7 @@ BufferStatus Buffer<T>::Send(const T& item) {
 }
 
 template<typename T>
-BufferStatus Buffer<T>::Receive(T* item) {
+BufferStatus Buffer<T>::Pull(T* item) {
   std::unique_lock<std::mutex> lock(mutex_);
   cond_.wait(lock, [this]() { return (!queue_.empty()) || is_closed_; });
   if (queue_.empty()) { return kBufferStatusErrorClosed; }

@@ -19,19 +19,19 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct DotGradInterpState : public OpExprInterpState {
+struct DotCaptureState : public AutoGradCaptureState {
   bool x_requires_grad;
   bool y_requires_grad;
   size_t x_offset;
   size_t y_offset;
 };
 
-class DotGrad : public OpExprGradFunction<DotGradInterpState> {
+class DotGrad : public OpExprGradFunction<DotCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(DotGradInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+  Maybe<void> Capture(DotCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->x_requires_grad = inputs.at(0)->requires_grad();
@@ -41,23 +41,21 @@ class DotGrad : public OpExprGradFunction<DotGradInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const DotGradInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const DotCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(2);
-
     if (ctx->x_requires_grad) {
       const auto& x = ctx->SavedTensors().at(ctx->x_offset);
-      const auto& results = JUST(functional::ScalarMulByTensor(x, out_grads.at(0)));
+      const auto& results = JUST(functional::Mul(x, out_grads.at(0)));
       in_grads->at(0) = results;
     }
 
     if (ctx->y_requires_grad) {
       const auto& y = ctx->SavedTensors().at(ctx->y_offset);
-      const auto& results = JUST(functional::ScalarMulByTensor(y, out_grads.at(0)));
+      const auto& results = JUST(functional::Mul(y, out_grads.at(0)));
       in_grads->at(1) = results;
     }
-
     return Maybe<void>::Ok();
   }
 };

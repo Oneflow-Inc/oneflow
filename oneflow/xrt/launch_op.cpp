@@ -95,13 +95,12 @@ Maybe<void> XrtLaunchOp::InferOutBlobDescs(
     }
     auto options = xrt::CreateDefaultXrtPassOptions();
     DeviceType device_type = JUST(DeviceType4DeviceTag(op_conf().device_tag()));
-    auto graph = xrt::BuildXrtGraph(launch_conf.function(), device_type, GlobalJobDesc());
+    auto graph = xrt::BuildXrtGraph(launch_conf.function(), device_type);
     const ParallelDesc& op_parallel_desc = *JUST(GetOpParallelDesc());
     const xrt::util::PbMap<std::string, cfg::SbpSignature>* const_cfg_sbp_signatures_ptr =
         &cfg_sbp_signatures;
-    xrt::RunXrtPass("InferShape", graph.get(), options, &GlobalJobDesc(), parallel_ctx,
-                    &op_parallel_desc, const_cfg_sbp_signatures_ptr, &lbn2logical_blob_desc,
-                    &blob_descs);
+    xrt::RunXrtPass("InferShape", graph.get(), options, parallel_ctx, &op_parallel_desc,
+                    const_cfg_sbp_signatures_ptr, &lbn2logical_blob_desc, &blob_descs);
   }
 
   // Fetch output blob descs

@@ -14,15 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/square_sum_kernel_util.h"
+#include "oneflow/user/kernels/square_sum_kernel_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
 namespace user_op {
 
 template<DeviceType device_type, typename T>
-class SquareSumKernel final : public user_op::OpKernel {
+class SquareSumKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   SquareSumKernel() = default;
   ~SquareSumKernel() override = default;
@@ -32,7 +33,7 @@ class SquareSumKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
 
-    SquareSumKernelUtil<device_type, T>::SquareSum(ctx->device_ctx(), x->shape().elem_cnt(),
+    SquareSumKernelUtil<device_type, T>::SquareSum(ctx->stream(), x->shape().elem_cnt(),
                                                    x->dptr<T>(), y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -41,14 +42,14 @@ class SquareSumKernel final : public user_op::OpKernel {
 #define REGISTER_SQUARE_SUM_KERNEL(device, dtype)                      \
   REGISTER_USER_KERNEL("square_sum")                                   \
       .SetCreateFn<SquareSumKernel<device, OF_PP_PAIR_FIRST(dtype)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)             \
-                       & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype)));
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)            \
+                       && (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SQUARE_SUM_KERNEL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ)
 
 template<DeviceType device_type, typename T>
-class MultiSquareSumKernel final : public user_op::OpKernel {
+class MultiSquareSumKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   MultiSquareSumKernel() = default;
   ~MultiSquareSumKernel() override = default;
@@ -63,8 +64,7 @@ class MultiSquareSumKernel final : public user_op::OpKernel {
       params[i].ptr = x->dptr<T>();
     }
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    SquareSumKernelUtil<device_type, T>::MultiSquareSum(ctx->device_ctx(), params,
-                                                        y->mut_dptr<T>());
+    SquareSumKernelUtil<device_type, T>::MultiSquareSum(ctx->stream(), params, y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -72,8 +72,8 @@ class MultiSquareSumKernel final : public user_op::OpKernel {
 #define REGISTER_MULTI_SQUARE_SUM_KERNEL(device, dtype)                     \
   REGISTER_USER_KERNEL("multi_square_sum")                                  \
       .SetCreateFn<MultiSquareSumKernel<device, OF_PP_PAIR_FIRST(dtype)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                  \
-                       & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype)));
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                 \
+                       && (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MULTI_SQUARE_SUM_KERNEL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ)

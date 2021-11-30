@@ -21,17 +21,14 @@ limitations under the License.
 namespace oneflow {
 
 class Kernel;
-class KernelCtx;
+struct KernelContext;
 class Blob;
 
 namespace profiler {
 
-void TraceKernelForwardDataContentStart(
-    const Kernel*, const KernelCtx& ctx,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob);
+void TraceKernelForwardDataContentStart(KernelContext* kernel_ctx, const Kernel* kernel);
 
-void TraceKernelForwardDataContentEnd(const Kernel*, const KernelCtx& ctx,
-                                      const std::function<Blob*(const std::string&)>& BnInOp2Blob);
+void TraceKernelForwardDataContentEnd(KernelContext* kernel_ctx, const Kernel* kernel);
 
 }  // namespace profiler
 

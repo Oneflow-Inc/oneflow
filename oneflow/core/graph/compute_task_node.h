@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/graph/stream_index_getter_registry_manager.h"
 
 namespace oneflow {
 
@@ -29,13 +28,6 @@ class CompTaskNode : public TaskNode {
   CompTaskNode() = default;
   virtual ~CompTaskNode() = default;
 
-  virtual CudaWorkType GetCudaWorkType() const {
-#ifdef WITH_CUDA
-    return CudaWorkType::kCompute;
-#else
-    UNIMPLEMENTED();
-#endif
-  }
   virtual void ToProto(TaskProto*) const override;
 
   // parallel_ctx_

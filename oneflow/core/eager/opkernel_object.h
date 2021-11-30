@@ -24,7 +24,6 @@ limitations under the License.
 
 namespace oneflow {
 
-class KernelCtx;
 class Blob;
 class ParallelContext;
 
@@ -80,6 +79,39 @@ class OpKernelObject : public vm::Object {
   std::shared_ptr<user_op::OpKernelState> opkernel_state_;
 };
 
+class SystemOpKernelContext : public KernelContext {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SystemOpKernelContext);
+  explicit SystemOpKernelContext(DeviceCtx* device_ctx) : device_ctx_(device_ctx) {}
+  ~SystemOpKernelContext() = default;
+
+  ep::Stream* stream() const override {
+    CHECK(device_ctx_ != nullptr);
+    return device_ctx_->stream();
+  }
+
+  DeviceCtx* device_ctx() const override { return device_ctx_; }
+
+  Blob* BnInOp2Blob(const std::string& bn) const override { return bn_in_op2blob_fn_(bn); }
+
+  const std::shared_ptr<KernelState>& state() const override {
+    static const std::shared_ptr<KernelState> null_state;
+    return null_state;
+  }
+
+  void set_state(std::shared_ptr<KernelState> state) override { UNIMPLEMENTED(); }
+
+  void set_device_ctx(DeviceCtx* ctx) { device_ctx_ = ctx; }
+
+  void UpdateBnInOp2BlobFn(std::function<Blob*(const std::string&)> fn) {
+    bn_in_op2blob_fn_ = std::move(fn);
+  }
+
+ private:
+  DeviceCtx* device_ctx_;
+  std::function<Blob*(const std::string&)> bn_in_op2blob_fn_;
+};
+
 class SystemOpKernelObject : public vm::Object {
  public:
   SystemOpKernelObject(const SystemOpKernelObject&) = delete;
@@ -95,6 +127,8 @@ class SystemOpKernelObject : public vm::Object {
   const OperatorConf& op_conf() const { return op_conf_; }
 
   const Kernel& kernel() const { return *kernel_; }
+
+  SystemOpKernelContext* kernel_ctx() const { return kernel_ctx_.get(); }
 
   Maybe<void> ResetKernel(const OpNodeSignatureDesc& op_node_signature,
                           const ParallelContext* parallel_ctx,
@@ -115,6 +149,7 @@ class SystemOpKernelObject : public vm::Object {
   std::shared_ptr<const JobDesc> job_desc_;
   DeviceType device_type_;
   std::unique_ptr<const Kernel> kernel_;
+  std::unique_ptr<SystemOpKernelContext> kernel_ctx_;
 };
 
 }  // namespace vm

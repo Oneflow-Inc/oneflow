@@ -19,7 +19,7 @@ namespace oneflow {
 
 class DynamicReshapeOp final : public Operator {
  public:
-  Maybe<void> InitFromOpConf() {
+  Maybe<void> InitFromOpConf() override {
     CHECK(op_conf().has_dynamic_reshape_conf());
     EnrollInputBn("in");
     EnrollOutputBn("out")->set_const_inplace_ibn("in");
@@ -117,7 +117,7 @@ REGISTER_OP(OperatorConf::kDynamicReshapeConf, DynamicReshapeOp);
 
 class DynamicReshapeLikeOp final : public Operator {
  public:
-  Maybe<void> InitFromOpConf() {
+  Maybe<void> InitFromOpConf() override {
     CHECK(op_conf().has_dynamic_reshape_like_conf());
     EnrollInputBn("x");
     EnrollOutputBn("y");

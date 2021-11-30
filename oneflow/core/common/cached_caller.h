@@ -16,8 +16,13 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_CACHED_CALLER_H_
 #define ONEFLOW_CORE_COMMON_CACHED_CALLER_H_
 
+#include <list>
+#include <tuple>
+#include <thread>
 #include "oneflow/core/common/function_traits.h"
 #include "oneflow/core/common/hash_eq_trait_ptr.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/tuple_hash.h"
 
 namespace oneflow {
 

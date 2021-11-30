@@ -81,9 +81,9 @@ const ConfigDefBuidler<config_def_type>& ConfigDefBuidler<config_def_type>::List
   return *this;
 }
 
-template class ConfigDefBuidler<kEnvConfigDefType>;
-template class ConfigDefBuidler<kSessionConfigDefType>;
-template class ConfigDefBuidler<kFunctionConfigDefType>;
-template class ConfigDefBuidler<kScopeConfigDefType>;
+template struct ConfigDefBuidler<kEnvConfigDefType>;
+template struct ConfigDefBuidler<kSessionConfigDefType>;
+template struct ConfigDefBuidler<kFunctionConfigDefType>;
+template struct ConfigDefBuidler<kScopeConfigDefType>;
 
 }  // namespace oneflow

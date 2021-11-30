@@ -19,9 +19,23 @@ namespace oneflow {
 
 template<typename T, typename CondT>
 struct WhereKernelUtil<DeviceType::kCPU, T, CondT> {
-  static void Where(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond, const T* lhs,
+  static void Where(ep::Stream* stream, const int64_t elem_cnt, const CondT* cond, const T* lhs,
                     const T* rhs, T* out) {
     FOR_RANGE(int64_t, i, 0, elem_cnt) { out[i] = static_cast<bool>(cond[i]) ? lhs[i] : rhs[i]; }
+  }
+  static void WhereXScalar(ep::Stream* stream, const int64_t elem_cnt, const CondT* cond,
+                           const T x_scalar, const T* rhs, T* out) {
+    FOR_RANGE(int64_t, i, 0, elem_cnt) { out[i] = static_cast<bool>(cond[i]) ? x_scalar : rhs[i]; }
+  }
+  static void WhereYScalar(ep::Stream* stream, const int64_t elem_cnt, const CondT* cond,
+                           const T* lhs, const T y_scalar, T* out) {
+    FOR_RANGE(int64_t, i, 0, elem_cnt) { out[i] = static_cast<bool>(cond[i]) ? lhs[i] : y_scalar; }
+  }
+  static void WhereXYScalar(ep::Stream* stream, const int64_t elem_cnt, const CondT* cond,
+                            const T x_scalar, const T y_scalar, T* out) {
+    FOR_RANGE(int64_t, i, 0, elem_cnt) {
+      out[i] = static_cast<bool>(cond[i]) ? x_scalar : y_scalar;
+    }
   }
 };
 

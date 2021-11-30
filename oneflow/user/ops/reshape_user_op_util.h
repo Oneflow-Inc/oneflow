@@ -33,9 +33,8 @@ struct ReshapeUserOpUtil {
                                                    std::vector<user_op::OpArg> out_args,
                                                    const int64_t parallel_num,
                                                    user_op::UserOpSbpSignatureBuilder* builder);
-  static Maybe<void> InferParallelDistribution(user_op::InferParallelDistributionFnContext* ctx,
-                                               const Shape& logical_in_shape,
-                                               const Shape& logical_out_shape);
+  static Maybe<void> InferNdSbp(user_op::InferNdSbpFnContext* ctx, const Shape& logical_in_shape,
+                                const Shape& logical_out_shape);
 };
 }  // namespace oneflow
 

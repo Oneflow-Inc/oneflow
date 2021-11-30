@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/common/fixed_vector.h"
 #include "gtest/gtest.h"
 #include <functional>
+#include <algorithm>
 
 namespace oneflow {
 
@@ -305,7 +306,7 @@ TEST(fixed_vector, erase_1) {
 TEST(fixed_vector, push_back_0) {
   std::vector<int> vec{0, 1, 2, 3};
   FixedVec a{0, 1, 2};
-  a.push_back(3);
+  a.emplace_back(3);
   ASSERT_TRUE(std::equal(a.begin(), a.end(), vec.begin()));
 }
 
@@ -313,7 +314,7 @@ TEST(fixed_vector, push_back_1) {
   std::vector<int> vec{0, 1, 2, 3};
   FixedVec a{0, 1, 2};
   int three = 3;
-  a.push_back(std::move(three));
+  a.emplace_back(std::move(three));
   ASSERT_TRUE(std::equal(a.begin(), a.end(), vec.begin()));
 }
 

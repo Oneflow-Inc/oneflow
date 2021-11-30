@@ -20,6 +20,8 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -109,6 +111,7 @@ class CudnnTensorDescHelper final {
   cudnnTensorDescriptor_t param_desc() const { return param_desc_; }
 
   void CheckParamTensor(const user_op::Tensor* tensor) const {
+    CHECK_NOTNULL(tensor);
     CHECK_EQ(tensor->shape().NumAxes(), 1);
     CHECK_EQ(tensor->shape().At(0), param_size_);
     CHECK_EQ(GetCudnnDataType(tensor->data_type()), param_data_type_);
@@ -172,12 +175,14 @@ size_t InferGradTmpSize(user_op::InferContext* ctx) {
 }
 
 template<typename T>
-class NormalizationInferenceKernel final : public user_op::OpKernel {
+class NormalizationInferenceKernel final : public user_op::OpKernel,
+                                           public user_op::CudaGraphSupport {
  public:
   NormalizationInferenceKernel() = default;
   ~NormalizationInferenceKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const bool training = ctx->Attr<bool>("training");
     CHECK(!training);
@@ -208,8 +213,8 @@ class NormalizationInferenceKernel final : public user_op::OpKernel {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), y->data_type());
       CHECK_EQ(add_to_output->shape(), y->shape());
-      Memcpy<DeviceType::kGPU>(
-          ctx->device_ctx(), y->mut_dptr<void>(), add_to_output->dptr<void>(),
+      Memcpy<DeviceType::kCUDA>(
+          ctx->stream(), y->mut_dptr<void>(), add_to_output->dptr<void>(),
           add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       sp_beta = CudnnSPOnePtr<T>();
     } else {
@@ -217,8 +222,8 @@ class NormalizationInferenceKernel final : public user_op::OpKernel {
     }
 
     OF_CUDNN_CHECK(cudnnBatchNormalizationForwardInference(
-        ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL, sp_alpha, sp_beta,
-        desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), y->mut_dptr(),
+        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL, sp_alpha,
+        sp_beta, desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), y->mut_dptr(),
         desc_helper.param_desc(), gamma->dptr(), beta->dptr(), moving_mean->dptr(),
         moving_variance->dptr(), epsilon));
   }
@@ -229,9 +234,9 @@ class NormalizationInferenceKernel final : public user_op::OpKernel {
 #define REGISTER_BN_INFERENCE_KERNEL(dtype)                                                     \
   REGISTER_USER_KERNEL("normalization")                                                         \
       .SetCreateFn<NormalizationInferenceKernel<dtype>>()                                       \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                       \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)            \
-                       & (user_op::HobAttr<bool>("training") == false))                         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)           \
+                       && (user_op::HobAttr<bool>("training") == false))                        \
       .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         if (ctx.has_input("_add_to_output", 0)) {                                               \
@@ -300,27 +305,27 @@ __global__ void AddReluGpu<half>(int64_t n, const half* x, const half* addend, h
 }
 
 template<typename T>
-void Relu(DeviceCtx* device_ctx, int64_t n, const T* x, T* y, int32_t* mask) {
-  ReluGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, device_ctx->cuda_stream()>>>(
-      n, x, y, mask);
+void Relu(ep::Stream* stream, int64_t n, const T* x, T* y, int32_t* mask) {
+  ReluGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+               stream->As<ep::CudaStream>()->cuda_stream()>>>(n, x, y, mask);
 }
 
 template<>
-void Relu<float16>(DeviceCtx* device_ctx, int64_t n, const float16* x, float16* y, int32_t* mask) {
-  Relu<half>(device_ctx, n, reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y), mask);
+void Relu<float16>(ep::Stream* stream, int64_t n, const float16* x, float16* y, int32_t* mask) {
+  Relu<half>(stream, n, reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y), mask);
 }
 
 template<typename T>
-void AddRelu(DeviceCtx* device_ctx, int64_t n, const T* x, const T* addend, T* y, int32_t* mask) {
-  AddReluGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, device_ctx->cuda_stream()>>>(
-      n, x, addend, y, mask);
+void AddRelu(ep::Stream* stream, int64_t n, const T* x, const T* addend, T* y, int32_t* mask) {
+  AddReluGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                  stream->As<ep::CudaStream>()->cuda_stream()>>>(n, x, addend, y, mask);
 }
 
 template<>
-void AddRelu<float16>(DeviceCtx* device_ctx, int64_t n, const float16* x, const float16* addend,
+void AddRelu<float16>(ep::Stream* stream, int64_t n, const float16* x, const float16* addend,
                       float16* y, int32_t* mask) {
-  AddRelu<half>(device_ctx, n, reinterpret_cast<const half*>(x),
-                reinterpret_cast<const half*>(addend), reinterpret_cast<half*>(y), mask);
+  AddRelu<half>(stream, n, reinterpret_cast<const half*>(x), reinterpret_cast<const half*>(addend),
+                reinterpret_cast<half*>(y), mask);
 }
 
 template<typename T>
@@ -334,55 +339,61 @@ __global__ void ReluBackwardGpu(int64_t n, const int32_t* mask, const T* dy, T* 
 }
 
 template<typename T>
-void ReluBackward(DeviceCtx* device_ctx, int64_t n, const int32_t* mask, const T* dy,
-                  T* addend_diff) {
-  ReluBackwardGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, device_ctx->cuda_stream()>>>(
-          n, mask, dy, addend_diff);
+void ReluBackward(ep::Stream* stream, int64_t n, const int32_t* mask, const T* dy, T* addend_diff) {
+  ReluBackwardGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                       stream->As<ep::CudaStream>()->cuda_stream()>>>(n, mask, dy, addend_diff);
 }
 
 template<>
-void ReluBackward<float16>(DeviceCtx* device_ctx, int64_t n, const int32_t* mask, const float16* dy,
+void ReluBackward<float16>(ep::Stream* stream, int64_t n, const int32_t* mask, const float16* dy,
                            float16* addend_diff) {
-  ReluBackward<half>(device_ctx, n, mask, reinterpret_cast<const half*>(dy),
+  ReluBackward<half>(stream, n, mask, reinterpret_cast<const half*>(dy),
                      reinterpret_cast<half*>(addend_diff));
 }
 
 template<typename T>
-class NormalizationTrainKernel final : public user_op::OpKernel {
+class NormalizationTrainKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   NormalizationTrainKernel() = default;
   ~NormalizationTrainKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     if (ctx->op_type_name() == "normalization") { CHECK(ctx->Attr<bool>("training")); }
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const auto* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
-    const auto* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
-    auto* moving_mean = ctx->Tensor4ArgNameAndIndex("moving_mean", 0);
-    auto* moving_variance = ctx->Tensor4ArgNameAndIndex("moving_variance", 0);
+
     const auto axis = ctx->Attr<int32_t>("axis");
     const auto epsilon = ctx->Attr<float>("epsilon");
     const auto momentum = ctx->Attr<float>("momentum");
-    auto* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
-    auto* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
 
     const DataType data_type = x->data_type();
     CHECK_EQ(x->shape(), y->shape());
     CHECK_EQ(y->data_type(), data_type);
     CHECK_GE(axis, 0);
     CHECK_LT(axis, x->shape().NumAxes());
-
     const CudnnTensorDescHelper desc_helper(x->shape(), data_type, axis,
                                             CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
+
+    const auto* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
+    const auto* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
+    auto* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
+    auto* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
     desc_helper.CheckParamTensor(gamma);
     desc_helper.CheckParamTensor(beta);
-    desc_helper.CheckParamTensor(moving_mean);
-    desc_helper.CheckParamTensor(moving_variance);
     desc_helper.CheckParamTensor(mean);
     desc_helper.CheckParamTensor(inv_variance);
+
+    user_op::Tensor* moving_mean = nullptr;
+    user_op::Tensor* moving_variance = nullptr;
+    if (ctx->has_input("moving_mean", 0)) {
+      CHECK(ctx->has_input("moving_variance", 0));
+      moving_mean = ctx->Tensor4ArgNameAndIndex("moving_mean", 0);
+      moving_variance = ctx->Tensor4ArgNameAndIndex("moving_variance", 0);
+      desc_helper.CheckParamTensor(moving_mean);
+      desc_helper.CheckParamTensor(moving_variance);
+    }
 
     const void* sp_alpha = CudnnSPOnePtr<T>();
     const void* sp_beta;
@@ -390,8 +401,8 @@ class NormalizationTrainKernel final : public user_op::OpKernel {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), y->data_type());
       CHECK_EQ(add_to_output->shape(), y->shape());
-      Memcpy<DeviceType::kGPU>(
-          ctx->device_ctx(), y->mut_dptr<void>(), add_to_output->dptr<void>(),
+      Memcpy<DeviceType::kCUDA>(
+          ctx->stream(), y->mut_dptr<void>(), add_to_output->dptr<void>(),
           add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       sp_beta = CudnnSPOnePtr<T>();
     } else {
@@ -401,36 +412,39 @@ class NormalizationTrainKernel final : public user_op::OpKernel {
 #if defined(BN_ENABLE_EX_API)
     size_t workspace_size;
     OF_CUDNN_CHECK(cudnnGetBatchNormalizationForwardTrainingExWorkspaceSize(
-        ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
+        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
         CUDNN_BATCHNORM_OPS_BN, desc_helper.xy_desc(), nullptr, desc_helper.xy_desc(),
         desc_helper.param_desc(), nullptr, &workspace_size));
     size_t reserve_space_size;
     OF_CUDNN_CHECK(cudnnGetBatchNormalizationTrainingExReserveSpaceSize(
-        ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
+        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
         CUDNN_BATCHNORM_OPS_BN, nullptr, desc_helper.xy_desc(), &reserve_space_size));
     auto* workspace = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     if (reserve_space_size == 0 && workspace_size <= workspace->shape().elem_cnt()) {
       OF_CUDNN_CHECK(cudnnBatchNormalizationForwardTrainingEx(
-          ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
+          ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
           CUDNN_BATCHNORM_OPS_BN, sp_alpha, sp_beta, desc_helper.xy_desc(), x->dptr(), nullptr,
           nullptr, desc_helper.xy_desc(), y->mut_dptr(), desc_helper.param_desc(), gamma->dptr(),
-          beta->dptr(), 1.0 - momentum, moving_mean->mut_dptr(), moving_variance->mut_dptr(),
-          epsilon, mean->mut_dptr(), inv_variance->mut_dptr(), nullptr, workspace->mut_dptr(),
-          workspace->shape().elem_cnt(), nullptr, 0));
+          beta->dptr(), 1.0 - momentum, moving_mean ? moving_mean->mut_dptr() : NULL,
+          moving_variance ? moving_variance->mut_dptr() : NULL, epsilon, mean->mut_dptr(),
+          inv_variance->mut_dptr(), nullptr, workspace->mut_dptr(), workspace->shape().elem_cnt(),
+          nullptr, 0));
     } else {
       OF_CUDNN_CHECK(cudnnBatchNormalizationForwardTraining(
-          ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT, sp_alpha, sp_beta,
-          desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), y->mut_dptr(),
+          ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
+          sp_alpha, sp_beta, desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), y->mut_dptr(),
           desc_helper.param_desc(), gamma->dptr(), beta->dptr(), 1.0 - momentum,
-          moving_mean->mut_dptr(), moving_variance->mut_dptr(), epsilon, mean->mut_dptr(),
+          moving_mean ? moving_mean->mut_dptr() : NULL,
+          moving_variance ? moving_variance->mut_dptr() : NULL, epsilon, mean->mut_dptr(),
           inv_variance->mut_dptr()));
     }
 #else
     OF_CUDNN_CHECK(cudnnBatchNormalizationForwardTraining(
-        ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT, sp_alpha, sp_beta,
-        desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), y->mut_dptr(),
+        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
+        sp_alpha, sp_beta, desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), y->mut_dptr(),
         desc_helper.param_desc(), gamma->dptr(), beta->dptr(), 1.0 - momentum,
-        moving_mean->mut_dptr(), moving_variance->mut_dptr(), epsilon, mean->mut_dptr(),
+        moving_mean ? moving_mean->mut_dptr() : NULL,
+        moving_variance ? moving_variance->mut_dptr() : NULL, epsilon, mean->mut_dptr(),
         inv_variance->mut_dptr()));
 #endif
 
@@ -440,11 +454,10 @@ class NormalizationTrainKernel final : public user_op::OpKernel {
       auto* mask = ctx->Tensor4ArgNameAndIndex("reserve_space", 0);
       if (ctx->has_input("addend", 0)) {
         const auto* addend = ctx->Tensor4ArgNameAndIndex("addend", 0);
-        AddRelu(ctx->device_ctx(), elem_cnt, y->dptr<T>(), addend->dptr<T>(), y->mut_dptr<T>(),
+        AddRelu(ctx->stream(), elem_cnt, y->dptr<T>(), addend->dptr<T>(), y->mut_dptr<T>(),
                 mask->mut_dptr<int32_t>());
       } else {
-        Relu(ctx->device_ctx(), elem_cnt, y->dptr<T>(), y->mut_dptr<T>(),
-             mask->mut_dptr<int32_t>());
+        Relu(ctx->stream(), elem_cnt, y->dptr<T>(), y->mut_dptr<T>(), mask->mut_dptr<int32_t>());
       }
     }
   }
@@ -455,9 +468,9 @@ class NormalizationTrainKernel final : public user_op::OpKernel {
 #define REGISTER_BN_TRAIN_KERNEL(dtype)                                                         \
   REGISTER_USER_KERNEL("normalization")                                                         \
       .SetCreateFn<NormalizationTrainKernel<dtype>>()                                           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                       \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)            \
-                       & (user_op::HobAttr<bool>("training") == true))                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)           \
+                       && (user_op::HobAttr<bool>("training") == true))                         \
       .SetInferTmpSizeFn(InferTrainTmpSize)                                                     \
       .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -471,11 +484,11 @@ REGISTER_BN_TRAIN_KERNEL(float16)
 REGISTER_BN_TRAIN_KERNEL(float)
 REGISTER_BN_TRAIN_KERNEL(double)
 
-#define REGISTER_BN_ADD_RELU_KERNEL(dtype)                                            \
-  REGISTER_USER_KERNEL("normalization_add_relu")                                      \
-      .SetCreateFn<NormalizationTrainKernel<dtype>>()                                 \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                             \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_BN_ADD_RELU_KERNEL(dtype)                                             \
+  REGISTER_USER_KERNEL("normalization_add_relu")                                       \
+      .SetCreateFn<NormalizationTrainKernel<dtype>>()                                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferTrainTmpSize);
 
 REGISTER_BN_ADD_RELU_KERNEL(float16)
@@ -483,12 +496,14 @@ REGISTER_BN_ADD_RELU_KERNEL(float)
 REGISTER_BN_ADD_RELU_KERNEL(double)
 
 template<typename T>
-class NormalizationGradUserKernel final : public user_op::OpKernel {
+class NormalizationGradUserKernel final : public user_op::OpKernel,
+                                          public user_op::CudaGraphSupport {
  public:
   NormalizationGradUserKernel() = default;
   ~NormalizationGradUserKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -532,7 +547,7 @@ class NormalizationGradUserKernel final : public user_op::OpKernel {
       user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
       if (ctx->has_output("addend_diff", 0)) {
         user_op::Tensor* addend_diff = ctx->Tensor4ArgNameAndIndex("addend_diff", 0);
-        ReluBackward(ctx->device_ctx(), elem_cnt, mask->dptr<int32_t>(), dy->dptr<T>(),
+        ReluBackward(ctx->stream(), elem_cnt, mask->dptr<int32_t>(), dy->dptr<T>(),
                      addend_diff->mut_dptr<T>());
         bn_workspace_ptr = tmp_buffer->mut_dptr();
         bn_workspace_size = tmp_buffer->shape().elem_cnt();
@@ -542,7 +557,7 @@ class NormalizationGradUserKernel final : public user_op::OpKernel {
         const size_t relu_dx_size =
             GetCudaAlignedSize(dy->shape().elem_cnt() * GetSizeOfDataType(dy->data_type()));
         CHECK_GE(tmp_buffer_size, relu_dx_size);
-        ReluBackward(ctx->device_ctx(), elem_cnt, mask->dptr<int32_t>(), dy->dptr<T>(),
+        ReluBackward(ctx->stream(), elem_cnt, mask->dptr<int32_t>(), dy->dptr<T>(),
                      reinterpret_cast<T*>(tmp_buffer->mut_dptr()));
         bn_workspace_ptr = tmp_buffer->mut_dptr<char>() + relu_dx_size;
         bn_workspace_size = tmp_buffer_size - relu_dx_size;
@@ -555,16 +570,16 @@ class NormalizationGradUserKernel final : public user_op::OpKernel {
 #if defined(BN_ENABLE_EX_API)
     size_t workspace_size;
     OF_CUDNN_CHECK(cudnnGetBatchNormalizationBackwardExWorkspaceSize(
-        ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
+        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
         CUDNN_BATCHNORM_OPS_BN, desc_helper.xy_desc(), nullptr, desc_helper.xy_desc(), nullptr,
         desc_helper.xy_desc(), desc_helper.param_desc(), nullptr, &workspace_size));
     size_t reserve_space_size;
     OF_CUDNN_CHECK(cudnnGetBatchNormalizationTrainingExReserveSpaceSize(
-        ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
+        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
         CUDNN_BATCHNORM_OPS_BN, nullptr, desc_helper.xy_desc(), &reserve_space_size));
     if (reserve_space_size == 0 && workspace_size <= bn_workspace_size) {
       OF_CUDNN_CHECK(cudnnBatchNormalizationBackwardEx(
-          ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
+          ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
           CUDNN_BATCHNORM_OPS_BN, CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(), CudnnSPOnePtr<T>(),
           CudnnSPZeroPtr<T>(), desc_helper.xy_desc(), x->dptr(), nullptr, nullptr,
           desc_helper.xy_desc(), bn_dy_ptr, nullptr, nullptr, desc_helper.xy_desc(), dx->mut_dptr(),
@@ -573,41 +588,41 @@ class NormalizationGradUserKernel final : public user_op::OpKernel {
           bn_workspace_ptr, bn_workspace_size, nullptr, 0));
     } else {
       OF_CUDNN_CHECK(cudnnBatchNormalizationBackward(
-          ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT, CudnnSPOnePtr<T>(),
-          CudnnSPZeroPtr<T>(), CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(), desc_helper.xy_desc(),
-          x->dptr(), desc_helper.xy_desc(), bn_dy_ptr, desc_helper.xy_desc(), dx->mut_dptr(),
-          desc_helper.param_desc(), gamma->dptr(), gamma_diff->mut_dptr(), beta_diff->mut_dptr(),
-          epsilon, mean->dptr(), inv_variance->dptr()));
+          ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
+          CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(), CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(),
+          desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), bn_dy_ptr, desc_helper.xy_desc(),
+          dx->mut_dptr(), desc_helper.param_desc(), gamma->dptr(), gamma_diff->mut_dptr(),
+          beta_diff->mut_dptr(), epsilon, mean->dptr(), inv_variance->dptr()));
     }
 #else
     OF_CUDNN_CHECK(cudnnBatchNormalizationBackward(
-        ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT, CudnnSPOnePtr<T>(),
-        CudnnSPZeroPtr<T>(), CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(), desc_helper.xy_desc(),
-        x->dptr(), desc_helper.xy_desc(), bn_dy_ptr, desc_helper.xy_desc(), dx->mut_dptr(),
-        desc_helper.param_desc(), gamma->dptr(), gamma_diff->mut_dptr(), beta_diff->mut_dptr(),
-        epsilon, mean->dptr(), inv_variance->dptr()));
+        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
+        CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(), CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(),
+        desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), bn_dy_ptr, desc_helper.xy_desc(),
+        dx->mut_dptr(), desc_helper.param_desc(), gamma->dptr(), gamma_diff->mut_dptr(),
+        beta_diff->mut_dptr(), epsilon, mean->dptr(), inv_variance->dptr()));
 #endif
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_BN_GRAD_KERNEL(dtype)                                                 \
-  REGISTER_USER_KERNEL("normalization_grad")                                           \
-      .SetCreateFn<NormalizationGradUserKernel<dtype>>()                               \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_BN_GRAD_KERNEL(dtype)                                                  \
+  REGISTER_USER_KERNEL("normalization_grad")                                            \
+      .SetCreateFn<NormalizationGradUserKernel<dtype>>()                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferGradTmpSize);
 
 REGISTER_BN_GRAD_KERNEL(float16)
 REGISTER_BN_GRAD_KERNEL(float)
 REGISTER_BN_GRAD_KERNEL(double)
 
-#define REGISTER_BN_ADD_RELU_GRAD_KERNEL(dtype)                                        \
-  REGISTER_USER_KERNEL("normalization_add_relu_grad")                                  \
-      .SetCreateFn<NormalizationGradUserKernel<dtype>>()                               \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_BN_ADD_RELU_GRAD_KERNEL(dtype)                                         \
+  REGISTER_USER_KERNEL("normalization_add_relu_grad")                                   \
+      .SetCreateFn<NormalizationGradUserKernel<dtype>>()                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferGradTmpSize);
 
 REGISTER_BN_ADD_RELU_GRAD_KERNEL(float16)
@@ -664,12 +679,14 @@ size_t InferFusedNormalizationAddReluGradTmpSize(user_op::InferContext* ctx) {
 }
 
 template<typename T>
-class FusedNormalizationAddReluKernel final : public user_op::OpKernel {
+class FusedNormalizationAddReluKernel final : public user_op::OpKernel,
+                                              public user_op::CudaGraphSupport {
  public:
   FusedNormalizationAddReluKernel() = default;
   ~FusedNormalizationAddReluKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -716,23 +733,23 @@ class FusedNormalizationAddReluKernel final : public user_op::OpKernel {
 
     size_t min_workspace_size;
     OF_CUDNN_CHECK(cudnnGetBatchNormalizationForwardTrainingExWorkspaceSize(
-        ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT, ops,
-        desc_helper.xy_desc(), z_desc, desc_helper.xy_desc(), desc_helper.param_desc(),
+        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
+        ops, desc_helper.xy_desc(), z_desc, desc_helper.xy_desc(), desc_helper.param_desc(),
         activation_desc.Get(), &min_workspace_size));
     const size_t workspace_size = tmp_buffer->shape().elem_cnt();
     CHECK_GE(workspace_size, min_workspace_size);
     size_t min_reserve_space_size;
     OF_CUDNN_CHECK(cudnnGetBatchNormalizationTrainingExReserveSpaceSize(
-        ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT, ops,
-        activation_desc.Get(), desc_helper.xy_desc(), &min_reserve_space_size));
+        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
+        ops, activation_desc.Get(), desc_helper.xy_desc(), &min_reserve_space_size));
     const size_t reserve_space_size = reserve_space->shape().elem_cnt();
     CHECK_GE(reserve_space_size, min_reserve_space_size);
 
     OF_CUDNN_CHECK(cudnnBatchNormalizationForwardTrainingEx(
-        ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT, ops,
-        CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(), desc_helper.xy_desc(), x->dptr(), z_desc, z_ptr,
-        desc_helper.xy_desc(), y->mut_dptr(), desc_helper.param_desc(), gamma->dptr(), beta->dptr(),
-        1.0 - momentum, moving_mean->mut_dptr(), moving_variance->mut_dptr(), epsilon,
+        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
+        ops, CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(), desc_helper.xy_desc(), x->dptr(), z_desc,
+        z_ptr, desc_helper.xy_desc(), y->mut_dptr(), desc_helper.param_desc(), gamma->dptr(),
+        beta->dptr(), 1.0 - momentum, moving_mean->mut_dptr(), moving_variance->mut_dptr(), epsilon,
         mean->mut_dptr(), inv_variance->mut_dptr(), activation_desc.Get(), tmp_buffer->mut_dptr(),
         workspace_size, reserve_space->mut_dptr(), reserve_space_size));
   }
@@ -740,22 +757,24 @@ class FusedNormalizationAddReluKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_BN_ADD_RELU_KERNEL(dtype)                                      \
-  REGISTER_USER_KERNEL("cudnn_fused_normalization_add_relu")                          \
-      .SetCreateFn<FusedNormalizationAddReluKernel<dtype>>()                          \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                             \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_FUSED_BN_ADD_RELU_KERNEL(dtype)                                       \
+  REGISTER_USER_KERNEL("cudnn_fused_normalization_add_relu")                           \
+      .SetCreateFn<FusedNormalizationAddReluKernel<dtype>>()                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferFusedNormalizationAddReluTmpSize);
 
 REGISTER_FUSED_BN_ADD_RELU_KERNEL(float16)
 
 template<typename T>
-class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel {
+class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel,
+                                                      public user_op::CudaGraphSupport {
  public:
   FusedNormalizationAddReluGradUserKernel() = default;
   ~FusedNormalizationAddReluGradUserKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const auto* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -805,21 +824,21 @@ class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel {
 
     size_t min_workspace_size;
     OF_CUDNN_CHECK(cudnnGetBatchNormalizationBackwardExWorkspaceSize(
-        ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT, ops,
-        desc_helper.xy_desc(), desc_helper.xy_desc(), desc_helper.xy_desc(), dz_desc,
+        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
+        ops, desc_helper.xy_desc(), desc_helper.xy_desc(), desc_helper.xy_desc(), dz_desc,
         desc_helper.xy_desc(), desc_helper.param_desc(), activation_desc.Get(),
         &min_workspace_size));
     const size_t workspace_size = tmp_buffer->shape().elem_cnt();
     CHECK_GE(workspace_size, min_workspace_size);
     size_t min_reserve_space_size;
     OF_CUDNN_CHECK(cudnnGetBatchNormalizationTrainingExReserveSpaceSize(
-        ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT, ops,
-        activation_desc.Get(), desc_helper.xy_desc(), &min_reserve_space_size));
+        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
+        ops, activation_desc.Get(), desc_helper.xy_desc(), &min_reserve_space_size));
     const size_t reserve_space_size = reserve_space->shape().elem_cnt();
     CHECK_GE(reserve_space_size, min_reserve_space_size);
     OF_CUDNN_CHECK(cudnnBatchNormalizationBackwardEx(
-        ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT, ops,
-        CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(), CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(),
+        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
+        ops, CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(), CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(),
         desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), y->dptr(), desc_helper.xy_desc(),
         dy->dptr(), dz_desc, dz_ptr, desc_helper.xy_desc(), dx->mut_dptr(),
         desc_helper.param_desc(), gamma->dptr(), beta->dptr(), gamma_diff->mut_dptr(),
@@ -831,11 +850,11 @@ class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_BN_ADD_RELU_GRAD_KERNEL(dtype)                                  \
-  REGISTER_USER_KERNEL("cudnn_fused_normalization_add_relu_grad")                      \
-      .SetCreateFn<FusedNormalizationAddReluGradUserKernel<dtype>>()                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_FUSED_BN_ADD_RELU_GRAD_KERNEL(dtype)                                   \
+  REGISTER_USER_KERNEL("cudnn_fused_normalization_add_relu_grad")                       \
+      .SetCreateFn<FusedNormalizationAddReluGradUserKernel<dtype>>()                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferFusedNormalizationAddReluGradTmpSize);
 
 REGISTER_FUSED_BN_ADD_RELU_GRAD_KERNEL(float16)

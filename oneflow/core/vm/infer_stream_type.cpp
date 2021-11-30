@@ -16,8 +16,8 @@ limitations under the License.
 #include "oneflow/core/vm/infer_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/stream.msg.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 
 namespace oneflow {
@@ -31,7 +31,8 @@ void InferStreamTypeUtil::InitInstructionStatus(const Stream& stream,
 
 void InferStreamTypeUtil::DeleteInstructionStatus(const Stream& stream,
                                                   InstructionStatusBuffer* status_buffer) {
-  // do nothing
+  auto* ptr = NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  ptr->~NaiveInstrStatusQuerier();
 }
 
 bool InferStreamTypeUtil::QueryInstructionStatusDone(const Stream& stream,

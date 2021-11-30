@@ -57,12 +57,12 @@ class PermutationIterator {
     return index_iter_ - other.index_iter_;
   }
 
-  ITER_DEVICE_FUNC const pointer operator->() const { return &data_iter_[*index_iter_]; }
+  ITER_DEVICE_FUNC pointer operator->() const { return &data_iter_[*index_iter_]; }
 
-  ITER_DEVICE_FUNC const reference operator*() const { return data_iter_[*index_iter_]; }
+  ITER_DEVICE_FUNC reference operator*() const { return data_iter_[*index_iter_]; }
 
   template<typename Int>
-  ITER_DEVICE_FUNC const reference operator[](Int n) const {
+  ITER_DEVICE_FUNC reference operator[](Int n) const {
     return data_iter_[index_iter_[n]];
   }
 
