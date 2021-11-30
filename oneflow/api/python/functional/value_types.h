@@ -44,6 +44,7 @@ namespace one {
 class Tensor;
 class TensorTuple;
 class Generator;
+class OpExpr;
 
 namespace functional {
 class TensorIndex;
@@ -105,7 +106,11 @@ enum ValueType : int {
   kPARALLEL_DESC,
   kSBP_PARALLEL,
   kSBP_PARALLEL_LIST,
+  kSHAPE_LIST,
+  kDTYPE_LIST,
 
+  kOPEXPR = 390,
+  kOPEXPR_REF,
   kPY_OBJECT = 400,
 };
 
@@ -151,7 +156,9 @@ VALUE_TYPE_OF_IMPL(Maybe<one::TensorTuple>, kTENSOR_TUPLE_MAYBE);
 VALUE_TYPE_OF_IMPL(cfg::AttrValue, kATTR);
 VALUE_TYPE_OF_IMPL(std::shared_ptr<cfg::AttrValue>, kATTR_REF);
 VALUE_TYPE_OF_IMPL(Symbol<DType>, kDTYPE);
+VALUE_TYPE_OF_IMPL(std::vector<Symbol<DType>>, kDTYPE_LIST);
 VALUE_TYPE_OF_IMPL(Shape, kSHAPE);
+VALUE_TYPE_OF_IMPL(std::vector<Shape>, kSHAPE_LIST);
 VALUE_TYPE_OF_IMPL(one::Generator, kGENERATOR);
 VALUE_TYPE_OF_IMPL(std::shared_ptr<one::Generator>, kGENERATOR_REF);
 VALUE_TYPE_OF_IMPL(Maybe<one::Generator>, kGENERATOR_MAYBE);
@@ -160,6 +167,9 @@ VALUE_TYPE_OF_IMPL(Symbol<Device>, kDEVICE);
 VALUE_TYPE_OF_IMPL(Symbol<ParallelDesc>, kPARALLEL_DESC);
 VALUE_TYPE_OF_IMPL(Symbol<cfg::SbpParallel>, kSBP_PARALLEL);
 VALUE_TYPE_OF_IMPL(std::vector<Symbol<cfg::SbpParallel>>, kSBP_PARALLEL_LIST);
+
+VALUE_TYPE_OF_IMPL(one::OpExpr, kOPEXPR);
+VALUE_TYPE_OF_IMPL(std::shared_ptr<one::OpExpr>, kOPEXPR_REF);
 
 VALUE_TYPE_OF_IMPL(PyObject*, kPY_OBJECT);
 VALUE_TYPE_OF_IMPL(const PyObject*, kPY_OBJECT);

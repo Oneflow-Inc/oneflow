@@ -97,6 +97,34 @@ class SelectTopNOpInterpCtx : public OpInterpCtx {
   int32_t top_n;
 };
 
+class FeedInputOpInterpCtx : public OpInterpCtx {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    return Error::RuntimeError() << "FeedInput op has no attribute named " << attr_name;
+  }
+};
+
+class FetchOutputOpInterpCtx : public OpInterpCtx {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    return Error::RuntimeError() << "FetchOutput op has no attribute named " << attr_name;
+  }
+};
+
+class FeedVariableOpInterpCtx : public OpInterpCtx {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "l2")) {
+      return (const void*)&l2;
+    } else {
+      return Error::RuntimeError() << "FeedVariable op has no attribute named " << attr_name;
+    }
+  }
+
+ public:
+  double l2;
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_OP_INTERP_CTX_H_

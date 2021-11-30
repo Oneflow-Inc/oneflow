@@ -52,7 +52,9 @@ HashMap<ValueType, std::string>* GetValueTypeNameMap() {
       {kATTR, "attr"},
       {kATTR_REF, "attr"},
       {kDTYPE, "data type"},
+      {kDTYPE_LIST, "data type list"},
       {kSHAPE, "shape"},
+      {kSHAPE_LIST, "shape list"},
       {kGENERATOR, "generator"},
       {kGENERATOR_REF, "generator"},
       {kGENERATOR_MAYBE, "maybe generator"},
@@ -61,6 +63,8 @@ HashMap<ValueType, std::string>* GetValueTypeNameMap() {
       {kPARALLEL_DESC, "placement"},
       {kSBP_PARALLEL, "sbp"},
       {kSBP_PARALLEL_LIST, "sbp list"},
+      {kOPEXPR, "opexpr"},
+      {kOPEXPR_REF, "opexpr"},
       {kPY_OBJECT, "python object"},
   };
   return &value_type_name_map;

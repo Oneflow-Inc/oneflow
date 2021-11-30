@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/random_generator.h"
@@ -106,9 +107,19 @@ Maybe<Symbol<DType>> PythonArg::ObjectAs<Symbol<DType>>() const {
 }
 
 template<>
+Maybe<std::vector<Symbol<DType>>> PythonArg::ObjectAs<std::vector<Symbol<DType>>>() const {
+  return PyUnpackDTypeSequence(object_);
+}
+
+template<>
 Maybe<Shape> PythonArg::ObjectAs<Shape>() const {
   const auto& shape = JUST(PyUnpackLongSequence<int64_t>(object_));
   return std::make_shared<Shape>(DimVector(shape->begin(), shape->end()));
+}
+
+template<>
+Maybe<std::vector<Shape>> PythonArg::ObjectAs<std::vector<Shape>>() const {
+  return PyUnpackShapeSequence(object_);
 }
 
 template<>
@@ -157,6 +168,16 @@ Maybe<TensorIndex> PythonArg::ObjectAs<TensorIndex>() const {
 }
 
 template<>
+Maybe<std::shared_ptr<one::OpExpr>> PythonArg::ObjectAs<std::shared_ptr<one::OpExpr>>() const {
+  return JUST(PyUnpackOpExpr(object_));
+}
+
+template<>
+Maybe<one::OpExpr> PythonArg::ObjectAs<one::OpExpr>() const {
+  return PyUnpackOpExpr(object_);
+}
+
+template<>
 Maybe<PyObject*> PythonArg::ObjectAs<PyObject*>() const {
   return object_;
 }
@@ -201,7 +222,10 @@ Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
     case kSBP_PARALLEL: return PySbpParallelCheck(object_);
     case kSBP_PARALLEL_LIST:
       return PySbpParallelSequenceCheck(object_) || PySbpParallelCheck(object_);
+    case kOPEXPR_REF: return PyOpExprCheck(object_);
     case kPY_OBJECT: return nullptr != object_;
+    case kDTYPE_LIST: return PyDTypeSequenceCheck(object_);
+    case kSHAPE_LIST: return PyShapeSequenceCheck(object_);
     default: {
       OF_UNIMPLEMENTED() << "Can not check type " << JUST(ValueTypeName(type));
     }

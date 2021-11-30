@@ -32,22 +32,6 @@ namespace oneflow {
 
 namespace {
 
-Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const one::TensorTuple& inputs,
-                                  const std::shared_ptr<OpInterpCtx>& ctx) {
-  CHECK_EQ_OR_RETURN(op.input_size(), inputs.size())
-      << "The operation requires " << op.input_size() << " inputs, but " << inputs.size()
-      << " is given.";
-  return JUST(one::OpInterpUtil::Dispatch<one::TensorTuple>(op, inputs, ctx));
-}
-
-Maybe<one::TensorTuple> Interpret(const one::OpExpr& op,
-                                  const std::vector<std::shared_ptr<one::Tensor>>& inputs,
-                                  const std::shared_ptr<OpInterpCtx>& ctx) {
-  one::TensorTuple input_list(inputs.size());
-  for (int i = 0; i < inputs.size(); ++i) { input_list[i] = inputs[i]; }
-  return JUST(Interpret(op, input_list, ctx));
-}
-
 template<typename OpT, typename ConfT,
          typename std::enable_if<std::is_base_of<one::BuiltinOpExpr, OpT>::value>::type* = nullptr>
 py::class_<OpT, one::BuiltinOpExpr, std::shared_ptr<OpT>> PybindExportOpExpr(
@@ -72,16 +56,7 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py::class_<one::OpExpr, std::shared_ptr<one::OpExpr>>(m, "OpExpr")
       .def_property_readonly("op_type_name", &one::OpExpr::op_type_name)
       .def_property_readonly("input_size", &one::OpExpr::input_size)
-      .def_property_readonly("output_size", &one::OpExpr::output_size)
-      .def("apply",
-           [](const one::OpExpr& op_expr, const std::vector<std::shared_ptr<one::Tensor>>& inputs,
-              const std::shared_ptr<OpInterpCtx>& ctx) {
-             return Interpret(op_expr, inputs, ctx).GetPtrOrThrow();
-           })
-      .def("apply", [](const one::OpExpr& op_expr, const one::TensorTuple& inputs,
-                       const std::shared_ptr<OpInterpCtx>& ctx) {
-        return Interpret(op_expr, inputs, ctx).GetPtrOrThrow();
-      });
+      .def_property_readonly("output_size", &one::OpExpr::output_size);
 
   py::class_<one::BuiltinOpExpr, one::OpExpr, std::shared_ptr<one::BuiltinOpExpr>>(m,
                                                                                    "BuiltinOpExpr")
