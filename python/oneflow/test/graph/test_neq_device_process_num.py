@@ -27,6 +27,10 @@ import oneflow.unittest
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestGraphNeqDeviceProcessNum(flow.unittest.TestCase):
     def test_graph_process_num_greater_than_device(test_case):
+        # NOTE(chengcheng): this test case is ONLY for 1n8d in 4d env.
+        if not (flow.env.get_node_size() == 1 and flow.env.get_world_size() == 8):
+            return
+
         BATCH_SIZE = 64
         BROADCAST = [flow.sbp.broadcast]
         P0 = flow.placement("cpu", {0: [0, 1, 2, 3]})
