@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
+#include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/register/ofblob.h"
 namespace oneflow {
 namespace one {
@@ -1410,40 +1411,44 @@ class PadFunctor {
 class DropoutFunctor {
  public:
   DropoutFunctor() {
-    random_mask_like_op_ =
-        CHECK_JUST(one::OpBuilder("random_mask_like").Input("like").Output("out").Build());
     dropout_op_ =
-        CHECK_JUST(one::OpBuilder("dropout").Input("in").Input("mask").Output("out").Build());
+        CHECK_JUST(one::OpBuilder("dropout").Input("in").Output("out").Output("mask").Build());
+    dropout_addend_op_ = CHECK_JUST(one::OpBuilder("dropout")
+                                        .Input("in")
+                                        .Input("_add_to_output")
+                                        .Output("out")
+                                        .Output("mask")
+                                        .Build());
+    add_op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a, const float& p,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<one::Tensor>& addend, const float& p,
                            const bool& training, const Optional<one::Generator>& generator) const {
-    if (!training || p == 0.0) return a;
-
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap random_mask_like_attrs;
-    JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
-    JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
-    const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
-
-    float scale = 1.0;
-    if (p != 1.0) { scale = 1.0 / (1.0 - p); }
+    const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
     MutableAttrMap dropout_attrs;
-    JUST(dropout_attrs.SetAttr<float>("scale", scale));
-
-    return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
-             return OpInterpUtil::Dispatch<Tensor>(
-                 *random_mask_like_op_, {a},
-                 OpExprInterpContext(random_mask_like_attrs, random_mask_like_state));
-           })
-        .then([&](const std::shared_ptr<one::Tensor>& x) {
-          return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {a, x}, dropout_attrs);
-        })
-        .call();
+    JUST(dropout_attrs.SetAttr<float>("rate", p));
+    if (addend) {
+      if (!training) {
+        return OpInterpUtil::Dispatch<Tensor>(*add_op_, {x, JUST(addend)});
+      } else {
+        return OpInterpUtil::Dispatch<Tensor>(*dropout_addend_op_, {x, JUST(addend)},
+                                              OpExprInterpContext(dropout_attrs, dropout_state));
+      }
+    } else {
+      if (!training) {
+        return x;
+      } else {
+        return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {x},
+                                              OpExprInterpContext(dropout_attrs, dropout_state));
+      }
+    }
   }
 
  private:
-  std::shared_ptr<OpExpr> random_mask_like_op_;
   std::shared_ptr<OpExpr> dropout_op_;
+  std::shared_ptr<OpExpr> dropout_addend_op_;
+  std::shared_ptr<OpExpr> add_op_;
 };
 
 class DropoutGradFunctor {
@@ -1456,7 +1461,6 @@ class DropoutGradFunctor {
                            const std::shared_ptr<one::Tensor>& mask, const float& scale) const {
     MutableAttrMap dropout_grad_attrs;
     JUST(dropout_grad_attrs.SetAttr<float>("scale", scale));
-
     return OpInterpUtil::Dispatch<Tensor>(*dropout_grad_op_, {dy, mask}, dropout_grad_attrs);
   }
 
@@ -2026,6 +2030,58 @@ class NmsFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class RoiAlignFunctor {
+ public:
+  RoiAlignFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("roi_align").Input("x").Input("rois").Output("y").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& rois, const float& spatial_scale,
+                           const int32_t& pooled_h, const int32_t& pooled_w,
+                           const int32_t& sampling_ratio, const bool& aligned) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("spatial_scale", spatial_scale));
+    JUST(attrs.SetAttr<int32_t>("pooled_h", pooled_h));
+    JUST(attrs.SetAttr<int32_t>("pooled_w", pooled_w));
+    JUST(attrs.SetAttr<int32_t>("sampling_ratio", sampling_ratio));
+    JUST(attrs.SetAttr<bool>("aligned", aligned));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, rois}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class RoiAlignGradFunctor {
+ public:
+  RoiAlignGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("roi_align_grad")
+                         .Input("dy")
+                         .Input("x_like")
+                         .Input("rois")
+                         .Output("dx")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x_like,
+                           const std::shared_ptr<one::Tensor>& rois, const float& spatial_scale,
+                           const int32_t& pooled_h, const int32_t& pooled_w,
+                           const int32_t& sampling_ratio, const bool& aligned) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("spatial_scale", spatial_scale));
+    JUST(attrs.SetAttr<int32_t>("pooled_h", pooled_h));
+    JUST(attrs.SetAttr<int32_t>("pooled_w", pooled_w));
+    JUST(attrs.SetAttr<int32_t>("sampling_ratio", sampling_ratio));
+    JUST(attrs.SetAttr<bool>("aligned", aligned));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x_like, rois}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2092,6 +2148,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PartialFCSampleFunctor>("DistributedPariticalFCSample");
   m.add_functor<impl::PariticalFCSampleDisableBoxing>("DistributedPariticalFCSampleDisableBoxing");
   m.add_functor<impl::NmsFunctor>("Nms");
+  m.add_functor<impl::RoiAlignFunctor>("RoiAlign");
+  m.add_functor<impl::RoiAlignGradFunctor>("RoiAlignGrad");
 };
 
 }  // namespace functional
