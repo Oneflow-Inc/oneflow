@@ -597,7 +597,7 @@ void VirtualMachineEngine::__Init__(const VmDesc& vm_desc) {
   }
 }
 
-int64_t InstructionMaxRunningSeconds() { return 60 * 5; }
+int64_t InstructionMaxRunningSeconds() { return 60 * 5 * 5; }
 
 // Returns true if old pending_instruction_list is empty
 Maybe<bool> VirtualMachineEngine::Receive(InstructionMsgList* compute_instr_msg_list) {

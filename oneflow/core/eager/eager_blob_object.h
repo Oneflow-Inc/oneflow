@@ -181,6 +181,8 @@ class DTREagerBlobObject final : public EagerBlobObject {
   void set_last_access_time(double val) { last_access_time_ = val; }
   void set_evict_attr(bool val) { could_evict_ = val; }
 
+  const std::string& compute_op_type_name() const;
+
   // DTR Strategy
   bool is_in_memory() const;
   bool is_pinned() const { return (pinned_ > 0); }

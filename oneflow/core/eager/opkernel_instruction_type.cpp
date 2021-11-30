@@ -220,11 +220,11 @@ std::unique_ptr<LocalCallOpKernelPhyInstrOperand> DTROp2LocalCallOp(DTRInstrOper
   std::shared_ptr<one::EagerBlobObjectList> output_shared_ptr =
       std::make_shared<one::EagerBlobObjectList>(outputs.size());
 
-  if (oneflow::DTRDebugEnabled()) {
-    std::cout << "going to recompute " << operand->shared_opkernel()->user_op_conf_->op_type_name()
-              << std::endl;
-  }
   for (int i = 0; i < inputs.size(); ++i) {
+    if (!inputs[i].lock()) {
+      std::cout << "null at input " << i << std::endl;
+      CHECK_JUST(Global<one::DTRTensorPool>::Get()->display2());
+    }
     input_shared_ptr->at(i) = CHECK_NOTNULL(inputs[i].lock());
   }
 
@@ -574,7 +574,7 @@ struct LocalCallOpKernelUtil {
     return ptr;
   }
 
- protected:
+ public:
   static inline Maybe<LocalCallOpKernelPhyInstrOperand> GetSharedLocalCallOpKernelPhyInstrOperand(
       vm::Instruction* instruction) {
     const auto& operand = instruction->instr_msg().phy_instr_operand();
@@ -724,7 +724,8 @@ struct LocalCallOpKernelUtil {
                    cudaMemcpyKind::cudaMemcpyDeviceToHost);
         float x = 0;
         for (float f : tmp) { x += f; }
-        if (const auto output = std::dynamic_pointer_cast<DTREagerBlobObject>(base_class_output)) {
+        if (const auto output = std::dynamic_pointer_cast<DTREagerBlobObject>(base_class_output))
+        {
           if (output->hash_ != -1) {
             if (output->hash_ != x) {
               std::cout << "wrong!!!!"
@@ -732,13 +733,14 @@ struct LocalCallOpKernelUtil {
                         << output->compute_op()->shared_opkernel()->user_op_conf_->op_type_name()
                         << ", old hash: " << output->hash_ << ", new hash: " << x
                         << ", old data[0]: " << output->backup_data_[0]
-                        << ", new data[0]: " << tmp[0] << ", shape: " << output->blob_desc().shape()
+                        << ", new data[0]: " << tmp[0] << ", shape: " <<
+                        output->blob_desc().shape()
                         << std::endl;
 
               // compare hash of inputs
               compare_input_hash = true;
             } else {
-              std::cout << "correct!!!!"
+              std::cout << "correct :)"
                         << " compute op: "
                         << output->compute_op()->shared_opkernel()->user_op_conf_->op_type_name()
                         << ", old hash: " << output->hash_ << ", new hash: " << x << std::endl;
@@ -751,7 +753,8 @@ struct LocalCallOpKernelUtil {
         base_class_output->backup_data_.resize(bytes / 4);
         memcpy(base_class_output->backup_data_.data(), tmp.data(), bytes);
       } else {
-        std::cout << "compute non gpu memory, op is: " << operand->opkernel().op_type_name() << std::endl;
+        std::cout << "compute non gpu memory, op is: " << operand->opkernel().op_type_name() <<
+        std::endl;
       }
     }
     if (compare_input_hash) {
@@ -773,14 +776,15 @@ struct LocalCallOpKernelUtil {
                           << ", new data[0]: " << tmp[0]
                           << ", shape: " << input->blob_desc().shape() << std::endl;
               } else {
-                std::cout << "input hash correct!!!!"
+                std::cout << "input hash correct :)"
                           << ", shape: " << input->blob_desc().shape() << std::endl;
               }
             } else {
               std::cout << "input not initialized!!!!!" << x << std::endl;
             }
           } else {
-            std::cout << "input non gpu memory, op is: " << operand->opkernel().op_type_name() << std::endl;
+            std::cout << "input non gpu memory, op is: " << operand->opkernel().op_type_name() <<
+            std::endl;
           }
         }
       }
@@ -820,9 +824,59 @@ struct EagerLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
   }
 };
 
+one::EagerBlobObjectListPtr global_pinned_ebos = nullptr;
+
+struct PinGuard {
+  OF_DISALLOW_COPY_AND_MOVE(PinGuard);
+  explicit PinGuard(const one::EagerBlobObjectListPtr& ebos)
+      : ebos_(ebos), old_ebos_(global_pinned_ebos) {
+    if (old_ebos_ != nullptr) {
+      for (auto& ebo : *old_ebos_) {
+        if (auto dtr_ebo = std::dynamic_pointer_cast<DTREagerBlobObject>(ebo)) {
+          dtr_ebo->unpin();
+        } else {
+          CHECK(false);
+        }
+      }
+    }
+    for (auto& ebo : *ebos_) {
+      if (auto dtr_ebo = std::dynamic_pointer_cast<DTREagerBlobObject>(ebo)) {
+        dtr_ebo->pin();
+      } else {
+        CHECK(false);
+      }
+    }
+    global_pinned_ebos = ebos_;
+  }
+  ~PinGuard() {
+    if (old_ebos_ != nullptr) {
+      for (auto& ebo : *old_ebos_) {
+        if (auto dtr_ebo = std::dynamic_pointer_cast<DTREagerBlobObject>(ebo)) {
+          dtr_ebo->pin();
+        } else {
+          CHECK(false);
+        }
+      }
+    }
+    for (auto& ebo : *ebos_) {
+      if (auto dtr_ebo = std::dynamic_pointer_cast<DTREagerBlobObject>(ebo)) {
+        dtr_ebo->unpin();
+      } else {
+        CHECK(false);
+      }
+    }
+    global_pinned_ebos = old_ebos_;
+  }
+
+ private:
+  one::EagerBlobObjectListPtr ebos_;
+  one::EagerBlobObjectListPtr old_ebos_;
+};
+
 struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
   static inline Maybe<void> Prepare(vm::Instruction* instruction) {
     auto operand = JUST(GetSharedLocalCallOpKernelPhyInstrOperand(instruction));
+    if (oneflow::DTRDebugEnabled()) { std::cout << "prepare start for " << operand->opkernel().op_type_name() << std::endl; }
     auto& stream = instruction->stream();
     JUST(
         ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
@@ -830,6 +884,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
           dtr_blob_object->pin();
           return Maybe<void>::Ok();
         }));
+    // PinGuard guard(operand->inputs());
     JUST(
         ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
           if (!dtr_blob_object->is_in_memory()) {
@@ -841,7 +896,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
           dtr_blob_object->update_user_ops(operand);
           return Maybe<void>::Ok();
         }));
-    if (oneflow::DTRDebugEnabled()) { std::cout << "prepare ok!!!" << std::endl; }
+    if (oneflow::DTRDebugEnabled()) { std::cout << "prepare ok for " << operand->opkernel().op_type_name() << std::endl; }
     return Maybe<void>::Ok();
   }
 
@@ -889,6 +944,10 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
   }
 
   static inline Maybe<void> recompute(vm::DTREagerBlobObject* object, const vm::Stream& stream) {
+  if (oneflow::DTRDebugEnabled()) {
+    std::cout << "going to recompute " << object->compute_op()->shared_opkernel()->user_op_conf_->op_type_name() << " for " << object << ", whose dptr is " << object->blob().dptr() << ", is in memory: " << object->is_in_memory()
+              << std::endl;
+  }
     auto unique_op = DTROp2LocalCallOp(object->compute_op());
     CHECK_NOTNULL_OR_RETURN(unique_op);
     DeviceCtx* device_ctx = stream.device_ctx().get();
@@ -896,6 +955,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
     // pin inputs
     // TODO for each ptr rather than shared_ptr
     auto* operand = unique_op.get();
+    // PinGuard guard(operand->inputs());
     JUST(
         ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
           dtr_blob_object->pin();
@@ -956,6 +1016,8 @@ void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) con
     CHECK_OK(DTRLocalCallOpKernelUtil::Prepare(instruction));
     CHECK_OK(DTRLocalCallOpKernelUtil::Compute(instruction));
     CHECK_OK(DTRLocalCallOpKernelUtil::UpdateTensorInfo(instruction));
+    auto operand = CHECK_JUST(LocalCallOpKernelUtil::GetSharedLocalCallOpKernelPhyInstrOperand(instruction));
+    std::cout << "all compute ok for " << operand->opkernel().op_type_name() << std::endl;
   } else {
     CHECK_OK(EagerLocalCallOpKernelUtil::Infer(instruction));
     CHECK_OK(EagerLocalCallOpKernelUtil::Prepare(instruction));

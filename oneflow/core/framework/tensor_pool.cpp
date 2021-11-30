@@ -35,6 +35,23 @@ DTRTensorPool::DTRTensorPool() {
   start_time_ = std::chrono::steady_clock::now();
 }
 
+namespace {
+void printInfo(const std::shared_ptr<vm::DTREagerBlobObject>& debo) {
+  double mem = debo->BlobBodyBytes() * 1. / 1024 / 1024;
+  const std::string& compute_op =
+      debo->compute_op()->shared_opkernel()->user_op_conf_->op_type_name();
+  std::cout << "is_in_memory: " << static_cast<bool>(debo->is_in_memory())
+            << ", is pinned: " << (debo->num_pinned())
+            << ", is evictable: " << (debo->is_evictable()) << ", compute op: " << compute_op
+            << ", shape: " << debo->mut_blob_desc()->shape() << ", memory: " << mem << "MB"
+            << ", ebo address: " << debo.get()
+            << ", blob dptr: " << debo->blob().dptr()
+            << ", tensor buffer dptr: " << static_cast<const void*>(debo->tensor_buffer()->blob_dptr())
+            // << ", data_type: " << debo->mut_blob_desc()->data_type()
+            << std::endl;
+}
+}  // namespace
+
 Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
   double min_cost = -1;
   vm::DTREagerBlobObject* best(nullptr);
@@ -45,25 +62,17 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
   for (const auto& object : candidates_) {
     if (auto shared_object = object.lock()) {
       if (oneflow::DTRDebugEnabled()) {
-        double mem = shared_object->BlobBodyBytes() * 1. / 1024 / 1024;
-        const std::string& compute_op = shared_object->compute_op()->shared_opkernel()->user_op_conf_->op_type_name();
-        std::cout << "id " << id
-                  << ", is_in_memory: " << static_cast<bool>(shared_object->is_in_memory())
-                  << ", is pinned: " << (shared_object->num_pinned())
-                  << ", is evictable: " << (shared_object->is_evictable())
-                  << ", compute op: " << compute_op
-                  // << ", Address: " << static_cast<const void*>(shared_object->object_dptr())
-                  << ", shape: " << shared_object->mut_blob_desc()->shape()
-                  << ", memory: " << mem << "MB"
-                  // << ", data_type: " << shared_object->mut_blob_desc()->data_type()
-                  << std::endl;
+        std::cout << "id " << id << ", ";
+        printInfo(shared_object);
+
         // copy op in lenet/alexnet model is always to copy parameters
         // from cpu to gpu during model.to('cuda')
         // copying from cpu to gpu uses cuda h2d memory pool, unrelated
         // to the cuda memory pool dtr uses.
-        if (shared_object->is_in_memory() && compute_op != "copy") {
-          tensor_pool_mem += mem;
-        }
+        double mem = shared_object->BlobBodyBytes() * 1. / 1024 / 1024;
+        const std::string& compute_op =
+            shared_object->compute_op()->shared_opkernel()->user_op_conf_->op_type_name();
+        if (shared_object->is_in_memory() && compute_op != "copy") { tensor_pool_mem += mem; }
       }
       if (static_cast<bool>(shared_object->compute_op()) && !shared_object->is_pinned()
           && (shared_object->is_evictable()) && shared_object->is_in_memory()) {
@@ -83,7 +92,7 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
   }
   if (oneflow::DTRDebugEnabled()) {
     std::cout << "pool mem is " << tensor_pool_mem << "MB" << std::endl;
-    std::cout << "Evict " << evict_object_id << "th object, cost is " << min_cost << std::endl;
+    std::cout << "Evict " << evict_object_id << "th object, cost is " << min_cost << ", compute op is " << best->compute_op()->shared_opkernel()->op_type_name() << ", addr is " << best << std::endl;
   }
   num_eviction_++;
   return best;
@@ -91,9 +100,7 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
 
 Maybe<bool> DTRTensorPool::find_best_tensor_and_evict() {
   auto* best = JUST(find_best_tensor());
-  if (best == nullptr) {
-    return false;
-  }
+  if (best == nullptr) { return false; }
   JUST(best->evict());
   return true;
 }
@@ -142,66 +149,25 @@ double DTRTensorPool::duration() {
   return time_span.count();
 }
 
+Maybe<void> DTRTensorPool::display2() {
+  std::cout << "===== Info of current tensor pool =====" << std::endl;
+  std::cout << "Number of candidates: " << candidates_.size() << std::endl;
+  int id = 0;
+  for (const auto& object : candidates_) {
+    if (auto shared_object = object.lock()) {
+      if (oneflow::DTRDebugEnabled()) {
+        std::cout << "id " << id << ", ";
+        printInfo(shared_object);
+      }
+    }
+    id++;
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> DTRTensorPool::display() {
   std::cout << "===== Info of current tensor pool =====" << std::endl;
   std::cout << "Number of candidates: " << candidates_.size() << std::endl;
-  // size_t id = 0;
-  // for (const auto& candidate : candidates_) {
-  //   if (auto wp = candidate.lock()) {
-  //     auto tmp = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(wp);
-  //     CHECK_NOTNULL_OR_RETURN(tmp);
-  //     std::cout << "id " << id << ", is_in_memory: " << tmp->is_in_memory()
-  //               << ", input size: " << tmp->input_size()
-  //               << ", is_evictable: " << tmp->is_evictable()
-  //               << ", number of user_ops: " << tmp->num_user_ops() << ", address: " << tmp
-  //               << ", nullptr? " << (tmp == nullptr) << std::endl;
-  //   }
-  //   // std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ",
-  //   address:
-  //   // " << candidate << std::endl;
-  //   id++;
-  // }
-  // for (const auto& candidate : candidates_) {
-  //     const auto* tmp = dynamic_cast<vm::DTREagerBlobObject*>(candidate);
-  //     std::cout << "Input info--------------- " << std::endl;
-  //     size_t iid = 0;
-  //     const auto* ptr =
-  //     dynamic_cast<vm::LocalCallOpKernelPhyInstrOperand*>(candidate->compute_op());
-  //     CHECK_NOTNULL_OR_RETURN(ptr);
-  //     for (const auto& input : *ptr->inputs()) {
-  //         CHECK_OR_RETURN(static_cast<bool>(input.get()));
-  //         const auto* dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(input.get());
-  //         CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-  //         std::cout << "Input id: " << iid++ << ", address: " << dtr_blob_object << ", ref_cnt: "
-  //         << input.use_count() << std::endl;
-  //     }
-
-  //     // std::cout << "Output info--------------- " << std::endl;
-  //     // for (int i = 0; i < candidate->num_user_ops(); ++i) {
-  //     //     size_t oid = 0;
-  //     //     std::cout << "The " << i << "th user_op: " << std::endl;
-  //     //     const auto* ptr =
-  //     dynamic_cast<vm::LocalCallOpKernelPhyInstrOperand*>(CHECK_JUST(candidate->user_op(i)));
-  //     //     for (const auto& output: *ptr->outputs()) {
-  //     //         CHECK_OR_RETURN(static_cast<bool>(output.get()));
-  //     //         const auto* dtr_blob_object =
-  //     dynamic_cast<vm::DTREagerBlobObject*>(output.get());
-  //     //         CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-  //     //         std::cout << "Output id: " << oid++ << ", address: " << dtr_blob_object << ",
-  //     ref_cnt: " << output.use_count() << std::endl;
-  //     //     }
-  //     // }
-  //     // std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ",
-  //     input size: " << candidate->input_size() << ", is_evictable: " << candidate->is_evictable()
-  //     << ", number of user_ops: " << candidate->num_user_ops() << ", address: " <<
-  //     static_cast<const void *>(candidate->object_dptr()) << ", nullptr? " << (tmp == nullptr) <<
-  //     std::endl;
-  //     // std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ",
-  //     input size: " << candidate->input_size() << ", is_evictable: " << candidate->is_evictable()
-  //     << ", number of user_ops: " << candidate->num_user_ops() << ", address: " << candidate <<
-  //     ", nullptr? " << (tmp == nullptr) << std::endl;
-  // }
-  // std::cout << "===== End info =====" << std::endl;
   return Maybe<void>::Ok();
 }
 

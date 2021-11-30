@@ -106,11 +106,11 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
         const auto& tensor_impl = std::make_shared<DTREagerMirroredTensorImpl>();
         outputs->at(i) = std::make_shared<DTRMirroredTensor>(tensor_impl);
         output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
-        if (inputs.size() > 0) {
-          auto dtr_mirrored_tensor = dynamic_cast<one::DTRMirroredTensor*>(outputs->at(i).get());
-          CHECK_NOTNULL_OR_RETURN(dtr_mirrored_tensor);
-          dtr_mirrored_tensor->set_tensor_inputs(inputs);
-        }
+        // if (inputs.size() > 0) {
+        //   auto dtr_mirrored_tensor = dynamic_cast<one::DTRMirroredTensor*>(outputs->at(i).get());
+        //   CHECK_NOTNULL_OR_RETURN(dtr_mirrored_tensor);
+        //   dtr_mirrored_tensor->set_tensor_inputs(inputs);
+        // }
       } else {
         const auto& tensor_impl = std::make_shared<EagerMirroredTensorImpl>();
         outputs->at(i) = std::make_shared<MirroredTensor>(tensor_impl);
@@ -170,6 +170,12 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
 
   for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
     output_eager_blob_objects->at(index)->set_is_shape_synced(false);
+  }
+
+  for (const auto &output : *outputs) {
+    if (auto dtr_output = std::dynamic_pointer_cast<DTRMirroredTensor>(output)) {
+      dtr_output->set_tensor_inputs(inputs);
+    }
   }
 
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {

@@ -221,9 +221,7 @@ Maybe<double> DTREagerBlobObject::cost() const {
   if (oneflow::DTRDebugEnabled()) {
     std::cout << "n_cost " << n_cost << ", blob_body_bytes_ " << blob_body_bytes_ << ", time_since_last_access " << time_since_last_access << std::endl;
   }
-  return 1. / blob_body_bytes_ / time_since_last_access;
-  // return n_cost / blob_body_bytes_ / time_since_last_access;
-  // return n_cost / blob_body_bytes_ / last_access_time_;
+  return n_cost / blob_body_bytes_ / time_since_last_access;
 }
 
 size_t DTREagerBlobObject::input_size() const {
@@ -231,8 +229,14 @@ size_t DTREagerBlobObject::input_size() const {
   return ptr->inputs().size();
 }
 
+const std::string& DTREagerBlobObject::compute_op_type_name() const {
+  return compute_op_->shared_opkernel()->op_type_name();
+}
+
 bool DTREagerBlobObject::is_evictable() const {
   if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "nll") { return false; }
+  // if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "conv_filter_grad") { return false; }
+  // if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "matmul") { return false; }
   return could_evict_;
 }
 

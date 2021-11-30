@@ -386,7 +386,7 @@ class MirroredTensor : public TensorIf<MirroredTensor>,
   OF_DISALLOW_COPY_AND_MOVE(MirroredTensor);
   MirroredTensor() = default;
   explicit MirroredTensor(const std::shared_ptr<MirroredTensorImpl>& impl) { impl_ = impl; }
-  ~MirroredTensor() override = default;
+  virtual ~MirroredTensor() override = default;
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
@@ -495,9 +495,17 @@ class DTRMirroredTensor final : public MirroredTensor {
   DTRMirroredTensor() = default;
   explicit DTRMirroredTensor(const std::shared_ptr<DTREagerMirroredTensorImpl>& impl) : MirroredTensor(impl) {
   }
-  ~DTRMirroredTensor() {}
+  ~DTRMirroredTensor() {
+    std::cout << "destruct " << this << ", ebo: " << CHECK_JUST(eager_blob_object()).get() << std::endl;
+  }
 
-  void set_tensor_inputs(const TensorTuple& inputs) { inputs_ = inputs; }
+  void set_tensor_inputs(const TensorTuple& inputs) {
+    std::cout << "set inputs of " << this << " (ebo " << CHECK_JUST(eager_blob_object()).get() << ") to ";
+    for (const auto &x : inputs) {
+      std::cout << x.get() << " (ebo " << CHECK_JUST(x->eager_blob_object()).get() << "), ";
+    }
+    std::cout << std::endl;
+    inputs_ = inputs; }
 
  private:
   TensorTuple inputs_;
