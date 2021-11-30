@@ -92,8 +92,6 @@ class ScalarMathKernel final : public user_op::OpKernel {
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_UNARY_MATH_SCALAR_ELEMWISE_USER_KERNEL, SCALAR_MATH_SEQ)
 
-// we register uint8_t, int8_t, int32_t, int64_t, float, double, float16.
-
 template<DeviceType device_type, typename T>
 class CpuScalarPowGradKernel final : public user_op::OpKernel {
  public:

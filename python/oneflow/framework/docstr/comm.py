@@ -37,9 +37,9 @@ add_docstr(
     Args:
         src (int, optional): Source rank. Will receive from any
             process if unspecified.
-        Shape (optional): output tensor shape.
-        DataType (optional): output tensor data type.
-        Device (optional): output tensor device.
+        shape (optional): output tensor shape.
+        dataType (optional): output tensor data type.
+        device (optional): output tensor device.
         out (Tensor, optional): Tensor to fill with received data.
     
     Returns:

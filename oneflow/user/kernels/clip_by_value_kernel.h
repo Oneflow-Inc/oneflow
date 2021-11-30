@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_CLIP_BY_VALUE_KERNEL_H_
 
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 

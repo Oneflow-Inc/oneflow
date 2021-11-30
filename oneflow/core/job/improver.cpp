@@ -136,7 +136,7 @@ void CollectSinkTaskIds(const HashSet<int64_t>& task_ids,
   };
   sink_task_ids->clear();
   for (int64_t src_task_id : task_ids) {
-    if (!IsReachableToAnyOtherTask(src_task_id)) { sink_task_ids->push_back(src_task_id); }
+    if (!IsReachableToAnyOtherTask(src_task_id)) { sink_task_ids->emplace_back(src_task_id); }
   }
 }
 
@@ -330,7 +330,7 @@ void Improver::MakeMemZoneRegstDescs(const Plan& plan, MemZoneRegstDescs* mz2reg
   for (const auto& task : plan.task()) {
     for (const auto& pair : task.produced_regst_desc()) {
       int64_t mem_zone_id = GetMemoryZoneId(pair.second.mem_case());
-      mz2regst_desc->at(task.machine_id()).at(mem_zone_id).push_back(&pair.second);
+      mz2regst_desc->at(task.machine_id()).at(mem_zone_id).emplace_back(&pair.second);
     }
   }
 }
@@ -349,7 +349,7 @@ Maybe<void> Improver::CheckAllZoneNotOOM(
       if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
         MemZoneId mem_zone = DecodeMemZoneIdFromInt64(mem_zone_id);
         LOG(ERROR) << "machine_id: " << machine_id << ", mem_zone_id: " << mem_zone_id
-                   << ", is_gpu: " << (mem_zone.device_type() == DeviceType::kGPU ? "yes" : "no")
+                   << ", is_gpu: " << (mem_zone.device_type() == DeviceType::kCUDA ? "yes" : "no")
                    << ", CalcMemoryConsumed: " << calc;
       }
       if (calc >= available) {

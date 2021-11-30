@@ -97,7 +97,7 @@ __global__ void BiasAddColGpu(const Index elem_cnt, const Index inner_size, cons
 }  // namespace
 
 template<typename T, typename Index>
-struct BiasAddCalculation<DeviceType::kGPU, T, Index> {
+struct BiasAddCalculation<DeviceType::kCUDA, T, Index> {
   static void Invoke(ep::Stream* stream, Index outer_size, Index bias_size, Index inner_size,
                      const T* x, const T* bias, T* y) {
     const Index elem_cnt = outer_size * bias_size * inner_size;
@@ -121,7 +121,7 @@ struct BiasAddCalculation<DeviceType::kGPU, T, Index> {
 };
 
 template<typename Index>
-struct BiasAddCalculation<DeviceType::kGPU, float16, Index> {
+struct BiasAddCalculation<DeviceType::kCUDA, float16, Index> {
   static void Invoke(ep::Stream* stream, Index outer_size, Index bias_size, Index inner_size,
                      const float16* x, const float16* bias, float16* y) {
     const Index elem_cnt = outer_size * bias_size * inner_size;
@@ -154,11 +154,11 @@ struct BiasAddCalculation<DeviceType::kGPU, float16, Index> {
   }
 };
 
-REGISTER_BIAS_ADD_USER_KERNEL(GPU, float16)
-REGISTER_BIAS_ADD_USER_KERNEL(GPU, float)
-REGISTER_BIAS_ADD_USER_KERNEL(GPU, double)
-REGISTER_BIAS_ADD_USER_KERNEL(GPU, int8_t)
-REGISTER_BIAS_ADD_USER_KERNEL(GPU, int32_t)
-REGISTER_BIAS_ADD_USER_KERNEL(GPU, int64_t)
+REGISTER_BIAS_ADD_USER_KERNEL(CUDA, float16)
+REGISTER_BIAS_ADD_USER_KERNEL(CUDA, float)
+REGISTER_BIAS_ADD_USER_KERNEL(CUDA, double)
+REGISTER_BIAS_ADD_USER_KERNEL(CUDA, int8_t)
+REGISTER_BIAS_ADD_USER_KERNEL(CUDA, int32_t)
+REGISTER_BIAS_ADD_USER_KERNEL(CUDA, int64_t)
 
 }  // namespace oneflow

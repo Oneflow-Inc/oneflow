@@ -36,7 +36,7 @@ class AccKernel final : public user_op::OpKernel {
     std::unique_ptr<ep::primitive::Add> primitive =
         ep::primitive::NewPrimitive<ep::primitive::AddFactory>(ctx->device_type(), in->data_type());
     CHECK(primitive);
-    primitive->Launch(ctx->stream(), in->dptr(), out->dptr(), out->mut_dptr(),
+    primitive->Launch(ctx->stream(), out->dptr(), in->dptr(), out->mut_dptr(),
                       in->shape().elem_cnt());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -51,7 +51,7 @@ class AccKernel final : public user_op::OpKernel {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ACC_KERNEL, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)
 #ifdef WITH_CUDA
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ACC_KERNEL, OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ACC_KERNEL, OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
                                  FLOAT16_DATA_TYPE_SEQ)
 #endif
 #undef REGISTER_ACC_KERNEL

@@ -16,6 +16,10 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/framework/framework.h"
 
+#ifdef WITH_CUDA
+#include <cudnn.h>
+#endif  // WITH_CUDA
+
 namespace oneflow {
 
 namespace {

@@ -166,7 +166,7 @@ class EagerPToSKernel final : public user_op::OpKernel {
       if (GlobalProcessCtx::Rank() == dst) {
         CHECK_JUST(Recv<device_type>(tmp_buffer_ptr, elem_cnt_per_chunk, out->data_type(), src,
                                      ctx->stream()));
-        add_primitive->Launch(ctx->stream(), tmp_buffer_ptr, out->dptr(), out->mut_dptr(),
+        add_primitive->Launch(ctx->stream(), out->dptr(), tmp_buffer_ptr, out->mut_dptr(),
                               elem_cnt_per_chunk);
       }
     }
@@ -181,8 +181,8 @@ class EagerPToSKernel final : public user_op::OpKernel {
       .SetInferTmpSizeFn(InferEagerPToSKernelTmpBufferSize);
 
 REGISTER_EAGER_P_TO_S_KERNEL(DeviceType::kCPU)
-#if defined(WITH_CUDA) && HAS_GPU_SEND_RECV
-REGISTER_EAGER_P_TO_S_KERNEL(DeviceType::kGPU)
+#if defined(WITH_CUDA) && HAS_NCCL_SEND_RECV
+REGISTER_EAGER_P_TO_S_KERNEL(DeviceType::kCUDA)
 #endif
 
 }  // namespace oneflow
