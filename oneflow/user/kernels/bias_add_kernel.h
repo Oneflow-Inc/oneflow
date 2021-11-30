@@ -17,22 +17,24 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_BIAS_ADD_KERNEL_H_
 
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T, typename Index>
 struct BiasAddCalculation {
-  static void Invoke(DeviceCtx* ctx, Index outer_size, Index bias_size, Index inner_size,
+  static void Invoke(ep::Stream* stream, Index outer_size, Index bias_size, Index inner_size,
                      const T* x, const T* bias, T* y);
 };
 
 template<DeviceType device_type, typename T>
-class BiasAddUserKernel final : public user_op::OpKernel {
+class BiasAddUserKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   BiasAddUserKernel() = default;
   ~BiasAddUserKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* a_tensor = ctx->Tensor4ArgNameAndIndex("a", 0);
     const auto* b_tensor = ctx->Tensor4ArgNameAndIndex("b", 0);
@@ -44,11 +46,11 @@ class BiasAddUserKernel final : public user_op::OpKernel {
     const auto n = a_tensor->shape().elem_cnt();
     if (IsKernelSafeInt32(n)) {
       BiasAddCalculation<device_type, T, int32_t>::Invoke(
-          ctx->device_ctx(), outer_size, bias_size, inner_size, a_tensor->dptr<T>(),
+          ctx->stream(), outer_size, bias_size, inner_size, a_tensor->dptr<T>(),
           b_tensor->dptr<T>(), out_tensor->mut_dptr<T>());
     } else {
       BiasAddCalculation<device_type, T, int64_t>::Invoke(
-          ctx->device_ctx(), outer_size, bias_size, inner_size, a_tensor->dptr<T>(),
+          ctx->stream(), outer_size, bias_size, inner_size, a_tensor->dptr<T>(),
           b_tensor->dptr<T>(), out_tensor->mut_dptr<T>());
     }
   }
@@ -59,8 +61,8 @@ class BiasAddUserKernel final : public user_op::OpKernel {
 #define REGISTER_BIAS_ADD_USER_KERNEL(op_device_type, dtype)                                    \
   REGISTER_USER_KERNEL("bias_add")                                                              \
       .SetCreateFn<BiasAddUserKernel<DeviceType::k##op_device_type, dtype>>()                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::k##op_device_type)               \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::k##op_device_type)              \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "a", 0, true));                        \

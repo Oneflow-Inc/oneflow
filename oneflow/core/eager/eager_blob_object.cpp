@@ -15,34 +15,24 @@ limitations under the License.
 */
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/vm/allocator.h"
-#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/shut_down_util.h"
+#include "oneflow/core/common/shape_vec.h"
 
 namespace oneflow {
 namespace vm {
 
-namespace {
-Maybe<VmLocalDepObject> GetVmLocalDepObject(
-    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
-  return parallel_desc != nullptr
-             ? Maybe<VmLocalDepObject>(std::make_shared<VmLocalDepObject>(parallel_desc))
-             : Error::Unimplemented();
-}
-}  // namespace
-
 EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
                                  const std::shared_ptr<Shape>& shape, DataType data_type,
                                  const std::shared_ptr<TensorBuffer>& tensor_buffer,
-                                 const std::shared_ptr<const ParallelDesc>& parallel_desc)
+                                 const Optional<LocalDepObject*>& dep_object)
     : BlobObject(mem_case, shape, data_type),
       tensor_buffer_(tensor_buffer),
-      blob_body_bytes_(0),
       is_shape_synced_(true),
-      compute_local_dep_object_(GetVmLocalDepObject(parallel_desc)) {
+      storage_offset_(0),
+      compute_local_dep_object_(dep_object) {
   CHECK(static_cast<bool>(shape));
   CHECK(static_cast<bool>(tensor_buffer));
-  non_pod_initer_ = std::make_unique<MemoryAllocator>();
 }
 
 Maybe<void> EagerBlobObject::TryInitBlob() {
@@ -52,12 +42,11 @@ Maybe<void> EagerBlobObject::TryInitBlob() {
 
 Maybe<void> EagerBlobObject::InitBlob() {
   CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
+  if (!blob_desc_.shape().is_initialized()) { blob_desc_.set_shape(Shape(DimVector{})); }
   {
     header_buffer_.reset();
     int64_t header_byte_size = blob_desc_.AlignedByteSizeOfBlobHeader();
-    const auto& FreeHeader = [header_byte_size](char* dptr) { std::free(dptr); };
-    char* ptr = reinterpret_cast<char*>(std::malloc(header_byte_size));
-    header_buffer_ = std::unique_ptr<char, std::function<void(char*)>>(ptr, FreeHeader);
+    header_buffer_ = std::make_unique<char[]>(header_byte_size);
   }
   blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer_.get(), nullptr));
   return Maybe<void>::Ok();
@@ -68,13 +57,13 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   CHECK_NOTNULL_OR_RETURN(allocator);
   Blob* blob = mut_blob();
   CHECK_NOTNULL_OR_RETURN(blob);
-  const std::size_t required_body_bytes = blob->AlignedByteSizeOfBlobBody();
+  size_t required_body_bytes = blob->AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
-    CHECK_ISNULL_OR_RETURN(blob->dptr());
+    CHECK_ISNULL_OR_RETURN(tensor_buffer_->blob_dptr());
     return Maybe<void>::Ok();
   }
-  if (blob->dptr() != nullptr) {
-    CHECK_EQ_OR_RETURN(blob_body_bytes_, required_body_bytes);
+  if (tensor_buffer_->blob_dptr() != nullptr) {
+    CHECK_GE_OR_RETURN(tensor_buffer_->blob_bytes(), required_body_bytes);
     return Maybe<void>::Ok();
   }
   {
@@ -85,11 +74,13 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     };
     char* dptr = nullptr;
     allocator->Allocate(&dptr, required_body_bytes);
-    tensor_buffer_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free));
-    blob->reset_dptr(dptr);
-    InitNonPODTypeBlobIfNeed(non_pod_initer_.get(), blob_.get());
+    tensor_buffer_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
+                                  required_body_bytes);
+
+    int64_t storage_offset_bytes = storage_offset_ * GetSizeOfDataType(blob_desc_.data_type());
+    blob->reset_dptr(dptr + storage_offset_bytes);
+    InitNonPODTypeBlobIfNeed(tensor_buffer_->non_pod_allocator(), blob_.get());
   }
-  blob_body_bytes_ = required_body_bytes;
   return Maybe<void>::Ok();
 }
 

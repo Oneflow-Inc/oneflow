@@ -18,15 +18,24 @@ limitations under the License.
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/profiler/profiler.h"
 #include "oneflow/user/image/random_crop_generator.h"
 #include <opencv2/opencv.hpp>
 
-#if defined(WITH_CUDA) && CUDA_VERSION >= 10020
+#ifdef WITH_CUDA
+
+#include <cuda.h>
+
+#if CUDA_VERSION >= 10020
+
+#define WITH_NVJPEG
 
 #include <nvjpeg.h>
 #include <npp.h>
 
-#endif
+#endif  // CUDA_VERSION >= 10020
+
+#endif  // WITH_CUDA
 
 namespace oneflow {
 
@@ -165,7 +174,7 @@ DecodeHandleFactory CreateDecodeHandleFactory<DeviceType::kCPU>(int target_width
   return []() -> std::shared_ptr<DecodeHandle> { return std::make_shared<CpuDecodeHandle>(); };
 }
 
-#if defined(WITH_CUDA) && CUDA_VERSION >= 10020
+#if defined(WITH_NVJPEG)
 
 int GpuDeviceMalloc(void** p, size_t s) { return (int)cudaMalloc(p, s); }
 
@@ -249,8 +258,9 @@ GpuDecodeHandle::GpuDecodeHandle(int dev, int target_width, int target_height)
   OF_NVJPEG_CHECK(nvjpegDecoderCreate(jpeg_handle_, NVJPEG_BACKEND_DEFAULT, &jpeg_decoder_));
   OF_NVJPEG_CHECK(nvjpegDecoderStateCreate(jpeg_handle_, jpeg_decoder_, &jpeg_state_));
 #if NVJPEG_VER_MAJOR >= 11
-  if (nvjpegDecoderCreate(jpeg_handle_, NVJPEG_BACKEND_HARDWARE, &hw_jpeg_decoder_)
-      == NVJPEG_STATUS_SUCCESS) {
+  if (ParseBooleanFromEnv("ONEFLOW_DECODER_ENABLE_NVJPEG_HARDWARE_ACCELERATION", true)
+      && nvjpegDecoderCreate(jpeg_handle_, NVJPEG_BACKEND_HARDWARE, &hw_jpeg_decoder_)
+             == NVJPEG_STATUS_SUCCESS) {
     OF_NVJPEG_CHECK(nvjpegDecoderStateCreate(jpeg_handle_, hw_jpeg_decoder_, &hw_jpeg_state_));
     use_hardware_acceleration_ = true;
   } else {
@@ -313,6 +323,9 @@ void GpuDecodeHandle::DecodeRandomCrop(const unsigned char* data, size_t length,
   } else {
     jpeg_decoder = jpeg_decoder_;
     jpeg_state = jpeg_state_;
+  }
+  if (roi.x != 0 || roi.y != 0 || roi.w != orig_width || roi.h != orig_height) {
+    // hardware_acceleration not support nvjpegDecodeParamsSetROI
     OF_NVJPEG_CHECK(nvjpegDecodeParamsSetROI(jpeg_decode_params_, roi.x, roi.y, roi.w, roi.h));
   }
   OF_NVJPEG_CHECK(nvjpegStateAttachPinnedBuffer(jpeg_state, jpeg_pinned_buffer_));
@@ -411,14 +424,21 @@ void GpuDecodeHandle::WarmupOnce(int warmup_size, unsigned char* workspace, size
   int decoded_height;
   Decode(data.data(), data.size(), workspace, workspace_size, &decoded_width, &decoded_height);
   Synchronize();
+  if (use_hardware_acceleration_ == true) {
+    // Note(guoran): hardware acceleration jpeg decoder support baseline decoding only, use
+    // progressive to warmup jpeg decoder.
+    cv::imencode(".jpg", image, data, {cv::IMWRITE_JPEG_PROGRESSIVE, 1});
+    Decode(data.data(), data.size(), workspace, workspace_size, &decoded_width, &decoded_height);
+    Synchronize();
+  }
   warmup_done_ = true;
 }
 
 void GpuDecodeHandle::Synchronize() { OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream_)); }
 
 template<>
-DecodeHandleFactory CreateDecodeHandleFactory<DeviceType::kGPU>(int target_width,
-                                                                int target_height) {
+DecodeHandleFactory CreateDecodeHandleFactory<DeviceType::kCUDA>(int target_width,
+                                                                 int target_height) {
   int dev;
   OF_CUDA_CHECK(cudaGetDevice(&dev));
   return [dev, target_width, target_height]() -> std::shared_ptr<DecodeHandle> {
@@ -427,7 +447,7 @@ DecodeHandleFactory CreateDecodeHandleFactory<DeviceType::kGPU>(int target_width
   };
 }
 
-#endif
+#endif  // defined(WITH_NVJPEG)
 
 class Worker final {
  public:
@@ -450,6 +470,7 @@ class Worker final {
 
   void PollWork(const std::function<std::shared_ptr<DecodeHandle>()>& handle_factory,
                 int target_width, int target_height, int warmup_size) {
+    OF_PROFILER_NAME_THIS_HOST_THREAD("_cuda_img_decode");
     std::shared_ptr<DecodeHandle> handle = handle_factory();
     std::shared_ptr<Work> work;
     while (true) {
@@ -473,23 +494,22 @@ class Worker final {
 }  // namespace
 
 template<DeviceType device_type>
-class ImageDecoderRandomCropResizeKernel final : public KernelIf<device_type> {
+class ImageDecoderRandomCropResizeKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ImageDecoderRandomCropResizeKernel);
   ImageDecoderRandomCropResizeKernel() = default;
   ~ImageDecoderRandomCropResizeKernel() override = default;
 
  private:
-  void VirtualKernelInit() override;
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
+  void VirtualKernelInit(KernelContext* ctx) override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 
   std::vector<std::unique_ptr<RandomCropGenerator>> random_crop_generators_;
   std::vector<std::unique_ptr<Worker>> workers_;
 };
 
 template<DeviceType device_type>
-void ImageDecoderRandomCropResizeKernel<device_type>::VirtualKernelInit() {
+void ImageDecoderRandomCropResizeKernel<device_type>::VirtualKernelInit(KernelContext* ctx) {
   const ImageDecoderRandomCropResizeOpConf& conf =
       this->op_conf().image_decoder_random_crop_resize_conf();
   const int64_t batch_size =
@@ -519,13 +539,12 @@ void ImageDecoderRandomCropResizeKernel<device_type>::VirtualKernelInit() {
 }
 
 template<DeviceType device_type>
-void ImageDecoderRandomCropResizeKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+void ImageDecoderRandomCropResizeKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
   const ImageDecoderRandomCropResizeOpConf& conf =
       this->op_conf().image_decoder_random_crop_resize_conf();
-  const Blob* in = BnInOp2Blob("in");
-  Blob* out = BnInOp2Blob("out");
-  Blob* tmp = BnInOp2Blob("tmp");
+  const Blob* in = ctx->BnInOp2Blob("in");
+  Blob* out = ctx->BnInOp2Blob("out");
+  Blob* tmp = ctx->BnInOp2Blob("tmp");
   CHECK_EQ(in->data_type(), DataType::kTensorBuffer);
   CHECK_EQ(out->data_type(), DataType::kUInt8);
   const ShapeView& in_shape = in->shape();
@@ -576,14 +595,14 @@ NEW_REGISTER_KERNEL(OperatorConf::kImageDecoderRandomCropResizeConf,
       return conf.op_attribute().op_conf().device_tag() == "cpu";
     });
 
-#if defined(WITH_CUDA) && CUDA_VERSION >= 10020
+#if defined(WITH_NVJPEG)
 
 NEW_REGISTER_KERNEL(OperatorConf::kImageDecoderRandomCropResizeConf,
-                    ImageDecoderRandomCropResizeKernel<DeviceType::kGPU>)
+                    ImageDecoderRandomCropResizeKernel<DeviceType::kCUDA>)
     .SetIsMatchedPred([](const KernelConf& conf) -> bool {
       return conf.op_attribute().op_conf().device_tag() == "gpu";
     });
 
-#endif
+#endif  // defined(WITH_NVJPEG)
 
 }  // namespace oneflow

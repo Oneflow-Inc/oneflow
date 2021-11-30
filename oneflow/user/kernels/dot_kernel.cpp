@@ -16,30 +16,27 @@ limitations under the License.
 
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/ep/include/primitive/matmul.h"
 
 namespace oneflow {
 
 namespace {
 
-template<DeviceType device_type, typename T>
-struct DotKernelCalculation {
-  static void dot(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* out);
-};
+using namespace ep::primitive;
 
-template<typename T>
-struct DotKernelCalculation<DeviceType::kCPU, T> {
-  static void dot(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* out) {
-    *out = cblas_dot<T>(n, x, 1, y, 1);
-  }
-};
-template<typename T>
-struct DotKernelCalculation<DeviceType::kGPU, T> {
-  static void dot(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* out) {
-    NewKernelUtil<DeviceType::kGPU>::OFDot(ctx, n, x, 1, y, 1, out);
-  }
-};
+template<typename Context>
+std::unique_ptr<Matmul> NewMatmulPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
+  return ep::primitive::NewPrimitive<MatmulFactory>(ctx->device_type(), data_type,
+                                                    BlasTransposeType::N, BlasTransposeType::N);
+}
 
-template<DeviceType device_type, typename T>
+auto MatmulPrimitiveExists() {
+  return hob::make_custom("MatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewMatmulPrimitive(&ctx).operator bool();
+  });
+}
+
 class DotKernel final : public user_op::OpKernel {
  public:
   DotKernel() = default;
@@ -52,24 +49,15 @@ class DotKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t n = x->shape().elem_cnt();
     CHECK(n <= INT_MAX);
-    DotKernelCalculation<device_type, T>::dot(ctx->device_ctx(), n, x->dptr<T>(), y->dptr<T>(),
-                                              out->mut_dptr<T>());
+    auto primitive = NewMatmulPrimitive(ctx);
+
+    primitive->Launch(ctx->stream(), 1, 1, n, 1, x->dptr(), y->dptr(), 0, out->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DOT_KERNEL(device, dtype)                                             \
-  REGISTER_USER_KERNEL("dot").SetCreateFn<DotKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device)                                              \
-      & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
-
-REGISTER_DOT_KERNEL(DeviceType::kCPU, float)
-REGISTER_DOT_KERNEL(DeviceType::kCPU, double)
-
-#ifdef WITH_CUDA
-REGISTER_DOT_KERNEL(DeviceType::kGPU, float)
-REGISTER_DOT_KERNEL(DeviceType::kGPU, double)
-#endif
+REGISTER_USER_KERNEL("dot").SetCreateFn<DotKernel>().SetIsMatchedHob(MatmulPrimitiveExists()
+                                                                     == true);
 
 }  // namespace
 

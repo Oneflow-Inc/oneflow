@@ -41,12 +41,11 @@ class OutputOp final : public Operator {
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override;
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
-  Maybe<void> InferParallelDistributionSignature(
-      cfg::ParallelDistributionSignature* parallel_distribution_signature,
-      const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
-      const ParallelDesc& parallel_desc,
-      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-          ParallelDistributionInferHint4Ibn) const override;
+  Maybe<void> InferNdSbpSignature(cfg::NdSbpSignature* nd_sbp_signature,
+                                  const cfg::NdSbpSignature& nd_sbp_constraints,
+                                  const ParallelDesc& parallel_desc,
+                                  std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
+                                      NdSbpInferHint4Ibn) const override;
 };
 
 }  // namespace oneflow

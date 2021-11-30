@@ -67,7 +67,7 @@ REGISTER_USER_OP("batch_gather")
             .PartialSum(user_op::OpArg("out", 0))
             .Build();
       } else {
-        std::shared_ptr<cfg::ErrorProto> err;
+        auto err = std::make_shared<cfg::ErrorProto>();
         err->set_msg("BatchGatherOp: indices_num_axes equals " + std::to_string(indices_num_axes)
                      + " (should be bigger than 1).");
         err->mutable_check_failed_error();
@@ -85,7 +85,8 @@ REGISTER_USER_OP("batch_gather")
     });
 
 REGISTER_USER_OP_GRAD("batch_gather")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       bool need_grad_in = op.NeedGenGradTensor4OpInput("in", 0);
       if (need_grad_in) {
         const Shape in_shape = op.TensorDesc4ArgNameAndIndex("in", 0).shape();
@@ -102,6 +103,7 @@ REGISTER_USER_OP_GRAD("batch_gather")
         op.BindGradTensorWithOpInput(in_grad_op.output("out", 0), "in", 0);
         AddOp(in_grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

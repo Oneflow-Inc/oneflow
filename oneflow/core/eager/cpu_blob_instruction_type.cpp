@@ -38,13 +38,14 @@ class CpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallback
 COMMAND(vm::RegisterInstructionType<CpuAccessBlobByCallbackInstructionType>(
     "cpu.AccessBlobByCallback"));
 
-class CpuSoftSyncStreamInstructionType : public SoftSyncStreamInstructionType {
+class CpuTensorViewInstructionType final : public TensorViewInstructionType {
  public:
-  CpuSoftSyncStreamInstructionType() = default;
-  ~CpuSoftSyncStreamInstructionType() override = default;
+  CpuTensorViewInstructionType() = default;
+  ~CpuTensorViewInstructionType() override = default;
+
   using stream_type = vm::CpuStreamType;
 };
-COMMAND(vm::RegisterInstructionType<CpuSoftSyncStreamInstructionType>("cpu.SoftSyncStream"));
+COMMAND(vm::RegisterInstructionType<CpuTensorViewInstructionType>("cpu.TensorView"));
 
 }  // namespace vm
 }  // namespace oneflow

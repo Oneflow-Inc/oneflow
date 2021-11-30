@@ -17,9 +17,9 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_INSTRUCTION_ID_H_
 
 #include <typeindex>
-#include "oneflow/core/object_msg/flat_msg.h"
+#include "oneflow/core/intrusive/flat_msg.h"
 #include "oneflow/core/common/layout_standardize.h"
-#include "oneflow/core/vm/stream_desc.msg.h"
+#include "oneflow/core/vm/stream_desc.h"
 #include "oneflow/core/vm/interpret_type.h"
 
 namespace oneflow {
@@ -38,13 +38,13 @@ class InstrTypeId final {
   ~InstrTypeId() = default;
 
   void __Init__() {
-    std::memset(this, 0, sizeof(InstrTypeId));
-    mutable_stream_type_id()->__Init__();
+    std::memset(reinterpret_cast<void*>(this), 0, sizeof(InstrTypeId));
+    mut_stream_type_id()->__Init__();
   }
   void __Init__(const StreamType* stream_type, const InstructionType* instruction_type,
                 InterpretType interpret_type) {
     __Init__();
-    mutable_stream_type_id()->__Init__(stream_type, interpret_type);
+    mut_stream_type_id()->__Init__(stream_type, interpret_type);
     instruction_type_ = instruction_type;
   }
   void clear() {
@@ -61,7 +61,6 @@ class InstrTypeId final {
 
   // Setters
   StreamTypeId* mut_stream_type_id() { return &stream_type_id_; }
-  StreamTypeId* mutable_stream_type_id() { return &stream_type_id_; }
 
   bool operator==(const InstrTypeId& rhs) const {
     return stream_type_id_ == rhs.stream_type_id_ && instruction_type_ == rhs.instruction_type_;

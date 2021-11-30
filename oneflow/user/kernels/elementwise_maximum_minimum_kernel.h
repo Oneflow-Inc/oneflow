@@ -63,13 +63,13 @@ struct MinimumGradFunctor {
 namespace {
 template<DeviceType device_type, template<typename> class Opt, typename T>
 struct ElemwiseXimumGradFunctor final {
-  void operator()(DeviceCtx* ctx, int64_t elem_cnt, const T* dz, const T* x, const T* y, T* dx,
+  void operator()(ep::Stream* stream, int64_t elem_cnt, const T* dz, const T* x, const T* y, T* dx,
                   T* dy);
 };
 
 template<DeviceType device_type, template<typename> class Opt, typename T>
 struct ElemwiseXimumFunctor final {
-  void operator()(DeviceCtx* ctx, int64_t elem_cnt, T* z, const T* x, const T* y);
+  void operator()(ep::Stream* stream, int64_t elem_cnt, T* z, const T* x, const T* y);
 };
 }  // namespace
 
@@ -80,13 +80,14 @@ class ElemwiseXimumKernel final : public user_op::OpKernel {
   ~ElemwiseXimumKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
     int64_t n = tensor_x->shape().elem_cnt();
 
-    ElemwiseXimumFunctor<device_type, Opt, T>()(ctx->device_ctx(), n, tensor_z->mut_dptr<T>(),
+    ElemwiseXimumFunctor<device_type, Opt, T>()(ctx->stream(), n, tensor_z->mut_dptr<T>(),
                                                 tensor_x->dptr<T>(), tensor_y->dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -99,6 +100,7 @@ class ElemwiseXimumBackwardKernel final : public user_op::OpKernel {
   ~ElemwiseXimumBackwardKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* tensor_dz = ctx->Tensor4ArgNameAndIndex("dz", 0);
     user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
@@ -113,36 +115,37 @@ class ElemwiseXimumBackwardKernel final : public user_op::OpKernel {
     T* dptr_dx = tensor_dx ? tensor_dx->mut_dptr<T>() : nullptr;
     T* dptr_dy = tensor_dy ? tensor_dy->mut_dptr<T>() : nullptr;
 
-    ElemwiseXimumGradFunctor<device_type, Opt, T>()(ctx->device_ctx(),
-                                                    tensor_dz->shape().elem_cnt(), dptr_dz, dptr_x,
-                                                    dptr_y, dptr_dx, dptr_dy);
+    ElemwiseXimumGradFunctor<device_type, Opt, T>()(ctx->stream(), tensor_dz->shape().elem_cnt(),
+                                                    dptr_dz, dptr_x, dptr_y, dptr_dx, dptr_dy);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MAXIMUM_KERNELS(device, dtype)                                        \
-  REGISTER_USER_KERNEL("elementwise_maximum")                                          \
-      .SetCreateFn<ElemwiseXimumKernel<device, MaximumFunctor, dtype>>()               \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("elementwise_maximum_backward")                                 \
-      .SetCreateFn<ElemwiseXimumBackwardKernel<device, MaximumGradFunctor, dtype>>()   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+#define REGISTER_MAXIMUM_KERNELS(device, dtype_pair)                                               \
+  REGISTER_USER_KERNEL("elementwise_maximum")                                                      \
+      .SetCreateFn<ElemwiseXimumKernel<device, MaximumFunctor, OF_PP_PAIR_FIRST(dtype_pair)>>()    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                        \
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair))          \
+                       && (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype_pair)));        \
+  REGISTER_USER_KERNEL("elementwise_maximum_backward")                                             \
+      .SetCreateFn<                                                                                \
+          ElemwiseXimumBackwardKernel<device, MaximumGradFunctor, OF_PP_PAIR_FIRST(dtype_pair)>>() \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                        \
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair))          \
+                       && (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
-#define REGISTER_MINIMUM_KERNELS(device, dtype)                                        \
-  REGISTER_USER_KERNEL("elementwise_minimum")                                          \
-      .SetCreateFn<ElemwiseXimumKernel<device, MinimumFunctor, dtype>>()               \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("elementwise_minimum_backward")                                 \
-      .SetCreateFn<ElemwiseXimumBackwardKernel<device, MinimumGradFunctor, dtype>>()   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+#define REGISTER_MINIMUM_KERNELS(device, dtype_pair)                                               \
+  REGISTER_USER_KERNEL("elementwise_minimum")                                                      \
+      .SetCreateFn<ElemwiseXimumKernel<device, MinimumFunctor, OF_PP_PAIR_FIRST(dtype_pair)>>()    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                        \
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair))          \
+                       && (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype_pair)));        \
+  REGISTER_USER_KERNEL("elementwise_minimum_backward")                                             \
+      .SetCreateFn<                                                                                \
+          ElemwiseXimumBackwardKernel<device, MinimumGradFunctor, OF_PP_PAIR_FIRST(dtype_pair)>>() \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                        \
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair))          \
+                       && (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
 }  // namespace oneflow
 

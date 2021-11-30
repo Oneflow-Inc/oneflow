@@ -1,0 +1,2 @@
+PyYAML>=5.1
+parsec

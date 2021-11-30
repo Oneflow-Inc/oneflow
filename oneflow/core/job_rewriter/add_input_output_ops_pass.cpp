@@ -108,6 +108,7 @@ Maybe<void> AddInputOutputOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
   }
 
   std::vector<std::string> drop_op_names;
+  drop_op_names.reserve(op_graph.node_num());
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const auto& op_name = op_node->op().op_name();
     if (keep_op_names.find(op_name) == keep_op_names.end()) { drop_op_names.emplace_back(op_name); }
@@ -128,10 +129,11 @@ Maybe<void> AddInputOutputOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
   for (const auto& pair : job_sig.inputs()) {
     const auto& input_name = pair.first;
     const auto& input_def = pair.second;
+    auto it = inferface_lbi2scope_sym_id.find(input_def.lbi());
+    if (it == inferface_lbi2scope_sym_id.end()) { continue; }
     const auto* op_node = op_graph.OpNode4OpName(input_def.lbi().op_name());
-
     CHECK_OR_RETURN(io_op_name2op_conf.emplace(input_name, OperatorConf()).second);
-    int64_t scope_sym_id = inferface_lbi2scope_sym_id.at(input_def.lbi());
+    int64_t scope_sym_id = it->second;
     std::string input_lbn = MakeInputOpConf(input_name, scope_sym_id, input_def.blob_conf(),
                                             &io_op_name2op_conf[input_name]);
     CHECK_OR_RETURN(

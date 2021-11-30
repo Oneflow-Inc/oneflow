@@ -37,7 +37,7 @@ class UniqueWithCountsKernel final : public user_op::OpKernel {
     void* tmp_ptr = tmp ? tmp->mut_dptr() : nullptr;
     int64_t tmp_size = tmp ? tmp->shape().elem_cnt() * GetSizeOfDataType(tmp->data_type()) : 0;
     UniqueKernelUtil<device_type, T, K>::UniqueWithCounts(
-        ctx->device_ctx(), x->shape().elem_cnt(), x->dptr<T>(), num_unique->mut_dptr<K>(),
+        ctx->stream(), x->shape().elem_cnt(), x->dptr<T>(), num_unique->mut_dptr<K>(),
         y->mut_dptr<T>(), idx->mut_dptr<K>(), count->mut_dptr<K>(), tmp_ptr, tmp_size);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -55,14 +55,15 @@ user_op::InferTmpSizeFn GenInferTmpSizeFn() {
   };
 }
 
-#define REGISTER_UNIQUE_WITH_COUNTS_KERNEL(device_type_v, data_type_pair, indices_type_pair)       \
-  REGISTER_USER_KERNEL("unique_with_counts")                                                       \
-      .SetCreateFn<UniqueWithCountsKernel<device_type_v, OF_PP_PAIR_FIRST(data_type_pair),         \
-                                          OF_PP_PAIR_FIRST(indices_type_pair)>>()                  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == ToString(device_type_v))                        \
-                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair))       \
-                       & (user_op::HobDataType("idx", 0) == OF_PP_PAIR_SECOND(indices_type_pair))) \
-      .SetInferTmpSizeFn(GenInferTmpSizeFn<device_type_v, OF_PP_PAIR_FIRST(data_type_pair),        \
+#define REGISTER_UNIQUE_WITH_COUNTS_KERNEL(device_type_v, data_type_pair, indices_type_pair) \
+  REGISTER_USER_KERNEL("unique_with_counts")                                                 \
+      .SetCreateFn<UniqueWithCountsKernel<device_type_v, OF_PP_PAIR_FIRST(data_type_pair),   \
+                                          OF_PP_PAIR_FIRST(indices_type_pair)>>()            \
+      .SetIsMatchedHob(                                                                      \
+          (user_op::HobDeviceType() == device_type_v)                                        \
+          && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair))             \
+          && (user_op::HobDataType("idx", 0) == OF_PP_PAIR_SECOND(indices_type_pair)))       \
+      .SetInferTmpSizeFn(GenInferTmpSizeFn<device_type_v, OF_PP_PAIR_FIRST(data_type_pair),  \
                                            OF_PP_PAIR_FIRST(indices_type_pair)>());
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNIQUE_WITH_COUNTS_KERNEL, DEVICE_TYPE_SEQ,

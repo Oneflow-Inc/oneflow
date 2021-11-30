@@ -23,7 +23,7 @@ REGISTER_NO_GRAD_USER_OP("argmax")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       auto dim_vec = ctx->InputShape("in", 0).dim_vec();
       dim_vec.pop_back();
-      *ctx->OutputShape("out", 0) = dim_vec.empty() ? Shape({1}) : Shape(std::move(dim_vec));
+      *ctx->OutputShape("out", 0) = Shape(std::move(dim_vec));
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -34,7 +34,7 @@ REGISTER_NO_GRAD_USER_OP("argmax")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = DataType::kInt32;
+      *ctx->OutputDType("out", 0) = DataType::kInt64;
       return Maybe<void>::Ok();
     });
 

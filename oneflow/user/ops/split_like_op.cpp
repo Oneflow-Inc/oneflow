@@ -45,7 +45,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
     }
     DimVector out_i_dim_vec = like_i_desc.shape().dim_vec();
     FOR_RANGE(int64_t, j, like_num_axes, in_num_axes) {
-      out_i_dim_vec.push_back(in_desc.shape().At(j));
+      out_i_dim_vec.emplace_back(in_desc.shape().At(j));
     }
     *out_i_desc->mut_shape() = Shape(out_i_dim_vec);
     out_i_desc->set_is_dynamic(like_i_desc.is_dynamic());
@@ -121,7 +121,7 @@ Maybe<void> GetSbpSignature(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void GenGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
   const int64_t axis = op.attr<int64_t>("axis");
   const int32_t out_size = op.output_size("out");
   int64_t max_dim_size = 0;
@@ -153,6 +153,7 @@ void GenGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
     op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
     AddOp(grad_op);
   }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace

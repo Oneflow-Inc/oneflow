@@ -47,7 +47,9 @@ struct AutoRegistrationFactory {
 
   Base* New(Key k, Args&&... args) const {
     auto creators_it = creators().find(k);
-    CHECK(creators_it != creators().end()) << "Unregistered: " << k;
+    CHECK(creators_it != creators().end())
+        << "Unregistered: key: " << k << "  Base type name:" << typeid(Base).name()
+        << "  Key type name" << typeid(Key).name();
     return creators_it->second(std::forward<Args>(args)...);
   }
 
@@ -90,6 +92,12 @@ struct AutoRegistrationFactory {
 template<typename Key, typename Base, typename... Args>
 inline Base* NewObj(Key k, Args&&... args) {
   return AutoRegistrationFactory<Key, Base, Args...>::Get().New(k, std::forward<Args>(args)...);
+}
+
+template<typename Key, typename Base, typename... Args>
+inline std::unique_ptr<Base> NewObjUniquePtr(Key k, Args&&... args) {
+  return std::unique_ptr<Base>(
+      AutoRegistrationFactory<Key, Base, Args...>::Get().New(k, std::forward<Args>(args)...));
 }
 
 template<typename Key, typename Base, typename... Args>

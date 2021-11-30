@@ -38,7 +38,7 @@ class XpuVarNdarray final : public XpuNdarrayBase<XpuVarNdarray<T>, T> {
   XpuVarNdarray(const ShapeView& shape, T* ptr, int ndims_left_extend_to)
       : shape_(shape, ndims_left_extend_to), ptr_(ptr) {}
   ~XpuVarNdarray() = default;
-  OF_DEVICE_FUNC ALWAYS_INLINE XpuVarNdarray(const XpuVarNdarray&) = default;
+  ALWAYS_INLINE XpuVarNdarray(const XpuVarNdarray&) = default;
   OF_DEVICE_FUNC ALWAYS_INLINE XpuVarNdarray(const XpuShape& shape, T* ptr)
       : shape_(shape), ptr_(ptr) {}
 
@@ -70,16 +70,18 @@ class XpuVarNdarray final : public XpuNdarrayBase<XpuVarNdarray<T>, T> {
   template<int NDIMS, typename X>
   OF_DEVICE_FUNC void Assign(const X& x) const {
     size_t n = shape_.ElemNum();
-    XPU_1D_KERNEL_LOOP(i, n) { ptr_[i] = x.template Get<NDIMS>(i); }
+    XPU_1D_KERNEL_LOOP_BEGIN(i, n);
+    ptr_[i] = x.template Get<NDIMS>(i);
+    XPU_1D_KERNEL_LOOP_END();
   }
 
   template<template<typename> class binary_func, int NDIMS, typename X>
   OF_DEVICE_FUNC void BinaryAssign(const X& x) const {
     size_t n = shape_.ElemNum();
-    XPU_1D_KERNEL_LOOP(i, n) {
-      T* ptr_i = ptr_ + i;
-      *ptr_i = binary_func<T>::Invoke(*ptr_i, x.template Get<NDIMS>(i));
-    }
+    XPU_1D_KERNEL_LOOP_BEGIN(i, n);
+    T* ptr_i = ptr_ + i;
+    *ptr_i = binary_func<T>::Invoke(*ptr_i, x.template Get<NDIMS>(i));
+    XPU_1D_KERNEL_LOOP_END();
   }
 
  private:

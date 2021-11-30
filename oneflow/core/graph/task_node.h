@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_GRAPH_TASK_NODE_H_
 
 #include "oneflow/core/graph/exec_graph.h"
-#include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/auto_registration_factory.h"
@@ -53,6 +52,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t machine_id() const { return machine_id_; }
   int64_t thrd_id() const { return thrd_id_; }
   int64_t task_id() const { return task_id_; }
+  const StreamId& stream_id() const;
   int64_t chain_id() const { return chain_id_; }
   int64_t order_in_graph() const { return order_in_graph_; }
   const ExecGraph& exec_gph() const { return exec_gph_; }
@@ -67,8 +67,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   }
   DeviceType device_type() const;
   virtual const ParallelContext* parallel_ctx() const { return nullptr; }
-  int64_t GlobalWorkStreamId() const;
-  int64_t GpuPhyId() const { return Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id_); }
 
   // Setters
   void set_machine_id(int64_t val);
@@ -86,7 +84,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
       const std::function<void(const std::string&, const RegstDesc*)>& Handler) const;
   void Build();
 
-  void EraseZeroSizeProducedBlob();
+  void EraseUninitializedShapeProducedBlob();
   void EraseZeroSizeConsumedRegst();
   void EraseZeroSizeProducedRegst();
   void UnbindBnWithEmptyRegst();
@@ -96,7 +94,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::string VisualStr() const override;
   virtual bool IsMeaningLess();
   virtual void ToProto(TaskProto*) const;
-  virtual bool IsIndependent() const { return false; }
   void BindEdgeWithProducedRegst(TaskEdge*, const std::string& name);
   virtual MemZoneId MemZoneId121() const;
   bool BuildCtrlRegstDescIfNeed(TaskNode* dst_node, std::string* name);
@@ -151,6 +148,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t task_id_;
   int64_t chain_id_;
   int64_t order_in_graph_;
+  std::unique_ptr<TaskId> new_task_id_;
 
   ExecGraph exec_gph_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> produced_regsts_;
@@ -178,28 +176,6 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
   HashSet<LogicalBlobId> lbis_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> name_in_producer2regst_;
 };
-
-struct IndependentThreadNum4TaskType final {
-  IndependentThreadNum4TaskType(size_t num) : has_func_(false), num_(num) {}
-  IndependentThreadNum4TaskType(std::function<size_t()> get_num)
-      : has_func_(true), get_num_(get_num) {}
-  operator size_t() { return has_func_ ? get_num_() : num_; }
-
- private:
-  bool has_func_;
-  size_t num_;
-  std::function<size_t()> get_num_;
-};
-
-#define REGISTER_INDEPENDENT_THREAD_NUM(task_type, ...)                     \
-  REGISTER_CLASS_CREATOR(int32_t, task_type, IndependentThreadNum4TaskType, \
-                         ([] { return new IndependentThreadNum4TaskType(__VA_ARGS__); }))
-
-struct TickTockTaskType final {};
-
-#define REGISTER_TICK_TOCK_TASK_TYPE(task_type)                \
-  REGISTER_CLASS_CREATOR(int32_t, task_type, TickTockTaskType, \
-                         ([] { return new TickTockTaskType; }))
 
 }  // namespace oneflow
 

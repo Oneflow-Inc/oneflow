@@ -7,10 +7,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--xla", default=False, action="store_true", required=False)
 parser.add_argument("--cuda", type=str, required=False)
 parser.add_argument("--src", type=str, required=False)
+parser.add_argument("--out", type=str, required=False)
 args = parser.parse_args()
 
 local_label = ""
-version = f"0.5.0"
+version = f"0.6.0"
 
 # set version if release of nightly
 assert (
@@ -27,8 +28,10 @@ elif os.getenv("ONEFLOW_RELEASE_NIGHTLY"):
 # append compute_platform
 compute_platform = ""
 if args.cuda:
-    compute_platform = "".join(args.cuda.split("."))
-    assert len(compute_platform) == 3, compute_platform
+    # TODO: use a proper semver lib to handle versions
+    splits = args.cuda.split(".")[0:2]
+    assert len(splits) == 2
+    compute_platform = "".join(splits)
     compute_platform = "cu" + compute_platform
 else:
     compute_platform = "cpu"
@@ -37,25 +40,24 @@ if args.xla:
 assert compute_platform
 version += f"+{compute_platform}"
 
+try:
+    git_hash = (
+        subprocess.check_output("git rev-parse --short HEAD", shell=True, cwd=args.src)
+        .decode()
+        .strip()
+    )
+except:
+    git_hash = "unknown"
+
 # append git if not release
 if not os.getenv("ONEFLOW_RELEASE_VERSION") and not os.getenv(
     "ONEFLOW_RELEASE_NIGHTLY"
 ):
-    try:
-        git_hash = (
-            subprocess.check_output(
-                "git rev-parse --short HEAD", shell=True, cwd=args.src
-            )
-            .decode()
-            .strip()
-        )
-    except:
-        git_hash = "unknown"
     version += f".git.{git_hash}"
 
 
-dst = os.path.join(args.src, "oneflow/python/version.py")
-print(f"-- Generating pip version: {version}, writing to: {dst}")
-assert args.src
-with open(dst, "w+") as f:
-    f.write(f'__version__ = "{version}"')
+print(f"-- Generating pip version: {version}, writing to: {args.out}")
+assert args.out
+with open(args.out, "w+") as f:
+    f.write(f'__version__ = "{version}"\n')
+    f.write(f'__git_commit__ = "{git_hash}"\n')

@@ -22,8 +22,8 @@ namespace {
 
 #define OF_BOXING_LOGGER_CSV_COLNUM_NAME_FIELD                   \
   "src_op_name,dst_op_name,src_parallel_desc,dst_parallel_desc," \
-  "src_parallel_distribution,"                                   \
-  "dst_parallel_distribution,lbi,dtype,shape,builder,comment\n"
+  "src_nd_sbp,"                                                  \
+  "dst_nd_sbp,lbi,dtype,shape,builder,comment\n"
 
 std::string ShapeToString(const Shape& shape) {
   std::stringstream shape_ss;
@@ -56,33 +56,30 @@ std::string ParallelDescToString(const ParallelDesc& parallel_desc) {
   return serialized_parallel_desc;
 }
 
-std::string ParallelDistributionToString(const cfg::ParallelDistribution& parallel_distribution) {
-  std::string serialized_parallel_distribution;
-  const int64_t num_axes = parallel_distribution.sbp_parallel_size();
-  serialized_parallel_distribution += "[";
+std::string NdSbpToString(const cfg::NdSbp& nd_sbp) {
+  std::string serialized_nd_sbp;
+  const int64_t num_axes = nd_sbp.sbp_parallel_size();
+  serialized_nd_sbp += "[";
   for (int64_t i = 0; i < num_axes - 1; ++i) {
-    serialized_parallel_distribution +=
-        SbpParallelToString(parallel_distribution.sbp_parallel(i)) + " ";
+    serialized_nd_sbp += SbpParallelToString(nd_sbp.sbp_parallel(i)) + " ";
   }
-  serialized_parallel_distribution +=
-      SbpParallelToString(parallel_distribution.sbp_parallel(num_axes - 1)) + "]";
-  return serialized_parallel_distribution;
+  serialized_nd_sbp += SbpParallelToString(nd_sbp.sbp_parallel(num_axes - 1)) + "]";
+  return serialized_nd_sbp;
 }
 
 std::string MakeBoxingLoggerCsvRow(const SubTskGphBuilderStatus& status,
                                    const std::string& src_op_name, const std::string& dst_op_name,
                                    const ParallelDesc& src_parallel_desc,
                                    const ParallelDesc& dst_parallel_desc,
-                                   const cfg::ParallelDistribution& src_parallel_distribution,
-                                   const cfg::ParallelDistribution& dst_parallel_distribution,
+                                   const cfg::NdSbp& src_nd_sbp, const cfg::NdSbp& dst_nd_sbp,
                                    const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc) {
   std::string serialized_status;
   serialized_status += src_op_name + ",";
   serialized_status += dst_op_name + ",";
   serialized_status += ParallelDescToString(src_parallel_desc) + ",";
   serialized_status += ParallelDescToString(dst_parallel_desc) + ",";
-  serialized_status += ParallelDistributionToString(src_parallel_distribution) + ",";
-  serialized_status += ParallelDistributionToString(dst_parallel_distribution) + ",";
+  serialized_status += NdSbpToString(src_nd_sbp) + ",";
+  serialized_status += NdSbpToString(dst_nd_sbp) + ",";
   serialized_status += GenLogicalBlobName(lbi) + ",";
   serialized_status += DataType_Name(logical_blob_desc.data_type()) + ",";
   serialized_status += ShapeToString(logical_blob_desc.shape()) + ",";
@@ -107,13 +104,12 @@ CsvBoxingLogger::~CsvBoxingLogger() { log_stream_->Flush(); }
 
 void CsvBoxingLogger::Log(const SubTskGphBuilderStatus& status, const std::string& src_op_name,
                           const std::string& dst_op_name, const ParallelDesc& src_parallel_desc,
-                          const ParallelDesc& dst_parallel_desc,
-                          const cfg::ParallelDistribution& src_parallel_distribution,
-                          const cfg::ParallelDistribution& dst_parallel_distribution,
-                          const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc) {
+                          const ParallelDesc& dst_parallel_desc, const cfg::NdSbp& src_nd_sbp,
+                          const cfg::NdSbp& dst_nd_sbp, const LogicalBlobId& lbi,
+                          const BlobDesc& logical_blob_desc) {
   log_stream_ << MakeBoxingLoggerCsvRow(status, src_op_name, dst_op_name, src_parallel_desc,
-                                        dst_parallel_desc, src_parallel_distribution,
-                                        dst_parallel_distribution, lbi, logical_blob_desc);
+                                        dst_parallel_desc, src_nd_sbp, dst_nd_sbp, lbi,
+                                        logical_blob_desc);
 }
 
 }  // namespace oneflow

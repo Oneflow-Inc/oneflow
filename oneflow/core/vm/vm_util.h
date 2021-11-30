@@ -17,19 +17,19 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_H_
 
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/object_msg/object_msg.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/intrusive/intrusive.h"
+#include "oneflow/core/vm/instruction.h"
 
 namespace oneflow {
 namespace vm {
 
-class InstructionMsg;
+struct InstructionMsg;
 
-ObjectMsgPtr<InstructionMsg> NewInstruction(const std::string& instr_type_name);
+intrusive::shared_ptr<InstructionMsg> NewInstruction(const std::string& instr_type_name);
 
 Maybe<void> Run(vm::InstructionMsgList* instr_msg_list);
-Maybe<void> SingleClientSync();
-Maybe<void> MultiClientSync();
+Maybe<void> ClusterSync();
+Maybe<void> CurrentRankSync();
 
 }  // namespace vm
 }  // namespace oneflow

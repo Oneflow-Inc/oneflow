@@ -89,7 +89,7 @@ class Registry : public RegistryBase {
     AttributeFactory attri_factory;
     attri_factory.factory = factory;
     attri_factory.attribute = attribute;
-    return std::move(attri_factory);
+    return attri_factory;
   }
 
  private:

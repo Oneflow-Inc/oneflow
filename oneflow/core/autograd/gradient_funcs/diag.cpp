@@ -20,17 +20,17 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct DiagInterpState : public OpExprInterpState {
+struct DiagCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   int32_t diagonal;
 };
 
-class Diag : public OpExprGradFunction<DiagInterpState> {
+class Diag : public OpExprGradFunction<DiagCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(DiagInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+  Maybe<void> Capture(DiagCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override;
-  Maybe<void> Apply(const DiagInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const DiagCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -44,7 +44,7 @@ Maybe<void> Diag::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Diag::Capture(DiagInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> Diag::Capture(DiagCaptureState* ctx, const TensorTuple& inputs,
                           const TensorTuple& outputs, const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(outputs.size(), 1);
   ctx->requires_grad = inputs.at(0)->requires_grad();
@@ -55,7 +55,7 @@ Maybe<void> Diag::Capture(DiagInterpState* ctx, const TensorTuple& inputs,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Diag::Apply(const DiagInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> Diag::Apply(const DiagCaptureState* ctx, const TensorTuple& out_grads,
                         TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(2);

@@ -31,7 +31,8 @@ void TransportStreamType::InitInstructionStatus(const Stream& stream,
 
 void TransportStreamType::DeleteInstructionStatus(const Stream& stream,
                                                   InstructionStatusBuffer* status_buffer) const {
-  // do nothing
+  auto* ptr = reinterpret_cast<RefCntType*>(status_buffer->mut_buffer()->mut_data());
+  ptr->~RefCntType();
 }
 
 bool TransportStreamType::QueryInstructionStatusDone(
@@ -47,7 +48,7 @@ void TransportStreamType::Compute(Instruction* instruction) const {
 }
 
 template<typename DerivedT>
-ObjectMsgPtr<StreamDesc> TransportStreamType::MakeTransportStreamDesc(
+intrusive::shared_ptr<StreamDesc> TransportStreamType::MakeTransportStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
   std::size_t device_num = 0;
   if (resource.has_cpu_device_num()) {
@@ -56,8 +57,8 @@ ObjectMsgPtr<StreamDesc> TransportStreamType::MakeTransportStreamDesc(
   if (resource.has_gpu_device_num()) {
     device_num = std::max<std::size_t>(device_num, resource.gpu_device_num());
   }
-  auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<DerivedT>());
+  auto ret = intrusive::make_shared<StreamDesc>();
+  ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<DerivedT>());
   // TODO(lixinqi): remove this ugly field
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(device_num);
@@ -66,12 +67,12 @@ ObjectMsgPtr<StreamDesc> TransportStreamType::MakeTransportStreamDesc(
   return ret;
 }
 
-ObjectMsgPtr<StreamDesc> TransportSenderStreamType::MakeStreamDesc(const Resource& resource,
-                                                                   int64_t this_machine_id) const {
+intrusive::shared_ptr<StreamDesc> TransportSenderStreamType::MakeStreamDesc(
+    const Resource& resource, int64_t this_machine_id) const {
   return MakeTransportStreamDesc<TransportSenderStreamType>(resource, this_machine_id);
 }
 
-ObjectMsgPtr<StreamDesc> TransportReceiverStreamType::MakeStreamDesc(
+intrusive::shared_ptr<StreamDesc> TransportReceiverStreamType::MakeStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
   return MakeTransportStreamDesc<TransportReceiverStreamType>(resource, this_machine_id);
 }

@@ -57,8 +57,7 @@ GraphBuilder::GraphBuilder(const OpGraph* op_graph) : graph_(std::make_shared<Xr
   });
 }
 
-GraphBuilder::GraphBuilder(const XrtLaunchOpConf::Function& function, const DeviceType& device_type,
-                           const JobDesc& job_desc)
+GraphBuilder::GraphBuilder(const XrtLaunchOpConf::Function& function, const DeviceType& device_type)
     : graph_(std::make_shared<XrtGraph>()) {
   for (const auto& arg_conf : function.argument()) {
     XrtNode* node = graph_->AddNode(arg_conf);
@@ -123,20 +122,20 @@ void GraphBuilder::SetupGraphEdges() {
     if (nullptr == src || nullptr == dst) { continue; }
     // Set time shape
     std::vector<Shape> time_shape;
-    time_shape.push_back(OutputTimeShape(src));
-    time_shape.push_back(InputTimeShape(dst));
+    time_shape.emplace_back(OutputTimeShape(src));
+    time_shape.emplace_back(InputTimeShape(dst));
     edge->Attr("time_shape", time_shape);
     // Set sbp policy
     std::vector<cfg::SbpParallel> sbp_policy;
-    sbp_policy.push_back(BlobSbpPolicy(src, name));
-    sbp_policy.push_back(BlobSbpPolicy(dst, name));
+    sbp_policy.emplace_back(BlobSbpPolicy(src, name));
+    sbp_policy.emplace_back(BlobSbpPolicy(dst, name));
     edge->Attr("sbp_policy", sbp_policy);
   }
 }
 
 std::shared_ptr<XrtGraph> BuildGraph(const XrtLaunchOpConf::Function& function,
-                                     const DeviceType& device_type, const JobDesc& job_desc) {
-  return GraphBuilder(function, device_type, job_desc).Build();
+                                     const DeviceType& device_type) {
+  return GraphBuilder(function, device_type).Build();
 }
 
 std::shared_ptr<XrtGraph> BuildGraph(const OpGraph* op_graph) {

@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/control/rpc_server.h"
-#include "oneflow/core/actor/act_event_logger.h"
-#include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/env_desc.h"
 #include "grpc/grpc_posix.h"
 
@@ -77,8 +75,8 @@ void RpcServer::Init() {
               .emplace(barrier_name, std::make_pair(std::list<CtrlCallIf*>{}, barrier_num))
               .first;
     }
-    CHECK_EQ(barrier_num, barrier_call_it->second.second);
-    barrier_call_it->second.first.push_back(call);
+    CHECK_EQ(barrier_num, barrier_call_it->second.second) << barrier_name;
+    barrier_call_it->second.first.emplace_back(call);
     if (barrier_call_it->second.first.size() == barrier_call_it->second.second) {
       for (CtrlCallIf* pending_call : barrier_call_it->second.first) {
         pending_call->SendResponse();
@@ -123,7 +121,7 @@ void RpcServer::Init() {
     void* lock_status = name2lock_status_.at(lock_name);
     if (lock_status) {
       auto waiting_calls = static_cast<std::list<CtrlCallIf*>*>(lock_status);
-      waiting_calls->push_back(call);
+      waiting_calls->emplace_back(call);
     } else {
       call->SendResponse();
     }
@@ -162,16 +160,9 @@ void RpcServer::Init() {
       call->mut_response()->set_val(kv_it->second);
       call->SendResponse();
     } else {
-      pending_kv_calls_[k].push_back(call);
+      pending_kv_calls_[k].emplace_back(call);
     }
     EnqueueRequest<CtrlMethod::kPullKV>();
-  });
-
-  Add([this](CtrlCall<CtrlMethod::kPushActEvent>* call) {
-    ActEvent act_event = call->request().act_event();
-    call->SendResponse();
-    Global<ActEventLogger>::Get()->PrintActEventToLogDir(act_event);
-    EnqueueRequest<CtrlMethod::kPushActEvent>();
   });
 
   Add([this](CtrlCall<CtrlMethod::kClear>* call) {

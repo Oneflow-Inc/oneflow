@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/graph/compute_task_node.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
 
 namespace oneflow {
 
@@ -28,18 +28,10 @@ class CaseCompTaskNode final : public CompTaskNode {
   void ConsumeAllRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kCase; }
-  CudaWorkType GetCudaWorkType() const override {
-#ifdef WITH_CUDA
-    return CudaWorkType::kCompute;
-#else
-    UNIMPLEMENTED();
-#endif
-  }
 
  private:
   void BuildExecGphAndRegst() override;
   void InferProducedDataRegstTimeShape() override;
-  bool IsIndependent() const override { return true; }
 };
 
 void CaseCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); }
@@ -82,12 +74,7 @@ void CaseCompTaskNode::BuildExecGphAndRegst() {
 
 void CaseCompTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
 
-REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kCase);
-
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kCase)
-    .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
-      return generator->GenerateTickTockStreamIndex();
-    });
+REGISTER_TICK_TASK_STREAM_INDEX_GETTER(TaskType::kCase);
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kCaseConf, CaseCompTaskNode);
 

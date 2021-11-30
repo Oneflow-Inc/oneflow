@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/register/register_desc.h"
+#include "oneflow/core/lazy/actor/actor_context.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -45,7 +46,7 @@ class CudaHostMem {
 }  // namespace
 
 template<typename SizeType>
-class SyncDynamicResizeGPUKernel final : public KernelIf<DeviceType::kGPU> {
+class SyncDynamicResizeGPUKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SyncDynamicResizeGPUKernel);
   SyncDynamicResizeGPUKernel() = default;
@@ -54,8 +55,7 @@ class SyncDynamicResizeGPUKernel final : public KernelIf<DeviceType::kGPU> {
  private:
   bool IsKernelLaunchSynchronized() const override { return false; }
 
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+  void ForwardDataContent(KernelContext* ctx) const override {
     const SyncDynamicResizeOpConf& conf = this->op_conf().sync_dynamic_resize_conf();
     CHECK_EQ(conf.axis(), 0);
     std::shared_ptr<CudaHostMem> cuda_host_mem_ptr;
@@ -68,12 +68,12 @@ class SyncDynamicResizeGPUKernel final : public KernelIf<DeviceType::kGPU> {
         queue_.pop();
       }
     }
-    const Blob* in = BnInOp2Blob("in");
-    const Blob* size = BnInOp2Blob("size");
-    Blob* out = BnInOp2Blob("out");
-    AutoMemcpy(ctx.device_ctx, out->mut_dptr(), in->dptr(), in->ByteSizeOfBlobBody(),
+    const Blob* in = ctx->BnInOp2Blob("in");
+    const Blob* size = ctx->BnInOp2Blob("size");
+    Blob* out = ctx->BnInOp2Blob("out");
+    AutoMemcpy(ctx->stream(), out->mut_dptr(), in->dptr(), in->ByteSizeOfBlobBody(),
                out->mem_case(), in->mem_case());
-    AutoMemcpy(ctx.device_ctx, cuda_host_mem_ptr->Ptr(), size->dptr(), sizeof(SizeType),
+    AutoMemcpy(ctx->stream(), cuda_host_mem_ptr->Ptr(), size->dptr(), sizeof(SizeType),
                MakeHostMemCase(), size->mem_case());
     const auto& UpdateShape = [out, cuda_host_mem_ptr, conf, this]() {
       const int64_t new_size = *reinterpret_cast<SizeType*>(cuda_host_mem_ptr->Ptr());
@@ -89,10 +89,11 @@ class SyncDynamicResizeGPUKernel final : public KernelIf<DeviceType::kGPU> {
       queue_.push(cuda_host_mem_ptr);
     };
     if (conf.eager()) {
-      OF_CUDA_CHECK(cudaStreamSynchronize(ctx.device_ctx->cuda_stream()));
+      CHECK_JUST(ctx->stream()->Sync());
       UpdateShape();
     } else {
-      ctx.device_ctx->AddCallBack(UpdateShape);
+      auto* actor_context_provider = CHECK_NOTNULL(dynamic_cast<ActorContextProvider*>(ctx));
+      actor_context_provider->GetActorContext()->AddCallback(UpdateShape);
     }
   }
 
@@ -114,7 +115,7 @@ REGISTER_SYNC_DYNAMIC_RESIZE_GPU_KERNEL(int64_t);
 #endif  // WITH_CUDA
 
 template<typename SizeType>
-class SyncDynamicResizeCPUKernel final : public KernelIf<DeviceType::kCPU> {
+class SyncDynamicResizeCPUKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SyncDynamicResizeCPUKernel);
   SyncDynamicResizeCPUKernel() = default;
@@ -122,14 +123,13 @@ class SyncDynamicResizeCPUKernel final : public KernelIf<DeviceType::kCPU> {
 
  private:
   bool IsKernelLaunchSynchronized() const override { return false; }
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+  void ForwardDataContent(KernelContext* ctx) const override {
     const SyncDynamicResizeOpConf& conf = this->op_conf().sync_dynamic_resize_conf();
     CHECK_EQ(conf.axis(), 0);
-    const Blob* in = BnInOp2Blob("in");
-    const Blob* size = BnInOp2Blob("size");
-    Blob* out = BnInOp2Blob("out");
-    AutoMemcpy(ctx.device_ctx, out->mut_dptr(), in->dptr(), in->ByteSizeOfBlobBody(),
+    const Blob* in = ctx->BnInOp2Blob("in");
+    const Blob* size = ctx->BnInOp2Blob("size");
+    Blob* out = ctx->BnInOp2Blob("out");
+    AutoMemcpy(ctx->stream(), out->mut_dptr(), in->dptr(), in->ByteSizeOfBlobBody(),
                out->mem_case(), in->mem_case());
     const SizeType new_size = *size->dptr<SizeType>();
     CHECK_GE(new_size, 0);

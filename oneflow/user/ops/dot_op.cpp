@@ -48,38 +48,32 @@ REGISTER_USER_OP("dot")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("dot").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
-  if (ctx->FwOp().NeedGenGradTensor4OpInput("x", 0)) {
-    const auto dot_grad_op_name = ctx->FwOp().op_name() + "_grad_x";
-    ctx->DefineOp(dot_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-      return builder.OpTypeName("scalar_mul")
-          .InputBind("x", ctx->FwOp().input("y", 0))
-          .InputBind("scalar", ctx->FwOp().output_grad("out", 0))
-          .Output("y")
-          .Build();
-    });
+REGISTER_USER_OP_GRAD("dot").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                                                       user_op::AddOpFn AddOp) -> Maybe<void> {
+  if (op.NeedGenGradTensor4OpInput("x", 0)) {
+    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+    user_op::UserOpConfWrapper grad_op =
+        builder.Op("scalar_mul")
+            .Input("x", op.input("y", 0))
+            .Input("scalar", op.GetGradTensorWithOpOutput("out", 0))
+            .Output("y")
+            .Build();
 
-    ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
-                              [&ctx, &dot_grad_op_name]() -> const std::string& {
-                                return ctx->GetOp(dot_grad_op_name).output("y", 0);
-                              });
+    op.BindGradTensorWithOpInput(grad_op.output("y", 0), "x", 0);
   }
 
-  if (ctx->FwOp().NeedGenGradTensor4OpInput("y", 0)) {
-    const auto dot_grad_op_name = ctx->FwOp().op_name() + "_grad_y";
-    ctx->DefineOp(dot_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-      return builder.OpTypeName("scalar_mul")
-          .InputBind("x", ctx->FwOp().input("x", 0))
-          .InputBind("scalar", ctx->FwOp().output_grad("out", 0))
-          .Output("y")
-          .Build();
-    });
+  if (op.NeedGenGradTensor4OpInput("y", 0)) {
+    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+    user_op::UserOpConfWrapper grad_op =
+        builder.Op("scalar_mul")
+            .Input("x", op.input("x", 0))
+            .Input("scalar", op.GetGradTensorWithOpOutput("out", 0))
+            .Output("y")
+            .Build();
 
-    ctx->FwOp().InputGradBind(user_op::OpArg("y", 0),
-                              [&ctx, &dot_grad_op_name]() -> const std::string& {
-                                return ctx->GetOp(dot_grad_op_name).output("y", 0);
-                              });
+    op.BindGradTensorWithOpInput(grad_op.output("y", 0), "y", 0);
   }
+  return Maybe<void>::Ok();
 });
 
 }  // namespace

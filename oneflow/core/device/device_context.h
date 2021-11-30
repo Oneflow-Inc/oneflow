@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/auto_registration_factory.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 
@@ -33,29 +34,34 @@ class DeviceCtx {
   virtual ~DeviceCtx() = default;
 
 #ifdef WITH_CUDA
-  virtual const cudaStream_t& cuda_stream() const { UNIMPLEMENTED(); }
-  virtual const cublasHandle_t& cublas_pmh_handle() const { UNIMPLEMENTED(); }
-  virtual const cublasHandle_t& cublas_pmd_handle() const { UNIMPLEMENTED(); }
-  virtual const cublasHandle_t& cublas_tensor_op_math_handle() const { UNIMPLEMENTED(); }
-  virtual const cudnnHandle_t& cudnn_handle() const { UNIMPLEMENTED(); }
+  virtual cudaStream_t cuda_stream() const {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+  virtual cublasHandle_t cublas_handle() const {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+  virtual cudnnHandle_t cudnn_handle() const {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
 #endif
 
-  virtual void SyncDevice() { UNIMPLEMENTED(); }
-  virtual void AddCallBack(std::function<void()>) const { UNIMPLEMENTED(); }
+  virtual ep::Stream* stream() = 0;
 
   virtual vm::Allocator* mut_allocator() {
     UNIMPLEMENTED();
     return nullptr;
   }
 
+  virtual DeviceType device_type() const = 0;
+
  protected:
   DeviceCtx() = default;
 
  private:
 };
-
-#define REGISTER_DEVICE_CONTEXT(device, creator) \
-  REGISTER_CLASS_CREATOR(int, device, DeviceCtx, creator, const ThreadCtx&)
 
 }  // namespace oneflow
 

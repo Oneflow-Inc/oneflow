@@ -45,7 +45,7 @@ REGISTER_USER_OP("repeat")
     .SetOutputBlobTimeShapeInferFn(
         [](user_op::InferOutputBlobTimeShapeFnContext* ctx) -> Maybe<void> {
           DimVector dim_vec(ctx->TimeShape4InputArgNameAndIndex("in", 0).dim_vec());
-          dim_vec.push_back(ctx->user_op_conf().attr<int32_t>("repeat_num"));
+          dim_vec.emplace_back(ctx->user_op_conf().attr<int32_t>("repeat_num"));
           *ctx->mut_output_blob_time_shape() = Shape(dim_vec);
           return Maybe<void>::Ok();
         })
@@ -54,7 +54,8 @@ REGISTER_USER_OP("repeat")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("repeat").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+REGISTER_USER_OP_GRAD("repeat").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx)
+                                                           -> Maybe<void> {
   const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
   ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("acc")
@@ -66,6 +67,7 @@ REGISTER_USER_OP_GRAD("repeat").SetBackwardOpConfGenFn([](user_op::BackwardOpCon
   ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), [&ctx, &grad_op_name]() -> const std::string& {
     return ctx->GetOp(grad_op_name).output("out", 0);
   });
+  return Maybe<void>::Ok();
 });
 
 }  // namespace

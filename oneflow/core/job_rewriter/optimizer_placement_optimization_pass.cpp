@@ -75,7 +75,7 @@ Maybe<void> GetDataParallelVariableAndNaiveSuccNode(
     std::vector<const OpNode*>* out) {
   if (!start->op().op_conf().has_variable_conf()) { return Maybe<void>::Ok(); }
   const ParallelDesc& pd = start->parallel_desc();
-  if (pd.device_type() != DeviceType::kGPU) { return Maybe<void>::Ok(); }
+  if (pd.device_type() != DeviceType::kCUDA) { return Maybe<void>::Ok(); }
   if (pd.parallel_num() == 1) { return Maybe<void>::Ok(); }
   const OpNode* cur_node = start;
   while (cur_node != nullptr) {
@@ -90,7 +90,7 @@ Maybe<void> GetDataParallelVariableAndNaiveSuccNode(
     if (cur_node->op().output_bns().size() != 1) { break; }
     const std::string& sole_obn = cur_node->op().SoleObn();
     if (!cur_node->SbpParallel4BnInOp(sole_obn).has_broadcast_parallel()) { break; }
-    out->push_back(cur_node);
+    out->emplace_back(cur_node);
     if (cur_node->out_edges().size() == 1) {
       cur_node = cur_node->SoleOutEdge()->dst_node();
     } else {
@@ -247,8 +247,8 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
       const OpNode* var_node = sorted_sequences.at(i)->GetVariableNode();
       OperatorConf new_var_op_conf = var_node->op().op_conf();
       CHECK_EQ(pd.hierarchy()->NumAxes(), 1);
-      new_var_op_conf.mutable_variable_conf()->clear_parallel_distribution();
-      *new_var_op_conf.mutable_variable_conf()->add_parallel_distribution() = "S(0)";
+      new_var_op_conf.mutable_variable_conf()->clear_nd_sbp();
+      *new_var_op_conf.mutable_variable_conf()->add_nd_sbp() = "S(0)";
       if (i != 0) {
         const std::string& prev_op_name =
             sorted_sequences.at(i - 1)->GetVariableNode()->op().op_name();
@@ -326,7 +326,7 @@ class OptimizerPlacementOptimizationPass final : public JobPass {
     } else if (mode == "distributed_split") {
       return RewriteDistributedSplit(op_graph, &job_builder);
     } else {
-      return Error::Unimplemented();
+      return Error::UnimplementedError();
     }
   }
 };

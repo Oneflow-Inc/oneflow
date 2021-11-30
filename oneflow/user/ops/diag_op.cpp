@@ -33,7 +33,7 @@ REGISTER_USER_OP("diag")
       if (in_dim == 1) {
         int32_t out_tensor_size = in_shape.At(0) + std::abs(diagonal);
         out_dim_vec[0] = out_tensor_size;
-        out_dim_vec.push_back(out_tensor_size);
+        out_dim_vec.emplace_back(out_tensor_size);
       } else {
         if (diagonal >= 0) {
           out_dim_vec[0] = std::min(in_shape.At(0), in_shape.At(1) - diagonal);
@@ -78,7 +78,8 @@ REGISTER_USER_OP("diag_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("diag").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+REGISTER_USER_OP_GRAD("diag").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx)
+                                                         -> Maybe<void> {
   const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
   ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("diag_grad")
@@ -92,5 +93,6 @@ REGISTER_USER_OP_GRAD("diag").SetBackwardOpConfGenFn([](user_op::BackwardOpConfC
   ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), [&ctx, &grad_op_name]() -> const std::string& {
     return ctx->GetOp(grad_op_name).output("dx", 0);
   });
+  return Maybe<void>::Ok();
 });
 }  // namespace oneflow

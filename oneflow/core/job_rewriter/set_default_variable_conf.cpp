@@ -13,7 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/job_set_compile_ctx.h"
 
@@ -30,6 +32,10 @@ class SetDefaultVariableConf final : public JobPass {
   }
 
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+    if (JUST(IsMultiClient())) {
+      // NOTE(chengcheng): Multi-Client Variable is inited by Eager.
+      return Maybe<void>::Ok();
+    }
     op_graph.ForEachNode([&](OpNode* op_node) {
       if (op_node->op().op_conf().has_variable_conf()) {
         OperatorConf variable_op_conf(op_node->op().op_conf());

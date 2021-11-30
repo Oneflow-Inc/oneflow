@@ -31,6 +31,7 @@ class ArgWhereKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     int64_t ndims = ctx->Tensor4ArgNameAndIndex("input", 0)->shape().NumAxes();
+    if (ndims == 0) { return; }
     SwitchNdimCompute(SwitchCase(ndims), ctx);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -48,7 +49,7 @@ class ArgWhereKernel final : public user_op::OpKernel {
     void* tmp_ptr = tmp ? tmp->mut_dptr() : nullptr;
     size_t tmp_size = tmp ? tmp->shape().elem_cnt() * GetSizeOfDataType(tmp->data_type()) : 0;
     ArgWhereKernelUtil<device_type, IN_T, OUT_T, NDIM>::ArgWhere(
-        ctx->device_ctx(), input->shape(), input->dptr<IN_T>(), tmp_ptr, tmp_size,
+        ctx->stream(), input->shape(), input->dptr<IN_T>(), tmp_ptr, tmp_size,
         output->mut_dptr<OUT_T>(), output_size->mut_dptr<OUT_T>());
   }
 };
@@ -62,11 +63,10 @@ size_t GetWorkspaceBytesSize(int64_t elem_cnt) {
 struct SwitchUtil {
 #define SWITCH_ENTRY(func_name, device, itype, otype, ndim) func_name<device, itype, otype, ndim>
 
-  DEFINE_STATIC_SWITCH_FUNC(size_t, GetWorkspaceBytesSize, SWITCH_ENTRY,
-                            MAKE_DEVICE_TYPE_CTRV_SEQ(DEVICE_TYPE_SEQ),
-                            MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ),
-                            MAKE_DATA_TYPE_CTRV_SEQ(INDEX_DATA_TYPE_SEQ),
-                            MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+  DEFINE_STATIC_SWITCH_FUNC(
+      size_t, GetWorkspaceBytesSize, SWITCH_ENTRY, MAKE_DEVICE_TYPE_CTRV_SEQ(DEVICE_TYPE_SEQ),
+      MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ),
+      MAKE_DATA_TYPE_CTRV_SEQ(INDEX_DATA_TYPE_SEQ), MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
 #undef SWITCH_ENTRY
 };
 
@@ -74,6 +74,7 @@ size_t InferTempStorageBytesSize(user_op::InferContext* ctx) {
   const std::string& device_tag = ctx->device_tag();
   DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(device_tag));
   const Shape& input_shape = ctx->InputShape("input", 0);
+  if (input_shape.NumAxes() == 0) { return 0; }
   const DataType& input_dtype = ctx->InputDType("input", 0);
   DataType output_dtype = *ctx->OutputDType("output", 0);
   return SwitchUtil::SwitchGetWorkspaceBytesSize(
@@ -83,19 +84,20 @@ size_t InferTempStorageBytesSize(user_op::InferContext* ctx) {
 
 }  // namespace
 
-#define REGISTER_ARG_WHERE_KERNEL(device, itype, otype)                                         \
-  REGISTER_USER_KERNEL("argwhere")                                                              \
-      .SetCreateFn<ArgWhereKernel<device, itype, otype>>()                                      \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
-                       & (user_op::HobDataType("input", 0) == GetDataType<itype>::value)        \
-                       & (user_op::HobDataType("output", 0) == GetDataType<otype>::value)       \
-                       & (user_op::HobDataType("output_size", 0) == GetDataType<otype>::value)) \
+#define REGISTER_ARG_WHERE_KERNEL(device, itype, otype)                                          \
+  REGISTER_USER_KERNEL("argwhere")                                                               \
+      .SetCreateFn<ArgWhereKernel<device, itype, otype>>()                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
+                       && (user_op::HobDataType("input", 0) == GetDataType<itype>::value)        \
+                       && (user_op::HobDataType("output", 0) == GetDataType<otype>::value)       \
+                       && (user_op::HobDataType("output_size", 0) == GetDataType<otype>::value)) \
       .SetInferTmpSizeFn(InferTempStorageBytesSize);
 
 #define REGISTER_ARG_WHERE_KERNEL_WITH_DTYPE_PAIR(device, itype_pair, otype_pair) \
   REGISTER_ARG_WHERE_KERNEL(device, OF_PP_PAIR_FIRST(itype_pair), OF_PP_PAIR_FIRST(otype_pair))
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ARG_WHERE_KERNEL_WITH_DTYPE_PAIR, DEVICE_TYPE_SEQ,
-                                 ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

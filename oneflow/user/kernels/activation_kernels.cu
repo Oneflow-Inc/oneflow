@@ -41,6 +41,28 @@ struct EluGradFunctor<half> {
 };
 
 template<>
+struct CeluFunctor<half> {
+  OF_DEVICE_FUNC explicit CeluFunctor(float alpha)
+      : alpha(alpha), float_functor(CeluFunctor<float>(alpha)) {}
+  OF_DEVICE_FUNC half operator()(half x) const {
+    return __float2half(float_functor(__half2float(x)));
+  }
+  const float alpha;
+  CeluFunctor<float> float_functor;
+};
+
+template<>
+struct CeluGradFunctor<half> {
+  OF_DEVICE_FUNC explicit CeluGradFunctor(float alpha)
+      : alpha(alpha), float_functor(CeluGradFunctor<float>(alpha)) {}
+  OF_DEVICE_FUNC half operator()(half x, half dy) const {
+    return __float2half(float_functor(__half2float(x), __half2float(dy)));
+  }
+  const float alpha;
+  CeluGradFunctor<float> float_functor;
+};
+
+template<>
 struct HardswishFunctor<half> {
   HardswishFunctor<float> float_functor;
   OF_DEVICE_FUNC half operator()(half x) const {
@@ -56,14 +78,129 @@ struct HardswishGradFunctor<half> {
   }
 };
 
-#define REGISTER_ACTIVATION_GPU_KERNEL(dtype)           \
-  REGISTER_ELU_KERNEL(DeviceType::kGPU, dtype);         \
-  REGISTER_HARDSWISH_KERNEL(DeviceType::kGPU, dtype);   \
-  REGISTER_HARDSIGMOID_KERNEL(DeviceType::kGPU, dtype); \
-  REGISTER_HARDTANH_KERNEL(DeviceType::kGPU, dtype);
+template<>
+struct MishFunctor<half> {
+  OF_DEVICE_FUNC explicit MishFunctor() : float_functor(MishFunctor<float>()) {}
+  OF_DEVICE_FUNC half operator()(half x) const {
+    return __float2half(float_functor(__half2float(x)));
+  }
+  MishFunctor<float> float_functor;
+};
 
-REGISTER_ACTIVATION_GPU_KERNEL(half);
-REGISTER_ACTIVATION_GPU_KERNEL(float);
-REGISTER_ACTIVATION_GPU_KERNEL(double);
+template<>
+struct MishGradFunctor<half> {
+  OF_DEVICE_FUNC explicit MishGradFunctor() : float_functor(MishGradFunctor<float>()) {}
+  OF_DEVICE_FUNC half operator()(half x, half dy) const {
+    return __float2half(float_functor(__half2float(x), __half2float(dy)));
+  }
+  MishGradFunctor<float> float_functor;
+};
+
+template<>
+struct SiluFunctor<half> {
+  OF_DEVICE_FUNC explicit SiluFunctor() : float_functor(SiluFunctor<float>()) {}
+  OF_DEVICE_FUNC half operator()(half x) const {
+    return __float2half(float_functor(__half2float(x)));
+  }
+  SiluFunctor<float> float_functor;
+};
+
+template<>
+struct SiluGradFunctor<half> {
+  OF_DEVICE_FUNC explicit SiluGradFunctor() : float_functor(SiluGradFunctor<float>()) {}
+  OF_DEVICE_FUNC half operator()(half x, half dy) const {
+    return __float2half(float_functor(__half2float(x), __half2float(dy)));
+  }
+  SiluGradFunctor<float> float_functor;
+};
+
+template<>
+struct SeluFunctor<half> {
+  OF_DEVICE_FUNC explicit SeluFunctor() : float_functor(SeluFunctor<float>()) {}
+  OF_DEVICE_FUNC half operator()(half x) const {
+    return __float2half(float_functor(__half2float(x)));
+  }
+  SeluFunctor<float> float_functor;
+};
+
+template<>
+struct SeluGradFunctor<half> {
+  OF_DEVICE_FUNC explicit SeluGradFunctor() : float_functor(SeluGradFunctor<float>()) {}
+  OF_DEVICE_FUNC half operator()(half x, half dy) const {
+    return __float2half(float_functor(__half2float(x), __half2float(dy)));
+  }
+  SeluGradFunctor<float> float_functor;
+};
+
+template<>
+struct SoftSignFunctor<half> {
+  OF_DEVICE_FUNC explicit SoftSignFunctor() : float_functor(SoftSignFunctor<float>()) {}
+  OF_DEVICE_FUNC half operator()(half x) const {
+    return __float2half(float_functor(__half2float(x)));
+  }
+  SoftSignFunctor<float> float_functor;
+};
+
+template<>
+struct SoftSignGradFunctor<half> {
+  OF_DEVICE_FUNC explicit SoftSignGradFunctor() : float_functor(SoftSignGradFunctor<float>()) {}
+  OF_DEVICE_FUNC half operator()(half x, half dy) const {
+    return __float2half(float_functor(__half2float(x), __half2float(dy)));
+  }
+  SoftSignGradFunctor<float> float_functor;
+};
+
+template<>
+struct ReluFunctor<half> {
+  OF_DEVICE_FUNC explicit ReluFunctor() {}
+  __device__ half operator()(half x) const {
+    half zero = __float2half(0.0);
+    if (__hgt(x, zero)) {
+      return x;
+    } else {
+      return zero;
+    }
+  }
+};
+
+template<>
+struct ReluGradFunctor<half> {
+  OF_DEVICE_FUNC explicit ReluGradFunctor() {}
+  __device__ half operator()(half y, half dy) const {
+    half zero = __float2half(0.0);
+    if (__hgt(y, zero)) {
+      return dy;
+    } else {
+      return zero;
+    }
+  }
+};
+
+#define REGISTER_ACTIVATION_CUDA_KERNEL(dtype)            \
+  REGISTER_ELU_KERNEL(DeviceType::kCUDA, dtype);          \
+  REGISTER_CELU_KERNEL(DeviceType::kCUDA, dtype);         \
+  REGISTER_HARDSWISH_KERNEL(DeviceType::kCUDA, dtype);    \
+  REGISTER_HARDSIGMOID_KERNEL(DeviceType::kCUDA, dtype);  \
+  REGISTER_HARDTANH_KERNEL(DeviceType::kCUDA, dtype);     \
+  REGISTER_MISH_KERNEL(DeviceType::kCUDA, dtype);         \
+  REGISTER_SILU_KERNEL(DeviceType::kCUDA, dtype);         \
+  REGISTER_SELU_KERNEL(DeviceType::kCUDA, dtype);         \
+  REGISTER_SOFTSIGN_KERNEL(DeviceType::kCUDA, dtype);     \
+  REGISTER_RELU_FORWARD_KERNEL(DeviceType::kCUDA, dtype); \
+  REGISTER_RELU_BACKWARD_KERNEL(DeviceType::kCUDA, dtype);
+
+namespace {
+
+REGISTER_ACTIVATION_CUDA_KERNEL(half);
+REGISTER_ACTIVATION_CUDA_KERNEL(float);
+REGISTER_ACTIVATION_CUDA_KERNEL(double);
+
+// For some special DType
+REGISTER_RELU_FORWARD_KERNEL(DeviceType::kCUDA, uint8_t);
+REGISTER_RELU_FORWARD_KERNEL(DeviceType::kCUDA, int8_t);
+REGISTER_RELU_FORWARD_KERNEL(DeviceType::kCUDA, int32_t);
+REGISTER_RELU_FORWARD_KERNEL(DeviceType::kCUDA, int64_t);
+
+}  // namespace
 
 }  // namespace oneflow
