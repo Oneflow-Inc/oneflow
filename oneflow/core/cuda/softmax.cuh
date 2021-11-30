@@ -230,8 +230,8 @@ __global__ void SoftmaxWarpImpl(LOAD load, STORE store, const int64_t rows, cons
   const int global_thread_group_id = blockIdx.x * blockDim.y + threadIdx.y;
   const int num_global_thread_group = gridDim.x * blockDim.y;
   const int lane_id = threadIdx.x;
-  for (int64_t row = global_thread_group_id * rows_per_access; row < rows;
-       row += num_global_thread_group * rows_per_access) {
+  const int64_t step = num_global_thread_group * rows_per_access;
+  for (int64_t row = global_thread_group_id * rows_per_access; row < rows; row += step) {
     ComputeType thread_max[rows_per_access];
 #pragma unroll
     for (int row_id = 0; row_id < rows_per_access; ++row_id) {
@@ -239,18 +239,17 @@ __global__ void SoftmaxWarpImpl(LOAD load, STORE store, const int64_t rows, cons
       ComputeType* row_buf = buf[row_id];
 #pragma unroll
       for (int pack_id = 0; pack_id < num_packs; ++pack_id) {
+        const int pack_offset = pack_id * pack_size;
         const int col = (pack_id * thread_group_width + lane_id) * pack_size;
         if (!padding || col < cols) {
-          load.template load<pack_size>(row_buf + pack_id * pack_size, row + row_id, col);
+          load.template load<pack_size>(row_buf + pack_offset, row + row_id, col);
 #pragma unroll
           for (int i = 0; i < pack_size; ++i) {
-            thread_max[row_id] = max(thread_max[row_id], row_buf[pack_id * pack_size + i]);
+            thread_max[row_id] = max(thread_max[row_id], row_buf[pack_offset + i]);
           }
         } else {
 #pragma unroll
-          for (int i = 0; i < pack_size; ++i) {
-            row_buf[pack_id * pack_size + i] = -Inf<ComputeType>();
-          }
+          for (int i = 0; i < pack_size; ++i) { row_buf[pack_offset + i] = -Inf<ComputeType>(); }
         }
       }
     }
@@ -313,9 +312,10 @@ inline cudaError_t LaunchSoftmaxWarpImpl(cudaStream_t stream, LOAD load, STORE s
   constexpr int block_size = 128;
   constexpr int waves = 32;
   static_assert(block_size % thread_group_width == 0, "");
-  constexpr int rows_per_block = block_size / thread_group_width;
-  dim3 block_dim(thread_group_width, rows_per_block);
-  const int64_t num_blocks = (rows + rows_per_block - 1) / rows_per_block;
+  constexpr int thread_groups_per_block = block_size / thread_group_width;
+  dim3 block_dim(thread_group_width, thread_groups_per_block);
+  const int64_t num_blocks =
+      (rows / rows_per_access + thread_groups_per_block - 1) / thread_groups_per_block;
   int grid_dim_x;
   {
     cudaError_t err = GetNumBlocks(block_size, num_blocks, waves, &grid_dim_x);
@@ -767,8 +767,8 @@ __global__ void SoftmaxGradWarpImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE store,
   const int global_thread_group_id = blockIdx.x * blockDim.y + threadIdx.y;
   const int num_global_thread_group = gridDim.x * blockDim.y;
   const int lane_id = threadIdx.x;
-  for (int64_t row = global_thread_group_id * rows_per_access; row < rows;
-       row += num_global_thread_group * rows_per_access) {
+  const int64_t step = num_global_thread_group * rows_per_access;
+  for (int64_t row = global_thread_group_id * rows_per_access; row < rows; row += step) {
     ComputeType thread_sum[rows_per_access];
 #pragma unroll
     for (int row_id = 0; row_id < rows_per_access; ++row_id) {
@@ -777,17 +777,17 @@ __global__ void SoftmaxGradWarpImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE store,
       ComputeType* row_dy_buf = dy_buf[row_id];
 #pragma unroll
       for (int pack_id = 0; pack_id < pack_per_thread; ++pack_id) {
+        const int pack_offset = pack_id * pack_size;
         const int col = (pack_id * thread_group_width + lane_id) * pack_size;
         if (!padding || col < cols) {
-          load_y.template load<pack_size>(row_y_buf + pack_id * pack_size, row + row_id, col);
-          load_dy.template load<pack_size>(row_dy_buf + pack_id * pack_size, row + row_id, col);
+          load_y.template load<pack_size>(row_y_buf + pack_offset, row + row_id, col);
+          load_dy.template load<pack_size>(row_dy_buf + pack_offset, row + row_id, col);
 #pragma unroll
           for (int i = 0; i < pack_size; ++i) {
             if (algorithm == Algorithm::kSoftmax) {
-              thread_sum[row_id] +=
-                  row_y_buf[pack_id * pack_size + i] * row_dy_buf[pack_id * pack_size + i];
+              thread_sum[row_id] += row_y_buf[pack_offset + i] * row_dy_buf[pack_offset + i];
             } else if (algorithm == Algorithm::kLogSoftmax) {
-              thread_sum[row_id] += row_dy_buf[pack_id * pack_size + i];
+              thread_sum[row_id] += row_dy_buf[pack_offset + i];
             } else {
               __trap();
             }
@@ -806,21 +806,20 @@ __global__ void SoftmaxGradWarpImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE store,
       ComputeType* row_dy_buf = dy_buf[row_id];
 #pragma unroll
       for (int pack_id = 0; pack_id < pack_per_thread; ++pack_id) {
+        const int pack_offset = pack_id * pack_size;
         const int col = (pack_id * thread_group_width + lane_id) * pack_size;
         if (!padding || col < cols) {
           for (int i = 0; i < pack_size; ++i) {
             if (algorithm == Algorithm::kSoftmax) {
-              row_dy_buf[pack_id * pack_size + i] =
-                  (row_dy_buf[pack_id * pack_size + i] - warp_sum[row_id])
-                  * row_y_buf[pack_id * pack_size + i];
+              row_dy_buf[pack_offset + i] =
+                  (row_dy_buf[pack_offset + i] - warp_sum[row_id]) * row_y_buf[pack_offset + i];
             } else if (algorithm == Algorithm::kLogSoftmax) {
-              row_dy_buf[pack_id * pack_size + i] -=
-                  Exp(row_y_buf[pack_id * pack_size + i]) * warp_sum[row_id];
+              row_dy_buf[pack_offset + i] -= Exp(row_y_buf[pack_offset + i]) * warp_sum[row_id];
             } else {
               __trap();
             }
           }
-          store.template store<pack_size>(row_dy_buf + pack_id * pack_size, row + row_id, col);
+          store.template store<pack_size>(row_dy_buf + pack_offset, row + row_id, col);
         }
       }
     }
@@ -835,9 +834,10 @@ inline cudaError_t LaunchSoftmaxGradWarpImpl(cudaStream_t stream, LOAD_Y load_y,
   constexpr int block_size = 128;
   constexpr int waves = 32;
   static_assert(block_size % thread_group_width == 0, "");
-  constexpr int rows_per_block = block_size / thread_group_width;
-  dim3 block_dim(thread_group_width, rows_per_block);
-  const int64_t num_blocks = (rows + rows_per_block - 1) / rows_per_block;
+  constexpr int thread_groups_per_block = block_size / thread_group_width;
+  dim3 block_dim(thread_group_width, thread_groups_per_block);
+  const int64_t num_blocks =
+      (rows / rows_per_access + thread_groups_per_block - 1) / thread_groups_per_block;
   int grid_dim_x;
   {
     cudaError_t err = GetNumBlocks(block_size, num_blocks, waves, &grid_dim_x);
