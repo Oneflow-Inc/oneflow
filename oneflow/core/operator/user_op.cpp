@@ -52,17 +52,14 @@ user_op::NaiveTensorDesc GenTensorDescFromBlobDesc(const BlobDesc* blob_desc) {
 
 }  // namespace
 
-class UserOpKernelRegContext final : virtual public user_op::UserOpConfOpInfoProvider,
-                                     virtual public user_op::UserOpConfAttrProvider,
-                                     public user_op::KernelRegContext {
+class UserOpKernelRegContext final : public user_op::KernelRegContext {
  public:
   using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
   explicit UserOpKernelRegContext(const UserOp* user_op,
                                   std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext* parallel_ctx)
-      : user_op::UserOpConfOpInfoProvider(user_op->op_conf()),
-        user_op::UserOpConfAttrProvider(user_op->op_conf()) {
+      : user_op_conf_(user_op->op_conf()) {
     const auto& op_conf = user_op->op_conf();
     CHECK(op_conf.has_user_conf());
 
@@ -110,7 +107,15 @@ class UserOpKernelRegContext final : virtual public user_op::UserOpConfOpInfoPro
   const ArgVec& inputs() const override { return inputs_; }
   const ArgVec& outputs() const override { return outputs_; }
 
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4Name(attr_name);
+  }
+
  private:
+  const user_op::UserOpConfWrapper user_op_conf_;
   ArgVec inputs_;
   ArgVec outputs_;
   DeviceType device_type_;
@@ -147,7 +152,8 @@ class UserOpInferContext final : public user_op::InferContext {
   user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index);
   }
-  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) {
+  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                  int32_t index) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_desc_.end()) { return nullptr; };
     return &(it->second);

@@ -43,14 +43,14 @@ NaiveTensorDesc& NaiveTensorDesc::operator=(const BlobDescProto& proto) {
   return *this;
 }
 
-  const Shape& BlobTensorDescView::shape() const {}
-  Shape* BlobTensorDescView::mut_shape() {}
-  DataType BlobTensorDescView::data_type() const {}
-  DataType* BlobTensorDescView::mut_data_type() {}
-
-  bool BlobTensorDescView::is_dynamic() const {}
-  bool* BlobTensorDescView::mut_is_dynamic() {}
-  void BlobTensorDescView::set_is_dynamic(bool val) {}
+  // const Shape& BlobTensorDescView::shape() const {}
+  // Shape* BlobTensorDescView::mut_shape() {}
+  // DataType BlobTensorDescView::data_type() const {}
+  // DataType* BlobTensorDescView::mut_data_type() {}
+  //
+  // bool BlobTensorDescView::is_dynamic() const {}
+  // bool* BlobTensorDescView::mut_is_dynamic() {}
+  // void BlobTensorDescView::set_is_dynamic(bool val) {}
 
 }  // namespace user_op
 

@@ -35,6 +35,7 @@ struct LocalCallOpKernelUtil;
 
 namespace one {
 
+class LocalUserKernelBaseContext;
 class LocalUserKernelRegContext;
 class LocalUserKernelInitContext;
 class LocalUserOpInferContext;
@@ -135,10 +136,7 @@ class ConsistentTensorMetaTensorDescView final : public user_op::TensorDesc {
   const std::function<Symbol<ConsistentTensorMeta>()> consistent_tensor_meta_;
 };
 
-class ZeroCopyBaseContext : virtual public user_op::TensorDescIf,
-                            virtual public user_op::TensorObjIf,
-                            virtual public user_op::ConsistentInfoIf,
-                            virtual public user_op::InputAndOutputNameIf {
+class ZeroCopyBaseContext {
  public:
   ZeroCopyBaseContext(const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                       const std::shared_ptr<const ArgTuple>& output_arg_tuple);
@@ -146,32 +144,21 @@ class ZeroCopyBaseContext : virtual public user_op::TensorDescIf,
                       const std::shared_ptr<const ArgTuple>& output_arg_tuple,
                       vm::EagerBlobObject* tmp_buffer);
 
-  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                  int32_t index) const override;
+  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) const;
 
-  user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override;
+  user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) const;
 
   const ConsistentTensorMeta* ConsistentTensorMeta4ArgNameAndIndex(const std::string& arg_name,
                                                                    const int32_t index) const;
 
-  const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                               int32_t index) const override {
-    return ConsistentTensorMetaView4ArgNameAndIndex(arg_name, index);
-  }
-
   const ConsistentTensorMetaTensorDescView* ConsistentTensorMetaView4ArgNameAndIndex(
       const std::string& arg_name, const int32_t index) const;
-
-  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name,
-                                          int32_t index) const override {
-    return *CHECK_NOTNULL(ConsistentTensorMeta4ArgNameAndIndex(arg_name, index))->nd_sbp();
-  }
 
   Optional<Symbol<ParallelDesc>> parallel_desc() const;
   const ParallelContext& parallel_ctx() const;
 
-  const ArgVec& inputs() const override { return input_arg_tuple_->indexed_arg_name_and_index(); }
-  const ArgVec& outputs() const override { return output_arg_tuple_->indexed_arg_name_and_index(); }
+  const ArgVec& inputs() const { return input_arg_tuple_->indexed_arg_name_and_index(); }
+  const ArgVec& outputs() const { return output_arg_tuple_->indexed_arg_name_and_index(); }
 
   void Update(EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
               ConsistentTensorInferResultRawPtr consistent_tensor_infer_result);
@@ -194,33 +181,43 @@ class ZeroCopyBaseContext : virtual public user_op::TensorDescIf,
   ;
 };
 
-class AttrFromComposedAttrMap : virtual public user_op::AttrIf {
+class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
  public:
-  explicit AttrFromComposedAttrMap(const ComposedAttrMap* composed_attrs)
-      : composed_attrs_(composed_attrs) {}
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override {
-    return composed_attrs_->Attr4Name(attr_name);
+  LocalUserKernelBaseContext(const std::string& device_tag,
+                             const std::shared_ptr<const ArgTuple>& input_tensor_tuple,
+                             const std::shared_ptr<const ArgTuple>& output_tensor_tuple);
+  LocalUserKernelBaseContext(const std::string& device_tag,
+                             const std::shared_ptr<const ArgTuple>& input_tensor_tuple,
+                             const std::shared_ptr<const ArgTuple>& output_tensor_tuple,
+                             vm::EagerBlobObject* tmp_buffer);
+  ~LocalUserKernelBaseContext() = default;
+
+  DeviceType device_type() const { return device_type_; }
+  const std::string& device_tag() const { return device_tag_; }
+  const JobDesc& job_desc() const {
+    UNIMPLEMENTED();
+    return *(const JobDesc*)nullptr;
   }
 
  private:
-  const ComposedAttrMap* composed_attrs_;
+  const std::string device_tag_;
+  const DeviceType device_type_;
+  vm::EagerBlobObject* tmp_buffer_;
 };
 
-class LocalUserOpInferContext final : virtual public ZeroCopyBaseContext,
-                                      virtual public user_op::UserOpConfOpInfoProvider,
-                                      virtual public AttrFromComposedAttrMap,
-                                      virtual public user_op::InferContext {
+class LocalUserOpInferContext : public user_op::InferContext {
  public:
   LocalUserOpInferContext(const user_op::UserOpConfWrapper* user_op_conf,
                           const ComposedAttrMap* composed_attrs,
                           const std::shared_ptr<const ArgTuple>& input_arg_tuple,
-                          const std::shared_ptr<const ArgTuple>& output_arg_tuple)
-      : ZeroCopyBaseContext(input_arg_tuple, output_arg_tuple),
-        user_op::UserOpConfOpInfoProvider(*user_op_conf),
-        AttrFromComposedAttrMap(composed_attrs) {}
-
+                          const std::shared_ptr<const ArgTuple>& output_arg_tuple);
   ~LocalUserOpInferContext() override = default;
+
+  const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                               int32_t index) const override {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
 
   const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name,
                                              int32_t index) const override {
@@ -232,6 +229,8 @@ class LocalUserOpInferContext final : virtual public ZeroCopyBaseContext,
   user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index);
   }
+  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                  int32_t index) override;
   const Shape& InputShape(const std::string& arg_name, int32_t index) const override {
     return *const_cast<LocalUserOpInferContext*>(this)->Shape4ArgNameAndIndex(arg_name, index);
   }
@@ -260,18 +259,56 @@ class LocalUserOpInferContext final : virtual public ZeroCopyBaseContext,
     return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
   }
 
+  const ArgVec& inputs() const override { return zero_copy_base_ctx_.inputs(); }
+  const ArgVec& outputs() const override { return zero_copy_base_ctx_.outputs(); }
   const JobDesc* job_desc() const override {
     UNIMPLEMENTED();
     return nullptr;
   }
   const ParallelContext& parallel_ctx() const override {
-    return ZeroCopyBaseContext::parallel_ctx();
+    return zero_copy_base_ctx_.parallel_ctx();
   }
   const ParallelDesc& parallel_desc() const override {
-    return *CHECK_JUST(ZeroCopyBaseContext::parallel_desc());
+    return *CHECK_JUST(zero_copy_base_ctx_.parallel_desc());
+  }
+  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                      int32_t index) const override {
+    const auto& nd_sbp = NdSbp4ArgNameAndIndex(arg_name, index);
+    CHECK_EQ(nd_sbp.sbp_parallel_size(), 1);
+    return nd_sbp.sbp_parallel(0);
+  }
+  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name,
+                                          int32_t index) const override {
+    return *CHECK_NOTNULL(zero_copy_base_ctx_.ConsistentTensorMeta4ArgNameAndIndex(arg_name, index))
+                ->nd_sbp();
   }
 
   int64_t parallel_num() const override { return parallel_ctx().parallel_num(); }
+
+  void Update(EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
+              ConsistentTensorInferResultRawPtr consistent_tensor_infer_result);
+
+  const std::string& input(const std::string& arg_name, int32_t index) const override {
+    return user_op_conf().input(arg_name, index);
+  }
+  const std::string& output(const std::string& arg_name, int32_t index) const override {
+    return user_op_conf().output(arg_name, index);
+  }
+  bool has_input(const std::string& arg_name, int32_t index) const override {
+    return user_op_conf().has_input(arg_name, index);
+  }
+  bool has_output(const std::string& arg_name, int32_t index) const override {
+    return user_op_conf().has_output(arg_name, index);
+  }
+  int32_t input_size(const std::string& arg_name) const override {
+    return user_op_conf().input_size(arg_name);
+  }
+  int32_t output_size(const std::string& arg_name) const override {
+    return user_op_conf().output_size(arg_name);
+  }
+  const std::string& op_name() const override { return user_op_conf().op_name(); }
+  const std::string& op_type_name() const override { return user_op_conf().op_type_name(); }
+  const std::string& device_tag() const override { return user_op_conf().op_conf().device_tag(); }
 
  private:
   user_op::TensorDesc* NonNullTensorDesc4ArgNameAndIndex(const std::string& arg_name,
@@ -280,12 +317,18 @@ class LocalUserOpInferContext final : virtual public ZeroCopyBaseContext,
     if (!tensor_desc) { LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found"; }
     return tensor_desc;
   }
+  const user_op::UserOpConfWrapper& user_op_conf() const { return *user_op_conf_; }
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
+      const std::string& attr_name) const override {
+    return composed_attrs_->Attr4Name(attr_name);
+  }
+
+  const user_op::UserOpConfWrapper* user_op_conf_;
+  const ComposedAttrMap* composed_attrs_;
+  ZeroCopyBaseContext zero_copy_base_ctx_;
 };
 
-class LocalUserKernelComputeContext final : virtual public ZeroCopyBaseContext,
-                                            virtual public user_op::UserOpConfOpInfoProvider,
-                                            virtual public AttrFromComposedAttrMap,
-                                            virtual public user_op::KernelComputeContext {
+class LocalUserKernelComputeContext final : public user_op::KernelComputeContext {
  public:
   explicit LocalUserKernelComputeContext(DeviceCtx* device_ctx, const std::string& device_tag,
                                          const user_op::UserOpConfWrapper* user_op_conf,
@@ -295,20 +338,40 @@ class LocalUserKernelComputeContext final : virtual public ZeroCopyBaseContext,
                                          vm::EagerBlobObject* tmp_buffer);
   ~LocalUserKernelComputeContext() = default;
 
-  DeviceCtx* device_ctx() override { return device_ctx_; }
-  StreamContext* stream_ctx() override { return stream_ctx_.get(); }
-
-  const ParallelContext& parallel_ctx() const override {
-    return ZeroCopyBaseContext::parallel_ctx();
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                        int32_t index) const override {
+    return base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
   }
+
+  user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return base_ctx_.Tensor4ArgNameAndIndex(arg_name, index);
+  }
+  ep::Stream* stream() override {
+    CHECK(device_ctx_);
+    return device_ctx_->stream();
+  }
+
+  DeviceType device_type() const override { return base_ctx_.device_type(); }
+  const ParallelContext& parallel_ctx() const override { return base_ctx_.parallel_ctx(); }
+
+  const ArgVec& inputs() const override { return base_ctx_.inputs(); };
+  const ArgVec& outputs() const override { return base_ctx_.outputs(); };
 
   void Update(EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
               ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
               DeviceCtx* device_ctx);
 
  private:
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
+      const std::string& attr_name) const override {
+    return composed_attrs_->Attr4Name(attr_name);
+  }
+
+  const user_op::UserOpConfWrapper* user_op_conf_;
+  const ComposedAttrMap* composed_attrs_;
   DeviceCtx* device_ctx_;
-  std::unique_ptr<StreamContext> stream_ctx_;
+  LocalUserKernelBaseContext base_ctx_;
 };
 
 class StatefulLocalOpKernel final {
@@ -366,9 +429,9 @@ class StatefulLocalOpKernel final {
   user_op::DataTypeInferFn DataTypeInferFn() const;
 
   void TryInitOpKernelState(const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx,
-      EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
-      ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
-      user_op::OpKernelState** state, user_op::OpKernelCache** cache);
+                            EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
+                            ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
+                            user_op::OpKernelState** state, user_op::OpKernelCache** cache);
 
   vm::EagerBlobObject* mut_temp_blob_object();
 

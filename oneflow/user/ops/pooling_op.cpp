@@ -45,7 +45,7 @@ TensorDescInferFn MaxPoolMakeForwardTensorDescInferFn(const int32_t dim) {
           << "pad should be smaller than half of kernel size";
     }
 
-    const PoolingParams3D params_3d(dim, x_shape, data_format, padding, kernel_size, stride,
+    const MaxPoolingParams3D params_3d(dim, x_shape, data_format, padding, kernel_size, stride,
                                     dilation, return_indices, ceil_mode);
     user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
     *y_desc = ctx->InputTensorDesc("x", 0);

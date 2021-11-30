@@ -449,40 +449,17 @@ struct LocalCallOpKernelUtil final {
     operand->mut_opkernel()->composed_attrs_for_scheduler_thread()->ResetPrior(operand->attrs());
     DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
-    JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
+    if (unlikely(operand->need_temp_storage())) {
+      InferTempStorageBlobDesc(operand);
+      JUST(ResetTempStorageBlob(operand));
+      JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
+    }
     user_op::OpKernelState* state = nullptr;
     user_op::OpKernelCache* cache = nullptr;
     TryInitOpKernelState(operand, device_ctx, &state, &cache);
-    JUST(OpKernelCompute(operand, device_ctx, state, cache));
-    JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
-    operand->set_user_opkernel(nullptr);
-    return Maybe<void>::Ok();
-  }
-
- private:
-  static inline Maybe<LocalCallOpKernelPhyInstrOperand*> GetLocalCallOpKernelPhyInstrOperand(
-      vm::Instruction* instruction) {
-    const auto& operand = instruction->instr_msg().phy_instr_operand();
-    CHECK_OR_RETURN(static_cast<bool>(operand));
-    auto* ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(operand.get());
-    CHECK_NOTNULL_OR_RETURN(ptr);
-    return ptr;
-  }
-
-  static inline Maybe<const MemoryCase&> GetMemCase(LocalCallOpKernelPhyInstrOperand* operand) {
-    const auto& mem_case = operand->opkernel().mem_case();
-    CHECK_OR_RETURN(static_cast<bool>(mem_case));
-    return *mem_case;
-  }
-
-  static inline Maybe<void> CheckMemCase(const MemoryCase& mem_case, DeviceType device_type,
-                                         int64_t device_id) {
-    if (mem_case.has_host_mem()) {
-      CHECK_EQ_OR_RETURN(device_type, DeviceType::kCPU);
-    } else if (mem_case.has_device_cuda_mem()) {
-      CHECK_EQ_OR_RETURN(mem_case.device_cuda_mem().device_id(), device_id);
-    } else {
-      OF_UNIMPLEMENTED();
+    OpKernelCompute(operand, device_ctx, state, cache);
+    if (unlikely(operand->need_temp_storage())) {
+      JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
     }
     return Maybe<void>::Ok();
   }
@@ -513,15 +490,14 @@ struct LocalCallOpKernelUtil final {
   }
 
   static inline void TryInitOpKernelState(LocalCallOpKernelPhyInstrOperand* operand,
-                                          DeviceCtx* device_ctx, user_op::OpKernelState** state,
-                                          user_op::OpKernelCache** cache) {
-    if (operand->op_interp_ctx().state) {
+                                          DeviceCtx* device_ctx, user_op::OpKernelState** state, user_op::OpKernelCache** cache) {
+    if (likely(operand->op_interp_ctx().state)) {
       *state = operand->op_interp_ctx().state.get();
       state = nullptr;
     }
     operand->mut_opkernel()->TryInitOpKernelState(
-        operand->user_opkernel(), device_ctx, operand->inputs(), operand->outputs(),
-        operand->consistent_tensor_infer_result(), state, cache);
+        operand->user_opkernel(), device_ctx, operand->inputs().get(), operand->outputs().get(),
+        operand->consistent_tensor_infer_result().get(), state, cache);
   }
 
   static inline Maybe<void> AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,
@@ -540,8 +516,7 @@ struct LocalCallOpKernelUtil final {
   }
 
   static inline void OpKernelCompute(LocalCallOpKernelPhyInstrOperand* operand,
-                                            DeviceCtx* device_ctx, user_op::OpKernelState* state,
-                                            const user_op::OpKernelCache* cache) {
+                                     DeviceCtx* device_ctx, user_op::OpKernelState* state, const user_op::OpKernelCache* cache) {
     auto* opkernel = operand->mut_opkernel();
     auto* compute_ctx =
         opkernel->UpdateComputeContext(operand->inputs().get(), operand->outputs().get(),
