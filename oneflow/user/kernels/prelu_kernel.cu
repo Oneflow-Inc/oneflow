@@ -52,9 +52,9 @@ constexpr int32_t GetPreluPackSize<double>() {
 
 template<typename T, typename IndexType, int pack_size, bool tail>
 __global__ void PReluForwardMultiAlphaGpu(const IndexType elem_cnt, const IndexType alpha_size,
-                                          const IndexType inner_size, const IndexType n_tail,
-                                          const T* x, const T* alpha, T* y, const T* tail_x,
-                                          T* tail_y) {
+                                          const IndexType inner_size, const IndexType mul_size,
+                                          const IndexType n_tail, const T* x, const T* alpha, T* y,
+                                          const T* tail_x, T* tail_y) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
 
   using LoadType = cuda::elementwise::PackType<T, pack_size>;
@@ -62,6 +62,9 @@ __global__ void PReluForwardMultiAlphaGpu(const IndexType elem_cnt, const IndexT
   T zero_val = static_cast<T>(0);
   for (int64_t linear_index = global_thread_id * pack_size; linear_index < elem_cnt;
        linear_index += gridDim.x * blockDim.x * pack_size) {
+    IndexType idx_sub_alpha = linear_index / mul_size * alpha_size;
+    IndexType alpha_idx = linear_index / inner_size - idx_sub_alpha;
+
     const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
     LoadPack x_vec;
     x_vec.storage = *x_load;
@@ -69,9 +72,7 @@ __global__ void PReluForwardMultiAlphaGpu(const IndexType elem_cnt, const IndexT
     LoadPack y_vec;
 #pragma unroll
     for (int i = 0; i < pack_size; i++) {
-      y_vec.elem[i] = x_vec.elem[i] > zero_val
-                          ? x_vec.elem[i]
-                          : x_vec.elem[i] * alpha[(linear_index / inner_size) % alpha_size];
+      y_vec.elem[i] = x_vec.elem[i] > zero_val ? x_vec.elem[i] : x_vec.elem[i] * alpha[alpha_idx];
     }
     *(reinterpret_cast<LoadType*>(y + linear_index)) = y_vec.storage;
   }
@@ -86,10 +87,10 @@ __global__ void PReluForwardMultiAlphaGpu(const IndexType elem_cnt, const IndexT
 
 template<typename T, typename IndexType, int pack_size, bool tail>
 __global__ void PReluBackwardMultiAlphaGpu(const IndexType elem_cnt, const IndexType alpha_size,
-                                           const IndexType inner_size, const IndexType n_tail,
-                                           const T* x, const T* alpha, const T* dy, T* dx,
-                                           T* alpha_diff, const T* tail_x, const T* tail_dy,
-                                           T* tail_dx) {
+                                           const IndexType inner_size, const IndexType mul_size,
+                                           const IndexType n_tail, const T* x, const T* alpha,
+                                           const T* dy, T* dx, T* alpha_diff, const T* tail_x,
+                                           const T* tail_dy, T* tail_dx) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
 
   using LoadType = cuda::elementwise::PackType<T, pack_size>;
@@ -98,6 +99,9 @@ __global__ void PReluBackwardMultiAlphaGpu(const IndexType elem_cnt, const Index
 
   for (int64_t linear_index = global_thread_id * pack_size; linear_index < elem_cnt;
        linear_index += gridDim.x * blockDim.x * pack_size) {
+    IndexType idx_sub_alpha = linear_index / mul_size * alpha_size;
+    IndexType alpha_idx = linear_index / inner_size - idx_sub_alpha;
+
     const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
     LoadPack x_vec;
     x_vec.storage = *x_load;
@@ -109,11 +113,9 @@ __global__ void PReluBackwardMultiAlphaGpu(const IndexType elem_cnt, const Index
     LoadPack dx_vec;
 #pragma unroll
     for (int i = 0; i < pack_size; i++) {
-      dx_vec.elem[i] = x_vec.elem[i] > zero_val
-                           ? dy_vec.elem[i]
-                           : dy_vec.elem[i] * alpha[(linear_index / inner_size) % alpha_size];
-      alpha_diff[(linear_index / inner_size) % alpha_size] +=
-          x_vec.elem[i] > zero_val ? zero_val : dy_vec.elem[i] * x_vec.elem[i];
+      dx_vec.elem[i] =
+          x_vec.elem[i] > zero_val ? dy_vec.elem[i] : dy_vec.elem[i] * alpha[alpha_idx];
+      alpha_diff[alpha_idx] += x_vec.elem[i] > zero_val ? zero_val : dy_vec.elem[i] * x_vec.elem[i];
     }
 
     *(reinterpret_cast<LoadType*>(dx + linear_index)) = dx_vec.storage;
@@ -144,19 +146,22 @@ void DispatchPreluForwardIndexTail(ep::Stream* stream, const int64_t elem_cnt,
   const bool tail = n_tail > 0 ? true : false;
   uint64_t inc_offset = 0;
 
+  const int64_t alpha_mul_in = alpha_size * inner_size;
+
   if (elem_cnt < GetMaxVal<int32_t>()) {
     if (tail) {
       // If tail, we need generate randnum one more time, so here we add another `1`.
       inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize + 1;
       PReluForwardMultiAlphaGpu<T, int32_t, pack_size, true>
           <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              elem_cnt, alpha_size, inner_size, n_tail, x, alpha, y, (x + tail_offset),
-              (y + tail_offset));
+              elem_cnt, alpha_size, inner_size, alpha_mul_in, n_tail, x, alpha, y,
+              (x + tail_offset), (y + tail_offset));
     } else {
       inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize;
       PReluForwardMultiAlphaGpu<T, int32_t, pack_size, false>
           <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              elem_cnt, alpha_size, inner_size, n_tail, x, alpha, y, nullptr, nullptr);
+              elem_cnt, alpha_size, inner_size, alpha_mul_in, n_tail, x, alpha, y, nullptr,
+              nullptr);
     }
   } else {
     if (tail) {
@@ -164,13 +169,14 @@ void DispatchPreluForwardIndexTail(ep::Stream* stream, const int64_t elem_cnt,
       inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize + 1;
       PReluForwardMultiAlphaGpu<T, int64_t, pack_size, true>
           <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              elem_cnt, alpha_size, inner_size, n_tail, x, alpha, y, (x + tail_offset),
-              (y + tail_offset));
+              elem_cnt, alpha_size, inner_size, alpha_mul_in, n_tail, x, alpha, y,
+              (x + tail_offset), (y + tail_offset));
     } else {
       inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize;
       PReluForwardMultiAlphaGpu<T, int64_t, pack_size, false>
           <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              elem_cnt, alpha_size, inner_size, n_tail, x, alpha, y, nullptr, nullptr);
+              elem_cnt, alpha_size, inner_size, alpha_mul_in, n_tail, x, alpha, y, nullptr,
+              nullptr);
     }
   }
 }
@@ -188,31 +194,33 @@ void DispatchBackwardIndexTail(ep::Stream* stream, const int64_t elem_cnt, const
   const bool tail = n_tail > 0 ? true : false;
   uint64_t inc_offset = 0;
 
+  const int64_t alpha_mul_in = alpha_size * inner_size;
+
   if (elem_cnt < GetMaxVal<int32_t>()) {
     if (tail) {
       // If tail, we need generate randnum one more time, so here we add another `1`.
       PReluBackwardMultiAlphaGpu<T, int32_t, pack_size, true>
           <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              elem_cnt, alpha_size, inner_size, n_tail, x, alpha, dy, dx, alpha_diff,
+              elem_cnt, alpha_size, inner_size, alpha_mul_in, n_tail, x, alpha, dy, dx, alpha_diff,
               (x + tail_offset), (dy + tail_offset), (dx + tail_offset));
     } else {
       PReluBackwardMultiAlphaGpu<T, int32_t, pack_size, false>
           <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              elem_cnt, alpha_size, inner_size, n_tail, x, alpha, dy, dx, alpha_diff, nullptr,
-              nullptr, nullptr);
+              elem_cnt, alpha_size, inner_size, alpha_mul_in, n_tail, x, alpha, dy, dx, alpha_diff,
+              nullptr, nullptr, nullptr);
     }
   } else {
     if (tail) {
       // If tail, we need generate randnum one more time, so here we add another `1`.
       PReluBackwardMultiAlphaGpu<T, int64_t, pack_size, true>
           <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              elem_cnt, alpha_size, inner_size, n_tail, x, alpha, dy, dx, alpha_diff,
+              elem_cnt, alpha_size, inner_size, alpha_mul_in, n_tail, x, alpha, dy, dx, alpha_diff,
               (x + tail_offset), (dy + tail_offset), (dx + tail_offset));
     } else {
       PReluBackwardMultiAlphaGpu<T, int64_t, pack_size, false>
           <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              elem_cnt, alpha_size, inner_size, n_tail, x, alpha, dy, dx, alpha_diff, nullptr,
-              nullptr, nullptr);
+              elem_cnt, alpha_size, inner_size, alpha_mul_in, n_tail, x, alpha, dy, dx, alpha_diff,
+              nullptr, nullptr, nullptr);
     }
   }
 }
