@@ -17,27 +17,15 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
+enum IRPassType : int32_t { kBeforeAD = 0, kAfterAD = 1 };
 
-HashMap<std::string, const JobPass*>* PassName2JobPass() {
-  static HashMap<std::string, const JobPass*> pass_name2job_pass;
-  return &pass_name2job_pass;
-}
-
-}  // namespace
-
-void RegisterJobPass(const std::string& pass_name, const JobPass* pass) {
-  CHECK(PassName2JobPass()->emplace(pass_name, pass).second);
-}
-
-bool HasJobPass(const std::string& pass_name) {
-  return PassName2JobPass()->find(pass_name) != PassName2JobPass()->end();
-}
-
-const JobPass& JobPass4Name(const std::string& pass_name) {
-  const auto& iter = PassName2JobPass()->find(pass_name);
-  CHECK(iter != PassName2JobPass()->end()) << "Cannot find job pass: " << pass_name;
-  return *iter->second;
-}
+template<IRPassType ir_pass_type>
+class IRRoundTrip final : public JobPass {
+ public:
+  IRRoundTrip() = default;
+  ~IRRoundTrip() override = default;
+  bool IsEnabled(const JobPassCtx& ctx) const;
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override;
+};
 
 }  // namespace oneflow
