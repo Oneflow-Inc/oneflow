@@ -96,9 +96,9 @@ __device__ __forceinline__ float CalSigmoid(const float x) {
 }
 
 template<typename T>
-__global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, float inv_elem_cnt,
-                                                           const T* input, const T* target,
-                                                           const T* dy, T* dx, const T* weight,
+__global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, const T* input,
+                                                           const T* target, const T* dy, T* dx,
+                                                           const T* weight,
                                                            const T* pos_weight_processed) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T input_val = input[i];
@@ -120,10 +120,9 @@ __global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, flo
 }
 
 template<>
-__global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, float inv_elem_cnt,
-                                                           const half* input, const half* target,
-                                                           const half* dy, half* dx,
-                                                           const half* weight,
+__global__ void ComputeBinaryCrossEntropyWithLogitsGradOut(int64_t elem_cnt, const half* input,
+                                                           const half* target, const half* dy,
+                                                           half* dx, const half* weight,
                                                            const half* pos_weight_processed) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
@@ -237,9 +236,8 @@ class BinaryCrossEntropyWithLogitsGradKernel final : public user_op::OpKernel {
     }
     ComputeBinaryCrossEntropyWithLogitsGradOut<<<
         BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-        elem_cnt, static_cast<float>(1.0 / elem_cnt), input, target, dy, dx, weight,
-        pos_weight_processed);
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(elem_cnt, input, target, dy, dx,
+                                                              weight, pos_weight_processed);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

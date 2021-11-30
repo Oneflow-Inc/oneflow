@@ -66,8 +66,8 @@ __global__ void ComputeKLDivOut(int64_t elem_cnt, const half* input, const half*
 }
 
 template<typename T>
-__global__ void ComputeKLDivGradOut(int64_t elem_cnt, float inv_elem_cnt, const T* input,
-                                    const T* target, const T* dy, T* dx, const bool log_target) {
+__global__ void ComputeKLDivGradOut(int64_t elem_cnt, const T* input, const T* target, const T* dy,
+                                    T* dx, const bool log_target) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T target_val = target[i];
     const T dy_val = dy[i];
@@ -78,12 +78,10 @@ __global__ void ComputeKLDivGradOut(int64_t elem_cnt, float inv_elem_cnt, const 
 }
 
 template<>
-__global__ void ComputeKLDivGradOut(int64_t elem_cnt, float inv_elem_cnt, const half* input,
-                                    const half* target, const half* dy, half* dx,
-                                    const bool log_target) {
+__global__ void ComputeKLDivGradOut(int64_t elem_cnt, const half* input, const half* target,
+                                    const half* dy, half* dx, const bool log_target) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   const half zero_val = __float2half(0.0);
-  const half half_inv_elem_cnt = __float2half(inv_elem_cnt);
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const half target_val = target[i];
     const half dy_val = dy[i];
@@ -119,7 +117,7 @@ class KLDivGradKernel : public SimpleLossGradKernel<DeviceType::kCUDA, T, KLDivG
     const bool log_target = ctx->Attr<bool>("log_target");
     ComputeKLDivGradOut<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-        elem_cnt, static_cast<float>(1.0 / elem_cnt), input, target, dy, dx, log_target);
+        elem_cnt, input, target, dy, dx, log_target);
   }
 };
 

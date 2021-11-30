@@ -61,9 +61,8 @@ __global__ void ComputeSmoothL1Out(int64_t elem_cnt, const half* input, const ha
 }
 
 template<typename T>
-__global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, float inv_elem_cnt, const T* input,
-                                       const T* target, const T* dy, T* dx, const float beta,
-                                       const float inv_beta) {
+__global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, const T* input, const T* target,
+                                       const T* dy, T* dx, const float beta, const float inv_beta) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T diff = input[i] - target[i];
     const T abs_diff = abs(diff);
@@ -80,15 +79,14 @@ __global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, float inv_elem_cnt, con
 }
 
 template<>
-__global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, float inv_elem_cnt, const half* input,
-                                       const half* target, const half* dy, half* dx,
-                                       const float beta, const float inv_beta) {
+__global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, const half* input, const half* target,
+                                       const half* dy, half* dx, const float beta,
+                                       const float inv_beta) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   const half half_zero = __float2half(0.0);
   const half half_one = __float2half(1.0);
   const half half_beta = __float2half(beta);
   const half half_inv_beta = __float2half(inv_beta);
-  const half half_inv_elem_cnt = __float2half(inv_elem_cnt);
 
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const half diff = __hsub(input[i], target[i]);
@@ -132,8 +130,7 @@ class SmoothL1LossGradKernel
     const float beta = ctx->Attr<float>("beta");
     ComputeSmoothL1GradOut<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-        elem_cnt, static_cast<float>(1.0 / elem_cnt), input, target, dy, dx, beta,
-        static_cast<float>(1.0 / beta));
+        elem_cnt, input, target, dy, dx, beta, static_cast<float>(1.0 / beta));
   }
 };
 

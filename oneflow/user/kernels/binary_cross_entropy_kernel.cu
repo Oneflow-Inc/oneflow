@@ -69,9 +69,8 @@ __global__ void ComputeBinaryCrossEntropyOut(int64_t elem_cnt, const half* input
 }
 
 template<typename T>
-__global__ void ComputeBinaryCrossEntropyGradOut(int64_t elem_cnt, float inv_elem_cnt,
-                                                 const T* input, const T* target, const T* dy,
-                                                 T* dx, const T* weight) {
+__global__ void ComputeBinaryCrossEntropyGradOut(int64_t elem_cnt, const T* input, const T* target,
+                                                 const T* dy, T* dx, const T* weight) {
   const T eps = static_cast<T>(1e-12);
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     T input_val = input[i];
@@ -85,9 +84,9 @@ __global__ void ComputeBinaryCrossEntropyGradOut(int64_t elem_cnt, float inv_ele
 }
 
 template<>
-__global__ void ComputeBinaryCrossEntropyGradOut(int64_t elem_cnt, float inv_elem_cnt,
-                                                 const half* input, const half* target,
-                                                 const half* dy, half* dx, const half* weight) {
+__global__ void ComputeBinaryCrossEntropyGradOut(int64_t elem_cnt, const half* input,
+                                                 const half* target, const half* dy, half* dx,
+                                                 const half* weight) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   const float one_val = 1.0;
   const float eps = 1e-12;
@@ -159,7 +158,7 @@ class BinaryCrossEntropyGradKernel final : public user_op::OpKernel {
 
     ComputeBinaryCrossEntropyGradOut<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-        elem_cnt, static_cast<float>(1.0 / elem_cnt), input, target, dy, dx, weight);
+        elem_cnt, input, target, dy, dx, weight);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
