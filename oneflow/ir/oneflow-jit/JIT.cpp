@@ -54,13 +54,16 @@ ParallelContext GetSingleDeviceParallelContext() {
   return parallel_ctx;
 }
 
-void InsertLbnSegmentIntoMapping(const ::mlir::ArrayAttr& lbn_segment_keys,
-                                 const ::mlir::ArrayAttr& lbn_segment_sizes, ValueRange values,
+template<template<typename T> class Trait>
+void InsertLbnSegmentIntoMapping(Operation* op, ValueRange values,
                                  std::unordered_map<std::string, mlir::Value>& value_mapping_) {
+  std::vector<std::string> lbn_segment_keys;
+  std::vector<int32_t> lbn_segment_sizes;
+  CHECK(GetFilteredSegmentKeyAndSizes<Trait>(op, lbn_segment_keys, lbn_segment_sizes).succeeded());
   auto operand_it = values.begin();
   for (const auto& bn_size_pair : llvm::zip(lbn_segment_keys, lbn_segment_sizes)) {
-    const auto& bn = std::get<0>(bn_size_pair).dyn_cast<StringAttr>().getValue().str();
-    const auto& length = std::get<1>(bn_size_pair).dyn_cast<IntegerAttr>().getInt();
+    auto bn = std::get<0>(bn_size_pair);
+    auto length = std::get<1>(bn_size_pair);
     for (size_t i = 0; i < length; i++) {
       const auto indexed_bn = bn + "_" + std::to_string(i);
       CHECK(value_mapping_.emplace(indexed_bn, *operand_it).second) << "indexed_bn: " << indexed_bn;
@@ -115,12 +118,10 @@ class CreateComputeCtxPass : public CreateComputeCtxPassBase<CreateComputeCtxPas
         }
         auto oneflow_op = CHECK_JUST(ConstructOp(op_conf));
         std::unordered_map<std::string, mlir::Value> value_mapping_;  // "a0" => %result
-        InsertLbnSegmentIntoMapping(user_op_adaptor.input_lbn_segment_keys(),
-                                    user_op_adaptor.input_lbn_segment_sizes(), op->getOperands(),
-                                    value_mapping_);
-        InsertLbnSegmentIntoMapping(user_op_adaptor.output_lbn_segment_keys(),
-                                    user_op_adaptor.output_lbn_segment_sizes(), op->getResults(),
-                                    value_mapping_);
+        InsertLbnSegmentIntoMapping<OpTrait::AttrSizedOperandSegments>(op, op->getOperands(),
+                                                                       value_mapping_);
+        InsertLbnSegmentIntoMapping<OpTrait::AttrSizedResultSegments>(op, op->getResults(),
+                                                                      value_mapping_);
         HashMap<std::string, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
         static ParallelContext parallel_ctx = GetSingleDeviceParallelContext();
         auto GetBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
@@ -263,15 +264,6 @@ LogicalResult JitImporter::InsertOpResults(const ::oneflow::OperatorConf& op_con
     (*process_op_context_.GetOutputs())[data_out.index()] = tensor;
   }
   return success();
-}
-::oneflow::AttrType JitImporter::QueryAttrType(const std::string& op_type_name,
-                                               const std::string& attr_name) {
-  const user_op::OpRegistryResult* val =
-      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
-  CHECK(val) << " Cannot find op_type_name: " << op_type_name;
-  user_op::UserOpDefWrapper op_def(val->op_def);
-  CHECK(op_def.IsAttrName(attr_name)) << attr_name << " not a attr name for op: " << op_type_name;
-  return op_def.GetAttrType(attr_name);
 }
 
 mlir::FuncOp JitImporter::GetOrInsertFunc(const std::string& func_name) {

@@ -42,6 +42,9 @@ LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf)
 ResultRange GetDataOutputResults(Operation* op);
 llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op);
 llvm::Optional<std::string> GetOutputLbn(OpResult result);
+template<template<typename T> class Trait>
+LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::string>& keys,
+                                            std::vector<int32_t>& sizes);
 
 class Importer {
  public:

@@ -73,12 +73,14 @@ Maybe<const ParallelDesc> GetParallelDesc(const std::shared_ptr<Tensor>& tensor)
   }
 }
 
-void InsertLbnSegmentIntoVec(const ::mlir::ArrayAttr& lbn_segment_keys,
-                             const ::mlir::ArrayAttr& lbn_segment_sizes,
-                             std::vector<std::string>& indexed_bns) {
+template<template<typename T> class Trait>
+void InsertLbnSegmentIntoVec(Operation* op, std::vector<std::string>& indexed_bns) {
+  std::vector<std::string> lbn_segment_keys;
+  std::vector<int32_t> lbn_segment_sizes;
+  CHECK(GetFilteredSegmentKeyAndSizes<Trait>(op, lbn_segment_keys, lbn_segment_sizes).succeeded());
   for (const auto& bn_size_pair : llvm::zip(lbn_segment_keys, lbn_segment_sizes)) {
-    const auto& bn = std::get<0>(bn_size_pair).dyn_cast<StringAttr>().getValue().str();
-    const auto& length = std::get<1>(bn_size_pair).dyn_cast<IntegerAttr>().getInt();
+    auto bn = std::get<0>(bn_size_pair);
+    auto length = std::get<1>(bn_size_pair);
     for (size_t i = 0; i < length; i++) {
       const auto indexed_bn = bn + "_" + std::to_string(i);
       indexed_bns.push_back(indexed_bn);
@@ -219,10 +221,8 @@ llvm::Optional<std::shared_ptr<one::UserOpExpr>> JitInterpreter::GetExpr(Operati
       && succeeded(ConvertCtrlInputs(op, op_conf))) {
     std::vector<std::string> indexed_ibns{};
     std::vector<std::string> indexed_obns{};
-    InsertLbnSegmentIntoVec(user_op_adaptor.input_lbn_segment_keys(),
-                            user_op_adaptor.input_lbn_segment_sizes(), indexed_ibns);
-    InsertLbnSegmentIntoVec(user_op_adaptor.output_lbn_segment_keys(),
-                            user_op_adaptor.output_lbn_segment_sizes(), indexed_obns);
+    InsertLbnSegmentIntoVec<OpTrait::AttrSizedOperandSegments>(op, indexed_ibns);
+    InsertLbnSegmentIntoVec<OpTrait::AttrSizedResultSegments>(op, indexed_obns);
     auto expr = CHECK_JUST(UserOpExpr::New(user_op_adaptor.op_name().getValue().str(),
                                            std::move(*user_conf), indexed_ibns, indexed_obns));
     cached_user_op_exprs_.insert({hash, expr});

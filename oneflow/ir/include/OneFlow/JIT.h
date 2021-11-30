@@ -184,8 +184,6 @@ class JitImporter : public Importer {
   // save tensor=>value mapping
   LogicalResult InsertOpResults(const ::oneflow::OperatorConf& op, Operation*) override;
   Type GetTensorTypeOfLbn(const std::string& lbn) override;
-  ::oneflow::AttrType QueryAttrType(const std::string& op_type_name,
-                                    const std::string& attr_name) override;
   // 1. if func absent, create it
   // 2. if input tensor absent in tensor=>value mapping, udpate function arg
   // 3. add input to tensor=>value mapping
