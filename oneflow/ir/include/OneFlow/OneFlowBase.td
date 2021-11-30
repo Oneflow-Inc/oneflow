@@ -1,3 +1,6 @@
+#ifndef ONEFLOW_BASE
+#define ONEFLOW_BASE
+
 include "OneFlowDialect.td"
 include "OneFlowInterfaces.td"
 
@@ -36,6 +39,7 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
   dag attrs = (ins);
   dag trait_attrs = (ins);
   dag user_op_attrs = (ins);
+  dag custom_attrs = (ins);
   dag input = (ins Variadic<AnyType>:$data_input);
   dag output = (outs Variadic<AnyType>:$data_output);
   dag ctrl_input = (ins);
@@ -46,6 +50,7 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
       op_conf_attrs,
       trait_attrs,
       user_op_attrs,
+      custom_attrs,
       attrs
   );
   let results = !con(
@@ -212,56 +217,7 @@ class OneFlow_InvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_UnaryBaseOp<mnemonic, !listconcat(traits, [OneFlow_Involution])> {
 }
 
-class OneFlow_ConcreteSystemOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_BaseOp<mnemonic, !listconcat(traits, [])> {
-  let input = (ins);
-  let output = (ins);
-  let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
-  let ctrl_output = (outs Optional<AnyType>:$ctrl_output);
-  let attrs = (ins
-    StrArrayAttr:$output_lbns
-  );
-  let hasCanonicalizer = 1;
-}
-
-def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", []> {
-  let summary = "";
-  let output = (outs AnyType:$out);
-  let custom_attrs = (ins
-    AnyI64ElementsAttr:$shape,
-    OptionalAttr<StrAttr>:$data_type,
-    DefaultValuedAttr<StrAttr, "\"weight\"">:$model_name,
-    DefaultValuedAttr<F32Attr, "0.0f">:$l1_regularization,
-    DefaultValuedAttr<F32Attr, "0.0f">:$l2_regularization,
-    DefaultValuedAttr<BoolAttr, "true">:$trainable,
-    StrArrayAttr:$nd_sbp
-  );
-}
-
-def OneFlow_InputOp : OneFlow_ConcreteSystemOp<"input", []> {
-  let summary = "";
-  let output = (outs AnyType:$out);
-  let custom_attrs = (ins
-    OptionalAttr<AnyI64ElementsAttr>:$shape,
-    OptionalAttr<StrAttr>:$data_type,
-    OptionalAttr<BoolAttr>:$is_dynamic,
-    OptionalAttr<StrArrayAttr>:$nd_sbp,
-    OptionalAttr<StrAttr>:$job_name
-  );
-}
-
-def OneFlow_OutputOp : OneFlow_ConcreteSystemOp<"output", []> {
-  let summary = "";
-  let input = (ins AnyType:$in);
-  let output = (outs AnyType:$out);
-  let custom_attrs = (ins
-    OptionalAttr<AnyI64ElementsAttr>:$shape,
-    OptionalAttr<StrAttr>:$data_type,
-    OptionalAttr<BoolAttr>:$is_dynamic,
-    OptionalAttr<StrArrayAttr>:$nd_sbp,
-    OptionalAttr<StrAttr>:$job_name
-  );
-}
-
 #define GET_ONEFLOW_BASE_OP_DEFINITIONS
 include "OneFlowUserOpGen.td"
+
+#endif // ONEFLOW_BASE

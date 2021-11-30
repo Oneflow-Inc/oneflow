@@ -92,6 +92,57 @@ def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpI
   }];
 }
 
+class OneFlow_ConcreteSystemOp<string mnemonic, list<OpTrait> traits = []> :
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [])> {
+  let input = (ins);
+  let output = (ins);
+  let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
+  let ctrl_output = (outs Optional<AnyType>:$ctrl_output);
+  let attrs = (ins
+    StrArrayAttr:$output_lbns
+  );
+  let hasCanonicalizer = 1;
+}
+
+def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", []> {
+  let summary = "";
+  let output = (outs AnyType:$out);
+  let custom_attrs = (ins
+    AnyI64ElementsAttr:$shape,
+    OptionalAttr<StrAttr>:$data_type,
+    DefaultValuedAttr<StrAttr, "\"weight\"">:$model_name,
+    DefaultValuedAttr<F32Attr, "0.0f">:$l1_regularization,
+    DefaultValuedAttr<F32Attr, "0.0f">:$l2_regularization,
+    DefaultValuedAttr<BoolAttr, "true">:$trainable,
+    StrArrayAttr:$nd_sbp
+  );
+}
+
+def OneFlow_InputOp : OneFlow_ConcreteSystemOp<"input", []> {
+  let summary = "";
+  let output = (outs AnyType:$out);
+  let custom_attrs = (ins
+    OptionalAttr<AnyI64ElementsAttr>:$shape,
+    OptionalAttr<StrAttr>:$data_type,
+    OptionalAttr<BoolAttr>:$is_dynamic,
+    OptionalAttr<StrArrayAttr>:$nd_sbp,
+    OptionalAttr<StrAttr>:$job_name
+  );
+}
+
+def OneFlow_OutputOp : OneFlow_ConcreteSystemOp<"output", []> {
+  let summary = "";
+  let input = (ins AnyType:$in);
+  let output = (outs AnyType:$out);
+  let custom_attrs = (ins
+    OptionalAttr<AnyI64ElementsAttr>:$shape,
+    OptionalAttr<StrAttr>:$data_type,
+    OptionalAttr<BoolAttr>:$is_dynamic,
+    OptionalAttr<StrArrayAttr>:$nd_sbp,
+    OptionalAttr<StrAttr>:$job_name
+  );
+}
+
 #endif // ONEFLOW_OPS
 
 #ifndef ONEFLOW_PASSES

@@ -467,9 +467,9 @@ class Graph(object):
             assert not self._is_compiled, (
                 "nn.Graph " + self._name + " has already been compiled."
             )
-            build_graph_start = time.clock()
+            build_graph_start = time.perf_counter()
             eager_outputs = self._build_graph(*args)
-            build_graph_end = time.clock()
+            build_graph_end = time.perf_counter()
             self._print(
                 0,
                 0,
@@ -497,9 +497,9 @@ class Graph(object):
                 0,
                 self._shallow_repr() + " Start compiling plan and init graph runtime.",
             )
-            compile_and_init_start = time.clock()
+            compile_and_init_start = time.perf_counter()
             self._c_nn_graph.complie_and_init_runtime()
-            compile_and_init_end = time.clock()
+            compile_and_init_end = time.perf_counter()
             self._print(
                 0,
                 0,
