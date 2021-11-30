@@ -359,10 +359,6 @@ def skip_unless_1n4d():
     return skip_unless(1, 4)
 
 
-def skip_unless_1n8d():
-    return skip_unless(1, 8)
-
-
 def skip_unless_2n1d():
     return skip_unless(2, 1)
 
