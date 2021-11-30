@@ -267,7 +267,6 @@ def GetDualObject(name, pytorch, oneflow):
                         else:
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             if testing_graph:
-                                # print(oneflow.__name__)
                                 if isinstance(oneflow, flow.nn.Module):
 
                                     class TestGraphOfModule(flow.nn.Graph):
@@ -280,7 +279,6 @@ def GetDualObject(name, pytorch, oneflow):
 
                                     test_g = TestGraphOfModule()
                                     test_g_res = test_g(*oneflow_args)
-                                    print(test_g_res)
                                     if isinstance(test_g_res, tuple):
                                         for idx, g_res in enumerate(test_g_res):
                                             flow_res_id_eager2_graph[
