@@ -35,7 +35,7 @@ class TestErfcModule(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = torch.erfc(x)
         return y
-        
+
     @autotest()
     def test_tensor_erfc_with_random_data(test_case):
         device = random_device()

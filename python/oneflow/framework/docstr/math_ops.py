@@ -1287,5 +1287,5 @@ add_docstr(
     oneflow.floor_,
     r"""
     In-place version of :func:`oneflow.floor`
-    """
+    """,
 )

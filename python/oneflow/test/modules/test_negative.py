@@ -72,7 +72,7 @@ class TestNegativeModule(flow.unittest.TestCase):
     @autotest()
     def test_inplace_neg_with_random_data(test_case):
         x = random_pytorch_tensor().to(random_device())
-        z = torch.neg_x)
+        z = torch.neg_(x)
         return z
 
     @autotest()
