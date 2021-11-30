@@ -309,11 +309,10 @@ class SmoothL1LossGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& input,
-                           const std::shared_ptr<one::Tensor>& target, const float& beta,
-                           const std::string& reduction) const {
+                           const std::shared_ptr<one::Tensor>& target, const float& beta) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("beta", beta));
-    JUST(attrs.SetAttr<std::string>("reduction", reduction));
+
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, input, target}, attrs);
   }
 
@@ -333,11 +332,11 @@ class KLDivLossGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& input,
-                           const std::shared_ptr<one::Tensor>& target, const bool log_target,
-                           const std::string& reduction) const {
+                           const std::shared_ptr<one::Tensor>& target,
+                           const bool log_target) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("log_target", log_target));
-    JUST(attrs.SetAttr<std::string>("reduction", reduction));
+
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, target, dy}, attrs);
   }
 
@@ -369,10 +368,10 @@ class NllLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight,
                            const std::shared_ptr<one::Tensor>& total_weight,
-                           const int64_t ignore_index, const std::string& reduction) const {
+                           const int64_t ignore_index) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
-    JUST(attrs.SetAttr<std::string>("reduction", reduction));
+
     if (weight) {
       return OpInterpUtil::Dispatch<one::Tensor>(
           *op_weight_, {input, target, total_weight, JUST(weight), dy}, attrs);
@@ -406,10 +405,9 @@ class BinaryCrossEntropyLossGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
-                           const Optional<one::Tensor>& weight,
-                           const std::string& reduction) const {
+                           const Optional<one::Tensor>& weight) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("reduction", reduction));
+
     if (weight) {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_weight_, {input, target, JUST(weight), dy},
                                                  attrs);
@@ -459,10 +457,9 @@ class BinaryCrossEntropyWithLogitsLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight,
-                           const Optional<one::Tensor>& pos_weight,
-                           const std::string& reduction) const {
+                           const Optional<one::Tensor>& pos_weight) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("reduction", reduction));
+
     JUST(attrs.SetAttr<bool>("has_pos_weight", pos_weight.has_value()));
 
     if (weight) {
