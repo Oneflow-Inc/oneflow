@@ -36,53 +36,6 @@ float16 GetValue<float16>(Scalar value) {
   return static_cast<float16>(GetValue<float>(value));
 }
 
-template<BinaryOp binary_op, typename Src, typename Dst, size_t num_dims, size_t src0_pack_size,
-         size_t src1_pack_size, typename IndexType>
-void LaunchKernel(Stream* stream, BroadcastElementwiseBinaryParams<num_dims, IndexType> params) {
-  constexpr size_t dst_pack_size =
-      src0_pack_size > src1_pack_size ? src0_pack_size : src1_pack_size;
-  static_assert(src0_pack_size == dst_pack_size || src0_pack_size == 1, "");
-  static_assert(src1_pack_size == dst_pack_size || src1_pack_size == 1, "");
-  const PackType<Src, src0_pack_size>* src0 =
-      reinterpret_cast<const PackType<Src, src0_pack_size>*>(params.src0);
-  const PackType<Src, src1_pack_size>* src1 =
-      reinterpret_cast<const PackType<Src, src1_pack_size>*>(params.src1);
-  PackType<Dst, dst_pack_size>* dst = reinterpret_cast<PackType<Dst, dst_pack_size>*>(params.dst);
-  IndexType src0_index[num_dims];
-  IndexType src1_index[num_dims];
-  IndexType dst_index[num_dims];
-  for (IndexType offset = 0; offset < params.count; ++offset) {
-    params.dst_index_helper.OffsetToNdIndex(offset, dst_index);
-    for (int64_t i = 0; i < num_dims; ++i) {
-      if (params.src0_dims[i] == 1) {
-        src0_index[i] = 0;
-      } else {
-        src0_index[i] = dst_index[i];
-      }
-      if (params.src1_dims[i] == 1) {
-        src1_index[i] = 0;
-      } else {
-        src1_index[i] = dst_index[i];
-      }
-    }
-    const IndexType src0_offset = params.src0_index_helper.NdIndexToOffset(src0_index);
-    const IndexType src1_offset = params.src1_index_helper.NdIndexToOffset(src1_index);
-    Pack<Src, src0_pack_size> src0_pack;
-    src0_pack.storage = src0[src0_offset];
-    Pack<Src, src1_pack_size> src1_pack;
-    src1_pack.storage = src1[src1_offset];
-    Pack<Dst, dst_pack_size> dst_pack;
-    for (int j = 0; j < dst_pack_size; ++j) {
-      const Src src0_val =
-          (src0_pack_size == dst_pack_size) ? src0_pack.elem[j] : src0_pack.elem[0];
-      const Src src1_val =
-          (src1_pack_size == dst_pack_size) ? src1_pack.elem[j] : src1_pack.elem[0];
-      dst_pack.elem[j] = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>()(src0_val, src1_val);
-    }
-    dst[offset] = dst_pack.storage;
-  }
-}
-
 template<BinaryOp binary_op, typename Src, typename Dst>
 void LaunchLhsScalarBinary(size_t n, Src scalar, const Src* src, Dst* dst) {
   for (size_t i = 0; i < n; ++i) {
@@ -146,8 +99,7 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
           src0_elem_cnt, reinterpret_cast<const Src*>(src1), reinterpret_cast<const Src*>(src0),
           reinterpret_cast<Dst*>(dst));
     } else {
-      SimplifyThenLaunch<binary_op, Src, Dst>(stream, num_src0_dims, src0_dims, src0, num_src1_dims,
-                                              src1_dims, src1, dst);
+      UNIMPLEMENTED();
     }
   }
 };
