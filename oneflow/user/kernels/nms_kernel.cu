@@ -109,9 +109,9 @@ class NmsGpuKernel final : public user_op::OpKernel {
     int num_keep = ctx->Attr<int>("keep_n");
     if (num_keep <= 0 || num_keep > num_boxes) { num_keep = num_boxes; }
     const int num_blocks = CeilDiv<int>(num_boxes, kBlockSize);
-    Memset<DeviceType::kGPU>(ctx->stream(), suppression_mask, 0,
-                             num_boxes * num_blocks * sizeof(int64_t));
-    Memset<DeviceType::kGPU>(ctx->stream(), keep, 0, num_boxes * sizeof(int8_t));
+    Memset<DeviceType::kCUDA>(ctx->stream(), suppression_mask, 0,
+                              num_boxes * num_blocks * sizeof(int64_t));
+    Memset<DeviceType::kCUDA>(ctx->stream(), keep, 0, num_boxes * sizeof(int8_t));
 
     dim3 blocks(num_blocks, num_blocks);
     dim3 threads(kBlockSize);
@@ -125,10 +125,10 @@ class NmsGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_NMS_GPU_KERNEL(dtype)                                                  \
+#define REGISTER_NMS_CUDA_KERNEL(dtype)                                                 \
   REGISTER_USER_KERNEL("nms")                                                           \
       .SetCreateFn<NmsGpuKernel<dtype>>()                                               \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("out", 0) == DataType::kInt8)           \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                               \
@@ -138,7 +138,7 @@ class NmsGpuKernel final : public user_op::OpKernel {
         return num_boxes * blocks * sizeof(int64_t);                                    \
       });
 
-REGISTER_NMS_GPU_KERNEL(float)
-REGISTER_NMS_GPU_KERNEL(double)
+REGISTER_NMS_CUDA_KERNEL(float)
+REGISTER_NMS_CUDA_KERNEL(double)
 
 }  // namespace oneflow

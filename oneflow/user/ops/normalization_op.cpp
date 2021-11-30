@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #ifdef WITH_CUDA
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/device/cudnn_util.h"
 #endif
 
@@ -575,9 +576,9 @@ REGISTER_USER_OP_GRAD("normalization")
                             const auto& in_shape = ctx->FwOp().arg_tensor_desc("x", 0).shape();
                             FOR_RANGE(size_t, i, 0, in_shape.NumAxes()) {
                               if (i != axis) {
-                                broadcast_dim_vec.push_back(1);
+                                broadcast_dim_vec.emplace_back(1);
                               } else {
-                                broadcast_dim_vec.push_back(in_shape.At(axis));
+                                broadcast_dim_vec.emplace_back(in_shape.At(axis));
                               }
                             }
                             const Shape broadcast_shape(broadcast_dim_vec);

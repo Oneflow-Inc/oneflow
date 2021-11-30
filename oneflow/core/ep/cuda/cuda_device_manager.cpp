@@ -55,7 +55,7 @@ void CudaDeviceManager::SetActiveDeviceByIndex(size_t device_index) {
   OF_CUDA_CHECK(cudaSetDevice(static_cast<int>(device_index)));
 }
 
-REGISTER_EP_DEVICE_MANAGER(DeviceType::kGPU, CudaDeviceManager);
+REGISTER_EP_DEVICE_MANAGER(DeviceType::kCUDA, CudaDeviceManager);
 
 }  // namespace ep
 

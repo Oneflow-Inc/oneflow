@@ -45,7 +45,7 @@ __global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, T* dptr,
 }  // namespace
 
 template<typename T>
-void UniformIntDistribution<DeviceType::kGPU, T>::operator()(
+void UniformIntDistribution<DeviceType::kCUDA, T>::operator()(
     ep::Stream* stream, const int64_t elem_cnt, T* dptr,
     const std::shared_ptr<one::Generator>& generator) const {
   CHECK_GE(elem_cnt, 0);
@@ -57,13 +57,13 @@ void UniformIntDistribution<DeviceType::kGPU, T>::operator()(
       curand_states, elem_cnt, dptr, low_, high_);
 }
 
-#define INITIATE_GPU_UNIFORM_INT_DISTRIBUTION(T, typeproto)              \
-  template void UniformIntDistribution<DeviceType::kGPU, T>::operator()( \
-      ep::Stream* stream, const int64_t elem_cnt, T* dptr,               \
+#define INITIATE_CUDA_UNIFORM_INT_DISTRIBUTION(T, typeproto)              \
+  template void UniformIntDistribution<DeviceType::kCUDA, T>::operator()( \
+      ep::Stream* stream, const int64_t elem_cnt, T* dptr,                \
       const std::shared_ptr<one::Generator>& generator) const;
 
-OF_PP_FOR_EACH_TUPLE(INITIATE_GPU_UNIFORM_INT_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)
-OF_PP_FOR_EACH_TUPLE(INITIATE_GPU_UNIFORM_INT_DISTRIBUTION, INT_DATA_TYPE_SEQ)
-OF_PP_FOR_EACH_TUPLE(INITIATE_GPU_UNIFORM_INT_DISTRIBUTION, UNSIGNED_INT_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INITIATE_CUDA_UNIFORM_INT_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INITIATE_CUDA_UNIFORM_INT_DISTRIBUTION, INT_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INITIATE_CUDA_UNIFORM_INT_DISTRIBUTION, UNSIGNED_INT_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

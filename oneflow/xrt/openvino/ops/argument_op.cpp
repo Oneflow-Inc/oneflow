@@ -13,26 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_GPU_H_
-#define ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_GPU_H_
-
-#include <type_traits>
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/device_registry_manager.h"
+#include "oneflow/xrt/openvino/ops/op_context.h"
+#include "oneflow/xrt/openvino/ops/op_kernel.h"
 
 namespace oneflow {
-#ifdef WITH_CUDA
-#include <cuda_fp16.h>
+namespace xrt {
+namespace openvino {
 
-void GpuDumpVersionInfo();
+class ArgumentOp : public OpenvinoOpKernel {
+ public:
+  void Compile(OpenvinoOpContext* ctx) override {}
+};
 
-template<typename T>
-struct IsFloat16;
+REGISTER_OPENVINO_OP_KERNEL(Argument, ArgumentOp).Finalize();
 
-template<>
-struct IsFloat16<half> : std::true_type {};
-
-REGISTER_DEVICE(DeviceType::kGPU).SetDumpVersionInfoFn(GpuDumpVersionInfo).SetDeviceTag("gpu");
-#endif  // WITH_CUDA
+}  // namespace openvino
+}  // namespace xrt
 }  // namespace oneflow
-#endif  // ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_GPU_H_

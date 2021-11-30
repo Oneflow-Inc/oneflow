@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_LOSS_KERNEL_UTIL_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -39,7 +39,7 @@ inline ReductionType GetReductionType(const std::string& reduction) {
 }
 
 #define RETURN_VOID_IF_CPU(x) typename std::enable_if_t<x == DeviceType::kCPU, void>
-#define RETURN_VOID_IF_GPU(x) typename std::enable_if_t<x == DeviceType::kGPU, void>
+#define RETURN_VOID_IF_CUDA(x) typename std::enable_if_t<x == DeviceType::kCUDA, void>
 
 template<DeviceType device_type, typename T>
 RETURN_VOID_IF_CPU(device_type)
@@ -47,7 +47,7 @@ ApplyLossReductionIfNeed(ep::Stream* stream, int64_t elem_cnt, const T* tmp_out,
                          const ReductionType reduction_type);
 
 template<DeviceType device_type, typename T>
-RETURN_VOID_IF_GPU(device_type)
+RETURN_VOID_IF_CUDA(device_type)
 ApplyLossReductionIfNeed(ep::Stream* stream, int64_t elem_cnt, const T* tmp_out, T* out,
                          const ReductionType reduction_type);
 
@@ -146,19 +146,19 @@ namespace {
   REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kCPU, float) \
   REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kCPU, double)
 
-#define REGISTER_SIMPLE_LOSS_KERNEL_GPU(name, kernel)                \
-  REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kGPU, half)  \
-  REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kGPU, float) \
-  REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kGPU, double)
+#define REGISTER_SIMPLE_LOSS_KERNEL_CUDA(name, kernel)                \
+  REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kCUDA, half)  \
+  REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kCUDA, float) \
+  REGISTER_SIMPLE_LOSS_KERNEL(name, kernel, DeviceType::kCUDA, double)
 
 #define REGISTER_SIMPLE_LOSS_GRAD_KERNEL_CPU(name, kernel)                \
   REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kCPU, float) \
   REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kCPU, double)
 
-#define REGISTER_SIMPLE_LOSS_GRAD_KERNEL_GPU(name, kernel)                \
-  REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kGPU, half)  \
-  REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kGPU, float) \
-  REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kGPU, double)
+#define REGISTER_SIMPLE_LOSS_GRAD_KERNEL_CUDA(name, kernel)                \
+  REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kCUDA, half)  \
+  REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kCUDA, float) \
+  REGISTER_SIMPLE_LOSS_GRAD_KERNEL(name, kernel, DeviceType::kCUDA, double)
 
 }  // namespace loss
 }  // namespace user_op

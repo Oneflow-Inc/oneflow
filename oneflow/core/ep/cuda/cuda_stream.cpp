@@ -128,7 +128,7 @@ Maybe<void> CudaStream::OnExecutionContextSetup() {
 
 Maybe<void> CudaStream::OnExecutionContextTeardown() { return Maybe<void>::Ok(); }
 
-DeviceType CudaStream::device_type() const { return DeviceType::kGPU; }
+DeviceType CudaStream::device_type() const { return DeviceType::kCUDA; }
 
 Maybe<void> CudaStream::Sync() {
   cudaError_t err = cudaStreamSynchronize(cuda_stream_);

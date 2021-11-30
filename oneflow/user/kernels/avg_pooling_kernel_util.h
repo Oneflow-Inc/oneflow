@@ -15,7 +15,7 @@ limitations under the License.
 */
 #ifndef ONEFLOW_USER_KERNELS_AVG_POOLING_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_AVG_POOLING_KERNEL_UTIL_H_
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
@@ -53,7 +53,7 @@ struct XPUAdd {
 
 #define AVG_POOLING_DATA_TYPE_CPU_SEQ AVG_POOLING_DATA_TYPE_SEQ
 
-#define AVG_POOLING_DATA_TYPE_GPU_SEQ AVG_POOLING_DATA_TYPE_SEQ
+#define AVG_POOLING_DATA_TYPE_CUDA_SEQ AVG_POOLING_DATA_TYPE_SEQ
 
 typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
 

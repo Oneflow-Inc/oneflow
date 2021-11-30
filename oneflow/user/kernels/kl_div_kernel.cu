@@ -103,7 +103,7 @@ __global__ void ComputeKLDivGradOut(int64_t elem_cnt, float inv_elem_cnt, const 
 }
 
 template<typename T>
-class KLDivKernel : public SimpleLossKernel<DeviceType::kGPU, T, KLDivKernel<T>> {
+class KLDivKernel : public SimpleLossKernel<DeviceType::kCUDA, T, KLDivKernel<T>> {
  public:
   void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
                   const T* target, T* out) const {
@@ -115,7 +115,7 @@ class KLDivKernel : public SimpleLossKernel<DeviceType::kGPU, T, KLDivKernel<T>>
 };
 
 template<typename T>
-class KLDivGradKernel : public SimpleLossGradKernel<DeviceType::kGPU, T, KLDivGradKernel<T>> {
+class KLDivGradKernel : public SimpleLossGradKernel<DeviceType::kCUDA, T, KLDivGradKernel<T>> {
  public:
   void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
                   const T* target, const T* dy, T* dx, const ReductionType reduction) const {
@@ -128,8 +128,8 @@ class KLDivGradKernel : public SimpleLossGradKernel<DeviceType::kGPU, T, KLDivGr
 
 }  // namespace
 
-REGISTER_SIMPLE_LOSS_KERNEL_GPU("kl_div_loss", KLDivKernel)
-REGISTER_SIMPLE_LOSS_GRAD_KERNEL_GPU("kl_div_loss_grad", KLDivGradKernel)
+REGISTER_SIMPLE_LOSS_KERNEL_CUDA("kl_div_loss", KLDivKernel)
+REGISTER_SIMPLE_LOSS_GRAD_KERNEL_CUDA("kl_div_loss_grad", KLDivGradKernel)
 
 }  // namespace user_op
 }  // namespace oneflow

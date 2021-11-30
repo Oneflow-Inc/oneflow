@@ -33,8 +33,8 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
   void Launch(Stream* stream, const void* src, void* dst, size_t count) override {
     auto* cuda_stream = stream->As<CudaStream>();
     OF_CUDA_CHECK(
-        (cuda::elementwise::Unary<UnaryFunctor<DeviceType::kGPU, unary_op, Dst, Src>, Dst, Src>(
-            UnaryFunctor<DeviceType::kGPU, unary_op, Dst, Src>(), count,
+        (cuda::elementwise::Unary<UnaryFunctor<DeviceType::kCUDA, unary_op, Dst, Src>, Dst, Src>(
+            UnaryFunctor<DeviceType::kCUDA, unary_op, Dst, Src>(), count,
             reinterpret_cast<Dst*>(dst), reinterpret_cast<const Src*>(src),
             cuda_stream->cuda_stream())));
   }
@@ -85,7 +85,7 @@ class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
   }
 };
 
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, ElementwiseUnaryFactory, ElementwiseUnaryFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, ElementwiseUnaryFactory, ElementwiseUnaryFactoryImpl);
 
 }  // namespace
 }  // namespace primitive

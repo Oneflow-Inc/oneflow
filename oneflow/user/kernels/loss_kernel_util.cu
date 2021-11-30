@@ -65,7 +65,7 @@ __global__ void ApplyLossReductionImpl<half>(int64_t elem_cnt, double inv_elem_c
 }
 
 template<DeviceType device_type, typename T>
-RETURN_VOID_IF_GPU(device_type)
+RETURN_VOID_IF_CUDA(device_type)
 ApplyLossReductionIfNeed(ep::Stream* stream, int64_t elem_cnt, const T* tmp_out, T* out,
                          const ReductionType reduction_type) {
   if (reduction_type == ReductionType::kNone) { return; }
@@ -79,14 +79,14 @@ ApplyLossReductionIfNeed(ep::Stream* stream, int64_t elem_cnt, const T* tmp_out,
       reduction_type == ReductionType::kMean);
 }
 
-#define SPECIALIZE_APPLY_LOSS_REDUCTION(device_type, dtype)                              \
-  template RETURN_VOID_IF_GPU(device_type) ApplyLossReductionIfNeed<device_type, dtype>( \
-      ep::Stream * stream, int64_t elem_cnt, const dtype* tmp_out, dtype* out,           \
+#define SPECIALIZE_APPLY_LOSS_REDUCTION(device_type, dtype)                               \
+  template RETURN_VOID_IF_CUDA(device_type) ApplyLossReductionIfNeed<device_type, dtype>( \
+      ep::Stream * stream, int64_t elem_cnt, const dtype* tmp_out, dtype* out,            \
       const ReductionType reduction_type);
 
-SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kGPU, half)
-SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kGPU, float)
-SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kGPU, double)
+SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kCUDA, half)
+SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kCUDA, float)
+SPECIALIZE_APPLY_LOSS_REDUCTION(DeviceType::kCUDA, double)
 
 }  // namespace loss
 }  // namespace user_op

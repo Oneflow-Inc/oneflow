@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
+#include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/register/ofblob.h"
 namespace oneflow {
 namespace one {
@@ -151,7 +152,7 @@ class DeConvBaseFunctor {
       for (int i = 0; i < groups; i++) {
         const std::shared_ptr<one::Tensor>& deconv_i = JUST(OpInterpUtil::Dispatch<Tensor>(
             *deconv_op_, {split_x->at(i), split_weight->at(i)}, deconv_attrs));
-        split_out.push_back(deconv_i);
+        split_out.emplace_back(deconv_i);
       }
       deconv_out = JUST(functional::Concat(split_out, 1));
     }
@@ -361,17 +362,17 @@ class PoolingNDFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class AvgPool2DFunctor : public PoolNDFunctor {
+class TFAvgPool2DFunctor : public PoolNDFunctor {
  public:
-  AvgPool2DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("avg_pool_2d").Input("x").Output("y").Build());
+  TFAvgPool2DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("tf_avg_pool_2d").Input("x").Output("y").Build());
   }
 };
 
-class MaxPool2DFunctor : public PoolNDFunctor {
+class TFMaxPool2DFunctor : public PoolNDFunctor {
  public:
-  MaxPool2DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("max_pool_2d").Input("x").Output("y").Build());
+  TFMaxPool2DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("tf_max_pool_2d").Input("x").Output("y").Build());
   }
 };
 
@@ -480,7 +481,7 @@ class MarginRankingLossFunctor : public SimpleLossFunctorBase {
                  .then(functional::Negative)
                  .then(std::bind(functional::Mul, target, std::placeholders::_1))
                  .then([&margin](const std::shared_ptr<one::Tensor>& x) {
-                   return functional::ScalarAdd(x, Scalar(margin), true);
+                   return functional::ScalarAdd(x, Scalar(margin), /*alpha=*/1, /*inplace=*/true);
                  })
                  .then(std::bind(functional::Clamp, std::placeholders::_1, Scalar(0), NullOpt))
                  .call(input_1, input_2));
@@ -869,10 +870,10 @@ class SparseSoftmaxCrossEntropyFunctor {
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
       cfg::SbpParallel sbp;
       sbp.mutable_broadcast_parallel();
-      s0b_sbp_parallels.push_back(logits_nd_sbp.sbp_parallel(0));
-      s0b_sbp_parallels.push_back(sbp);
-      s0s1_sbp_parallels.push_back(logits_nd_sbp.sbp_parallel(0));
-      s0s1_sbp_parallels.push_back(logits_nd_sbp.sbp_parallel(1));
+      s0b_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(0));
+      s0b_sbp_parallels.emplace_back(sbp);
+      s0s1_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(0));
+      s0s1_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(1));
       max_global_stage_input0 = JUST(functional::ToConsistent(
           max_device_stage->at(0), JUST(max_device_stage->at(0)->parallel_desc()),
           s0b_sbp_parallels, s0s1_sbp_parallels));
@@ -1096,24 +1097,26 @@ class TripletMarginLossFunctor {
       if ((reduction != "none") && (reduction != "sum") && (reduction != "mean")) return false;
       return true;
     }());
-    auto da_p = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, positive)))), p, dim, false,
-                                anchor->dtype()));
-    auto da_n = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, negative)))), p, dim, false,
-                                anchor->dtype()));
+    auto da_p = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, positive)), /*alpha=*/1)), p,
+                                dim, /*keepdim=*/false, anchor->dtype()));
+    auto da_n = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, negative)), /*alpha=*/1)), p,
+                                dim, /*keepdim=*/false, anchor->dtype()));
     if (swap) {
-      auto distance_swap = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(positive, negative)))), p,
-                                           dim, false, positive->dtype()));
+      auto distance_swap =
+          JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(positive, negative)), /*alpha=*/1)), p, dim,
+                          /*keepdim=*/false, positive->dtype()));
       da_n = JUST(Minimum(distance_swap, da_n));
     }
     auto triplet_loss =
-        JUST(Clamp(JUST(ScalarAdd(JUST(Sub(da_p, da_n)), margin, false)), 0.0, NullOpt));
+        JUST(Clamp(JUST(ScalarAdd(JUST(Sub(da_p, da_n)), margin, /*alpha=*/1, /*inplace=*/false)),
+                   /*min=*/0.0, NullOpt));
     int32_t ndim = triplet_loss->ndim() - 1;
     std::vector<int32_t> axis(1, ndim);
 
     if (reduction == "mean") {
-      triplet_loss = JUST(ReduceMean(triplet_loss, axis, false));
+      triplet_loss = JUST(ReduceMean(triplet_loss, axis, /*keepdim=*/false));
     } else if (reduction == "sum") {
-      triplet_loss = JUST(ReduceSum(triplet_loss, axis, false));
+      triplet_loss = JUST(ReduceSum(triplet_loss, axis, /*keepdim=*/false));
     }
     return triplet_loss;
   }
@@ -1408,40 +1411,44 @@ class PadFunctor {
 class DropoutFunctor {
  public:
   DropoutFunctor() {
-    random_mask_like_op_ =
-        CHECK_JUST(one::OpBuilder("random_mask_like").Input("like").Output("out").Build());
     dropout_op_ =
-        CHECK_JUST(one::OpBuilder("dropout").Input("in").Input("mask").Output("out").Build());
+        CHECK_JUST(one::OpBuilder("dropout").Input("in").Output("out").Output("mask").Build());
+    dropout_addend_op_ = CHECK_JUST(one::OpBuilder("dropout")
+                                        .Input("in")
+                                        .Input("_add_to_output")
+                                        .Output("out")
+                                        .Output("mask")
+                                        .Build());
+    add_op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a, const float& p,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<one::Tensor>& addend, const float& p,
                            const bool& training, const Optional<one::Generator>& generator) const {
-    if (!training || p == 0.0) return a;
-
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap random_mask_like_attrs;
-    JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
-    JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
-    const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
-
-    float scale = 1.0;
-    if (p != 1.0) { scale = 1.0 / (1.0 - p); }
+    const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
     MutableAttrMap dropout_attrs;
-    JUST(dropout_attrs.SetAttr<float>("scale", scale));
-
-    return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
-             return OpInterpUtil::Dispatch<Tensor>(
-                 *random_mask_like_op_, {a},
-                 OpExprInterpContext(random_mask_like_attrs, random_mask_like_state));
-           })
-        .then([&](const std::shared_ptr<one::Tensor>& x) {
-          return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {a, x}, dropout_attrs);
-        })
-        .call();
+    JUST(dropout_attrs.SetAttr<float>("rate", p));
+    if (addend) {
+      if (!training) {
+        return OpInterpUtil::Dispatch<Tensor>(*add_op_, {x, JUST(addend)});
+      } else {
+        return OpInterpUtil::Dispatch<Tensor>(*dropout_addend_op_, {x, JUST(addend)},
+                                              OpExprInterpContext(dropout_attrs, dropout_state));
+      }
+    } else {
+      if (!training) {
+        return x;
+      } else {
+        return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {x},
+                                              OpExprInterpContext(dropout_attrs, dropout_state));
+      }
+    }
   }
 
  private:
-  std::shared_ptr<OpExpr> random_mask_like_op_;
   std::shared_ptr<OpExpr> dropout_op_;
+  std::shared_ptr<OpExpr> dropout_addend_op_;
+  std::shared_ptr<OpExpr> add_op_;
 };
 
 class DropoutGradFunctor {
@@ -1454,7 +1461,6 @@ class DropoutGradFunctor {
                            const std::shared_ptr<one::Tensor>& mask, const float& scale) const {
     MutableAttrMap dropout_grad_attrs;
     JUST(dropout_grad_attrs.SetAttr<float>("scale", scale));
-
     return OpInterpUtil::Dispatch<Tensor>(*dropout_grad_op_, {dy, mask}, dropout_grad_attrs);
   }
 
@@ -2024,6 +2030,58 @@ class NmsFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class RoiAlignFunctor {
+ public:
+  RoiAlignFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("roi_align").Input("x").Input("rois").Output("y").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& rois, const float& spatial_scale,
+                           const int32_t& pooled_h, const int32_t& pooled_w,
+                           const int32_t& sampling_ratio, const bool& aligned) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("spatial_scale", spatial_scale));
+    JUST(attrs.SetAttr<int32_t>("pooled_h", pooled_h));
+    JUST(attrs.SetAttr<int32_t>("pooled_w", pooled_w));
+    JUST(attrs.SetAttr<int32_t>("sampling_ratio", sampling_ratio));
+    JUST(attrs.SetAttr<bool>("aligned", aligned));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, rois}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class RoiAlignGradFunctor {
+ public:
+  RoiAlignGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("roi_align_grad")
+                         .Input("dy")
+                         .Input("x_like")
+                         .Input("rois")
+                         .Output("dx")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x_like,
+                           const std::shared_ptr<one::Tensor>& rois, const float& spatial_scale,
+                           const int32_t& pooled_h, const int32_t& pooled_w,
+                           const int32_t& sampling_ratio, const bool& aligned) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("spatial_scale", spatial_scale));
+    JUST(attrs.SetAttr<int32_t>("pooled_h", pooled_h));
+    JUST(attrs.SetAttr<int32_t>("pooled_w", pooled_w));
+    JUST(attrs.SetAttr<int32_t>("sampling_ratio", sampling_ratio));
+    JUST(attrs.SetAttr<bool>("aligned", aligned));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x_like, rois}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2037,11 +2095,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
-  m.add_functor<impl::AvgPool2DFunctor>("AvgPool2D");
+  m.add_functor<impl::TFAvgPool2DFunctor>("AvgPool2D");
   m.add_functor<impl::Maxpool1DFunctor>("Maxpool1D");
   m.add_functor<impl::Maxpool2DFunctor>("Maxpool2D");
   m.add_functor<impl::Maxpool3DFunctor>("Maxpool3D");
-  m.add_functor<impl::MaxPool2DFunctor>("MaxPool2D");
+  m.add_functor<impl::TFMaxPool2DFunctor>("MaxPool2D");
   m.add_functor<impl::AdaptiveAvgPool1DFunctor>("AdaptiveAvgPool1D");
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
@@ -2090,6 +2148,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PartialFCSampleFunctor>("DistributedPariticalFCSample");
   m.add_functor<impl::PariticalFCSampleDisableBoxing>("DistributedPariticalFCSampleDisableBoxing");
   m.add_functor<impl::NmsFunctor>("Nms");
+  m.add_functor<impl::RoiAlignFunctor>("RoiAlign");
+  m.add_functor<impl::RoiAlignGradFunctor>("RoiAlignGrad");
 };
 
 }  // namespace functional

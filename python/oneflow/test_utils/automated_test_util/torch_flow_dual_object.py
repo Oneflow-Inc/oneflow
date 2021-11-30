@@ -467,6 +467,9 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
             torch_grad, flow_grad, rtol=rtol, atol=atol, equal_nan=True,
         ):
             print_note_fake_program()
+            print("---------Grad Shape--------")
+            print(torch_grad.shape)
+            print(flow_grad.shape)
             print(
                 f"Grads are not equal. PyTorch grad: \n{torch_grad}\n, OneFlow grad: \n{flow_grad}"
             )
@@ -480,6 +483,9 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
     )
     if equality_res == False:
         print_note_fake_program()
+        print("---------Tensor Shape--------")
+        print(torch_tensor.shape)
+        print(flow_tensor.shape)
     return equality_res
 
 

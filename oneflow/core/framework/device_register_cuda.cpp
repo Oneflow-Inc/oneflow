@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/device_register_gpu.h"
+#include "oneflow/core/framework/device_register_cuda.h"
 
 #ifdef WITH_CUDA
 #include <cuda_runtime.h>
@@ -48,7 +48,7 @@ bool GetCudnnVersionString(std::string* version) {
 }  // namespace
 
 namespace oneflow {
-void GpuDumpVersionInfo() {
+void CudaDumpVersionInfo() {
   {
     int cuda_runtime_version;
     cudaError_t err = cudaRuntimeGetVersion(&cuda_runtime_version);
