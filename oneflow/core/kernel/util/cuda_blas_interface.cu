@@ -132,28 +132,4 @@ void BlasIf<DeviceType::kCUDA>::OFGemm(ep::Stream* stream, enum CBLAS_TRANSPOSE 
              reinterpret_cast<half*>(c));
 }
 
-void BlasIf<DeviceType::kGPU>::OFScal(DeviceCtx* ctx, const int n, const float* alpha, float* x,
-                                      int incx) {
-  OF_CUBLAS_CHECK(cublasSscal(ctx->cublas_tensor_op_math_handle(), n, alpha, x, incx));
-}
-
-void BlasIf<DeviceType::kGPU>::OFScal(DeviceCtx* ctx, const int n, const double* alpha, double* x,
-                                      int incx) {
-  OF_CUBLAS_CHECK(cublasDscal(ctx->cublas_tensor_op_math_handle(), n, alpha, x, incx));
-}
-
-void BlasIf<DeviceType::kGPU>::OFCopy(DeviceCtx* ctx, const int n, const float* x, int incx,
-                                      float* y, int incy) {
-  OF_CUBLAS_CHECK(cublasScopy(ctx->cublas_tensor_op_math_handle(), n, x, incx, y, incy));
-}
-
-void BlasIf<DeviceType::kGPU>::OFCopy(DeviceCtx* ctx, const int n, const double* x, int incx,
-                                      double* y, int incy) {
-  OF_CUBLAS_CHECK(cublasDcopy(ctx->cublas_tensor_op_math_handle(), n, x, incx, y, incy));
-}
-
-void BlasIf<DeviceType::kGPU>::OFSetPointerMod(DeviceCtx* ctx, cublasPointerMode_t mode) {
-  OF_CUBLAS_CHECK(cublasSetPointerMode(ctx->cublas_tensor_op_math_handle(), mode));
-}
-
 }  // namespace oneflow
