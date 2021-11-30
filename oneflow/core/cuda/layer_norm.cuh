@@ -289,8 +289,9 @@ __global__ void LayerNormWarpImpl(LOAD load, STORE store, const int64_t rows, co
   const int64_t global_thread_group_id = blockIdx.x * blockDim.y + threadIdx.y;
   const int64_t num_global_thread_group = gridDim.x * blockDim.y;
   const int64_t lane_id = threadIdx.x;
+  const int64_t step = num_global_thread_group * rows_per_access;
   for (int64_t row = global_thread_group_id * rows_per_access; row < rows;
-       row += num_global_thread_group * rows_per_access) {
+       row += step) {
     ComputeType thread_mean[rows_per_access];
     ComputeType thread_m2[rows_per_access];
     ComputeType thread_count[rows_per_access];
@@ -359,9 +360,9 @@ inline cudaError_t LaunchLayerNormWarpImpl(cudaStream_t stream, LOAD load, STORE
   constexpr int block_size = 128;
   constexpr int waves = 32;
   static_assert(block_size % thread_group_width == 0, "");
-  constexpr int rows_per_block = block_size / thread_group_width;
-  dim3 block_dim(thread_group_width, rows_per_block);
-  const int64_t num_blocks = (rows + rows_per_block - 1) / rows_per_block;
+  constexpr int thread_groups_per_block = block_size / thread_group_width;
+  dim3 block_dim(thread_group_width, thread_groups_per_block);
+  const int64_t num_blocks = (rows / rows_per_access + thread_groups_per_block - 1) / thread_groups_per_block;
   int grid_dim_x;
   {
     cudaError_t err =
@@ -865,11 +866,12 @@ __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_DY load_dy, STORE stor
   ComputeType dy_buf[rows_per_access][cols_per_thread];
   ComputeType mean_buf[rows_per_access];
   ComputeType inv_variance_buf[rows_per_access];
-  const int global_thread_group_id = blockIdx.x * blockDim.y + threadIdx.y;
-  const int num_global_thread_group = gridDim.x * blockDim.y;
+  const int64_t global_thread_group_id = blockIdx.x * blockDim.y + threadIdx.y;
+  const int64_t num_global_thread_group = gridDim.x * blockDim.y;
   const int lane_id = threadIdx.x;
+  const int64_t step = num_global_thread_group * rows_per_access;
   for (int64_t row = global_thread_group_id * rows_per_access; row < rows;
-       row += num_global_thread_group * rows_per_access) {
+       row += step) {
     ComputeType sum_loss1[rows_per_access];
     ComputeType sum_loss2[rows_per_access];
 #pragma unroll
@@ -941,9 +943,9 @@ inline cudaError_t LaunchLayerNormGradWarpImpl(cudaStream_t stream, LOAD_X load_
   constexpr int block_size = 128;
   constexpr int waves = 32;
   static_assert(block_size % thread_group_width == 0, "");
-  constexpr int rows_per_block = block_size / thread_group_width;
-  dim3 block_dim(thread_group_width, rows_per_block);
-  const int64_t num_blocks = (rows + rows_per_block - 1) / rows_per_block;
+  constexpr int thread_groups_per_block = block_size / thread_group_width;
+  dim3 block_dim(thread_group_width, thread_groups_per_block);
+  const int64_t num_blocks = (rows / rows_per_access + thread_groups_per_block - 1) / thread_groups_per_block;
   int grid_dim_x;
   {
     cudaError_t err = GetNumBlocks(
