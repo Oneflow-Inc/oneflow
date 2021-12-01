@@ -87,9 +87,10 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
                            const OpExprInterpContext& ctx) {
   const auto& attrs = ctx.attrs;
 
-  auto contiguous_inputs = TensorTuple(inputs.size()); 
+  // make input tensor contiguous in memory
+  TensorTuple contiguous_inputs(inputs.size());
   for(int i=0; i<inputs.size(); ++i){
-    contiguous_inputs.emplace_back(inputs[i]->contiguous());
+    contiguous_inputs[i] = inputs.at(i)->contiguous();
   }
 
   std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
