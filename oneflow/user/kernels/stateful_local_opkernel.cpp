@@ -464,16 +464,11 @@ Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(
   return Maybe<void>::Ok();
 }
 
-void StatefulLocalOpKernel::TryInitOpKernelState(
+void StatefulLocalOpKernel::TryInitOpKernelStateAndCache(
     const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx, EagerBlobObjectListRawPtr inputs,
     EagerBlobObjectListRawPtr outputs,
     ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
     user_op::OpKernelState** state, std::shared_ptr<user_op::OpKernelCache>* cache) {
-  auto it = op_kernel_state_map_.find(op_kernel);
-  if (it != op_kernel_state_map_.end()) {
-    *state = it->second.get();
-    return;
-  }
 
   LocalUserKernelInitAndCacheContext init_and_cache_ctx(
       device_ctx, op_conf_->device_tag(), user_op_conf_.get(), input_arg_tuple_, output_arg_tuple_,

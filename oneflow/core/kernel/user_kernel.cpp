@@ -141,8 +141,9 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext, p
   void UpdateTensorWithCorrBlob(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
     for (auto& pair : base_ctx_.arg2tensor_desc_) {
       auto& tensor_desc = pair.second;
-      Blob* blob = BnInOp2Blob(GenRepeatedBn(pair.first.first, pair.first.second));
-      CHECK(blob != nullptr) << "Cache context doesn't support dynamic input/output num";
+      std::string bn = GenRepeatedBn(pair.first.first, pair.first.second);
+      Blob* blob = BnInOp2Blob(bn);
+      CHECK(blob != nullptr) << "Blob " << bn << " is not found in cache context.";
       if (blob->blob_desc().is_dynamic()) { blob->shape().ToShape(tensor_desc.mut_shape()); }
     }
   }

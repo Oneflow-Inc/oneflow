@@ -428,7 +428,7 @@ class StatefulLocalOpKernel final {
   user_op::TensorDescInferFn TensorDescInferFn() const;
   user_op::DataTypeInferFn DataTypeInferFn() const;
 
-  void TryInitOpKernelState(const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx,
+  void TryInitOpKernelStateAndCache(const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx,
                             EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
                             ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
                             user_op::OpKernelState** state, std::shared_ptr<user_op::OpKernelCache>* cache);
