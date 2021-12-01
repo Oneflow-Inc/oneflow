@@ -125,7 +125,7 @@ REGISTER_USER_OP_GRAD("fused_bias_add_gelu")
           const int32_t bias_add_axis = op.attr<int32_t>("axis");
           std::vector<int32_t> reduce_axes_vec;
           FOR_RANGE(int64_t, i, 0, num_axes) {
-            if (i != bias_add_axis) { reduce_axes_vec.push_back(i); }
+            if (i != bias_add_axis) { reduce_axes_vec.emplace_back(i); }
           }
           user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
           auto grad_op = builder.Op("reduce_sum")
@@ -215,7 +215,7 @@ REGISTER_USER_OP_GRAD("fused_bias_add_mask_scale")
           const int32_t bias_add_axis = op.attr<int32_t>("axis");
           std::vector<int32_t> reduce_axes_vec;
           FOR_RANGE(int64_t, i, 0, num_axes) {
-            if (i != bias_add_axis) { reduce_axes_vec.push_back(i); }
+            if (i != bias_add_axis) { reduce_axes_vec.emplace_back(i); }
           }
           user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
           auto grad_op = builder.Op("reduce_sum")

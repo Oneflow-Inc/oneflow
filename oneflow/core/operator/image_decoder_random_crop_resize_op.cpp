@@ -35,9 +35,9 @@ Maybe<void> InferBlobDescs(const OperatorConf& op_conf,
   *out = *in;
   out->set_data_type(DataType::kUInt8);
   DimVector out_dim_vec = in->shape().dim_vec();
-  out_dim_vec.push_back(conf.target_height());
-  out_dim_vec.push_back(conf.target_width());
-  out_dim_vec.push_back(3);
+  out_dim_vec.emplace_back(conf.target_height());
+  out_dim_vec.emplace_back(conf.target_width());
+  out_dim_vec.emplace_back(3);
   out->mut_shape() = Shape(out_dim_vec);
   return Maybe<void>::Ok();
 }

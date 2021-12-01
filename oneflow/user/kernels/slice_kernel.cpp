@@ -230,9 +230,9 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
   const int64_t ndim = start_attr.size();
   for (int i = 0; i < ndim; i++) {
     const int64_t dim_size = large->shape().At(i);
-    positive_start_vec.push_back(RegulateSliceStart(
+    positive_start_vec.emplace_back(RegulateSliceStart(
         start_attr.at(i), i == slice_ctx.split_axis ? slice_ctx.logical_length : dim_size));
-    positive_stop_vec.push_back(RegulateSliceStop(
+    positive_stop_vec.emplace_back(RegulateSliceStop(
         stop_attr.at(i), i == slice_ctx.split_axis ? slice_ctx.logical_length : dim_size));
   }
   SliceParams large_slice_param;

@@ -138,10 +138,14 @@ def ones_op(
         >>> y = flow.ones(5)
         >>> y
         tensor([1., 1., 1., 1., 1.], dtype=oneflow.float32)
-        >>> y = flow.ones(2,3)
+        >>> y = flow.ones(2,3) # construct local tensor
         >>> y
         tensor([[1., 1., 1.],
                 [1., 1., 1.]], dtype=oneflow.float32)
+        >>> placement = flow.placement("cpu", {0: [0]})
+        >>> y = flow.ones(4, 5, placement=placement, sbp=flow.sbp.broadcast) # construct consistent tensor
+        >>> y.is_consistent
+        True
 
 
     """
@@ -242,13 +246,17 @@ def full_op(
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> y = flow.full((5,),5)
+        >>> y = flow.full((5,),5) 
         >>> y
         tensor([5, 5, 5, 5, 5], dtype=oneflow.int64)
-        >>> y = flow.full((2,3),5.0)
+        >>> y = flow.full((2,3),5.0) # construct local tensor
         >>> y
         tensor([[5., 5., 5.],
                 [5., 5., 5.]], dtype=oneflow.float32)
+        >>> placement = flow.placement("cpu", {0: [0]})
+        >>> y = flow.full((2,3),5.0, placement=placement, sbp=flow.sbp.broadcast)  # construct consistent tensor
+        >>> y.is_consistent
+        True
 
     """
     size = _handle_size_arg(*size)

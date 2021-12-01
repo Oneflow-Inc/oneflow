@@ -68,10 +68,10 @@ Maybe<void> SplitLike::Apply(const SplitLikeCaptureState* ctx, const TensorTuple
   for (int i = 0; i < out_grads.size(); ++i) {
     const auto& out_grad_i = out_grads.at(i);
     if (out_grad_i.get()) {
-      inputs.push_back(out_grad_i);
+      inputs.emplace_back(out_grad_i);
     } else {
       const auto& zero_grad = JUST(functional::ZerosLike(saved_tensors.at(i)));
-      inputs.push_back(zero_grad);
+      inputs.emplace_back(zero_grad);
     }
   }
   in_grads->at(0) = JUST(functional::Concat(inputs, ctx->axis));

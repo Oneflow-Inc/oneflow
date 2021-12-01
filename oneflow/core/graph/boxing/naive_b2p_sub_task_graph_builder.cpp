@@ -51,7 +51,7 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
         TaskNode* proxy =
             ctx->task_graph()->GetProxyNode(nearest_in_node, lbi, out_parallel_desc, out_id);
 
-        sorted_out_tasks->push_back(proxy);
+        sorted_out_tasks->emplace_back(proxy);
       } else {
         int64_t out_machine_id = CHECK_JUST(out_parallel_desc.MachineId4ParallelId(out_id));
         int64_t out_dev_phy_id = CHECK_JUST(out_parallel_desc.DeviceId4ParallelId(out_id));
@@ -63,7 +63,7 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
                          logical_blob_desc.data_type(), time_shape);
         nearest_in_node->BuildCtrlRegstDesc(zeros_node);
         Connect<TaskNode>(nearest_in_node, ctx->task_graph()->NewEdge(), zeros_node);
-        sorted_out_tasks->push_back(zeros_node);
+        sorted_out_tasks->emplace_back(zeros_node);
       }
     }
     return TRY(BuildSubTskGphBuilderStatus("NaiveB2PSubTskGphBuilder", ""));

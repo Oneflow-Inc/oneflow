@@ -235,9 +235,9 @@ class ModelInitV2Kernel final : public Kernel {
       std::seed_seq seq{original_variable_conf.random_seed()};
       std::vector<int64_t> seeds(seed_num);
       seq.generate(seeds.begin(), seeds.end());
-      seeds_.push_back(seeds.at(seed_offset));
+      seeds_.emplace_back(seeds.at(seed_offset));
       const Shape logical_blob_shape(original_variable_conf.shape());
-      tensor_slice_views_.push_back(GetTensorSliceView4ParallelId(
+      tensor_slice_views_.emplace_back(GetTensorSliceView4ParallelId(
           *hierarchy, nd_sbp, logical_blob_shape, parallel_ctx.parallel_id()));
     }
   }
@@ -296,7 +296,7 @@ class ModelLoadV2Kernel final : public Kernel {
     FOR_RANGE(int64_t, i, 0, num_var) {
       const cfg::NdSbp& nd_sbp = GetNdSbp(this->kernel_conf(), GenRepeatedBn("ref", i));
       const Shape logical_blob_shape(model_load_v2_conf.original_variable_conf(i).shape());
-      tensor_slice_views_.push_back(
+      tensor_slice_views_.emplace_back(
           GetTensorSliceView4ParallelId(*hierarchy, nd_sbp, logical_blob_shape,
                                         this->kernel_conf().parallel_ctx().parallel_id()));
     }
@@ -361,6 +361,7 @@ class ModelSaveV2Kernel final : public Kernel {
       bool variable_need_do_save = false;
       int64_t variable_part_id = 0;
       std::vector<TensorSliceView> variable_part_id2slice_views;
+      variable_part_id2slice_views.reserve(hierarchy->elem_cnt());
       FOR_RANGE(int64_t, j, 0, hierarchy->elem_cnt()) {
         hierarchy_index_helper.OffsetToNdIndex(j, parallel_rank.data());
         bool cur_id_need_do_save = NeedDoSave(parallel_rank, nd_sbp);
@@ -369,13 +370,13 @@ class ModelSaveV2Kernel final : public Kernel {
           variable_part_id = variable_part_id2slice_views.size();
         }
         if (cur_id_need_do_save) {
-          variable_part_id2slice_views.push_back(GetTensorSliceView4ParallelRank(
+          variable_part_id2slice_views.emplace_back(GetTensorSliceView4ParallelRank(
               *hierarchy, nd_sbp, logical_blob_shape, parallel_rank));
         }
       }
-      need_do_saves_.push_back(variable_need_do_save);
-      part_ids_.push_back(variable_part_id);
-      part_id2slice_views_.push_back(variable_part_id2slice_views);
+      need_do_saves_.emplace_back(variable_need_do_save);
+      part_ids_.emplace_back(variable_part_id);
+      part_id2slice_views_.emplace_back(variable_part_id2slice_views);
     }
   }
 
