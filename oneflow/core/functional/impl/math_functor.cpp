@@ -1546,6 +1546,78 @@ class VarianceFunctor {
   }
 };
 
+class MovedimVecFunctor {
+ public:
+  MovedimVecFunctor() = default;
+  static Maybe<void> CheckNoRepeat(const std::vector<int32_t>& perm, std::vector<int32_t> &perm_out, int32_t ndim, const std::string &desc) {  
+    std::vector<bool> is_used(ndim, false);
+    FOR_RANGE(size_t, i, 0, perm.size()) {
+      int32_t item = perm[i];
+      if(item < 0){
+        item += ndim;
+      }
+      CHECK_GE_OR_RETURN(item, 0) << ", Dimension out of range (expected to be in range of [" << -ndim << ", " <<ndim-1<< "], but got " << perm[i] << ")";
+      CHECK_LT_OR_RETURN(item, ndim) << ", Dimension out of range (expected to be in range of [" << -ndim <<", " << ndim-1 << "], but got " << perm[i] << ")";
+      CHECK_EQ_OR_RETURN(is_used[item], false) << "repeated dim in " << desc;
+      
+      is_used[item] = true;
+      perm_out[i] = item;
+    }
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::vector<int32_t>& source,
+                           const std::vector<int32_t>& destination ) const {
+    int32_t ndim = input->shape()->NumAxes();
+    int32_t dim = source.size();
+
+    CHECK_EQ_OR_RETURN(source.size(),destination.size()) << "movedim: Invalid source or destination dims: source (" <<
+              source.size() << " dims ) should contain the same number of dims as destination (" << destination.size() <<" dims)";
+
+    std::vector<int32_t> source_nopeat(dim);
+    std::vector<int32_t> destination_nopeat(dim);
+
+    CheckNoRepeat(source, source_nopeat, ndim, "source");
+    CheckNoRepeat(destination, destination_nopeat, ndim, "destination");
+    
+    std::vector<int32_t> order(ndim);
+    std::vector<int32_t> source_dims(ndim);
+    std::vector<int32_t> destination_dims(ndim);
+
+    std::iota(source_dims.begin(), source_dims.end(), 0);
+    std::iota(destination_dims.begin(), destination_dims.end(), 0);
+    
+    FOR_RANGE(size_t, i, 0, dim) {
+      order[destination_nopeat[i]] = source_nopeat[i];
+      source_dims[source_nopeat[i]] = -1;
+      destination_dims[destination_nopeat[i]] = -1;
+    }
+    
+    std::remove(source_dims.begin(), source_dims.end(), -1);
+    std::remove(destination_dims.begin(), destination_dims.end(), -1);
+    
+    int64_t rest_dim = ndim - dim;
+    FOR_RANGE(size_t, i, 0, rest_dim) {
+      order[destination_dims[i]] = source_dims[i];
+    }
+
+    return Transpose(input, order);
+  }
+};
+
+class MovedimIntFunctor {
+ public:
+  MovedimIntFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const int32_t& source,
+                           const int32_t& destination ) const {
+    std::vector<int32_t> src{source};
+    std::vector<int32_t> dest{destination};
+    return MovedimVec(input,src,dest);
+  }
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -1605,8 +1677,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarLogicalXorFunctor, ScalarLogicalXor2Functor>("ScalarLogicalXor");
   m.add_functor<StandardDeviationFunctor>("StandardDeviation");
   m.add_functor<VarianceFunctor>("Variance");
-  m.add_functor<impl::MovedimVecFunctor>("MovedimVec");
-  m.add_functor<impl::MovedimIntFunctor>("MovedimInt");
+  m.add_functor<MovedimVecFunctor>("MovedimVec");
+  m.add_functor<MovedimIntFunctor>("MovedimInt");
 };
 
 }  // namespace functional
