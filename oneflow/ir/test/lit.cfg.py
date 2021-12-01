@@ -21,13 +21,6 @@ import re
 import subprocess
 import tempfile
 
-import lit.formats
-import lit.util
-
-from lit.llvm import llvm_config
-from lit.llvm.subst import ToolSubst
-from lit.llvm.subst import FindTool
-
 
 def get_visible_gpu_with_max_free_memory(debug=False) -> int:
     try:
@@ -42,22 +35,36 @@ def get_visible_gpu_with_max_free_memory(debug=False) -> int:
         )
         reader = csv.DictReader(csv_out, skipinitialspace=True,)
         MEMORY_KEY = "memory.free [MiB]"
+        MEMORY_UNIT = " MiB"
+        MEMORY_UNIT_length = len(" MiB")
         INDEX_KEY = "index"
         max_mem = 0
         max_mem_gpu_index = -1
         for row in reader:
-            mem = int(row[MEMORY_KEY][0:-3])
+            mem = int(row[MEMORY_KEY][0:-MEMORY_UNIT_length])
             max_mem_gpu_index = int(row[INDEX_KEY])
             if mem > max_mem:
                 max_mem = mem
             if debug:
                 print(row)
         if debug:
-            print("Max free memory: ", max_mem)
+            print("Max free memory", MEMORY_UNIT, max_mem)
         return max_mem_gpu_index
     except Exception as e:
         print(e)
         return -1
+
+
+if __name__ == "__main__":
+    print(get_visible_gpu_with_max_free_memory(debug=True))
+    exit(1)
+
+import lit.formats
+import lit.util
+
+from lit.llvm import llvm_config
+from lit.llvm.subst import ToolSubst
+from lit.llvm.subst import FindTool
 
 
 # Configuration file for the 'lit' test runner.
@@ -129,7 +136,3 @@ tools.extend(
     [ToolSubst("%linalg_test_lib_dir", config.llvm_lib_dir, unresolved="ignore"),]
 )
 llvm_config.add_tool_substitutions(tools, tool_dirs)
-
-if __name__ == "__main__":
-    print(set_visible_gpu_with_max_free_memory(debug=True))
-    exit(1)
