@@ -490,7 +490,8 @@ struct LocalCallOpKernelUtil final {
   }
 
   static inline void TryInitOpKernelState(LocalCallOpKernelPhyInstrOperand* operand,
-                                          DeviceCtx* device_ctx, user_op::OpKernelState** state, user_op::OpKernelCache** cache) {
+                                          DeviceCtx* device_ctx, user_op::OpKernelState** state,
+                                          user_op::OpKernelCache** cache) {
     if (likely(operand->op_interp_ctx().state)) {
       *state = operand->op_interp_ctx().state.get();
       state = nullptr;
@@ -516,7 +517,8 @@ struct LocalCallOpKernelUtil final {
   }
 
   static inline void OpKernelCompute(LocalCallOpKernelPhyInstrOperand* operand,
-                                     DeviceCtx* device_ctx, user_op::OpKernelState* state, const user_op::OpKernelCache* cache) {
+                                     DeviceCtx* device_ctx, user_op::OpKernelState* state,
+                                     const user_op::OpKernelCache* cache) {
     auto* opkernel = operand->mut_opkernel();
     auto* compute_ctx =
         opkernel->UpdateComputeContext(operand->inputs().get(), operand->outputs().get(),

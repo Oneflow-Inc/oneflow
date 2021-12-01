@@ -491,8 +491,7 @@ void StatefulLocalOpKernel::TryInitOpKernelState(
   {
     std::shared_ptr<user_op::OpKernelCache>& local_cache = op_kernel_cache_map_[op_kernel];
     op_kernel->InitOpKernelCache(
-        &init_ctx,
-        user_op::OpKernelCache::AttrMayChanged | user_op::OpKernelCache::ShapeMayChanged,
+        &init_ctx, user_op::OpKernelCache::AttrMayChanged | user_op::OpKernelCache::ShapeMayChanged,
         &local_cache);
     *cache = local_cache.get();
   }
