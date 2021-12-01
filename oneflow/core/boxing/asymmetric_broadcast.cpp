@@ -75,9 +75,6 @@ Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, in
   return one::OpBuilder("eager_nccl_broadcast", *JUST(UniqueStr("eager_nccl_broadcast")))
       .Input("in")
       .Output("out")
-      // TODO(hjchen2)
-      // .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      // .Attr<int64_t>("root", root)
       .Build();
 }
 
@@ -110,7 +107,10 @@ Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tenso
       int64_t root = JUST(CachedGetBroadcastRoot(in_placement, broadcast_placement_cur_rank));
       std::shared_ptr<one::UserOpExpr> op_expr =
           JUST(CachedEagerNcclBroadcast(broadcast_placement_cur_rank, root));
-      local_tensor = JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {local_tensor}));
+      auto ctx = std::make_shared<EagerNcclBroadcastOpInterpCtx>();
+      ctx->root = root;
+      ctx->parallel_conf = PbMessage2TxtString(broadcast_placement_cur_rank->parallel_conf());
+      local_tensor = JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {local_tensor}, ctx));
     }
   }
   return one::functional::LocalToConsistent(local_tensor, out_placement,

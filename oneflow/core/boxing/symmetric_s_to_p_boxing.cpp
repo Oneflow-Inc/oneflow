@@ -43,9 +43,6 @@ Maybe<one::UserOpExpr> EagerSymmetricSToP(Symbol<ParallelDesc> parallel_desc,
   return one::OpBuilder("eager_symmetric_s_to_p", *JUST(UniqueStr("eager_symmetric_s_to_p")))
       .Input("in")
       .Output("out")
-      // TODO(hjchen2)
-      // .Attr<int64_t>("in_split_axis", src_sbp->split_parallel().axis())
-      // .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
       .Build();
 }
 
@@ -76,8 +73,10 @@ Maybe<one::Tensor> SymmetricSToP(const std::shared_ptr<one::Tensor>& tensor, Sym
 
   std::shared_ptr<one::OpExpr> op_expr = JUST(
       CachedEagerSymmetricSToPOpExpr(tensor_placement, SymbolOf(tensor_nd_sbp->sbp_parallel(0))));
-
-  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}));
+  auto ctx = std::make_shared<EagerSymmetricSToPOpInterpCtx>();
+  ctx->in_split_axis = tensor_nd_sbp->sbp_parallel(0).split_parallel().axis();
+  ctx->parallel_conf = PbMessage2TxtString(tensor_placement->parallel_conf());
+  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}, ctx));
 }
 
 COMMAND(RegisterBoxingFunction("symmetric-s-to-p", CheckSymmetricSToP, &SymmetricSToP));
