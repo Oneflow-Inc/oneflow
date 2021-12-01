@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/common/channel.h"
@@ -21,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/user/image/random_crop_generator.h"
 #include <opencv2/opencv.hpp>
+#include <jpeglib.h>
 
 #ifdef WITH_CUDA
 
@@ -145,6 +147,61 @@ class CpuDecodeHandle final : public DecodeHandle {
     // do nothing
   }
 };
+
+int JpegPartialDecode(const unsigned char* data, size_t length, RandomCropGenerator* crop_generator, unsigned char* workspace, 
+                      size_t workspace_size, unsigned char* dst, int target_width, int target_height)
+{
+  struct jpeg_decompress_struct cinfo;
+	struct jpeg_error_mgr jerr;
+  int row_stride, width, height, pixel_size, crop_x, crop_y, crop_w, crop_h, rc;
+  unsigned int tmp;
+  unsigned char * crop_buf;
+
+  cinfo.err = jpeg_std_error(&jerr);
+  jpeg_create_decompress(&cinfo);
+  jpeg_mem_src(&cinfo, data, length);
+
+  rc = jpeg_read_header(&cinfo, TRUE);
+  if(rc != 1)
+  {
+    return -1;
+  }
+
+  jpeg_start_decompress(&cinfo);
+  width = cinfo.output_width;
+	height = cinfo.output_height;
+  pixel_size = cinfo.output_components;
+
+  if(width*height*pixel_size > workspace_size)
+  {
+    std::vector<unsigned char> tmp_buf(width*height*pixel_size);
+    crop_buf = tmp_buf.data();
+  }
+  else{
+    crop_buf = workspace;
+  }
+
+  GenerateRandomCropRoi(crop_generator, width, height, &crop_x, &crop_y, &crop_w, &crop_h);
+
+  row_stride = crop_w * pixel_size;
+  jpeg_crop_scanline(&cinfo, &crop_x, &crop_w);
+  if ((tmp = jpeg_skip_scanlines(&cinfo, crop_y)) != crop_y) {
+    return -2;
+  }
+
+  while (cinfo.output_scanline < crop_y + crop_h) {
+		unsigned char *buffer_array[1];
+		buffer_array[0] = crop_buf + (cinfo.output_scanline - crop_y) * row_stride;
+		jpeg_read_scanlines(&cinfo, buffer_array, 1);
+	}
+
+  jpeg_skip_scanlines(&cinfo, cinfo.output_height - crop_y - crop_h);
+	jpeg_finish_decompress(&cinfo);
+	jpeg_destroy_decompress(&cinfo);
+
+  return 0;
+
+}
 
 void CpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t length,
                                              RandomCropGenerator* crop_generator,
