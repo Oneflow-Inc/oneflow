@@ -1149,7 +1149,6 @@ __global__ void LayerNormGradBlockSMemImpl(LOAD_X load_x, LOAD_DY load_dy, STORE
         const int buf_offset = i * num_packs + pack_id;
         x_buf[buf_offset] = x_pack[i];
         dy_buf[buf_offset] = dy_pack[i];
-        const int col_id = pack_id * pack_size + i;
         sum_loss1 += dy_pack[i];
         sum_loss2 += dy_pack[i] * (x_pack[i] - mean_val) * inv_variance_val;
       }
@@ -1160,7 +1159,6 @@ __global__ void LayerNormGradBlockSMemImpl(LOAD_X load_x, LOAD_DY load_dy, STORE
       ComputeType pack[pack_size];
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
-        const int col_id = pack_id * pack_size + i;
         const int buf_offset = i * num_packs + pack_id;
         pack[i] = (cols * dy_buf[buf_offset] - row_sum_loss1
                    - (x_buf[buf_offset] - mean_val) * inv_variance_val * row_sum_loss2)
@@ -1312,7 +1310,6 @@ __global__ void LayerNormGradBlockUncachedImpl(LOAD_X load_x, LOAD_DY load_dy, S
 
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
-        const int col_id = pack_id * pack_size + i;
         sum_loss1 += dy_pack[i];
         sum_loss2 += dy_pack[i] * (x_pack[i] - mean_val) * inv_variance_val;
       }
@@ -1326,7 +1323,6 @@ __global__ void LayerNormGradBlockUncachedImpl(LOAD_X load_x, LOAD_DY load_dy, S
       load_dy.template load<pack_size>(dy_pack, row, pack_id * pack_size);
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
-        const int col_id = pack_id * pack_size + i;
         dy_pack[i] = (cols * dy_pack[i] - row_sum_loss1
                       - (x_pack[i] - mean_val) * inv_variance_val * row_sum_loss2)
                      * inv_variance_over_cols;
