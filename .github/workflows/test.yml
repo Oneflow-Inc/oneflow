@@ -110,7 +110,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: 'Code got formatted by CI, Please request CI again'
+              body: 'Code got formatted by CI. Please request CI again. If the PR is from a forked repo, please download the patch files from the GitHub Action web page and apply it.'
             })
       - name: Please request CI again
         if: ${{ failure() }}
