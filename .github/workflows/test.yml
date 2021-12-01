@@ -101,6 +101,17 @@ jobs:
         with:
           name: license_and_format-${{ github.sha }}.patch
           path: license_and_format.patch
+      - name: Add comment
+        if: ${{ failure() }}
+        uses: actions/github-script@v4
+        with:
+          script: |
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'Code got formatted by CI, Please request CI again'
+            })
       - name: Please request CI again
         if: ${{ failure() }}
         run: |
