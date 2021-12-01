@@ -37,22 +37,22 @@ namespace one {
 
 namespace {
 
-std::shared_ptr<OpExprInterpreter>& MutJitInterpreter() {
-  static std::shared_ptr<OpExprInterpreter> internal;
+std::shared_ptr<AutogradInterpreter>& MutJitAutogradInterpreter() {
+  static std::shared_ptr<AutogradInterpreter> internal;
   return internal;
 }
 
 }  // namespace
 
-void SetJitInterpreter(std::shared_ptr<OpExprInterpreter> jit_interpreter) {
-  MutJitInterpreter().swap(jit_interpreter);
+void SetJitInterpreter(const std::shared_ptr<OpExprInterpreter>& jit_interpreter) {
+  auto jit_autograd_interpreter = std::make_shared<AutogradInterpreter>(jit_interpreter);
+  MutJitAutogradInterpreter().swap(jit_autograd_interpreter);
 }
 
 std::shared_ptr<AutogradInterpreter> GetJitInterpreter() {
-  auto jit_interpreter = MutJitInterpreter();
-  CHECK(jit_interpreter != nullptr) << "Jit interpreter is not set";
-  std::shared_ptr<OpExprInterpreter> internal = jit_interpreter;
-  return std::make_shared<AutogradInterpreter>(internal);
+  auto jit_autograd_interpreter = MutJitAutogradInterpreter();
+  CHECK(jit_autograd_interpreter != nullptr) << "Jit interpreter is not set";
+  return jit_autograd_interpreter;
 }
 
 #endif  // WITH_MLIR
@@ -97,8 +97,7 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExp
   static const auto& g_eager_consistent_interpreter = BuildEagerInterpreter(/*is_mirrored=*/false);
   static const auto& g_eager_mirrored_interpreter = BuildEagerInterpreter(/*is_mirrored=*/true);
 #ifdef WITH_MLIR
-  static const auto& g_jit_mirrored_interpreter = GetJitInterpreter();
-  if (one::IsJitEnabled()) { return g_jit_mirrored_interpreter; }
+  if (one::IsJitEnabled()) { return GetJitInterpreter(); }
 #endif  // WITH_MLIR
   if (!LazyMode::is_enabled()) {
     if (inputs.empty()) {

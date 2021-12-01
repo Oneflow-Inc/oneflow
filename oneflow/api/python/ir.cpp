@@ -42,7 +42,8 @@ struct Module {
         module_(CreateJitModule(context_)),
         importer_(context_, *module_) {}
   py::object forward(const py::args& args, const py::kwargs& kwargs) {
-    auto jit_interpreter = dynamic_cast<one::JitInterpreter*>(one::GetJitInterpreter().get());
+    auto jit_interpreter = std::dynamic_pointer_cast<one::JitInterpreter>(one::GetJitInterpreter());
+    CHECK(jit_interpreter != nullptr) << "JIT interpreter is not initialized";
     *one::MutJitEnabled() = true;
     auto i_this = reinterpret_cast<std::uintptr_t>(this);
     std::string func_name = "jitModule" + std::to_string(i_this) + "_" + std::to_string(nth_call_);
@@ -91,7 +92,8 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
     *one::MutJitEnabled() = !*one::MutJitEnabled();
     *one::MutJitFuncName() = func_name;
     // when false => true, start jit
-    auto jit_interpreter = dynamic_cast<one::JitInterpreter*>(one::GetJitInterpreter().get());
+    auto jit_interpreter = std::dynamic_pointer_cast<one::JitInterpreter>(one::GetJitInterpreter());
+    CHECK(jit_interpreter != nullptr) << "JIT interpreter is not initialized";
     if (one::IsJitEnabled() == true) { jit_interpreter->Start(); }
     // when true => false, start exec
     if (one::IsJitEnabled() == false) {
@@ -116,7 +118,8 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
 
 REGISTER_JOB_PASS("IRRoundTripBeforeAD", IRRoundTrip<kBeforeAD>);
 REGISTER_JOB_PASS("IRRoundTrip", IRRoundTrip<kAfterAD>);
-COMMAND(SetJitInterpreter(std::make_shared<one::JitInterpreter>()));
+COMMAND(static auto interpreter = std::make_shared<one::JitInterpreter>();
+        SetJitInterpreter(interpreter));
 
 }  // namespace oneflow
 
