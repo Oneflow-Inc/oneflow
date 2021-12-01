@@ -47,7 +47,8 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
   CHECK_OR_RETURN(t->is_eager()) << "eager tensors supported only";
   int64_t storage_offset = 0;
   if (t->is_local()) {
-    tensor = JUST(t->AsMirroredTensor());
+    auto contiguous_tensor = t->contiguous();
+    tensor = JUST(contiguous_tensor->AsMirroredTensor());
     // view op could generate none-zero storage_offset
     storage_offset = JUST(tensor->eager_blob_object())->storage_offset();
   } else {

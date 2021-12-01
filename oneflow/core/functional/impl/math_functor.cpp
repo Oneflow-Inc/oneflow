@@ -538,10 +538,10 @@ class TransposeFunctor {
           << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
           << ndims << " ] but got " << ndims;
     }
-    if (input->is_eager() && input->is_local()) { return JUST(view::Transpose(input, permute)); }
+    if (input->is_eager() && input->is_local()) { return JUST(view::Transpose(input->contiguous(), permute)); }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()}, attrs);
   }
 
  private:

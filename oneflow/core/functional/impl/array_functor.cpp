@@ -542,7 +542,7 @@ class ExpandDimsFunctor {
     if (dim < 0) { expand_dim = dim + ndim + 1; }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", expand_dim));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()}, attrs);
   }
 
  private:
@@ -865,7 +865,7 @@ class ReshapeFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
     // if input tensor is eager local, than return tensor's view
-    if (x->is_eager() && x->is_local()) { return view::Reshape(x, shape); }
+    if (x->is_eager() && x->is_local()) { return view::Reshape(x->contiguous(), shape); }
     int need_infer_axis = -1;
     size_t count = 1;
     for (int i = 0; i < shape.NumAxes(); ++i) {
@@ -892,7 +892,7 @@ class ReshapeFunctor {
           << x->shape()->ToString();
       JUST(attrs.SetAttr<Shape>("shape", infered_shape));
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -926,8 +926,7 @@ class SliceBaseFunctor {
                            const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
     if (x->is_eager() && x->is_local()) {
-      // return view::Slice(x, start, stop, step);
-      return ToContiguous(JUST(view::Slice(x, start, stop, step)));
+      return view::Slice(x->contiguous(), start, stop, step);
     }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
@@ -952,7 +951,7 @@ class SliceGradBaseFunctor {
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, like}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), like->contiguous()}, attrs);
   }
 
  protected:
@@ -983,7 +982,7 @@ class NarrowFunctor {
         << "], but got:" << dim << ")";
     if (narrow_dim < 0) { narrow_dim += ndim; }
     if (input->is_eager() && input->is_local()) {
-      return JUST(ToContiguous(JUST(view::Narrow(input, narrow_dim, start, length))));
+      return JUST(view::Narrow(input, narrow_dim, start, length));
     }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("dim", narrow_dim));
@@ -1035,7 +1034,7 @@ class LogicalSliceAssignFunctor {
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, value}, attrs));
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref->contiguous(), value->contiguous()}, attrs));
     return Maybe<void>::Ok();
   }
 
@@ -1063,7 +1062,7 @@ class SliceUpdateFunctor {
       JUST(OpInterpUtil::Dispatch(*op_, {x, update}, outputs.get(), attrs));
       return outputs->at(0);
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x, update}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), update->contiguous()}, attrs);
     }
   }
 
@@ -1602,7 +1601,7 @@ class TensorGetItemFunctor {
     JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &expand_dims,
                              &target_dims));
 
-    auto expand_input = x;
+    auto expand_input = x->contiguous();
     for (int i = 0; i < expand_dims.size(); ++i) {
       int64_t dim = expand_dims.at(i);
       expand_input = JUST(functional::ExpandDims(expand_input, dim + i));

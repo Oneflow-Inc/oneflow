@@ -328,7 +328,7 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   std::shared_ptr<Tensor> transposed_input;
   TensorTuple valid_indices;
   JUST(TransposeFront(input, *expanded_indices, &transposed_input, &valid_indices));
-  if (valid_indices.empty()) { return input; }
+  if (valid_indices.empty()) { return input->contiguous(); }
   int index_ndim = valid_indices.at(0)->shape()->NumAxes();
   std::shared_ptr<Tensor> packed_indices;
   if (valid_indices.size() > 1) {
