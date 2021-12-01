@@ -759,15 +759,15 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   std::shared_ptr<user_op::OpKernelState> new_opkernel_state;
   CHECK_NOTNULL(device_ctx);
-  UserKernelInitContext init_ctx(device_ctx->stream(), kernel_conf());
+  UserKernelInitAndCacheContext init_and_cache_ctx(device_ctx->stream(), kernel_conf());
   if (old_opkernel_state) {
     new_opkernel_state = old_opkernel_state;
   } else {
-    new_opkernel_state = kernel_->CreateOpKernelState(&init_ctx);
+    new_opkernel_state = kernel_->CreateOpKernelState(&init_and_cache_ctx);
   }
   std::shared_ptr<user_op::OpKernelCache> cache = nullptr;
   kernel_->InitOpKernelCache(
-      &init_ctx, user_op::OpKernelCache::AttrMayChanged | user_op::OpKernelCache::ShapeMayChanged,
+      &init_and_cache_ctx, user_op::OpKernelCache::AttrMayChanged | user_op::OpKernelCache::ShapeMayChanged,
       &cache);
 
   if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob)
