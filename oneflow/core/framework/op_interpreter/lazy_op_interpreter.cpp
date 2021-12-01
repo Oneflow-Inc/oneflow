@@ -273,7 +273,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   JUST(GenVariableOpConfNdSbpStringByTensor(var_conf, input_tensor));
   if (!input_tensor->requires_grad()) { var_conf->set_trainable(false); }
   if (input_tensor->requires_grad()) {
-    double l2 = JUST(ctx->GetAttr<double>("l2"));
+    double l2 = JUST(ctx->GetAttr<double>("_l2"));
     if (unlikely(l2 != 0.0)) { var_conf->mutable_regularizer()->mutable_l1_l2_conf()->set_l2(l2); }
   }
 
