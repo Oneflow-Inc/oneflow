@@ -21,7 +21,6 @@ namespace oneflow {
 
 namespace {
 
-constexpr int32_t kVecSize = 4;
 constexpr int32_t kBlockSize = 256;
 
 template<typename T>
@@ -38,16 +37,6 @@ template<>
 constexpr int32_t GetPreluPackSize<double>() {
   return 2;
 };
-
-#if CUDA_VERSION >= 11000
-#define RETURN_VOID_IF_HALF                                                                        \
-  typename std::enable_if_t<(std::is_same<T, half>::value || std::is_same<T, nv_bfloat16>::value), \
-                            void>
-#else
-#define RETURN_VOID_IF_HALF typename std::enable_if_t<std::is_same<T, half>::value, void>
-#endif
-#define RETURN_VOID_IF_FLOAT typename std::enable_if_t<std::is_same<T, float>::value, void>
-#define RETURN_VOID_IF_DOUBLE typename std::enable_if_t<std::is_same<T, double>::value, void>
 
 template<typename T, typename IndexType, int pack_size, bool tail>
 __global__ void PReluForwardMultiAlphaGpu(const IndexType elem_cnt, const IndexType alpha_size,
