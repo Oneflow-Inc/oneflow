@@ -93,7 +93,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     if (i > 0) {
       CHECK_OR_RETURN(*default_device == *input_device) << Error::InputDeviceNotMatchError();
     }
-    input_eager_blob_objects->at(i) = JUST(inputs.at(i)->contiguous()->eager_blob_object());
+    input_eager_blob_objects->at(i) = JUST(inputs.at(i)->eager_blob_object());
   }
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(outputs->size());
