@@ -202,6 +202,9 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext, p
   cfg::NdSbpSignature nd_sbp_signature_;
 };
 
+using UserKernelInitContext = UserKernelInitAndCacheContext;
+using UserKernelCacheContext = UserKernelInitAndCacheContext;
+
 class UserKernelOpInferContext : public user_op::InferContext {
  public:
   explicit UserKernelOpInferContext(const KernelConf& kernel_conf)
@@ -591,7 +594,7 @@ UserKernel::~UserKernel() = default;
 void UserKernel::InitUserKernel(ep::Stream* stream) {
   ctx_.reset(new UserKernelComputeContext(stream, kernel_conf()));
   infer_ctx_.reset(new UserKernelInferContext(stream, kernel_conf()));
-  cache_ctx_.reset(new UserKernelInitAndCacheContext(stream, kernel_conf()));
+  cache_ctx_.reset(new UserKernelCacheContext(stream, kernel_conf()));
   infer_cache_.reset(new user_op::OpKernelInferCache(kernel_conf(), this));
   {
     const std::string& op_type_name =
@@ -605,7 +608,7 @@ void UserKernel::InitUserKernel(ep::Stream* stream) {
 }
 
 std::shared_ptr<user_op::OpKernelState> UserKernel::CreateOpKernelState(KernelContext* ctx) {
-  UserKernelInitAndCacheContext init_ctx(ctx->stream(), kernel_conf());
+  UserKernelInitContext init_ctx(ctx->stream(), kernel_conf());
   return kernel_->CreateOpKernelState(&init_ctx);
 }
 
@@ -756,7 +759,7 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   std::shared_ptr<user_op::OpKernelState> new_opkernel_state;
   CHECK_NOTNULL(device_ctx);
-  UserKernelInitAndCacheContext init_ctx(device_ctx->stream(), kernel_conf());
+  UserKernelInitContext init_ctx(device_ctx->stream(), kernel_conf());
   if (old_opkernel_state) {
     new_opkernel_state = old_opkernel_state;
   } else {

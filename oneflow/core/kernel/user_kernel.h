@@ -32,9 +32,8 @@ limitations under the License.
 namespace oneflow {
 
 class UserKernelComputeContext;
-class UserKernelInitAndCacheContext;
 class UserKernelInferContext;
-class UserKernelInitContext;
+class UserKernelInitAndCacheContext;
 
 namespace user_op {
 class OpKernelCache;
