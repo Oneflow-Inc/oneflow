@@ -455,6 +455,15 @@ class ModuleBlock(Block):
         b_state = self._get_from_states(name, "_buffers")
         if b_state is not None:
             return b_state
+        # support none parameter or buffer
+        if name in self._origin._parameters:
+            p_none = self._origin._parameters[name]
+            assert p_none is None
+            return None
+        if name in self._origin._buffers:
+            b_none = self._origin._buffers[name]
+            assert b_none is None
+            return None
         # support get normal attr
         if name in self._origin.__dict__:
             return self._origin.__dict__[name]

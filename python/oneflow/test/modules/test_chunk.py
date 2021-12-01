@@ -28,7 +28,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestChunk(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_chunk_list_with_random_data(test_case):
         device = random_device()
         dim = random(1, 4).to(int)
