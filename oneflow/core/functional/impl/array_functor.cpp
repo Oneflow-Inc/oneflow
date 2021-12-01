@@ -56,7 +56,7 @@ class ArgMaxFunctor {
     if (dim.has_value() == false) {
       return SequenceFunction<Maybe<Tensor>()>([&]() { return Flatten(input, 0, -1); })
           .then([&](const std::shared_ptr<one::Tensor>& x) {
-            return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()});
+            return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
           })
           .call();
     }
@@ -77,7 +77,7 @@ class ArgMaxFunctor {
 
     if (new_dim == ndims - 1) {
       return SequenceFunction<Maybe<Tensor>()>(
-                 [&]() { return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()}); })
+                 [&]() { return OpInterpUtil::Dispatch<Tensor>(*op_, {input}); })
           .then_if(keepdim.has_value() && JUST(keepdim) == true,
                    std::bind(ExpandDims, std::placeholders::_1, -1))
           .then_if(dtype.has_value(), do_cast)
@@ -97,7 +97,7 @@ class ArgMaxFunctor {
 
     return SequenceFunction<Maybe<Tensor>()>([&]() { return Transpose(input, permute); })
         .then([&](const std::shared_ptr<one::Tensor>& x) {
-          return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()});
+          return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
         })
         .then(std::bind(ExpandDims, std::placeholders::_1, -1))
         .then(std::bind(Transpose, std::placeholders::_1, permute_inv))
@@ -254,7 +254,7 @@ class FlattenFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("start_dim", start_dim));
     JUST(attrs.SetAttr<int32_t>("end_dim", end_dim));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -270,7 +270,7 @@ class WhereFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition,
                            const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, x->contiguous(), y->contiguous()});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, x, y});
   }
 
  private:
@@ -297,7 +297,7 @@ class WhereScalarXFunctor {
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be float or int.";
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, y->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, y}, attrs);
   }
 
  private:
@@ -324,7 +324,7 @@ class WhereScalarYFunctor {
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be float or int.";
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, x}, attrs);
   }
 
  private:
@@ -373,7 +373,7 @@ class ArgWhereFunctor {
                                 const Symbol<DType>& dtype) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
   }
 
  private:
@@ -390,7 +390,7 @@ class BroadcastLikeFunctor {
                            const std::vector<int32_t>& broadcast_axes) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("broadcast_axes", broadcast_axes));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), like->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like}, attrs);
   }
 
  private:
@@ -503,7 +503,7 @@ class ExpandFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("logical_in_shape", in_shape));
     JUST(attrs.SetAttr<std::vector<int32_t>>("logical_expand_shape", expand_shape));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -521,7 +521,7 @@ class ExpandGradFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("logical_out_shape", logical_in_shape));
     JUST(attrs.SetAttr<std::vector<int32_t>>("logical_expand_shape", logical_expand_shape));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, attrs);
   }
 
  private:
@@ -542,7 +542,7 @@ class ExpandDimsFunctor {
     if (dim < 0) { expand_dim = dim + ndim + 1; }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", expand_dim));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
  private:
@@ -568,7 +568,7 @@ class RollFunctor {
         << "The `shifts` and `dims` parameters should have the same size.";
     JUST(attrs.SetAttr<std::vector<int32_t>>("dims", actual_dims));
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -584,7 +584,7 @@ class GatherFunctor {
                            const std::shared_ptr<one::Tensor>& indices, const int64_t& axis) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("axis", axis));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), indices->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, indices}, attrs);
   }
 
  private:
@@ -601,7 +601,7 @@ class DimGatherFunctor {
                            const std::shared_ptr<one::Tensor>& indices, const int32_t& dim) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), indices->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, indices}, attrs);
   }
 
  private:
@@ -623,7 +623,7 @@ class DimScatterFunctor {
                            const std::shared_ptr<one::Tensor>& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous(), index->contiguous(), src->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
   }
 
  private:
@@ -645,7 +645,7 @@ class DimScatterAddFunctor {
                            const std::shared_ptr<one::Tensor>& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous(), index->contiguous(), src->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
   }
 
  private:
@@ -667,7 +667,7 @@ class DimScatterAddLikeFunctor {
                            const std::shared_ptr<one::Tensor>& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {like->contiguous(), index->contiguous(), src->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {like, index, src}, attrs);
   }
 
  private:
@@ -689,7 +689,7 @@ class DimScatterMulFunctor {
                            const std::shared_ptr<one::Tensor>& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous(), index->contiguous(), src->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
   }
 
  private:
@@ -710,7 +710,7 @@ class DimScatterUpdateScalarFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
     JUST(attrs.SetAttr<float>("src_scalar", JUST(src.As<float>())));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous(), index->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
  private:
@@ -731,7 +731,7 @@ class DimScatterAddScalarFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
     JUST(attrs.SetAttr<float>("src_scalar", JUST(src.As<float>())));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous(), index->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
  private:
@@ -752,7 +752,7 @@ class DimScatterMulScalarFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
     JUST(attrs.SetAttr<float>("src_scalar", JUST(src.As<float>())));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous(), index->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
  private:
@@ -768,7 +768,7 @@ class ArgSortFunctor {
                            const std::string direction) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("direction", direction));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {in->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
   }
 
  private:
@@ -783,7 +783,7 @@ class GatherNdFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& params,
                            const std::shared_ptr<one::Tensor>& indices) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {params->contiguous(), indices->contiguous()});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {params, indices});
   }
 
  private:
@@ -800,7 +800,7 @@ class ScatterNdFunctor {
                            const std::shared_ptr<one::Tensor>& updates, const Shape& shape) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {indices->contiguous(), updates->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {indices, updates}, attrs);
   }
 
  private:
@@ -830,7 +830,7 @@ class TensorScatterNdUpdateFunctor {
       JUST(OpInterpUtil::Dispatch(*op_, {tensor, indices, updates}, outputs.get()));
       return outputs->at(0);
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {tensor->contiguous(), indices->contiguous(), updates->contiguous()});
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {tensor, indices, updates});
     }
   }
 
@@ -851,7 +851,7 @@ class ScatterNdLikeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& like,
                            const std::shared_ptr<one::Tensor>& updates,
                            const std::shared_ptr<one::Tensor>& indices) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {like->contiguous(), updates->contiguous(), indices->contiguous()});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {like, updates, indices});
   }
 
  private:
@@ -892,7 +892,7 @@ class ReshapeFunctor {
           << x->shape()->ToString();
       JUST(attrs.SetAttr<Shape>("shape", infered_shape));
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -911,7 +911,7 @@ class ToContiguousFunctor {
     const auto& stride = JUST(input->stride())->StrideVec();
     JUST(attrs.SetAttr<std::vector<int64_t>>("stride", {stride.begin(), stride.end()}));
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
  private:
@@ -933,7 +933,7 @@ class SliceBaseFunctor {
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  protected:
@@ -952,7 +952,7 @@ class SliceGradBaseFunctor {
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), like->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, like}, attrs);
   }
 
  protected:
@@ -989,7 +989,7 @@ class NarrowFunctor {
     JUST(attrs.SetAttr<int64_t>("dim", narrow_dim));
     JUST(attrs.SetAttr<int64_t>("start", start));
     JUST(attrs.SetAttr<int64_t>("length", length));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
  private:
@@ -1008,7 +1008,7 @@ class NarrowGradFunctor {
     JUST(attrs.SetAttr<int64_t>("dim", dim));
     JUST(attrs.SetAttr<int64_t>("start", start));
     JUST(attrs.SetAttr<int64_t>("length", length));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), like->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, like}, attrs);
   }
 
  private:
@@ -1035,7 +1035,7 @@ class LogicalSliceAssignFunctor {
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref->contiguous(), value->contiguous()}, attrs));
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, value}, attrs));
     return Maybe<void>::Ok();
   }
 
@@ -1060,10 +1060,10 @@ class SliceUpdateFunctor {
       JUST(CheckInplaceValid(x));
       auto outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op_, {x->contiguous(), update->contiguous()}, outputs.get(), attrs));
+      JUST(OpInterpUtil::Dispatch(*op_, {x, update}, outputs.get(), attrs));
       return outputs->at(0);
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), update->contiguous()}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x, update}, attrs);
     }
   }
 
@@ -1098,7 +1098,7 @@ class SqueezeFunctor {
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axes", squeeze_dims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -1120,7 +1120,7 @@ class UpsampleGradFunctor {
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
     JUST(attrs.SetAttr<std::string>("interpolation", interpolation));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
 
  private:
@@ -1138,7 +1138,7 @@ class CopyFunctor {
 #ifdef WITH_CUDA
     if (device_type == "cuda") { InitCudaContextOnce(device_id); }
 #endif
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -1152,7 +1152,7 @@ class FlipFunctor {
                            const std::vector<int32_t>& dims) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("dims", dims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -1168,7 +1168,7 @@ class FlipGradFunctor {
                            const std::vector<int32_t>& dims) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("dims", dims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, attrs);
   }
 
  private:
@@ -1186,7 +1186,7 @@ class UnfoldTensorFunctor {
     JUST(attrs.SetAttr<int32_t>("dimension", dimension));
     JUST(attrs.SetAttr<int32_t>("size", size));
     JUST(attrs.SetAttr<int32_t>("step", step));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -1206,7 +1206,7 @@ class UnfoldTensorGradFunctor {
     JUST(attrs.SetAttr<int32_t>("dimension", dimension));
     JUST(attrs.SetAttr<int32_t>("size", size));
     JUST(attrs.SetAttr<int32_t>("step", step));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
 
  private:
@@ -1225,7 +1225,7 @@ class UpsampleFunctor {
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
     JUST(attrs.SetAttr<std::string>("interpolation", interpolation));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -1243,7 +1243,7 @@ class UpsampleLinear1DFunctor {
     JUST(attrs.SetAttr<float>("scale_factor", scale_factor));
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -1263,7 +1263,7 @@ class UpsampleLinear1DGradFunctor {
     JUST(attrs.SetAttr<float>("scale_factor", scale_factor));
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
 
  private:
@@ -1280,7 +1280,7 @@ class UpsampleNearest1DFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("scale_factor", scale_factor));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -1299,7 +1299,7 @@ class UpsampleNearest1DGradFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("scale_factor", scale_factor));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
 
  private:
@@ -1317,7 +1317,7 @@ class UpsampleNearest2DFunctor {
     JUST(attrs.SetAttr<float>("height_scale", height_scale));
     JUST(attrs.SetAttr<float>("width_scale", width_scale));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -1337,7 +1337,7 @@ class UpsampleNearest2DGradFunctor {
     JUST(attrs.SetAttr<float>("height_scale", height_scale));
     JUST(attrs.SetAttr<float>("width_scale", width_scale));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
 
  private:
@@ -1357,7 +1357,7 @@ class UpsampleBilinear2DFunctor {
     JUST(attrs.SetAttr<float>("width_scale", width_scale));
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -1379,7 +1379,7 @@ class UpsampleBilinear2DGradFunctor {
     JUST(attrs.SetAttr<float>("width_scale", width_scale));
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
 
  private:
@@ -1399,7 +1399,7 @@ class UpsampleBicubic2DFunctor {
     JUST(attrs.SetAttr<float>("width_scale", width_scale));
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -1421,7 +1421,7 @@ class UpsampleBicubic2DGradFunctor {
     JUST(attrs.SetAttr<float>("width_scale", width_scale));
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
 
  private:
@@ -1441,7 +1441,7 @@ class UpsampleNearest3DFunctor {
     JUST(attrs.SetAttr<float>("height_scale", height_scale));
     JUST(attrs.SetAttr<float>("width_scale", width_scale));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -1463,7 +1463,7 @@ class UpsampleNearest3DGradFunctor {
     JUST(attrs.SetAttr<float>("height_scale", height_scale));
     JUST(attrs.SetAttr<float>("width_scale", width_scale));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
 
  private:
@@ -1484,7 +1484,7 @@ class UpsampleTrilinear3DFunctor {
     JUST(attrs.SetAttr<float>("width_scale", width_scale));
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -1507,7 +1507,7 @@ class UpsampleTrilinear3DGradFunctor {
     JUST(attrs.SetAttr<float>("width_scale", width_scale));
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
 
  private:
@@ -1529,7 +1529,7 @@ class UnsortedSegmentSumLikeFunctor {
                            const std::shared_ptr<one::Tensor>& like, const int64_t& axis) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("axis", axis));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), segment_ids->contiguous(), like->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, segment_ids, like}, attrs);
   }
 
  private:
@@ -1542,7 +1542,7 @@ class TrilFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& diagonal) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("diagonal", diagonal));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -1555,7 +1555,7 @@ class TriuFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& diagonal) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("diagonal", diagonal));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -1568,7 +1568,7 @@ class DiagFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& diagonal) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("diagonal", diagonal));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -1584,7 +1584,7 @@ class DiagGradFunctor {
                            const std::shared_ptr<one::Tensor>& x, const int32_t& diagonal) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("diagonal", diagonal));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
 
  private:
@@ -1736,7 +1736,7 @@ class CastLikeFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& like) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), like->contiguous()});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like});
   }
 
  private:
@@ -1757,7 +1757,7 @@ class ElementwiseMinimumGradFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dz,
                                 const std::shared_ptr<one::Tensor>& x,
                                 const std::shared_ptr<one::Tensor>& y) const {
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dz->contiguous(), x->contiguous(), y->contiguous()});
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dz, x, y});
   }
 
  private:
@@ -1778,7 +1778,7 @@ class ElementwiseMaximumGradFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dz,
                                 const std::shared_ptr<one::Tensor>& x,
                                 const std::shared_ptr<one::Tensor>& y) const {
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dz->contiguous(), x->contiguous(), y->contiguous()});
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dz, x, y});
   }
 
  private:
@@ -1798,7 +1798,7 @@ class DivGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dz,
                            const std::shared_ptr<one::Tensor>& z,
                            const std::shared_ptr<one::Tensor>& y) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dz->contiguous(), z->contiguous(), y->contiguous()});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dz, z, y});
   }
 
  private:
@@ -1820,7 +1820,7 @@ class BroadcastPowXGradFunctor {
                            const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& z) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dz->contiguous(), x->contiguous(), y->contiguous(), z->contiguous()});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dz, x, y, z});
   }
 
  private:
@@ -1842,7 +1842,7 @@ class BroadcastPowYGradFunctor {
                            const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& z) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dz->contiguous(), x->contiguous(), y->contiguous(), z->contiguous()});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dz, x, y, z});
   }
 
  private:
@@ -1855,7 +1855,7 @@ class IdentityFunctor {
     op_ = CHECK_JUST(one::OpBuilder("identity").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {in->contiguous()});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in});
   }
 
  private:
@@ -1868,7 +1868,7 @@ class AmpWhiteIdentityFunctor {
     op_ = CHECK_JUST(one::OpBuilder("amp_white_identity").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {in->contiguous()});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in});
   }
 
  private:
@@ -1886,7 +1886,7 @@ class ReduceSumLikeFunctor {
                            const std::vector<int32_t>& axis) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), like->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like}, attrs);
   }
 
  private:
@@ -2004,7 +2004,7 @@ class BatchGatherFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
                            const std::shared_ptr<one::Tensor>& indices) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {in->contiguous(), indices->contiguous()});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in, indices});
   }
 
  protected:
@@ -2025,7 +2025,7 @@ class UnsortedBatchSegmentSumFunctor {
                            const int64_t& num_segments) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("num_segments", num_segments));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {data->contiguous(), segment_ids->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {data, segment_ids}, attrs);
   }
 
  protected:
@@ -2065,7 +2065,7 @@ class MaskedFillFunctor {
       return OpInterpUtil::Dispatch<Tensor>(
           *op_, {JUST(Expand(x, max_shape)), JUST(Expand(mask, max_shape))}, attrs);
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), mask->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mask}, attrs);
   }
 
  private:

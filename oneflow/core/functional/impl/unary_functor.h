@@ -33,7 +33,7 @@ namespace impl {
 class UnaryFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
   }
 
  protected:
@@ -69,7 +69,7 @@ class FloatUnaryFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     // The functor lowest Dtype is Float32. (For sigmoid, tanh and etc. )
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.AddInputs({x->contiguous()}, DType::Float()).Apply());
+    JUST(tensor_processor.AddInputs({x}, DType::Float()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, input_tuple);
   }
