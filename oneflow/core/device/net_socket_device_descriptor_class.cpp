@@ -71,7 +71,7 @@ class NetSocketDeviceDescriptorClass : public DeviceDescriptorClass {
       }
       auto socket_device =
           NetSocketDeviceDescriptor::Query(static_cast<int32_t>(devices.size()), name, host);
-      if (socket_device) { devices.push_back(socket_device); }
+      if (socket_device) { devices.emplace_back(socket_device); }
     }
     freeifaddrs(interfaces);
     return std::make_shared<const BasicDeviceDescriptorList>(
@@ -90,7 +90,7 @@ class NetSocketDeviceDescriptorClass : public DeviceDescriptorClass {
       CHECK(socket_device);
       std::string serialized_device;
       socket_device->Serialize(&serialized_device);
-      serialized_devices.push_back(std::move(serialized_device));
+      serialized_devices.emplace_back(std::move(serialized_device));
     }
     nlohmann::json json_object;
     json_object[kJsonKeyDevices] = serialized_devices;

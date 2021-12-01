@@ -40,7 +40,7 @@ class UserKernel final : public Kernel {
   UserKernel() = default;
   ~UserKernel() override;
 
-  void InitUserKernel(ep::Stream* stream, DeviceCtx* device_ctx);
+  void InitUserKernel(ep::Stream* stream);
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(KernelContext* ctx);
   const std::shared_ptr<user_op::OpKernelState>& GetOpKernelState() const;
   void ForwardUserKernel(const std::function<Blob*(const std::string&)>& BnInOp2Blob,

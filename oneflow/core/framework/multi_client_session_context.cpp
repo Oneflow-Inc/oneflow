@@ -120,7 +120,7 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
 
 Maybe<void> MultiClientSessionContext::AddCGraph(
     const std::shared_ptr<oneflow::NNGraph>& c_graph_ptr) {
-  graphs_.push_back(c_graph_ptr);
+  graphs_.emplace_back(c_graph_ptr);
   return Maybe<void>::Ok();
 }
 
@@ -174,7 +174,7 @@ void MultiClientSessionContext::StoreFreeEagerTensorWithNameByGraphName(
                       std::vector<std::pair<std::string, std::shared_ptr<one::Tensor>>>())
              .first;
   }
-  it->second.push_back(std::make_pair(tensor_name, tensor));
+  it->second.emplace_back(std::make_pair(tensor_name, tensor));
 }
 
 const std::vector<std::pair<std::string, std::shared_ptr<one::Tensor>>>&

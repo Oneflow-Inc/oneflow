@@ -219,8 +219,8 @@ class EagerBToSKernel final : public user_op::OpKernel {
       .SetInferTmpSizeFn(InferEagerBToSKernelTmpBufferSize);
 
 REGISTER_EAGER_B_TO_S_KERNEL(DeviceType::kCPU)
-#if defined(WITH_CUDA) && HAS_GPU_SEND_RECV
-REGISTER_EAGER_B_TO_S_KERNEL(DeviceType::kGPU)
+#if defined(WITH_CUDA) && HAS_NCCL_SEND_RECV
+REGISTER_EAGER_B_TO_S_KERNEL(DeviceType::kCUDA)
 #endif
 
 }  // namespace oneflow

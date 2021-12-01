@@ -32,10 +32,10 @@ Maybe<bool> IgnoringDeviceTypeEqual(Symbol<ParallelDesc> lhs, Symbol<ParallelDes
 namespace {
 
 Maybe<BoxingExprIf> OptionalCudaCopy(const std::shared_ptr<BoxingExprIf>& core_boxing_expr) {
-  return JUST(
-      BoxingExpr(JUST(ReplaceInDeviceType(DeviceType::kGPU)), JUST(OptionalBoxing("cuda-copy-h2d")),
-                 JUST(BoxingExpr(JUST(ReplaceOutDeviceType(DeviceType::kGPU)), core_boxing_expr,
-                                 JUST(OptionalBoxing("cuda-copy-d2h"))))));
+  return JUST(BoxingExpr(
+      JUST(ReplaceInDeviceType(DeviceType::kCUDA)), JUST(OptionalBoxing("cuda-copy-h2d")),
+      JUST(BoxingExpr(JUST(ReplaceOutDeviceType(DeviceType::kCUDA)), core_boxing_expr,
+                      JUST(OptionalBoxing("cuda-copy-d2h"))))));
 }
 
 Maybe<BoxingExprIf> NcclSxToBBoxingExpr() {

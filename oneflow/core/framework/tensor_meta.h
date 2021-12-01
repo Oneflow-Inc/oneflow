@@ -67,6 +67,9 @@ class MirroredTensorMeta : public TensorMeta {
   MirroredTensorMeta();
   MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
                      Symbol<Device> device);
+  MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
+                     Symbol<Device> device, const std::shared_ptr<const Stride>& stride,
+                     int64_t storage_offset);
   virtual ~MirroredTensorMeta() = default;
 
   const Symbol<Device>& device() const { return device_; }

@@ -122,7 +122,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
         && infered_input_meta->nd_sbp() != JUST(input->nd_sbp())) {
       input = JUST(GetBoxingOutput(input, infered_input_meta->nd_sbp(),
                                    infered_input_meta->parallel_desc(), parallel_id.has_value()));
-      boxing_outputs.push_back(input);
+      boxing_outputs.emplace_back(input);
     }
     const auto& local_tensor = JUST(input->cur_rank_phy_tensor());
     input_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());

@@ -44,7 +44,7 @@ void PrependTickByParallelDesc(const OpGraph& op_graph, JobBuilder* job_builder)
     auto mut_tick_input_helper = NewMutOpConTickInputHelper(op_node->op().op_conf());
     if (!mut_tick_input_helper) { return; }
     if (mut_tick_input_helper->IsTickInputBound() == true) { return; }
-    parallel_desc2op_node[op_node->parallel_desc()].push_back(op_node);
+    parallel_desc2op_node[op_node->parallel_desc()].emplace_back(op_node);
   });
   for (const auto& pair : parallel_desc2op_node) {
     OperatorConf device_tick_op;
@@ -272,9 +272,10 @@ OperatorConf AppendTick(const std::string tick_name, const std::vector<std::stri
 OperatorConf AppendTick(const std::string tick_name, const std::list<const OpNode*>& op_nodes,
                         const std::shared_ptr<const Shape>& time_shape, JobBuilder* job_builder) {
   std::vector<std::string> op_names;
+  op_names.reserve(op_nodes.size());
   for (const auto* op_node : op_nodes) {
     CHECK(op_nodes.front()->parallel_desc() == op_node->parallel_desc());
-    op_names.push_back(op_node->op().op_name());
+    op_names.emplace_back(op_node->op().op_name());
   }
   return AppendTick(tick_name, op_names, time_shape,
                     op_nodes.front()->parallel_desc().parallel_conf(), job_builder);
@@ -284,10 +285,11 @@ OperatorConf PrependTick(const HashSet<const OpNode*>& op_nodes, JobBuilder* job
   CHECK_GE(op_nodes.size(), 1);
   OperatorConf tick_op_conf = MakeTickOpConf("Prepend");
   std::vector<OperatorConf> op_confs;
+  op_confs.reserve(op_nodes.size());
   for (const OpNode* op_node : op_nodes) {
     OperatorConf op_conf(op_node->op().op_conf());
     op_conf.add_ctrl_in_op_name(tick_op_conf.name());
-    op_confs.push_back(op_conf);
+    op_confs.emplace_back(op_conf);
   }
   job_builder->MutOpsOnlyOnce({op_confs});
   ParallelDesc pd((*op_nodes.begin())->parallel_desc());
@@ -324,7 +326,8 @@ OperatorConf AppendAccTick(const Shape& src_shape, const std::list<const OpNode*
 
 std::vector<std::string> GetOpNames(const HashSet<const OpNode*>& op_nodes) {
   std::vector<std::string> ret;
-  for (const OpNode* op_node : op_nodes) { ret.push_back(op_node->op().op_name()); }
+  ret.reserve(op_nodes.size());
+  for (const OpNode* op_node : op_nodes) { ret.emplace_back(op_node->op().op_name()); }
   return ret;
 };
 
@@ -382,17 +385,18 @@ Maybe<std::vector<OperatorConf>> AddTickForTimeShape(const Shape& src_time_shape
   for (const OpNode* op_node : op_nodes) {
     auto ts = std::make_pair(*JUST(op_node->op().GetInputOutputFastestTimeShape()),
                              *JUST(op_node->op().GetOpTimeShape()));
-    pd7ts2op_nodes[{op_node->parallel_desc(), ts}].push_back(op_node);
+    pd7ts2op_nodes[{op_node->parallel_desc(), ts}].emplace_back(op_node);
   }
   std::vector<OperatorConf> op_confs;
+  op_confs.reserve(pd7ts2op_nodes.size());
   for (const auto& pair : pd7ts2op_nodes) {
     const std::pair<Shape, Shape>& ts = pair.first.second;
     if (ts.second.elem_cnt() == src_time_shape.elem_cnt()) {
       CHECK_GE_OR_RETURN(ts.first.elem_cnt(), ts.second.elem_cnt());
-      op_confs.push_back(
+      op_confs.emplace_back(
           AppendTick("Append", pair.second, std::make_shared<const Shape>(ts.second), job_builder));
     } else if (ts.second.elem_cnt() > src_time_shape.elem_cnt()) {
-      op_confs.push_back(AppendAccTick(src_time_shape, pair.second, job_builder));
+      op_confs.emplace_back(AppendAccTick(src_time_shape, pair.second, job_builder));
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
@@ -417,10 +421,11 @@ Maybe<void> AddGlobalInputOutputCriticalSection(
   }
   std::vector<OperatorConf> source_ticks;
   std::vector<OperatorConf> sink_ticks;
+  source_ticks.reserve(parallel_desc2op_nodes.size());
   for (const auto& pair : parallel_desc2op_nodes) {
-    source_ticks.push_back(PrependTick(pair.second, job_builder));
+    source_ticks.emplace_back(PrependTick(pair.second, job_builder));
     const auto& ops = JUST(AddTickForTimeShape(*time_shape, pair.second, job_builder));
-    for (const auto& sink_tick : *ops) { sink_ticks.push_back(sink_tick); }
+    for (const auto& sink_tick : *ops) { sink_ticks.emplace_back(sink_tick); }
   }
   OperatorConf src_subset_tick_op;
   {

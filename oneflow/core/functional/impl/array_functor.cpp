@@ -85,8 +85,9 @@ class ArgMaxFunctor {
     }
 
     std::vector<int32_t> permute;
-    for (int32_t i = 0; i < ndims - 1; i++) { permute.push_back(i < new_dim ? i : i + 1); }
-    permute.push_back(new_dim);
+    permute.reserve(ndims);
+    for (int32_t i = 0; i < ndims - 1; i++) { permute.emplace_back(i < new_dim ? i : i + 1); }
+    permute.emplace_back(new_dim);
 
     std::vector<int32_t> permute_inv(ndims, 0);
     for (int32_t i = 0; i < ndims; i++) { permute_inv[i] = -1; }
@@ -438,7 +439,7 @@ class ConcatFunctor {
       size_t size = (i + kMaxInputCount) < inputs.size() ? kMaxInputCount : inputs.size() - i;
       TensorTuple partial_inputs(size);
       for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
-      outputs.push_back(
+      outputs.emplace_back(
           JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
     }
     if (outputs.size() == 1) { return outputs.at(0); }
@@ -561,7 +562,7 @@ class RollFunctor {
     if (dims.has_value()) {
       actual_dims = *JUST(dims);
     } else {
-      actual_dims.push_back(-1);
+      actual_dims.emplace_back(-1);
     }
     CHECK_GE_OR_RETURN(shifts.size(), actual_dims.size())
         << "The `shifts` and `dims` parameters should have the same size.";
@@ -863,6 +864,8 @@ class ReshapeFunctor {
     op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
+    // if input tensor is eager local, than return tensor's view
+    if (x->is_eager() && x->is_local()) { return view::Reshape(x, shape); }
     int need_infer_axis = -1;
     size_t count = 1;
     for (int i = 0; i < shape.NumAxes(); ++i) {
@@ -1050,7 +1053,8 @@ class SqueezeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<std::vector<int32_t>>& dim) const {
     int32_t ndim = x->shape()->NumAxes();
-    std::vector<int32_t> squeeze_dims(0);
+    std::vector<int32_t> squeeze_dims;
+    squeeze_dims.reserve(ndim);
     if (dim.has_value() == true) {
       std::vector<int32_t> dims = *JUST(dim);
       for (int32_t dim_i : dims) {
@@ -1058,11 +1062,11 @@ class SqueezeFunctor {
             << "Dimension out of range (expected to be in range of  [" << -ndim << "," << ndim - 1
             << "], but got " << dim_i;
         if (dim_i < 0) { dim_i += ndim; }
-        if (x->shape()->At(dim_i) == 1) { squeeze_dims.push_back(dim_i); }
+        if (x->shape()->At(dim_i) == 1) { squeeze_dims.emplace_back(dim_i); }
       }
     } else {
       for (int i = 0; i < ndim; ++i) {
-        if (x->shape()->At(i) == 1) { squeeze_dims.push_back(i); }
+        if (x->shape()->At(i) == 1) { squeeze_dims.emplace_back(i); }
       }
     }
 

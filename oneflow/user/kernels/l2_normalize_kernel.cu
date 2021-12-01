@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include <cub/cub.cuh>
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
@@ -105,13 +106,13 @@ class GpuL2NormalizeKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_L2_NORMALIZE_KERNEL(dtype)                       \
-  REGISTER_USER_KERNEL("l2_normalize")                                \
-      .SetCreateFn<GpuL2NormalizeKernel<dtype>>()                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_CUDA_L2_NORMALIZE_KERNEL(dtype)                       \
+  REGISTER_USER_KERNEL("l2_normalize")                                 \
+      .SetCreateFn<GpuL2NormalizeKernel<dtype>>()                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_L2_NORMALIZE_KERNEL(float)
+REGISTER_CUDA_L2_NORMALIZE_KERNEL(float)
 
 template<typename T>
 class GpuL2NormalizeGradKernel final : public user_op::OpKernel {
@@ -137,12 +138,12 @@ class GpuL2NormalizeGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_L2_NORMALIZE_GRAD_KERNEL(dtype)                  \
-  REGISTER_USER_KERNEL("l2_normalize_grad")                           \
-      .SetCreateFn<GpuL2NormalizeGradKernel<dtype>>()                 \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_CUDA_L2_NORMALIZE_GRAD_KERNEL(dtype)                  \
+  REGISTER_USER_KERNEL("l2_normalize_grad")                            \
+      .SetCreateFn<GpuL2NormalizeGradKernel<dtype>>()                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_L2_NORMALIZE_GRAD_KERNEL(float)
+REGISTER_CUDA_L2_NORMALIZE_GRAD_KERNEL(float)
 
 }  // namespace oneflow

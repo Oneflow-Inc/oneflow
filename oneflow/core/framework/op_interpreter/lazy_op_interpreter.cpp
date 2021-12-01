@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
@@ -271,7 +272,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   if (!input_tensor->requires_grad()) { var_conf->set_trainable(false); }
   if (input_tensor->requires_grad()) {
     double l2 = JUST(ctx.attrs.GetAttr<double>("l2"));
-    var_conf->mutable_regularizer()->mutable_l1_l2_conf()->set_l2(l2);
+    if (unlikely(l2 != 0.0)) { var_conf->mutable_regularizer()->mutable_l1_l2_conf()->set_l2(l2); }
   }
 
   auto infer_ctx = JUST(GetCurInferCtx());

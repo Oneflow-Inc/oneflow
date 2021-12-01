@@ -35,7 +35,7 @@ Maybe<void> GenerateCloneGradOpIfNeed(
       const auto& in_diff_lbi_it =
           in_oba2in_diff_lbi.find(GenOpBlobArg(out_node->op().op_name(), ibn));
       if (in_diff_lbi_it == in_oba2in_diff_lbi.end()) { continue; }
-      out_oba2in_diff_lbis[oba_it->second].push_back(in_diff_lbi_it->second);
+      out_oba2in_diff_lbis[oba_it->second].emplace_back(in_diff_lbi_it->second);
     }
   });
   for (const auto& obn : op_node.op().output_bns()) {

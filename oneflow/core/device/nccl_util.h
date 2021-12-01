@@ -57,7 +57,7 @@ std::string NcclUniqueIdToString(const ncclUniqueId& unique_id);
 
 void NcclUniqueIdFromString(const std::string& str, ncclUniqueId* unique_id);
 
-#define HAS_GPU_SEND_RECV NCCL_VERSION_CODE > 2700
+#define HAS_NCCL_SEND_RECV NCCL_VERSION_CODE > 2700
 
 #endif  // WITH_CUDA
 

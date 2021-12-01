@@ -96,7 +96,7 @@ class CpuSliceVarNdarray : public CpuNdarray<typename XT::dtype, XT::ndims> {
     DimVector dim_vec;
     for (const Slice& slice : bounded_slices) {
       CHECK_GT(slice.Size(), 0);
-      dim_vec.push_back(slice.Size());
+      dim_vec.emplace_back(slice.Size());
     }
     return Shape(dim_vec);
   }

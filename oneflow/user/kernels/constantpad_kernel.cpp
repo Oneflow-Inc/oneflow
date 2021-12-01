@@ -208,8 +208,8 @@ class ConstantPad3dGradKernel final : public OpKernel {
 
 REGISTER_CONSTANT_PAD_WITH_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_CONSTANT_PAD_WITH_DEVICE(DeviceType::kGPU)
-REGISTER_CONSTANT_PAD_KERNELS(DeviceType::kGPU, float16)
+REGISTER_CONSTANT_PAD_WITH_DEVICE(DeviceType::kCUDA)
+REGISTER_CONSTANT_PAD_KERNELS(DeviceType::kCUDA, float16)
 #endif
 
 }  // namespace user_op
