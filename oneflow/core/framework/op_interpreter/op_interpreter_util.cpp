@@ -49,7 +49,9 @@ void SetJitInterpreter(std::shared_ptr<OpExprInterpreter> jit_interpreter) {
 }
 
 std::shared_ptr<AutogradInterpreter> GetJitInterpreter() {
-  std::shared_ptr<OpExprInterpreter> internal = MutJitInterpreter();
+  auto jit_interpreter = MutJitInterpreter();
+  CHECK(jit_interpreter != nullptr) << "Jit interpreter is not set";
+  std::shared_ptr<OpExprInterpreter> internal = jit_interpreter;
   return std::make_shared<AutogradInterpreter>(internal);
 }
 
