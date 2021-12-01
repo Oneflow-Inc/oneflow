@@ -20,6 +20,8 @@ limitations under the License.
 #include <pybind11/stl.h>
 
 #include <utility>
+#include "oneflow/ir/include/OneFlow/Extension.h"
+#include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowRoundTrip.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/ir/include/OneFlow/Extension.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -112,5 +114,9 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
   ;
 }
 
+REGISTER_JOB_PASS("IRRoundTripBeforeAD", IRRoundTrip<kBeforeAD>);
+REGISTER_JOB_PASS("IRRoundTrip", IRRoundTrip<kAfterAD>);
+
 }  // namespace oneflow
+
 #endif  // WITH_MLIR

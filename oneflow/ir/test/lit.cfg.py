@@ -28,6 +28,38 @@ from lit.llvm import llvm_config
 from lit.llvm.subst import ToolSubst
 from lit.llvm.subst import FindTool
 
+
+def get_visible_gpu_with_max_free_memory(debug=False) -> int:
+    try:
+        import csv
+
+        csv_out = (
+            subprocess.check_output(
+                "nvidia-smi --query-gpu=index,memory.free --format=csv", shell=True
+            )
+            .decode("utf-8")
+            .splitlines()
+        )
+        reader = csv.DictReader(csv_out, skipinitialspace=True,)
+        MEMORY_KEY = "memory.free [MiB]"
+        INDEX_KEY = "index"
+        max_mem = 0
+        max_mem_gpu_index = -1
+        for row in reader:
+            mem = int(row[MEMORY_KEY][0:-3])
+            max_mem_gpu_index = int(row[INDEX_KEY])
+            if mem > max_mem:
+                max_mem = mem
+            if debug:
+                print(row)
+        if debug:
+            print("Max free memory: ", max_mem)
+        return max_mem_gpu_index
+    except Exception as e:
+        print(e)
+        return -1
+
+
 # Configuration file for the 'lit' test runner.
 
 # name: The name of this test suite.
@@ -79,6 +111,12 @@ llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
 llvm_config.with_environment("ONEFLOW_MLIR_STDOUT", "1")
 llvm_config.with_environment("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS", "1")
 llvm_config.with_environment("ONEFLOW_MLIR_ENABLE_ROUND_TRIP", "1")
+
+
+gpu_index = get_visible_gpu_with_max_free_memory()
+if gpu_index != -1:
+    llvm_config.with_environment("CUDA_VISIBLE_DEVICES", str(gpu_index))
+
 llvm_config.with_environment(
     "PYTHONPATH",
     os.path.join(config.test_source_root, "../../../python"),
@@ -91,3 +129,7 @@ tools.extend(
     [ToolSubst("%linalg_test_lib_dir", config.llvm_lib_dir, unresolved="ignore"),]
 )
 llvm_config.add_tool_substitutions(tools, tool_dirs)
+
+if __name__ == "__main__":
+    print(set_visible_gpu_with_max_free_memory(debug=True))
+    exit(1)
