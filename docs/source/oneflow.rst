@@ -43,6 +43,7 @@ oneflow
             cosh, 
             diag, 
             div, 
+            dot, 
             eq, 
             equal, 
             expand, 
