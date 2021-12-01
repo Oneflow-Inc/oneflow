@@ -14,36 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <gtest/gtest.h>
-#include "oneflow/api/cpp/api.h"
-#include "oneflow/api/cpp/device.h"
+#include "oneflow/api/cpp/framework/dtype.h"
+#include <map>
 
 namespace oneflow_api {
+
 namespace {
 
-class EnvScope {  // NOLINT
- public:
-  EnvScope() { initialize(); }
-  ~EnvScope() { release(); }
+std::map<DType, int32_t> DTypeSize = {
+    {DType::kFloat, sizeof(float)},   {DType::kDouble, sizeof(double)},
+    {DType::kInt8, sizeof(int8_t)},   {DType::kInt32, sizeof(int32_t)},
+    {DType::kInt64, sizeof(int64_t)},
 };
 
-}  // namespace
-
-TEST(Api, init_and_release) {
-  EnvScope scope;
-
-  auto device = Device("cpu");
-  ASSERT_EQ(device.type(), "cpu");
-
-#ifdef WITH_CUDA
-  device = Device("cuda", 1);
-  ASSERT_EQ(device.type(), "cuda");
-  ASSERT_EQ(device.device_id(), 1);
-
-  device = Device("cuda:2");
-  ASSERT_EQ(device.type(), "cuda");
-  ASSERT_EQ(device.device_id(), 2);
-#endif
 }
+
+int32_t GetDTypeSize(DType dtype) { return DTypeSize[dtype]; }
 
 }  // namespace oneflow_api
