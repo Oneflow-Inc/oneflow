@@ -42,9 +42,9 @@ def get_visible_gpu_with_max_free_memory(debug=False) -> int:
         max_mem_gpu_index = -1
         for row in reader:
             mem = int(row[MEMORY_KEY][0:-MEMORY_UNIT_length])
-            max_mem_gpu_index = int(row[INDEX_KEY])
             if mem > max_mem:
                 max_mem = mem
+                max_mem_gpu_index = int(row[INDEX_KEY])
             if debug:
                 print(row)
         if debug:
