@@ -60,6 +60,8 @@ class JitInterpreter : public OpExprInterpreter {
         current_importer_(&importer_) {}
   ~JitInterpreter() = default;
 
+  static std::shared_ptr<JitInterpreter> Get();
+
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const AttrMap& attrs) const {
     return Apply(op_expr, inputs, outputs, OpExprInterpContext(attrs));

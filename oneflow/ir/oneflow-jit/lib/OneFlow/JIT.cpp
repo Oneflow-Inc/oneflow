@@ -92,7 +92,7 @@ class CreateComputeCtxPass : public CreateComputeCtxPassBase<CreateComputeCtxPas
     ModuleOp top_module = getFunction()->getParentOfType<ModuleOp>();
     mlir::MLIRContext& context = getContext();
     auto jit_interpreter =
-        dynamic_cast<::oneflow::one::JitInterpreter*>(::oneflow::one::GetJitInterpreter().get());
+        std::dynamic_pointer_cast<one::JitInterpreter>(one::JitInterpreter::Get());
     auto importer = jit_interpreter->GetImporter();
     Builder builder(&context);
     // external func to launch kernel

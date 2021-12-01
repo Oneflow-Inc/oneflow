@@ -244,6 +244,11 @@ void JitInterpreter::Trace(
   MlirTraceEnd();
 }
 
+std::shared_ptr<JitInterpreter> JitInterpreter::Get() {
+  static auto interpreter = std::make_shared<one::JitInterpreter>();
+  return interpreter;
+}
+
 }  // namespace one
 
 }  // namespace oneflow
