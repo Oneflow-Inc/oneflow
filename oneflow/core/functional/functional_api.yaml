@@ -1786,3 +1786,7 @@
 - name: "meshgrid"
   signature: "TensorTuple (TensorTuple tensors) => Meshgrid"
   bind_python: True
+
+- name: "one_rec_decode"
+  signature: "Tensor (Tensor input, String key, DataType dtype, Shape shape, Bool is_dynamic=False, Shape reshape=None, Shape batch_padding=None) => OneRecDecode"
+  bind_python: True
