@@ -23,21 +23,6 @@ namespace {
 
 constexpr int32_t kBlockSize = 256;
 
-template<typename T>
-constexpr int32_t GetPreluPackSize() {
-  return 4;
-};
-
-template<>
-constexpr int32_t GetPreluPackSize<half>() {
-  return 8;
-};
-
-template<>
-constexpr int32_t GetPreluPackSize<double>() {
-  return 2;
-};
-
 template<typename T, typename IndexType, int pack_size, bool tail>
 __global__ void PReluForwardMultiAlphaGpu(const IndexType elem_cnt, const IndexType alpha_size,
                                           const IndexType inner_size, const IndexType mul_size,
@@ -124,7 +109,7 @@ template<typename T>
 void DispatchPreluForwardIndexTail(ep::Stream* stream, const int64_t elem_cnt,
                                    const int64_t alpha_size, const int64_t inner_size, const T* x,
                                    const T* alpha, T* y) {
-  constexpr int pack_size = GetPreluPackSize<T>();
+  constexpr int pack_size = cuda::elementwise::PackSize<T>();
   const int64_t pack_num = elem_cnt / pack_size;
   int grid_size;
   cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
@@ -166,7 +151,7 @@ template<typename T>
 void DispatchBackwardIndexTail(ep::Stream* stream, const int64_t elem_cnt, const int64_t alpha_size,
                                const int64_t inner_size, const T* x, const T* alpha, const T* dy,
                                T* dx, T* alpha_diff) {
-  constexpr int pack_size = GetPreluPackSize<T>();
+  constexpr int pack_size = cuda::elementwise::PackSize<T>();
   const int64_t pack_num = elem_cnt / pack_size;
   int grid_size;
   cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
