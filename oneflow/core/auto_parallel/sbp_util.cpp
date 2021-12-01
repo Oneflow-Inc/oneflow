@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "sbp_util.h"
 #include <memory>
+#include "sbp_util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/sbp_parallel.h"

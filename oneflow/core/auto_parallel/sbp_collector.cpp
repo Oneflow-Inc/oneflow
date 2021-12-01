@@ -124,7 +124,7 @@ void SbpCollector::InitializeCopyCostFromNode2Proxy(SbpNode<cfg::NdSbpSignature>
         // Use the parallel description of producer as those for consumer for now.
         sbp_edge->Cost[sbp_id_producer][sbp_id_consumer] += ComputCopyCostBetweenNdSbp(
             sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc,
-            producer_parallel_desc, false, false);
+            producer_parallel_desc, /*is_same=*/false, /*allow_cpu2gpu=*/false);
       }
     }
   }

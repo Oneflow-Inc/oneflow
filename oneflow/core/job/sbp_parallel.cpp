@@ -245,10 +245,9 @@ void CheckSbpSignatureAndNdSbpEquals(const cfg::SbpSignature& sbp_sig,
 }
 
 void ResizeNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t size) {
-  for (auto it_ = nd_sbp_sig.mutable_bn_in_op2nd_sbp()->begin();
-       it_ != nd_sbp_sig.mutable_bn_in_op2nd_sbp()->end(); ++it_) {
-    if (it_->second.sbp_parallel_size() > size) { it_->second.clear_sbp_parallel(); }
-    while (it_->second.sbp_parallel_size() < size) { it_->second.add_sbp_parallel(); }
+  for (auto& it : *nd_sbp_sig.mutable_bn_in_op2nd_sbp()) {
+    if (it.second.sbp_parallel_size() > size) { it.second.clear_sbp_parallel(); }
+    while (it.second.sbp_parallel_size() < size) { it.second.add_sbp_parallel(); }
   }
 }
 
@@ -261,15 +260,15 @@ void SetNdSbpSignature(const cfg::SbpSignature& sbp_signature,
 }
 
 void DFS_SetNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t max_depth,
-                           std::vector<cfg::NdSbpSignature>& ndsbp_sig_list,
+                           std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list,
                            cfg::SbpSignatureList* sbp_sig_list) {
   CHECK(depth <= max_depth) << "Wrong DFS while setting ND-Sbp signature";
   if (depth == max_depth) {
-    ndsbp_sig_list.push_back(nd_sbp_sig);
+    nd_sbp_sig_list.push_back(nd_sbp_sig);
   } else if (depth < max_depth) {
     for (int32_t i = 0; i < sbp_sig_list->sbp_signature_size(); i++) {
       SetNdSbpSignature(sbp_sig_list->sbp_signature(i), &nd_sbp_sig, depth);
-      DFS_SetNdSbpSignature(nd_sbp_sig, depth + 1, max_depth, ndsbp_sig_list, sbp_sig_list);
+      DFS_SetNdSbpSignature(nd_sbp_sig, depth + 1, max_depth, nd_sbp_sig_list, sbp_sig_list);
     }
   }
 }

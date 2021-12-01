@@ -179,7 +179,7 @@ class Operator {
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& ndsbp_sig_list) const;
 
-  void ForEachBnInOp(std::function<void(const std::string&)>) const;
+  void ForEachBnInOp(const std::function<void(const std::string&)>&) const;
 
   virtual Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const;
   std::shared_ptr<OpAttribute> GetOpAttributeWithoutOpNameAndLbn() const;

@@ -69,7 +69,7 @@ void SetNdSbpSignature(const cfg::SbpSignature& sbp_signature,
                        cfg::NdSbpSignature* nd_sbp_signature, int32_t sbp_axis);
 
 void DFS_SetNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t max_depth,
-                           std::vector<cfg::NdSbpSignature>& ndsbp_sig_list,
+                           std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list,
                            cfg::SbpSignatureList* sbp_sig_list);
 
 }  // namespace oneflow
