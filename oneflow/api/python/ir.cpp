@@ -116,6 +116,7 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
 
 REGISTER_JOB_PASS("IRRoundTripBeforeAD", IRRoundTrip<kBeforeAD>);
 REGISTER_JOB_PASS("IRRoundTrip", IRRoundTrip<kAfterAD>);
+COMMAND(SetJitInterpreter(std::make_shared<one::JitInterpreter>()));
 
 }  // namespace oneflow
 

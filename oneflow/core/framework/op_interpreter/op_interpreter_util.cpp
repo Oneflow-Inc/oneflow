@@ -37,7 +37,7 @@ namespace one {
 
 namespace {
 
-std::shared_ptr<OpExprInterpreter> MutJitInterpreter() {
+std::shared_ptr<OpExprInterpreter>& MutJitInterpreter() {
   static std::shared_ptr<OpExprInterpreter> internal;
   return internal;
 }
@@ -45,7 +45,7 @@ std::shared_ptr<OpExprInterpreter> MutJitInterpreter() {
 }  // namespace
 
 void SetJitInterpreter(std::shared_ptr<OpExprInterpreter> jit_interpreter) {
-  static std::shared_ptr<OpExprInterpreter> internal = std::move(jit_interpreter);
+  MutJitInterpreter().swap(jit_interpreter);
 }
 
 std::shared_ptr<AutogradInterpreter> GetJitInterpreter() {
