@@ -34,8 +34,8 @@
 
 - name: "dispatch_ofrecord_reader"
   signature: [
-      "Tensor (OpExpr op, String data_dir, Int32 data_part_num, String part_name_prefix, Int32 part_name_suffix_length, Int32 batch_size, Int64 seed, Int32 shuffle_buffer_size, Bool random_shuffle, Bool shuffle_after_epoch, Device device) => DispatchOfrecordReader",
-      "Tensor (OpExpr op, String data_dir, Int32 data_part_num, String part_name_prefix, Int32 part_name_suffix_length, Int32 batch_size, Int64 seed, Int32 shuffle_buffer_size, Bool random_shuffle, Bool shuffle_after_epoch, Placement placement, Sbp sbp) => DispatchOfrecordReader",
+      "Tensor (OpExpr op, String data_dir, Int32 data_part_num, String part_name_prefix, Int32 part_name_suffix_length, Int32 batch_size, Int32 shuffle_buffer_size, Bool random_shuffle, Bool shuffle_after_epoch, Int64 seed, Device device=None) => DispatchOFRecordReader",
+      "Tensor (OpExpr op, String data_dir, Int32 data_part_num, String part_name_prefix, Int32 part_name_suffix_length, Int32 batch_size, Int32 shuffle_buffer_size, Bool random_shuffle, Bool shuffle_after_epoch, Int64 seed, Placement placement, Sbp sbp) => DispatchOFRecordReader",
   ]
   bind_python: True
 
@@ -45,7 +45,7 @@
 
 - name: "dispatch_coin_flip"
   signature: [
-      "Tensor (OpExpr op, Int64 batch_size, Scalar probability, Int64 seed, Bool has_seed, Device device) => DispatchCoinFlip",
+      "Tensor (OpExpr op, Int64 batch_size, Scalar probability, Int64 seed, Bool has_seed, Device device=None) => DispatchCoinFlip",
       "Tensor (OpExpr op, Int64 batch_size, Scalar probability, Int64 seed, Bool has_seed, Placement placement, Sbp sbp) => DispatchCoinFlip",
   ]
   bind_python: True
@@ -88,7 +88,7 @@
 
 - name: "dispatch_coco_reader"
   signature: [
-      "TensorTuple (OpExpr op, String image_dir, String annotation_file, Int64 batch_size, Bool shuffle_after_epoch, Int64 random_seed, Bool group_by_ratio, Bool remove_images_without_annotations, Bool stride_partition, Int64 session_id, Device device) => DispatchCOCOReader",
+      "TensorTuple (OpExpr op, String image_dir, String annotation_file, Int64 batch_size, Bool shuffle_after_epoch, Int64 random_seed, Bool group_by_ratio, Bool remove_images_without_annotations, Bool stride_partition, Int64 session_id, Device device=None) => DispatchCOCOReader",
       "TensorTuple (OpExpr op, String image_dir, String annotation_file, Int64 batch_size, Bool shuffle_after_epoch, Int64 random_seed, Bool group_by_ratio, Bool remove_images_without_annotations, Bool stride_partition, Int64 session_id, Placement placement, Sbp sbp) => DispatchCOCOReader",
   ]
   bind_python: True
@@ -103,7 +103,7 @@
 
 - name: "dispatch_megatron_gpt_mmap_data_loader"
   signature: [
-      "Tensor (OpExpr op, String data_file_prefix, Int64 seq_length, Int64 label_length, Int64 num_samples, Int64 batch_size, DataType dtype, Int64List split_sizes, Int64 split_index, Bool shuffle, Int64 random_seed, Device device) => DispatchMegatronGptMmapDataLoader",
+      "Tensor (OpExpr op, String data_file_prefix, Int64 seq_length, Int64 label_length, Int64 num_samples, Int64 batch_size, DataType dtype, Int64List split_sizes, Int64 split_index, Bool shuffle, Int64 random_seed, Device device=None) => DispatchMegatronGptMmapDataLoader",
       "Tensor (OpExpr op, String data_file_prefix, Int64 seq_length, Int64 label_length, Int64 num_samples, Int64 batch_size, DataType dtype, Int64List split_sizes, Int64 split_index, Bool shuffle, Int64 random_seed, Placement placement, Sbp sbp) => DispatchMegatronGptMmapDataLoader",
   ]
   bind_python: True
