@@ -381,7 +381,7 @@ if (WITH_MLIR)
   include_directories(${MLIR_INCLUDE_DIRS})
   include_directories(${ONEFLOW_MLIR_SOURCE_INCLUDE_DIRS})
   include_directories(${ONEFLOW_MLIR_BINARY_INCLUDE_DIRS})
-endif()
+endif(WITH_MLIR)
 
 if(APPLE)
   set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj)
@@ -421,6 +421,9 @@ if(BUILD_PYTHON)
   target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
   target_compile_definitions(oneflow_internal PRIVATE ONEFLOW_CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
+  if(WITH_MLIR)
+    add_dependencies(check-oneflow oneflow_internal)
+  endif(WITH_MLIR)
 
   set(gen_pip_args "")
   if (BUILD_CUDA)
