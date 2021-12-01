@@ -43,7 +43,9 @@ void SetJitForwardArgs(const std::vector<std::shared_ptr<one::Tensor>>& tensors)
 
 const std::vector<std::shared_ptr<one::Tensor>>& GetJitForwardArgs();
 
-std::shared_ptr<OpExprInterpreter> GetJitInterpreter();
+void SetJitInterpreter(std::shared_ptr<OpExprInterpreter> jit_interpreter);
+
+std::shared_ptr<AutogradInterpreter> GetJitInterpreter();
 
 #endif  // WITH_MLIR
 

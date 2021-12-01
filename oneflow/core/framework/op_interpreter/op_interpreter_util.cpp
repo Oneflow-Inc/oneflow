@@ -33,6 +33,28 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+#ifdef WITH_MLIR
+
+namespace {
+
+std::shared_ptr<OpExprInterpreter> MutJitInterpreter() {
+  static std::shared_ptr<OpExprInterpreter> internal;
+  return internal;
+}
+
+}  // namespace
+
+void SetJitInterpreter(std::shared_ptr<OpExprInterpreter> jit_interpreter) {
+  static std::shared_ptr<OpExprInterpreter> internal = std::move(jit_interpreter);
+}
+
+std::shared_ptr<AutogradInterpreter> GetJitInterpreter() {
+  std::shared_ptr<OpExprInterpreter> internal = MutJitInterpreter();
+  return std::make_shared<AutogradInterpreter>(internal);
+}
+
+#endif  // WITH_MLIR
+
 namespace {
 
 std::shared_ptr<AutogradInterpreter> BuildEagerInterpreter(const bool& is_mirrored) {
@@ -66,24 +88,6 @@ std::string ErrorString4Inputs(const TensorTuple& inputs, const OpExpr& op_expr)
   }
   return error_str.str();
 }
-
-#ifdef WITH_MLIR
-
-std::shared_ptr<OpExprInterpreter> MutJitInterpreter() {
-  static std::shared_ptr<OpExprInterpreter> internal;
-  return internal;
-}
-
-void SetJitInterpreter(std::shared_ptr<OpExprInterpreter> jit_interpreter) {
-  static std::shared_ptr<OpExprInterpreter> internal = std::move(jit_interpreter);
-}
-
-std::shared_ptr<AutogradInterpreter> GetJitInterpreter() {
-  std::shared_ptr<OpExprInterpreter> internal = MutJitInterpreter();
-  return std::make_shared<AutogradInterpreter>(internal);
-}
-
-#endif  // WITH_MLIR
 
 Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExprInterpContext& ctx,
                                           const OpExpr& op_expr) {
