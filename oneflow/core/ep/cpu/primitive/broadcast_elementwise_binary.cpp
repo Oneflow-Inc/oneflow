@@ -95,8 +95,6 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
   }
 };
 
-}  // namespace
-
 template<BinaryOp binary_op, typename Src, typename Dst,
          void (*binary_func)(ep::Stream* stream, const XpuVarNdarray<Dst>& z,
                              const XpuVarNdarray<const Src>& x, const XpuVarNdarray<const Src>& y)>
@@ -105,15 +103,14 @@ std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary() {
       new BroadcastElementwiseBinaryImpl<binary_op, Src, Dst, binary_func>());
 }
 
-namespace {
-
 #define BINARY_MATH_OP_NDARRAY_PAIR         \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAdd, Add) \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSub, Sub) \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMul, Mul) \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kDiv, Div) \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMax, Max) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMin, Min)
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMin, Min) \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kPow, Pow)
 
 #define NDARRAY_BINARY_TYPE_SEQ \
   CPU_PRIMITIVE_INT8_TYPE_SEQ   \

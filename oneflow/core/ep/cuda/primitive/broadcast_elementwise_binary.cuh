@@ -354,7 +354,6 @@ nv_bfloat16 GetValue<nv_bfloat16>(Scalar value) {
 }
 
 #endif  // CUDA_VERSION >= 11000
-}  // namespace
 
 template<BinaryOp binary_op, typename Src, typename Dst>
 class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
@@ -389,6 +388,8 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
         src1_dims, reinterpret_cast<const Src*>(src1), reinterpret_cast<Dst*>(dst));
   }
 };
+
+}  // namespace
 
 template<BinaryOp binary_op, typename Src, typename Dst>
 std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary() {

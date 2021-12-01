@@ -80,7 +80,8 @@ inline size_t GetElementCount(size_t num_dims, const int64_t* dims) {
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMul) \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kDiv) \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMax) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMin)
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMin) \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kPow)
 
 #define BINARY_COMPARISION_OP_SEQ              \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kEqual)       \
