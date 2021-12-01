@@ -47,7 +47,7 @@ TensorDescInferFn MaxPoolMakeForwardTensorDescInferFn(const int32_t dim) {
 
     const MaxPoolingParams3D params_3d(dim, x_shape, data_format, padding, kernel_size, stride,
                                        dilation, return_indices, ceil_mode);
-  user_op:
+    user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
     *y_desc = ctx->InputTensorDesc("x", 0);
     *y_desc->mut_shape() = params_3d.GetYShape();
 
