@@ -13,34 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_API_CPP_DEVICE_H_
-#define ONEFLOW_API_CPP_DEVICE_H_
+#ifndef ONEFLOW_USER_KERNELS_DROPOUT_KERNEL_H_
+#define ONEFLOW_USER_KERNELS_DROPOUT_KERNEL_H_
 
-#include <string>
-#include <memory>
+#include "oneflow/user/kernels/random_mask_generator.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
-class Device;
+class FusedDropoutKernelState : public user_op::OpKernelState {
+ public:
+  explicit FusedDropoutKernelState(const std::shared_ptr<one::Generator>& generator)
+      : generator_(generator) {}
 
-template<typename T>
-class Symbol;
+  const std::shared_ptr<one::Generator>& generator() const { return generator_; }
+
+ private:
+  std::shared_ptr<one::Generator> generator_;
+};
 
 }  // namespace oneflow
 
-namespace oneflow_api {
-
-class Device final {
- public:
-  explicit Device(const std::string& type_or_type_with_device_id);
-  explicit Device(const std::string& type, int64_t device_id);
-  const std::string& type() const;
-  int64_t device_id() const;
-
- private:
-  std::shared_ptr<oneflow::Symbol<oneflow::Device>> device_ = nullptr;
-};
-
-}  // namespace oneflow_api
-
-#endif  // !ONEFLOW_API_CPP_DEVICE_H_
+#endif  // ONEFLOW_USER_KERNELS_DROPOUT_KERNEL_H_
