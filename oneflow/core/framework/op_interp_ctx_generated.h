@@ -4673,6 +4673,50 @@ class OfrecordImageDecoderRandomCropOpInterpCtx : public OpInterpCtx {
   std::vector<float> random_area;
   std::vector<float> random_aspect_ratio;
 };
+class ImageDecoderRandomCropResizeOpInterpCtx : public OpInterpCtx {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "target_width")) {
+      return (const void*)&target_width;
+    } else if (!strcmp(attr_name, "target_height")) {
+      return (const void*)&target_height;
+    } else if (!strcmp(attr_name, "seed")) {
+      return (const void*)&seed;
+    } else if (!strcmp(attr_name, "num_workers")) {
+      return (const void*)&num_workers;
+    } else if (!strcmp(attr_name, "max_num_pixels")) {
+      return (const void*)&max_num_pixels;
+    } else if (!strcmp(attr_name, "random_area_min")) {
+      return (const void*)&random_area_min;
+    } else if (!strcmp(attr_name, "random_area_max")) {
+      return (const void*)&random_area_max;
+    } else if (!strcmp(attr_name, "random_aspect_ratio_min")) {
+      return (const void*)&random_aspect_ratio_min;
+    } else if (!strcmp(attr_name, "random_aspect_ratio_max")) {
+      return (const void*)&random_aspect_ratio_max;
+    } else if (!strcmp(attr_name, "warmup_size")) {
+      return (const void*)&warmup_size;
+    } else if (!strcmp(attr_name, "num_attempts")) {
+      return (const void*)&num_attempts;
+    } else {
+      return Error::RuntimeError()
+             << "ImageDecoderRandomCropResizeOpInterpCtx op has no attribute named " << attr_name;
+    }
+  }
+
+ public:
+  int64_t target_width;
+  int64_t target_height;
+  int64_t seed;
+  int64_t num_workers;
+  int64_t max_num_pixels;
+  float random_area_min;
+  float random_area_max;
+  float random_aspect_ratio_min;
+  float random_aspect_ratio_max;
+  int64_t warmup_size;
+  int64_t num_attempts;
+};
 class OfrecordRawDecoderOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
