@@ -983,7 +983,7 @@ class NarrowFunctor {
         << "], but got:" << dim << ")";
     if (narrow_dim < 0) { narrow_dim += ndim; }
     if (input->is_eager() && input->is_local()) {
-      return JUST(view::Narrow(input, narrow_dim, start, length));
+      return JUST(ToContiguous(JUST(view::Narrow(input, narrow_dim, start, length))));
     }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("dim", narrow_dim));

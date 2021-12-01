@@ -41,7 +41,6 @@ struct BlobNumpyCopyUtil {
     return BlobBufferCopyUtil<T>::To(of_blob_ptr, (T*)array.data(), array.size());
   }
 
-  template<typename T>
   static Maybe<void> From(uint64_t of_blob_ptr, int64_t storage_offset,
                           const NumPyArrayPtr& array) {
     T* buf_ptr = (T*)array.data();
@@ -51,7 +50,6 @@ struct BlobNumpyCopyUtil {
     return Maybe<void>::Ok();
   }
 
-  template<typename T>
   static Maybe<void> To(uint64_t of_blob_ptr, int64_t storage_offset, const NumPyArrayPtr& array) {
     T* buf_ptr = (T*)array.data();
     size_t size = array.size();
