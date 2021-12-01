@@ -66,9 +66,15 @@ struct OptionalStorage {
     if (has_) { Value().~T(); }
   }
 
-  template<typename... Args>
+  template<typename... Args, typename U = Type, std::enable_if_t<IsAggregate<U>, int> = 0>
   void Construct(Args&&... args) {
     new (value_) Type{std::forward<Args>(args)...};
+    has_ = true;
+  }
+
+  template<typename... Args, typename U = Type, std::enable_if_t<!IsAggregate<U>, int> = 0>
+  void Construct(Args&&... args) {
+    new (value_) Type(std::forward<Args>(args)...);
     has_ = true;
   }
 
