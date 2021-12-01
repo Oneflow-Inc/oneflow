@@ -73,9 +73,8 @@ class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
                                              UNARY_FLOATING_MATH_OP_SEQ,
                                              CPU_PRIMITIVE_FLOATING_TYPE_SEQ)
             // For Logical OP
-            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY, 
-                                             UNARY_LOGICAL_OP_SEQ,
-                                             CPU_PRIMITIVE_NATIVE_TYPE_SEQ, 
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY,
+                                             UNARY_LOGICAL_OP_SEQ, CPU_PRIMITIVE_NATIVE_TYPE_SEQ,
                                              CPU_PRIMITIVE_INT8_TYPE_SEQ)};
 
 #undef MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY
