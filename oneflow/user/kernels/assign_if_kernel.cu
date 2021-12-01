@@ -54,22 +54,22 @@ class AssignIfGPUKernel final : public user_op::OpKernel {
 
 }  // namespace
 
-#define REGISTER_ASSIGN_WITH_CONDITION_VALUE_GPU_KERNEL(op_type_name, assign_if, condition_type, \
-                                                        value_type)                              \
-  REGISTER_USER_KERNEL(op_type_name)                                                             \
-      .SetCreateFn<AssignIfGPUKernel<assign_if, condition_type, value_type>>()                   \
-      .SetIsMatchedHob(                                                                          \
-          (user_op::HobDeviceType() == DeviceType::kGPU)                                         \
-          && (user_op::HobDataType("condition", 0) == GetDataType<condition_type>::value)        \
+#define REGISTER_ASSIGN_WITH_CONDITION_VALUE_CUDA_KERNEL(op_type_name, assign_if, condition_type, \
+                                                         value_type)                              \
+  REGISTER_USER_KERNEL(op_type_name)                                                              \
+      .SetCreateFn<AssignIfGPUKernel<assign_if, condition_type, value_type>>()                    \
+      .SetIsMatchedHob(                                                                           \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                         \
+          && (user_op::HobDataType("condition", 0) == GetDataType<condition_type>::value)         \
           && (user_op::HobDataType("value", 0) == GetDataType<value_type>::value));
 
-#define REGISTER_ASSIGN_IF_GPU_KERNEL(condition_type, value_type)                         \
-  REGISTER_ASSIGN_WITH_CONDITION_VALUE_GPU_KERNEL(                                        \
+#define REGISTER_ASSIGN_IF_CUDA_KERNEL(condition_type, value_type)                        \
+  REGISTER_ASSIGN_WITH_CONDITION_VALUE_CUDA_KERNEL(                                       \
       "assign_if", true, OF_PP_PAIR_FIRST(condition_type), OF_PP_PAIR_FIRST(value_type)); \
-  REGISTER_ASSIGN_WITH_CONDITION_VALUE_GPU_KERNEL(                                        \
+  REGISTER_ASSIGN_WITH_CONDITION_VALUE_CUDA_KERNEL(                                       \
       "assign_if_not", false, OF_PP_PAIR_FIRST(condition_type), OF_PP_PAIR_FIRST(value_type))
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ASSIGN_IF_GPU_KERNEL, INT_DATA_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ASSIGN_IF_CUDA_KERNEL, INT_DATA_TYPE_SEQ,
                                  POD_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

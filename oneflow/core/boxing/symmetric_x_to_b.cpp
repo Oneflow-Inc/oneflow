@@ -59,7 +59,7 @@ Maybe<void> RawCheckSymmetricXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> ou
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(IsAllBroadcastNdSbp(out->nd_sbp()));
   CHECK_OR_RETURN(in->placement() == out->placement());
-  CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kGPU);
+  CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kCUDA);
   return Maybe<void>::Ok();
 }
 

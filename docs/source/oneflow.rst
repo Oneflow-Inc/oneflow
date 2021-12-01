@@ -12,6 +12,7 @@ oneflow
             add, 
             acosh, 
             addmm, 
+            arccos, 
             arcsin, 
             arcsinh, 
             arccosh, 
@@ -143,5 +144,6 @@ oneflow
             inference_mode,
             is_grad_enabled,
             is_floating_point,
+            set_printoptions,
 .. autofunction:: oneflow.relu
 .. autofunction:: oneflow.env.get_rank

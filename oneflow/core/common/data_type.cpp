@@ -45,6 +45,15 @@ bool IsPODDataType(DataType data_type) {
   }
 #undef POD_CASE
 }
+bool IsPODAndHalfDataType(DataType data_type) {
+  switch (data_type) {
+#define POD_AND_HALF_CASE(type_cpp, type_proto) \
+  case type_proto: return true;
+    OF_PP_FOR_EACH_TUPLE(POD_AND_HALF_CASE, POD_AND_HALF_DATA_TYPE_SEQ)
+    default: return false;
+  }
+#undef POD_AND_HALF_CASE
+}
 bool IsIndexDataType(DataType data_type) {
   switch (data_type) {
 #define INDEX_CASE(type_cpp, type_proto) \

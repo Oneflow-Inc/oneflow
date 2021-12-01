@@ -80,6 +80,7 @@ def _test_inplace_add(test_case, shape, device):
     of_x_inplace = of_x_inplace.sum()
     of_x_inplace.backward()
     test_case.assertTrue(np.allclose(of_x.grad.numpy(), np.ones(shape), 1e-05, 1e-05))
+
     of_x = flow.tensor(
         np_x, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
@@ -98,6 +99,7 @@ def _test_inplace_add(test_case, shape, device):
     of_x_inplace = of_x_inplace.sum()
     of_x_inplace.backward()
     test_case.assertTrue(np.allclose(of_x.grad.numpy(), np.ones(shape), 1e-05, 1e-05))
+
     of_x = flow.tensor(
         np_x, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
@@ -116,6 +118,7 @@ def _test_inplace_add(test_case, shape, device):
     of_x_inplace = of_x_inplace.sum()
     of_x_inplace.backward()
     test_case.assertTrue(np.allclose(of_x.grad.numpy(), np.ones(shape), 1e-05, 1e-05))
+
     of_x = flow.tensor(
         np_x, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
@@ -134,6 +137,7 @@ def _test_inplace_add(test_case, shape, device):
     of_x_inplace = of_x_inplace.sum()
     of_x_inplace.backward()
     test_case.assertTrue(np.allclose(of_x.grad.numpy(), np.ones(shape), 1e-05, 1e-05))
+
     of_x = flow.tensor(
         np_x, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
@@ -189,6 +193,20 @@ class TestAddModule(flow.unittest.TestCase):
         y = random_pytorch_tensor(2, 2, 3).to(device)
         x += y.mean()
         return x
+
+    @autotest()
+    def test_add_with_alpha(test_case):
+        device = random_device()
+        x1 = random_pytorch_tensor(2, 2, 3).to(device).mean()
+        x2 = random_pytorch_tensor(2, 2, 3).to(device).mean()
+        x3 = random_pytorch_tensor(2, 2, 3).to(device).mean()
+        y = random_pytorch_tensor(2, 2, 3).to(device)
+        s = random().to(float)
+        alpha = random().to(float)
+        z1 = torch.add(x1, y, alpha=alpha)
+        z2 = torch.add(x2, s, alpha=alpha)
+        z3 = torch.add(s, x3, alpha=alpha)
+        return z1, z2, z3
 
 
 if __name__ == "__main__":

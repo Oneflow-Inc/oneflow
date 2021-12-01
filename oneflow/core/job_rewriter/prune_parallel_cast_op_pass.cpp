@@ -90,7 +90,7 @@ Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
         }
       }
     }
-    del_op_names.push_back(op_conf.name());
+    del_op_names.emplace_back(op_conf.name());
   });
   for (const auto& pair : op_name2op_conf) { job_builder->MutOpsOnlyOnce({pair.second}); }
   for (const auto& pair : op_name2nd_sbp_signature) {

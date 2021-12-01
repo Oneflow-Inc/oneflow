@@ -76,7 +76,7 @@ void RpcServer::Init() {
               .first;
     }
     CHECK_EQ(barrier_num, barrier_call_it->second.second) << barrier_name;
-    barrier_call_it->second.first.push_back(call);
+    barrier_call_it->second.first.emplace_back(call);
     if (barrier_call_it->second.first.size() == barrier_call_it->second.second) {
       for (CtrlCallIf* pending_call : barrier_call_it->second.first) {
         pending_call->SendResponse();
@@ -121,7 +121,7 @@ void RpcServer::Init() {
     void* lock_status = name2lock_status_.at(lock_name);
     if (lock_status) {
       auto waiting_calls = static_cast<std::list<CtrlCallIf*>*>(lock_status);
-      waiting_calls->push_back(call);
+      waiting_calls->emplace_back(call);
     } else {
       call->SendResponse();
     }
@@ -160,7 +160,7 @@ void RpcServer::Init() {
       call->mut_response()->set_val(kv_it->second);
       call->SendResponse();
     } else {
-      pending_kv_calls_[k].push_back(call);
+      pending_kv_calls_[k].emplace_back(call);
     }
     EnqueueRequest<CtrlMethod::kPullKV>();
   });

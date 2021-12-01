@@ -51,8 +51,8 @@ class CategoricalOrdinalEncodeKernel final : public user_op::OpKernel {
 REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(DeviceType::kCPU, DataType::kInt32, int32_t);
 REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(DeviceType::kCPU, DataType::kInt64, int64_t);
 #ifdef WITH_CUDA
-REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(DeviceType::kGPU, DataType::kInt32, int32_t);
-REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(DeviceType::kGPU, DataType::kInt64, int64_t);
+REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(DeviceType::kCUDA, DataType::kInt32, int32_t);
+REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(DeviceType::kCUDA, DataType::kInt64, int64_t);
 #endif
 
 }  // namespace oneflow

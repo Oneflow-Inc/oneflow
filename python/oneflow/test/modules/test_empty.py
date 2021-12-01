@@ -60,7 +60,7 @@ class TestEmptyOp(flow.unittest.TestCase):
     def test_local_empty(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
-        arg_dict["dtype"] = [flow.float32, flow.int32]
+        arg_dict["dtype"] = [flow.float32, flow.float16, flow.int32]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["requires_grad"] = [True, False]
         for arg in GenArgDict(arg_dict):
@@ -69,7 +69,7 @@ class TestEmptyOp(flow.unittest.TestCase):
     def test_consistent_empty(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
-        arg_dict["dtype"] = [flow.float32, flow.int32]
+        arg_dict["dtype"] = [flow.float32, flow.float16, flow.int32]
         arg_dict["placement"] = ["cpu", "cuda"]
         arg_dict["sbp"] = [flow.sbp.broadcast]
         arg_dict["requires_grad"] = [True, False]

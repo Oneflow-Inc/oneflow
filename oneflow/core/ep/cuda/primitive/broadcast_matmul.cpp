@@ -193,7 +193,7 @@ class BroadcastMatmulFactoryImpl : public BroadcastMatmulFactory {
   }
 };
 
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, BroadcastMatmulFactory, BroadcastMatmulFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, BroadcastMatmulFactory, BroadcastMatmulFactoryImpl);
 
 }  // namespace
 
