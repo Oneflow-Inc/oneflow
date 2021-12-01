@@ -850,6 +850,16 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(of_shape, np_shape))
 
     @autotest()
+    def test_flatten_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.flatten(
+            start_dim=random(1, 6).to(int) | nothing(),
+            end_dim=random(1, 6).to(int) | nothing(),
+        )
+        return y
+
+    @autotest()
     def test_reshape_tensor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4).to(device)

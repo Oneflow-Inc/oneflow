@@ -60,14 +60,14 @@ def _test_flatten_backward(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestFlattenModule(flow.unittest.TestCase):
-    # def test_cast(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["test_fun"] = [_test_flatten, _test_flatten_backward]
-    #     arg_dict["device"] = ["cpu", "cuda"]
-    #     for arg in GenArgList(arg_dict):
-    #         arg[0](test_case, *arg[1:])
+    def test_cast(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [_test_flatten, _test_flatten_backward]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
-    @autotest(auto_backward=True)
+    @autotest()
     def test_flatten_module_with_random_data(test_case):
         m = torch.nn.Flatten(
             start_dim=random(1, 6) | nothing(), end_dim=random(1, 6) | nothing()
@@ -79,26 +79,16 @@ class TestFlattenModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    # @autotest(auto_backward=False)
-    # def test_flatten_with_random_data(test_case):
-    #     device = random_device()
-    #     x = random_pytorch_tensor().to(device)
-    #     y = torch.flatten(
-    #         x,
-    #         start_dim=random(1, 6).to(int) | nothing(),
-    #         end_dim=random(1, 6).to(int) | nothing(),
-    #     )
-    #     return y
-    
-    # @autotest(auto_backward=False)
-    # def test_flatten_tensor_with_random_data(test_case):
-    #     device = random_device()
-    #     x = random_pytorch_tensor().to(device)
-    #     y = x.flatten(
-    #         start_dim=random(1, 6).to(int) | nothing(),
-    #         end_dim=random(1, 6).to(int) | nothing(),
-    #     )
-    #     return y
+    @autotest()
+    def test_flatten_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.flatten(
+            x,
+            start_dim=random(1, 6).to(int) | nothing(),
+            end_dim=random(1, 6).to(int) | nothing(),
+        )
+        return y
 
 
 if __name__ == "__main__":
