@@ -46,11 +46,19 @@ class OpInterpCtx {
     return 0;
   }
 
+  virtual const std::vector<const char*>& AttrNamesList() const { return EmptyAttrNamesList(); }
+
  public:
   Optional<Symbol<Device>> device;               // for local op
   Optional<Symbol<ParallelDesc>> parallel_desc;  // for consistent op
   Optional<Symbol<cfg::NdSbp>> nd_sbp;           // for consistent op
   Optional<user_op::OpKernelState> state;
+
+ protected:
+  const std::vector<const char*>& EmptyAttrNamesList() const {
+    static std::vector<const char*> attr_names;
+    return attr_names;
+  }
 };
 
 class FakeOpInterpCtx : public OpInterpCtx {
@@ -78,6 +86,11 @@ class CastToConsistentOpInterpCtx : public OpInterpCtx {
     }
   }
 
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"shape", "dtype"};
+    return attr_names;
+  }
+
  public:
   Shape shape;
   DataType dtype;
@@ -91,6 +104,11 @@ class SelectTopNOpInterpCtx : public OpInterpCtx {
     } else {
       return Error::RuntimeError() << "SelectTopN op has no attribute named " << attr_name;
     }
+  }
+
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"top_n"};
+    return attr_names;
   }
 
  public:
@@ -114,15 +132,20 @@ class FetchOutputOpInterpCtx : public OpInterpCtx {
 class FeedVariableOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "l2")) {
-      return (const void*)&l2;
+    if (!strcmp(attr_name, "_l2")) {
+      return (const void*)&_l2;
     } else {
       return Error::RuntimeError() << "FeedVariable op has no attribute named " << attr_name;
     }
   }
 
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"_l2"};
+    return attr_names;
+  }
+
  public:
-  double l2;
+  double _l2;
 };
 
 }  // namespace oneflow

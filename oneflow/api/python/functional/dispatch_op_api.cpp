@@ -46,7 +46,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const Scalar& l2) -> Maybe<Tensor> {
                   auto ctx = std::make_shared<FeedVariableOpInterpCtx>();
-                  ctx->l2 = JUST(l2.As<double>());
+                  ctx->_l2 = JUST(l2.As<double>());
                   return OpInterpUtil::Dispatch<Tensor>(*op, {input}, ctx);
                 });
   m.add_functor(

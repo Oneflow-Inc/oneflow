@@ -23,12 +23,17 @@ class COCOReaderOpInterpCtx : public OpInterpCtx {
       return (const void*)&remove_images_without_annotations;
     } else if (!strcmp(attr_name, "stride_partition")) {
       return (const void*)&stride_partition;
-    } else /*if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else {
       return Error::RuntimeError() << "COCOReader op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"session_id", "annotation_file", "image_dir", "batch_size", "shuffle_after_epoch", "random_seed", "group_by_ratio", "remove_images_without_annotations", "stride_partition", "nd_sbp"};
+    return attr_names;
+  }
+
  public:
   int64_t session_id;
   std::string annotation_file;
@@ -50,6 +55,11 @@ class CategoricalOrdinalEncodeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CategoricalOrdinalEncode op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"hash_precomputed"};
+    return attr_names;
+  }
+
  public:
   bool hash_precomputed;
 };
@@ -74,12 +84,17 @@ class OFRecordReaderOpInterpCtx : public OpInterpCtx {
       return (const void*)&shuffle_buffer_size;
     } else if (!strcmp(attr_name, "shuffle_after_epoch")) {
       return (const void*)&shuffle_after_epoch;
-    } else /*if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else {
       return Error::RuntimeError() << "OFRecordReader op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"data_dir", "data_part_num", "batch_size", "part_name_prefix", "part_name_suffix_length", "random_shuffle", "seed", "shuffle_buffer_size", "shuffle_after_epoch", "nd_sbp"};
+    return attr_names;
+  }
+
  public:
   std::string data_dir;
   int32_t data_part_num;
@@ -115,6 +130,11 @@ class OneRecReaderOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "OneRecReader op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"files", "batch_size", "random_shuffle", "shuffle_mode", "seed", "shuffle_buffer_size", "shuffle_after_epoch", "verify_example"};
+    return attr_names;
+  }
+
  public:
   std::vector<std::string> files;
   int32_t batch_size;
@@ -134,6 +154,11 @@ class TestDataTypeAttrOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TestDataTypeAttr op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"output_type"};
+    return attr_names;
+  }
+
  public:
   DataType output_type;
 };
@@ -142,6 +167,7 @@ class TestDynamicSourceOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "TestDynamicSource op has no attribute named " << attr_name;
   }
+
 };
 class TestListDataTypeAndListShapeAndListStringAttrOpInterpCtx : public OpInterpCtx {
  public:
@@ -156,6 +182,11 @@ class TestListDataTypeAndListShapeAndListStringAttrOpInterpCtx : public OpInterp
       return Error::RuntimeError() << "TestListDataTypeAndListShapeAndListStringAttr op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"out_shapes", "out_types", "string_list"};
+    return attr_names;
+  }
+
  public:
   std::vector<Shape> out_shapes;
   std::vector<DataType> out_types;
@@ -166,18 +197,21 @@ class TestMultiInputOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "TestMultiInput op has no attribute named " << attr_name;
   }
+
 };
 class TestMultiInputGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "TestMultiInputGrad op has no attribute named " << attr_name;
   }
+
 };
 class TestMultiOutputOrderOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "TestMultiOutputOrder op has no attribute named " << attr_name;
   }
+
 };
 class TestRandomSourceOpInterpCtx : public OpInterpCtx {
  public:
@@ -188,6 +222,11 @@ class TestRandomSourceOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TestRandomSource op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"seed"};
+    return attr_names;
+  }
+
  public:
   int64_t seed;
 };
@@ -200,6 +239,11 @@ class TestReshapeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TestReshape op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"shape"};
+    return attr_names;
+  }
+
  public:
   Shape shape;
 };
@@ -208,6 +252,7 @@ class TestSourceOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "TestSource op has no attribute named " << attr_name;
   }
+
 };
 class TestSourceMultiGpuFixedOutNumOpInterpCtx : public OpInterpCtx {
  public:
@@ -218,6 +263,11 @@ class TestSourceMultiGpuFixedOutNumOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TestSourceMultiGpuFixedOutNum op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"out_num"};
+    return attr_names;
+  }
+
  public:
   int64_t out_num;
 };
@@ -232,6 +282,11 @@ class _ncclLogical_2DSameDim0All2allOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "_ncclLogical_2DSameDim0All2all op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"in_dim1_split_axis", "out_dim1_split_axis"};
+    return attr_names;
+  }
+
  public:
   int64_t in_dim1_split_axis;
   int64_t out_dim1_split_axis;
@@ -241,6 +296,7 @@ class _ncclLogical_2DSameDim0AllGatherOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "_ncclLogical_2DSameDim0AllGather op has no attribute named " << attr_name;
   }
+
 };
 class _ncclLogical_2DSameDim0AllGatherNoncontinuousOpInterpCtx : public OpInterpCtx {
  public:
@@ -251,6 +307,11 @@ class _ncclLogical_2DSameDim0AllGatherNoncontinuousOpInterpCtx : public OpInterp
       return Error::RuntimeError() << "_ncclLogical_2DSameDim0AllGatherNoncontinuous op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"in_dim1_split_axis"};
+    return attr_names;
+  }
+
  public:
   int64_t in_dim1_split_axis;
 };
@@ -259,18 +320,21 @@ class _ncclLogical_2DSameDim0AllReduceOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "_ncclLogical_2DSameDim0AllReduce op has no attribute named " << attr_name;
   }
+
 };
 class _ncclLogical_2DSameDim1AllReduceOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "_ncclLogical_2DSameDim1AllReduce op has no attribute named " << attr_name;
   }
+
 };
 class _ncclLogicalAllGatherOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "_ncclLogicalAllGather op has no attribute named " << attr_name;
   }
+
 };
 class _ncclLogicalAllGatherNoncontinuousOpInterpCtx : public OpInterpCtx {
  public:
@@ -281,6 +345,11 @@ class _ncclLogicalAllGatherNoncontinuousOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "_ncclLogicalAllGatherNoncontinuous op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"in_split_axis"};
+    return attr_names;
+  }
+
  public:
   int64_t in_split_axis;
 };
@@ -289,12 +358,14 @@ class _ncclLogicalAllReduceOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "_ncclLogicalAllReduce op has no attribute named " << attr_name;
   }
+
 };
 class _ncclLogicalReduceScatterOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "_ncclLogicalReduceScatter op has no attribute named " << attr_name;
   }
+
 };
 class _ncclLogicalS2sOpInterpCtx : public OpInterpCtx {
  public:
@@ -307,6 +378,11 @@ class _ncclLogicalS2sOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "_ncclLogicalS2s op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"in_split_axis", "out_split_axis"};
+    return attr_names;
+  }
+
  public:
   int64_t in_split_axis;
   int64_t out_split_axis;
@@ -316,12 +392,14 @@ class AbsOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Abs op has no attribute named " << attr_name;
   }
+
 };
 class AbsGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "AbsGrad op has no attribute named " << attr_name;
   }
+
 };
 class AccOpInterpCtx : public OpInterpCtx {
  public:
@@ -332,6 +410,11 @@ class AccOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Acc op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"max_acc_num"};
+    return attr_names;
+  }
+
  public:
   int32_t max_acc_num;
 };
@@ -340,24 +423,28 @@ class AcosOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Acos op has no attribute named " << attr_name;
   }
+
 };
 class AcosGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "AcosGrad op has no attribute named " << attr_name;
   }
+
 };
 class AcoshOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Acosh op has no attribute named " << attr_name;
   }
+
 };
 class AcoshGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "AcoshGrad op has no attribute named " << attr_name;
   }
+
 };
 class AdagradUpdateOpInterpCtx : public OpInterpCtx {
  public:
@@ -382,6 +469,11 @@ class AdagradUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdagradUpdate op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"train_step_val", "learning_rate_val", "scale", "l1", "l2", "lr_decay", "weight_decay", "epsilon"};
+    return attr_names;
+  }
+
  public:
   int32_t train_step_val;
   float learning_rate_val;
@@ -401,6 +493,11 @@ class AdamBiasCorrectionFactorOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdamBiasCorrectionFactor op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"beta"};
+    return attr_names;
+  }
+
  public:
   float beta;
 };
@@ -435,6 +532,11 @@ class AdamUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdamUpdate op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"learning_rate_val", "bias_correction1_val", "bias_correction2_val", "scale", "l1", "l2", "beta1", "beta2", "epsilon", "weight_decay", "amsgrad", "do_bias_correction"};
+    return attr_names;
+  }
+
  public:
   float learning_rate_val;
   float bias_correction1_val;
@@ -458,6 +560,11 @@ class AdaptiveAvgPool1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdaptiveAvgPool1D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"output_size"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> output_size;
 };
@@ -470,6 +577,11 @@ class AdaptiveAvgPool1DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdaptiveAvgPool1DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"output_size"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> output_size;
 };
@@ -482,6 +594,11 @@ class AdaptiveAvgPool2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdaptiveAvgPool2D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"output_size"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> output_size;
 };
@@ -494,6 +611,11 @@ class AdaptiveAvgPool2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdaptiveAvgPool2DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"output_size"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> output_size;
 };
@@ -506,6 +628,11 @@ class AdaptiveAvgPool3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdaptiveAvgPool3D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"output_size"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> output_size;
 };
@@ -518,6 +645,11 @@ class AdaptiveAvgPool3DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdaptiveAvgPool3DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"output_size"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> output_size;
 };
@@ -526,6 +658,7 @@ class AddNOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "AddN op has no attribute named " << attr_name;
   }
+
 };
 class AffineGridOpInterpCtx : public OpInterpCtx {
  public:
@@ -538,6 +671,11 @@ class AffineGridOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AffineGrid op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"size", "align_corners"};
+    return attr_names;
+  }
+
  public:
   Shape size;
   bool align_corners;
@@ -553,6 +691,11 @@ class AffineGridGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AffineGridGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"size", "align_corners"};
+    return attr_names;
+  }
+
  public:
   Shape size;
   bool align_corners;
@@ -562,6 +705,7 @@ class AmpWhiteIdentityOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "AmpWhiteIdentity op has no attribute named " << attr_name;
   }
+
 };
 class ArangeOpInterpCtx : public OpInterpCtx {
  public:
@@ -580,12 +724,17 @@ class ArangeOpInterpCtx : public OpInterpCtx {
       return (const void*)&float_limit;
     } else if (!strcmp(attr_name, "dtype")) {
       return (const void*)&dtype;
-    } else /*if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else {
       return Error::RuntimeError() << "Arange op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"integer_start", "integer_delta", "integer_limit", "float_start", "float_delta", "float_limit", "dtype", "nd_sbp"};
+    return attr_names;
+  }
+
  public:
   int64_t integer_start;
   int64_t integer_delta;
@@ -605,6 +754,11 @@ class ArgSortOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ArgSort op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"direction"};
+    return attr_names;
+  }
+
  public:
   std::string direction;
 };
@@ -613,6 +767,7 @@ class ArgmaxOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Argmax op has no attribute named " << attr_name;
   }
+
 };
 class ArgwhereOpInterpCtx : public OpInterpCtx {
  public:
@@ -623,6 +778,11 @@ class ArgwhereOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Argwhere op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"dtype"};
+    return attr_names;
+  }
+
  public:
   DataType dtype;
 };
@@ -631,84 +791,98 @@ class AsinOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Asin op has no attribute named " << attr_name;
   }
+
 };
 class AsinGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "AsinGrad op has no attribute named " << attr_name;
   }
+
 };
 class AsinhOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Asinh op has no attribute named " << attr_name;
   }
+
 };
 class AsinhGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "AsinhGrad op has no attribute named " << attr_name;
   }
+
 };
 class AssignOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Assign op has no attribute named " << attr_name;
   }
+
 };
 class AssignIfOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "AssignIf op has no attribute named " << attr_name;
   }
+
 };
 class AssignIfNotOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "AssignIfNot op has no attribute named " << attr_name;
   }
+
 };
 class AtanOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Atan op has no attribute named " << attr_name;
   }
+
 };
 class Atan2OpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Atan2 op has no attribute named " << attr_name;
   }
+
 };
 class Atan2XGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Atan2XGrad op has no attribute named " << attr_name;
   }
+
 };
 class Atan2YGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Atan2YGrad op has no attribute named " << attr_name;
   }
+
 };
 class AtanGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "AtanGrad op has no attribute named " << attr_name;
   }
+
 };
 class AtanhOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Atanh op has no attribute named " << attr_name;
   }
+
 };
 class AtanhGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "AtanhGrad op has no attribute named " << attr_name;
   }
+
 };
 class AvgPool1DOpInterpCtx : public OpInterpCtx {
  public:
@@ -731,6 +905,11 @@ class AvgPool1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AvgPool1D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -761,6 +940,11 @@ class AvgPool1DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AvgPool1DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -791,6 +975,11 @@ class AvgPool2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AvgPool2D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -821,6 +1010,11 @@ class AvgPool2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AvgPool2DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -851,6 +1045,11 @@ class AvgPool3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AvgPool3D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -881,6 +1080,11 @@ class AvgPool3DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AvgPool3DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -895,6 +1099,7 @@ class BatchGatherOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "BatchGather op has no attribute named " << attr_name;
   }
+
 };
 class BatchMatmulOpInterpCtx : public OpInterpCtx {
  public:
@@ -909,6 +1114,11 @@ class BatchMatmulOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BatchMatmul op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"transpose_a", "transpose_b", "alpha"};
+    return attr_names;
+  }
+
  public:
   bool transpose_a;
   bool transpose_b;
@@ -927,6 +1137,11 @@ class BernoulliOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Bernoulli op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"seed", "has_seed", "dtype"};
+    return attr_names;
+  }
+
  public:
   int64_t seed;
   bool has_seed;
@@ -941,6 +1156,11 @@ class BiasAddOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BiasAdd op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis"};
+    return attr_names;
+  }
+
  public:
   int32_t axis;
 };
@@ -953,6 +1173,11 @@ class BinaryCrossEntropyOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BinaryCrossEntropy op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"reduction"};
+    return attr_names;
+  }
+
  public:
   std::string reduction;
 };
@@ -965,6 +1190,11 @@ class BinaryCrossEntropyGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BinaryCrossEntropyGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"reduction"};
+    return attr_names;
+  }
+
  public:
   std::string reduction;
 };
@@ -979,6 +1209,11 @@ class BinaryCrossEntropyWithLogitsOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BinaryCrossEntropyWithLogits op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"has_pos_weight", "reduction"};
+    return attr_names;
+  }
+
  public:
   bool has_pos_weight;
   std::string reduction;
@@ -994,6 +1229,11 @@ class BinaryCrossEntropyWithLogitsGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BinaryCrossEntropyWithLogitsGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"has_pos_weight", "reduction"};
+    return attr_names;
+  }
+
  public:
   bool has_pos_weight;
   std::string reduction;
@@ -1003,60 +1243,70 @@ class BroadcastAddOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "BroadcastAdd op has no attribute named " << attr_name;
   }
+
 };
 class BroadcastDivOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "BroadcastDiv op has no attribute named " << attr_name;
   }
+
 };
 class BroadcastDivGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "BroadcastDivGrad op has no attribute named " << attr_name;
   }
+
 };
 class BroadcastEqualOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "BroadcastEqual op has no attribute named " << attr_name;
   }
+
 };
 class BroadcastFloorModOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "BroadcastFloorMod op has no attribute named " << attr_name;
   }
+
 };
 class BroadcastFmodOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "BroadcastFmod op has no attribute named " << attr_name;
   }
+
 };
 class BroadcastGreaterOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "BroadcastGreater op has no attribute named " << attr_name;
   }
+
 };
 class BroadcastGreaterEqualOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "BroadcastGreaterEqual op has no attribute named " << attr_name;
   }
+
 };
 class BroadcastLessOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "BroadcastLess op has no attribute named " << attr_name;
   }
+
 };
 class BroadcastLessEqualOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "BroadcastLessEqual op has no attribute named " << attr_name;
   }
+
 };
 class BroadcastLikeOpInterpCtx : public OpInterpCtx {
  public:
@@ -1067,6 +1317,11 @@ class BroadcastLikeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BroadcastLike op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"broadcast_axes"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> broadcast_axes;
 };
@@ -1075,18 +1330,21 @@ class BroadcastLogicalAndOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "BroadcastLogicalAnd op has no attribute named " << attr_name;
   }
+
 };
 class BroadcastLogicalOrOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "BroadcastLogicalOr op has no attribute named " << attr_name;
   }
+
 };
 class BroadcastLogicalXorOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "BroadcastLogicalXor op has no attribute named " << attr_name;
   }
+
 };
 class BroadcastMatmulOpInterpCtx : public OpInterpCtx {
  public:
@@ -1101,6 +1359,11 @@ class BroadcastMatmulOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BroadcastMatmul op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"transpose_a", "transpose_b", "alpha"};
+    return attr_names;
+  }
+
  public:
   bool transpose_a;
   bool transpose_b;
@@ -1115,6 +1378,11 @@ class BroadcastMatmulGradBOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BroadcastMatmulGradB op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"alpha"};
+    return attr_names;
+  }
+
  public:
   double alpha;
 };
@@ -1123,48 +1391,56 @@ class BroadcastMaximumOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "BroadcastMaximum op has no attribute named " << attr_name;
   }
+
 };
 class BroadcastMinimumOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "BroadcastMinimum op has no attribute named " << attr_name;
   }
+
 };
 class BroadcastMulOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "BroadcastMul op has no attribute named " << attr_name;
   }
+
 };
 class BroadcastNotEqualOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "BroadcastNotEqual op has no attribute named " << attr_name;
   }
+
 };
 class BroadcastPowOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "BroadcastPow op has no attribute named " << attr_name;
   }
+
 };
 class BroadcastPowXGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "BroadcastPowXGrad op has no attribute named " << attr_name;
   }
+
 };
 class BroadcastPowYGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "BroadcastPowYGrad op has no attribute named " << attr_name;
   }
+
 };
 class BroadcastSubOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "BroadcastSub op has no attribute named " << attr_name;
   }
+
 };
 class CastOpInterpCtx : public OpInterpCtx {
  public:
@@ -1175,6 +1451,11 @@ class CastOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Cast op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"dtype"};
+    return attr_names;
+  }
+
  public:
   DataType dtype;
 };
@@ -1183,42 +1464,49 @@ class CastLikeOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "CastLike op has no attribute named " << attr_name;
   }
+
 };
 class CastToStaticShapeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "CastToStaticShape op has no attribute named " << attr_name;
   }
+
 };
 class CastToTickOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "CastToTick op has no attribute named " << attr_name;
   }
+
 };
 class CcreluOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Ccrelu op has no attribute named " << attr_name;
   }
+
 };
 class CcreluGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "CcreluGrad op has no attribute named " << attr_name;
   }
+
 };
 class CeilOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Ceil op has no attribute named " << attr_name;
   }
+
 };
 class CeilGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "CeilGrad op has no attribute named " << attr_name;
   }
+
 };
 class CeluOpInterpCtx : public OpInterpCtx {
  public:
@@ -1229,6 +1517,11 @@ class CeluOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Celu op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"alpha"};
+    return attr_names;
+  }
+
  public:
   double alpha;
 };
@@ -1241,6 +1534,11 @@ class CeluGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CeluGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"alpha"};
+    return attr_names;
+  }
+
  public:
   double alpha;
 };
@@ -1259,6 +1557,11 @@ class ClipByScalarOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ClipByScalar op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"floating_min", "integral_min", "floating_max", "integral_max"};
+    return attr_names;
+  }
+
  public:
   double floating_min;
   int64_t integral_min;
@@ -1280,6 +1583,11 @@ class ClipByScalarGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ClipByScalarGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"floating_min", "integral_min", "floating_max", "integral_max"};
+    return attr_names;
+  }
+
  public:
   double floating_min;
   int64_t integral_min;
@@ -1297,6 +1605,11 @@ class ClipByScalarMaxOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ClipByScalarMax op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"floating_max", "integral_max"};
+    return attr_names;
+  }
+
  public:
   double floating_max;
   int64_t integral_max;
@@ -1312,6 +1625,11 @@ class ClipByScalarMaxGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ClipByScalarMaxGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"floating_max", "integral_max"};
+    return attr_names;
+  }
+
  public:
   double floating_max;
   int64_t integral_max;
@@ -1327,6 +1645,11 @@ class ClipByScalarMinOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ClipByScalarMin op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"floating_min", "integral_min"};
+    return attr_names;
+  }
+
  public:
   double floating_min;
   int64_t integral_min;
@@ -1342,6 +1665,11 @@ class ClipByScalarMinGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ClipByScalarMinGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"floating_min", "integral_min"};
+    return attr_names;
+  }
+
  public:
   double floating_min;
   int64_t integral_min;
@@ -1357,12 +1685,17 @@ class CoinFlipOpInterpCtx : public OpInterpCtx {
       return (const void*)&seed;
     } else if (!strcmp(attr_name, "has_seed")) {
       return (const void*)&has_seed;
-    } else /*if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else {
       return Error::RuntimeError() << "CoinFlip op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"probability", "batch_size", "seed", "has_seed", "nd_sbp"};
+    return attr_names;
+  }
+
  public:
   float probability;
   int64_t batch_size;
@@ -1385,6 +1718,11 @@ class CombinedMarginLossOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CombinedMarginLoss op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"m1", "m2", "m3", "depth"};
+    return attr_names;
+  }
+
  public:
   float m1;
   float m2;
@@ -1406,6 +1744,11 @@ class CombinedMarginLossGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CombinedMarginLossGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"m1", "m2", "m3", "depth"};
+    return attr_names;
+  }
+
  public:
   float m1;
   float m2;
@@ -1423,6 +1766,11 @@ class ConcatOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Concat op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis", "max_dim_size"};
+    return attr_names;
+  }
+
  public:
   int64_t axis;
   int64_t max_dim_size;
@@ -1440,12 +1788,17 @@ class ConstantOpInterpCtx : public OpInterpCtx {
       return (const void*)&dtype;
     } else if (!strcmp(attr_name, "shape")) {
       return (const void*)&shape;
-    } else /*if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else {
       return Error::RuntimeError() << "Constant op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"floating_value", "integer_value", "is_floating_value", "dtype", "shape", "nd_sbp"};
+    return attr_names;
+  }
+
  public:
   double floating_value;
   int64_t integer_value;
@@ -1467,6 +1820,11 @@ class ConstantPad1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConstantPad1D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "floating_value", "integral_value"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> padding;
   double floating_value;
@@ -1485,6 +1843,11 @@ class ConstantPad1DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConstantPad1DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "floating_value", "integral_value"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> padding;
   double floating_value;
@@ -1503,6 +1866,11 @@ class ConstantPad2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConstantPad2D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "floating_value", "integral_value"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> padding;
   double floating_value;
@@ -1521,6 +1889,11 @@ class ConstantPad2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConstantPad2DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "floating_value", "integral_value"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> padding;
   double floating_value;
@@ -1539,6 +1912,11 @@ class ConstantPad3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConstantPad3D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "floating_value", "integral_value"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> padding;
   double floating_value;
@@ -1557,6 +1935,11 @@ class ConstantPad3DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConstantPad3DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "floating_value", "integral_value"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> padding;
   double floating_value;
@@ -1583,6 +1966,11 @@ class Conv1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Conv1D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"filters", "padding_before", "data_format", "kernel_size", "strides", "dilation_rate", "groups"};
+    return attr_names;
+  }
+
  public:
   int32_t filters;
   std::vector<int32_t> padding_before;
@@ -1613,6 +2001,11 @@ class Conv2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Conv2D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"filters", "padding_before", "data_format", "kernel_size", "strides", "dilation_rate", "groups"};
+    return attr_names;
+  }
+
  public:
   int32_t filters;
   std::vector<int32_t> padding_before;
@@ -1643,6 +2036,11 @@ class Conv3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Conv3D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"filters", "padding_before", "data_format", "kernel_size", "strides", "dilation_rate", "groups"};
+    return attr_names;
+  }
+
  public:
   int32_t filters;
   std::vector<int32_t> padding_before;
@@ -1663,6 +2061,11 @@ class ConvBiasGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConvBiasGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"data_format", "num_spatial_dims"};
+    return attr_names;
+  }
+
  public:
   std::string data_format;
   int32_t num_spatial_dims;
@@ -1688,6 +2091,11 @@ class ConvDataGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConvDataGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"num_spatial_dims", "padding_before", "data_format", "kernel_size", "strides", "dilation_rate", "groups"};
+    return attr_names;
+  }
+
  public:
   int32_t num_spatial_dims;
   std::vector<int32_t> padding_before;
@@ -1718,6 +2126,11 @@ class ConvFilterGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConvFilterGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"num_spatial_dims", "padding_before", "data_format", "kernel_size", "strides", "dilation_rate", "groups"};
+    return attr_names;
+  }
+
  public:
   int32_t num_spatial_dims;
   std::vector<int32_t> padding_before;
@@ -1738,6 +2151,11 @@ class CopyOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Copy op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"device_type", "device_id"};
+    return attr_names;
+  }
+
  public:
   std::string device_type;
   int64_t device_id;
@@ -1747,36 +2165,42 @@ class CosOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Cos op has no attribute named " << attr_name;
   }
+
 };
 class CosGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "CosGrad op has no attribute named " << attr_name;
   }
+
 };
 class CoshOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Cosh op has no attribute named " << attr_name;
   }
+
 };
 class CoshGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "CoshGrad op has no attribute named " << attr_name;
   }
+
 };
 class CountNotFiniteOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "CountNotFinite op has no attribute named " << attr_name;
   }
+
 };
 class CpuOnlyReluTestOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "CpuOnlyReluTest op has no attribute named " << attr_name;
   }
+
 };
 class CreateSummaryWriterOpInterpCtx : public OpInterpCtx {
  public:
@@ -1787,6 +2211,11 @@ class CreateSummaryWriterOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CreateSummaryWriter op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"logdir"};
+    return attr_names;
+  }
+
  public:
   std::string logdir;
 };
@@ -1815,6 +2244,11 @@ class CropMirrorNormalizeFromTensorbufferOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CropMirrorNormalizeFromTensorbuffer op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"color_space", "output_layout", "mean", "std", "crop_h", "crop_w", "crop_pos_x", "crop_pos_y", "output_dtype"};
+    return attr_names;
+  }
+
  public:
   std::string color_space;
   std::string output_layout;
@@ -1851,6 +2285,11 @@ class CropMirrorNormalizeFromUint8OpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CropMirrorNormalizeFromUint8 op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"color_space", "output_layout", "mean", "std", "crop_h", "crop_w", "crop_pos_x", "crop_pos_y", "output_dtype"};
+    return attr_names;
+  }
+
  public:
   std::string color_space;
   std::string output_layout;
@@ -1871,6 +2310,11 @@ class CtcGreedyDecoderOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CtcGreedyDecoder op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"merge_repeated"};
+    return attr_names;
+  }
+
  public:
   bool merge_repeated;
 };
@@ -1887,6 +2331,11 @@ class CtcLossOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CtcLoss op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"max_target_length", "blank", "zero_infinity"};
+    return attr_names;
+  }
+
  public:
   int64_t max_target_length;
   int32_t blank;
@@ -1905,6 +2354,11 @@ class CtcLossGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CtcLossGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"max_target_length", "blank", "zero_infinity"};
+    return attr_names;
+  }
+
  public:
   int64_t max_target_length;
   int32_t blank;
@@ -1923,6 +2377,11 @@ class CudnnFusedNormalizationAddReluOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CudnnFusedNormalizationAddRelu op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis", "epsilon", "momentum"};
+    return attr_names;
+  }
+
  public:
   int32_t axis;
   float epsilon;
@@ -1939,6 +2398,11 @@ class CudnnFusedNormalizationAddReluGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CudnnFusedNormalizationAddReluGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis", "epsilon"};
+    return attr_names;
+  }
+
  public:
   int32_t axis;
   float epsilon;
@@ -1966,6 +2430,11 @@ class Deconv1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Deconv1D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"filters", "padding_before", "data_format", "kernel_size", "output_padding", "strides", "dilation_rate", "groups"};
+    return attr_names;
+  }
+
  public:
   int32_t filters;
   std::vector<int32_t> padding_before;
@@ -1999,6 +2468,11 @@ class Deconv2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Deconv2D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"filters", "padding_before", "data_format", "kernel_size", "output_padding", "strides", "dilation_rate", "groups"};
+    return attr_names;
+  }
+
  public:
   int32_t filters;
   std::vector<int32_t> padding_before;
@@ -2032,6 +2506,11 @@ class Deconv3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Deconv3D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"filters", "padding_before", "data_format", "kernel_size", "output_padding", "strides", "dilation_rate", "groups"};
+    return attr_names;
+  }
+
  public:
   int32_t filters;
   std::vector<int32_t> padding_before;
@@ -2051,6 +2530,11 @@ class DiagOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Diag op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"diagonal"};
+    return attr_names;
+  }
+
  public:
   int32_t diagonal;
 };
@@ -2063,6 +2547,11 @@ class DiagGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DiagGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"diagonal"};
+    return attr_names;
+  }
+
  public:
   int32_t diagonal;
 };
@@ -2075,6 +2564,11 @@ class DimGatherOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimGather op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"dim"};
+    return attr_names;
+  }
+
  public:
   int32_t dim;
 };
@@ -2087,6 +2581,11 @@ class DimScatterAddOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimScatterAdd op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"dim"};
+    return attr_names;
+  }
+
  public:
   int32_t dim;
 };
@@ -2099,6 +2598,11 @@ class DimScatterAddLikeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimScatterAddLike op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"dim"};
+    return attr_names;
+  }
+
  public:
   int32_t dim;
 };
@@ -2113,6 +2617,11 @@ class DimScatterAddScalarOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimScatterAddScalar op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"src_scalar", "dim"};
+    return attr_names;
+  }
+
  public:
   float src_scalar;
   int32_t dim;
@@ -2126,6 +2635,11 @@ class DimScatterMulOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimScatterMul op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"dim"};
+    return attr_names;
+  }
+
  public:
   int32_t dim;
 };
@@ -2140,6 +2654,11 @@ class DimScatterMulScalarOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimScatterMulScalar op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"src_scalar", "dim"};
+    return attr_names;
+  }
+
  public:
   float src_scalar;
   int32_t dim;
@@ -2153,6 +2672,11 @@ class DimScatterUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimScatterUpdate op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"dim"};
+    return attr_names;
+  }
+
  public:
   int32_t dim;
 };
@@ -2167,6 +2691,11 @@ class DimScatterUpdateScalarOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimScatterUpdateScalar op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"src_scalar", "dim"};
+    return attr_names;
+  }
+
  public:
   float src_scalar;
   int32_t dim;
@@ -2182,6 +2711,11 @@ class DistributedPartialFcSampleOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DistributedPartialFcSample op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"num_sample", "seed"};
+    return attr_names;
+  }
+
  public:
   int64_t num_sample;
   int64_t seed;
@@ -2191,6 +2725,7 @@ class DistributedPartialFcSampleDisableBoxingOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "DistributedPartialFcSampleDisableBoxing op has no attribute named " << attr_name;
   }
+
 };
 class DropoutOpInterpCtx : public OpInterpCtx {
  public:
@@ -2201,6 +2736,11 @@ class DropoutOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Dropout op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"scale"};
+    return attr_names;
+  }
+
  public:
   float scale;
 };
@@ -2213,6 +2753,11 @@ class DropoutGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DropoutGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"scale"};
+    return attr_names;
+  }
+
  public:
   float scale;
 };
@@ -2227,6 +2772,11 @@ class DynamicLossScaleScheduleOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DynamicLossScaleSchedule op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"increment_period", "multiplier"};
+    return attr_names;
+  }
+
  public:
   int64_t increment_period;
   float multiplier;
@@ -2246,6 +2796,11 @@ class EagerBToSOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerBToS op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"out_split_axis", "in_parallel_conf", "out_parallel_conf", "shape"};
+    return attr_names;
+  }
+
  public:
   int64_t out_split_axis;
   std::string in_parallel_conf;
@@ -2269,6 +2824,11 @@ class EagerNaiveSToSOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerNaiveSToS op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"in_split_axis", "out_split_axis", "in_parallel_conf", "out_parallel_conf", "shape"};
+    return attr_names;
+  }
+
  public:
   int64_t in_split_axis;
   int64_t out_split_axis;
@@ -2285,6 +2845,11 @@ class EagerNcclAllGatherOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerNcclAllGather op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"parallel_conf"};
+    return attr_names;
+  }
+
  public:
   std::string parallel_conf;
 };
@@ -2299,6 +2864,11 @@ class EagerNcclAllReduceOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerNcclAllReduce op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"parallel_conf", "async_launch"};
+    return attr_names;
+  }
+
  public:
   std::string parallel_conf;
   bool async_launch;
@@ -2314,6 +2884,11 @@ class EagerNcclBroadcastOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerNcclBroadcast op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"parallel_conf", "root"};
+    return attr_names;
+  }
+
  public:
   std::string parallel_conf;
   int64_t root;
@@ -2329,6 +2904,11 @@ class EagerNcclReduceOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerNcclReduce op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"parallel_conf", "root"};
+    return attr_names;
+  }
+
  public:
   std::string parallel_conf;
   int64_t root;
@@ -2344,6 +2924,11 @@ class EagerNcclReduceScatterOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerNcclReduceScatter op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"parallel_conf", "op_type"};
+    return attr_names;
+  }
+
  public:
   std::string parallel_conf;
   std::string op_type;
@@ -2361,6 +2946,11 @@ class EagerNcclS2sOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerNcclS2s op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"in_split_axis", "out_split_axis", "parallel_conf"};
+    return attr_names;
+  }
+
  public:
   int64_t in_split_axis;
   int64_t out_split_axis;
@@ -2379,6 +2969,11 @@ class EagerPToBOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerPToB op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"in_parallel_conf", "out_parallel_conf", "shape"};
+    return attr_names;
+  }
+
  public:
   std::string in_parallel_conf;
   std::string out_parallel_conf;
@@ -2399,6 +2994,11 @@ class EagerPToSOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerPToS op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"out_split_axis", "in_parallel_conf", "out_parallel_conf", "shape"};
+    return attr_names;
+  }
+
  public:
   int64_t out_split_axis;
   std::string in_parallel_conf;
@@ -2420,6 +3020,11 @@ class EagerSToBOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerSToB op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"in_split_axis", "in_parallel_conf", "out_parallel_conf", "shape"};
+    return attr_names;
+  }
+
  public:
   int64_t in_split_axis;
   std::string in_parallel_conf;
@@ -2437,6 +3042,11 @@ class EagerSymmetricSToPOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerSymmetricSToP op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"in_split_axis", "parallel_conf"};
+    return attr_names;
+  }
+
  public:
   int64_t in_split_axis;
   std::string parallel_conf;
@@ -2446,24 +3056,28 @@ class ElementwiseMaximumOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ElementwiseMaximum op has no attribute named " << attr_name;
   }
+
 };
 class ElementwiseMaximumBackwardOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ElementwiseMaximumBackward op has no attribute named " << attr_name;
   }
+
 };
 class ElementwiseMinimumOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ElementwiseMinimum op has no attribute named " << attr_name;
   }
+
 };
 class ElementwiseMinimumBackwardOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ElementwiseMinimumBackward op has no attribute named " << attr_name;
   }
+
 };
 class EluOpInterpCtx : public OpInterpCtx {
  public:
@@ -2474,6 +3088,11 @@ class EluOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Elu op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"alpha"};
+    return attr_names;
+  }
+
  public:
   double alpha;
 };
@@ -2486,6 +3105,11 @@ class EluGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EluGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"alpha"};
+    return attr_names;
+  }
+
  public:
   double alpha;
 };
@@ -2496,12 +3120,17 @@ class EmptyOpInterpCtx : public OpInterpCtx {
       return (const void*)&dtype;
     } else if (!strcmp(attr_name, "shape")) {
       return (const void*)&shape;
-    } else /*if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else {
       return Error::RuntimeError() << "Empty op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"dtype", "shape", "nd_sbp"};
+    return attr_names;
+  }
+
  public:
   DataType dtype;
   Shape shape;
@@ -2512,36 +3141,42 @@ class ErfOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Erf op has no attribute named " << attr_name;
   }
+
 };
 class ErfGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ErfGrad op has no attribute named " << attr_name;
   }
+
 };
 class ErfcOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Erfc op has no attribute named " << attr_name;
   }
+
 };
 class ErfcGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ErfcGrad op has no attribute named " << attr_name;
   }
+
 };
 class ExpOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Exp op has no attribute named " << attr_name;
   }
+
 };
 class ExpGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ExpGrad op has no attribute named " << attr_name;
   }
+
 };
 class ExpandOpInterpCtx : public OpInterpCtx {
  public:
@@ -2554,6 +3189,11 @@ class ExpandOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Expand op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"logical_in_shape", "logical_expand_shape"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> logical_in_shape;
   std::vector<int32_t> logical_expand_shape;
@@ -2567,6 +3207,11 @@ class ExpandDimsOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ExpandDims op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis"};
+    return attr_names;
+  }
+
  public:
   int32_t axis;
 };
@@ -2581,6 +3226,11 @@ class ExpandGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ExpandGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"logical_out_shape", "logical_expand_shape"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> logical_out_shape;
   std::vector<int32_t> logical_expand_shape;
@@ -2590,12 +3240,14 @@ class Expm1OpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Expm1 op has no attribute named " << attr_name;
   }
+
 };
 class Expm1GradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Expm1Grad op has no attribute named " << attr_name;
   }
+
 };
 class EyeOpInterpCtx : public OpInterpCtx {
  public:
@@ -2606,12 +3258,17 @@ class EyeOpInterpCtx : public OpInterpCtx {
       return (const void*)&cols;
     } else if (!strcmp(attr_name, "dtype")) {
       return (const void*)&dtype;
-    } else /*if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else {
       return Error::RuntimeError() << "Eye op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"rows", "cols", "dtype", "nd_sbp"};
+    return attr_names;
+  }
+
  public:
   int64_t rows;
   int64_t cols;
@@ -2631,6 +3288,11 @@ class FakeQuantizationOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FakeQuantization op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"quantization_formula", "quantization_bit", "quantization_scheme"};
+    return attr_names;
+  }
+
  public:
   std::string quantization_formula;
   int32_t quantization_bit;
@@ -2647,6 +3309,11 @@ class FlattenOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Flatten op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"start_dim", "end_dim"};
+    return attr_names;
+  }
+
  public:
   int32_t start_dim;
   int32_t end_dim;
@@ -2660,6 +3327,11 @@ class FlipOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Flip op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"dims"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> dims;
 };
@@ -2672,6 +3344,11 @@ class FlipGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FlipGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"dims"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> dims;
 };
@@ -2680,36 +3357,42 @@ class FloorOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Floor op has no attribute named " << attr_name;
   }
+
 };
 class FloorGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "FloorGrad op has no attribute named " << attr_name;
   }
+
 };
 class FloordivOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Floordiv op has no attribute named " << attr_name;
   }
+
 };
 class FloordivXGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "FloordivXGrad op has no attribute named " << attr_name;
   }
+
 };
 class FloordivYGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "FloordivYGrad op has no attribute named " << attr_name;
   }
+
 };
 class FlushSummaryWriterOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "FlushSummaryWriter op has no attribute named " << attr_name;
   }
+
 };
 class FoldOpInterpCtx : public OpInterpCtx {
  public:
@@ -2728,6 +3411,11 @@ class FoldOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Fold op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"output_size", "kernel_size", "strides", "padding", "dilation_rate"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> output_size;
   std::vector<int32_t> kernel_size;
@@ -2744,6 +3432,11 @@ class FusedBiasAddGeluOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedBiasAddGelu op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis"};
+    return attr_names;
+  }
+
  public:
   int32_t axis;
 };
@@ -2756,6 +3449,11 @@ class FusedBiasAddGeluGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedBiasAddGeluGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis"};
+    return attr_names;
+  }
+
  public:
   int32_t axis;
 };
@@ -2770,6 +3468,11 @@ class FusedBiasAddMaskScaleOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedBiasAddMaskScale op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis", "scale"};
+    return attr_names;
+  }
+
  public:
   int32_t axis;
   float scale;
@@ -2783,6 +3486,11 @@ class FusedCastScaleOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedCastScale op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"scale"};
+    return attr_names;
+  }
+
  public:
   double scale;
 };
@@ -2797,6 +3505,11 @@ class FusedScaleMaskSoftmaxOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedScaleMaskSoftmax op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"scale_value", "mask_fill_value"};
+    return attr_names;
+  }
+
  public:
   float scale_value;
   float mask_fill_value;
@@ -2814,6 +3527,11 @@ class FusedScaleMaskSoftmaxDropoutOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedScaleMaskSoftmaxDropout op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"scale_value", "mask_fill_value", "dropout_scale_value"};
+    return attr_names;
+  }
+
  public:
   float scale_value;
   float mask_fill_value;
@@ -2830,6 +3548,11 @@ class FusedScaleMaskSoftmaxDropoutGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedScaleMaskSoftmaxDropoutGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"scale_value", "dropout_scale_value"};
+    return attr_names;
+  }
+
  public:
   float scale_value;
   float dropout_scale_value;
@@ -2843,6 +3566,11 @@ class FusedScaleMaskSoftmaxGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedScaleMaskSoftmaxGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"scale_value"};
+    return attr_names;
+  }
+
  public:
   float scale_value;
 };
@@ -2867,6 +3595,11 @@ class FusedScaleTrilOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedScaleTril op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"diagonal", "floating_fill_value", "integer_fill_value", "is_floating_fill_value", "floating_scale_value", "integer_scale_value", "is_floating_scale_value"};
+    return attr_names;
+  }
+
  public:
   int64_t diagonal;
   double floating_fill_value;
@@ -2887,6 +3620,11 @@ class FusedSelfAttentionQueryMulKeyAndValueOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedSelfAttentionQueryMulKeyAndValue op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"head_size", "alpha"};
+    return attr_names;
+  }
+
  public:
   int64_t head_size;
   float alpha;
@@ -2900,6 +3638,11 @@ class FusedSelfAttentionQueryMulKeyAndValueGradOpInterpCtx : public OpInterpCtx 
       return Error::RuntimeError() << "FusedSelfAttentionQueryMulKeyAndValueGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"alpha"};
+    return attr_names;
+  }
+
  public:
   float alpha;
 };
@@ -2918,6 +3661,11 @@ class FusedTrilScaleSoftmaxMaskScaleOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedTrilScaleSoftmaxMaskScale op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"diagonal", "tril_fill_value", "tril_scale_value", "mask_scale_value"};
+    return attr_names;
+  }
+
  public:
   int64_t diagonal;
   float tril_fill_value;
@@ -2937,6 +3685,11 @@ class FusedTrilScaleSoftmaxMaskScaleGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedTrilScaleSoftmaxMaskScaleGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"diagonal", "tril_scale_value", "mask_scale_value"};
+    return attr_names;
+  }
+
  public:
   int64_t diagonal;
   float tril_scale_value;
@@ -2951,6 +3704,11 @@ class GatherOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Gather op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis"};
+    return attr_names;
+  }
+
  public:
   int64_t axis;
 };
@@ -2959,18 +3717,21 @@ class GatherNdOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "GatherNd op has no attribute named " << attr_name;
   }
+
 };
 class GeluOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Gelu op has no attribute named " << attr_name;
   }
+
 };
 class GeluGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "GeluGrad op has no attribute named " << attr_name;
   }
+
 };
 class GenTensorBufferOpInterpCtx : public OpInterpCtx {
  public:
@@ -2989,6 +3750,11 @@ class GenTensorBufferOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "GenTensorBuffer op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"shape", "shape_list", "value_list", "data_type", "dynamic_out"};
+    return attr_names;
+  }
+
  public:
   Shape shape;
   std::vector<Shape> shape_list;
@@ -3005,6 +3771,11 @@ class GenerateRandomBatchPermutationIndicesOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "GenerateRandomBatchPermutationIndices op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"seed"};
+    return attr_names;
+  }
+
  public:
   int64_t seed;
 };
@@ -3021,6 +3792,11 @@ class GridSampleOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "GridSample op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"interpolation_mode", "padding_mode", "align_corners"};
+    return attr_names;
+  }
+
  public:
   std::string interpolation_mode;
   std::string padding_mode;
@@ -3039,6 +3815,11 @@ class GridSampleGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "GridSampleGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"interpolation_mode", "padding_mode", "align_corners"};
+    return attr_names;
+  }
+
  public:
   std::string interpolation_mode;
   std::string padding_mode;
@@ -3049,24 +3830,28 @@ class HardsigmoidOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Hardsigmoid op has no attribute named " << attr_name;
   }
+
 };
 class HardsigmoidGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "HardsigmoidGrad op has no attribute named " << attr_name;
   }
+
 };
 class HardswishOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Hardswish op has no attribute named " << attr_name;
   }
+
 };
 class HardswishGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "HardswishGrad op has no attribute named " << attr_name;
   }
+
 };
 class HardtanhOpInterpCtx : public OpInterpCtx {
  public:
@@ -3079,6 +3864,11 @@ class HardtanhOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Hardtanh op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"min_val", "max_val"};
+    return attr_names;
+  }
+
  public:
   double min_val;
   double max_val;
@@ -3094,6 +3884,11 @@ class HardtanhGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "HardtanhGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"min_val", "max_val"};
+    return attr_names;
+  }
+
  public:
   double min_val;
   double max_val;
@@ -3101,9 +3896,9 @@ class HardtanhGradOpInterpCtx : public OpInterpCtx {
 class HierarchicalParallelCastOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
-    /*if (!strcmp(attr_name, "nd_sbp")) {
+    if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */if (!strcmp(attr_name, "grad_mode")) {
+    } else if (!strcmp(attr_name, "grad_mode")) {
       return (const void*)&grad_mode;
     } else if (!strcmp(attr_name, "grad_nd_sbp")) {
       return (const void*)&grad_nd_sbp;
@@ -3111,6 +3906,11 @@ class HierarchicalParallelCastOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "HierarchicalParallelCast op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"nd_sbp", "grad_mode", "grad_nd_sbp"};
+    return attr_names;
+  }
+
  public:
   // std::vector<std::string> nd_sbp;
   std::string grad_mode;
@@ -3121,12 +3921,14 @@ class HierarchicalParallelCastLikeOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "HierarchicalParallelCastLike op has no attribute named " << attr_name;
   }
+
 };
 class IdentityOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Identity op has no attribute named " << attr_name;
   }
+
 };
 class IdentityBufferOpInterpCtx : public OpInterpCtx {
  public:
@@ -3137,6 +3939,11 @@ class IdentityBufferOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "IdentityBuffer op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"buffer_size"};
+    return attr_names;
+  }
+
  public:
   int64_t buffer_size;
 };
@@ -3155,6 +3962,11 @@ class ImageBatchAlignOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ImageBatchAlign op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"shape", "data_type", "alignment", "dynamic_out"};
+    return attr_names;
+  }
+
  public:
   Shape shape;
   DataType data_type;
@@ -3172,6 +3984,11 @@ class ImageDecodeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ImageDecode op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"color_space", "data_type"};
+    return attr_names;
+  }
+
  public:
   std::string color_space;
   DataType data_type;
@@ -3181,6 +3998,7 @@ class ImageFlipOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ImageFlip op has no attribute named " << attr_name;
   }
+
 };
 class ImageNormalizeOpInterpCtx : public OpInterpCtx {
  public:
@@ -3193,6 +4011,11 @@ class ImageNormalizeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ImageNormalize op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"std", "mean"};
+    return attr_names;
+  }
+
  public:
   std::vector<float> std;
   std::vector<float> mean;
@@ -3214,6 +4037,11 @@ class ImageRandomCropOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ImageRandomCrop op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"num_attempts", "seed", "has_seed", "random_area", "random_aspect_ratio"};
+    return attr_names;
+  }
+
  public:
   int32_t num_attempts;
   int64_t seed;
@@ -3238,6 +4066,11 @@ class ImageResizeKeepAspectRatioOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ImageResizeKeepAspectRatio op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"target_size", "min_size", "max_size", "resize_longer", "interpolation_type"};
+    return attr_names;
+  }
+
  public:
   int32_t target_size;
   int32_t min_size;
@@ -3262,6 +4095,11 @@ class ImageResizeToFixedOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ImageResizeToFixed op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"target_width", "target_height", "channels", "data_type", "interpolation_type"};
+    return attr_names;
+  }
+
  public:
   int64_t target_width;
   int64_t target_height;
@@ -3280,6 +4118,11 @@ class ImageTargetResizeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ImageTargetResize op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"target_size", "max_size"};
+    return attr_names;
+  }
+
  public:
   int32_t target_size;
   int32_t max_size;
@@ -3293,6 +4136,11 @@ class InTopKOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "InTopK op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"k"};
+    return attr_names;
+  }
+
  public:
   int32_t k;
 };
@@ -3317,6 +4165,11 @@ class IndexedSlicesAdamUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "IndexedSlicesAdamUpdate op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"learning_rate_val", "beta1", "beta2", "epsilon", "weight_decay", "amsgrad", "do_bias_correction"};
+    return attr_names;
+  }
+
  public:
   float learning_rate_val;
   float beta1;
@@ -3337,6 +4190,11 @@ class IndexedSlicesMomentumUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "IndexedSlicesMomentumUpdate op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"beta", "weight_decay"};
+    return attr_names;
+  }
+
  public:
   float beta;
   float weight_decay;
@@ -3346,6 +4204,7 @@ class IndexedSlicesReduceSumOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "IndexedSlicesReduceSum op has no attribute named " << attr_name;
   }
+
 };
 class IndexedSlicesSgdUpdateOpInterpCtx : public OpInterpCtx {
  public:
@@ -3356,6 +4215,11 @@ class IndexedSlicesSgdUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "IndexedSlicesSgdUpdate op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"weight_decay"};
+    return attr_names;
+  }
+
  public:
   float weight_decay;
 };
@@ -3370,6 +4234,11 @@ class KlDivLossOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "KlDivLoss op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"reduction", "log_target"};
+    return attr_names;
+  }
+
  public:
   std::string reduction;
   bool log_target;
@@ -3385,6 +4254,11 @@ class KlDivLossGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "KlDivLossGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"reduction", "log_target"};
+    return attr_names;
+  }
+
  public:
   std::string reduction;
   bool log_target;
@@ -3400,6 +4274,11 @@ class L1L2RegularizeGradientOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "L1L2RegularizeGradient op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"l1", "l2"};
+    return attr_names;
+  }
+
  public:
   float l1;
   float l2;
@@ -3415,6 +4294,11 @@ class L2NormalizeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "L2Normalize op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis", "epsilon"};
+    return attr_names;
+  }
+
  public:
   int32_t axis;
   float epsilon;
@@ -3430,6 +4314,11 @@ class L2NormalizeGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "L2NormalizeGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis", "epsilon"};
+    return attr_names;
+  }
+
  public:
   int32_t axis;
   float epsilon;
@@ -3455,6 +4344,11 @@ class LambUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LambUpdate op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"beta1", "beta2", "epsilon", "scale", "l1", "l2", "weight_decay"};
+    return attr_names;
+  }
+
  public:
   float beta1;
   float beta2;
@@ -3485,6 +4379,11 @@ class LarsUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LarsUpdate op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"scale", "l1", "l2", "momentum_beta", "epsilon", "lars_coefficient", "weight_decay"};
+    return attr_names;
+  }
+
  public:
   double scale;
   float l1;
@@ -3511,6 +4410,11 @@ class LayerNormOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LayerNorm op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"center", "scale", "begin_norm_axis", "begin_params_axis", "epsilon"};
+    return attr_names;
+  }
+
  public:
   bool center;
   bool scale;
@@ -3529,6 +4433,11 @@ class LayerNormGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LayerNormGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"begin_norm_axis", "epsilon"};
+    return attr_names;
+  }
+
  public:
   int64_t begin_norm_axis;
   double epsilon;
@@ -3542,6 +4451,11 @@ class LayerNormParamGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LayerNormParamGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"begin_params_axis"};
+    return attr_names;
+  }
+
  public:
   int64_t begin_params_axis;
 };
@@ -3554,6 +4468,11 @@ class LeakyReluOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LeakyRelu op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"alpha"};
+    return attr_names;
+  }
+
  public:
   float alpha;
 };
@@ -3566,6 +4485,11 @@ class LeakyReluGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LeakyReluGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"alpha"};
+    return attr_names;
+  }
+
  public:
   float alpha;
 };
@@ -3574,66 +4498,77 @@ class LgammaOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Lgamma op has no attribute named " << attr_name;
   }
+
 };
 class LgammaGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "LgammaGrad op has no attribute named " << attr_name;
   }
+
 };
 class LogOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Log op has no attribute named " << attr_name;
   }
+
 };
 class Log1pOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Log1p op has no attribute named " << attr_name;
   }
+
 };
 class Log1pGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Log1pGrad op has no attribute named " << attr_name;
   }
+
 };
 class LogGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "LogGrad op has no attribute named " << attr_name;
   }
+
 };
 class LogSigmoidOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "LogSigmoid op has no attribute named " << attr_name;
   }
+
 };
 class LogSigmoidGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "LogSigmoidGrad op has no attribute named " << attr_name;
   }
+
 };
 class LogSoftmaxOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "LogSoftmax op has no attribute named " << attr_name;
   }
+
 };
 class LogSoftmaxGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "LogSoftmaxGrad op has no attribute named " << attr_name;
   }
+
 };
 class LogicalNotOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "LogicalNot op has no attribute named " << attr_name;
   }
+
 };
 class LogicalSliceOpInterpCtx : public OpInterpCtx {
  public:
@@ -3648,6 +4583,11 @@ class LogicalSliceOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LogicalSlice op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"start", "stop", "step"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> start;
   std::vector<int64_t> stop;
@@ -3666,6 +4606,11 @@ class LogicalSliceAssignOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LogicalSliceAssign op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"start", "stop", "step"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> start;
   std::vector<int64_t> stop;
@@ -3686,6 +4631,11 @@ class MaskedFillOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MaskedFill op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+    return attr_names;
+  }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -3705,6 +4655,11 @@ class MatmulOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Matmul op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"transpose_a", "transpose_b", "alpha"};
+    return attr_names;
+  }
+
  public:
   bool transpose_a;
   bool transpose_b;
@@ -3731,6 +4686,11 @@ class MaxPool1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MaxPool1D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -3761,6 +4721,11 @@ class MaxPool1DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MaxPool1DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -3791,6 +4756,11 @@ class MaxPool2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MaxPool2D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -3821,6 +4791,11 @@ class MaxPool2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MaxPool2DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -3851,6 +4826,11 @@ class MaxPool3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MaxPool3D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -3881,6 +4861,11 @@ class MaxPool3DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MaxPool3DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -3913,12 +4898,17 @@ class MegatronGptMmapDataLoaderOpInterpCtx : public OpInterpCtx {
       return (const void*)&shuffle;
     } else if (!strcmp(attr_name, "random_seed")) {
       return (const void*)&random_seed;
-    } else /*if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else {
       return Error::RuntimeError() << "MegatronGptMmapDataLoader op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"data_file_prefix", "seq_length", "label_length", "num_samples", "batch_size", "dtype", "split_sizes", "split_index", "shuffle", "random_seed", "nd_sbp"};
+    return attr_names;
+  }
+
  public:
   std::string data_file_prefix;
   int64_t seq_length;
@@ -3947,6 +4937,11 @@ class MinMaxObserverOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MinMaxObserver op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"quantization_formula", "quantization_bit", "quantization_scheme", "per_layer_quantization"};
+    return attr_names;
+  }
+
  public:
   std::string quantization_formula;
   int32_t quantization_bit;
@@ -3958,12 +4953,14 @@ class MishOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Mish op has no attribute named " << attr_name;
   }
+
 };
 class MishGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "MishGrad op has no attribute named " << attr_name;
   }
+
 };
 class MomentumUpdateOpInterpCtx : public OpInterpCtx {
  public:
@@ -3984,6 +4981,11 @@ class MomentumUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MomentumUpdate op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"learning_rate_val", "scale", "l1", "l2", "beta", "weight_decay"};
+    return attr_names;
+  }
+
  public:
   float learning_rate_val;
   double scale;
@@ -4011,6 +5013,11 @@ class MovingAverageMinMaxObserverOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MovingAverageMinMaxObserver op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"training", "quantization_formula", "stop_update_after_iters", "quantization_bit", "quantization_scheme", "momentum"};
+    return attr_names;
+  }
+
  public:
   bool training;
   std::string quantization_formula;
@@ -4024,18 +5031,21 @@ class MultiCountNotFiniteOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "MultiCountNotFinite op has no attribute named " << attr_name;
   }
+
 };
 class MultiSquareSumOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "MultiSquareSum op has no attribute named " << attr_name;
   }
+
 };
 class MultiplyOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Multiply op has no attribute named " << attr_name;
   }
+
 };
 class NarrowOpInterpCtx : public OpInterpCtx {
  public:
@@ -4050,6 +5060,11 @@ class NarrowOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Narrow op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"dim", "start", "length"};
+    return attr_names;
+  }
+
  public:
   int64_t dim;
   int64_t start;
@@ -4068,6 +5083,11 @@ class NarrowGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "NarrowGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"dim", "start", "length"};
+    return attr_names;
+  }
+
  public:
   int64_t dim;
   int64_t start;
@@ -4078,12 +5098,14 @@ class NegativeOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Negative op has no attribute named " << attr_name;
   }
+
 };
 class NegativeGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "NegativeGrad op has no attribute named " << attr_name;
   }
+
 };
 class NllOpInterpCtx : public OpInterpCtx {
  public:
@@ -4096,6 +5118,11 @@ class NllOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Nll op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"ignore_index", "reduction"};
+    return attr_names;
+  }
+
  public:
   int64_t ignore_index;
   std::string reduction;
@@ -4111,6 +5138,11 @@ class NllGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "NllGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"ignore_index", "reduction"};
+    return attr_names;
+  }
+
  public:
   int64_t ignore_index;
   std::string reduction;
@@ -4126,6 +5158,11 @@ class NmsOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Nms op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"iou_threshold", "keep_n"};
+    return attr_names;
+  }
+
  public:
   float iou_threshold;
   int32_t keep_n;
@@ -4143,12 +5180,17 @@ class NormalOpInterpCtx : public OpInterpCtx {
       return (const void*)&dtype;
     } else if (!strcmp(attr_name, "shape")) {
       return (const void*)&shape;
-    } else /*if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else {
       return Error::RuntimeError() << "Normal op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"mean", "std", "seed", "dtype", "shape", "nd_sbp"};
+    return attr_names;
+  }
+
  public:
   double mean;
   double std;
@@ -4172,6 +5214,11 @@ class NormalizationOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Normalization op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis", "epsilon", "training", "momentum"};
+    return attr_names;
+  }
+
  public:
   int32_t axis;
   float epsilon;
@@ -4193,6 +5240,11 @@ class NormalizationAddReluBaseOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "NormalizationAddReluBase op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis", "epsilon", "training", "momentum"};
+    return attr_names;
+  }
+
  public:
   int32_t axis;
   float epsilon;
@@ -4210,6 +5262,11 @@ class NormalizationAddReluGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "NormalizationAddReluGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis", "epsilon"};
+    return attr_names;
+  }
+
  public:
   int32_t axis;
   float epsilon;
@@ -4225,6 +5282,11 @@ class NormalizationGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "NormalizationGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis", "epsilon"};
+    return attr_names;
+  }
+
  public:
   int32_t axis;
   float epsilon;
@@ -4238,6 +5300,11 @@ class NvtxEndOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "NvtxEnd op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"mark_prefix"};
+    return attr_names;
+  }
+
  public:
   std::string mark_prefix;
 };
@@ -4250,6 +5317,11 @@ class NvtxStartOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "NvtxStart op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"mark_prefix"};
+    return attr_names;
+  }
+
  public:
   std::string mark_prefix;
 };
@@ -4258,30 +5330,35 @@ class ObjectBboxFlipOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ObjectBboxFlip op has no attribute named " << attr_name;
   }
+
 };
 class ObjectBboxScaleOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ObjectBboxScale op has no attribute named " << attr_name;
   }
+
 };
 class ObjectSegmentationPolygonFlipOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ObjectSegmentationPolygonFlip op has no attribute named " << attr_name;
   }
+
 };
 class ObjectSegmentationPolygonScaleOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ObjectSegmentationPolygonScale op has no attribute named " << attr_name;
   }
+
 };
 class ObjectSegmentationPolygonToMaskOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ObjectSegmentationPolygonToMask op has no attribute named " << attr_name;
   }
+
 };
 class OfrecordBytesDecoderOpInterpCtx : public OpInterpCtx {
  public:
@@ -4292,6 +5369,11 @@ class OfrecordBytesDecoderOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "OfrecordBytesDecoder op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"name"};
+    return attr_names;
+  }
+
  public:
   std::string name;
 };
@@ -4330,6 +5412,11 @@ class OfrecordImageClassificationReaderOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "OfrecordImageClassificationReader op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"data_dir", "data_part_num", "batch_size", "part_name_prefix", "part_name_suffix_length", "random_shuffle", "seed", "shuffle_buffer_size", "shuffle_after_epoch", "color_space", "image_feature_name", "label_feature_name", "decode_buffer_size_per_thread", "num_decode_threads_per_machine"};
+    return attr_names;
+  }
+
  public:
   std::string data_dir;
   int32_t data_part_num;
@@ -4357,6 +5444,11 @@ class OfrecordImageDecoderOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "OfrecordImageDecoder op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"name", "color_space"};
+    return attr_names;
+  }
+
  public:
   std::string name;
   std::string color_space;
@@ -4382,6 +5474,11 @@ class OfrecordImageDecoderRandomCropOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "OfrecordImageDecoderRandomCrop op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"name", "color_space", "num_attempts", "seed", "has_seed", "random_area", "random_aspect_ratio"};
+    return attr_names;
+  }
+
  public:
   std::string name;
   std::string color_space;
@@ -4408,6 +5505,11 @@ class OfrecordRawDecoderOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "OfrecordRawDecoder op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"name", "shape", "data_type", "dim1_varying_length", "truncate"};
+    return attr_names;
+  }
+
  public:
   std::string name;
   Shape shape;
@@ -4434,6 +5536,11 @@ class OneHotOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "OneHot op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"depth", "floating_on_value", "integer_on_value", "floating_off_value", "integer_off_value", "dtype"};
+    return attr_names;
+  }
+
  public:
   int64_t depth;
   double floating_on_value;
@@ -4465,6 +5572,11 @@ class OnerecDecoderOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "OnerecDecoder op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"key", "data_type", "static_shape", "is_dynamic", "has_reshape", "reshape", "has_batch_padding", "batch_padding"};
+    return attr_names;
+  }
+
  public:
   std::string key;
   DataType data_type;
@@ -4480,6 +5592,7 @@ class OnesLikeOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "OnesLike op has no attribute named " << attr_name;
   }
+
 };
 class PackOpInterpCtx : public OpInterpCtx {
  public:
@@ -4490,6 +5603,11 @@ class PackOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Pack op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"pack_num"};
+    return attr_names;
+  }
+
  public:
   int32_t pack_num;
 };
@@ -4508,6 +5626,11 @@ class PadOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Pad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding_before", "padding_after", "floating_constant_value", "integral_constant_value"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> padding_before;
   std::vector<int64_t> padding_after;
@@ -4529,6 +5652,11 @@ class PadGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "PadGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding_before", "padding_after", "floating_constant_value", "integral_constant_value"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> padding_before;
   std::vector<int64_t> padding_after;
@@ -4546,6 +5674,11 @@ class ParallelCastOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ParallelCast op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"sbp_parallel", "grad_sbp_parallel"};
+    return attr_names;
+  }
+
  public:
   std::string sbp_parallel;
   std::string grad_sbp_parallel;
@@ -4555,30 +5688,35 @@ class PowOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Pow op has no attribute named " << attr_name;
   }
+
 };
 class PowXGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "PowXGrad op has no attribute named " << attr_name;
   }
+
 };
 class PowYGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "PowYGrad op has no attribute named " << attr_name;
   }
+
 };
 class PreluOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Prelu op has no attribute named " << attr_name;
   }
+
 };
 class PreluGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "PreluGrad op has no attribute named " << attr_name;
   }
+
 };
 class QuantizationOpInterpCtx : public OpInterpCtx {
  public:
@@ -4593,6 +5731,11 @@ class QuantizationOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Quantization op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"quantization_formula", "quantization_bit", "quantization_scheme"};
+    return attr_names;
+  }
+
  public:
   std::string quantization_formula;
   int32_t quantization_bit;
@@ -4609,6 +5752,11 @@ class RandomMaskLikeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "RandomMaskLike op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"rate", "seed"};
+    return attr_names;
+  }
+
  public:
   float rate;
   int64_t seed;
@@ -4620,12 +5768,17 @@ class RandpermOpInterpCtx : public OpInterpCtx {
       return (const void*)&n;
     } else if (!strcmp(attr_name, "seed")) {
       return (const void*)&seed;
-    } else /*if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else {
       return Error::RuntimeError() << "Randperm op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"n", "seed", "nd_sbp"};
+    return attr_names;
+  }
+
  public:
   int32_t n;
   int64_t seed;
@@ -4636,24 +5789,28 @@ class ReciprocalOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Reciprocal op has no attribute named " << attr_name;
   }
+
 };
 class ReciprocalGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ReciprocalGrad op has no attribute named " << attr_name;
   }
+
 };
 class ReciprocalNoNanOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ReciprocalNoNan op has no attribute named " << attr_name;
   }
+
 };
 class ReciprocalNoNanGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ReciprocalNoNanGrad op has no attribute named " << attr_name;
   }
+
 };
 class RecvOpInterpCtx : public OpInterpCtx {
  public:
@@ -4672,6 +5829,11 @@ class RecvOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Recv op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"src_process_id", "dtype", "shape", "device_type", "device_id"};
+    return attr_names;
+  }
+
  public:
   int64_t src_process_id;
   DataType dtype;
@@ -4690,6 +5852,11 @@ class ReduceAllOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceAll op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis", "keepdims"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> axis;
   bool keepdims;
@@ -4705,6 +5872,11 @@ class ReduceAnyOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceAny op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis", "keepdims"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> axis;
   bool keepdims;
@@ -4720,6 +5892,11 @@ class ReduceMaxOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceMax op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis", "keepdims"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> axis;
   bool keepdims;
@@ -4733,6 +5910,11 @@ class ReduceMaxDeviceStageOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceMaxDeviceStage op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> axis;
 };
@@ -4745,6 +5927,11 @@ class ReduceMaxDeviceStageGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceMaxDeviceStageGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> axis;
 };
@@ -4759,6 +5946,11 @@ class ReduceMaxGlobalStageOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceMaxGlobalStage op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis", "keepdims"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> axis;
   bool keepdims;
@@ -4774,6 +5966,11 @@ class ReduceMaxGlobalStageGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceMaxGlobalStageGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis", "keepdims"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> axis;
   bool keepdims;
@@ -4789,6 +5986,11 @@ class ReduceMinOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceMin op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis", "keepdims"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> axis;
   bool keepdims;
@@ -4802,6 +6004,11 @@ class ReduceMinDeviceStageOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceMinDeviceStage op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> axis;
 };
@@ -4814,6 +6021,11 @@ class ReduceMinDeviceStageGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceMinDeviceStageGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> axis;
 };
@@ -4828,6 +6040,11 @@ class ReduceMinGlobalStageOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceMinGlobalStage op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis", "keepdims"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> axis;
   bool keepdims;
@@ -4843,6 +6060,11 @@ class ReduceMinGlobalStageGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceMinGlobalStageGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis", "keepdims"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> axis;
   bool keepdims;
@@ -4858,6 +6080,11 @@ class ReduceProdOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceProd op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis", "keepdims"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> axis;
   bool keepdims;
@@ -4873,6 +6100,11 @@ class ReduceSumOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceSum op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis", "keepdims"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> axis;
   bool keepdims;
@@ -4886,6 +6118,11 @@ class ReduceSumLikeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceSumLike op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> axis;
 };
@@ -4898,6 +6135,11 @@ class ReflectionPad2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReflectionPad2D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> padding;
 };
@@ -4910,6 +6152,11 @@ class ReflectionPad2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReflectionPad2DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> padding;
 };
@@ -4918,12 +6165,14 @@ class ReluOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Relu op has no attribute named " << attr_name;
   }
+
 };
 class ReluGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ReluGrad op has no attribute named " << attr_name;
   }
+
 };
 class RepeatOpInterpCtx : public OpInterpCtx {
  public:
@@ -4934,6 +6183,11 @@ class RepeatOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Repeat op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"repeat_num"};
+    return attr_names;
+  }
+
  public:
   int32_t repeat_num;
 };
@@ -4946,6 +6200,11 @@ class ReplicationPad2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReplicationPad2D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> padding;
 };
@@ -4958,6 +6217,11 @@ class ReplicationPad2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReplicationPad2DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> padding;
 };
@@ -4970,6 +6234,11 @@ class ReshapeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Reshape op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"shape"};
+    return attr_names;
+  }
+
  public:
   Shape shape;
 };
@@ -4978,18 +6247,21 @@ class ReshapeLikeOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ReshapeLike op has no attribute named " << attr_name;
   }
+
 };
 class RintOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Rint op has no attribute named " << attr_name;
   }
+
 };
 class RintGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "RintGrad op has no attribute named " << attr_name;
   }
+
 };
 class RmspropUpdateOpInterpCtx : public OpInterpCtx {
  public:
@@ -5014,6 +6286,11 @@ class RmspropUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "RmspropUpdate op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"learning_rate_val", "scale", "l1", "l2", "centered", "epsilon", "decay_rate", "weight_decay"};
+    return attr_names;
+  }
+
  public:
   float learning_rate_val;
   double scale;
@@ -5035,6 +6312,11 @@ class RollOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Roll op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"shifts", "dims"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> shifts;
   std::vector<int32_t> dims;
@@ -5044,24 +6326,28 @@ class RoundOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Round op has no attribute named " << attr_name;
   }
+
 };
 class RoundGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "RoundGrad op has no attribute named " << attr_name;
   }
+
 };
 class RsqrtOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Rsqrt op has no attribute named " << attr_name;
   }
+
 };
 class RsqrtGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "RsqrtGrad op has no attribute named " << attr_name;
   }
+
 };
 class SamePaddingOpInterpCtx : public OpInterpCtx {
  public:
@@ -5080,6 +6366,11 @@ class SamePaddingOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SamePadding op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "strides", "dilation_rate"};
+    return attr_names;
+  }
+
  public:
   std::string padding;
   std::string data_format;
@@ -5104,6 +6395,11 @@ class SamePaddingGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SamePaddingGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "strides", "dilation_rate"};
+    return attr_names;
+  }
+
  public:
   std::string padding;
   std::string data_format;
@@ -5126,6 +6422,11 @@ class ScalarAddOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarAdd op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+    return attr_names;
+  }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5137,12 +6438,14 @@ class ScalarAddByTensorOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ScalarAddByTensor op has no attribute named " << attr_name;
   }
+
 };
 class ScalarDivByTensorOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ScalarDivByTensor op has no attribute named " << attr_name;
   }
+
 };
 class ScalarFloordivOpInterpCtx : public OpInterpCtx {
  public:
@@ -5159,6 +6462,11 @@ class ScalarFloordivOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarFloordiv op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+    return attr_names;
+  }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5180,6 +6488,11 @@ class ScalarFmodOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarFmod op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+    return attr_names;
+  }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5201,6 +6514,11 @@ class ScalarLogicalAndOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalAnd op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+    return attr_names;
+  }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5222,6 +6540,11 @@ class ScalarLogicalEqualOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalEqual op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+    return attr_names;
+  }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5243,6 +6566,11 @@ class ScalarLogicalGreaterOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalGreater op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+    return attr_names;
+  }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5264,6 +6592,11 @@ class ScalarLogicalGreaterEqualOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalGreaterEqual op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+    return attr_names;
+  }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5285,6 +6618,11 @@ class ScalarLogicalLessOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalLess op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+    return attr_names;
+  }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5306,6 +6644,11 @@ class ScalarLogicalLessEqualOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalLessEqual op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+    return attr_names;
+  }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5327,6 +6670,11 @@ class ScalarLogicalNotEqualOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalNotEqual op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+    return attr_names;
+  }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5348,6 +6696,11 @@ class ScalarLogicalOrOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalOr op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+    return attr_names;
+  }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5369,6 +6722,11 @@ class ScalarLogicalXorOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalXor op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+    return attr_names;
+  }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5390,6 +6748,11 @@ class ScalarMulOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarMul op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+    return attr_names;
+  }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5401,6 +6764,7 @@ class ScalarMulByTensorOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ScalarMulByTensor op has no attribute named " << attr_name;
   }
+
 };
 class ScalarPowOpInterpCtx : public OpInterpCtx {
  public:
@@ -5417,6 +6781,11 @@ class ScalarPowOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarPow op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+    return attr_names;
+  }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5438,6 +6807,11 @@ class ScalarPowGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarPowGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+    return attr_names;
+  }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5449,6 +6823,7 @@ class ScalarSubByTensorOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ScalarSubByTensor op has no attribute named " << attr_name;
   }
+
 };
 class ScatterNdOpInterpCtx : public OpInterpCtx {
  public:
@@ -5459,6 +6834,11 @@ class ScatterNdOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScatterNd op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"shape"};
+    return attr_names;
+  }
+
  public:
   Shape shape;
 };
@@ -5467,18 +6847,21 @@ class ScatterNdLikeOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ScatterNdLike op has no attribute named " << attr_name;
   }
+
 };
 class SeluOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Selu op has no attribute named " << attr_name;
   }
+
 };
 class SeluGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "SeluGrad op has no attribute named " << attr_name;
   }
+
 };
 class SendOpInterpCtx : public OpInterpCtx {
  public:
@@ -5489,6 +6872,11 @@ class SendOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Send op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"dst_process_id"};
+    return attr_names;
+  }
+
  public:
   int64_t dst_process_id;
 };
@@ -5509,6 +6897,11 @@ class SgdUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SgdUpdate op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"learning_rate_val", "scale", "l1", "l2", "weight_decay"};
+    return attr_names;
+  }
+
  public:
   float learning_rate_val;
   double scale;
@@ -5521,84 +6914,98 @@ class SigmoidOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Sigmoid op has no attribute named " << attr_name;
   }
+
 };
 class SigmoidCrossEntropyOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "SigmoidCrossEntropy op has no attribute named " << attr_name;
   }
+
 };
 class SigmoidCrossEntropyGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "SigmoidCrossEntropyGrad op has no attribute named " << attr_name;
   }
+
 };
 class SigmoidGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "SigmoidGrad op has no attribute named " << attr_name;
   }
+
 };
 class SigmoidV2OpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "SigmoidV2 op has no attribute named " << attr_name;
   }
+
 };
 class SigmoidV2GradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "SigmoidV2Grad op has no attribute named " << attr_name;
   }
+
 };
 class SignOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Sign op has no attribute named " << attr_name;
   }
+
 };
 class SignGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "SignGrad op has no attribute named " << attr_name;
   }
+
 };
 class SiluOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Silu op has no attribute named " << attr_name;
   }
+
 };
 class SiluGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "SiluGrad op has no attribute named " << attr_name;
   }
+
 };
 class SinOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Sin op has no attribute named " << attr_name;
   }
+
 };
 class SinGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "SinGrad op has no attribute named " << attr_name;
   }
+
 };
 class SinhOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Sinh op has no attribute named " << attr_name;
   }
+
 };
 class SinhGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "SinhGrad op has no attribute named " << attr_name;
   }
+
 };
 class SliceOpInterpCtx : public OpInterpCtx {
  public:
@@ -5613,6 +7020,11 @@ class SliceOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Slice op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"start", "stop", "step"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> start;
   std::vector<int64_t> stop;
@@ -5631,6 +7043,11 @@ class SliceGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SliceGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"start", "stop", "step"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> start;
   std::vector<int64_t> stop;
@@ -5649,6 +7066,11 @@ class SliceUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SliceUpdate op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"start", "stop", "step"};
+    return attr_names;
+  }
+
  public:
   std::vector<int64_t> start;
   std::vector<int64_t> stop;
@@ -5665,6 +7087,11 @@ class SmoothL1LossOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SmoothL1Loss op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"reduction", "beta"};
+    return attr_names;
+  }
+
  public:
   std::string reduction;
   float beta;
@@ -5680,6 +7107,11 @@ class SmoothL1LossGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SmoothL1LossGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"reduction", "beta"};
+    return attr_names;
+  }
+
  public:
   std::string reduction;
   float beta;
@@ -5689,48 +7121,56 @@ class SoftmaxOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Softmax op has no attribute named " << attr_name;
   }
+
 };
 class SoftmaxCrossEntropyOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "SoftmaxCrossEntropy op has no attribute named " << attr_name;
   }
+
 };
 class SoftmaxCrossEntropyGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "SoftmaxCrossEntropyGrad op has no attribute named " << attr_name;
   }
+
 };
 class SoftmaxGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "SoftmaxGrad op has no attribute named " << attr_name;
   }
+
 };
 class SoftplusOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Softplus op has no attribute named " << attr_name;
   }
+
 };
 class SoftplusGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "SoftplusGrad op has no attribute named " << attr_name;
   }
+
 };
 class SoftsignOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Softsign op has no attribute named " << attr_name;
   }
+
 };
 class SoftsignGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "SoftsignGrad op has no attribute named " << attr_name;
   }
+
 };
 class SortOpInterpCtx : public OpInterpCtx {
  public:
@@ -5741,6 +7181,11 @@ class SortOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Sort op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"direction"};
+    return attr_names;
+  }
+
  public:
   std::string direction;
 };
@@ -5753,6 +7198,11 @@ class SparseCrossEntropyOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SparseCrossEntropy op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"depth"};
+    return attr_names;
+  }
+
  public:
   int64_t depth;
 };
@@ -5765,6 +7215,11 @@ class SparseCrossEntropyGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SparseCrossEntropyGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"depth"};
+    return attr_names;
+  }
+
  public:
   int64_t depth;
 };
@@ -5777,6 +7232,11 @@ class SparseCrossEntropyMsOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SparseCrossEntropyMs op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"depth"};
+    return attr_names;
+  }
+
  public:
   int64_t depth;
 };
@@ -5789,6 +7249,11 @@ class SparseCrossEntropyMsGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SparseCrossEntropyMsGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"depth"};
+    return attr_names;
+  }
+
  public:
   int64_t depth;
 };
@@ -5801,6 +7266,11 @@ class SparseSoftmaxCrossEntropyOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SparseSoftmaxCrossEntropy op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"depth"};
+    return attr_names;
+  }
+
  public:
   int64_t depth;
 };
@@ -5813,6 +7283,11 @@ class SparseSoftmaxCrossEntropyGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SparseSoftmaxCrossEntropyGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"depth"};
+    return attr_names;
+  }
+
  public:
   int64_t depth;
 };
@@ -5825,6 +7300,11 @@ class SparseSoftmaxCrossEntropyMsOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SparseSoftmaxCrossEntropyMs op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"depth"};
+    return attr_names;
+  }
+
  public:
   int64_t depth;
 };
@@ -5837,6 +7317,11 @@ class SparseSoftmaxCrossEntropyMsGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SparseSoftmaxCrossEntropyMsGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"depth"};
+    return attr_names;
+  }
+
  public:
   int64_t depth;
 };
@@ -5849,6 +7334,11 @@ class SplitLikeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SplitLike op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis"};
+    return attr_names;
+  }
+
  public:
   int64_t axis;
 };
@@ -5857,30 +7347,35 @@ class SqrtOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Sqrt op has no attribute named " << attr_name;
   }
+
 };
 class SqrtGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "SqrtGrad op has no attribute named " << attr_name;
   }
+
 };
 class SquareOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Square op has no attribute named " << attr_name;
   }
+
 };
 class SquareGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "SquareGrad op has no attribute named " << attr_name;
   }
+
 };
 class SquareSumOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "SquareSum op has no attribute named " << attr_name;
   }
+
 };
 class SqueezeOpInterpCtx : public OpInterpCtx {
  public:
@@ -5891,6 +7386,11 @@ class SqueezeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Squeeze op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axes"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> axes;
 };
@@ -5903,6 +7403,11 @@ class SspVariableProxyOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SspVariableProxy op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"buffer_size"};
+    return attr_names;
+  }
+
  public:
   int64_t buffer_size;
 };
@@ -5911,48 +7416,56 @@ class SummaryWriteHistogramOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "SummaryWriteHistogram op has no attribute named " << attr_name;
   }
+
 };
 class SummaryWriteImageOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "SummaryWriteImage op has no attribute named " << attr_name;
   }
+
 };
 class SummaryWritePbOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "SummaryWritePb op has no attribute named " << attr_name;
   }
+
 };
 class SummaryWriteScalarOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "SummaryWriteScalar op has no attribute named " << attr_name;
   }
+
 };
 class TanOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Tan op has no attribute named " << attr_name;
   }
+
 };
 class TanGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "TanGrad op has no attribute named " << attr_name;
   }
+
 };
 class TanhOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Tanh op has no attribute named " << attr_name;
   }
+
 };
 class TanhGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "TanhGrad op has no attribute named " << attr_name;
   }
+
 };
 class TensorBufferToListOfTensorsOpInterpCtx : public OpInterpCtx {
  public:
@@ -5967,6 +7480,11 @@ class TensorBufferToListOfTensorsOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TensorBufferToListOfTensors op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"out_shape", "out_dtype", "dynamic_out"};
+    return attr_names;
+  }
+
  public:
   Shape out_shape;
   DataType out_dtype;
@@ -5985,6 +7503,11 @@ class TensorBufferToListOfTensorsV2OpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TensorBufferToListOfTensorsV2 op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"out_shapes", "out_dtypes", "dynamic_out"};
+    return attr_names;
+  }
+
  public:
   std::vector<Shape> out_shapes;
   std::vector<DataType> out_dtypes;
@@ -6001,6 +7524,11 @@ class TensorBufferToTensorOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TensorBufferToTensor op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"instance_shape", "dtype"};
+    return attr_names;
+  }
+
  public:
   Shape instance_shape;
   DataType dtype;
@@ -6010,12 +7538,14 @@ class TensorScatterNdAddOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "TensorScatterNdAdd op has no attribute named " << attr_name;
   }
+
 };
 class TensorScatterNdUpdateOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "TensorScatterNdUpdate op has no attribute named " << attr_name;
   }
+
 };
 class TensorToTensorBufferOpInterpCtx : public OpInterpCtx {
  public:
@@ -6026,6 +7556,11 @@ class TensorToTensorBufferOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TensorToTensorBuffer op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"instance_dims"};
+    return attr_names;
+  }
+
  public:
   int32_t instance_dims;
 };
@@ -6040,6 +7575,11 @@ class TestUserOpAttrAutoTypeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TestUserOpAttrAutoType op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"int1", "int2"};
+    return attr_names;
+  }
+
  public:
   int32_t int1;
   int32_t int2;
@@ -6065,6 +7605,11 @@ class TfAvgPool1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfAvgPool1D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+    return attr_names;
+  }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6095,6 +7640,11 @@ class TfAvgPool1DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfAvgPool1DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+    return attr_names;
+  }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6125,6 +7675,11 @@ class TfAvgPool2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfAvgPool2D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+    return attr_names;
+  }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6155,6 +7710,11 @@ class TfAvgPool2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfAvgPool2DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+    return attr_names;
+  }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6185,6 +7745,11 @@ class TfAvgPool3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfAvgPool3D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+    return attr_names;
+  }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6215,6 +7780,11 @@ class TfAvgPool3DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfAvgPool3DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+    return attr_names;
+  }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6245,6 +7815,11 @@ class TfMaxPool1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfMaxPool1D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+    return attr_names;
+  }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6275,6 +7850,11 @@ class TfMaxPool1DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfMaxPool1DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+    return attr_names;
+  }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6305,6 +7885,11 @@ class TfMaxPool2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfMaxPool2D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+    return attr_names;
+  }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6335,6 +7920,11 @@ class TfMaxPool2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfMaxPool2DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+    return attr_names;
+  }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6365,6 +7955,11 @@ class TfMaxPool3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfMaxPool3D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+    return attr_names;
+  }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6395,6 +7990,11 @@ class TfMaxPool3DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfMaxPool3DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+    return attr_names;
+  }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6409,12 +8009,14 @@ class TfPreluOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "TfPrelu op has no attribute named " << attr_name;
   }
+
 };
 class TfPreluGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "TfPreluGrad op has no attribute named " << attr_name;
   }
+
 };
 class TopKOpInterpCtx : public OpInterpCtx {
  public:
@@ -6427,6 +8029,11 @@ class TopKOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TopK op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"k", "sorted"};
+    return attr_names;
+  }
+
  public:
   int32_t k;
   bool sorted;
@@ -6440,6 +8047,11 @@ class TransposeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Transpose op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"perm"};
+    return attr_names;
+  }
+
  public:
   std::vector<int32_t> perm;
 };
@@ -6458,6 +8070,11 @@ class TrilOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Tril op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"diagonal", "floating_fill_value", "integer_fill_value", "is_floating_fill_value"};
+    return attr_names;
+  }
+
  public:
   int64_t diagonal;
   double floating_fill_value;
@@ -6473,6 +8090,11 @@ class TriuOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Triu op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"diagonal"};
+    return attr_names;
+  }
+
  public:
   int64_t diagonal;
 };
@@ -6481,6 +8103,7 @@ class TupleIdentityOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "TupleIdentity op has no attribute named " << attr_name;
   }
+
 };
 class UnfoldOpInterpCtx : public OpInterpCtx {
  public:
@@ -6499,6 +8122,11 @@ class UnfoldOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Unfold op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"data_format", "kernel_size", "padding", "strides", "dilation_rate"};
+    return attr_names;
+  }
+
  public:
   std::string data_format;
   std::vector<int32_t> kernel_size;
@@ -6519,6 +8147,11 @@ class UnfoldTensorOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UnfoldTensor op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"dimension", "size", "step"};
+    return attr_names;
+  }
+
  public:
   int32_t dimension;
   int32_t size;
@@ -6537,6 +8170,11 @@ class UnfoldTensorGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UnfoldTensorGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"dimension", "size", "step"};
+    return attr_names;
+  }
+
  public:
   int32_t dimension;
   int32_t size;
@@ -6555,12 +8193,17 @@ class UniformOpInterpCtx : public OpInterpCtx {
       return (const void*)&dtype;
     } else if (!strcmp(attr_name, "shape")) {
       return (const void*)&shape;
-    } else /*if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else {
       return Error::RuntimeError() << "Uniform op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"from", "to", "seed", "dtype", "shape", "nd_sbp"};
+    return attr_names;
+  }
+
  public:
   double from;
   double to;
@@ -6582,12 +8225,17 @@ class UniformIntOpInterpCtx : public OpInterpCtx {
       return (const void*)&dtype;
     } else if (!strcmp(attr_name, "shape")) {
       return (const void*)&shape;
-    } else /*if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else {
       return Error::RuntimeError() << "UniformInt op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"from", "to", "seed", "dtype", "shape", "nd_sbp"};
+    return attr_names;
+  }
+
  public:
   int64_t from;
   int64_t to;
@@ -6605,6 +8253,11 @@ class UniqueWithCountsOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UniqueWithCounts op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"out_idx"};
+    return attr_names;
+  }
+
  public:
   DataType out_idx;
 };
@@ -6617,6 +8270,11 @@ class UnpackOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Unpack op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"unpack_num"};
+    return attr_names;
+  }
+
  public:
   int32_t unpack_num;
 };
@@ -6629,6 +8287,11 @@ class UnsortedBatchSegmentSumOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UnsortedBatchSegmentSum op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"num_segments"};
+    return attr_names;
+  }
+
  public:
   int64_t num_segments;
 };
@@ -6643,6 +8306,11 @@ class UnsortedSegmentSumOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UnsortedSegmentSum op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis", "num_segments"};
+    return attr_names;
+  }
+
  public:
   int64_t axis;
   int64_t num_segments;
@@ -6656,6 +8324,11 @@ class UnsortedSegmentSumLikeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UnsortedSegmentSumLike op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"axis"};
+    return attr_names;
+  }
+
  public:
   int64_t axis;
 };
@@ -6676,6 +8349,11 @@ class UpsampleOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Upsample op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"height_scale", "width_scale", "align_corners", "data_format", "interpolation"};
+    return attr_names;
+  }
+
  public:
   float height_scale;
   float width_scale;
@@ -6698,6 +8376,11 @@ class UpsampleBicubic2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleBicubic2D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"height_scale", "width_scale", "align_corners", "data_format"};
+    return attr_names;
+  }
+
  public:
   float height_scale;
   float width_scale;
@@ -6719,6 +8402,11 @@ class UpsampleBicubic2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleBicubic2DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"height_scale", "width_scale", "align_corners", "data_format"};
+    return attr_names;
+  }
+
  public:
   float height_scale;
   float width_scale;
@@ -6740,6 +8428,11 @@ class UpsampleBilinear2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleBilinear2D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"height_scale", "width_scale", "align_corners", "data_format"};
+    return attr_names;
+  }
+
  public:
   float height_scale;
   float width_scale;
@@ -6761,6 +8454,11 @@ class UpsampleBilinear2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleBilinear2DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"height_scale", "width_scale", "align_corners", "data_format"};
+    return attr_names;
+  }
+
  public:
   float height_scale;
   float width_scale;
@@ -6784,6 +8482,11 @@ class UpsampleGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"height_scale", "width_scale", "align_corners", "data_format", "interpolation"};
+    return attr_names;
+  }
+
  public:
   float height_scale;
   float width_scale;
@@ -6804,6 +8507,11 @@ class UpsampleLinear1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleLinear1D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"scale_factor", "align_corners", "data_format"};
+    return attr_names;
+  }
+
  public:
   float scale_factor;
   bool align_corners;
@@ -6822,6 +8530,11 @@ class UpsampleLinear1DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleLinear1DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"scale_factor", "align_corners", "data_format"};
+    return attr_names;
+  }
+
  public:
   float scale_factor;
   bool align_corners;
@@ -6838,6 +8551,11 @@ class UpsampleNearest1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleNearest1D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"scale_factor", "data_format"};
+    return attr_names;
+  }
+
  public:
   float scale_factor;
   std::string data_format;
@@ -6853,6 +8571,11 @@ class UpsampleNearest1DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleNearest1DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"scale_factor", "data_format"};
+    return attr_names;
+  }
+
  public:
   float scale_factor;
   std::string data_format;
@@ -6870,6 +8593,11 @@ class UpsampleNearest2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleNearest2D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"height_scale", "width_scale", "data_format"};
+    return attr_names;
+  }
+
  public:
   float height_scale;
   float width_scale;
@@ -6888,6 +8616,11 @@ class UpsampleNearest2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleNearest2DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"height_scale", "width_scale", "data_format"};
+    return attr_names;
+  }
+
  public:
   float height_scale;
   float width_scale;
@@ -6908,6 +8641,11 @@ class UpsampleNearest3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleNearest3D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"depth_scale", "height_scale", "width_scale", "data_format"};
+    return attr_names;
+  }
+
  public:
   float depth_scale;
   float height_scale;
@@ -6929,6 +8667,11 @@ class UpsampleNearest3DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleNearest3DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"depth_scale", "height_scale", "width_scale", "data_format"};
+    return attr_names;
+  }
+
  public:
   float depth_scale;
   float height_scale;
@@ -6952,6 +8695,11 @@ class UpsampleTrilinear3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleTrilinear3D op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"depth_scale", "height_scale", "width_scale", "align_corners", "data_format"};
+    return attr_names;
+  }
+
  public:
   float depth_scale;
   float height_scale;
@@ -6976,6 +8724,11 @@ class UpsampleTrilinear3DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleTrilinear3DGrad op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"depth_scale", "height_scale", "width_scale", "align_corners", "data_format"};
+    return attr_names;
+  }
+
  public:
   float depth_scale;
   float height_scale;
@@ -6988,6 +8741,7 @@ class WhereOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Where op has no attribute named " << attr_name;
   }
+
 };
 class WhereScalarXOpInterpCtx : public OpInterpCtx {
  public:
@@ -7004,6 +8758,11 @@ class WhereScalarXOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "WhereScalarX op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+    return attr_names;
+  }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -7033,6 +8792,11 @@ class WhereScalarXyOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "WhereScalarXy op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"has_x_int_operand", "has_x_float_operand", "has_y_int_operand", "has_y_float_operand", "x_int_operand", "x_float_operand", "y_int_operand", "y_float_operand"};
+    return attr_names;
+  }
+
  public:
   bool has_x_int_operand;
   bool has_x_float_operand;
@@ -7058,6 +8822,11 @@ class WhereScalarYOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "WhereScalarY op has no attribute named " << attr_name;
     }
   }
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+    return attr_names;
+  }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -7069,42 +8838,49 @@ class XdivyOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Xdivy op has no attribute named " << attr_name;
   }
+
 };
 class XdivyXGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "XdivyXGrad op has no attribute named " << attr_name;
   }
+
 };
 class XdivyYGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "XdivyYGrad op has no attribute named " << attr_name;
   }
+
 };
 class XlogyOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "Xlogy op has no attribute named " << attr_name;
   }
+
 };
 class XlogyXGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "XlogyXGrad op has no attribute named " << attr_name;
   }
+
 };
 class XlogyYGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "XlogyYGrad op has no attribute named " << attr_name;
   }
+
 };
 class ZeroLikeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     return Error::RuntimeError() << "ZeroLike op has no attribute named " << attr_name;
   }
+
 };
 
 #endif  // DEFINE_OP_INTERP_CTX_CLASS
