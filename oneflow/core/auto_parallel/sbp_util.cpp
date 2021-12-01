@@ -47,7 +47,7 @@ double ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& producer_sbp_
                                            const BlobDesc& logical_blob_desc,
                                            const ParallelDesc& producer_parallel_desc,
                                            const ParallelDesc& consumer_parallel_desc,
-                                           bool is_same_sbp) {
+                                           bool is_same_sbp, bool allow_cpu2gpu) {
   // Checking here.
   if (!(CheckSbpParallel(producer_sbp_parallel) && CheckSbpParallel(consumer_sbp_parallel))) {
     // TODO: replace assert
@@ -82,7 +82,12 @@ double ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& producer_sbp_
     return 2 * logical_blob_size * (producer_parallel_desc.parallel_num() - 1);
   } else {
     // Will directly modify output blob of source op. Requiring data having same sbp_parallel
-    if (is_same_sbp) { return GetMaxVal<float>(); }
+    if (is_same_sbp
+        && !(allow_cpu2gpu
+             && producer_parallel_desc.EqualsIgnoringDeviceType(consumer_parallel_desc)
+             && producer_sbp_parallel == consumer_sbp_parallel)) {
+      return GetMaxVal<float>();
+    }
     // Not supporting S->P, B->P for now. Actually yes for boxing op, but it does not work with some
     // other ops.
     if (consumer_sbp_parallel.has_partial_sum_parallel()) { return GetMaxVal<float>(); }
@@ -146,7 +151,8 @@ double ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
                                   const cfg::NdSbp& consumer_sbp_parallel,
                                   const BlobDesc& logical_blob_desc,
                                   const ParallelDesc& producer_parallel_desc,
-                                  const ParallelDesc& consumer_parallel_desc, bool is_same_sbp) {
+                                  const ParallelDesc& consumer_parallel_desc, bool is_same_sbp,
+                                  bool allow_cpu2gpu) {
   if (!(CheckNdSbp(producer_sbp_parallel) && CheckNdSbp(consumer_sbp_parallel))) {
     // TODO: replace assert
     std::cout << "Replace assert here!" << std::endl;
@@ -169,18 +175,21 @@ double ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
   // TODO: Support it in the future
   if (in_dim <= 0 || in_dim >= 3 || out_dim <= 0 || out_dim >= 3) { return GetMaxVal<float>(); }
 
-  if (reduced_in_parallel_desc == reduced_out_parallel_desc
-      && reduced_in_nd_sbp == reduced_out_nd_sbp) {
-    return 0.0;
-  }
+  bool same_nd_sbp = reduced_in_nd_sbp == reduced_out_nd_sbp;
+  if (same_nd_sbp && reduced_in_parallel_desc == reduced_out_parallel_desc) { return 0.0; }
   // Will directly modify output blob of source op. Requiring data having same sbp_parallel
-  if (is_same_sbp) { return GetMaxVal<float>(); }
+  if (is_same_sbp
+      && !(allow_cpu2gpu
+           && reduced_in_parallel_desc.EqualsIgnoringDeviceType(reduced_out_parallel_desc)
+           && same_nd_sbp)) {
+    return GetMaxVal<float>();
+  }
 
   // We support different hierarchy for 1D sbp
   if (in_dim == 1 && out_dim == 1) {
     return ComputCopyCostBetweenTwoSbpParallel(
         reduced_in_nd_sbp.sbp_parallel(0), reduced_out_nd_sbp.sbp_parallel(0), logical_blob_desc,
-        reduced_in_parallel_desc, reduced_out_parallel_desc, is_same_sbp);
+        reduced_in_parallel_desc, reduced_out_parallel_desc, is_same_sbp, allow_cpu2gpu);
   }
   // Not supporting different hierarchy
   // TODO: Support it in the future
