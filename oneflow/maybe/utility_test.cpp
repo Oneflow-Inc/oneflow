@@ -15,35 +15,22 @@ limitations under the License.
 */
 
 #include <gtest/gtest.h>
-#include "oneflow/api/cpp/api.h"
-#include "oneflow/api/cpp/device.h"
+#include "oneflow/maybe/utility.h"
 
-namespace oneflow_api {
-namespace {
+using namespace oneflow::maybe;
 
-class EnvScope {  // NOLINT
- public:
-  EnvScope() { initialize(); }
-  ~EnvScope() { release(); }
-};
+TEST(Utility, NullOpt) {
+  NullOptType a, b(NullOpt), c(a);  // NOLINT
 
-}  // namespace
+  a = NullOpt;
 
-TEST(Api, init_and_release) {
-  EnvScope scope;
+  a = b;
 
-  auto device = Device("cpu");
-  ASSERT_EQ(device.type(), "cpu");
-
-#ifdef WITH_CUDA
-  device = Device("cuda", 1);
-  ASSERT_EQ(device.type(), "cuda");
-  ASSERT_EQ(device.device_id(), 1);
-
-  device = Device("cuda:2");
-  ASSERT_EQ(device.type(), "cuda");
-  ASSERT_EQ(device.device_id(), 2);
-#endif
+  ASSERT_EQ(a, NullOptType{});
+  ASSERT_EQ(std::hash<NullOptType>()(a), std::hash<NullOptType>()(NullOpt));
+  ASSERT_EQ(NullOpt, a);
+  ASSERT_GE(NullOpt, a);
+  ASSERT_LE(NullOpt, a);
+  ASSERT_FALSE(NullOpt < a);
+  ASSERT_FALSE(NullOpt > a);
 }
-
-}  // namespace oneflow_api

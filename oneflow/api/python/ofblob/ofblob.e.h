@@ -24,29 +24,21 @@ limitations under the License.
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/api/common/ofblob.h"
 #include "oneflow/extension/python/numpy.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
 
-struct OfBlob_CopyBuffer {
-  template<typename T>
+template<typename T>
+struct BlobNumpyCopyUtil {
   static Maybe<void> From(uint64_t of_blob_ptr, const NumPyArrayPtr& array) {
-    T* buf_ptr = (T*)array.data();
-    size_t size = array.size();
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    of_blob->AutoMemCopyFrom<T>(buf_ptr, size);
-    return Maybe<void>::Ok();
+    return BlobBufferCopyUtil<T>::From(of_blob_ptr, (T*)array.data(), array.size());
   }
 
-  template<typename T>
   static Maybe<void> To(uint64_t of_blob_ptr, const NumPyArrayPtr& array) {
-    T* buf_ptr = (T*)array.data();
-    size_t size = array.size();
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    of_blob->AutoMemCopyTo<T>(buf_ptr, size);
-    return Maybe<void>::Ok();
+    return BlobBufferCopyUtil<T>::To(of_blob_ptr, (T*)array.data(), array.size());
   }
 };
 
@@ -54,11 +46,11 @@ struct OfBlob_CopyBuffer {
 
 #define DEFINE_COPIER(T, type_proto)                                                               \
   inline void OfBlob_CopyToBuffer_##T(uint64_t of_blob_ptr, const oneflow::NumPyArrayPtr& array) { \
-    oneflow::OfBlob_CopyBuffer::To<T>(of_blob_ptr, array).GetOrThrow();                            \
+    oneflow::BlobNumpyCopyUtil<T>::To(of_blob_ptr, array).GetOrThrow();                            \
   }                                                                                                \
   inline void OfBlob_CopyFromBuffer_##T(uint64_t of_blob_ptr,                                      \
                                         const oneflow::NumPyArrayPtr& array) {                     \
-    oneflow::OfBlob_CopyBuffer::From<T>(of_blob_ptr, array).GetOrThrow();                          \
+    oneflow::BlobNumpyCopyUtil<T>::From(of_blob_ptr, array).GetOrThrow();                          \
   }
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_COPIER, POD_DATA_TYPE_SEQ);
