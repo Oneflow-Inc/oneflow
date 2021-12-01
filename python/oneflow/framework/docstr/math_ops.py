@@ -108,7 +108,7 @@ add_docstr(
         array([[ 0.,  1.],
                [-1.,  2.]], dtype=float32)
 
-    """
+    """,
 )
 
 add_docstr(

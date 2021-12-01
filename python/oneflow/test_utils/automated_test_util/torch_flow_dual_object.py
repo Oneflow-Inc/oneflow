@@ -48,6 +48,7 @@ vis_parameters = {}
 call_tensor_id = []
 extra_input_tensor = set()
 
+
 class PyTorchDoesNotSupportError(Exception):
     def __init__(self, exc):
         self.exc = exc
@@ -245,7 +246,13 @@ def GetDualObject(name, pytorch, oneflow):
                                     )
                                 ):
                                     pass
-                                elif len(pytorch_args) >0 and isinstance(pytorch_args[0], torch_original.Tensor) and id(pytorch_args[0]) == id(pytorch_res):
+                                elif (
+                                    len(pytorch_args) > 0
+                                    and isinstance(
+                                        pytorch_args[0], torch_original.Tensor
+                                    )
+                                    and id(pytorch_args[0]) == id(pytorch_res)
+                                ):
                                     extra_input_tensor.add(pytorch_res)
                                 else:
                                     call_tensor_id.append(id(pytorch_res))
@@ -372,7 +379,9 @@ def print_note_fake_program():
                 flag_vis_tensor[j] = True
 
     if len(unique_vis_tensor) == 0:
-        print(f"\033[32mThis program has {len(extra_input_tensor)} input tensor: \033[0m")
+        print(
+            f"\033[32mThis program has {len(extra_input_tensor)} input tensor: \033[0m"
+        )
         for input_tensor in iter(extra_input_tensor):
             print(f"\033[32mShape{get_tensor_shape(input_tensor)}\033[0m")
             print(f"\033[32m{input_tensor}\033[0m")
@@ -380,7 +389,9 @@ def print_note_fake_program():
                 f"\033[32m-----------------------------------------------------------\033[0m"
             )
     else:
-        print(f"\033[32mThis program has {len(unique_vis_tensor)} input tensor: \033[0m")
+        print(
+            f"\033[32mThis program has {len(unique_vis_tensor)} input tensor: \033[0m"
+        )
         for input_tensor in unique_vis_tensor:
             print(f"\033[32mShape{get_tensor_shape(input_tensor)}\033[0m")
             print(f"\033[32m{input_tensor}\033[0m")
@@ -570,7 +581,7 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                             )
                         )
                         call_tensor_id.append(id(getattr(x.pytorch, key).grad))
-                
+
                 for x in dual_objects_to_test:
                     if (
                         isinstance(x.pytorch, torch_original.Tensor)

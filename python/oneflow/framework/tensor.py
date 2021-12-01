@@ -457,8 +457,10 @@ def _expm1(self):
 def _fmod(self, other):
     return flow.fmod(self, other)
 
+
 def _flatten(self, start_dim: int = 0, end_dim: int = -1):
     return flow._C.flatten(self, start_dim=start_dim, end_dim=end_dim)
+
 
 def _log(self):
     return flow.log(self)
