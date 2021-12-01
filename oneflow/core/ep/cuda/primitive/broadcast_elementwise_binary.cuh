@@ -80,7 +80,8 @@ __global__ void BroadcastElementwiseBinaryGpu(
   size_t num_dims = params.num_dims;
   CUDA_1D_KERNEL_LOOP_T(IndexType, offset, params.count) {
     params.dst_index_helper.OffsetToNdIndex(offset, dst_index, num_dims);
-    for (int64_t i = 0; i < num_dims; ++i) {
+#pragma unroll
+    for (int i = 0; i < max_dims; ++i) {
       if (params.src0_dims[i] == 1) {
         src0_index[i] = 0;
       } else {

@@ -62,7 +62,9 @@ class NdIndexOffsetHelper {
 #ifdef __CUDA_ARCH__
 #pragma unroll
 #endif
-    for (int i = 0; i < n; ++i) { offset += index[i] * stride_[i]; }
+    for (int i = 0; i < N; ++i) {
+      if (i < n) { offset += index[i] * stride_[i]; }
+    }
     return offset;
   }
 
@@ -103,10 +105,12 @@ class NdIndexOffsetHelper {
 #ifdef __CUDA_ARCH__
 #pragma unroll
 #endif
-    for (int i = 0; i < n; ++i) {
-      const T idx = remaining / stride_[i];
-      index[i] = idx;
-      remaining = remaining - idx * stride_[i];
+    for (int i = 0; i < N; ++i) {
+      if (i < n) {
+        const T idx = remaining / stride_[i];
+        index[i] = idx;
+        remaining = remaining - idx * stride_[i];
+      }
     }
   }
 
