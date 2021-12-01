@@ -33,6 +33,8 @@ class Tensor;
 namespace oneflow_api {
 
 class Tensor final {
+  friend class Graph;
+
  public:
   explicit Tensor(const Shape& shape = Shape(), const Device& device = Device("cpu"),
                   const DType& dtype = DType::kFloat);
