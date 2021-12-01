@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 // This file is generated automatically. Please DO NOT EDIT!
 
 #ifdef DEFINE_OP_INTERP_CTX_CLASS
@@ -25,10 +40,12 @@ class COCOReaderOpInterpCtx : public OpInterpCtx {
       return (const void*)&stride_partition;
     } else /*if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else */
+    {
       return Error::RuntimeError() << "COCOReader op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t session_id;
   std::string annotation_file;
@@ -47,9 +64,11 @@ class CategoricalOrdinalEncodeOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "hash_precomputed")) {
       return (const void*)&hash_precomputed;
     } else {
-      return Error::RuntimeError() << "CategoricalOrdinalEncode op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "CategoricalOrdinalEncode op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool hash_precomputed;
 };
@@ -76,10 +95,12 @@ class OFRecordReaderOpInterpCtx : public OpInterpCtx {
       return (const void*)&shuffle_after_epoch;
     } else /*if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else */
+    {
       return Error::RuntimeError() << "OFRecordReader op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string data_dir;
   int32_t data_part_num;
@@ -115,6 +136,7 @@ class OneRecReaderOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "OneRecReader op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<std::string> files;
   int32_t batch_size;
@@ -134,6 +156,7 @@ class TestDataTypeAttrOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TestDataTypeAttr op has no attribute named " << attr_name;
     }
   }
+
  public:
   DataType output_type;
 };
@@ -153,9 +176,12 @@ class TestListDataTypeAndListShapeAndListStringAttrOpInterpCtx : public OpInterp
     } else if (!strcmp(attr_name, "string_list")) {
       return (const void*)&string_list;
     } else {
-      return Error::RuntimeError() << "TestListDataTypeAndListShapeAndListStringAttr op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "TestListDataTypeAndListShapeAndListStringAttr op has no attribute named "
+             << attr_name;
     }
   }
+
  public:
   std::vector<Shape> out_shapes;
   std::vector<DataType> out_types;
@@ -188,6 +214,7 @@ class TestRandomSourceOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TestRandomSource op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t seed;
 };
@@ -200,6 +227,7 @@ class TestReshapeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TestReshape op has no attribute named " << attr_name;
     }
   }
+
  public:
   Shape shape;
 };
@@ -215,9 +243,11 @@ class TestSourceMultiGpuFixedOutNumOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "out_num")) {
       return (const void*)&out_num;
     } else {
-      return Error::RuntimeError() << "TestSourceMultiGpuFixedOutNum op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "TestSourceMultiGpuFixedOutNum op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t out_num;
 };
@@ -229,9 +259,11 @@ class _ncclLogical_2DSameDim0All2allOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "out_dim1_split_axis")) {
       return (const void*)&out_dim1_split_axis;
     } else {
-      return Error::RuntimeError() << "_ncclLogical_2DSameDim0All2all op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "_ncclLogical_2DSameDim0All2all op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t in_dim1_split_axis;
   int64_t out_dim1_split_axis;
@@ -239,7 +271,8 @@ class _ncclLogical_2DSameDim0All2allOpInterpCtx : public OpInterpCtx {
 class _ncclLogical_2DSameDim0AllGatherOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
-    return Error::RuntimeError() << "_ncclLogical_2DSameDim0AllGather op has no attribute named " << attr_name;
+    return Error::RuntimeError() << "_ncclLogical_2DSameDim0AllGather op has no attribute named "
+                                 << attr_name;
   }
 };
 class _ncclLogical_2DSameDim0AllGatherNoncontinuousOpInterpCtx : public OpInterpCtx {
@@ -248,22 +281,27 @@ class _ncclLogical_2DSameDim0AllGatherNoncontinuousOpInterpCtx : public OpInterp
     if (!strcmp(attr_name, "in_dim1_split_axis")) {
       return (const void*)&in_dim1_split_axis;
     } else {
-      return Error::RuntimeError() << "_ncclLogical_2DSameDim0AllGatherNoncontinuous op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "_ncclLogical_2DSameDim0AllGatherNoncontinuous op has no attribute named "
+             << attr_name;
     }
   }
+
  public:
   int64_t in_dim1_split_axis;
 };
 class _ncclLogical_2DSameDim0AllReduceOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
-    return Error::RuntimeError() << "_ncclLogical_2DSameDim0AllReduce op has no attribute named " << attr_name;
+    return Error::RuntimeError() << "_ncclLogical_2DSameDim0AllReduce op has no attribute named "
+                                 << attr_name;
   }
 };
 class _ncclLogical_2DSameDim1AllReduceOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
-    return Error::RuntimeError() << "_ncclLogical_2DSameDim1AllReduce op has no attribute named " << attr_name;
+    return Error::RuntimeError() << "_ncclLogical_2DSameDim1AllReduce op has no attribute named "
+                                 << attr_name;
   }
 };
 class _ncclLogicalAllGatherOpInterpCtx : public OpInterpCtx {
@@ -278,9 +316,11 @@ class _ncclLogicalAllGatherNoncontinuousOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "in_split_axis")) {
       return (const void*)&in_split_axis;
     } else {
-      return Error::RuntimeError() << "_ncclLogicalAllGatherNoncontinuous op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "_ncclLogicalAllGatherNoncontinuous op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t in_split_axis;
 };
@@ -293,7 +333,8 @@ class _ncclLogicalAllReduceOpInterpCtx : public OpInterpCtx {
 class _ncclLogicalReduceScatterOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
-    return Error::RuntimeError() << "_ncclLogicalReduceScatter op has no attribute named " << attr_name;
+    return Error::RuntimeError() << "_ncclLogicalReduceScatter op has no attribute named "
+                                 << attr_name;
   }
 };
 class _ncclLogicalS2sOpInterpCtx : public OpInterpCtx {
@@ -307,6 +348,7 @@ class _ncclLogicalS2sOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "_ncclLogicalS2s op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t in_split_axis;
   int64_t out_split_axis;
@@ -332,6 +374,7 @@ class AccOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Acc op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t max_acc_num;
 };
@@ -382,6 +425,7 @@ class AdagradUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdagradUpdate op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t train_step_val;
   float learning_rate_val;
@@ -398,9 +442,11 @@ class AdamBiasCorrectionFactorOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "beta")) {
       return (const void*)&beta;
     } else {
-      return Error::RuntimeError() << "AdamBiasCorrectionFactor op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "AdamBiasCorrectionFactor op has no attribute named " << attr_name;
     }
   }
+
  public:
   float beta;
 };
@@ -435,6 +481,7 @@ class AdamUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdamUpdate op has no attribute named " << attr_name;
     }
   }
+
  public:
   float learning_rate_val;
   float bias_correction1_val;
@@ -458,6 +505,7 @@ class AdaptiveAvgPool1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdaptiveAvgPool1D op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> output_size;
 };
@@ -467,9 +515,11 @@ class AdaptiveAvgPool1DGradOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "output_size")) {
       return (const void*)&output_size;
     } else {
-      return Error::RuntimeError() << "AdaptiveAvgPool1DGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "AdaptiveAvgPool1DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> output_size;
 };
@@ -482,6 +532,7 @@ class AdaptiveAvgPool2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdaptiveAvgPool2D op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> output_size;
 };
@@ -491,9 +542,11 @@ class AdaptiveAvgPool2DGradOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "output_size")) {
       return (const void*)&output_size;
     } else {
-      return Error::RuntimeError() << "AdaptiveAvgPool2DGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "AdaptiveAvgPool2DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> output_size;
 };
@@ -506,6 +559,7 @@ class AdaptiveAvgPool3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdaptiveAvgPool3D op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> output_size;
 };
@@ -515,9 +569,11 @@ class AdaptiveAvgPool3DGradOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "output_size")) {
       return (const void*)&output_size;
     } else {
-      return Error::RuntimeError() << "AdaptiveAvgPool3DGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "AdaptiveAvgPool3DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> output_size;
 };
@@ -538,6 +594,7 @@ class AffineGridOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AffineGrid op has no attribute named " << attr_name;
     }
   }
+
  public:
   Shape size;
   bool align_corners;
@@ -553,6 +610,7 @@ class AffineGridGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AffineGridGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   Shape size;
   bool align_corners;
@@ -582,10 +640,12 @@ class ArangeOpInterpCtx : public OpInterpCtx {
       return (const void*)&dtype;
     } else /*if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else */
+    {
       return Error::RuntimeError() << "Arange op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t integer_start;
   int64_t integer_delta;
@@ -605,6 +665,7 @@ class ArgSortOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ArgSort op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string direction;
 };
@@ -623,6 +684,7 @@ class ArgwhereOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Argwhere op has no attribute named " << attr_name;
     }
   }
+
  public:
   DataType dtype;
 };
@@ -731,6 +793,7 @@ class AvgPool1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AvgPool1D op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -761,6 +824,7 @@ class AvgPool1DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AvgPool1DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -791,6 +855,7 @@ class AvgPool2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AvgPool2D op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -821,6 +886,7 @@ class AvgPool2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AvgPool2DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -851,6 +917,7 @@ class AvgPool3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AvgPool3D op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -881,6 +948,7 @@ class AvgPool3DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AvgPool3DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -909,6 +977,7 @@ class BatchMatmulOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BatchMatmul op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool transpose_a;
   bool transpose_b;
@@ -927,6 +996,7 @@ class BernoulliOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Bernoulli op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t seed;
   bool has_seed;
@@ -941,6 +1011,7 @@ class BiasAddOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BiasAdd op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t axis;
 };
@@ -953,6 +1024,7 @@ class BinaryCrossEntropyOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BinaryCrossEntropy op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string reduction;
 };
@@ -962,9 +1034,11 @@ class BinaryCrossEntropyGradOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "reduction")) {
       return (const void*)&reduction;
     } else {
-      return Error::RuntimeError() << "BinaryCrossEntropyGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "BinaryCrossEntropyGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string reduction;
 };
@@ -976,9 +1050,11 @@ class BinaryCrossEntropyWithLogitsOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "reduction")) {
       return (const void*)&reduction;
     } else {
-      return Error::RuntimeError() << "BinaryCrossEntropyWithLogits op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "BinaryCrossEntropyWithLogits op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool has_pos_weight;
   std::string reduction;
@@ -991,9 +1067,11 @@ class BinaryCrossEntropyWithLogitsGradOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "reduction")) {
       return (const void*)&reduction;
     } else {
-      return Error::RuntimeError() << "BinaryCrossEntropyWithLogitsGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "BinaryCrossEntropyWithLogitsGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool has_pos_weight;
   std::string reduction;
@@ -1067,6 +1145,7 @@ class BroadcastLikeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BroadcastLike op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> broadcast_axes;
 };
@@ -1101,6 +1180,7 @@ class BroadcastMatmulOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BroadcastMatmul op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool transpose_a;
   bool transpose_b;
@@ -1112,9 +1192,11 @@ class BroadcastMatmulGradBOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "alpha")) {
       return (const void*)&alpha;
     } else {
-      return Error::RuntimeError() << "BroadcastMatmulGradB op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "BroadcastMatmulGradB op has no attribute named " << attr_name;
     }
   }
+
  public:
   double alpha;
 };
@@ -1175,6 +1257,7 @@ class CastOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Cast op has no attribute named " << attr_name;
     }
   }
+
  public:
   DataType dtype;
 };
@@ -1229,6 +1312,7 @@ class CeluOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Celu op has no attribute named " << attr_name;
     }
   }
+
  public:
   double alpha;
 };
@@ -1241,6 +1325,7 @@ class CeluGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CeluGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   double alpha;
 };
@@ -1259,6 +1344,7 @@ class ClipByScalarOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ClipByScalar op has no attribute named " << attr_name;
     }
   }
+
  public:
   double floating_min;
   int64_t integral_min;
@@ -1280,6 +1366,7 @@ class ClipByScalarGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ClipByScalarGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   double floating_min;
   int64_t integral_min;
@@ -1297,6 +1384,7 @@ class ClipByScalarMaxOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ClipByScalarMax op has no attribute named " << attr_name;
     }
   }
+
  public:
   double floating_max;
   int64_t integral_max;
@@ -1312,6 +1400,7 @@ class ClipByScalarMaxGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ClipByScalarMaxGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   double floating_max;
   int64_t integral_max;
@@ -1327,6 +1416,7 @@ class ClipByScalarMinOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ClipByScalarMin op has no attribute named " << attr_name;
     }
   }
+
  public:
   double floating_min;
   int64_t integral_min;
@@ -1342,6 +1432,7 @@ class ClipByScalarMinGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ClipByScalarMinGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   double floating_min;
   int64_t integral_min;
@@ -1359,10 +1450,12 @@ class CoinFlipOpInterpCtx : public OpInterpCtx {
       return (const void*)&has_seed;
     } else /*if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else */
+    {
       return Error::RuntimeError() << "CoinFlip op has no attribute named " << attr_name;
     }
   }
+
  public:
   float probability;
   int64_t batch_size;
@@ -1385,6 +1478,7 @@ class CombinedMarginLossOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CombinedMarginLoss op has no attribute named " << attr_name;
     }
   }
+
  public:
   float m1;
   float m2;
@@ -1403,9 +1497,11 @@ class CombinedMarginLossGradOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "depth")) {
       return (const void*)&depth;
     } else {
-      return Error::RuntimeError() << "CombinedMarginLossGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "CombinedMarginLossGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   float m1;
   float m2;
@@ -1423,6 +1519,7 @@ class ConcatOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Concat op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t axis;
   int64_t max_dim_size;
@@ -1442,10 +1539,12 @@ class ConstantOpInterpCtx : public OpInterpCtx {
       return (const void*)&shape;
     } else /*if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else */
+    {
       return Error::RuntimeError() << "Constant op has no attribute named " << attr_name;
     }
   }
+
  public:
   double floating_value;
   int64_t integer_value;
@@ -1467,6 +1566,7 @@ class ConstantPad1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConstantPad1D op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> padding;
   double floating_value;
@@ -1485,6 +1585,7 @@ class ConstantPad1DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConstantPad1DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> padding;
   double floating_value;
@@ -1503,6 +1604,7 @@ class ConstantPad2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConstantPad2D op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> padding;
   double floating_value;
@@ -1521,6 +1623,7 @@ class ConstantPad2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConstantPad2DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> padding;
   double floating_value;
@@ -1539,6 +1642,7 @@ class ConstantPad3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConstantPad3D op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> padding;
   double floating_value;
@@ -1557,6 +1661,7 @@ class ConstantPad3DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConstantPad3DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> padding;
   double floating_value;
@@ -1583,6 +1688,7 @@ class Conv1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Conv1D op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t filters;
   std::vector<int32_t> padding_before;
@@ -1613,6 +1719,7 @@ class Conv2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Conv2D op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t filters;
   std::vector<int32_t> padding_before;
@@ -1643,6 +1750,7 @@ class Conv3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Conv3D op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t filters;
   std::vector<int32_t> padding_before;
@@ -1663,6 +1771,7 @@ class ConvBiasGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConvBiasGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string data_format;
   int32_t num_spatial_dims;
@@ -1688,6 +1797,7 @@ class ConvDataGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConvDataGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t num_spatial_dims;
   std::vector<int32_t> padding_before;
@@ -1718,6 +1828,7 @@ class ConvFilterGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConvFilterGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t num_spatial_dims;
   std::vector<int32_t> padding_before;
@@ -1738,6 +1849,7 @@ class CopyOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Copy op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string device_type;
   int64_t device_id;
@@ -1787,6 +1899,7 @@ class CreateSummaryWriterOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CreateSummaryWriter op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string logdir;
 };
@@ -1812,9 +1925,11 @@ class CropMirrorNormalizeFromTensorbufferOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "output_dtype")) {
       return (const void*)&output_dtype;
     } else {
-      return Error::RuntimeError() << "CropMirrorNormalizeFromTensorbuffer op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "CropMirrorNormalizeFromTensorbuffer op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string color_space;
   std::string output_layout;
@@ -1848,9 +1963,11 @@ class CropMirrorNormalizeFromUint8OpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "output_dtype")) {
       return (const void*)&output_dtype;
     } else {
-      return Error::RuntimeError() << "CropMirrorNormalizeFromUint8 op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "CropMirrorNormalizeFromUint8 op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string color_space;
   std::string output_layout;
@@ -1871,6 +1988,7 @@ class CtcGreedyDecoderOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CtcGreedyDecoder op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool merge_repeated;
 };
@@ -1887,6 +2005,7 @@ class CtcLossOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CtcLoss op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t max_target_length;
   int32_t blank;
@@ -1905,6 +2024,7 @@ class CtcLossGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CtcLossGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t max_target_length;
   int32_t blank;
@@ -1920,9 +2040,11 @@ class CudnnFusedNormalizationAddReluOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "momentum")) {
       return (const void*)&momentum;
     } else {
-      return Error::RuntimeError() << "CudnnFusedNormalizationAddRelu op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "CudnnFusedNormalizationAddRelu op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t axis;
   float epsilon;
@@ -1936,9 +2058,11 @@ class CudnnFusedNormalizationAddReluGradOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "epsilon")) {
       return (const void*)&epsilon;
     } else {
-      return Error::RuntimeError() << "CudnnFusedNormalizationAddReluGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "CudnnFusedNormalizationAddReluGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t axis;
   float epsilon;
@@ -1966,6 +2090,7 @@ class Deconv1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Deconv1D op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t filters;
   std::vector<int32_t> padding_before;
@@ -1999,6 +2124,7 @@ class Deconv2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Deconv2D op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t filters;
   std::vector<int32_t> padding_before;
@@ -2032,6 +2158,7 @@ class Deconv3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Deconv3D op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t filters;
   std::vector<int32_t> padding_before;
@@ -2051,6 +2178,7 @@ class DiagOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Diag op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t diagonal;
 };
@@ -2063,6 +2191,7 @@ class DiagGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DiagGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t diagonal;
 };
@@ -2075,6 +2204,7 @@ class DimGatherOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimGather op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t dim;
 };
@@ -2087,6 +2217,7 @@ class DimScatterAddOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimScatterAdd op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t dim;
 };
@@ -2099,6 +2230,7 @@ class DimScatterAddLikeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimScatterAddLike op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t dim;
 };
@@ -2113,6 +2245,7 @@ class DimScatterAddScalarOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimScatterAddScalar op has no attribute named " << attr_name;
     }
   }
+
  public:
   float src_scalar;
   int32_t dim;
@@ -2126,6 +2259,7 @@ class DimScatterMulOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimScatterMul op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t dim;
 };
@@ -2140,6 +2274,7 @@ class DimScatterMulScalarOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimScatterMulScalar op has no attribute named " << attr_name;
     }
   }
+
  public:
   float src_scalar;
   int32_t dim;
@@ -2153,6 +2288,7 @@ class DimScatterUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimScatterUpdate op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t dim;
 };
@@ -2164,9 +2300,11 @@ class DimScatterUpdateScalarOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "dim")) {
       return (const void*)&dim;
     } else {
-      return Error::RuntimeError() << "DimScatterUpdateScalar op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "DimScatterUpdateScalar op has no attribute named " << attr_name;
     }
   }
+
  public:
   float src_scalar;
   int32_t dim;
@@ -2179,9 +2317,11 @@ class DistributedPartialFcSampleOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "seed")) {
       return (const void*)&seed;
     } else {
-      return Error::RuntimeError() << "DistributedPartialFcSample op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "DistributedPartialFcSample op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t num_sample;
   int64_t seed;
@@ -2189,7 +2329,8 @@ class DistributedPartialFcSampleOpInterpCtx : public OpInterpCtx {
 class DistributedPartialFcSampleDisableBoxingOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
-    return Error::RuntimeError() << "DistributedPartialFcSampleDisableBoxing op has no attribute named " << attr_name;
+    return Error::RuntimeError()
+           << "DistributedPartialFcSampleDisableBoxing op has no attribute named " << attr_name;
   }
 };
 class DropoutOpInterpCtx : public OpInterpCtx {
@@ -2201,6 +2342,7 @@ class DropoutOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Dropout op has no attribute named " << attr_name;
     }
   }
+
  public:
   float scale;
 };
@@ -2213,6 +2355,7 @@ class DropoutGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DropoutGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   float scale;
 };
@@ -2224,9 +2367,11 @@ class DynamicLossScaleScheduleOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "multiplier")) {
       return (const void*)&multiplier;
     } else {
-      return Error::RuntimeError() << "DynamicLossScaleSchedule op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "DynamicLossScaleSchedule op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t increment_period;
   float multiplier;
@@ -2246,6 +2391,7 @@ class EagerBToSOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerBToS op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t out_split_axis;
   std::string in_parallel_conf;
@@ -2269,6 +2415,7 @@ class EagerNaiveSToSOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerNaiveSToS op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t in_split_axis;
   int64_t out_split_axis;
@@ -2285,6 +2432,7 @@ class EagerNcclAllGatherOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerNcclAllGather op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string parallel_conf;
 };
@@ -2299,6 +2447,7 @@ class EagerNcclAllReduceOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerNcclAllReduce op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string parallel_conf;
   bool async_launch;
@@ -2314,6 +2463,7 @@ class EagerNcclBroadcastOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerNcclBroadcast op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string parallel_conf;
   int64_t root;
@@ -2329,6 +2479,7 @@ class EagerNcclReduceOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerNcclReduce op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string parallel_conf;
   int64_t root;
@@ -2341,9 +2492,11 @@ class EagerNcclReduceScatterOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "op_type")) {
       return (const void*)&op_type;
     } else {
-      return Error::RuntimeError() << "EagerNcclReduceScatter op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "EagerNcclReduceScatter op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string parallel_conf;
   std::string op_type;
@@ -2361,6 +2514,7 @@ class EagerNcclS2sOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerNcclS2s op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t in_split_axis;
   int64_t out_split_axis;
@@ -2379,6 +2533,7 @@ class EagerPToBOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerPToB op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string in_parallel_conf;
   std::string out_parallel_conf;
@@ -2399,6 +2554,7 @@ class EagerPToSOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerPToS op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t out_split_axis;
   std::string in_parallel_conf;
@@ -2420,6 +2576,7 @@ class EagerSToBOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerSToB op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t in_split_axis;
   std::string in_parallel_conf;
@@ -2437,6 +2594,7 @@ class EagerSymmetricSToPOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerSymmetricSToP op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t in_split_axis;
   std::string parallel_conf;
@@ -2450,7 +2608,8 @@ class ElementwiseMaximumOpInterpCtx : public OpInterpCtx {
 class ElementwiseMaximumBackwardOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
-    return Error::RuntimeError() << "ElementwiseMaximumBackward op has no attribute named " << attr_name;
+    return Error::RuntimeError() << "ElementwiseMaximumBackward op has no attribute named "
+                                 << attr_name;
   }
 };
 class ElementwiseMinimumOpInterpCtx : public OpInterpCtx {
@@ -2462,7 +2621,8 @@ class ElementwiseMinimumOpInterpCtx : public OpInterpCtx {
 class ElementwiseMinimumBackwardOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
-    return Error::RuntimeError() << "ElementwiseMinimumBackward op has no attribute named " << attr_name;
+    return Error::RuntimeError() << "ElementwiseMinimumBackward op has no attribute named "
+                                 << attr_name;
   }
 };
 class EluOpInterpCtx : public OpInterpCtx {
@@ -2474,6 +2634,7 @@ class EluOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Elu op has no attribute named " << attr_name;
     }
   }
+
  public:
   double alpha;
 };
@@ -2486,6 +2647,7 @@ class EluGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EluGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   double alpha;
 };
@@ -2498,10 +2660,12 @@ class EmptyOpInterpCtx : public OpInterpCtx {
       return (const void*)&shape;
     } else /*if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else */
+    {
       return Error::RuntimeError() << "Empty op has no attribute named " << attr_name;
     }
   }
+
  public:
   DataType dtype;
   Shape shape;
@@ -2554,6 +2718,7 @@ class ExpandOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Expand op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> logical_in_shape;
   std::vector<int32_t> logical_expand_shape;
@@ -2567,6 +2732,7 @@ class ExpandDimsOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ExpandDims op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t axis;
 };
@@ -2581,6 +2747,7 @@ class ExpandGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ExpandGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> logical_out_shape;
   std::vector<int32_t> logical_expand_shape;
@@ -2608,10 +2775,12 @@ class EyeOpInterpCtx : public OpInterpCtx {
       return (const void*)&dtype;
     } else /*if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else */
+    {
       return Error::RuntimeError() << "Eye op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t rows;
   int64_t cols;
@@ -2631,6 +2800,7 @@ class FakeQuantizationOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FakeQuantization op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string quantization_formula;
   int32_t quantization_bit;
@@ -2647,6 +2817,7 @@ class FlattenOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Flatten op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t start_dim;
   int32_t end_dim;
@@ -2660,6 +2831,7 @@ class FlipOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Flip op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> dims;
 };
@@ -2672,6 +2844,7 @@ class FlipGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FlipGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> dims;
 };
@@ -2728,6 +2901,7 @@ class FoldOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Fold op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> output_size;
   std::vector<int32_t> kernel_size;
@@ -2744,6 +2918,7 @@ class FusedBiasAddGeluOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedBiasAddGelu op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t axis;
 };
@@ -2753,9 +2928,11 @@ class FusedBiasAddGeluGradOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "axis")) {
       return (const void*)&axis;
     } else {
-      return Error::RuntimeError() << "FusedBiasAddGeluGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "FusedBiasAddGeluGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t axis;
 };
@@ -2767,9 +2944,11 @@ class FusedBiasAddMaskScaleOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "scale")) {
       return (const void*)&scale;
     } else {
-      return Error::RuntimeError() << "FusedBiasAddMaskScale op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "FusedBiasAddMaskScale op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t axis;
   float scale;
@@ -2783,6 +2962,7 @@ class FusedCastScaleOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedCastScale op has no attribute named " << attr_name;
     }
   }
+
  public:
   double scale;
 };
@@ -2794,9 +2974,11 @@ class FusedScaleMaskSoftmaxOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "mask_fill_value")) {
       return (const void*)&mask_fill_value;
     } else {
-      return Error::RuntimeError() << "FusedScaleMaskSoftmax op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "FusedScaleMaskSoftmax op has no attribute named " << attr_name;
     }
   }
+
  public:
   float scale_value;
   float mask_fill_value;
@@ -2811,9 +2993,11 @@ class FusedScaleMaskSoftmaxDropoutOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "dropout_scale_value")) {
       return (const void*)&dropout_scale_value;
     } else {
-      return Error::RuntimeError() << "FusedScaleMaskSoftmaxDropout op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "FusedScaleMaskSoftmaxDropout op has no attribute named " << attr_name;
     }
   }
+
  public:
   float scale_value;
   float mask_fill_value;
@@ -2827,9 +3011,11 @@ class FusedScaleMaskSoftmaxDropoutGradOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "dropout_scale_value")) {
       return (const void*)&dropout_scale_value;
     } else {
-      return Error::RuntimeError() << "FusedScaleMaskSoftmaxDropoutGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "FusedScaleMaskSoftmaxDropoutGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   float scale_value;
   float dropout_scale_value;
@@ -2840,9 +3026,11 @@ class FusedScaleMaskSoftmaxGradOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "scale_value")) {
       return (const void*)&scale_value;
     } else {
-      return Error::RuntimeError() << "FusedScaleMaskSoftmaxGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "FusedScaleMaskSoftmaxGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   float scale_value;
 };
@@ -2867,6 +3055,7 @@ class FusedScaleTrilOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedScaleTril op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t diagonal;
   double floating_fill_value;
@@ -2884,9 +3073,11 @@ class FusedSelfAttentionQueryMulKeyAndValueOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "alpha")) {
       return (const void*)&alpha;
     } else {
-      return Error::RuntimeError() << "FusedSelfAttentionQueryMulKeyAndValue op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "FusedSelfAttentionQueryMulKeyAndValue op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t head_size;
   float alpha;
@@ -2897,9 +3088,11 @@ class FusedSelfAttentionQueryMulKeyAndValueGradOpInterpCtx : public OpInterpCtx 
     if (!strcmp(attr_name, "alpha")) {
       return (const void*)&alpha;
     } else {
-      return Error::RuntimeError() << "FusedSelfAttentionQueryMulKeyAndValueGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "FusedSelfAttentionQueryMulKeyAndValueGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   float alpha;
 };
@@ -2915,9 +3108,11 @@ class FusedTrilScaleSoftmaxMaskScaleOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "mask_scale_value")) {
       return (const void*)&mask_scale_value;
     } else {
-      return Error::RuntimeError() << "FusedTrilScaleSoftmaxMaskScale op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "FusedTrilScaleSoftmaxMaskScale op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t diagonal;
   float tril_fill_value;
@@ -2934,9 +3129,11 @@ class FusedTrilScaleSoftmaxMaskScaleGradOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "mask_scale_value")) {
       return (const void*)&mask_scale_value;
     } else {
-      return Error::RuntimeError() << "FusedTrilScaleSoftmaxMaskScaleGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "FusedTrilScaleSoftmaxMaskScaleGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t diagonal;
   float tril_scale_value;
@@ -2951,6 +3148,7 @@ class GatherOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Gather op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t axis;
 };
@@ -2989,6 +3187,7 @@ class GenTensorBufferOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "GenTensorBuffer op has no attribute named " << attr_name;
     }
   }
+
  public:
   Shape shape;
   std::vector<Shape> shape_list;
@@ -3002,9 +3201,11 @@ class GenerateRandomBatchPermutationIndicesOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "seed")) {
       return (const void*)&seed;
     } else {
-      return Error::RuntimeError() << "GenerateRandomBatchPermutationIndices op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "GenerateRandomBatchPermutationIndices op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t seed;
 };
@@ -3021,6 +3222,7 @@ class GridSampleOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "GridSample op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string interpolation_mode;
   std::string padding_mode;
@@ -3039,6 +3241,7 @@ class GridSampleGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "GridSampleGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string interpolation_mode;
   std::string padding_mode;
@@ -3079,6 +3282,7 @@ class HardtanhOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Hardtanh op has no attribute named " << attr_name;
     }
   }
+
  public:
   double min_val;
   double max_val;
@@ -3094,6 +3298,7 @@ class HardtanhGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "HardtanhGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   double min_val;
   double max_val;
@@ -3103,14 +3308,17 @@ class HierarchicalParallelCastOpInterpCtx : public OpInterpCtx {
   Maybe<const void*> GetAttr(const char* attr_name) const override {
     /*if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */if (!strcmp(attr_name, "grad_mode")) {
+    } else */
+    if (!strcmp(attr_name, "grad_mode")) {
       return (const void*)&grad_mode;
     } else if (!strcmp(attr_name, "grad_nd_sbp")) {
       return (const void*)&grad_nd_sbp;
     } else {
-      return Error::RuntimeError() << "HierarchicalParallelCast op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "HierarchicalParallelCast op has no attribute named " << attr_name;
     }
   }
+
  public:
   // std::vector<std::string> nd_sbp;
   std::string grad_mode;
@@ -3119,7 +3327,8 @@ class HierarchicalParallelCastOpInterpCtx : public OpInterpCtx {
 class HierarchicalParallelCastLikeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
-    return Error::RuntimeError() << "HierarchicalParallelCastLike op has no attribute named " << attr_name;
+    return Error::RuntimeError() << "HierarchicalParallelCastLike op has no attribute named "
+                                 << attr_name;
   }
 };
 class IdentityOpInterpCtx : public OpInterpCtx {
@@ -3137,6 +3346,7 @@ class IdentityBufferOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "IdentityBuffer op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t buffer_size;
 };
@@ -3155,6 +3365,7 @@ class ImageBatchAlignOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ImageBatchAlign op has no attribute named " << attr_name;
     }
   }
+
  public:
   Shape shape;
   DataType data_type;
@@ -3172,6 +3383,7 @@ class ImageDecodeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ImageDecode op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string color_space;
   DataType data_type;
@@ -3193,6 +3405,7 @@ class ImageNormalizeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ImageNormalize op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<float> std;
   std::vector<float> mean;
@@ -3214,6 +3427,7 @@ class ImageRandomCropOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ImageRandomCrop op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t num_attempts;
   int64_t seed;
@@ -3235,9 +3449,11 @@ class ImageResizeKeepAspectRatioOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "interpolation_type")) {
       return (const void*)&interpolation_type;
     } else {
-      return Error::RuntimeError() << "ImageResizeKeepAspectRatio op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "ImageResizeKeepAspectRatio op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t target_size;
   int32_t min_size;
@@ -3262,6 +3478,7 @@ class ImageResizeToFixedOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ImageResizeToFixed op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t target_width;
   int64_t target_height;
@@ -3280,6 +3497,7 @@ class ImageTargetResizeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ImageTargetResize op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t target_size;
   int32_t max_size;
@@ -3293,6 +3511,7 @@ class InTopKOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "InTopK op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t k;
 };
@@ -3314,9 +3533,11 @@ class IndexedSlicesAdamUpdateOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "do_bias_correction")) {
       return (const void*)&do_bias_correction;
     } else {
-      return Error::RuntimeError() << "IndexedSlicesAdamUpdate op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "IndexedSlicesAdamUpdate op has no attribute named " << attr_name;
     }
   }
+
  public:
   float learning_rate_val;
   float beta1;
@@ -3334,9 +3555,11 @@ class IndexedSlicesMomentumUpdateOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "weight_decay")) {
       return (const void*)&weight_decay;
     } else {
-      return Error::RuntimeError() << "IndexedSlicesMomentumUpdate op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "IndexedSlicesMomentumUpdate op has no attribute named " << attr_name;
     }
   }
+
  public:
   float beta;
   float weight_decay;
@@ -3344,7 +3567,8 @@ class IndexedSlicesMomentumUpdateOpInterpCtx : public OpInterpCtx {
 class IndexedSlicesReduceSumOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
-    return Error::RuntimeError() << "IndexedSlicesReduceSum op has no attribute named " << attr_name;
+    return Error::RuntimeError() << "IndexedSlicesReduceSum op has no attribute named "
+                                 << attr_name;
   }
 };
 class IndexedSlicesSgdUpdateOpInterpCtx : public OpInterpCtx {
@@ -3353,9 +3577,11 @@ class IndexedSlicesSgdUpdateOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "weight_decay")) {
       return (const void*)&weight_decay;
     } else {
-      return Error::RuntimeError() << "IndexedSlicesSgdUpdate op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "IndexedSlicesSgdUpdate op has no attribute named " << attr_name;
     }
   }
+
  public:
   float weight_decay;
 };
@@ -3370,6 +3596,7 @@ class KlDivLossOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "KlDivLoss op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string reduction;
   bool log_target;
@@ -3385,6 +3612,7 @@ class KlDivLossGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "KlDivLossGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string reduction;
   bool log_target;
@@ -3397,9 +3625,11 @@ class L1L2RegularizeGradientOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "l2")) {
       return (const void*)&l2;
     } else {
-      return Error::RuntimeError() << "L1L2RegularizeGradient op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "L1L2RegularizeGradient op has no attribute named " << attr_name;
     }
   }
+
  public:
   float l1;
   float l2;
@@ -3415,6 +3645,7 @@ class L2NormalizeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "L2Normalize op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t axis;
   float epsilon;
@@ -3430,6 +3661,7 @@ class L2NormalizeGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "L2NormalizeGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t axis;
   float epsilon;
@@ -3455,6 +3687,7 @@ class LambUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LambUpdate op has no attribute named " << attr_name;
     }
   }
+
  public:
   float beta1;
   float beta2;
@@ -3485,6 +3718,7 @@ class LarsUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LarsUpdate op has no attribute named " << attr_name;
     }
   }
+
  public:
   double scale;
   float l1;
@@ -3511,6 +3745,7 @@ class LayerNormOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LayerNorm op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool center;
   bool scale;
@@ -3529,6 +3764,7 @@ class LayerNormGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LayerNormGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t begin_norm_axis;
   double epsilon;
@@ -3542,6 +3778,7 @@ class LayerNormParamGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LayerNormParamGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t begin_params_axis;
 };
@@ -3554,6 +3791,7 @@ class LeakyReluOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LeakyRelu op has no attribute named " << attr_name;
     }
   }
+
  public:
   float alpha;
 };
@@ -3566,6 +3804,7 @@ class LeakyReluGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LeakyReluGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   float alpha;
 };
@@ -3648,6 +3887,7 @@ class LogicalSliceOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LogicalSlice op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> start;
   std::vector<int64_t> stop;
@@ -3666,6 +3906,7 @@ class LogicalSliceAssignOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LogicalSliceAssign op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> start;
   std::vector<int64_t> stop;
@@ -3686,6 +3927,7 @@ class MaskedFillOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MaskedFill op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -3705,6 +3947,7 @@ class MatmulOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Matmul op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool transpose_a;
   bool transpose_b;
@@ -3731,6 +3974,7 @@ class MaxPool1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MaxPool1D op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -3761,6 +4005,7 @@ class MaxPool1DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MaxPool1DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -3791,6 +4036,7 @@ class MaxPool2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MaxPool2D op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -3821,6 +4067,7 @@ class MaxPool2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MaxPool2DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -3851,6 +4098,7 @@ class MaxPool3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MaxPool3D op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -3881,6 +4129,7 @@ class MaxPool3DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MaxPool3DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> padding;
   std::string data_format;
@@ -3915,10 +4164,13 @@ class MegatronGptMmapDataLoaderOpInterpCtx : public OpInterpCtx {
       return (const void*)&random_seed;
     } else /*if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
-      return Error::RuntimeError() << "MegatronGptMmapDataLoader op has no attribute named " << attr_name;
+    } else */
+    {
+      return Error::RuntimeError()
+             << "MegatronGptMmapDataLoader op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string data_file_prefix;
   int64_t seq_length;
@@ -3947,6 +4199,7 @@ class MinMaxObserverOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MinMaxObserver op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string quantization_formula;
   int32_t quantization_bit;
@@ -3984,6 +4237,7 @@ class MomentumUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MomentumUpdate op has no attribute named " << attr_name;
     }
   }
+
  public:
   float learning_rate_val;
   double scale;
@@ -4008,9 +4262,11 @@ class MovingAverageMinMaxObserverOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "momentum")) {
       return (const void*)&momentum;
     } else {
-      return Error::RuntimeError() << "MovingAverageMinMaxObserver op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "MovingAverageMinMaxObserver op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool training;
   std::string quantization_formula;
@@ -4050,6 +4306,7 @@ class NarrowOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Narrow op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t dim;
   int64_t start;
@@ -4068,6 +4325,7 @@ class NarrowGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "NarrowGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t dim;
   int64_t start;
@@ -4096,6 +4354,7 @@ class NllOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Nll op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t ignore_index;
   std::string reduction;
@@ -4111,6 +4370,7 @@ class NllGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "NllGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t ignore_index;
   std::string reduction;
@@ -4126,6 +4386,7 @@ class NmsOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Nms op has no attribute named " << attr_name;
     }
   }
+
  public:
   float iou_threshold;
   int32_t keep_n;
@@ -4145,10 +4406,12 @@ class NormalOpInterpCtx : public OpInterpCtx {
       return (const void*)&shape;
     } else /*if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else */
+    {
       return Error::RuntimeError() << "Normal op has no attribute named " << attr_name;
     }
   }
+
  public:
   double mean;
   double std;
@@ -4172,6 +4435,7 @@ class NormalizationOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Normalization op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t axis;
   float epsilon;
@@ -4190,9 +4454,11 @@ class NormalizationAddReluBaseOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "momentum")) {
       return (const void*)&momentum;
     } else {
-      return Error::RuntimeError() << "NormalizationAddReluBase op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "NormalizationAddReluBase op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t axis;
   float epsilon;
@@ -4207,9 +4473,11 @@ class NormalizationAddReluGradOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "epsilon")) {
       return (const void*)&epsilon;
     } else {
-      return Error::RuntimeError() << "NormalizationAddReluGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "NormalizationAddReluGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t axis;
   float epsilon;
@@ -4225,6 +4493,7 @@ class NormalizationGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "NormalizationGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t axis;
   float epsilon;
@@ -4238,6 +4507,7 @@ class NvtxEndOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "NvtxEnd op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string mark_prefix;
 };
@@ -4250,6 +4520,7 @@ class NvtxStartOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "NvtxStart op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string mark_prefix;
 };
@@ -4268,19 +4539,22 @@ class ObjectBboxScaleOpInterpCtx : public OpInterpCtx {
 class ObjectSegmentationPolygonFlipOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
-    return Error::RuntimeError() << "ObjectSegmentationPolygonFlip op has no attribute named " << attr_name;
+    return Error::RuntimeError() << "ObjectSegmentationPolygonFlip op has no attribute named "
+                                 << attr_name;
   }
 };
 class ObjectSegmentationPolygonScaleOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
-    return Error::RuntimeError() << "ObjectSegmentationPolygonScale op has no attribute named " << attr_name;
+    return Error::RuntimeError() << "ObjectSegmentationPolygonScale op has no attribute named "
+                                 << attr_name;
   }
 };
 class ObjectSegmentationPolygonToMaskOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
-    return Error::RuntimeError() << "ObjectSegmentationPolygonToMask op has no attribute named " << attr_name;
+    return Error::RuntimeError() << "ObjectSegmentationPolygonToMask op has no attribute named "
+                                 << attr_name;
   }
 };
 class OfrecordBytesDecoderOpInterpCtx : public OpInterpCtx {
@@ -4289,9 +4563,11 @@ class OfrecordBytesDecoderOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "name")) {
       return (const void*)&name;
     } else {
-      return Error::RuntimeError() << "OfrecordBytesDecoder op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "OfrecordBytesDecoder op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string name;
 };
@@ -4327,9 +4603,11 @@ class OfrecordImageClassificationReaderOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "num_decode_threads_per_machine")) {
       return (const void*)&num_decode_threads_per_machine;
     } else {
-      return Error::RuntimeError() << "OfrecordImageClassificationReader op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "OfrecordImageClassificationReader op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string data_dir;
   int32_t data_part_num;
@@ -4354,9 +4632,11 @@ class OfrecordImageDecoderOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "color_space")) {
       return (const void*)&color_space;
     } else {
-      return Error::RuntimeError() << "OfrecordImageDecoder op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "OfrecordImageDecoder op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string name;
   std::string color_space;
@@ -4379,9 +4659,11 @@ class OfrecordImageDecoderRandomCropOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "random_aspect_ratio")) {
       return (const void*)&random_aspect_ratio;
     } else {
-      return Error::RuntimeError() << "OfrecordImageDecoderRandomCrop op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "OfrecordImageDecoderRandomCrop op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string name;
   std::string color_space;
@@ -4408,6 +4690,7 @@ class OfrecordRawDecoderOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "OfrecordRawDecoder op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string name;
   Shape shape;
@@ -4434,6 +4717,7 @@ class OneHotOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "OneHot op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t depth;
   double floating_on_value;
@@ -4465,6 +4749,7 @@ class OnerecDecoderOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "OnerecDecoder op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string key;
   DataType data_type;
@@ -4490,6 +4775,7 @@ class PackOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Pack op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t pack_num;
 };
@@ -4508,6 +4794,7 @@ class PadOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Pad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> padding_before;
   std::vector<int64_t> padding_after;
@@ -4529,6 +4816,7 @@ class PadGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "PadGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> padding_before;
   std::vector<int64_t> padding_after;
@@ -4546,6 +4834,7 @@ class ParallelCastOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ParallelCast op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string sbp_parallel;
   std::string grad_sbp_parallel;
@@ -4593,6 +4882,7 @@ class QuantizationOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Quantization op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string quantization_formula;
   int32_t quantization_bit;
@@ -4609,6 +4899,7 @@ class RandomMaskLikeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "RandomMaskLike op has no attribute named " << attr_name;
     }
   }
+
  public:
   float rate;
   int64_t seed;
@@ -4622,10 +4913,12 @@ class RandpermOpInterpCtx : public OpInterpCtx {
       return (const void*)&seed;
     } else /*if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else */
+    {
       return Error::RuntimeError() << "Randperm op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t n;
   int64_t seed;
@@ -4672,6 +4965,7 @@ class RecvOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Recv op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t src_process_id;
   DataType dtype;
@@ -4690,6 +4984,7 @@ class ReduceAllOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceAll op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> axis;
   bool keepdims;
@@ -4705,6 +5000,7 @@ class ReduceAnyOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceAny op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> axis;
   bool keepdims;
@@ -4720,6 +5016,7 @@ class ReduceMaxOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceMax op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> axis;
   bool keepdims;
@@ -4730,9 +5027,11 @@ class ReduceMaxDeviceStageOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "axis")) {
       return (const void*)&axis;
     } else {
-      return Error::RuntimeError() << "ReduceMaxDeviceStage op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "ReduceMaxDeviceStage op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> axis;
 };
@@ -4742,9 +5041,11 @@ class ReduceMaxDeviceStageGradOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "axis")) {
       return (const void*)&axis;
     } else {
-      return Error::RuntimeError() << "ReduceMaxDeviceStageGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "ReduceMaxDeviceStageGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> axis;
 };
@@ -4756,9 +5057,11 @@ class ReduceMaxGlobalStageOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "keepdims")) {
       return (const void*)&keepdims;
     } else {
-      return Error::RuntimeError() << "ReduceMaxGlobalStage op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "ReduceMaxGlobalStage op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> axis;
   bool keepdims;
@@ -4771,9 +5074,11 @@ class ReduceMaxGlobalStageGradOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "keepdims")) {
       return (const void*)&keepdims;
     } else {
-      return Error::RuntimeError() << "ReduceMaxGlobalStageGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "ReduceMaxGlobalStageGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> axis;
   bool keepdims;
@@ -4789,6 +5094,7 @@ class ReduceMinOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceMin op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> axis;
   bool keepdims;
@@ -4799,9 +5105,11 @@ class ReduceMinDeviceStageOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "axis")) {
       return (const void*)&axis;
     } else {
-      return Error::RuntimeError() << "ReduceMinDeviceStage op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "ReduceMinDeviceStage op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> axis;
 };
@@ -4811,9 +5119,11 @@ class ReduceMinDeviceStageGradOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "axis")) {
       return (const void*)&axis;
     } else {
-      return Error::RuntimeError() << "ReduceMinDeviceStageGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "ReduceMinDeviceStageGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> axis;
 };
@@ -4825,9 +5135,11 @@ class ReduceMinGlobalStageOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "keepdims")) {
       return (const void*)&keepdims;
     } else {
-      return Error::RuntimeError() << "ReduceMinGlobalStage op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "ReduceMinGlobalStage op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> axis;
   bool keepdims;
@@ -4840,9 +5152,11 @@ class ReduceMinGlobalStageGradOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "keepdims")) {
       return (const void*)&keepdims;
     } else {
-      return Error::RuntimeError() << "ReduceMinGlobalStageGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "ReduceMinGlobalStageGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> axis;
   bool keepdims;
@@ -4858,6 +5172,7 @@ class ReduceProdOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceProd op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> axis;
   bool keepdims;
@@ -4873,6 +5188,7 @@ class ReduceSumOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceSum op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> axis;
   bool keepdims;
@@ -4886,6 +5202,7 @@ class ReduceSumLikeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceSumLike op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> axis;
 };
@@ -4898,6 +5215,7 @@ class ReflectionPad2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReflectionPad2D op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> padding;
 };
@@ -4910,6 +5228,7 @@ class ReflectionPad2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReflectionPad2DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> padding;
 };
@@ -4934,6 +5253,7 @@ class RepeatOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Repeat op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t repeat_num;
 };
@@ -4946,6 +5266,7 @@ class ReplicationPad2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReplicationPad2D op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> padding;
 };
@@ -4955,9 +5276,11 @@ class ReplicationPad2DGradOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "padding")) {
       return (const void*)&padding;
     } else {
-      return Error::RuntimeError() << "ReplicationPad2DGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "ReplicationPad2DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> padding;
 };
@@ -4970,6 +5293,7 @@ class ReshapeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Reshape op has no attribute named " << attr_name;
     }
   }
+
  public:
   Shape shape;
 };
@@ -5014,6 +5338,7 @@ class RmspropUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "RmspropUpdate op has no attribute named " << attr_name;
     }
   }
+
  public:
   float learning_rate_val;
   double scale;
@@ -5035,6 +5360,7 @@ class RollOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Roll op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> shifts;
   std::vector<int32_t> dims;
@@ -5080,6 +5406,7 @@ class SamePaddingOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SamePadding op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string padding;
   std::string data_format;
@@ -5104,6 +5431,7 @@ class SamePaddingGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SamePaddingGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string padding;
   std::string data_format;
@@ -5126,6 +5454,7 @@ class ScalarAddOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarAdd op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5159,6 +5488,7 @@ class ScalarFloordivOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarFloordiv op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5180,6 +5510,7 @@ class ScalarFmodOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarFmod op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5201,6 +5532,7 @@ class ScalarLogicalAndOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalAnd op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5222,6 +5554,7 @@ class ScalarLogicalEqualOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalEqual op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5240,9 +5573,11 @@ class ScalarLogicalGreaterOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "float_operand")) {
       return (const void*)&float_operand;
     } else {
-      return Error::RuntimeError() << "ScalarLogicalGreater op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "ScalarLogicalGreater op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5261,9 +5596,11 @@ class ScalarLogicalGreaterEqualOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "float_operand")) {
       return (const void*)&float_operand;
     } else {
-      return Error::RuntimeError() << "ScalarLogicalGreaterEqual op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "ScalarLogicalGreaterEqual op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5285,6 +5622,7 @@ class ScalarLogicalLessOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalLess op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5303,9 +5641,11 @@ class ScalarLogicalLessEqualOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "float_operand")) {
       return (const void*)&float_operand;
     } else {
-      return Error::RuntimeError() << "ScalarLogicalLessEqual op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "ScalarLogicalLessEqual op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5324,9 +5664,11 @@ class ScalarLogicalNotEqualOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "float_operand")) {
       return (const void*)&float_operand;
     } else {
-      return Error::RuntimeError() << "ScalarLogicalNotEqual op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "ScalarLogicalNotEqual op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5348,6 +5690,7 @@ class ScalarLogicalOrOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalOr op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5369,6 +5712,7 @@ class ScalarLogicalXorOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalXor op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5390,6 +5734,7 @@ class ScalarMulOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarMul op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5417,6 +5762,7 @@ class ScalarPowOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarPow op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5438,6 +5784,7 @@ class ScalarPowGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarPowGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -5459,6 +5806,7 @@ class ScatterNdOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScatterNd op has no attribute named " << attr_name;
     }
   }
+
  public:
   Shape shape;
 };
@@ -5489,6 +5837,7 @@ class SendOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Send op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t dst_process_id;
 };
@@ -5509,6 +5858,7 @@ class SgdUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SgdUpdate op has no attribute named " << attr_name;
     }
   }
+
  public:
   float learning_rate_val;
   double scale;
@@ -5531,7 +5881,8 @@ class SigmoidCrossEntropyOpInterpCtx : public OpInterpCtx {
 class SigmoidCrossEntropyGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
-    return Error::RuntimeError() << "SigmoidCrossEntropyGrad op has no attribute named " << attr_name;
+    return Error::RuntimeError() << "SigmoidCrossEntropyGrad op has no attribute named "
+                                 << attr_name;
   }
 };
 class SigmoidGradOpInterpCtx : public OpInterpCtx {
@@ -5613,6 +5964,7 @@ class SliceOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Slice op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> start;
   std::vector<int64_t> stop;
@@ -5631,6 +5983,7 @@ class SliceGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SliceGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> start;
   std::vector<int64_t> stop;
@@ -5649,6 +6002,7 @@ class SliceUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SliceUpdate op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int64_t> start;
   std::vector<int64_t> stop;
@@ -5665,6 +6019,7 @@ class SmoothL1LossOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SmoothL1Loss op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string reduction;
   float beta;
@@ -5680,6 +6035,7 @@ class SmoothL1LossGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SmoothL1LossGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string reduction;
   float beta;
@@ -5699,7 +6055,8 @@ class SoftmaxCrossEntropyOpInterpCtx : public OpInterpCtx {
 class SoftmaxCrossEntropyGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<const void*> GetAttr(const char* attr_name) const override {
-    return Error::RuntimeError() << "SoftmaxCrossEntropyGrad op has no attribute named " << attr_name;
+    return Error::RuntimeError() << "SoftmaxCrossEntropyGrad op has no attribute named "
+                                 << attr_name;
   }
 };
 class SoftmaxGradOpInterpCtx : public OpInterpCtx {
@@ -5741,6 +6098,7 @@ class SortOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Sort op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string direction;
 };
@@ -5753,6 +6111,7 @@ class SparseCrossEntropyOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SparseCrossEntropy op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t depth;
 };
@@ -5762,9 +6121,11 @@ class SparseCrossEntropyGradOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "depth")) {
       return (const void*)&depth;
     } else {
-      return Error::RuntimeError() << "SparseCrossEntropyGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "SparseCrossEntropyGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t depth;
 };
@@ -5774,9 +6135,11 @@ class SparseCrossEntropyMsOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "depth")) {
       return (const void*)&depth;
     } else {
-      return Error::RuntimeError() << "SparseCrossEntropyMs op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "SparseCrossEntropyMs op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t depth;
 };
@@ -5786,9 +6149,11 @@ class SparseCrossEntropyMsGradOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "depth")) {
       return (const void*)&depth;
     } else {
-      return Error::RuntimeError() << "SparseCrossEntropyMsGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "SparseCrossEntropyMsGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t depth;
 };
@@ -5798,9 +6163,11 @@ class SparseSoftmaxCrossEntropyOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "depth")) {
       return (const void*)&depth;
     } else {
-      return Error::RuntimeError() << "SparseSoftmaxCrossEntropy op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "SparseSoftmaxCrossEntropy op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t depth;
 };
@@ -5810,9 +6177,11 @@ class SparseSoftmaxCrossEntropyGradOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "depth")) {
       return (const void*)&depth;
     } else {
-      return Error::RuntimeError() << "SparseSoftmaxCrossEntropyGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "SparseSoftmaxCrossEntropyGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t depth;
 };
@@ -5822,9 +6191,11 @@ class SparseSoftmaxCrossEntropyMsOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "depth")) {
       return (const void*)&depth;
     } else {
-      return Error::RuntimeError() << "SparseSoftmaxCrossEntropyMs op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "SparseSoftmaxCrossEntropyMs op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t depth;
 };
@@ -5834,9 +6205,11 @@ class SparseSoftmaxCrossEntropyMsGradOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "depth")) {
       return (const void*)&depth;
     } else {
-      return Error::RuntimeError() << "SparseSoftmaxCrossEntropyMsGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "SparseSoftmaxCrossEntropyMsGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t depth;
 };
@@ -5849,6 +6222,7 @@ class SplitLikeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SplitLike op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t axis;
 };
@@ -5891,6 +6265,7 @@ class SqueezeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Squeeze op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> axes;
 };
@@ -5903,6 +6278,7 @@ class SspVariableProxyOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SspVariableProxy op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t buffer_size;
 };
@@ -5964,9 +6340,11 @@ class TensorBufferToListOfTensorsOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "dynamic_out")) {
       return (const void*)&dynamic_out;
     } else {
-      return Error::RuntimeError() << "TensorBufferToListOfTensors op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "TensorBufferToListOfTensors op has no attribute named " << attr_name;
     }
   }
+
  public:
   Shape out_shape;
   DataType out_dtype;
@@ -5982,9 +6360,11 @@ class TensorBufferToListOfTensorsV2OpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "dynamic_out")) {
       return (const void*)&dynamic_out;
     } else {
-      return Error::RuntimeError() << "TensorBufferToListOfTensorsV2 op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "TensorBufferToListOfTensorsV2 op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<Shape> out_shapes;
   std::vector<DataType> out_dtypes;
@@ -5998,9 +6378,11 @@ class TensorBufferToTensorOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "dtype")) {
       return (const void*)&dtype;
     } else {
-      return Error::RuntimeError() << "TensorBufferToTensor op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "TensorBufferToTensor op has no attribute named " << attr_name;
     }
   }
+
  public:
   Shape instance_shape;
   DataType dtype;
@@ -6023,9 +6405,11 @@ class TensorToTensorBufferOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "instance_dims")) {
       return (const void*)&instance_dims;
     } else {
-      return Error::RuntimeError() << "TensorToTensorBuffer op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "TensorToTensorBuffer op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t instance_dims;
 };
@@ -6037,9 +6421,11 @@ class TestUserOpAttrAutoTypeOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "int2")) {
       return (const void*)&int2;
     } else {
-      return Error::RuntimeError() << "TestUserOpAttrAutoType op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "TestUserOpAttrAutoType op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t int1;
   int32_t int2;
@@ -6065,6 +6451,7 @@ class TfAvgPool1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfAvgPool1D op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6095,6 +6482,7 @@ class TfAvgPool1DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfAvgPool1DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6125,6 +6513,7 @@ class TfAvgPool2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfAvgPool2D op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6155,6 +6544,7 @@ class TfAvgPool2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfAvgPool2DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6185,6 +6575,7 @@ class TfAvgPool3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfAvgPool3D op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6215,6 +6606,7 @@ class TfAvgPool3DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfAvgPool3DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6245,6 +6637,7 @@ class TfMaxPool1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfMaxPool1D op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6275,6 +6668,7 @@ class TfMaxPool1DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfMaxPool1DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6305,6 +6699,7 @@ class TfMaxPool2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfMaxPool2D op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6335,6 +6730,7 @@ class TfMaxPool2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfMaxPool2DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6365,6 +6761,7 @@ class TfMaxPool3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfMaxPool3D op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6395,6 +6792,7 @@ class TfMaxPool3DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfMaxPool3DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string padding;
   std::vector<int32_t> padding_before;
@@ -6427,6 +6825,7 @@ class TopKOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TopK op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t k;
   bool sorted;
@@ -6440,6 +6839,7 @@ class TransposeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Transpose op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::vector<int32_t> perm;
 };
@@ -6458,6 +6858,7 @@ class TrilOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Tril op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t diagonal;
   double floating_fill_value;
@@ -6473,6 +6874,7 @@ class TriuOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Triu op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t diagonal;
 };
@@ -6499,6 +6901,7 @@ class UnfoldOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Unfold op has no attribute named " << attr_name;
     }
   }
+
  public:
   std::string data_format;
   std::vector<int32_t> kernel_size;
@@ -6519,6 +6922,7 @@ class UnfoldTensorOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UnfoldTensor op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t dimension;
   int32_t size;
@@ -6537,6 +6941,7 @@ class UnfoldTensorGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UnfoldTensorGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t dimension;
   int32_t size;
@@ -6557,10 +6962,12 @@ class UniformOpInterpCtx : public OpInterpCtx {
       return (const void*)&shape;
     } else /*if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else */
+    {
       return Error::RuntimeError() << "Uniform op has no attribute named " << attr_name;
     }
   }
+
  public:
   double from;
   double to;
@@ -6584,10 +6991,12 @@ class UniformIntOpInterpCtx : public OpInterpCtx {
       return (const void*)&shape;
     } else /*if (!strcmp(attr_name, "nd_sbp")) {
       return (const void*)&nd_sbp;
-    } else */{
+    } else */
+    {
       return Error::RuntimeError() << "UniformInt op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t from;
   int64_t to;
@@ -6605,6 +7014,7 @@ class UniqueWithCountsOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UniqueWithCounts op has no attribute named " << attr_name;
     }
   }
+
  public:
   DataType out_idx;
 };
@@ -6617,6 +7027,7 @@ class UnpackOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Unpack op has no attribute named " << attr_name;
     }
   }
+
  public:
   int32_t unpack_num;
 };
@@ -6626,9 +7037,11 @@ class UnsortedBatchSegmentSumOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "num_segments")) {
       return (const void*)&num_segments;
     } else {
-      return Error::RuntimeError() << "UnsortedBatchSegmentSum op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "UnsortedBatchSegmentSum op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t num_segments;
 };
@@ -6643,6 +7056,7 @@ class UnsortedSegmentSumOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UnsortedSegmentSum op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t axis;
   int64_t num_segments;
@@ -6653,9 +7067,11 @@ class UnsortedSegmentSumLikeOpInterpCtx : public OpInterpCtx {
     if (!strcmp(attr_name, "axis")) {
       return (const void*)&axis;
     } else {
-      return Error::RuntimeError() << "UnsortedSegmentSumLike op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "UnsortedSegmentSumLike op has no attribute named " << attr_name;
     }
   }
+
  public:
   int64_t axis;
 };
@@ -6676,6 +7092,7 @@ class UpsampleOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Upsample op has no attribute named " << attr_name;
     }
   }
+
  public:
   float height_scale;
   float width_scale;
@@ -6698,6 +7115,7 @@ class UpsampleBicubic2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleBicubic2D op has no attribute named " << attr_name;
     }
   }
+
  public:
   float height_scale;
   float width_scale;
@@ -6716,9 +7134,11 @@ class UpsampleBicubic2DGradOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "data_format")) {
       return (const void*)&data_format;
     } else {
-      return Error::RuntimeError() << "UpsampleBicubic2DGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "UpsampleBicubic2DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   float height_scale;
   float width_scale;
@@ -6740,6 +7160,7 @@ class UpsampleBilinear2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleBilinear2D op has no attribute named " << attr_name;
     }
   }
+
  public:
   float height_scale;
   float width_scale;
@@ -6758,9 +7179,11 @@ class UpsampleBilinear2DGradOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "data_format")) {
       return (const void*)&data_format;
     } else {
-      return Error::RuntimeError() << "UpsampleBilinear2DGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "UpsampleBilinear2DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   float height_scale;
   float width_scale;
@@ -6784,6 +7207,7 @@ class UpsampleGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   float height_scale;
   float width_scale;
@@ -6804,6 +7228,7 @@ class UpsampleLinear1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleLinear1D op has no attribute named " << attr_name;
     }
   }
+
  public:
   float scale_factor;
   bool align_corners;
@@ -6819,9 +7244,11 @@ class UpsampleLinear1DGradOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "data_format")) {
       return (const void*)&data_format;
     } else {
-      return Error::RuntimeError() << "UpsampleLinear1DGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "UpsampleLinear1DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   float scale_factor;
   bool align_corners;
@@ -6838,6 +7265,7 @@ class UpsampleNearest1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleNearest1D op has no attribute named " << attr_name;
     }
   }
+
  public:
   float scale_factor;
   std::string data_format;
@@ -6850,9 +7278,11 @@ class UpsampleNearest1DGradOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "data_format")) {
       return (const void*)&data_format;
     } else {
-      return Error::RuntimeError() << "UpsampleNearest1DGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "UpsampleNearest1DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   float scale_factor;
   std::string data_format;
@@ -6870,6 +7300,7 @@ class UpsampleNearest2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleNearest2D op has no attribute named " << attr_name;
     }
   }
+
  public:
   float height_scale;
   float width_scale;
@@ -6885,9 +7316,11 @@ class UpsampleNearest2DGradOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "data_format")) {
       return (const void*)&data_format;
     } else {
-      return Error::RuntimeError() << "UpsampleNearest2DGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "UpsampleNearest2DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   float height_scale;
   float width_scale;
@@ -6908,6 +7341,7 @@ class UpsampleNearest3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleNearest3D op has no attribute named " << attr_name;
     }
   }
+
  public:
   float depth_scale;
   float height_scale;
@@ -6926,9 +7360,11 @@ class UpsampleNearest3DGradOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "data_format")) {
       return (const void*)&data_format;
     } else {
-      return Error::RuntimeError() << "UpsampleNearest3DGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "UpsampleNearest3DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   float depth_scale;
   float height_scale;
@@ -6952,6 +7388,7 @@ class UpsampleTrilinear3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleTrilinear3D op has no attribute named " << attr_name;
     }
   }
+
  public:
   float depth_scale;
   float height_scale;
@@ -6973,9 +7410,11 @@ class UpsampleTrilinear3DGradOpInterpCtx : public OpInterpCtx {
     } else if (!strcmp(attr_name, "data_format")) {
       return (const void*)&data_format;
     } else {
-      return Error::RuntimeError() << "UpsampleTrilinear3DGrad op has no attribute named " << attr_name;
+      return Error::RuntimeError()
+             << "UpsampleTrilinear3DGrad op has no attribute named " << attr_name;
     }
   }
+
  public:
   float depth_scale;
   float height_scale;
@@ -7004,6 +7443,7 @@ class WhereScalarXOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "WhereScalarX op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
@@ -7033,6 +7473,7 @@ class WhereScalarXyOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "WhereScalarXy op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool has_x_int_operand;
   bool has_x_float_operand;
@@ -7058,6 +7499,7 @@ class WhereScalarYOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "WhereScalarY op has no attribute named " << attr_name;
     }
   }
+
  public:
   bool has_int_operand;
   bool has_float_operand;
