@@ -45,7 +45,7 @@ class UserOp final : public Operator {
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
   Maybe<double> GetComputeComplexity(
-      cfg::SbpSignature* sbp_signature,
+      cfg::NdSbpSignature* sbp_signature,
       std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
       const ParallelDesc& parallel_desc) const override;
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;

@@ -24,9 +24,12 @@ namespace {
 // splitting input and using partial sum for output is not a valid sbp for this op for now.
 Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
   double logical_computation_cost = ctx->Shape4ArgNameAndIndex("in", 0)->elem_cnt() * 10;
-  const auto& sbp_parallel = ctx->SbpParallel4ArgNameAndIndex("in", 0);
-  if (sbp_parallel.has_split_parallel()) {
-    return logical_computation_cost / ctx->parallel_desc().parallel_num();
+  const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
+  const auto& nd_sbp_in = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  for (int32_t dim_sbp = 0; dim_sbp < nd_sbp_in.sbp_parallel_size(); dim_sbp++) {
+    if (nd_sbp_in.sbp_parallel(dim_sbp).has_split_parallel()) {
+      logical_computation_cost /= parallel_hierarchy->At(dim_sbp);
+    }
   }
   return logical_computation_cost;
 }
