@@ -3,7 +3,7 @@ include (ExternalProject)
 set(CUB_INCLUDE_DIR ${THIRD_PARTY_DIR}/cub/include)
 set(CUB_BUILD_INCLUDE ${CMAKE_CURRENT_BINARY_DIR}/cub/src/cub/cub)
 
-set(CUB_URL https://github.com/NVlabs/cub/archive/v1.8.0.tar.gz)
+set(CUB_URL https://github.com/NVIDIA/cub/archive/refs/tags/1.11.0.tar.gz)
 use_mirror(VARIABLE CUB_URL URL ${CUB_URL})
 
 if(THIRD_PARTY)
@@ -11,7 +11,7 @@ if(THIRD_PARTY)
 ExternalProject_Add(cub
     PREFIX cub
     URL ${CUB_URL}
-    URL_MD5 9203ea2499b56782601fddf8a12e9b08
+    URL_MD5 97196a885598e40592100e1caaf3d5ea
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ""
     INSTALL_COMMAND ""

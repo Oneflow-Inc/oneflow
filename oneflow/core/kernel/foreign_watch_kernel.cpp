@@ -45,8 +45,8 @@ REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kForeignWatchConf, DeviceType::kCPU,
                             ForeignWatchKernel<DeviceType::kCPU>);
 
 #ifdef WITH_CUDA
-REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kForeignWatchConf, DeviceType::kGPU,
-                            ForeignWatchKernel<DeviceType::kGPU>);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kForeignWatchConf, DeviceType::kCUDA,
+                            ForeignWatchKernel<DeviceType::kCUDA>);
 #endif
 
 }  // namespace oneflow

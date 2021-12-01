@@ -23,7 +23,7 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-void MaskAndScale(DeviceCtx* ctx, const int64_t n, float scale, const T* x, const int8_t* mask,
+void MaskAndScale(ep::Stream* stream, const int64_t n, float scale, const T* x, const int8_t* mask,
                   T* y) {
   for (int64_t i = 0; i < n; ++i) { y[i] = x[i] * static_cast<T>(mask[i]) * scale; }
 }
@@ -40,7 +40,7 @@ class DropoutKernelCPU final : public user_op::OpKernel {
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const float scale = ctx->Attr<float>("scale");
-    MaskAndScale<T>(ctx->device_ctx(), in->shape().elem_cnt(), scale, in->dptr<T>(),
+    MaskAndScale<T>(ctx->stream(), in->shape().elem_cnt(), scale, in->dptr<T>(),
                     mask->dptr<int8_t>(), out->mut_dptr<T>());
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
@@ -50,7 +50,7 @@ class DropoutKernelCPU final : public user_op::OpKernel {
           ep::primitive::NewPrimitive<ep::primitive::AddFactory>(DeviceType::kCPU,
                                                                  add_to_output->data_type());
       CHECK(primitive);
-      primitive->Launch(ctx->stream(), add_to_output->dptr<T>(), out->dptr<T>(), out->mut_dptr<T>(),
+      primitive->Launch(ctx->stream(), out->dptr<T>(), add_to_output->dptr<T>(), out->mut_dptr<T>(),
                         add_to_output->shape().elem_cnt());
     }
   }
@@ -83,7 +83,7 @@ class DropoutGradKernelCPU final : public user_op::OpKernel {
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const float scale = ctx->Attr<float>("scale");
-    MaskAndScale<T>(ctx->device_ctx(), dy->shape().elem_cnt(), scale, dy->dptr<T>(),
+    MaskAndScale<T>(ctx->stream(), dy->shape().elem_cnt(), scale, dy->dptr<T>(),
                     mask->dptr<int8_t>(), dx->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

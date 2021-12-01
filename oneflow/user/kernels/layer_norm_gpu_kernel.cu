@@ -21,6 +21,8 @@ limitations under the License.
 #include <cub/cub.cuh>
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/include/primitive/fill.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/cuda/layer_norm.cuh"
 
 namespace oneflow {
 
@@ -66,239 +68,52 @@ class LayerNormCudnnBnCtx final {
   cudnnBatchNormMode_t mode_;
 };
 
-template<typename T, bool do_scale, bool do_center>
-__global__ void InstanceScaleCenterGpu(const int64_t elem_cnt, const int64_t instance_size,
-                                       const T* in, const T* gamma, const T* beta, T* out) {
-  CUDA_1D_KERNEL_LOOP_T(int64_t, i, elem_cnt) {
-    const int64_t elem_id = i % instance_size;
-    T v = in[i];
-    if (do_scale) { v *= gamma[elem_id]; }
-    if (do_center) { v += beta[elem_id]; }
-    out[i] = v;
-  }
-}
-
-template<bool do_scale, bool do_center>
-__global__ void InstanceScaleCenterH2Gpu(const int64_t h2_elem_cnt, const int64_t h2_instance_size,
-                                         const half* in, const half* gamma, const half* beta,
-                                         half* out) {
-  const auto* in_h2 = reinterpret_cast<const half2*>(in);
-  const auto* gamma_h2 = reinterpret_cast<const half2*>(gamma);
-  const auto* beta_h2 = reinterpret_cast<const half2*>(beta);
-  auto* out_h2 = reinterpret_cast<half2*>(out);
-  CUDA_1D_KERNEL_LOOP_T(int64_t, i, h2_elem_cnt) {
-    const int64_t elem_id = i % h2_instance_size;
-    half2 v2 = in_h2[i];
-    if (do_scale) { v2 = __hmul2(v2, gamma_h2[elem_id]); }
-    if (do_center) { v2 = __hadd2(v2, beta_h2[elem_id]); }
-    out_h2[i] = v2;
-  }
-}
-
-template<typename T>
-void InstanceScaleCenter(DeviceCtx* ctx, const int64_t batch_size, const int64_t instance_size,
-                         const T* in, const T* gamma, const T* beta, T* out) {
-  const int64_t elem_cnt = batch_size * instance_size;
-  if (beta != nullptr && gamma != nullptr) {  // scale and center
-    InstanceScaleCenterGpu<T, true, true>
-        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            elem_cnt, instance_size, in, gamma, beta, out);
-  } else if (gamma != nullptr) {  // scale only
-    InstanceScaleCenterGpu<T, true, false>
-        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            elem_cnt, instance_size, in, gamma, nullptr, out);
-  } else if (beta != nullptr) {  // center only
-    InstanceScaleCenterGpu<T, false, true>
-        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            elem_cnt, instance_size, in, nullptr, beta, out);
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-void InstanceScaleCenterH2(DeviceCtx* ctx, const int64_t batch_size, const int64_t instance_size,
-                           const half* in, const half* gamma, const half* beta, half* out) {
-  CHECK_EQ(instance_size % 2, 0);
-  const int64_t elem_cnt_h2 = batch_size * instance_size / 2;
-  const int64_t instance_size_h2 = instance_size / 2;
-  if (beta != nullptr && gamma != nullptr) {  // scale and center
-    InstanceScaleCenterH2Gpu<true, true>
-        <<<BlocksNum4ThreadsNum(elem_cnt_h2), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            elem_cnt_h2, instance_size_h2, in, gamma, beta, out);
-  } else if (gamma != nullptr) {  // scale only
-    InstanceScaleCenterH2Gpu<true, false>
-        <<<BlocksNum4ThreadsNum(elem_cnt_h2), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            elem_cnt_h2, instance_size_h2, in, gamma, nullptr, out);
-  } else if (beta != nullptr) {  // center only
-    InstanceScaleCenterH2Gpu<false, true>
-        <<<BlocksNum4ThreadsNum(elem_cnt_h2), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            elem_cnt_h2, instance_size_h2, in, nullptr, beta, out);
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-template<>
-void InstanceScaleCenter<float16>(DeviceCtx* ctx, const int64_t batch_size,
-                                  const int64_t instance_size, const float16* in,
-                                  const float16* gamma, const float16* beta, float16* out) {
-  if (instance_size % 2 == 0) {
-    InstanceScaleCenterH2(ctx, batch_size, instance_size, reinterpret_cast<const half*>(in),
-                          reinterpret_cast<const half*>(gamma), reinterpret_cast<const half*>(beta),
-                          reinterpret_cast<half*>(out));
-  } else {
-    InstanceScaleCenter<half>(ctx, batch_size, instance_size, reinterpret_cast<const half*>(in),
-                              reinterpret_cast<const half*>(gamma),
-                              reinterpret_cast<const half*>(beta), reinterpret_cast<half*>(out));
-  }
-}
-
-constexpr int64_t kLayerNormForwardGpuBlockSize = 256;
-
-template<typename T>
-struct LayerNormUtil {
-  using ComputeType = T;
-  __device__ static ComputeType ToComputeType(T v) { return v; }
-  __device__ static T FromComputeType(ComputeType v) { return v; }
-};
-
-template<>
-struct LayerNormUtil<half> {
-  using ComputeType = float;
-  __device__ static ComputeType ToComputeType(half v) { return __half2float(v); }
-  __device__ static half FromComputeType(ComputeType v) { return __float2half(v); }
-};
-
-template<typename T>
-int GetForwardDynamicSharedMemorySize(const int norm_size) {
-  return norm_size * sizeof(typename LayerNormUtil<T>::ComputeType);
-}
-
-int GetLayerNormForwardBlockSize() { return kLayerNormForwardGpuBlockSize; }
-
-int GetLayerNormForwardNumBlocks(const int num_instances) {
-  return std::min(static_cast<int>(num_instances), kCudaMaxBlocksNum);
-}
-
-template<typename T, typename ComputeType>
-__global__ void LayerNormForwardImpl(const int num_instances, const int norm_size,
-                                     const double epsilon, const T* x, const T* gamma,
-                                     const T* beta, ComputeType* mean, ComputeType* inv_variance,
-                                     T* normalized, T* y) {
-  using LU = LayerNormUtil<T>;
-  extern __shared__ __align__(sizeof(double)) unsigned char fw_shared_buf[];
-  auto* compute_buf = reinterpret_cast<ComputeType*>(fw_shared_buf);
-  __shared__ ComputeType row_mean_shared;
-  __shared__ ComputeType row_inv_var_shared;
-  typedef cub::BlockReduce<ComputeType, kLayerNormForwardGpuBlockSize> BlockReduce;
-  __shared__ typename BlockReduce::TempStorage cub_mean_reduce_tmp_storage;
-  __shared__ typename BlockReduce::TempStorage cub_variance_reduce_tmp_storage;
-  ComputeType inv_norm_size = static_cast<ComputeType>(1.0) / static_cast<ComputeType>(norm_size);
-  for (int row = blockIdx.x; row < num_instances; row += gridDim.x) {
-    const int row_offset = row * norm_size;
-    const T* x_row = x + row_offset;
-    ComputeType thread_sum = 0;
-    ComputeType thread_square_sum = 0;
-    const int tid = threadIdx.x;
-    for (int col = tid; col < norm_size; col += blockDim.x) {
-      const ComputeType val = LU::ToComputeType(x_row[col]);
-      compute_buf[col] = val;
-      thread_sum += val;
-      thread_square_sum += val * val;
+template<typename SRC, typename DST, bool do_scale, bool do_center>
+struct AffineStore {
+  AffineStore(DST* normalized, DST* y, int64_t row_size, const DST* gamma, const DST* beta)
+      : normalized(normalized), y(y), row_size(row_size), gamma(gamma), beta(beta) {}
+  template<int N>
+  __device__ void store(const SRC* src, int64_t row, int64_t col) {
+    cuda::layer_norm::Pack<DST, N> y_pack;
+    cuda::layer_norm::Pack<DST, N> normalized_pack;
+    cuda::layer_norm::Pack<DST, N> gamma_pack;
+    cuda::layer_norm::Pack<DST, N> beta_pack;
+    const int64_t offset = row * row_size + col;
+    if (do_scale) {
+      gamma_pack.storage =
+          *reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(gamma + col);
+    } else {
+#pragma unroll
+      for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = 1; }
     }
-    __syncthreads();
-    ComputeType block_sum = BlockReduce(cub_mean_reduce_tmp_storage).Reduce(thread_sum, cub::Sum());
-    ComputeType block_square_sum =
-        BlockReduce(cub_variance_reduce_tmp_storage).Reduce(thread_square_sum, cub::Sum());
-    if (tid == 0) {
-      ComputeType row_mean = block_sum * inv_norm_size;
-      row_mean_shared = row_mean;
-      mean[row] = row_mean;
-      ComputeType row_variance =
-          max(block_square_sum * inv_norm_size - row_mean * row_mean, static_cast<ComputeType>(0));
-      ComputeType row_inv_var = rsqrt(row_variance + static_cast<ComputeType>(epsilon));
-      row_inv_var_shared = row_inv_var;
-      inv_variance[row] = row_inv_var;
+    if (do_center) {
+      beta_pack.storage = *reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(beta + col);
+    } else {
+#pragma unroll
+      for (int i = 0; i < N; ++i) { beta_pack.elem[i] = 0; }
     }
-    __syncthreads();
-    ComputeType mean = row_mean_shared;
-    ComputeType inv_var = row_inv_var_shared;
-    for (int col = threadIdx.x; col < norm_size; col += blockDim.x) {
-      int offset = row_offset + col;
-      ComputeType val = compute_buf[col];
-      val = (val - mean) * inv_var;
-      if (gamma != nullptr || beta != nullptr) {
-        int elem_id = col;
-        if (gamma != nullptr) {
-          normalized[offset] = LU::FromComputeType(val);
-          val *= LU::ToComputeType(gamma[elem_id]);
-        }
-        if (beta != nullptr) { val += LU::ToComputeType(beta[elem_id]); }
+#pragma unroll
+    for (int i = 0; i < N; ++i) {
+      DST normalized_i = static_cast<DST>(src[i]);
+      if (do_scale) { normalized_pack.elem[i] = normalized_i; }
+      if (do_scale || do_center) {
+        y_pack.elem[i] = normalized_i * gamma_pack.elem[i] + beta_pack.elem[i];
+      } else {
+        y_pack.elem[i] = normalized_i;
       }
-      y[offset] = LU::FromComputeType(val);
+    }
+    *reinterpret_cast<cuda::layer_norm::PackType<DST, N>*>(y + offset) = y_pack.storage;
+    if (do_scale) {
+      *reinterpret_cast<cuda::layer_norm::PackType<DST, N>*>(normalized + offset) =
+          normalized_pack.storage;
     }
   }
-}
-
-template<typename T>
-void LayerNormForwardGpu(DeviceCtx* ctx, const int num_instances, const int norm_size,
-                         const double epsilon, const T* x_ptr, const T* gamma_ptr,
-                         const T* beta_ptr, T* normalized_ptr, T* y_ptr, user_op::Tensor* mean,
-                         user_op::Tensor* inv_variance) {
-  LayerNormForwardImpl<T, typename LayerNormUtil<T>::ComputeType>
-      <<<GetLayerNormForwardNumBlocks(num_instances), GetLayerNormForwardBlockSize(),
-         GetForwardDynamicSharedMemorySize<T>(norm_size), ctx->cuda_stream()>>>(
-          num_instances, norm_size, epsilon, x_ptr, gamma_ptr, beta_ptr,
-          mean->mut_dptr<typename LayerNormUtil<T>::ComputeType>(),
-          inv_variance->mut_dptr<typename LayerNormUtil<T>::ComputeType>(), normalized_ptr, y_ptr);
-}
-
-template<>
-void LayerNormForwardGpu<float16>(DeviceCtx* ctx, const int num_instances, const int norm_size,
-                                  const double epsilon, const float16* x_ptr,
-                                  const float16* gamma_ptr, const float16* beta_ptr,
-                                  float16* normalized_ptr, float16* y_ptr, user_op::Tensor* mean,
-                                  user_op::Tensor* inv_variance) {
-  LayerNormForwardImpl<half, typename LayerNormUtil<half>::ComputeType>
-      <<<GetLayerNormForwardNumBlocks(num_instances), GetLayerNormForwardBlockSize(),
-         GetForwardDynamicSharedMemorySize<half>(norm_size), ctx->cuda_stream()>>>(
-          num_instances, norm_size, epsilon, reinterpret_cast<const half*>(x_ptr),
-          reinterpret_cast<const half*>(gamma_ptr), reinterpret_cast<const half*>(beta_ptr),
-          mean->mut_dptr<typename LayerNormUtil<half>::ComputeType>(),
-          inv_variance->mut_dptr<typename LayerNormUtil<half>::ComputeType>(),
-          reinterpret_cast<half*>(normalized_ptr), reinterpret_cast<half*>(y_ptr));
-}
-
-int GetForwardFusedKernelMinNormSize() { return 64; }
-
-template<typename T>
-int GetForwardFusedKernelMaxActiveBlocks(const int32_t norm_size) {
-  int max_active_blocks = 0;
-  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-      &max_active_blocks, LayerNormForwardImpl<T, typename LayerNormUtil<T>::ComputeType>,
-      GetLayerNormForwardBlockSize(), GetForwardDynamicSharedMemorySize<T>(norm_size)));
-  return max_active_blocks;
-}
-
-template<>
-int GetForwardFusedKernelMaxActiveBlocks<float16>(const int32_t norm_size) {
-  int max_active_blocks = 0;
-  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-      &max_active_blocks, LayerNormForwardImpl<half, typename LayerNormUtil<half>::ComputeType>,
-      GetLayerNormForwardBlockSize(), GetForwardDynamicSharedMemorySize<half>(norm_size)));
-  return max_active_blocks;
-}
-
-template<typename T>
-bool IsForwardFusedKernelSupported(const int32_t norm_size, const int32_t instance_size) {
-  if (norm_size >= GetForwardFusedKernelMinNormSize() && norm_size % 32 == 0
-      && GetForwardFusedKernelMaxActiveBlocks<T>(norm_size) > 0
-      && (instance_size == 0 || norm_size == instance_size)) {
-    return true;
-  } else {
-    return false;
-  }
-}
+  DST* normalized;
+  DST* y;
+  int64_t row_size;
+  const DST* gamma;
+  const DST* beta;
+};
 
 constexpr int64_t kLayerNormParamGradGpuBlockSize = 512;
 
@@ -381,9 +196,44 @@ __global__ void LayerNormParamGradHalfImpl(const I n, const I instance_size, con
   }
 }
 
+template<typename T, bool do_scale, bool do_center>
+void LayerNormForwardGpu(ep::Stream* stream, const int64_t num_instances, const int64_t norm_size,
+                         const double epsilon, const T* x_ptr, const T* gamma_ptr,
+                         const T* beta_ptr, T* normalized_ptr, T* y_ptr, user_op::Tensor* mean,
+                         user_op::Tensor* inv_variance) {
+  using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
+  cuda::layer_norm::DirectLoad<T, ComputeType> load(x_ptr, norm_size);
+  AffineStore<ComputeType, T, do_scale, do_center> store(normalized_ptr, y_ptr, norm_size,
+                                                         gamma_ptr, beta_ptr);
+  cuda::layer_norm::DispatchLayerNorm<decltype(load), decltype(store), ComputeType>(
+      stream->As<ep::CudaStream>()->cuda_stream(), load, store, num_instances, norm_size, epsilon,
+      mean->mut_dptr<ComputeType>(), inv_variance->mut_dptr<ComputeType>());
+}
+
+template<typename T>
+void DispatchLayerNormForwardGpu(ep::Stream* stream, const int64_t num_instances,
+                                 const int64_t norm_size, const double epsilon, const T* x_ptr,
+                                 const T* gamma_ptr, const T* beta_ptr, T* normalized_ptr, T* y_ptr,
+                                 user_op::Tensor* mean, user_op::Tensor* inv_variance) {
+  if (gamma_ptr != nullptr && beta_ptr != nullptr) {
+    LayerNormForwardGpu<T, true, true>(stream, num_instances, norm_size, epsilon, x_ptr, gamma_ptr,
+                                       beta_ptr, normalized_ptr, y_ptr, mean, inv_variance);
+  } else if (gamma_ptr != nullptr && beta_ptr == nullptr) {
+    LayerNormForwardGpu<T, true, false>(stream, num_instances, norm_size, epsilon, x_ptr, gamma_ptr,
+                                        beta_ptr, normalized_ptr, y_ptr, mean, inv_variance);
+  } else if (gamma_ptr == nullptr && beta_ptr != nullptr) {
+    LayerNormForwardGpu<T, false, true>(stream, num_instances, norm_size, epsilon, x_ptr, gamma_ptr,
+                                        beta_ptr, normalized_ptr, y_ptr, mean, inv_variance);
+  } else {
+    LayerNormForwardGpu<T, false, false>(stream, num_instances, norm_size, epsilon, x_ptr,
+                                         gamma_ptr, beta_ptr, normalized_ptr, y_ptr, mean,
+                                         inv_variance);
+  }
+}
+
 }  // namespace
 
-template<typename T, typename BNParamT>
+template<typename T>
 class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   LayerNormGpuKernel() = default;
@@ -397,78 +247,35 @@ class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
     user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
-    const bool scale = ctx->Attr<bool>("scale");
-    const bool center = ctx->Attr<bool>("center");
-    user_op::Tensor* normalized = scale ? ctx->Tensor4ArgNameAndIndex("normalized", 0) : y;
+    user_op::Tensor* normalized =
+        ctx->has_input("gamma", 0) ? ctx->Tensor4ArgNameAndIndex("normalized", 0) : y;
     const double epsilon = ctx->Attr<double>("epsilon");
     CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
-    const int32_t num_instances = mean->shape().elem_cnt();
-    const int32_t norm_size = x->shape().elem_cnt() / num_instances;
-    int32_t instance_size = 0;
+    const int64_t num_instances = mean->shape().elem_cnt();
+    const int64_t norm_size = x->shape().elem_cnt() / num_instances;
     const T* gamma_ptr = nullptr;
     const T* beta_ptr = nullptr;
-    if (scale || center) {
-      if (scale) {
-        const user_op::Tensor* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
-        instance_size = gamma->shape().elem_cnt();
-        gamma_ptr = gamma->dptr<T>();
-      }
-      if (center) {
-        const user_op::Tensor* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
-        if (gamma_ptr) {
-          CHECK_EQ(beta->shape().elem_cnt(), instance_size);
-        } else {
-          instance_size = beta->shape().elem_cnt();
-        }
-        beta_ptr = beta->dptr<T>();
-      }
-      CHECK_EQ(y->shape().elem_cnt() % instance_size, 0);
+    if (ctx->has_input("gamma", 0)) {
+      const user_op::Tensor* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
+      gamma_ptr = gamma->dptr<T>();
+      CHECK_EQ(gamma->shape().elem_cnt(), norm_size);
     }
-    if (IsForwardFusedKernelSupported<T>(norm_size, instance_size)) {
-      LayerNormForwardGpu<T>(ctx->device_ctx(), num_instances, norm_size, epsilon, x->dptr<T>(),
-                             gamma_ptr, beta_ptr, normalized->mut_dptr<T>(), y->mut_dptr<T>(), mean,
-                             inv_variance);
-    } else {
-      LayerNormCudnnBnCtx bn_ctx(x->shape(), mean->shape(), x->data_type());
-      user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-      const size_t aligned_buffer_size =
-          GetCudaAlignedSize(mean->shape().elem_cnt() * GetSizeOfDataType(mean->data_type()));
-      char* cudnn_bn_scale_ones_dptr = tmp_buffer->mut_dptr<char>();
-      char* cudnn_bn_bias_zeros_dptr = cudnn_bn_scale_ones_dptr + aligned_buffer_size;
-      auto fill = NewFillPrimitive(ctx->stream(), mean->data_type());
-      fill->Launch(ctx->stream(), cudnn_bn_scale_ones_dptr, 1, mean->shape().elem_cnt());
-      fill->Launch(ctx->stream(), cudnn_bn_bias_zeros_dptr, 0, mean->shape().elem_cnt());
-      OF_CUDNN_CHECK(cudnnBatchNormalizationForwardTraining(
-          ctx->device_ctx()->cudnn_handle(), bn_ctx.mode(), CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(),
-          bn_ctx.data_tensor_desc(), x->dptr<T>(), bn_ctx.data_tensor_desc(),
-          normalized->mut_dptr<T>(), bn_ctx.param_tensor_desc(),
-          reinterpret_cast<BNParamT*>(cudnn_bn_scale_ones_dptr),
-          reinterpret_cast<BNParamT*>(cudnn_bn_bias_zeros_dptr), 1.0, nullptr, nullptr, epsilon,
-          mean->mut_dptr(), inv_variance->mut_dptr()));
-      if (scale || center) {
-        const int64_t batch_size = y->shape().elem_cnt() / instance_size;
-        InstanceScaleCenter<T>(ctx->device_ctx(), batch_size, instance_size, normalized->dptr<T>(),
-                               gamma_ptr, beta_ptr, y->mut_dptr<T>());
-      }
-    }
+    if (ctx->has_input("beta", 0)) { beta_ptr = ctx->Tensor4ArgNameAndIndex("beta", 0)->dptr<T>(); }
+    DispatchLayerNormForwardGpu<T>(ctx->stream(), num_instances, norm_size, epsilon, x->dptr<T>(),
+                                   gamma_ptr, beta_ptr, normalized->mut_dptr<T>(), y->mut_dptr<T>(),
+                                   mean, inv_variance);
   };
 };
 
-#define REGISTER_LAYER_NORM_GPU_KERNEL(dtype, bn_param_dtype)                          \
-  REGISTER_USER_KERNEL("layer_norm")                                                   \
-      .SetCreateFn<LayerNormGpuKernel<dtype, bn_param_dtype>>()                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                     \
-        user_op::TensorDesc* mean = ctx->OutputTensorDesc("mean", 0);                  \
-        const DataType& data_type = mean->data_type();                                 \
-        const int64_t elem_cnt = mean->shape().elem_cnt();                             \
-        return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type)) * 2;        \
-      });
+#define REGISTER_LAYER_NORM_CUDA_KERNEL(dtype)                         \
+  REGISTER_USER_KERNEL("layer_norm")                                   \
+      .SetCreateFn<LayerNormGpuKernel<dtype>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
-REGISTER_LAYER_NORM_GPU_KERNEL(float, float)
-REGISTER_LAYER_NORM_GPU_KERNEL(double, double)
-REGISTER_LAYER_NORM_GPU_KERNEL(float16, float)
+REGISTER_LAYER_NORM_CUDA_KERNEL(float)
+REGISTER_LAYER_NORM_CUDA_KERNEL(double)
+REGISTER_LAYER_NORM_CUDA_KERNEL(half)
 
 template<typename T, typename BNParamT>
 class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -499,8 +306,8 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), dx->data_type());
       CHECK_EQ(add_to_output->shape(), dx->shape());
-      Memcpy<DeviceType::kGPU>(
-          ctx->device_ctx(), dx->mut_dptr<void>(), add_to_output->dptr<void>(),
+      Memcpy<DeviceType::kCUDA>(
+          ctx->stream(), dx->mut_dptr<void>(), add_to_output->dptr<void>(),
           add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       sp_beta = CudnnSPOnePtr<T>();
     } else {
@@ -510,20 +317,20 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
     CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
     LayerNormCudnnBnCtx bn_ctx(x->shape(), mean->shape(), x->data_type());
     OF_CUDNN_CHECK(cudnnBatchNormalizationBackward(
-        ctx->device_ctx()->cudnn_handle(), bn_ctx.mode(), sp_alpha, sp_beta, CudnnSPOnePtr<T>(),
-        CudnnSPZeroPtr<T>(), bn_ctx.data_tensor_desc(), x->dptr<T>(), bn_ctx.data_tensor_desc(),
-        dy->dptr<T>(), bn_ctx.data_tensor_desc(), dx->mut_dptr<T>(), bn_ctx.param_tensor_desc(),
-        reinterpret_cast<const BNParamT*>(cudnn_bn_scale_ones_dptr),
+        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), bn_ctx.mode(), sp_alpha, sp_beta,
+        CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(), bn_ctx.data_tensor_desc(), x->dptr<T>(),
+        bn_ctx.data_tensor_desc(), dy->dptr<T>(), bn_ctx.data_tensor_desc(), dx->mut_dptr<T>(),
+        bn_ctx.param_tensor_desc(), reinterpret_cast<const BNParamT*>(cudnn_bn_scale_ones_dptr),
         reinterpret_cast<BNParamT*>(cudnn_bn_scale_diff_buf_dptr),
         reinterpret_cast<BNParamT*>(cudnn_bn_bias_diff_buf_dptr), epsilon, mean->dptr(),
         inv_variance->dptr()));
   };
 };
 
-#define REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(dtype, bn_param_dtype)                         \
+#define REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(dtype, bn_param_dtype)                        \
   REGISTER_USER_KERNEL("layer_norm_grad")                                                  \
       .SetCreateFn<LayerNormGradGpuKernel<dtype, bn_param_dtype>>()                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                     \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))    \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                         \
         const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);                 \
@@ -540,9 +347,9 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
             return Maybe<void>::Ok();                                                      \
           });
 
-REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(float, float)
-REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(double, double)
-REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(float16, float)
+REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(float, float)
+REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(double, double)
+REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(float16, float)
 
 template<typename T>
 class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
@@ -555,7 +362,7 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
   using user_op::OpKernel::Compute;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    using NdUtil = NdarrayUtil<DeviceType::kGPU, T>;
+    using NdUtil = NdarrayUtil<DeviceType::kCUDA, T>;
     auto Val = NdUtil::GetValNdarrayBuilder();
     auto Var = NdUtil::GetVarNdarrayBuilder();
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -576,21 +383,23 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
         GetParamGradDynamicSharedMemorySize<T>(m)));
     if (has_gamma_diff && has_beta_diff && has_normalized_diff && max_active_blocks > 0) {
       const user_op::Tensor* normalized = ctx->Tensor4ArgNameAndIndex("normalized", 0);
-      Memset<DeviceType::kGPU>(ctx->device_ctx(), gamma_diff->mut_dptr<T>(), 0,
-                               gamma_diff->shape().elem_cnt() * sizeof(T));
-      Memset<DeviceType::kGPU>(ctx->device_ctx(), beta_diff->mut_dptr<T>(), 0,
-                               beta_diff->shape().elem_cnt() * sizeof(T));
+      Memset<DeviceType::kCUDA>(ctx->stream(), gamma_diff->mut_dptr<T>(), 0,
+                                gamma_diff->shape().elem_cnt() * sizeof(T));
+      Memset<DeviceType::kCUDA>(ctx->stream(), beta_diff->mut_dptr<T>(), 0,
+                                beta_diff->shape().elem_cnt() * sizeof(T));
       if (elem_cnt > static_cast<int64_t>(GetMaxVal<int32_t>() / 2)) {
         LayerNormParamGradImpl<T, int64_t>
             <<<GetLayerNormParamGradNumBlocks(elem_cnt), GetLayerNormParamGradBlockSize(),
-               GetParamGradDynamicSharedMemorySize<T>(m), ctx->device_ctx()->cuda_stream()>>>(
+               GetParamGradDynamicSharedMemorySize<T>(m),
+               ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
                 elem_cnt, m, dy->dptr<T>(), normalized->dptr<T>(), gamma->dptr<T>(),
                 gamma_diff->mut_dptr<T>(), beta_diff->mut_dptr<T>(),
                 normalized_diff->mut_dptr<T>());
       } else {
         LayerNormParamGradImpl<T, int32_t>
             <<<GetLayerNormParamGradNumBlocks(elem_cnt), GetLayerNormParamGradBlockSize(),
-               GetParamGradDynamicSharedMemorySize<T>(m), ctx->device_ctx()->cuda_stream()>>>(
+               GetParamGradDynamicSharedMemorySize<T>(m),
+               ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
                 static_cast<int32_t>(elem_cnt), static_cast<int32_t>(m), dy->dptr<T>(),
                 normalized->dptr<T>(), gamma->dptr<T>(), gamma_diff->mut_dptr<T>(),
                 beta_diff->mut_dptr<T>(), normalized_diff->mut_dptr<T>());
@@ -624,23 +433,23 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
           NdUtil::BroadcastMul(ctx->stream(), Var({n, m}, normalized_diff->mut_dptr<T>()),
                                Val({n, m}, dy->dptr<T>()), Val({1, m}, gamma->dptr<T>()));
         } else {
-          Memcpy<DeviceType::kGPU>(ctx->device_ctx(), normalized_diff->mut_dptr<void>(),
-                                   dy->dptr<void>(),
-                                   dy->shape().elem_cnt() * GetSizeOfDataType(dy->data_type()));
+          Memcpy<DeviceType::kCUDA>(ctx->stream(), normalized_diff->mut_dptr<void>(),
+                                    dy->dptr<void>(),
+                                    dy->shape().elem_cnt() * GetSizeOfDataType(dy->data_type()));
         }
       }
     }
   };
 };
 
-#define REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(dtype)              \
-  REGISTER_USER_KERNEL("layer_norm_param_grad")                       \
-      .SetCreateFn<LayerNormParamGradGpuKernel<dtype>>()              \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_LAYER_NORM_PARAM_GRAD_CUDA_KERNEL(dtype)              \
+  REGISTER_USER_KERNEL("layer_norm_param_grad")                        \
+      .SetCreateFn<LayerNormParamGradGpuKernel<dtype>>()               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
 
-REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(float)
-REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(double)
+REGISTER_LAYER_NORM_PARAM_GRAD_CUDA_KERNEL(float)
+REGISTER_LAYER_NORM_PARAM_GRAD_CUDA_KERNEL(double)
 
 class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
                                               public user_op::CudaGraphSupport {
@@ -652,7 +461,7 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
   using user_op::OpKernel::Compute;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    using NdUtil = NdarrayUtil<DeviceType::kGPU, float16>;
+    using NdUtil = NdarrayUtil<DeviceType::kCUDA, float16>;
     auto Val = NdUtil::GetValNdarrayBuilder();
     auto Var = NdUtil::GetVarNdarrayBuilder();
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -685,14 +494,16 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
       if (elem_cnt > static_cast<int64_t>(GetMaxVal<int32_t>() / 2)) {
         LayerNormParamGradHalfImpl<int64_t>
             <<<GetLayerNormParamGradNumBlocks(elem_cnt), GetLayerNormParamGradBlockSize(),
-               GetParamGradDynamicSharedMemorySize<float16>(m), ctx->device_ctx()->cuda_stream()>>>(
+               GetParamGradDynamicSharedMemorySize<float16>(m),
+               ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
                 elem_cnt, m, dy->dptr<half>(), normalized->dptr<half>(), gamma->dptr<half>(),
                 reinterpret_cast<half*>(tmp_gamma_diff), reinterpret_cast<half*>(tmp_beta_diff),
                 normalized_diff->mut_dptr<half>());
       } else {
         LayerNormParamGradHalfImpl<int32_t>
             <<<GetLayerNormParamGradNumBlocks(elem_cnt), GetLayerNormParamGradBlockSize(),
-               GetParamGradDynamicSharedMemorySize<float16>(m), ctx->device_ctx()->cuda_stream()>>>(
+               GetParamGradDynamicSharedMemorySize<float16>(m),
+               ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
                 static_cast<int32_t>(elem_cnt), static_cast<int32_t>(m), dy->dptr<half>(),
                 normalized->dptr<half>(), gamma->dptr<half>(),
                 reinterpret_cast<half*>(tmp_gamma_diff), reinterpret_cast<half*>(tmp_beta_diff),
@@ -734,9 +545,9 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
                                Val({n, m}, dy->dptr<float16>()),
                                Val({1, m}, gamma->dptr<float16>()));
         } else {
-          Memcpy<DeviceType::kGPU>(ctx->device_ctx(), normalized_diff->mut_dptr<void>(),
-                                   dy->dptr<void>(),
-                                   dy->shape().elem_cnt() * GetSizeOfDataType(dy->data_type()));
+          Memcpy<DeviceType::kCUDA>(ctx->stream(), normalized_diff->mut_dptr<void>(),
+                                    dy->dptr<void>(),
+                                    dy->shape().elem_cnt() * GetSizeOfDataType(dy->data_type()));
         }
       }
     }
@@ -745,7 +556,7 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
 
 REGISTER_USER_KERNEL("layer_norm_param_grad")
     .SetCreateFn<LayerNormParamGradGpuHalfKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
                      && (user_op::HobDataType("dy", 0) == DataType::kFloat16))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
       const int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");

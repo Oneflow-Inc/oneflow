@@ -140,7 +140,7 @@ class FillFactoryImpl : public FillFactory {
   }
 };
 
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, FillFactory, FillFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, FillFactory, FillFactoryImpl);
 
 }  // namespace
 

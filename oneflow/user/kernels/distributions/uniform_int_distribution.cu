@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/user/kernels/distributions/uniform_int_distribution.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -44,25 +45,25 @@ __global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, T* dptr,
 }  // namespace
 
 template<typename T>
-void UniformIntDistribution<DeviceType::kGPU, T>::operator()(
-    DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,
+void UniformIntDistribution<DeviceType::kCUDA, T>::operator()(
+    ep::Stream* stream, const int64_t elem_cnt, T* dptr,
     const std::shared_ptr<one::Generator>& generator) const {
   CHECK_GE(elem_cnt, 0);
   auto gen = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
   int32_t block_num = gen->max_block_num();
   int32_t thread_num = gen->max_thread_num();
   auto* curand_states = gen->curand_states();
-  GenerateGpu<T><<<block_num, thread_num, 0, device_ctx->cuda_stream()>>>(curand_states, elem_cnt,
-                                                                          dptr, low_, high_);
+  GenerateGpu<T><<<block_num, thread_num, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      curand_states, elem_cnt, dptr, low_, high_);
 }
 
-#define INITIATE_GPU_UNIFORM_INT_DISTRIBUTION(T, typeproto)              \
-  template void UniformIntDistribution<DeviceType::kGPU, T>::operator()( \
-      DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,            \
+#define INITIATE_CUDA_UNIFORM_INT_DISTRIBUTION(T, typeproto)              \
+  template void UniformIntDistribution<DeviceType::kCUDA, T>::operator()( \
+      ep::Stream* stream, const int64_t elem_cnt, T* dptr,                \
       const std::shared_ptr<one::Generator>& generator) const;
 
-OF_PP_FOR_EACH_TUPLE(INITIATE_GPU_UNIFORM_INT_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)
-OF_PP_FOR_EACH_TUPLE(INITIATE_GPU_UNIFORM_INT_DISTRIBUTION, INT_DATA_TYPE_SEQ)
-OF_PP_FOR_EACH_TUPLE(INITIATE_GPU_UNIFORM_INT_DISTRIBUTION, UNSIGNED_INT_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INITIATE_CUDA_UNIFORM_INT_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INITIATE_CUDA_UNIFORM_INT_DISTRIBUTION, INT_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INITIATE_CUDA_UNIFORM_INT_DISTRIBUTION, UNSIGNED_INT_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

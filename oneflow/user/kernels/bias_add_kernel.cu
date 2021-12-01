@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/bias_add_kernel.h"
 #include "oneflow/core/device/cudnn_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -47,22 +48,24 @@ __global__ void InplaceBiasAddGpu(const Index elem_cnt, const Index bias_size,
 
 template<typename T, typename Index>
 typename std::enable_if<IsFloating<T>::value || std::is_same<T, float16>::value>::type
-InplaceBiasAdd(DeviceCtx* ctx, Index outer_size, Index bias_size, Index inner_size, const T* x,
+InplaceBiasAdd(ep::Stream* stream, Index outer_size, Index bias_size, Index inner_size, const T* x,
                const T* bias, T* y) {
   CudnnTensorDesc c_desc(CUDNN_TENSOR_NCHW, GetDataType<T>::value, outer_size, bias_size,
                          inner_size, 1);
   CudnnTensorDesc a_desc(CUDNN_TENSOR_NCHW, GetDataType<T>::value, 1, bias_size, 1, 1);
-  OF_CUDNN_CHECK(cudnnAddTensor(ctx->cudnn_handle(), CudnnSPOnePtr<float>(), a_desc.Get(), bias,
-                                CudnnSPOnePtr<float>(), c_desc.Get(), y));
+  OF_CUDNN_CHECK(cudnnAddTensor(stream->As<ep::CudaStream>()->cudnn_handle(),
+                                CudnnSPOnePtr<float>(), a_desc.Get(), bias, CudnnSPOnePtr<float>(),
+                                c_desc.Get(), y));
 }
 
 template<typename T, typename Index>
-typename std::enable_if<IsIntegral<T>::value>::type InplaceBiasAdd(DeviceCtx* ctx, Index outer_size,
+typename std::enable_if<IsIntegral<T>::value>::type InplaceBiasAdd(ep::Stream* stream,
+                                                                   Index outer_size,
                                                                    Index bias_size,
                                                                    Index inner_size, const T* x,
                                                                    const T* bias, T* y) {
   const Index elem_cnt = outer_size * bias_size * inner_size;
-  RUN_CUDA_KERNEL((InplaceBiasAddGpu<T, Index>), ctx, elem_cnt, elem_cnt, bias_size, inner_size,
+  RUN_CUDA_KERNEL((InplaceBiasAddGpu<T, Index>), stream, elem_cnt, elem_cnt, bias_size, inner_size,
                   bias, y);
 }
 
@@ -94,56 +97,56 @@ __global__ void BiasAddColGpu(const Index elem_cnt, const Index inner_size, cons
 }  // namespace
 
 template<typename T, typename Index>
-struct BiasAddCalculation<DeviceType::kGPU, T, Index> {
-  static void Invoke(DeviceCtx* ctx, Index outer_size, Index bias_size, Index inner_size,
+struct BiasAddCalculation<DeviceType::kCUDA, T, Index> {
+  static void Invoke(ep::Stream* stream, Index outer_size, Index bias_size, Index inner_size,
                      const T* x, const T* bias, T* y) {
     const Index elem_cnt = outer_size * bias_size * inner_size;
     if (inner_size == 1) {
       BiasAddRowGpu<T, Index>
-          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-              elem_cnt, bias_size, x, bias, y);
+          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+             stream->As<ep::CudaStream>()->cuda_stream()>>>(elem_cnt, bias_size, x, bias, y);
     } else if (outer_size == 1) {
       BiasAddColGpu<T, Index>
-          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-              elem_cnt, inner_size, x, bias, y);
+          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+             stream->As<ep::CudaStream>()->cuda_stream()>>>(elem_cnt, inner_size, x, bias, y);
     } else {
       if (x == y) {
-        InplaceBiasAdd<T, Index>(ctx, outer_size, bias_size, inner_size, x, bias, y);
+        InplaceBiasAdd<T, Index>(stream, outer_size, bias_size, inner_size, x, bias, y);
       } else {
-        RUN_CUDA_KERNEL((BiasAddGpu<T, Index>), ctx, elem_cnt, elem_cnt, bias_size, inner_size, x,
-                        bias, y);
+        RUN_CUDA_KERNEL((BiasAddGpu<T, Index>), stream, elem_cnt, elem_cnt, bias_size, inner_size,
+                        x, bias, y);
       }
     }
   }
 };
 
 template<typename Index>
-struct BiasAddCalculation<DeviceType::kGPU, float16, Index> {
-  static void Invoke(DeviceCtx* ctx, Index outer_size, Index bias_size, Index inner_size,
+struct BiasAddCalculation<DeviceType::kCUDA, float16, Index> {
+  static void Invoke(ep::Stream* stream, Index outer_size, Index bias_size, Index inner_size,
                      const float16* x, const float16* bias, float16* y) {
     const Index elem_cnt = outer_size * bias_size * inner_size;
     if (inner_size == 1) {
       if (bias_size % 2 == 0) {
         BiasAddRowGpuHalf2<Index><<<BlocksNum4ThreadsNum(elem_cnt / 2), kCudaThreadsNumPerBlock, 0,
-                                    ctx->cuda_stream()>>>(
+                                    stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, bias_size, reinterpret_cast<const half*>(x),
             reinterpret_cast<const half*>(bias), reinterpret_cast<half*>(y));
       } else {
-        BiasAddRowGpu<half, Index>
-            <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-                elem_cnt, bias_size, reinterpret_cast<const half*>(x),
-                reinterpret_cast<const half*>(bias), reinterpret_cast<half*>(y));
+        BiasAddRowGpu<half, Index><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                                     stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            elem_cnt, bias_size, reinterpret_cast<const half*>(x),
+            reinterpret_cast<const half*>(bias), reinterpret_cast<half*>(y));
       }
     } else if (outer_size == 1) {
-      BiasAddColGpu<half, Index>
-          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-              elem_cnt, inner_size, reinterpret_cast<const half*>(x),
-              reinterpret_cast<const half*>(bias), reinterpret_cast<half*>(y));
+      BiasAddColGpu<half, Index><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                                   stream->As<ep::CudaStream>()->cuda_stream()>>>(
+          elem_cnt, inner_size, reinterpret_cast<const half*>(x),
+          reinterpret_cast<const half*>(bias), reinterpret_cast<half*>(y));
     } else {
       if (x == y) {
-        InplaceBiasAdd<float16, Index>(ctx, outer_size, bias_size, inner_size, x, bias, y);
+        InplaceBiasAdd<float16, Index>(stream, outer_size, bias_size, inner_size, x, bias, y);
       } else {
-        RUN_CUDA_KERNEL((BiasAddGpuHalf<Index>), ctx, elem_cnt, elem_cnt, bias_size, inner_size,
+        RUN_CUDA_KERNEL((BiasAddGpuHalf<Index>), stream, elem_cnt, elem_cnt, bias_size, inner_size,
                         reinterpret_cast<const half*>(x), reinterpret_cast<const half*>(bias),
                         reinterpret_cast<half*>(y));
       }
@@ -151,11 +154,11 @@ struct BiasAddCalculation<DeviceType::kGPU, float16, Index> {
   }
 };
 
-REGISTER_BIAS_ADD_USER_KERNEL(GPU, float16)
-REGISTER_BIAS_ADD_USER_KERNEL(GPU, float)
-REGISTER_BIAS_ADD_USER_KERNEL(GPU, double)
-REGISTER_BIAS_ADD_USER_KERNEL(GPU, int8_t)
-REGISTER_BIAS_ADD_USER_KERNEL(GPU, int32_t)
-REGISTER_BIAS_ADD_USER_KERNEL(GPU, int64_t)
+REGISTER_BIAS_ADD_USER_KERNEL(CUDA, float16)
+REGISTER_BIAS_ADD_USER_KERNEL(CUDA, float)
+REGISTER_BIAS_ADD_USER_KERNEL(CUDA, double)
+REGISTER_BIAS_ADD_USER_KERNEL(CUDA, int8_t)
+REGISTER_BIAS_ADD_USER_KERNEL(CUDA, int32_t)
+REGISTER_BIAS_ADD_USER_KERNEL(CUDA, int64_t)
 
 }  // namespace oneflow

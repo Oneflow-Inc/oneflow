@@ -94,7 +94,7 @@ class EagerCclBroadcastKernel final : public user_op::OpKernel {
     }
     CHECK_JUST(ccl::Broadcast<DeviceType::kCPU>(in_ptr, out->mut_dptr(), out->shape().elem_cnt(),
                                                 out->data_type(), root,
-                                                kernel_state->parallel_desc(), ctx->device_ctx()));
+                                                kernel_state->parallel_desc(), ctx->stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -129,7 +129,7 @@ class EagerCclReduceKernel final : public user_op::OpKernel {
     }
     CHECK_JUST(ccl::Reduce<DeviceType::kCPU>(in->dptr(), out_ptr, in->shape().elem_cnt(),
                                              in->data_type(), ccl::kSum, root,
-                                             kernel_state->parallel_desc(), ctx->device_ctx()));
+                                             kernel_state->parallel_desc(), ctx->stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -159,7 +159,7 @@ class EagerCclAllReduceKernel final : public user_op::OpKernel {
 
     CHECK_JUST(ccl::AllReduce<DeviceType::kCPU>(
         in->dptr(), out->mut_dptr(), out->shape().elem_cnt(), out->data_type(), ccl::kSum,
-        kernel_state->parallel_desc(), ctx->device_ctx()));
+        kernel_state->parallel_desc(), ctx->stream()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -190,7 +190,7 @@ class EagerCclReduceScatterKernel final : public user_op::OpKernel {
     CHECK_EQ(op_type, "sum");
     CHECK_JUST(ccl::ReduceScatter<DeviceType::kCPU>(
         in->dptr(), out->mut_dptr(), out->shape().elem_cnt(), out->data_type(), ccl::kSum,
-        kernel_state->parallel_desc(), ctx->device_ctx()));
+        kernel_state->parallel_desc(), ctx->stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -219,7 +219,7 @@ class EagerCclAllGatherKernel final : public user_op::OpKernel {
     CHECK_EQ(in->data_type(), out->data_type());
     CHECK_JUST(ccl::AllGather<DeviceType::kCPU>(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
                                                 out->data_type(), kernel_state->parallel_desc(),
-                                                ctx->device_ctx()));
+                                                ctx->stream()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -279,9 +279,9 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
       transpose_in_dim_vec[out_split_axis] = transpose_in_dim_vec.at(out_split_axis) / num_ranks;
       transpose_in_dim_vec.insert(transpose_in_dim_vec.begin() + out_split_axis, num_ranks);
       std::vector<int32_t> perm;
-      perm.push_back(out_split_axis);
+      perm.emplace_back(out_split_axis);
       FOR_RANGE(int64_t, i, 0, transpose_in_dim_vec.size()) {
-        if (i != out_split_axis) { perm.push_back(i); }
+        if (i != out_split_axis) { perm.emplace_back(i); }
       }
       auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
           ctx->stream()->device_type(), transpose_in_dim_vec.size());
@@ -315,7 +315,7 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
           CHECK_JUST(Send<DeviceType::kCPU>(
               reinterpret_cast<const void*>(reinterpret_cast<const char*>(pack_to_ptr)
                                             + parallel_id * chunk_size),
-              elem_per_chunk, in->data_type(), dst, ctx->device_ctx()));
+              elem_per_chunk, in->data_type(), dst, ctx->stream()));
         }
         if (GlobalProcessCtx::Rank() == dst) {
           Symbol<ParallelDesc> parallel_desc = kernel_state->parallel_desc();
@@ -326,7 +326,7 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
           CHECK_JUST(Recv<DeviceType::kCPU>(
               reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr)
                                       + parallel_id * chunk_size),
-              elem_per_chunk, out->data_type(), src, ctx->device_ctx()));
+              elem_per_chunk, out->data_type(), src, ctx->stream()));
         }
       }
     }
@@ -341,7 +341,7 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
       unpack_from_dim_vec[out_split_axis] = unpack_from_dim_vec.at(out_split_axis) / num_ranks;
       unpack_from_dim_vec.insert(unpack_from_dim_vec.begin(), num_ranks);
       std::vector<int32_t> perm;
-      FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.push_back(i); }
+      FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.emplace_back(i); }
       perm.insert(perm.begin() + in_split_axis, 0);
       auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
           ctx->stream()->device_type(), unpack_from_dim_vec.size());

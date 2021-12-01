@@ -309,6 +309,26 @@ class TestPow(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n1d()
+class TestArccos(flow.unittest.TestCase):
+    @autotest()
+    def test_arccos_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(low=2, high=3).to(device)
+        y = torch.arccos(x)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestAcos(flow.unittest.TestCase):
+    @autotest()
+    def test_acos_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(low=2, high=3).to(device)
+        y = torch.acos(x)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
 class TestArccosh(flow.unittest.TestCase):
     @autotest()
     def test_arccosh_flow_with_random_data(test_case):

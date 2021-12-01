@@ -77,7 +77,7 @@ class CpuPReluGradKernel final : public user_op::OpKernel {
     const int channels = x->shape().At(1);
     const int32_t inner_size = elem_cnt / batch / channels;
 
-    Memset<DeviceType::kCPU>(ctx->device_ctx(), alpha_diff->mut_dptr<T>(), 0,
+    Memset<DeviceType::kCPU>(ctx->stream(), alpha_diff->mut_dptr<T>(), 0,
                              alpha_diff->shape().elem_cnt() * sizeof(T));
 
     for (int i = 0; i < elem_cnt; i++) {

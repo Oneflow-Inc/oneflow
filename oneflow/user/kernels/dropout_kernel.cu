@@ -15,10 +15,10 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
-#include "oneflow/core/kernel/random_generator.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -82,34 +82,33 @@ __global__ void MaskAndScaleAddGpu<half>(const int64_t n, float scale, const hal
 }
 
 template<typename T>
-void MaskAndScale(DeviceCtx* ctx, const int64_t n, float scale, const T* x, const int8_t* mask,
+void MaskAndScale(ep::Stream* stream, const int64_t n, float scale, const T* x, const int8_t* mask,
                   T* y) {
-  MaskAndScaleGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      n, scale, x, mask, y);
+  MaskAndScaleGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                       stream->As<ep::CudaStream>()->cuda_stream()>>>(n, scale, x, mask, y);
 }
 
 template<>
-void MaskAndScale<half>(DeviceCtx* ctx, const int64_t n, float scale, const half* x,
+void MaskAndScale<half>(ep::Stream* stream, const int64_t n, float scale, const half* x,
                         const int8_t* mask, half* y) {
-  MaskAndScaleGpu<half>
-      <<<BlocksNum4ThreadsNum(RoundUp(n, 2) / 2), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          n, scale, x, mask, y);
+  MaskAndScaleGpu<half><<<BlocksNum4ThreadsNum(RoundUp(n, 2) / 2), kCudaThreadsNumPerBlock, 0,
+                          stream->As<ep::CudaStream>()->cuda_stream()>>>(n, scale, x, mask, y);
 }
 
 template<typename T>
-void MaskAndScaleAdd(DeviceCtx* ctx, const int64_t n, float scale, const T* x, const int8_t* mask,
-                     const T* addend, T* y) {
+void MaskAndScaleAdd(ep::Stream* stream, const int64_t n, float scale, const T* x,
+                     const int8_t* mask, const T* addend, T* y) {
   MaskAndScaleAddGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          n, scale, x, mask, addend, y);
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+         stream->As<ep::CudaStream>()->cuda_stream()>>>(n, scale, x, mask, addend, y);
 }
 
 template<>
-void MaskAndScaleAdd<half>(DeviceCtx* ctx, const int64_t n, float scale, const half* x,
+void MaskAndScaleAdd<half>(ep::Stream* stream, const int64_t n, float scale, const half* x,
                            const int8_t* mask, const half* addend, half* y) {
   MaskAndScaleAddGpu<half>
-      <<<BlocksNum4ThreadsNum(RoundUp(n, 2) / 2), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          n, scale, x, mask, addend, y);
+      <<<BlocksNum4ThreadsNum(RoundUp(n, 2) / 2), kCudaThreadsNumPerBlock, 0,
+         stream->As<ep::CudaStream>()->cuda_stream()>>>(n, scale, x, mask, addend, y);
 }
 
 template<typename T>
@@ -136,26 +135,26 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
     const float scale = ctx->Attr<float>("scale");
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* addend = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
-      MaskAndScaleAdd<T>(ctx->device_ctx(), in->shape().elem_cnt(), scale, in->dptr<T>(),
+      MaskAndScaleAdd<T>(ctx->stream(), in->shape().elem_cnt(), scale, in->dptr<T>(),
                          mask->dptr<int8_t>(), addend->dptr<T>(), out->mut_dptr<T>());
     } else {
       const int64_t elem_cnt = in->shape().elem_cnt();
       OF_CUDA_CHECK((cuda::elementwise::Binary(
           MaskAndScaleFunctor<T>(scale), elem_cnt, out->mut_dptr<T>(), in->dptr<T>(),
-          mask->dptr<int8_t>(), ctx->device_ctx()->cuda_stream())));
+          mask->dptr<int8_t>(), ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DROPOUT_KERNEL_GPU(dtype)                                                \
+#define REGISTER_DROPOUT_KERNEL_CUDA(dtype)                                               \
   REGISTER_USER_KERNEL("dropout").SetCreateFn<DropoutKernelGPU<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kGPU)                                      \
+      (user_op::HobDeviceType() == DeviceType::kCUDA)                                     \
       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
-REGISTER_DROPOUT_KERNEL_GPU(half)
-REGISTER_DROPOUT_KERNEL_GPU(float)
-REGISTER_DROPOUT_KERNEL_GPU(double)
+REGISTER_DROPOUT_KERNEL_CUDA(half)
+REGISTER_DROPOUT_KERNEL_CUDA(float)
+REGISTER_DROPOUT_KERNEL_CUDA(double)
 
 template<typename T>
 class DropoutGradKernelGPU final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -173,15 +172,15 @@ class DropoutGradKernelGPU final : public user_op::OpKernel, public user_op::Cud
     const int64_t elem_cnt = dy->shape().elem_cnt();
     OF_CUDA_CHECK((cuda::elementwise::Binary(MaskAndScaleFunctor<T>(scale), elem_cnt,
                                              dx->mut_dptr<T>(), dy->dptr<T>(), mask->dptr<int8_t>(),
-                                             ctx->device_ctx()->cuda_stream())));
+                                             ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DROPOUT_GRAD_KERNEL_GPU(dtype)                                                 \
+#define REGISTER_DROPOUT_GRAD_KERNEL_CUDA(dtype)                                                \
   REGISTER_USER_KERNEL("dropout_grad")                                                          \
       .SetCreateFn<DropoutGradKernelGPU<dtype>>()                                               \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -189,9 +188,9 @@ class DropoutGradKernelGPU final : public user_op::OpKernel, public user_op::Cud
         return Maybe<void>::Ok();                                                               \
       });
 
-REGISTER_DROPOUT_GRAD_KERNEL_GPU(half)
-REGISTER_DROPOUT_GRAD_KERNEL_GPU(float)
-REGISTER_DROPOUT_GRAD_KERNEL_GPU(double)
+REGISTER_DROPOUT_GRAD_KERNEL_CUDA(half)
+REGISTER_DROPOUT_GRAD_KERNEL_CUDA(float)
+REGISTER_DROPOUT_GRAD_KERNEL_CUDA(double)
 
 }  // namespace
 

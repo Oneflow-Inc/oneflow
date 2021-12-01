@@ -50,9 +50,9 @@ class CtcLossKernel final : public user_op::OpKernel {
     T* loss_ptr = loss->mut_dptr<T>();
     T* alpha_ptr = alpha->mut_dptr<T>();
     CtcLossKernelUtil<device_type, T, IDX>::CtcLossForward(
-        ctx->device_ctx(), log_probs_ptr, targets_ptr, input_lengths_ptr, target_lengths_ptr,
-        alpha_ptr, loss_ptr, input_helper, alpha_helper, batch_size, max_input_length,
-        max_target_length, blank, targets_ndim);
+        ctx->stream(), log_probs_ptr, targets_ptr, input_lengths_ptr, target_lengths_ptr, alpha_ptr,
+        loss_ptr, input_helper, alpha_helper, batch_size, max_input_length, max_target_length,
+        blank, targets_ndim);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -107,7 +107,7 @@ class CtcLossGradKernel final : public user_op::OpKernel {
     T* grad_ptr = grad->mut_dptr<T>();
     T* beta_ptr = tmp_buffer->mut_dptr<T>();
     CtcLossKernelUtil<device_type, T, IDX>::CtcLossBackward(
-        ctx->device_ctx(), grad_out_ptr, loss_ptr, alpha_ptr, log_probs_ptr, targets_ptr,
+        ctx->stream(), grad_out_ptr, loss_ptr, alpha_ptr, log_probs_ptr, targets_ptr,
         input_lengths_ptr, target_lengths_ptr, beta_ptr, grad_ptr, input_helper, beta_helper,
         batch_size, max_input_length, max_target_length, num_labels, blank, zero_infinity,
         targets_ndim);

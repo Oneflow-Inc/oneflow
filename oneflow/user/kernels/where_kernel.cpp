@@ -49,11 +49,11 @@ class WhereKernel final : public user_op::OpKernel {
       NdarrayUtil<device_type, CondT>::BroadcastTo(
           ctx->stream(), XpuVarNdarray<CondT>(out->shape(), cond_tmp_buf),
           XpuVarNdarray<const CondT>(cond->shape(), cond->dptr<CondT>(), num_axes));
-      WhereKernelUtil<device_type, T, CondT>::Where(ctx->device_ctx(), out->shape().elem_cnt(),
+      WhereKernelUtil<device_type, T, CondT>::Where(ctx->stream(), out->shape().elem_cnt(),
                                                     cond_tmp_buf, tmp_buffer->mut_dptr<T>(),
                                                     y_tmp_buf, out->mut_dptr<T>());
     } else {
-      WhereKernelUtil<device_type, T, CondT>::Where(ctx->device_ctx(), out->shape().elem_cnt(),
+      WhereKernelUtil<device_type, T, CondT>::Where(ctx->stream(), out->shape().elem_cnt(),
                                                     cond->dptr<CondT>(), x->dptr<T>(), y->dptr<T>(),
                                                     out->mut_dptr<T>());
     }
@@ -93,12 +93,12 @@ class WhereScalarXKernel final : public user_op::OpKernel {
           ctx->stream(), XpuVarNdarray<CondT>(out->shape(), cond_tmp_buf),
           XpuVarNdarray<const CondT>(cond->shape(), cond->dptr<CondT>(), num_axes));
       WhereKernelUtil<device_type, T, CondT>::WhereXScalar(
-          ctx->device_ctx(), out->shape().elem_cnt(), cond_tmp_buf, scalar_operand,
+          ctx->stream(), out->shape().elem_cnt(), cond_tmp_buf, scalar_operand,
           tmp_buffer->mut_dptr<T>(), out->mut_dptr<T>());
     } else {
-      WhereKernelUtil<device_type, T, CondT>::WhereXScalar(
-          ctx->device_ctx(), out->shape().elem_cnt(), cond->dptr<CondT>(), scalar_operand,
-          y->dptr<T>(), out->mut_dptr<T>());
+      WhereKernelUtil<device_type, T, CondT>::WhereXScalar(ctx->stream(), out->shape().elem_cnt(),
+                                                           cond->dptr<CondT>(), scalar_operand,
+                                                           y->dptr<T>(), out->mut_dptr<T>());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -135,13 +135,13 @@ class WhereScalarYKernel final : public user_op::OpKernel {
       NdarrayUtil<device_type, CondT>::BroadcastTo(
           ctx->stream(), XpuVarNdarray<CondT>(out->shape(), cond_tmp_buf),
           XpuVarNdarray<const CondT>(cond->shape(), cond->dptr<CondT>(), num_axes));
-      WhereKernelUtil<device_type, T, CondT>::WhereYScalar(
-          ctx->device_ctx(), out->shape().elem_cnt(), cond_tmp_buf, tmp_buffer->mut_dptr<T>(),
-          scalar_operand, out->mut_dptr<T>());
+      WhereKernelUtil<device_type, T, CondT>::WhereYScalar(ctx->stream(), out->shape().elem_cnt(),
+                                                           cond_tmp_buf, tmp_buffer->mut_dptr<T>(),
+                                                           scalar_operand, out->mut_dptr<T>());
     } else {
-      WhereKernelUtil<device_type, T, CondT>::WhereYScalar(
-          ctx->device_ctx(), out->shape().elem_cnt(), cond->dptr<CondT>(), x->dptr<T>(),
-          scalar_operand, out->mut_dptr<T>());
+      WhereKernelUtil<device_type, T, CondT>::WhereYScalar(ctx->stream(), out->shape().elem_cnt(),
+                                                           cond->dptr<CondT>(), x->dptr<T>(),
+                                                           scalar_operand, out->mut_dptr<T>());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -169,9 +169,9 @@ class WhereScalarXYKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED() << "The scalar in Where should be float or int";
     }
-    WhereKernelUtil<device_type, T, CondT>::WhereXYScalar(
-        ctx->device_ctx(), out->shape().elem_cnt(), cond->dptr<CondT>(), x_scalar_operand,
-        y_scalar_operand, out->mut_dptr<T>());
+    WhereKernelUtil<device_type, T, CondT>::WhereXYScalar(ctx->stream(), out->shape().elem_cnt(),
+                                                          cond->dptr<CondT>(), x_scalar_operand,
+                                                          y_scalar_operand, out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -249,7 +249,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_WHERE_SCALAR_XY_KERNEL, DEVICE_TYPE_SE
                                      OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64),
                                  INT_DATA_TYPE_SEQ)
 #ifdef WITH_CUDA
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_WHERE_KERNEL, (DeviceType::kGPU), FLOAT16_DATA_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_WHERE_KERNEL, (DeviceType::kCUDA), FLOAT16_DATA_TYPE_SEQ,
                                  INT_DATA_TYPE_SEQ)
 #endif
 

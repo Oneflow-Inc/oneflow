@@ -25,7 +25,7 @@ namespace {
 
 REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kGPU)
+REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kCUDA)
 #endif
 }  // namespace
 

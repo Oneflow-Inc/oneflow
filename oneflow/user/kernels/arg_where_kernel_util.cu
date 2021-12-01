@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/fixed_vector.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #include <cub/cub.cuh>
 
 namespace oneflow {
@@ -82,59 +83,59 @@ cudaError_t SelectTrue(cudaStream_t stream, int num_items, void* temp_storage,
 }  // namespace
 
 template<typename IN_T, typename OUT_T, int NDIM>
-struct ArgWhereKernelUtil<DeviceType::kGPU, IN_T, OUT_T, NDIM> {
-  static void ArgWhere(DeviceCtx* ctx, const ShapeView& input_shape, const IN_T* input_ptr,
+struct ArgWhereKernelUtil<DeviceType::kCUDA, IN_T, OUT_T, NDIM> {
+  static void ArgWhere(ep::Stream* stream, const ShapeView& input_shape, const IN_T* input_ptr,
                        void* temp_storage, size_t temp_storage_bytes, OUT_T* output_ptr,
                        OUT_T* output_size_ptr) {
     const int64_t elem_cnt = input_shape.elem_cnt();
     // deal with empty blob
     if (elem_cnt == 0) {
-      Memset<DeviceType::kGPU>(ctx, output_size_ptr, 0, sizeof(OUT_T));
+      Memset<DeviceType::kCUDA>(stream, output_size_ptr, 0, sizeof(OUT_T));
       return;
     }
 
-    CHECK_NOTNULL(ctx);
+    CHECK_NOTNULL(stream);
     CHECK_LE(elem_cnt, std::numeric_limits<OUT_T>::max());
-    size_t workspace = GetWorkspaceBytesSize(ctx, elem_cnt);
+    size_t workspace = GetWorkspaceBytesSize(stream, elem_cnt);
     CHECK_LE(workspace, temp_storage_bytes);
 
     if (NDIM == 1) {
-      OF_CUDA_CHECK(
-          (SelectTrue<IN_T, OUT_T, OUT_T*>(ctx->cuda_stream(), input_shape.elem_cnt(), temp_storage,
-                                           workspace, input_ptr, output_ptr, output_size_ptr)));
+      OF_CUDA_CHECK((SelectTrue<IN_T, OUT_T, OUT_T*>(
+          stream->As<ep::CudaStream>()->cuda_stream(), input_shape.elem_cnt(), temp_storage,
+          workspace, input_ptr, output_ptr, output_size_ptr)));
     } else {
       using OutputIterator = StrideIterator<OUT_T, NDIM>;
       OutputIterator output_iter(output_ptr, elem_cnt);
-      OF_CUDA_CHECK((SelectTrue<IN_T, OUT_T, OutputIterator>(ctx->cuda_stream(), elem_cnt,
-                                                             temp_storage, workspace, input_ptr,
-                                                             output_iter, output_size_ptr)));
+      OF_CUDA_CHECK((SelectTrue<IN_T, OUT_T, OutputIterator>(
+          stream->As<ep::CudaStream>()->cuda_stream(), elem_cnt, temp_storage, workspace, input_ptr,
+          output_iter, output_size_ptr)));
 
       OUT_T dims[NDIM] = {0};
       std::transform(input_shape.ptr(), input_shape.ptr() + input_shape.NumAxes(), dims,
                      [](int64_t dim) { return static_cast<OUT_T>(dim); });
       NdIndexOffsetHelper<OUT_T, NDIM> index_converter(dims);
       CudaOffsetToNdIndexInplace<OUT_T, NDIM>
-          <<<GetNumBlocks(elem_cnt), kBlockSize, 0, ctx->cuda_stream()>>>(
+          <<<GetNumBlocks(elem_cnt), kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
               index_converter, output_size_ptr, output_ptr);
     }
   }
 
-  static size_t GetWorkspaceBytesSize(DeviceCtx* ctx, int64_t elem_cnt) {
-    cudaStream_t stream = ctx ? ctx->cuda_stream() : 0;
+  static size_t GetWorkspaceBytesSize(ep::Stream* stream, int64_t elem_cnt) {
+    cudaStream_t cuda_stream = stream ? stream->As<ep::CudaStream>()->cuda_stream() : 0;
     size_t workspace = 0;
     if (NDIM == 1) {
-      OF_CUDA_CHECK((SelectTrue<IN_T, OUT_T, OUT_T*>(stream, elem_cnt, nullptr, workspace, nullptr,
-                                                     nullptr, nullptr)));
+      OF_CUDA_CHECK((SelectTrue<IN_T, OUT_T, OUT_T*>(cuda_stream, elem_cnt, nullptr, workspace,
+                                                     nullptr, nullptr, nullptr)));
     } else {
       using OutputIterator = StrideIterator<OUT_T, NDIM>;
       OutputIterator output_iter(nullptr, elem_cnt);
-      OF_CUDA_CHECK((SelectTrue<IN_T, OUT_T, OutputIterator>(stream, elem_cnt, nullptr, workspace,
-                                                             nullptr, output_iter, nullptr)));
+      OF_CUDA_CHECK((SelectTrue<IN_T, OUT_T, OutputIterator>(
+          cuda_stream, elem_cnt, nullptr, workspace, nullptr, output_iter, nullptr)));
     }
     return workspace;
   }
 };
 
-INSTANTIATE_ARG_WHERE_KERNEL_UTIL_FOR_DEVICE(DeviceType::kGPU)
+INSTANTIATE_ARG_WHERE_KERNEL_UTIL_FOR_DEVICE(DeviceType::kCUDA)
 
 }  // namespace oneflow

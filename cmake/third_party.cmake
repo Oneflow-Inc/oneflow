@@ -30,11 +30,19 @@ if (WITH_XLA)
   include(tensorflow)
 endif()
 
+if (WITH_OPENVINO)
+  include(openvino)
+endif()
+
 if (WITH_TENSORRT)
   include(tensorrt)
 endif()
 
 include(hwloc)
+if (WITH_ONEDNN)
+  include(oneDNN)
+endif()
+
 
 option(CUDA_STATIC "" ON)
 
@@ -139,6 +147,9 @@ set(oneflow_third_party_libs
     ${FLATBUFFERS_STATIC_LIBRARIES}
     ${LZ4_STATIC_LIBRARIES}
 )
+if (WITH_ONEDNN)
+  set(oneflow_third_party_libs ${oneflow_third_party_libs} ${ONEDNN_STATIC_LIBRARIES})
+endif()
 
 if (NOT WITH_XLA)
   list(APPEND oneflow_third_party_libs ${RE2_LIBRARIES})
@@ -167,6 +178,10 @@ set(oneflow_third_party_dependencies
   lz4_copy_libs_to_destination
   lz4_copy_headers_to_destination
 )
+if (WITH_ONEDNN)
+  list(APPEND oneflow_third_party_dependencies onednn)
+endif()
+
 
 if (WITH_COCOAPI)
   list(APPEND oneflow_third_party_dependencies cocoapi_copy_headers_to_destination)
@@ -197,6 +212,10 @@ list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS
     ${FLATBUFFERS_INCLUDE_DIR}
     ${LZ4_INCLUDE_DIR}
 )
+if (WITH_ONEDNN)
+  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${ONEDNN_INCLUDE_DIR})
+endif()
+
 
 if (NOT WITH_XLA)
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${RE2_INCLUDE_DIR})
@@ -265,7 +284,28 @@ if(WITH_TENSORRT)
   list(APPEND oneflow_third_party_libs ${TENSORRT_LIBRARIES})
 endif()
 
+if (WITH_OPENVINO)
+  list(APPEND oneflow_third_party_libs ${OPENVINO_LIBRARIES})
+endif()
+
 message(STATUS "oneflow_third_party_libs: ${oneflow_third_party_libs}")
+
+foreach (oneflow_third_party_lib IN LISTS oneflow_third_party_libs)
+  string(FIND "${oneflow_third_party_lib}" "-l" FLAG_FOUND)
+  if (NOT ("${FLAG_FOUND}" EQUAL 0) AND NOT TARGET ${oneflow_third_party_lib})
+    get_filename_component(IMPORTED_LIB_NAME ${oneflow_third_party_lib} NAME_WE)
+    set(IMPORTED_LIB_NAME "imported::${IMPORTED_LIB_NAME}")
+    message(STATUS "Creating imported lib: ${oneflow_third_party_lib} => ${IMPORTED_LIB_NAME}")
+    add_library(${IMPORTED_LIB_NAME} UNKNOWN IMPORTED)
+    set_property(TARGET ${IMPORTED_LIB_NAME} PROPERTY IMPORTED_LOCATION "${oneflow_third_party_lib}")
+    list(APPEND ONEFLOW_THIRD_PARTY_LIBS_TO_LINK "${IMPORTED_LIB_NAME}")
+  else()
+    list(APPEND ONEFLOW_THIRD_PARTY_LIBS_TO_LINK "${oneflow_third_party_lib}")
+  endif()
+endforeach()
+
+message(STATUS "ONEFLOW_THIRD_PARTY_LIBS_TO_LINK: ${ONEFLOW_THIRD_PARTY_LIBS_TO_LINK}")
+set(oneflow_third_party_libs ${ONEFLOW_THIRD_PARTY_LIBS_TO_LINK})
 
 add_definitions(-DHALF_ENABLE_CPP11_USER_LITERALS=0)
 

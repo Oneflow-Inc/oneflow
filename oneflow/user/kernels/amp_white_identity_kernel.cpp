@@ -30,7 +30,7 @@ namespace oneflow {
 
 REGISTER_AMP_WHITE_IDENTITY_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_AMP_WHITE_IDENTITY_KERNEL(DeviceType::kGPU)
+REGISTER_AMP_WHITE_IDENTITY_KERNEL(DeviceType::kCUDA)
 #endif
 
 }  // namespace oneflow

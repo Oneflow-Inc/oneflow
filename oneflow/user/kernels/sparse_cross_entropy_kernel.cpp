@@ -55,7 +55,7 @@ class SparseCrossEntropyKernel final : public user_op::OpKernel {
     const int64_t lower_bound = 0;
     const int64_t depth = ctx->Attr<int64_t>("depth");
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeEntropy(
-        ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
+        ctx->stream(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
         label->dptr<K>(), out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -100,10 +100,10 @@ class SparseCrossEntropyMsKernel final : public user_op::OpKernel {
       CHECK_EQ(num_classes, kernel_state->upper() - kernel_state->lower());
       lower_bound = kernel_state->lower();
     }
-    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
+    Memset<device_type>(ctx->stream(), out->mut_dptr(), 0,
                         out->shape().elem_cnt() * GetSizeOfDataType(out->data_type()));
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeEntropy(
-        ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
+        ctx->stream(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
         label->dptr<K>(), out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -123,7 +123,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_KERNEL, (SparseCr
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 #ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_KERNEL, (SparseCrossEntropyKernel),
-                                 ("sparse_cross_entropy"), OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
+                                 ("sparse_cross_entropy"), OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 #endif
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_KERNEL, (SparseCrossEntropyMsKernel),
@@ -133,7 +133,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_KERNEL, (SparseCr
 #ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_KERNEL, (SparseCrossEntropyMsKernel),
                                  ("sparse_cross_entropy_ms"),
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 #endif
 
@@ -156,10 +156,10 @@ class SparseCrossEntropyGradKernel final : public user_op::OpKernel {
     const int64_t depth = ctx->Attr<int64_t>("depth");
     size_t prediction_diff_bytes_size =
         prediction_diff->shape().elem_cnt() * GetSizeOfDataType(prediction_diff->data_type());
-    Memset<device_type>(ctx->device_ctx(), prediction_diff->mut_dptr<T>(), 0,
+    Memset<device_type>(ctx->stream(), prediction_diff->mut_dptr<T>(), 0,
                         prediction_diff_bytes_size);
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiff(
-        ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
+        ctx->stream(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
         label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -207,10 +207,10 @@ class SparseCrossEntropyMsGradKernel final : public user_op::OpKernel {
     }
     size_t prediction_diff_bytes_size =
         prediction_diff->shape().elem_cnt() * GetSizeOfDataType(prediction_diff->data_type());
-    Memset<device_type>(ctx->device_ctx(), prediction_diff->mut_dptr<T>(), 0,
+    Memset<device_type>(ctx->stream(), prediction_diff->mut_dptr<T>(), 0,
                         prediction_diff_bytes_size);
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiff(
-        ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
+        ctx->stream(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
         label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -233,7 +233,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_GRAD_KERNEL,
 #ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_GRAD_KERNEL,
                                  (SparseCrossEntropyGradKernel), ("sparse_cross_entropy_grad"),
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 #endif
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_GRAD_KERNEL,
@@ -243,7 +243,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_GRAD_KERNEL,
 #ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_GRAD_KERNEL,
                                  (SparseCrossEntropyMsGradKernel), ("sparse_cross_entropy_ms_grad"),
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 #endif
 

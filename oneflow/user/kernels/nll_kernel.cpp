@@ -126,8 +126,7 @@ class NllGradKernel final : public user_op::OpKernel {
     T* dx = dx_blob->mut_dptr<T>();
     const T* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
-    Memset<DeviceType::kCPU>(ctx->device_ctx(), dx, 0,
-                             GetCudaAlignedSize(input_elem_cnt * sizeof(T)));
+    Memset<DeviceType::kCPU>(ctx->stream(), dx, 0, GetCudaAlignedSize(input_elem_cnt * sizeof(T)));
     ComputeNllGradOut(num_instances, num_classes, ignore_index, target, dy, dx, weight,
                       total_weight, reduction);
   }

@@ -128,7 +128,7 @@ class AddFactoryImpl : public AddFactory {
   }
 };
 
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, AddFactory, AddFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, AddFactory, AddFactoryImpl);
 
 }  // namespace
 

@@ -863,6 +863,55 @@ class FusedScaleTrilSoftmaxMaskScaleGradFunctor {
   std::shared_ptr<OpExpr> fused_op_;
 };
 
+class FusedScaleMaskSoftmaxGradFunctor {
+ public:
+  FusedScaleMaskSoftmaxGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_scale_mask_softmax_grad")
+                         .Input("y")
+                         .Input("dy")
+                         .Input("mask")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& mask, const float& scale) const {
+    MutableAttrMap attrs_;
+    JUST(attrs_.SetAttr<float>("scale_value", scale));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {y, dy, mask}, attrs_);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedScaleMaskSoftmaxDropoutGradFunctor {
+ public:
+  FusedScaleMaskSoftmaxDropoutGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_scale_mask_softmax_dropout_grad")
+                         .Input("softmax_y")
+                         .Input("dy")
+                         .Input("mask")
+                         .Input("dropout_mask")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& softmax_y,
+                           const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& mask,
+                           const std::shared_ptr<one::Tensor>& dropout_mask, const float& scale,
+                           const float& dropout_scale) const {
+    MutableAttrMap attrs_;
+    JUST(attrs_.SetAttr<float>("scale_value", scale));
+    JUST(attrs_.SetAttr<float>("dropout_scale_value", dropout_scale));
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {softmax_y, dy, mask, dropout_mask}, attrs_);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -895,6 +944,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::CtcLossGradFunctor>("CtcLossGrad");
   m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleGradFunctor>(
       "FusedScaleTrilSoftmaxMaskScaleGrad");
+  m.add_functor<impl::FusedScaleMaskSoftmaxGradFunctor>("FusedScaleMaskSoftmaxGrad");
+  m.add_functor<impl::FusedScaleMaskSoftmaxDropoutGradFunctor>("FusedScaleMaskSoftmaxDropoutGrad");
 };
 
 }  // namespace functional

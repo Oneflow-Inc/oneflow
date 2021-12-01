@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/profiler/profiler.h"
 #include "oneflow/user/image/random_crop_generator.h"
 #include <opencv2/opencv.hpp>
 
@@ -436,8 +437,8 @@ void GpuDecodeHandle::WarmupOnce(int warmup_size, unsigned char* workspace, size
 void GpuDecodeHandle::Synchronize() { OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream_)); }
 
 template<>
-DecodeHandleFactory CreateDecodeHandleFactory<DeviceType::kGPU>(int target_width,
-                                                                int target_height) {
+DecodeHandleFactory CreateDecodeHandleFactory<DeviceType::kCUDA>(int target_width,
+                                                                 int target_height) {
   int dev;
   OF_CUDA_CHECK(cudaGetDevice(&dev));
   return [dev, target_width, target_height]() -> std::shared_ptr<DecodeHandle> {
@@ -469,6 +470,7 @@ class Worker final {
 
   void PollWork(const std::function<std::shared_ptr<DecodeHandle>()>& handle_factory,
                 int target_width, int target_height, int warmup_size) {
+    OF_PROFILER_NAME_THIS_HOST_THREAD("_cuda_img_decode");
     std::shared_ptr<DecodeHandle> handle = handle_factory();
     std::shared_ptr<Work> work;
     while (true) {
@@ -596,7 +598,7 @@ NEW_REGISTER_KERNEL(OperatorConf::kImageDecoderRandomCropResizeConf,
 #if defined(WITH_NVJPEG)
 
 NEW_REGISTER_KERNEL(OperatorConf::kImageDecoderRandomCropResizeConf,
-                    ImageDecoderRandomCropResizeKernel<DeviceType::kGPU>)
+                    ImageDecoderRandomCropResizeKernel<DeviceType::kCUDA>)
     .SetIsMatchedPred([](const KernelConf& conf) -> bool {
       return conf.op_attribute().op_conf().device_tag() == "gpu";
     });

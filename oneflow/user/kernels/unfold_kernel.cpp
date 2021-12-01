@@ -73,7 +73,7 @@ class UnfoldKernel final : public OpKernel {
 
     const UnfoldParams<INDEX_T, NDIM, SDIM> params = state_ptr->params();
     UnfoldKernelUtil<device_type, T, INDEX_T, NDIM, SDIM>::Forward(
-        ctx->device_ctx(), &params, input->dptr<T>(), output->mut_dptr<T>());
+        ctx->stream(), &params, input->dptr<T>(), output->mut_dptr<T>());
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -92,8 +92,8 @@ REGISTER_UNFOLD_KERNEL(DeviceType::kCPU, float)
 REGISTER_UNFOLD_KERNEL(DeviceType::kCPU, double)
 
 #ifdef WITH_CUDA
-REGISTER_UNFOLD_KERNEL(DeviceType::kGPU, float)
-REGISTER_UNFOLD_KERNEL(DeviceType::kGPU, double)
+REGISTER_UNFOLD_KERNEL(DeviceType::kCUDA, float)
+REGISTER_UNFOLD_KERNEL(DeviceType::kCUDA, double)
 #endif  // WITH_CUDA
 
 }  // namespace user_op

@@ -1751,7 +1751,7 @@ def max_pool2d(
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("MaxPool2D_")
         )
-        .Op("max_pool_2d")
+        .Op("tf_max_pool_2d")
         .Input("x", [input])
         .Output("y")
     )
@@ -1829,7 +1829,7 @@ def avg_pool2d(
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("AvgPool2D_")
         )
-        .Op("avg_pool_2d")
+        .Op("tf_avg_pool_2d")
         .Input("x", [input])
         .Output("y")
     )
@@ -1908,7 +1908,7 @@ def max_pool3d(
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("MaxPool3D_")
         )
-        .Op("max_pool_3d")
+        .Op("tf_max_pool_3d")
         .Input("x", [input])
         .Output("y")
     )
@@ -1987,7 +1987,7 @@ def avg_pool3d(
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("AvgPool3D_")
         )
-        .Op("avg_pool_3d")
+        .Op("tf_avg_pool_3d")
         .Input("x", [input])
         .Output("y")
     )

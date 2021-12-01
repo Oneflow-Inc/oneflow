@@ -38,7 +38,7 @@ class MaskedFillKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED() << "The scalar in MaskedFill should be float or int.";
     }
-    WhereKernelUtil<device_type, T, CondT>::WhereXScalar(ctx->device_ctx(), out->shape().elem_cnt(),
+    WhereKernelUtil<device_type, T, CondT>::WhereXScalar(ctx->stream(), out->shape().elem_cnt(),
                                                          mask->dptr<CondT>(), scalar_operand,
                                                          x->dptr<T>(), out->mut_dptr<T>());
   }
@@ -56,7 +56,7 @@ class MaskedFillKernel final : public user_op::OpKernel {
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MASKED_FILL_KERNEL, DEVICE_TYPE_SEQ,
                                  ARITHMETIC_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
 #ifdef WITH_CUDA
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MASKED_FILL_KERNEL, (DeviceType::kGPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MASKED_FILL_KERNEL, (DeviceType::kCUDA),
                                  FLOAT16_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
 #endif
 

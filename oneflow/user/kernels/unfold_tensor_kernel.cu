@@ -64,21 +64,21 @@ __global__ void InitPtr(const int32_t elements, T* ptr) {
 
 template<typename T>
 struct GpuUnfoldTensorFunctor final {
-  void operator()(DeviceCtx* ctx, const T* in_ptr, const STRIDES out_stride,
+  void operator()(ep::Stream* stream, const T* in_ptr, const STRIDES out_stride,
                   const STRIDES out_shape, const int32_t out_dims, const int32_t elements,
                   T* out_ptr) {
-    RUN_CUDA_KERNEL((UnfoldTensorCudaKernel<T>), ctx, elements, in_ptr, out_stride, out_shape,
+    RUN_CUDA_KERNEL((UnfoldTensorCudaKernel<T>), stream, elements, in_ptr, out_stride, out_shape,
                     out_dims, elements, out_ptr);
   }
 };
 
 template<typename T>
 struct GpuUnfoldTensorGradFunctor final {
-  void operator()(DeviceCtx* ctx, const T* dout_ptr, const STRIDES dout_stride,
+  void operator()(ep::Stream* stream, const T* dout_ptr, const STRIDES dout_stride,
                   const STRIDES dout_shape, const int32_t dout_dims, const int32_t dout_elements,
                   const int32_t din_elements, T* din_ptr) {
-    RUN_CUDA_KERNEL((InitPtr<T>), ctx, din_elements, din_elements, din_ptr);
-    RUN_CUDA_KERNEL((UnfoldTensorGradCudaKernel<T>), ctx, dout_elements, dout_ptr, dout_stride,
+    RUN_CUDA_KERNEL((InitPtr<T>), stream, din_elements, din_elements, din_ptr);
+    RUN_CUDA_KERNEL((UnfoldTensorGradCudaKernel<T>), stream, dout_elements, dout_ptr, dout_stride,
                     dout_shape, dout_dims, dout_elements, din_ptr);
   }
 };
@@ -130,17 +130,17 @@ class GpuUnfoldTensorKernel final : public user_op::OpKernel {
     STRIDES out_shape_cuda;
     for (int i = 0; i < out_dims; ++i) { out_shape_cuda.val[i] = out_shape[i]; }
 
-    GpuUnfoldTensorFunctor<T>()(ctx->device_ctx(), in_ptr, out_stride_cuda, out_shape_cuda,
-                                out_dims, out_size, out_ptr);
+    GpuUnfoldTensorFunctor<T>()(ctx->stream(), in_ptr, out_stride_cuda, out_shape_cuda, out_dims,
+                                out_size, out_ptr);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UNFOLD_TENSOR_KERNEL(dtype)                          \
-  REGISTER_USER_KERNEL("unfold_tensor")                               \
-      .SetCreateFn<GpuUnfoldTensorKernel<dtype>>()                    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_UNFOLD_TENSOR_KERNEL(dtype)                           \
+  REGISTER_USER_KERNEL("unfold_tensor")                                \
+      .SetCreateFn<GpuUnfoldTensorKernel<dtype>>()                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value))
 
 REGISTER_UNFOLD_TENSOR_KERNEL(float);
@@ -196,17 +196,17 @@ class GpuUnfoldTensorGradKernel final : public user_op::OpKernel {
     const int32_t dout_size = dout->shape().elem_cnt();
     const int32_t din_size = din->shape().elem_cnt();
 
-    GpuUnfoldTensorGradFunctor<T>()(ctx->device_ctx(), dout_ptr, dout_stride_cuda, dout_shape_cuda,
+    GpuUnfoldTensorGradFunctor<T>()(ctx->stream(), dout_ptr, dout_stride_cuda, dout_shape_cuda,
                                     dout_dims, dout_size, din_size, din_ptr);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(dtype)                     \
-  REGISTER_USER_KERNEL("unfold_tensor_grad")                          \
-      .SetCreateFn<GpuUnfoldTensorGradKernel<dtype>>()                \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(dtype)                      \
+  REGISTER_USER_KERNEL("unfold_tensor_grad")                           \
+      .SetCreateFn<GpuUnfoldTensorGradKernel<dtype>>()                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value))
 
 REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(float);
