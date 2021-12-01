@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/primitive/include/fill.h"
+#include "oneflow/core/ep/include/primitive/fill.h"
 
 namespace oneflow {
 namespace user_op {
@@ -22,9 +22,9 @@ namespace user_op {
 namespace {
 
 template<typename Context>
-std::unique_ptr<primitive::Fill> NewFillPrimitive(Context* ctx) {
+std::unique_ptr<ep::primitive::Fill> NewFillPrimitive(Context* ctx) {
   const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
-  return primitive::NewPrimitive<primitive::FillFactory>(ctx->device_type(), data_type);
+  return ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->device_type(), data_type);
 }
 
 class ConstantKernel final : public OpKernel {
@@ -41,17 +41,17 @@ class ConstantKernel final : public OpKernel {
     const int64_t elem_cnt = out_tensor->shape().elem_cnt();
     CHECK_GE(elem_cnt, 0);
     if (elem_cnt == 0) { return; }
-    std::unique_ptr<primitive::Fill> fill = NewFillPrimitive(ctx);
+    std::unique_ptr<ep::primitive::Fill> fill = NewFillPrimitive(ctx);
     CHECK(fill);
-    fill->Launch(ctx->stream_ctx(), out_tensor->mut_dptr(), value, elem_cnt);
+    fill->Launch(ctx->stream(), out_tensor->mut_dptr(), value, elem_cnt);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> FillPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>(
-      "FillPrimitiveExists",
-      [](const user_op::KernelRegContext& ctx) { return NewFillPrimitive(&ctx).operator bool(); });
+auto FillPrimitiveExists() {
+  return hob::make_custom("FillPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewFillPrimitive(&ctx).operator bool();
+  });
 }
 
 REGISTER_USER_KERNEL("constant")

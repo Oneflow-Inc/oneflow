@@ -32,7 +32,7 @@ namespace vm {
 struct Stream;
 struct InstructionStatusBuffer;
 struct Instruction;
-struct VirtualMachine;
+struct VirtualMachineEngine;
 struct InstructionMsg;
 class InstructionType;
 
@@ -41,8 +41,8 @@ class StreamType {
   virtual ~StreamType() = default;
 
   void Run(Instruction* instruction) const;
-  void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const;
-  void Run(VirtualMachine* vm, Instruction* instruction) const;
+  void Run(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const;
+  void Run(VirtualMachineEngine* vm, Instruction* instruction) const;
 
   virtual const char* device_tag() const = 0;
 
@@ -60,15 +60,19 @@ class StreamType {
   virtual intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
                                                            int64_t this_machine_id) const = 0;
 
-  virtual bool SharingVirtualMachineThread() const = 0;
+  virtual bool OnSchedulerThread() const = 0;
   virtual bool SupportingTransportInstructions() const = 0;
   virtual bool IsControlStreamType() const { return false; }
-  virtual void Infer(VirtualMachine* vm, Instruction* instruction) const { Infer(instruction); }
-  virtual void Compute(VirtualMachine* vm, Instruction* instruction) const { Compute(instruction); }
-  virtual void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+  virtual void Infer(VirtualMachineEngine* vm, Instruction* instruction) const {
+    Infer(instruction);
+  }
+  virtual void Compute(VirtualMachineEngine* vm, Instruction* instruction) const {
+    Compute(instruction);
+  }
+  virtual void Infer(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
-  virtual void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+  virtual void Compute(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
 

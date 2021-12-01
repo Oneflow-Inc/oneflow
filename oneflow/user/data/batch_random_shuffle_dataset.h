@@ -41,7 +41,7 @@ class BatchRandomShuffleDataset final : public Dataset<LoadTarget> {
     initial_buffer_fill_ = ctx->Attr<int32_t>("shuffle_buffer_size");
     for (int32_t i = 0; i < initial_buffer_fill_; ++i) {
       LoadTargetPtrList batch = loader_->Next();
-      batch_buffer_.push_back(std::move(batch));
+      batch_buffer_.emplace_back(std::move(batch));
     }
   }
   ~BatchRandomShuffleDataset() = default;

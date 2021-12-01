@@ -30,7 +30,7 @@ limitations under the License.
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "oneflow/core/actor/actor_message.h"
+#include "oneflow/core/lazy/actor/actor_message.h"
 #include "oneflow/core/transport/transport_message.h"
 
 namespace oneflow {

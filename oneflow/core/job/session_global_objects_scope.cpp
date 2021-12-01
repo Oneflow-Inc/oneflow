@@ -38,6 +38,7 @@ limitations under the License.
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/user/summary/events_writer.h"
 #include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
 
 #ifdef WITH_CUDA
 #include "oneflow/core/device/cuda_device_descriptor.h"
@@ -107,6 +108,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   Global<ResourceDesc, ForSession>::New(config_proto.resource(),
                                         GlobalProcessCtx::NumOfProcessPerNode());
   Global<IDMgr>::New();
+  Global<TaskStreamIndexManager>::New();
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     Global<AvailableMemDesc>::New();
     if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
@@ -170,6 +172,7 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
     Global<JobName2JobId>::Delete();
     Global<AvailableMemDesc>::Delete();
   }
+  Global<TaskStreamIndexManager>::Delete();
   Global<IDMgr>::Delete();
   Global<ResourceDesc, ForSession>::Delete();
   Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),

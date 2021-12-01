@@ -50,6 +50,7 @@ limitations under the License.
 #ifdef WITH_RDMA
 #include "oneflow/core/platform/include/ibv.h"
 #endif  // WITH_RDMA
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
@@ -175,6 +176,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   if (Global<ResourceDesc, ForEnv>::Get()->enable_debug_mode()) {
     Global<device::NodeDeviceDescriptorManager>::Get()->DumpSummary("devices");
   }
+  Global<ep::DeviceManagerRegistry>::New();
   Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
 #ifdef WITH_CUDA
   Global<EagerNcclCommMgr>::New();
@@ -242,6 +244,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<EagerNcclCommMgr>::Delete();
 #endif
   Global<ThreadPool>::Delete();
+  Global<ep::DeviceManagerRegistry>::Delete();
   if (Global<ResourceDesc, ForSession>::Get() != nullptr) {
     Global<ResourceDesc, ForSession>::Delete();
   }

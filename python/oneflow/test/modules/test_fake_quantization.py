@@ -50,7 +50,7 @@ def gen_quant_scale_for_min_max_cambricon(weight, quantization_bit):
 
 
 def product(tu):
-    return np.prod(tu).astype(np.int).item()
+    return np.prod(tu).astype(np.int32).item()
 
 
 def fake_quant_per_layer_symmetric(input, quantization_bit, scale):

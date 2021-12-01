@@ -18,4 +18,5 @@ Optimizers
             LambdaLR,
             StepLR,
             MultiStepLR,
+            ExponentialLR,
             ReduceLROnPlateau

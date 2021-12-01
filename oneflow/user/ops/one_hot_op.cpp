@@ -35,7 +35,7 @@ REGISTER_NO_GRAD_USER_OP("one_hot")
       user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
       *out_desc->mut_is_dynamic() = indices_desc.is_dynamic();
       DimVector dim_vec = indices_desc.shape().dim_vec();
-      dim_vec.push_back(depth);
+      dim_vec.emplace_back(depth);
       *out_desc->mut_shape() = Shape(dim_vec);
       return Maybe<void>::Ok();
     })

@@ -53,7 +53,7 @@ void StreamType::Run(Instruction* instruction) const {
   }
 }
 
-void StreamType::Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+void StreamType::Run(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
   InterpretType interpret_type = instr_msg->instr_type_id().stream_type_id().interpret_type();
   if (interpret_type == InterpretType::kCompute) {
     Compute(vm, instr_msg);
@@ -64,7 +64,7 @@ void StreamType::Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
   }
 }
 
-void StreamType::Run(VirtualMachine* vm, Instruction* instruction) const {
+void StreamType::Run(VirtualMachineEngine* vm, Instruction* instruction) const {
   auto interpret_type = instruction->stream().stream_id().stream_type_id().interpret_type();
   if (interpret_type == InterpretType::kCompute) {
     Compute(vm, instruction);

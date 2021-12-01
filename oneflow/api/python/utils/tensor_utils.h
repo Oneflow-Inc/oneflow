@@ -55,8 +55,9 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
     broadcast_sbp.mutable_broadcast_parallel();
     std::vector<Symbol<cfg::SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel_size(),
                                                     SymbolOf(broadcast_sbp));
-    auto consistent_tensor = JUST(
-        functional::ToConsistent(t, tensor_meta->parallel_desc(), sbp_tuple, GetNoneSbpList()));
+    std::vector<Symbol<cfg::SbpParallel>> none;
+    const auto& consistent_tensor =
+        JUST(functional::ToConsistent(t, tensor_meta->parallel_desc(), sbp_tuple, none));
     tensor = JUST(consistent_tensor->cur_rank_phy_tensor());
   }
 

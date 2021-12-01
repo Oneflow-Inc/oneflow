@@ -41,7 +41,7 @@ class FunctionNode;
 class ConsistentTensor;
 class MirroredTensor;
 
-class Tensor {
+class Tensor : public std::enable_shared_from_this<Tensor> {
  public:
   virtual ~Tensor() = default;
 
@@ -193,8 +193,14 @@ class StaticZerosTensor final : public Tensor {
   Maybe<Tensor> clone() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
   // Setters for autograd
-  Maybe<void> set_requires_grad(bool requires_grad) override { PRINT_BUG_PROMPT_AND_ABORT(); }
-  Maybe<void> set_retain_grad(bool retain_grad) override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<void> set_requires_grad(bool requires_grad) override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return Maybe<void>::Ok();
+  }
+  Maybe<void> set_retain_grad(bool retain_grad) override {
+    RETURN_ERROR_WITH_BUG_PROMPT();
+    return Maybe<void>::Ok();
+  }
   void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
     PRINT_BUG_PROMPT_AND_ABORT();
   }
@@ -376,8 +382,7 @@ class Parameter final : public TensorIf<Parameter> {
   std::shared_ptr<Tensor> tensor_;
 };
 
-class MirroredTensor final : public TensorIf<MirroredTensor>,
-                             public std::enable_shared_from_this<MirroredTensor> {
+class MirroredTensor final : public TensorIf<MirroredTensor> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MirroredTensor);
   MirroredTensor() = default;
@@ -410,6 +415,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return false; }
   bool is_cuda() const override;
+
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
   Maybe<Tensor> data() override {
     OF_LOG_ONCE(LOG(WARNING) << "You shouldn't call `.data` for a LocalTensor.");
@@ -478,15 +484,16 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
     return Maybe<void>::Ok();
   }
 
-  Maybe<MirroredTensor> AsMirroredTensor() override { return shared_from_this(); }
+  Maybe<MirroredTensor> AsMirroredTensor() override {
+    return std::dynamic_pointer_cast<MirroredTensor>(shared_from_this());
+  }
   Maybe<ConsistentTensor> AsConsistentTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
  private:
   std::shared_ptr<MirroredTensorImpl> impl_;
 };
 
-class ConsistentTensor final : public TensorIf<ConsistentTensor>,
-                               public std::enable_shared_from_this<ConsistentTensor> {
+class ConsistentTensor final : public TensorIf<ConsistentTensor> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConsistentTensor);
   ConsistentTensor() = default;
@@ -551,7 +558,6 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   }
   Maybe<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
   Maybe<void> set_requires_grad(bool requires_grad) override {
-    // return impl_->set_requires_grad(requires_grad);
     JUST(impl_->set_requires_grad(requires_grad));
     if (!requires_grad) { set_grad_fn_node(nullptr); }
     return Maybe<void>::Ok();
@@ -594,7 +600,9 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   }
 
   Maybe<MirroredTensor> AsMirroredTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<ConsistentTensor> AsConsistentTensor() override { return shared_from_this(); }
+  Maybe<ConsistentTensor> AsConsistentTensor() override {
+    return std::dynamic_pointer_cast<ConsistentTensor>(shared_from_this());
+  }
 
  private:
   std::shared_ptr<ConsistentTensorImpl> impl_;

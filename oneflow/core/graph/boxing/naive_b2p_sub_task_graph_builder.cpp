@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/naive_b2p_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing_zeros_task_node.h"
-#include "oneflow/core/device/stream_index.h"
+#include "oneflow/core/graph/task_stream_id.h"
 
 namespace oneflow {
 
@@ -51,37 +51,19 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
         TaskNode* proxy =
             ctx->task_graph()->GetProxyNode(nearest_in_node, lbi, out_parallel_desc, out_id);
 
-        sorted_out_tasks->push_back(proxy);
+        sorted_out_tasks->emplace_back(proxy);
       } else {
-        const int64_t out_machine_id = CHECK_JUST(out_parallel_desc.MachineId4ParallelId(out_id));
-        const int64_t out_dev_phy_id = CHECK_JUST(out_parallel_desc.DeviceId4ParallelId(out_id));
-        int64_t thrd_id = -1;
-        if (out_parallel_desc.device_type() == DeviceType::kGPU) {
-#ifdef WITH_CUDA
-          DeviceId device_id{static_cast<DeviceId::rank_t>(out_machine_id), DeviceType::kGPU,
-                             static_cast<DeviceId::device_index_t>(out_dev_phy_id)};
-          auto* stream_index_generator =
-              Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
-          auto stream_index = stream_index_generator->GenerateComputeStreamIndex();
-          thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
-#else
-          UNIMPLEMENTED();
-#endif
-        } else if (out_parallel_desc.device_type() == DeviceType::kCPU) {
-          DeviceId device_id{static_cast<DeviceId::rank_t>(out_machine_id), DeviceType::kCPU, 0};
-          auto* stream_index_generator =
-              Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
-          auto stream_index = stream_index_generator->GenerateComputeStreamIndex();
-          thrd_id = EncodeStreamIdToInt64(StreamId{device_id, stream_index});
-        } else {
-          UNIMPLEMENTED();
-        }
+        int64_t out_machine_id = CHECK_JUST(out_parallel_desc.MachineId4ParallelId(out_id));
+        int64_t out_dev_phy_id = CHECK_JUST(out_parallel_desc.DeviceId4ParallelId(out_id));
+        if (out_parallel_desc.device_type() == DeviceType::kCPU) { out_dev_phy_id = 0; }
+        int64_t thrd_id = EncodeStreamIdToInt64(GenerateComputeTaskStreamId(
+            out_machine_id, out_parallel_desc.device_type(), out_dev_phy_id));
         auto* zeros_node = ctx->task_graph()->NewNode<BoxingZerosTaskNode>();
         zeros_node->Init(out_machine_id, thrd_id, lbi, logical_blob_desc.shape(),
                          logical_blob_desc.data_type(), time_shape);
         nearest_in_node->BuildCtrlRegstDesc(zeros_node);
         Connect<TaskNode>(nearest_in_node, ctx->task_graph()->NewEdge(), zeros_node);
-        sorted_out_tasks->push_back(zeros_node);
+        sorted_out_tasks->emplace_back(zeros_node);
       }
     }
     return TRY(BuildSubTskGphBuilderStatus("NaiveB2PSubTskGphBuilder", ""));

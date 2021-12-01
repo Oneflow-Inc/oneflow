@@ -51,14 +51,7 @@ def expand_op(input, *sizes):
         oneflow.Size([1, 3, 2, 2])
 
     """
-    if len(sizes) == 1:
-        expand_size = sizes[0]
-        if isinstance(expand_size, int):
-            expand_size = (expand_size,)
-    else:
-        expand_size = sizes
-
-    return flow._C.expand(input, expand_size)
+    return flow._C.expand(input, sizes)
 
 
 if __name__ == "__main__":

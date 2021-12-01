@@ -44,8 +44,8 @@ struct ScalarMulByTensorOpLowering final : public OpConversionPattern<ScalarMulB
  public:
   using OpConversionPattern<ScalarMulByTensorOp>::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(ScalarMulByTensorOp op, ArrayRef<Value> operands,
-                                ConversionPatternRewriter& rewriter) const final {
+  LogicalResult matchAndRewrite(ScalarMulByTensorOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
     auto scalar = op.scalar();
     auto reshaped_scalar =
         rewriter
@@ -67,11 +67,11 @@ struct ScalarMulByTensorOpLowering final : public OpConversionPattern<ScalarMulB
 struct CastOpLowering final : public OpConversionPattern<CastOp> {
  public:
   using OpConversionPattern<CastOp>::OpConversionPattern;
-  LogicalResult matchAndRewrite(CastOp op, ArrayRef<Value> operands,
-                                ConversionPatternRewriter& rewriter) const final {
+  LogicalResult matchAndRewrite(CastOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
     rewriter.replaceOpWithNewOp<tosa::CastOp>(op,
-                                              /* output */ op.y().getType(),
-                                              /* input */ op.x());
+                                              /* output */ op.out().getType(),
+                                              /* input */ op.in());
     return success();
   }
 };

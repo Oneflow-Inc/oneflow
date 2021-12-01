@@ -59,7 +59,7 @@ REGISTER_USER_OP("unpack")
         [](user_op::InferOutputBlobTimeShapeFnContext* ctx) -> Maybe<void> {
           const int32_t unpack_num = ctx->user_op_conf().attr<int32_t>("unpack_num");
           DimVector time_shape_dim_vec = ctx->TimeShape4InputArgNameAndIndex("in", 0).dim_vec();
-          time_shape_dim_vec.push_back(unpack_num);
+          time_shape_dim_vec.emplace_back(unpack_num);
           *ctx->mut_output_blob_time_shape() = Shape(time_shape_dim_vec);
           return Maybe<void>::Ok();
         });

@@ -16,7 +16,7 @@ limitations under the License.
 
 #include "oneflow/api/python/functional/python_arg.h"
 
-#include "oneflow/api/python/framework/device.h"
+#include "oneflow/api/common/device.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/indexing.h"
 #include "oneflow/core/common/scalar.h"

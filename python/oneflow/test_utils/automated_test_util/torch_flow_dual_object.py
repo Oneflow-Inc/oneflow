@@ -44,6 +44,7 @@ note_pytorch_method_names = []
 note_pytorch_args = []
 note_pytorch_kwargs = []
 vis_tensor = []
+vis_parameters = {}
 call_tensor_id = []
 
 
@@ -374,6 +375,12 @@ def print_note_fake_program():
         print(
             f"\033[32m-----------------------------------------------------------\033[0m"
         )
+    if vis_parameters:
+        print(
+            f"\033[32m-------------------nn.Module Parameters---------------------\033[0m"
+        )
+        for name, param in vis_parameters.items():
+            print(f"\033[32m{name}: {param}\033[0m")
 
 
 def clear_note_fake_program():
@@ -382,6 +389,7 @@ def clear_note_fake_program():
     note_pytorch_kwargs.clear()
     call_tensor_id.clear()
     vis_tensor.clear()
+    vis_parameters.clear()
 
 
 class DualObject:
@@ -459,6 +467,9 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
             torch_grad, flow_grad, rtol=rtol, atol=atol, equal_nan=True,
         ):
             print_note_fake_program()
+            print("---------Grad Shape--------")
+            print(torch_grad.shape)
+            print(flow_grad.shape)
             print(
                 f"Grads are not equal. PyTorch grad: \n{torch_grad}\n, OneFlow grad: \n{flow_grad}"
             )
@@ -472,6 +483,9 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
     )
     if equality_res == False:
         print_note_fake_program()
+        print("---------Tensor Shape--------")
+        print(torch_tensor.shape)
+        print(flow_tensor.shape)
     return equality_res
 
 
@@ -526,6 +540,7 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                         if key not in x.oneflow.state_dict().keys():
                             warnings.warn(f"oneflow module don't have `{key}`")
                             continue
+                        vis_parameters[key] = x.pytorch.state_dict()[key]
                         dual_objects_to_test.append(
                             GetDualObject(
                                 "unused",

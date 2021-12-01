@@ -75,22 +75,61 @@ class TestPermute(flow.unittest.TestCase):
 
     @unittest.skip("pytorch 1.9.0 exist not torch.permute api")
     @autotest()
-    def test_permute_with_random_data(test_case):
+    def test_torch_permute4d_with_random_data(test_case):
         device = random_device()
         ndim = 4
         permute_list = [0, 1, 2, 3]
         shuffle(permute_list)
-        x = random_pytorch_tensor(ndim=ndim).to(device)
+        x = random_pytorch_tensor(ndim=ndim, dim0=random().to(int)).to(device)
         y = torch.permute(x, dims=permute_list)
         return y
 
     @autotest()
-    def test_permute_tensor_with_random_data(test_case):
+    def test_permute5d_tensor_with_random_data(test_case):
+        device = random_device()
+        ndim = 5
+        permute_list = [0, 1, 2, 3, 4]
+        shuffle(permute_list)
+        x = random_pytorch_tensor(
+            ndim=ndim,
+            dim0=random(1, 16).to(int),
+            dim1=random(1, 33).to(int),
+            dim2=random(1, 64).to(int),
+            dim3=random(45, 67).to(int),
+            dim4=random(1, 64).to(int),
+        ).to(device)
+        y = x.permute(permute_list)
+        return y
+
+    @autotest()
+    def test_permute4d_tensor_with_random_data(test_case):
         device = random_device()
         ndim = 4
         permute_list = [0, 1, 2, 3]
         shuffle(permute_list)
-        x = random_pytorch_tensor(ndim=ndim).to(device)
+        x = random_pytorch_tensor(
+            ndim=ndim,
+            dim0=random(1, 32).to(int),
+            dim1=random(1, 59).to(int),
+            dim2=random(1, 65).to(int),
+            dim3=random(1, 127).to(int),
+        ).to(device)
+        y = x.permute(permute_list)
+        return y
+
+    @autotest()
+    def test_permute3d_tensor_with_random_data(test_case):
+        device = random_device()
+        ndim = 3
+        permute_list = [0, 1, 2]
+        shuffle(permute_list)
+        x = random_pytorch_tensor(
+            ndim=ndim,
+            dim0=random(1, 18).to(int),
+            dim1=random(1, 78).to(int),
+            dim2=random(1, 99).to(int),
+            dim3=random(1, 98).to(int),
+        ).to(device)
         y = x.permute(permute_list)
         return y
 

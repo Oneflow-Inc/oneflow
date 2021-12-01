@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/intrusive/flat_msg.h"
 #include "oneflow/core/intrusive/intrusive.h"
+#include "oneflow/core/intrusive/object_pool.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/mirrored_object_id.h"
 #include "oneflow/core/vm/stream_desc.h"
@@ -38,7 +39,10 @@ enum OperandAccessType {
   kMutableOperandAccess,
 };
 
-class RwMutexedObjectAccess final : public intrusive::Base {
+class RwMutexedObjectAccess final
+    : public intrusive::Base,
+      public intrusive::EnableObjectPool<RwMutexedObjectAccess,
+                                         intrusive::kThreadUnsafeAndDisableDestruct> {
  public:
   void __Init__();
   // Getters
@@ -72,14 +76,14 @@ class RwMutexedObjectAccess final : public intrusive::Base {
   void __Init__(Instruction* instruction, MirroredObject* mirrored_object,
                 OperandAccessType access_type);
 
-  bool is_const_operand() const;
-  bool is_mut_operand() const;
+  bool is_const_operand() const { return kConstOperandAccess == access_type(); }
+  bool is_mut_operand() const { return kMutableOperandAccess == access_type(); }
 
   intrusive::Ref::RefCntType ref_cnt() const { return intrusive_ref_.ref_cnt(); }
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }  // NOLINT
 
  private:
   friend class intrusive::Ref;
-  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }  // NOLINT
 
   RwMutexedObjectAccess()
       : intrusive_ref_(),
@@ -225,7 +229,7 @@ class MirroredObject final : public intrusive::Base {
   intrusive::SkipListHook<int64_t, 10> global_device_id_;
 };
 
-struct VirtualMachine;
+struct VirtualMachineEngine;
 class LogicalObject final : public intrusive::Base {
  public:
   // types

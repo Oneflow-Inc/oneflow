@@ -20,7 +20,7 @@ limitations under the License.
 #define private public
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/vm/id_util.h"
-#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/test_util.h"
@@ -45,7 +45,7 @@ template<typename T, typename SerializedT>
 void TestInitSymbolInstructionType(const std::string& instr_type_name) {
   auto vm_desc = intrusive::make_shared<vm::VmDesc>(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol", instr_type_name});
-  auto vm = intrusive::make_shared<vm::VirtualMachine>(vm_desc.Get());
+  auto vm = intrusive::make_shared<vm::VirtualMachineEngine>(vm_desc.Get());
   InstructionMsgList list;
   int64_t symbol_id = vm::IdUtil::NewLogicalSymbolId();
   CHECK_JUST(Global<symbol::Storage<T>>::Get()->Add(symbol_id, SerializedT()));

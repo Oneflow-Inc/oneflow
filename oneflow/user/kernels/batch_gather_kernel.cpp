@@ -35,21 +35,21 @@ class BatchGatherKernel final : public user_op::OpKernel, public user_op::CudaGr
     const int64_t axis = indices->shape().NumAxes() - 1;
     const Shape flat_out_shape =
         Shape({out->shape().Count(0, axis), out->shape().At(axis), out->shape().Count(axis + 1)});
-    BatchGatherKernelUtilImpl<device_type, T, K>::Forward(ctx->device_ctx(), in->dptr<T>(),
+    BatchGatherKernelUtilImpl<device_type, T, K>::Forward(ctx->stream(), in->dptr<T>(),
                                                           indices->dptr<K>(), flat_out_shape,
                                                           in->shape().At(axis), out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_BATCH_GATHER_KERNEL(device, out_dtype, indices_dtype)       \
-  REGISTER_USER_KERNEL("batch_gather")                                       \
-      .SetCreateFn<BatchGatherKernel<device, OF_PP_PAIR_FIRST(out_dtype),    \
-                                     OF_PP_PAIR_FIRST(indices_dtype)>>()     \
-      .SetIsMatchedHob(                                                      \
-          (user_op::HobDeviceTag() == device)                                \
-          & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_dtype)) \
-          & (user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(indices_dtype)));
+#define REGISTER_BATCH_GATHER_KERNEL(device, out_dtype, indices_dtype)        \
+  REGISTER_USER_KERNEL("batch_gather")                                        \
+      .SetCreateFn<BatchGatherKernel<device, OF_PP_PAIR_FIRST(out_dtype),     \
+                                     OF_PP_PAIR_FIRST(indices_dtype)>>()      \
+      .SetIsMatchedHob(                                                       \
+          (user_op::HobDeviceType() == device)                                \
+          && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_dtype)) \
+          && (user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(indices_dtype)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BATCH_GATHER_KERNEL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
