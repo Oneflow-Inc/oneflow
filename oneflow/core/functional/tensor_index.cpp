@@ -279,7 +279,7 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
                    << " at index " << dim + j;
           }
         }
-        for (const auto& e : *JUST(ExpandMaskIndex(tensor))) { indices->emplace_back(e); }
+        indices = JUST(ExpandMaskIndex(tensor));
       } else {
         indices->emplace_back(tensor);
       }
