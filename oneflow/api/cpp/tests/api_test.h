@@ -14,11 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_API_CPP_API_H_
-#define ONEFLOW_API_CPP_API_H_
+#ifndef ONEFLOW_API_CPP_TESTS_API_TEST_H_
+#define ONEFLOW_API_CPP_TESTS_API_TEST_H_
 
-#include "env.h"
-#include "framework.h"
-#include "nn.h"
+#include "oneflow/api/cpp/api.h"
 
-#endif  // !ONEFLOW_API_CPP_API_H_
+namespace oneflow_api {
+
+class EnvScope {  // NOLINT
+ public:
+  EnvScope() { initialize(); }
+  ~EnvScope() { release(); }
+};
+
+Shape RandomShape();
+
+template<typename T>
+std::vector<T> RandomData(size_t size);
+
+}  // namespace oneflow_api
+
+#endif  // !ONEFLOW_API_CPP_TESTS_API_TEST_H_
