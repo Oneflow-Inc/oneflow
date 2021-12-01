@@ -280,7 +280,7 @@ class OpKernelCache {
   virtual ~OpKernelCache() = default;
 
   static const int8_t ShapeMayChanged = 0x1;
-  static const int8_t AttrMayChanged = 0x10;
+  static const int8_t AttrMayChanged = 0x2;
 
  protected:
   OpKernelCache() = default;
