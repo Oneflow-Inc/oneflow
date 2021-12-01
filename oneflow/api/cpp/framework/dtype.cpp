@@ -13,34 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_API_CPP_DEVICE_H_
-#define ONEFLOW_API_CPP_DEVICE_H_
 
-#include <string>
-#include <memory>
-
-namespace oneflow {
-
-class Device;
-
-template<typename T>
-class Symbol;
-
-}  // namespace oneflow
+#include "oneflow/api/cpp/framework/dtype.h"
+#include <map>
 
 namespace oneflow_api {
 
-class Device final {
- public:
-  explicit Device(const std::string& type_or_type_with_device_id);
-  explicit Device(const std::string& type, int64_t device_id);
-  const std::string& type() const;
-  int64_t device_id() const;
+namespace {
 
- private:
-  std::shared_ptr<oneflow::Symbol<oneflow::Device>> device_ = nullptr;
+std::map<DType, int32_t> DTypeSize = {
+    {DType::kFloat, sizeof(float)},   {DType::kDouble, sizeof(double)},
+    {DType::kInt8, sizeof(int8_t)},   {DType::kInt32, sizeof(int32_t)},
+    {DType::kInt64, sizeof(int64_t)},
 };
 
-}  // namespace oneflow_api
+}
 
-#endif  // !ONEFLOW_API_CPP_DEVICE_H_
+int32_t GetDTypeSize(DType dtype) { return DTypeSize[dtype]; }
+
+}  // namespace oneflow_api
