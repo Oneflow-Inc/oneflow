@@ -148,6 +148,65 @@ class FeedVariableOpInterpCtx : public OpInterpCtx {
   double _l2;
 };
 
+class ImageDecoderRandomCropResizeOpInterpCtx : public OpInterpCtx {
+ public:
+  Maybe<const void*> GetAttr(const char* attr_name) const override {
+    if (!strcmp(attr_name, "target_width")) {
+      return (const void*)&target_width;
+    } else if (!strcmp(attr_name, "target_height")) {
+      return (const void*)&target_height;
+    } else if (!strcmp(attr_name, "num_workers")) {
+      return (const void*)&num_workers;
+    } else if (!strcmp(attr_name, "max_num_pixels")) {
+      return (const void*)&max_num_pixels;
+    } else if (!strcmp(attr_name, "warmup_size")) {
+      return (const void*)&warmup_size;
+    } else if (!strcmp(attr_name, "seed")) {
+      return (const void*)&seed;
+    } else if (!strcmp(attr_name, "num_attempts")) {
+      return (const void*)&num_attempts;
+    } else if (!strcmp(attr_name, "random_area_min")) {
+      return (const void*)&random_area_min;
+    } else if (!strcmp(attr_name, "random_area_max")) {
+      return (const void*)&random_area_max;
+    } else if (!strcmp(attr_name, "random_aspect_ratio_min")) {
+      return (const void*)&random_aspect_ratio_min;
+    } else if (!strcmp(attr_name, "random_aspect_ratio_max")) {
+      return (const void*)&random_aspect_ratio_max;
+    } else {
+      return Error::RuntimeError() << "FeedVariable op has no attribute named " << attr_name;
+    }
+  }
+
+  const std::vector<const char*>& AttrNamesList() const override {
+    static std::vector<const char*> attr_names{"target_width",
+                                               "target_height",
+                                               "num_workers",
+                                               "max_num_pixels",
+                                               "warmup_size",
+                                               "seed",
+                                               "num_attempts",
+                                               "random_area_min",
+                                               "random_area_max",
+                                               "random_aspect_ratio_min",
+                                               "random_aspect_ratio_max"};
+    return attr_names;
+  }
+
+ public:
+  int64_t target_width;
+  int64_t target_height;
+  int64_t num_workers;
+  int64_t max_num_pixels;
+  int64_t warmup_size;
+  int64_t seed;
+  int64_t num_attempts;
+  float random_area_min;
+  float random_area_max;
+  float random_aspect_ratio_min;
+  float random_aspect_ratio_max;
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_OP_INTERP_CTX_H_
