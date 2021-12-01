@@ -61,6 +61,16 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
   double tensor_pool_mem = 0.;
   for (const auto& object : candidates_) {
     if (auto shared_object = object.lock()) {
+      double cur_cost = -1;
+      if (static_cast<bool>(shared_object->compute_op()) && !shared_object->is_pinned()
+          && (shared_object->is_evictable()) && shared_object->is_in_memory()) {
+        cur_cost = JUST(shared_object->cost());
+        if (min_cost < 0 || min_cost > cur_cost) {
+          best = shared_object.get();
+          min_cost = cur_cost;
+          evict_object_id = id;
+        }
+      }
       if (oneflow::DTRDebugEnabled()) {
         std::cout << "id " << id << ", ";
         printInfo(shared_object);
@@ -73,15 +83,6 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
         const std::string& compute_op =
             shared_object->compute_op()->shared_opkernel()->user_op_conf_->op_type_name();
         if (shared_object->is_in_memory() && compute_op != "copy") { tensor_pool_mem += mem; }
-      }
-      if (static_cast<bool>(shared_object->compute_op()) && !shared_object->is_pinned()
-          && (shared_object->is_evictable()) && shared_object->is_in_memory()) {
-        auto cur_cost = JUST(shared_object->cost());
-        if (min_cost < 0 || min_cost > cur_cost) {
-          best = shared_object.get();
-          min_cost = cur_cost;
-          evict_object_id = id;
-        }
       }
     } else {
       JUST(display());

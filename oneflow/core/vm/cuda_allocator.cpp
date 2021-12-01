@@ -196,23 +196,17 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   size_t free_bytes = -1;
   size_t total_bytes = -1;
   OF_CUDA_CHECK(cudaMemGetInfo(&free_bytes, &total_bytes));
-  const size_t remain_bytes = 0; // 50 * 1048576;
-  // const size_t available_bytes = free_bytes - remain_bytes;  // remain at least 50MiB memory
+  const size_t remain_bytes = 50 * 1048576;   // remain at least 50MiB memory
   size_t available_bytes = -1;
-  if (total_memory_bytes_ + remain_bytes < oneflow::GetDTRMemoryThreshold()) {
-    available_bytes = oneflow::GetDTRMemoryThreshold() - total_memory_bytes_
-                      - remain_bytes;  // remain at least 50MiB memory
-    LOG(INFO) << "available_bytes: " << available_bytes / 1024. / 1024.;
-    // if (free_bytes > (remain_bytes + dtr_remain_bytes)) {
-    // available_bytes = free_bytes - remain_bytes - dtr_remain_bytes;  // remain at least 50MiB
-    // memory
+  if (oneflow::DTREnabled()) {
+    if (total_memory_bytes_ + remain_bytes < oneflow::GetDTRMemoryThreshold()) {
+      available_bytes = oneflow::GetDTRMemoryThreshold() - total_memory_bytes_ - remain_bytes;
+      LOG(INFO) << "available_bytes: " << available_bytes / 1024. / 1024. << ", total_memory_bytes: " << total_memory_bytes_ / 1024. / 1024.;
+    } else {
+      return false;
+    }
   } else {
-    // if (oneflow::DTRDebugEnabled()) {
-    //   std::cout << "Total free bytes: " << free_bytes << ", dtr_remain_bytes: " <<
-    //   dtr_remain_bytes
-    //             << std::endl;
-    // }
-    return false;
+    available_bytes = free_bytes - remain_bytes;
   }
 
   size_t allocate_bytes = aligned_size;
@@ -228,8 +222,8 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   }
   const size_t final_allocate_bytes = CudaMemAlignedBytes(allocate_bytes);
   if (oneflow::DTRDebugEnabled()) {
-    LOG(INFO) << "final allocate " << final_allocate_bytes << ", allocate " << allocate_bytes
-              << ", wanted " << aligned_size;
+    LOG(INFO) << "final allocate " << final_allocate_bytes / 1024. / 1024. << ", allocate " << allocate_bytes / 1024. / 1024.
+              << ", wanted " << aligned_size / 1024. / 1024.;
   }
 
   if (final_allocate_bytes > available_bytes) {
@@ -267,7 +261,7 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
 }
 
 bool CudaAllocator::DeallocateFreeBlockForGarbageCollection() {
-  // if (oneflow::DTRDebugEnabled()) { std::cout << "deallocate free" << std::endl; }
+  // if (oneflow::DTRDebugEnabled()) { std::cout << "Start deallocating gpu memory." << std::endl; }
   size_t total_free_bytes = 0;
   HashSet<char*> free_block_ptrs;
   for (const auto& pair : mem_ptr2block_) {
@@ -292,7 +286,7 @@ bool CudaAllocator::DeallocateFreeBlockForGarbageCollection() {
 
   if (total_free_bytes > 0) {
     LOG(INFO) << "CudaAllocator try deallocate free block for garbage collection. "
-              << " deallocate free bytes : " << total_free_bytes;
+              << " deallocate free bytes : " << total_free_bytes / 1024. / 1024.;
     cudaSetDevice(device_id_);
     for (char* ptr : free_block_ptrs) {
       auto it = mem_ptr2block_.find(ptr);
@@ -353,6 +347,7 @@ void CudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
     // int it = 0;   // evict iteration times
     while (piece == nullptr
            && CHECK_JUST(Global<one::DTRTensorPool>::Get()->find_best_tensor_and_evict())) {
+      LOG(INFO) << "total_memory_bytes after find best tensor and evict: " << total_memory_bytes_ / 1024. / 1024.;
       piece = FindPiece(aligned_size);
       if (piece == nullptr) {
         if (AllocateBlockToExtendTotalMem(aligned_size)) { piece = FindPiece(aligned_size); }
