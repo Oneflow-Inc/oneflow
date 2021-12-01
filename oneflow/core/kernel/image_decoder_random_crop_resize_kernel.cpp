@@ -148,73 +148,70 @@ class CpuDecodeHandle final : public DecodeHandle {
   }
 };
 
-int JpegPartialDecode(const unsigned char* data, size_t length, RandomCropGenerator* crop_generator, unsigned char* workspace, 
-                      size_t workspace_size, unsigned char* dst, int target_width, int target_height)
-{
+int JpegPartialDecode(const unsigned char* data, size_t length, RandomCropGenerator* crop_generator,
+                      unsigned char* workspace, size_t workspace_size, unsigned char* dst,
+                      int target_width, int target_height) {
   struct jpeg_decompress_struct cinfo;
-	struct jpeg_error_mgr jerr;
+  struct jpeg_error_mgr jerr;
   int row_stride, width, height, pixel_size, crop_x, crop_y, crop_w, crop_h, rc;
   unsigned int tmp;
-  unsigned char * crop_buf;
+  unsigned char* crop_buf;
 
   cinfo.err = jpeg_std_error(&jerr);
   jpeg_create_decompress(&cinfo);
   jpeg_mem_src(&cinfo, data, length);
 
   rc = jpeg_read_header(&cinfo, TRUE);
-  if(rc != 1)
-  {
-    return -1;
-  }
+  if (rc != 1) { return -1; }
 
   jpeg_start_decompress(&cinfo);
   width = cinfo.output_width;
-	height = cinfo.output_height;
+  height = cinfo.output_height;
   pixel_size = cinfo.output_components;
 
-  if(width*height*pixel_size > workspace_size)
-  {
-    std::vector<unsigned char> tmp_buf(width*height*pixel_size);
+  if (width * height * pixel_size > workspace_size) {
+    std::vector<unsigned char> tmp_buf(width * height * pixel_size);
     crop_buf = tmp_buf.data();
-  }
-  else{
+  } else {
     crop_buf = workspace;
   }
 
-  GenerateRandomCropRoi(crop_generator, width, height, &crop_x, &crop_y, &crop_w, &crop_h);
+  if (crop_generator) {
+    GenerateRandomCropRoi(crop_generator, width, height, &crop_x, &crop_y, &crop_w, &crop_h);
+  } else {
+    crop_x = 0;
+    crop_y = 0;
+    crop_w = width;
+    crop_h = height;
+  }
 
   unsigned int u_crop_x = crop_x, u_crop_y = crop_y, u_crop_w = crop_w, u_crop_h = crop_h;
 
   row_stride = crop_w * pixel_size;
   jpeg_crop_scanline(&cinfo, &u_crop_x, &u_crop_w);
-  if ((tmp = jpeg_skip_scanlines(&cinfo, u_crop_y)) != u_crop_y) {
-    return -2;
-  }
+  if ((tmp = jpeg_skip_scanlines(&cinfo, u_crop_y)) != u_crop_y) { return -2; }
 
   while (cinfo.output_scanline < u_crop_y + u_crop_h) {
-		unsigned char *buffer_array[1];
-		buffer_array[0] = crop_buf + (cinfo.output_scanline - u_crop_y) * row_stride;
-		jpeg_read_scanlines(&cinfo, buffer_array, 1);
-	}
+    unsigned char* buffer_array[1];
+    buffer_array[0] = crop_buf + (cinfo.output_scanline - u_crop_y) * row_stride;
+    jpeg_read_scanlines(&cinfo, buffer_array, 1);
+  }
 
   jpeg_skip_scanlines(&cinfo, cinfo.output_height - u_crop_y - u_crop_h);
-	jpeg_finish_decompress(&cinfo);
-	jpeg_destroy_decompress(&cinfo);
+  jpeg_finish_decompress(&cinfo);
+  jpeg_destroy_decompress(&cinfo);
 
-	cv::Mat image(u_crop_h, u_crop_w, CV_8UC3, crop_buf, cv::Mat::AUTO_STEP);
-	cv::Mat dst_mat(target_height, target_width, CV_8UC3, dst, cv::Mat::AUTO_STEP);
+  cv::Mat image(u_crop_h, u_crop_w, CV_8UC3, crop_buf, cv::Mat::AUTO_STEP);
+  cv::Mat dst_mat(target_height, target_width, CV_8UC3, dst, cv::Mat::AUTO_STEP);
 
-	cv::resize(image, dst_mat, cv::Size(target_width, target_height), 0, 0, cv::INTER_LINEAR);
+  cv::resize(image, dst_mat, cv::Size(target_width, target_height), 0, 0, cv::INTER_LINEAR);
 
   return 0;
-
 }
 
 void OpencvPartialDecode(const unsigned char* data, size_t length,
-                                             RandomCropGenerator* crop_generator,
-                                             unsigned char* dst, int target_width,
-                                             int target_height)
-{
+                         RandomCropGenerator* crop_generator, unsigned char* dst, int target_width,
+                         int target_height) {
   cv::Mat image =
       cv::imdecode(cv::Mat(1, length, CV_8UC1, const_cast<unsigned char*>(data)), cv::IMREAD_COLOR);
   cv::Mat cropped;
@@ -237,10 +234,9 @@ void CpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t l
                                              unsigned char* workspace, size_t workspace_size,
                                              unsigned char* dst, int target_width,
                                              int target_height) {
-  
-  int ret = JpegPartialDecode(data, length, crop_generator, workspace, workspace_size, dst, target_width, target_height);
-  if(ret != 0)
-  {
+  int ret = JpegPartialDecode(data, length, crop_generator, workspace, workspace_size, dst,
+                              target_width, target_height);
+  if (ret != 0) {
     OpencvPartialDecode(data, length, crop_generator, dst, target_width, target_height);
   }
 }
