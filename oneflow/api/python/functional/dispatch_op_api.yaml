@@ -59,7 +59,7 @@
   bind_python: True
 
 - name: "dispatch_ofrecord_image_decoder_random_crop"
-  signature: "Tensor (OpExpr op, Tensor input, String name, String color_space, FloatList random_area, FloatList random_aspect_ratio, Int32 num_attempts, Int64 seed, Bool has_seed) => DispatchOfrecordImageDecoderRandimCrop"
+  signature: "Tensor (OpExpr op, Tensor input, String name, String color_space, FloatList random_area, FloatList random_aspect_ratio, Int32 num_attempts, Int64 seed, Bool has_seed) => DispatchOfrecordImageDecoderRandomCrop"
   bind_python: True
 
 - name: "dispatch_ofrecord_image_decoder"
