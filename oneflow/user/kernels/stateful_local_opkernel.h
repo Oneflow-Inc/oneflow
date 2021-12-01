@@ -37,7 +37,7 @@ namespace one {
 
 class LocalUserKernelBaseContext;
 class LocalUserKernelRegContext;
-class LocalUserKernelInitContext;
+class LocalUserKernelInitAndCacheContext;
 class LocalUserOpInferContext;
 
 class ConsistentTensorInferResult;

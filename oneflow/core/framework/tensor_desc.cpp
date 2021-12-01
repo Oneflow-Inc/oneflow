@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/tensor_desc.h"
-#include "oneflow/core/register/blob.h"
 
 namespace oneflow {
 
@@ -42,15 +41,6 @@ NaiveTensorDesc& NaiveTensorDesc::operator=(const BlobDescProto& proto) {
   is_dynamic_ = proto.is_dynamic();
   return *this;
 }
-
-// const Shape& BlobTensorDescView::shape() const {}
-// Shape* BlobTensorDescView::mut_shape() {}
-// DataType BlobTensorDescView::data_type() const {}
-// DataType* BlobTensorDescView::mut_data_type() {}
-//
-// bool BlobTensorDescView::is_dynamic() const {}
-// bool* BlobTensorDescView::mut_is_dynamic() {}
-// void BlobTensorDescView::set_is_dynamic(bool val) {}
 
 }  // namespace user_op
 
