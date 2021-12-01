@@ -1578,8 +1578,8 @@ class MovedimVecFunctor {
     std::vector<int32_t> source_nopeat(dim);
     std::vector<int32_t> destination_nopeat(dim);
 
-    CheckNoRepeat(source, source_nopeat, ndim, "source");
-    CheckNoRepeat(destination, destination_nopeat, ndim, "destination");
+    JUST(CheckNoRepeat(source, source_nopeat, ndim, "source"));
+    JUST(CheckNoRepeat(destination, destination_nopeat, ndim, "destination"));
     
     std::vector<int32_t> order(ndim);
     std::vector<int32_t> source_dims(ndim);
