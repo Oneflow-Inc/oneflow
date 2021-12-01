@@ -186,26 +186,26 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   ctx->color_space = color_space;
                   return OpInterpUtil::Dispatch<Tensor>(*op, {input}, ctx);
                 });
-  m.add_functor(
-    "DispatchImageDecoderRandomCropResize",
-    [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor> input, int64_t target_width, int64_t target_height,
-       int64_t seed, int64_t num_workers, int64_t max_num_pixels, float random_area_min, float random_area_max,
-       float random_aspect_ratio_min, float random_aspect_ratio_max, int64_t warmup_size, 
-       int64_t num_attempts) -> Maybe<Tensor> {
-      auto ctx = std::make_shared<ImageDecoderRandomCropResizeOpInterpCtx>();
-      ctx->target_width = target_width;
-      ctx->target_height = target_height;
-      ctx->seed = seed;
-      ctx->num_workers = num_workers;
-      ctx->max_num_pixels = max_num_pixels;
-      ctx->random_area_min = random_area_min;
-      ctx->random_area_max = random_area_max;
-      ctx->random_aspect_ratio_min = random_aspect_ratio_min;
-      ctx->random_aspect_ratio_max = random_aspect_ratio_max;
-      ctx->warmup_size = warmup_size;
-      ctx->num_attempts = num_attempts;
-      return OpInterpUtil::Dispatch<Tensor>(*op, {input}, ctx);
-    });
+  m.add_functor("DispatchImageDecoderRandomCropResize",
+                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor> input,
+                   int64_t target_width, int64_t target_height, int64_t seed, int64_t num_workers,
+                   int64_t max_num_pixels, float random_area_min, float random_area_max,
+                   float random_aspect_ratio_min, float random_aspect_ratio_max,
+                   int64_t warmup_size, int64_t num_attempts) -> Maybe<Tensor> {
+                  auto ctx = std::make_shared<ImageDecoderRandomCropResizeOpInterpCtx>();
+                  ctx->target_width = target_width;
+                  ctx->target_height = target_height;
+                  ctx->seed = seed;
+                  ctx->num_workers = num_workers;
+                  ctx->max_num_pixels = max_num_pixels;
+                  ctx->random_area_min = random_area_min;
+                  ctx->random_area_max = random_area_max;
+                  ctx->random_aspect_ratio_min = random_aspect_ratio_min;
+                  ctx->random_aspect_ratio_max = random_aspect_ratio_max;
+                  ctx->warmup_size = warmup_size;
+                  ctx->num_attempts = num_attempts;
+                  return OpInterpUtil::Dispatch<Tensor>(*op, {input}, ctx);
+                });
   m.add_functor(
       "DispatchTensorBufferToListOfTensorsV2",
       [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor> input,
