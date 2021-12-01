@@ -86,14 +86,20 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
                            const Symbol<Device>& default_device, TensorTuple* outputs,
                            const OpExprInterpContext& ctx) {
   const auto& attrs = ctx.attrs;
+
+  auto contiguous_inputs = TensorTuple(inputs.size()); 
+  for(int i=0; i<inputs.size(); ++i){
+    contiguous_inputs.emplace_back(inputs[i]->contiguous());
+  }
+
   std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
-      std::make_shared<EagerBlobObjectList>(inputs.size());
-  for (int i = 0; i < inputs.size(); i++) {
-    const auto& input_device = JUST(inputs.at(i)->device());
+      std::make_shared<EagerBlobObjectList>(contiguous_inputs.size());
+  for (int i = 0; i < contiguous_inputs.size(); i++) {
+    const auto& input_device = JUST(contiguous_inputs.at(i)->device());
     if (i > 0) {
       CHECK_OR_RETURN(*default_device == *input_device) << Error::InputDeviceNotMatchError();
     }
-    input_eager_blob_objects->at(i) = JUST(inputs.at(i)->eager_blob_object());
+    input_eager_blob_objects->at(i) = JUST(contiguous_inputs.at(i)->contiguous()->eager_blob_object());
   }
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(outputs->size());
@@ -121,7 +127,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
   } else {
     need_check_mem_case = false;
-    op_device = JUST(user_op_expr.InferDevices(attrs, inputs, outputs));
+    op_device = JUST(user_op_expr.InferDevices(attrs, contiguous_inputs, outputs));
   }
 
   // Infer shapes and dtypes
@@ -129,7 +135,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   JUST(user_op_expr.InferPhysicalShapeAndDType(
       attrs, device_tag,
       [&](int32_t i) -> const TensorMeta* {
-        return CHECK_JUST(TensorImpl4Tensor(inputs.at(i)))->mut_tensor_meta();
+        return CHECK_JUST(TensorImpl4Tensor(contiguous_inputs.at(i)))->mut_tensor_meta();
       },
       [&](int32_t i) -> TensorMeta* {
         // using thread_local TensorMeta pointer if inplace.
