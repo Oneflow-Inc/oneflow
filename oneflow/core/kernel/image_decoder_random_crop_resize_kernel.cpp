@@ -183,31 +183,38 @@ int JpegPartialDecode(const unsigned char* data, size_t length, RandomCropGenera
 
   GenerateRandomCropRoi(crop_generator, width, height, &crop_x, &crop_y, &crop_w, &crop_h);
 
+  unsigned int u_crop_x = crop_x, u_crop_y = crop_y, u_crop_w = crop_w, u_crop_h = crop_h;
+
   row_stride = crop_w * pixel_size;
-  jpeg_crop_scanline(&cinfo, &crop_x, &crop_w);
-  if ((tmp = jpeg_skip_scanlines(&cinfo, crop_y)) != crop_y) {
+  jpeg_crop_scanline(&cinfo, &u_crop_x, &u_crop_w);
+  if ((tmp = jpeg_skip_scanlines(&cinfo, u_crop_y)) != u_crop_y) {
     return -2;
   }
 
-  while (cinfo.output_scanline < crop_y + crop_h) {
+  while (cinfo.output_scanline < u_crop_y + u_crop_h) {
 		unsigned char *buffer_array[1];
-		buffer_array[0] = crop_buf + (cinfo.output_scanline - crop_y) * row_stride;
+		buffer_array[0] = crop_buf + (cinfo.output_scanline - u_crop_y) * row_stride;
 		jpeg_read_scanlines(&cinfo, buffer_array, 1);
 	}
 
-  jpeg_skip_scanlines(&cinfo, cinfo.output_height - crop_y - crop_h);
+  jpeg_skip_scanlines(&cinfo, cinfo.output_height - u_crop_y - u_crop_h);
 	jpeg_finish_decompress(&cinfo);
 	jpeg_destroy_decompress(&cinfo);
+
+	cv::Mat image(u_crop_h, u_crop_w, CV_8UC3, crop_buf, cv::Mat::AUTO_STEP);
+	cv::Mat dst_mat(target_height, target_width, CV_8UC3, dst, cv::Mat::AUTO_STEP);
+
+	cv::resize(image, dst_mat, cv::Size(target_width, target_height), 0, 0, cv::INTER_LINEAR);
 
   return 0;
 
 }
 
-void CpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t length,
+void OpencvPartialDecode(const unsigned char* data, size_t length,
                                              RandomCropGenerator* crop_generator,
-                                             unsigned char* workspace, size_t workspace_size,
                                              unsigned char* dst, int target_width,
-                                             int target_height) {
+                                             int target_height)
+{
   cv::Mat image =
       cv::imdecode(cv::Mat(1, length, CV_8UC1, const_cast<unsigned char*>(data)), cv::IMREAD_COLOR);
   cv::Mat cropped;
@@ -223,6 +230,19 @@ void CpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t l
   cv::resize(cropped, resized, cv::Size(target_width, target_height), 0, 0, cv::INTER_LINEAR);
   cv::Mat dst_mat(target_height, target_width, CV_8UC3, dst, cv::Mat::AUTO_STEP);
   cv::cvtColor(resized, dst_mat, cv::COLOR_BGR2RGB);
+}
+
+void CpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t length,
+                                             RandomCropGenerator* crop_generator,
+                                             unsigned char* workspace, size_t workspace_size,
+                                             unsigned char* dst, int target_width,
+                                             int target_height) {
+  
+  int ret = JpegPartialDecode(data, length, crop_generator, workspace, workspace_size, dst, target_width, target_height);
+  if(ret != 0)
+  {
+    OpencvPartialDecode(data, length, crop_generator, dst, target_width, target_height);
+  }
 }
 
 template<>
