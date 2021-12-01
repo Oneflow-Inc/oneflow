@@ -13,13 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_JIT_OP_INTERPRETER_H_
-#define ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_JIT_OP_INTERPRETER_H_
+
+#ifndef ONEFLOW_IR_ONEFLOW_JIT_INCLUDE_ONEFLOW_JIT_OP_INTERPRETER_H_
+#define ONEFLOW_IR_ONEFLOW_JIT_INCLUDE_ONEFLOW_JIT_OP_INTERPRETER_H_
 
 #ifdef WITH_MLIR
 
 #include "oneflow/core/framework/op_interpreter.h"
-#include "oneflow/ir/include/OneFlow/JIT.h"
+#include "oneflow/ir/oneflow-jit/include/OneFlow/JIT.h"
 #include "mlir/IR/Builders.h"
 #include "oneflow/core/framework/op_expr.h"
 
@@ -28,6 +29,27 @@ namespace oneflow {
 namespace one {
 
 using namespace mlir;
+
+class JitFunctionContext {
+ public:
+  JitFunctionContext() = default;
+  JitFunctionContext(const std::string& func_name,
+                     const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors)
+      : func_name_(func_name), forward_args_(arg_tensors){};
+  JitFunctionContext(JitFunctionContext&&) = default;
+  JitFunctionContext(const JitFunctionContext&) = default;
+  JitFunctionContext& operator=(JitFunctionContext&&) = default;
+  JitFunctionContext& operator=(const JitFunctionContext&) = default;
+  ~JitFunctionContext() = default;
+
+  std::string GetFuncName() { return func_name_; }
+  const std::string& GetJitFuncName() { return func_name_; }
+  const std::vector<std::shared_ptr<one::Tensor>>& GetJitForwardArgs() { return forward_args_; }
+
+ private:
+  std::string func_name_;
+  std::vector<std::shared_ptr<one::Tensor>> forward_args_;
+};
 
 class JitInterpreter : public OpExprInterpreter {
  public:
@@ -60,12 +82,16 @@ class JitInterpreter : public OpExprInterpreter {
                                .count();
     return mlir_trace_time / jit_time;
   }
-  void Trace(ir::JitImporter& importer,
+  void Trace(ir::JitImporter& importer, const std::string& func_name,
              const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
              const std::function<std::vector<std::shared_ptr<one::Tensor>>(void)>& forward_func);
   void DispatchModule(ModuleOp module, const std::string& func_name,
                       const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
                       std::vector<std::shared_ptr<one::Tensor>> returned_lazy_tensors);
+  const std::string& GetJitFuncName() const { return jit_function_context_.GetJitFuncName(); }
+  const std::vector<std::shared_ptr<one::Tensor>>& GetJitForwardArgs() const {
+    return jit_function_context_.GetJitForwardArgs();
+  }
 
  private:
   DECLARE_NORMAL_APPLY_FUNC(UserOp);  // note(BBuf) jit deal with user op only, now.
@@ -77,6 +103,7 @@ class JitInterpreter : public OpExprInterpreter {
   mutable std::chrono::steady_clock::time_point trace_start_time_;
   mutable std::chrono::steady_clock::time_point trace_end_time_;
   mutable std::chrono::steady_clock::time_point dispatch_end_time_;
+  mutable JitFunctionContext jit_function_context_;
 };
 
 }  // namespace one
@@ -84,4 +111,4 @@ class JitInterpreter : public OpExprInterpreter {
 
 #endif  // WITH_MLIR
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_JIT_OP_INTERPRETER_H_
+#endif  // ONEFLOW_IR_ONEFLOW_JIT_INCLUDE_ONEFLOW_JIT_OP_INTERPRETER_H_

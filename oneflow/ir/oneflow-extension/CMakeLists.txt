@@ -18,6 +18,8 @@ if(WITH_MLIR_CUDA_CODEGEN)
   set(MLIR_RUNTIME_GPU_LIBS -Wl,--no-as-needed mlir_cuda_runtime -Wl,--as-needed)
 endif(WITH_MLIR_CUDA_CODEGEN)
 set(MLIR_RUNTIME_LIBS -Wl,--no-as-needed mlir_c_runner_utils -Wl,--as-needed)
+set(MLIR_ONEFLOW_JIT_LIBS -Wl,--no-as-needed MLIROneFlowJIT -Wl,--as-needed)
+set(MLIR_ONEFLOW_TRANSLATION_LIBS -Wl,--no-as-needed MLIROneFlowTranslation -Wl,--as-needed)
 target_link_libraries(MLIROneFlowExtension
   PRIVATE
   ${dialect_libs}
@@ -30,9 +32,10 @@ target_link_libraries(MLIROneFlowExtension
   MLIRSupport
   MLIROneFlow
   MLIRExecutionEngine
-  MLIROneFlowTranslation
   oneflow
   PUBLIC
+  ${MLIR_ONEFLOW_TRANSLATION_LIBS}
+  ${MLIR_ONEFLOW_JIT_LIBS}
   ${MLIR_RUNTIME_LIBS}
   ${MLIR_RUNTIME_GPU_LIBS}
 )

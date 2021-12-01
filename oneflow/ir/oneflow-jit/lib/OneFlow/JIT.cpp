@@ -18,7 +18,7 @@ limitations under the License.
 #include "OneFlow/OneFlowDialect.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
-#include "oneflow/core/framework/op_interpreter/jit_op_interpreter.h"
+#include "OneFlow/jit_op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
