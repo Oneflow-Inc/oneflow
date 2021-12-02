@@ -298,11 +298,12 @@ mlir::FuncOp JitImporter::GetOrInsertFunc(const std::string& func_name) {
     auto entryBlock = function.addEntryBlock();
     CHECK_EQ(arg_tensors.size(), function.body().getArguments().size());
     for (auto argument_pair : llvm::zip(arg_tensors, function.body().getArguments())) {
-      // don't check here, because one tensor could be passed as multiple arguments
+      // TODO: don't check here, because one tensor could be passed as multiple arguments
       TrackTensorAndValue(std::get<0>(argument_pair).get(), std::get<1>(argument_pair));
     }
     GetBuilder().setInsertionPointToStart(entryBlock);
     GetModule().push_back(function);
+    LOG(ERROR) << "func created: " << func_name;
     return function;
   }
 }
