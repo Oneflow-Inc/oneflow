@@ -282,31 +282,28 @@ void JitImporter::StartProcessFunc(llvm::StringRef func_name,
   auto result_types = llvm::SmallVector<Type, 8>();
   SymbolTable symbol_table(GetModule());
   FuncOp found_func = symbol_table.lookup<FuncOp>(func_name);
-  if (found_func) {
-    return;
-  } else {
-    auto arg_tensors = GetJitForwardArgs();
-    auto arg_types = llvm::SmallVector<Type, 8>();
-    for (const auto& arg_tensor : arg_tensors) {
-      auto mlir_dtype = GetTypeFromOneFlowDataType(arg_tensor->dtype()->data_type());
-      auto mlir_tensor_type =
-          RankedTensorType::get(ArrayRef<int64_t>(arg_tensor->shape()->dim_vec().begin(),
-                                                  arg_tensor->shape()->dim_vec().end()),
-                                mlir_dtype.getValue());
-      arg_types.push_back(mlir_tensor_type);
-    }
-    auto func_type = GetBuilder().getFunctionType(arg_types, llvm::NoneType());
-    FuncOp function = mlir::FuncOp::create(GetRootLocation(), func_name, func_type);
-    auto entryBlock = function.addEntryBlock();
-    CHECK_EQ(arg_tensors.size(), function.body().getArguments().size());
-    for (auto argument_pair : llvm::zip(arg_tensors, function.body().getArguments())) {
-      // TODO: don't check here, because one tensor could be passed as multiple arguments
-      TrackTensorAndValue(std::get<0>(argument_pair).get(), std::get<1>(argument_pair));
-    }
-    GetBuilder().setInsertionPointToStart(entryBlock);
-    GetModule().push_back(function);
-    LOG(ERROR) << "arg_tensors size: " << arg_tensors.size();
+  CHECK(!found_func) << "func exists: " << func_name.str();
+  auto arg_tensors = GetJitForwardArgs();
+  auto arg_types = llvm::SmallVector<Type, 8>();
+  for (const auto& arg_tensor : arg_tensors) {
+    auto mlir_dtype = GetTypeFromOneFlowDataType(arg_tensor->dtype()->data_type());
+    auto mlir_tensor_type =
+        RankedTensorType::get(ArrayRef<int64_t>(arg_tensor->shape()->dim_vec().begin(),
+                                                arg_tensor->shape()->dim_vec().end()),
+                              mlir_dtype.getValue());
+    arg_types.push_back(mlir_tensor_type);
   }
+  auto func_type = GetBuilder().getFunctionType(arg_types, llvm::NoneType());
+  FuncOp function = mlir::FuncOp::create(GetRootLocation(), func_name, func_type);
+  auto entryBlock = function.addEntryBlock();
+  CHECK_EQ(arg_tensors.size(), function.body().getArguments().size());
+  for (auto argument_pair : llvm::zip(arg_tensors, function.body().getArguments())) {
+    // TODO: don't check here, because one tensor could be passed as multiple arguments
+    TrackTensorAndValue(std::get<0>(argument_pair).get(), std::get<1>(argument_pair));
+  }
+  GetBuilder().setInsertionPointToStart(entryBlock);
+  GetModule().push_back(function);
+  LOG(ERROR) << "arg_tensors size: " << arg_tensors.size();
 }
 
 llvm::Optional<TensorType> JitImporter::GetMlirTensorTypeFromBlobDesc(const BlobDesc& blob_desc) {

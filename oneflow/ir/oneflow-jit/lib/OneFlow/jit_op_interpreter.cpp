@@ -175,6 +175,7 @@ Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTup
   GetImporter().CreateOperandMapping(*op_conf, parallel_desc, op_expr.input_arg_tuple(), inputs,
                                      outputs);
   CHECK_OR_RETURN(GetImporter().ProcessUserOp(*op_conf).succeeded());
+  GetImporter().GetModule()->dump();
   return Maybe<void>::Ok();
 }
 

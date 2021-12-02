@@ -45,9 +45,8 @@ struct Module {
     auto jit_interpreter =
         std::dynamic_pointer_cast<one::JitInterpreter>(one::JitInterpreter::Get());
     CHECK(jit_interpreter != nullptr) << "JIT interpreter is not initialized";
-    *one::MutJitEnabled() = true;
     auto i_this = reinterpret_cast<std::uintptr_t>(this);
-    std::string func_name = "jitModule" + std::to_string(i_this) + "_" + std::to_string(nth_call_);
+    std::string func_name = "jitModule" + std::to_string(i_this);
     auto inputs = args.cast<std::vector<std::shared_ptr<one::Tensor>>>();
     auto parameters_generator = py_module_.attr("parameters")();
     std::vector<std::shared_ptr<one::Tensor>> parameters{};
@@ -59,19 +58,21 @@ struct Module {
     arg_tensors.insert(arg_tensors.end(), parameters.begin(), parameters.end());
     py::object ret;
     std::vector<std::shared_ptr<one::Tensor>> tensors_to_materialize{};
-    FuncOp func_op = jit_interpreter->Trace(importer_, func_name, arg_tensors, [&]() {
-      ret = py_module_.attr("forward")(*args, **kwargs);
-      if (auto tensor = ret.cast<std::shared_ptr<one::Tensor>>()) {
-        tensors_to_materialize.push_back(tensor);
-      }
-      return tensors_to_materialize;
-    });
-    jit_interpreter->MlirTraceEnd();
-    *one::MutJitEnabled() = false;
-    jit_interpreter->DispatchFunc(func_op, arg_tensors);
+    if (!func_op_) {
+      *one::MutJitEnabled() = true;
+      func_op_ = jit_interpreter->Trace(importer_, func_name, arg_tensors, [&]() {
+        ret = py_module_.attr("forward")(*args, **kwargs);
+        if (auto tensor = ret.cast<std::shared_ptr<one::Tensor>>()) {
+          tensors_to_materialize.push_back(tensor);
+        }
+        return tensors_to_materialize;
+      });
+      jit_interpreter->MlirTraceEnd();
+      *one::MutJitEnabled() = false;
+    }
+    jit_interpreter->DispatchFunc(func_op_.getValue(), arg_tensors);
     jit_interpreter->End();
     LOG(ERROR) << "JIT trace overhead: " << jit_interpreter->TraceOverhead();
-    nth_call_ += 1;
     return ret;
   }
   void dump_ir() { module_->dump(); }
@@ -81,7 +82,7 @@ struct Module {
   MLIRContext* context_;
   OwningOpRef<ModuleOp> module_;
   JitImporter importer_;
-  int32_t nth_call_ = 0;  // TODO: remove this dirty workaround
+  llvm::Optional<FuncOp> func_op_;
 };
 }  // namespace jit
 
