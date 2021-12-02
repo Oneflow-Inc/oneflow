@@ -30,7 +30,7 @@ add_docstr(
 
         >>> import numpy as np
         >>> import oneflow as flow
-        >>> input = flow.Tensor(32, 1, 5, 5)
+        >>> input = flow.randn(32, 1, 5, 5)
         >>> output = flow.flatten(input, start_dim=1)
         >>> output.shape
         oneflow.Size([32, 25])
