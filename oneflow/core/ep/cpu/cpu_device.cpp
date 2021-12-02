@@ -40,7 +40,7 @@ Maybe<void> CpuDevice::Alloc(const AllocationOptions& options, void** ptr, size_
   if (options.HasPinnedDevice()) {
     auto device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(
         options.GetPinnedDeviceType(), options.GetPinnedDeviceIndex());
-    CHECK(device);
+    CHECK_OR_RETURN(device);
     return device->AllocPinned(options, ptr, size);
   } else {
     *ptr = aligned_alloc(kMaxAlignmentRequirement, size);
