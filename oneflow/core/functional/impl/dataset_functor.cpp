@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <string>
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -42,9 +43,9 @@ class ImageFlipFuntor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class OneRecDecodeFunctor {
+class DecodeOneRecFunctor {
  public:
-  OneRecDecodeFunctor() {
+  DecodeOneRecFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("onerec_decoder").Input("in").Output("out").Build());
   }
 
@@ -85,11 +86,36 @@ class OneRecDecodeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ReadOneRecFunctor {
+ public:
+  ReadOneRecFunctor() { op_ = CHECK_JUST(one::OpBuilder("OneRecReader").Output("out").Build()); }
+
+  Maybe<Tensor> operator()(const std::vector<std::string>& files, const int32_t batch_size,
+                           const bool random_shuffle, const std::string& shuffle_mode,
+                           const int32_t shuffle_buffer_size, const bool shuffle_after_epoch,
+                           const bool verify_example) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<std::string>>("files", files));
+    JUST(attrs.SetAttr<int32_t>("batch_size", batch_size));
+    JUST(attrs.SetAttr<bool>("random_shuffle", random_shuffle));
+    JUST(attrs.SetAttr<std::string>("shuffle_mode", shuffle_mode));
+    JUST(attrs.SetAttr<int32_t>("shuffle_buffer_size", shuffle_buffer_size));
+    JUST(attrs.SetAttr<bool>("shuffle_after_epoch", shuffle_after_epoch));
+    JUST(attrs.SetAttr<bool>("batch_size", verify_example));
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ImageFlipFuntor>("ImageFlip");
-  m.add_functor<impl::OneRecDecodeFunctor>("OneRecDecode");
+  m.add_functor<impl::DecodeOneRecFunctor>("DecodeOneRec");
+  m.add_functor<impl::ReadOneRecFunctor>("ReadOneRec");
 };
 
 }  // namespace functional
