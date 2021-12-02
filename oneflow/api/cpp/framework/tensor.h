@@ -56,10 +56,10 @@ class Tensor final {
   const std::shared_ptr<oneflow::one::Tensor>& __internal_tensor() const;
 
   template<typename T>
-  void copy_to(T* blob);
+  void copy_to(T* buffer);
 
-  static Tensor from_blob(const void* blob, const Shape& shape, const Device& device,
-                          const DType& dtype);
+  static Tensor from_buffer(const void* buffer, const Shape& shape, const Device& device,
+                            const DType& dtype);
 
  private:
   std::shared_ptr<oneflow::one::Tensor> tensor_ = nullptr;

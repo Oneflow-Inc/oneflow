@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_API_CPP_SHAPE_H_
-#define ONEFLOW_API_CPP_SHAPE_H_
+#ifndef ONEFLOW_API_CPP_FRAMEWORK_SHAPE_H_
+#define ONEFLOW_API_CPP_FRAMEWORK_SHAPE_H_
 
 #include <memory>
 #include <vector>
@@ -53,4 +53,4 @@ class Shape final {
 };
 }  // namespace oneflow_api
 
-#endif  // ONEFLOW_API_CPP_SHAPE_H_
+#endif  // ONEFLOW_API_CPP_FRAMEWORK_SHAPE_H_

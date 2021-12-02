@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_API_CPP_DEVICE_H_
-#define ONEFLOW_API_CPP_DEVICE_H_
+#ifndef ONEFLOW_API_CPP_FRAMEWORK_DEVICE_H_
+#define ONEFLOW_API_CPP_FRAMEWORK_DEVICE_H_
 
 #include <string>
 #include <memory>
@@ -48,4 +48,4 @@ class Device final {
 
 }  // namespace oneflow_api
 
-#endif  // !ONEFLOW_API_CPP_DEVICE_H_
+#endif  // !ONEFLOW_API_CPP_FRAMEWORK_DEVICE_H_

@@ -26,13 +26,28 @@ template<typename T>
 struct BlobBufferCopyUtil {
   static Maybe<void> From(uint64_t of_blob_ptr, const T* buf_ptr, size_t size) {
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    of_blob->AutoMemCopyFrom<void>(buf_ptr, size);
+    of_blob->AutoMemCopyFrom<T>(buf_ptr, size);
     return Maybe<void>::Ok();
   }
 
   static Maybe<void> To(uint64_t of_blob_ptr, T* buf_ptr, size_t size) {
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
     of_blob->AutoMemCopyTo<T>(buf_ptr, size);
+    return Maybe<void>::Ok();
+  }
+};
+
+template<>
+struct BlobBufferCopyUtil<void> {
+  static Maybe<void> From(uint64_t of_blob_ptr, const void* buf_ptr, size_t size) {
+    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+    of_blob->AutoMemCopyFrom<void>(buf_ptr, size);
+    return Maybe<void>::Ok();
+  }
+
+  static Maybe<void> To(uint64_t of_blob_ptr, void* buf_ptr, size_t size) {
+    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+    of_blob->AutoMemCopyTo<void>(buf_ptr, size);
     return Maybe<void>::Ok();
   }
 };

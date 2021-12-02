@@ -20,6 +20,10 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 #include <half.hpp>
 
+#ifdef WITH_ONEDNN
+#include "oneapi/dnnl/dnnl.hpp"
+#endif
+
 #define CPU_PRIMITIVE_CHAR_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(char, DataType::kChar)
 #define CPU_PRIMITIVE_INT8_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(int8_t, DataType::kInt8)
 #define CPU_PRIMITIVE_UINT8_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(uint8_t, DataType::kUInt8)
@@ -28,6 +32,19 @@ limitations under the License.
 #define CPU_PRIMITIVE_FLOAT_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)
 #define CPU_PRIMITIVE_DOUBLE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
 #define CPU_PRIMITIVE_FLOAT16_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(float16, DataType::kFloat16)
+
+#define CPU_PRIMITIVE_ONEDNN_INT8_TYPE_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::s8, DataType::kInt8)
+#define CPU_PRIMITIVE_ONEDNN_UINT8_TYPE_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::u8, DataType::kUInt8)
+#define CPU_PRIMITIVE_ONEDNN_INT32_TYPE_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::s32, DataType::kInt32)
+#define CPU_PRIMITIVE_ONEDNN_FLOAT_TYPE_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::f32, DataType::kFloat)
+#define CPU_PRIMITIVE_ONEDNN_FLOAT16_TYPE_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::f16, DataType::kFloat16)
+#define CPU_PRIMITIVE_ONEDNN_BFLOAT16_TYPE_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::bf16, DataType::kBFloat16)
 
 #define CPU_PRIMITIVE_NATIVE_TYPE_SEQ \
   CPU_PRIMITIVE_CHAR_TYPE_SEQ         \
