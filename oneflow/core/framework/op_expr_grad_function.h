@@ -73,11 +73,10 @@ class OpExprGradFunctionIf {
   virtual Maybe<void> Init(const OpExpr& op) = 0;
 
   // Capture forward inputs and outputs for backward.
-  virtual Maybe<void> CaptureIf(AutoGradCaptureState* ctx, const TensorTuple& inputs,
-                                const TensorTuple& outputs,
-                                const std::shared_ptr<const OpInterpCtx>& interp_ctx) const = 0;
+  virtual Maybe<void> CaptureIf(AutoGradCaptureState* state, const TensorTuple& inputs,
+                                const TensorTuple& outputs, const OpInterpCtx* ctx) const = 0;
 
-  virtual Maybe<void> ApplyIf(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,
+  virtual Maybe<void> ApplyIf(const AutoGradCaptureState* state, const TensorTuple& out_grads,
                               TensorTuple* in_grads) const = 0;
 };
 
@@ -88,11 +87,10 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
     return std::make_shared<StateT>();
   }
 
-  Maybe<void> CaptureIf(AutoGradCaptureState* ctx, const TensorTuple& inputs,
-                        const TensorTuple& outputs,
-                        const std::shared_ptr<const OpInterpCtx>& interp_ctx) const override {
-    StateT* state = dynamic_cast<StateT*>(ctx);
-    CHECK_NOTNULL_OR_RETURN(state);
+  Maybe<void> CaptureIf(AutoGradCaptureState* state, const TensorTuple& inputs,
+                        const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+    StateT* s = dynamic_cast<StateT*>(state);
+    CHECK_NOTNULL_OR_RETURN(s);
     // Only captures detached tensor for calculating grad and set right requires_grad
     // for higher order derivative
     TensorTuple detach_inputs(inputs.size());
@@ -105,23 +103,23 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
       detach_outputs.at(i) = JUST(outputs.at(i)->detach());
       JUST(detach_outputs.at(i)->set_requires_grad(outputs.at(i)->requires_grad()));
     }
-    return Capture(state, detach_inputs, detach_outputs, interp_ctx);
+    return Capture(s, detach_inputs, detach_outputs, ctx);
   }
 
-  Maybe<void> ApplyIf(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> ApplyIf(const AutoGradCaptureState* state, const TensorTuple& out_grads,
                       TensorTuple* in_grads) const override {
-    const StateT* state = dynamic_cast<const StateT*>(ctx);
-    CHECK_NOTNULL_OR_RETURN(state);
-    return Apply(state, out_grads, in_grads);
+    const StateT* s = dynamic_cast<const StateT*>(state);
+    CHECK_NOTNULL_OR_RETURN(s);
+    return Apply(s, out_grads, in_grads);
   }
 
  protected:
-  virtual Maybe<void> Capture(StateT* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                              const std::shared_ptr<const OpInterpCtx>& interp_ctx) const {
+  virtual Maybe<void> Capture(StateT* state, const TensorTuple& inputs, const TensorTuple& outputs,
+                              const OpInterpCtx* ctx) const {
     UNIMPLEMENTED_THEN_RETURN();
   }
 
-  virtual Maybe<void> Apply(const StateT* ctx, const TensorTuple& out_grads,
+  virtual Maybe<void> Apply(const StateT* state, const TensorTuple& out_grads,
                             TensorTuple* in_grads) const = 0;
 
   std::string GradientOpName(const std::string& prefix) const {
@@ -145,20 +143,19 @@ class FunctionOpExprGradFunction final : public OpExprGradFunctionIf {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> CaptureIf(AutoGradCaptureState* ctx, const TensorTuple& inputs,
-                        const TensorTuple& outputs,
-                        const std::shared_ptr<const OpInterpCtx>& interp_ctx) const override {
+  Maybe<void> CaptureIf(AutoGradCaptureState* state, const TensorTuple& inputs,
+                        const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     // do nothing
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> ApplyIf(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> ApplyIf(const AutoGradCaptureState* state, const TensorTuple& out_grads,
                       TensorTuple* in_grads) const override {
-    const FunctionAutoGradCaptureState* func_ctx =
-        dynamic_cast<const FunctionAutoGradCaptureState*>(ctx);
-    CHECK_NOTNULL_OR_RETURN(func_ctx);
+    const FunctionAutoGradCaptureState* func_state =
+        dynamic_cast<const FunctionAutoGradCaptureState*>(state);
+    CHECK_NOTNULL_OR_RETURN(func_state);
     const std::shared_ptr<TensorTuple>& out = backward_fn_(
-        const_cast<FunctionAutoGradCaptureState*>(func_ctx)->GetSharedFromThis(), out_grads);
+        const_cast<FunctionAutoGradCaptureState*>(func_state)->GetSharedFromThis(), out_grads);
     in_grads->assign(out->begin(), out->end());
     return Maybe<void>::Ok();
   }
@@ -180,8 +177,8 @@ class OpExprGradClosure {
   virtual ~OpExprGradClosure() = default;
 
   Maybe<void> Capture(const TensorTuple& inputs, const TensorTuple& outputs,
-                      const std::shared_ptr<const OpInterpCtx>& interp_ctx) const {
-    return impl_->CaptureIf(state_.get(), inputs, outputs, interp_ctx);
+                      const OpInterpCtx* ctx) const {
+    return impl_->CaptureIf(state_.get(), inputs, outputs, ctx);
   }
 
   Maybe<void> Apply(const TensorTuple& out_grads, TensorTuple* in_grads) const {

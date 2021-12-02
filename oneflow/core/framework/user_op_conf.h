@@ -67,15 +67,11 @@ class UserOpConfWrapper final {
 
   template<typename T>
   const T& attr_or_default(const std::string& attr_name, const T& default_val) const {
-    // TODO(hjchen2)
-    // const auto& it = op_interp_ctx_->find(attr_name);
-    // if (it != op_interp_ctx_->end()) {
-    //   return CHECK_JUST(op_interp_ctx_->GetAttr<T>(attr_name));
-    // } else {
-    //   return default_val;
-    // }
+    if (has_attr(attr_name)) { return this->attr<T>(attr_name); }
     return default_val;
   }
+
+  bool has_attr(const std::string& attr_name) const;
 
   const void* Attr4Name(const std::string& attr_name) const;
 

@@ -68,6 +68,10 @@ bool UserOpConfWrapper::has_output(const std::string& arg_name, int32_t index) c
   return output_size(arg_name) > index;
 }
 
+bool UserOpConfWrapper::has_attr(const std::string& attr_name) const {
+  return op_interp_ctx_->HasAttr(attr_name);
+}
+
 int32_t UserOpConfWrapper::input_size(const std::string& arg_name) const {
   auto it = op_conf_->user_conf().input().find(arg_name);
   if (it == op_conf_->user_conf().input().end()) { return 0; }

@@ -110,9 +110,8 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
   const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
 
   const void* Attr4Name(const std::string& attr_name) const override {
-    // return user_op_conf().Attr4Name(attr_name);
-    UNIMPLEMENTED();
-    return nullptr;
+    // TODO(hjchen2)
+    return user_op_conf().Attr4Name(attr_name);
   }
 
  private:
@@ -265,9 +264,8 @@ class UserOpInferContext final : public user_op::InferContext {
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const { return op_->user_op_conf(); }
   const void* Attr4Name(const std::string& attr_name) const override {
-    // return user_op_conf().Attr4Name(attr_name);
-    UNIMPLEMENTED();
-    return nullptr;
+    // TODO(hjchen2)
+    return user_op_conf().Attr4Name(attr_name);
   }
 
   const UserOp* op_;
