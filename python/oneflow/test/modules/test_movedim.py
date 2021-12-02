@@ -18,6 +18,7 @@ from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
 
+
 class TestMovedim(flow.unittest.TestCase):
     @autotest()
     def test_flow_movedim_with_vector(test_case):
@@ -29,8 +30,9 @@ class TestMovedim(flow.unittest.TestCase):
             dim3=random(3, 6),
             dim4=random(3, 6),
         ).to(device)
-        z = torch.movedim(x, (0,1), (2,3))
+        z = torch.movedim(x, (0, 1), (2, 3))
         return z
+
     @autotest()
     def test_flow_movedim_with_int(test_case):
         device = random_device()
@@ -43,6 +45,7 @@ class TestMovedim(flow.unittest.TestCase):
         ).to(device)
         z = torch.movedim(x, 0, 3)
         return z
+
 
 if __name__ == "__main__":
     unittest.main()
