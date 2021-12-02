@@ -101,7 +101,7 @@ class ReadOneRecFunctor {
     JUST(attrs.SetAttr<std::string>("shuffle_mode", shuffle_mode));
     JUST(attrs.SetAttr<int32_t>("shuffle_buffer_size", shuffle_buffer_size));
     JUST(attrs.SetAttr<bool>("shuffle_after_epoch", shuffle_after_epoch));
-    JUST(attrs.SetAttr<bool>("batch_size", verify_example));
+    JUST(attrs.SetAttr<bool>("verify_example", verify_example));
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
   }
