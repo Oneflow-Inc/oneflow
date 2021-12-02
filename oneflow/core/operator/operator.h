@@ -290,6 +290,9 @@ class Operator {
       const cfg::SbpSignatureList& total_sbp_sig_list,
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, cfg::SbpSignatureList* valid_sbp_sig_list) const;
+  Maybe<void> FilterNdSbpSignatureListByLogicalShape(
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const;
 
   LogicalBlobId tbn2lbi(const std::string& data_tmp_bn) const;
   std::string Bn2ConfName(const std::string& bn) const;
