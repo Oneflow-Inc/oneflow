@@ -1262,39 +1262,14 @@ add_docstr(
     .. code-block:: python
         
         >>> import oneflow as flow
-        
-        >>> t = flow.tensor([[[-0.1523],
-                [-0.6242]],
+        >>> import numpy as np
 
-                [[-0.1521],
-                [ 0.5220]],
-
-                [[-0.2166],
-                [ 1.5300]]],dtype=flow.float32)
-        >>> t
-        tensor([[[-0.1523],
-                [-0.6242]],
-
-                [[-0.1521],
-                [ 0.5220]],
-
-                [[-0.2166],
-                [ 1.5300]]], dtype=oneflow.float32)
-        >>> flow.movedim(t,1,0).shape
-        flow.Size([2, 3, 1])
-        >>> flow.movedim(t,1,0)
-        tensor([[[-0.1523],
-                [-0.1521],
-                [-0.2166]],
-
-                [[-0.6242],
-                [ 0.5220],
-                [ 1.5300]]], dtype=oneflow.float32)
-        >>> flow.movedim(t, (1, 2), (0, 1)).shape
-        flow.Size([2, 1, 3])
-        >>> flow.movedim(t, (1, 2), (0, 1))
-        tensor([[[-0.1523, -0.1521, -0.2166]],
-
-                [[-0.6242,  0.5220,  1.5300]]], dtype=oneflow.float32)
+        >>> input = flow.tensor(np.random.randn(2, 3, 4, 5), dtype=flow.float32)
+        >>> output = flow.movedim(input, 1, 0)
+        >>> output.shape
+        oneflow.Size([3, 2, 4, 5])
+        >>> output = flow.movedim(input, (1, 2), (0, 1))
+        >>> output.shape
+        oneflow.Size([3, 4, 2, 5])
     """,
 )
