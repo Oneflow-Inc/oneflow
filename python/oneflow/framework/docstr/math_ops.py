@@ -1247,7 +1247,7 @@ add_docstr(
     Moves the dimension(s) of input at the position(s) in source to the position(s) in destination.
     Other dimensions of input that are not explicitly moved remain in their original order and appear at the positions not specified in destination.
     The documentation is referenced from:
-        https://pytorch.org/docs/stable/generated/torch.movedim.html#torch.movedim.
+    https://pytorch.org/docs/stable/generated/torch.movedim.html#torch.movedim.
 
     Args:
         input (Tensor): the input tensor.
