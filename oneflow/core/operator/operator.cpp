@@ -478,7 +478,7 @@ Maybe<void> Operator::GetValidNdSbpSignatureList(
   cfg::SbpSignatureList sbp_sig_list;
   JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &sbp_sig_list));
   CHECK_GT_OR_RETURN(sbp_sig_list.sbp_signature_size(), 0)
-      << "No sbp signature got from 1d GetSbpSignaturesIf!";
+      << op_name() << " gets no sbp signature from GetSbpSignaturesIf function!";
 
   int32_t sbp_dimension = parallel_desc.hierarchy()->NumAxes();
   cfg::NdSbpSignature nd_sbp_sig;
@@ -852,7 +852,6 @@ Maybe<double> Operator::GetComputeComplexity(
           // Illegal split sbp has already been filtered.
           CHECK_OR_RETURN(axis < logical_blob_desc.shape().NumAxes()
                           && logical_blob_desc.shape().At(axis) >= parallel_hierarchy.At(sbp_dim));
-        } else {
           total_cost /= parallel_hierarchy.At(sbp_dim);
         }
       }
