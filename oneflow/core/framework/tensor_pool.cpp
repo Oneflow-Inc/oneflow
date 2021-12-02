@@ -103,6 +103,7 @@ Maybe<bool> DTRTensorPool::find_best_tensor_and_evict() {
   auto* best = JUST(find_best_tensor());
   if (best == nullptr) { return false; }
   JUST(best->evict());
+  update_after_evict(best);
   return true;
 }
 
@@ -169,6 +170,61 @@ Maybe<void> DTRTensorPool::display2() {
 Maybe<void> DTRTensorPool::display() {
   std::cout << "===== Info of current tensor pool =====" << std::endl;
   std::cout << "Number of candidates: " << candidates_.size() << std::endl;
+  return Maybe<void>::Ok();
+}
+
+// Disjoint Node Set
+void DTRTensorPool::merge(std::shared_ptr<vm::DisjNode>& x, std::shared_ptr<vm::DisjNode>& y) {
+  auto&& parent_x = find_father(x);
+  auto&& parent_y = find_father(y);
+  if (parent_x.get() == parent_y.get()) {
+    return;
+  }
+
+  parent_y->set_compute_time(parent_y->compute_time() + parent_x->compute_time());
+  parent_x->set_parent(parent_y);
+}
+
+std::shared_ptr<vm::DisjNode> DTRTensorPool::find_father(std::shared_ptr<vm::DisjNode>& x) {
+  if (x->is_root()) {
+    return x;
+  } else {
+    auto fa = x->parent();
+    auto&& y = find_father(fa);
+    x->set_parent(y);
+    return y;
+  }
+}
+
+void DTRTensorPool::update_after_recompute(vm::DTREagerBlobObject* obj) {
+  auto&& fa = find_father(obj->node);
+  fa->set_compute_time(fa->compute_time() - obj->node->compute_time());
+  obj->reset_node(obj->compute_time());
+}
+
+Maybe<void> DTRTensorPool::update_after_evict(vm::DTREagerBlobObject* obj) {
+  auto * operand = obj->compute_op();
+  const auto& inputs = operand->inputs();
+  const auto& outputs = operand->outputs();
+  for (int i = 0; i < inputs.size(); ++i) {
+    if (auto tmp = inputs[i].lock()) {
+      auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
+      CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+      if (!dtr_blob_object->is_in_memory()) {
+        merge(dtr_blob_object->node, obj->node);
+      }
+    }
+  }
+
+  for (int i = 0; i < outputs.size(); ++i) {
+    if (auto tmp = outputs[i].lock()) {
+      auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
+      CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+      if (!dtr_blob_object->is_in_memory()) {
+        merge(obj->node, dtr_blob_object->node);
+      }
+    }
+  }
   return Maybe<void>::Ok();
 }
 

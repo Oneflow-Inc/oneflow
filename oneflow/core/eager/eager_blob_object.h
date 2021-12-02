@@ -132,6 +132,17 @@ class DisjNode {
   bool is_root() { return !bool(parent_); }
 
   void set_parent(std::shared_ptr<DisjNode>& parent) { parent_ = parent; }
+  void set_compute_time(double new_time) {
+    compute_time_ = new_time;
+  }
+
+  double compute_time() { return compute_time_; }
+  std::shared_ptr<DisjNode> parent() { return parent_; }
+
+  void reset(double t) {
+    compute_time_ = t;
+    parent_.reset();
+  }
 
  private:
   double compute_time_;
@@ -210,13 +221,17 @@ class DTREagerBlobObject final : public EagerBlobObject {
   Maybe<double> parent_cost() const;
   Maybe<double> child_cost() const;
   Maybe<double> neighbor_cost() const;
+  Maybe<double> approx_neighbor_cost() const;
   size_t input_size() const;
   void clear_invalid_object();
 
   // TODO: variable cost functions in terms of different heuristics
   Maybe<double> cost() const;
 
-  std::shared_ptr<DisjNode> node_;
+  std::shared_ptr<DisjNode> node;
+  void reset_node(double t) {
+    node->reset(t);
+  }
 
  private:
   bool evict_flag_ = false;

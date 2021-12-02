@@ -927,6 +927,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
           dtr_blob_object->set_compute_time(compute_time);
           // Condition - insert current blob into candidates only when blob memory > threshold (with
           // default 0)
+          dtr_blob_object->reset_node(compute_time);
           JUST(Global<one::DTRTensorPool>::Get()->insert(dtr_blob_object));
           return Maybe<void>::Ok();
         }));
@@ -992,6 +993,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
         }));
 
     Global<one::DTRTensorPool>::Get()->add_recompute_times();
+    Global<one::DTRTensorPool>::Get()->update_after_recompute(object);
     return Maybe<void>::Ok();
   }
 

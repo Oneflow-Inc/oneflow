@@ -115,6 +115,8 @@ Maybe<void> DTREagerBlobObject::InitBlobAttrs(
   // compute_op_ = operand;
   could_evict_ = (input_size() > 0) && could_evict_;
 
+  node = std::make_shared<DisjNode>(0);
+
   return Maybe<void>::Ok();
 }
 
@@ -215,8 +217,34 @@ Maybe<double> DTREagerBlobObject::neighbor_cost() const {
   return p_cost + c_cost + compute_time_;
 }
 
+Maybe<double> DTREagerBlobObject::approx_neighbor_cost() const {
+  double cost = 0;
+  const auto& inputs = compute_op_->inputs();
+  for (int i = 0; i < inputs.size(); ++i) {
+    if (auto tmp = inputs[i].lock()) {
+      auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
+      CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+      double p_cost = Global<one::DTRTensorPool>::Get()->find_father(dtr_blob_object->node)->compute_time();
+      cost += p_cost;
+    }
+  }
+
+  const auto& outputs = compute_op_->outputs();
+  for (int i = 0; i < outputs.size(); ++i) {
+    if (auto tmp = outputs[i].lock()) {
+      auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
+      CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+      double c_cost = Global<one::DTRTensorPool>::Get()->find_father(dtr_blob_object->node)->compute_time();
+      cost += c_cost;
+    }
+  }
+
+  return cost;
+}
+
 Maybe<double> DTREagerBlobObject::cost() const {
-  auto n_cost = JUST(neighbor_cost());
+  auto n_cost = JUST(approx_neighbor_cost());
+  // auto n_cost = JUST(neighbor_cost());
   double time_since_last_access = Global<one::DTRTensorPool>::Get()->duration() - last_access_time_;
   if (oneflow::DTRDebugEnabled()) {
     std::cout << "n_cost " << n_cost << ", blob_body_bytes_ " << blob_body_bytes_ << ", time_since_last_access " << time_since_last_access << std::endl;
