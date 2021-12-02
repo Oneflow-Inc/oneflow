@@ -184,6 +184,20 @@ OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context) {
   return module;
 }
 
+void ProcessFuncContext::InsertValueMapping(Tensor* t, mlir::Value v) {
+  CHECK(value_mapping_.insert({t, v}).second);
+}
+
+mlir::Value ProcessFuncContext::GetValue(Tensor* t) { return value_mapping_.lookup(t); }
+
+const llvm::DenseMap<Tensor*, mlir::Value>& ProcessFuncContext::GetValueMapping() {
+  return value_mapping_;
+}
+
+void ProcessFuncContext::InsertIntermediateTensor(Value v, std::shared_ptr<TensorRef> r) {
+  CHECK(intermediate_tensors_mapping_.insert({v, r}).second);
+}
+
 LogicalResult JitImporter::AppendDataInOperand(const std::string& key, const int32_t index,
                                                const std::string& lbn,
                                                std::vector<::mlir::Value>& operand_vec) {
@@ -245,12 +259,8 @@ std::shared_ptr<Tensor> JitImporter::MakeIntermediateTensor(
   auto tensor_ref = std::make_shared<TensorRef>(tensor);
   // tensor_ref_ref is for tracking the ref count of Python
   auto tensor_ref_ref = std::make_shared<TensorRef>(tensor_ref);
-  CHECK(intermediate_tensors_.insert({result, tensor_ref}).second)
-      << "Intermediate tensor already created, lbn: " << lbn;
-  CHECK(py_tensors_.insert({result, tensor_ref_ref}).second)
-      << "Python tensor already created, lbn: " << lbn;
-  CHECK(result_mapping_.emplace(tensor_ref.get(), result).second)
-      << "Intermediate tensor already mapped to mlir value, lbn: " << lbn;
+  SaveIntermediate(result, tensor_ref);
+  TrackTensorAndValue(tensor_ref.get(), result);
   return tensor_ref_ref;
 }
 LogicalResult JitImporter::InsertOpResults(const ::oneflow::OperatorConf& op_conf,
@@ -289,7 +299,7 @@ mlir::FuncOp JitImporter::GetOrInsertFunc(const std::string& func_name) {
     CHECK_EQ(arg_tensors.size(), function.body().getArguments().size());
     for (auto argument_pair : llvm::zip(arg_tensors, function.body().getArguments())) {
       // don't check here, because one tensor could be passed as multiple arguments
-      result_mapping_.emplace(std::get<0>(argument_pair).get(), std::get<1>(argument_pair));
+      TrackTensorAndValue(std::get<0>(argument_pair).get(), std::get<1>(argument_pair));
     }
     GetBuilder().setInsertionPointToStart(entryBlock);
     GetModule().push_back(function);
@@ -358,58 +368,22 @@ llvm::Optional<mlir::Value> JitImporter::GetResultByBnAndIndex(const std::string
                                                                const int32_t index) {
   auto idx = GetProcessOpContext().GetInputArgTuple()->TensorTupleIndex4ArgNameAndIndex(bn, index);
   auto tensor = GetProcessOpContext().GetInputs()[idx];
-  auto result_it = result_mapping_.find(UnWrapTensorRefOrReturnSelf(tensor).get());
-  if (result_it == result_mapping_.end()) {
+  auto result_it = GetValueMapping().find(UnWrapTensorRefOrReturnSelf(tensor).get());
+  if (result_it == GetValueMapping().end()) {
     return llvm::None;
   } else {
     return result_it->second;
   }
 }
 
-LogicalResult JitImporter::LowerToOneFlowKernel() {
-  llvm::SmallVector<Value, 8> return_values;
+LogicalResult JitImporter::FinalizeProcessFunction() {
+  llvm::SmallVector<Value, 8> return_values{};
   llvm::SmallVector<Type, 8> out_types{};
   SymbolTable symbol_table(GetModule());
   auto func_name = GetJitFuncName();
   auto function = symbol_table.lookup<FuncOp>(func_name);
   if (!function) { return GetModule().emitError("function not found: " + func_name); }
   llvm::hash_code function_hash{};
-  function
-      ->walk([&](mlir::Operation* op) {
-        if (llvm::dyn_cast<mlir::oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
-          for (auto result : op->getOpResults()) {
-            auto op_hash =
-                llvm::hash_combine(op->getName(), op->getAttrDictionary(), op->getResultTypes());
-            // llvm::errs() << "op_hash: " << op_hash << ", " << op->getName() << "\n";
-            function_hash = llvm::hash_combine(op_hash, function_hash);
-            // TODO: define a control edge type
-            const bool is_ctrl_edge =
-                result.getType().isa<mlir::RankedTensorType>()
-                && result.getType().cast<mlir::RankedTensorType>().getElementType().isInteger(1);
-            if (result.use_empty() && !is_ctrl_edge) {
-              auto found = intermediate_tensors_.find(result);
-              if (found == intermediate_tensors_.end()) {
-                for (auto& kv : intermediate_tensors_) {
-                  kv.first.dump();
-                  llvm::errs() << ": " << reinterpret_cast<uintptr_t>(kv.second.get()) << "\n";
-                }
-                result.dump();
-                result.getType().dump();
-                llvm::errs() << "\n";
-                LOG(ERROR) << "importer: " << reinterpret_cast<uintptr_t>(this);
-                LOG(FATAL) << "tensor not found for result #" << result.getResultNumber();
-              }
-              return_tensors_.push_back(found->second);
-              return_values.push_back(result);
-              out_types.push_back(result.getType());
-            }
-          }
-          return WalkResult::advance();
-        } else {
-          return WalkResult::advance();
-        }
-      })
-      .wasInterrupted();
   auto it = func_hash_symbol_mapping_.find(function_hash);
   if (it != func_hash_symbol_mapping_.end()) {
     function.erase();
@@ -430,15 +404,6 @@ LogicalResult JitImporter::LowerToOneFlowKernel() {
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createCreateComputeCtxPass());
   pm.addPass(::mlir::oneflow::createFuseIntoExistingOpPass());
   // function->dump();
-  if (ParseBooleanFromEnv("ONEFLOW_MLIR_DUMP_PY_USE", false)) {
-    for (auto& tensor_pair : py_tensors_) {
-      if (tensor_pair.second.use_count() > 1) {
-        tensor_pair.first.dump();
-        llvm::errs() << "#" << tensor_pair.first.dyn_cast<OpResult>().getResultNumber() << ": "
-                     << tensor_pair.second.use_count() << "\n";
-      }
-    }
-  }
   return pm.run(function);
 }
 

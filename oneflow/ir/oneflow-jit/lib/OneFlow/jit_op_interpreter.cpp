@@ -88,19 +88,17 @@ void InsertLbnSegmentIntoVec(Operation* op, std::vector<std::string>& indexed_bn
   }
 }
 
-void JitInterpreter::DispatchModule(
-    ModuleOp module, const std::string& func_name,
-    const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
-    std::vector<std::shared_ptr<one::Tensor>> returned_lazy_tensors) {
+void JitInterpreter::DispatchModule(ModuleOp module, const std::string& func_name,
+                                    const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors) {
   llvm::DenseMap<Value, std::shared_ptr<Tensor>> mapping;
   // TODO: handle the case if there are more than one function in the module.
-  ReturnOp return_op;
   SymbolTable symbol_table(module);
   auto function = symbol_table.lookup(func_name);
   if (!function) {
     module->dump();
     LOG(FATAL) << "The function " << func_name << " is not found in the module.";
   }
+  llvm::DenseSet<Value> values_to_materialize{};
   const bool was_interrupted =
       function
           ->walk([&](mlir::Operation* op) {
@@ -142,8 +140,9 @@ void JitInterpreter::DispatchModule(
               } else {
                 return WalkResult::interrupt();
               }
-            } else if (auto return_op_ = llvm::dyn_cast<ReturnOp>(op)) {
-              return_op = return_op_;
+            }
+            // TODO: collect values from TensorMaterializeOp and add to values_to_materialize
+            else if (llvm::dyn_cast<ReturnOp>(op)) {
               return WalkResult::advance();
             } else {
               return WalkResult::advance();
@@ -151,33 +150,16 @@ void JitInterpreter::DispatchModule(
           })
           .wasInterrupted();
   CHECK(!was_interrupted) << "JIT dispatch failure";
-  llvm::DenseSet<Tensor*> tensors_to_materialize{};
-  for (const auto& tensor_ref : returned_lazy_tensors) {
-    tensors_to_materialize.insert(tensor_ref.get());
-  }
-  for (const auto& indexed_return_value : llvm::enumerate(return_op->getOperands())) {
-    auto value = indexed_return_value.value();
-    auto found = mapping.find(value);
-    CHECK(found != mapping.end()) << "tensor not found";
-    auto tensor_i = returned_lazy_tensors[indexed_return_value.index()];
-    if (auto tensor_ref = std::dynamic_pointer_cast<ir::TensorRef>(tensor_i)) {
-      if (tensors_to_materialize.contains(tensor_ref.get())) {
-        tensor_ref->ResetTensor(mapping[value]);
-      }
-    } else {
-      LOG(FATAL) << "tensor is not a TensorRef";
-    }
-  }
 }
 
 void JitInterpreter::Interrupt() {
-  CHECK(GetImporter().LowerToOneFlowKernel().succeeded());
+  CHECK(GetImporter().FinalizeProcessFunction().succeeded());
   if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module_->print(llvm::outs()); }
   MlirTraceEnd();
-  auto ret = GetImporter().GetReturnTensors();
-  DispatchModule(*module_, GetJitFuncName(), GetJitForwardArgs(), {ret.begin(), ret.end()});
-  GetImporter().ResetMappings();
-}  // namespace one
+  std::vector<std::shared_ptr<one::Tensor>> ret{};
+  for (const auto& kv : GetImporter().GetIntermediateTensorsMapping()) { ret.push_back(kv.second); }
+  DispatchModule(*module_, GetJitFuncName(), GetJitForwardArgs());
+}
 
 Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
                                       TensorTuple* outputs, const OpExprInterpContext& ctx) const {
@@ -240,7 +222,7 @@ void JitInterpreter::Trace(
   current_importer_ = &importer;  // TODO: extract function
   JitFunctionContext jit_function_context_(func_name, arg_tensors);
   auto return_tensors = forward_func();
-  CHECK(importer.LowerToOneFlowKernel().succeeded());
+  CHECK(importer.FinalizeProcessFunction().succeeded());
   MlirTraceEnd();
 }
 

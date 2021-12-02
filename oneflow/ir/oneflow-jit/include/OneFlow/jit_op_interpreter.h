@@ -88,8 +88,7 @@ class JitInterpreter : public OpExprInterpreter {
              const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
              const std::function<std::vector<std::shared_ptr<one::Tensor>>(void)>& forward_func);
   void DispatchModule(ModuleOp module, const std::string& func_name,
-                      const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
-                      std::vector<std::shared_ptr<one::Tensor>> returned_lazy_tensors);
+                      const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors);
   const std::string& GetJitFuncName() const { return jit_function_context_.GetJitFuncName(); }
   const std::vector<std::shared_ptr<one::Tensor>>& GetJitForwardArgs() const {
     return jit_function_context_.GetJitForwardArgs();
