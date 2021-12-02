@@ -192,8 +192,7 @@ llvm::Optional<std::shared_ptr<one::UserOpExpr>> JitInterpreter::GetExpr(Operati
   auto user_conf = op_conf.mutable_user_conf();
   if (succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))
       && succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))
-      && succeeded(GetImporter().ConvertUserOpAttributes(op, user_op_adaptor, op_conf))
-      && succeeded(ConvertCtrlInputs(op, op_conf))) {
+      && succeeded(GetImporter().ConvertUserOpAttributes(op, user_op_adaptor, op_conf))) {
     std::vector<std::string> indexed_ibns{};
     std::vector<std::string> indexed_obns{};
     InsertLbnSegmentIntoVec<OpTrait::AttrSizedOperandSegments>(op, indexed_ibns);
