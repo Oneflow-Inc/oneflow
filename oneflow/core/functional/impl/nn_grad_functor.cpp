@@ -41,7 +41,7 @@ class ConvBiasGradFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("num_spatial_dims", num_spatial_dims));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous()}, attrs);
   }
 
  private:
@@ -69,7 +69,7 @@ class ConvFilterGradFunctor {
     JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
     JUST(attrs.SetAttr<int32_t>("groups", groups));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), x->contiguous()}, attrs);
   }
 
  private:
@@ -102,7 +102,7 @@ class ConvDataGradFunctor {
     JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
     JUST(attrs.SetAttr<int32_t>("groups", groups));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, weight, x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), weight->contiguous(), x->contiguous()}, attrs);
   }
 
  private:

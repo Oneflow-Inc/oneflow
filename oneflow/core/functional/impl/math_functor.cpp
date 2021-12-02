@@ -104,7 +104,7 @@ class ScalarMathBaseFunctor {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
                                   << " should be float or int.";
     }
-    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
+    JUST(tensor_processor.AddInputs({x->contiguous()}, lowest_dtype).Apply());
     TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
     if (inplace) {
       JUST(CheckInplaceCastValid(x, casted_vec[0]));
@@ -238,7 +238,7 @@ class ScalarPowGradFunctor {
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarPowGrad should be float or int.";
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, dy}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), dy->contiguous()}, attrs);
   }
 
  private:
@@ -272,7 +272,7 @@ class ReduceMaxFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -296,7 +296,7 @@ class ReduceMinFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -322,7 +322,7 @@ class ReduceSumFunctor {
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
+    JUST(tensor_processor.AddInputs({x->contiguous()}, /*lowest_dtype=*/DType::Int64()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
   }

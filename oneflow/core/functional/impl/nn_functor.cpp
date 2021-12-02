@@ -83,7 +83,7 @@ class ConvBaseFunctor {
     if (bias) {
       MutableAttrMap bias_attrs;
       JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
-      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {conv_out, JUST(bias)}, bias_attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {conv_out->contiguous(), JUST(bias)->contiguous()}, bias_attrs);
     } else {
       return conv_out;
     }
@@ -143,7 +143,7 @@ class DeConvBaseFunctor {
     JUST(deconv_attrs.SetAttr<std::string>("data_format", data_format));
     std::shared_ptr<one::Tensor> deconv_out = nullptr;
     if (groups == 1) {
-      deconv_out = JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {x, weight}, deconv_attrs));
+      deconv_out = JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {x->contiguous(), weight->contiguous()}, deconv_attrs));
     } else {
       auto nc = x->dim(1) / groups;
       auto split_x = JUST(functional::Split(x, nc, 1));
@@ -151,7 +151,7 @@ class DeConvBaseFunctor {
       one::TensorTuple split_out;
       for (int i = 0; i < groups; i++) {
         const std::shared_ptr<one::Tensor>& deconv_i = JUST(OpInterpUtil::Dispatch<Tensor>(
-            *deconv_op_, {split_x->at(i), split_weight->at(i)}, deconv_attrs));
+            *deconv_op_, {split_x->at(i)->contiguous(), split_weight->at(i)->contiguous()}, deconv_attrs));
         split_out.emplace_back(deconv_i);
       }
       deconv_out = JUST(functional::Concat(split_out, 1));
@@ -160,7 +160,7 @@ class DeConvBaseFunctor {
     if (bias) {
       MutableAttrMap bias_attrs;
       JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
-      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {deconv_out, JUST(bias)}, bias_attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {deconv_out->contiguous(), JUST(bias)->contiguous()}, bias_attrs);
     } else {
       return deconv_out;
     }
@@ -213,12 +213,12 @@ class MatMulFunctor {
     if (a_shape->NumAxes() != b_shape->NumAxes()) {
       CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 2)
           << "Not support number of dimensions of a being less than number of dimensions of b!";
-      return OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {a, b}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {a->contiguous(), b->contiguous()}, attrs);
     }
     if (a_shape->NumAxes() > 2) {
-      return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a->contiguous(), b->contiguous()}, attrs);
     }
-    return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a->contiguous(), b->contiguous()}, attrs);
   }
 
  private:
@@ -245,7 +245,7 @@ class BatchMatMulFunctor {
     JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
     JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
     JUST(attrs.SetAttr<double>("alpha", alpha));
-    return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a->contiguous(), b->contiguous()}, attrs);
   }
 
  private:
@@ -270,7 +270,7 @@ class LayerNormFunctor {
     JUST(attrs.SetAttr<double>("epsilon", epsilon));
     JUST(attrs.SetAttr<bool>("center", false));
     JUST(attrs.SetAttr<bool>("scale", false));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:

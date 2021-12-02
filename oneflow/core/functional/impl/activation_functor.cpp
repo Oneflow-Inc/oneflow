@@ -258,7 +258,7 @@ class HardSigmoidFunctor {
       JUST(OpInterpUtil::Dispatch(*op_, {input}, outputs.get(), AttrMap{}));
       return outputs->at(0);
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {input});
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()});
     }
   }
 
@@ -308,7 +308,7 @@ class SoftmaxFunctorBase {
           .call(input, input_perm);
     }
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()});
   }
 
  protected:
@@ -333,7 +333,7 @@ class SoftmaxGradFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& y) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {y, dy});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {y->contiguous(), dy->contiguous()});
   }
 
  private:
@@ -369,7 +369,7 @@ class LeakyReluFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& alpha) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -385,7 +385,7 @@ class LeakyReluGradFunctor {
                            const std::shared_ptr<one::Tensor>& dy, const float& alpha) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x->contiguous(), dy->contiguous()}, attrs);
   }
 
  private:
