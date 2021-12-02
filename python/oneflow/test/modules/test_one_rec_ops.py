@@ -15,21 +15,17 @@ limitations under the License.
 """
 
 import unittest
-from collections import OrderedDict
-
-import numpy as np
-from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
 
 
 @flow.unittest.skip_unless_1n1d()
-# @unittest.skipIf(True, "skip until one_rec dataset is ready on CI server")
+@unittest.skipIf(True, "skip until one_rec dataset is ready on CI server")
 class TestOneRecOpsModule(flow.unittest.TestCase):
     def test_read_decode(test_case):
         files = [
-            "/home/yaochi/dataset/onerec/part-00000-713a0aee-1337-4686-b418-0ada6face4de-c000.onerec"
+            "/dataset/onerec_test/part-00000-713a0aee-1337-4686-b418-0ada6face4de-c000.onerec"
         ]
         readdata = flow.read_onerec(
             files, batch_size=10, random_shuffle=True, shuffle_mode="batch"
@@ -41,7 +37,7 @@ class TestOneRecOpsModule(flow.unittest.TestCase):
             readdata, key="dense_fields", dtype=flow.float, shape=(13,)
         )
         test_case.assertTrue(labels.shape == (10, 1))
-        test_case.assertTrue(dense_fields.shape == (10, 1))
+        test_case.assertTrue(dense_fields.shape == (10, 13))
 
 
 if __name__ == "__main__":
