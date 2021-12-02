@@ -57,7 +57,7 @@ __global__ void BatchGatherBackwardGpu(const int64_t elem_cnt, const T* out_diff
 }  // namespace
 
 template<typename T, typename K>
-struct BatchGatherKernelUtilImpl<DeviceType::kGPU, T, K> final {
+struct BatchGatherKernelUtilImpl<DeviceType::kCUDA, T, K> final {
   static void Forward(ep::Stream* stream, const T* in, const K* indices,
                       const Shape& flat_out_shape, const int64_t gather_dim_size, T* out);
   static void Backward(ep::Stream* stream, const T* out_diff, const K* indices,
@@ -65,11 +65,11 @@ struct BatchGatherKernelUtilImpl<DeviceType::kGPU, T, K> final {
 };
 
 template<typename T, typename K>
-void BatchGatherKernelUtilImpl<DeviceType::kGPU, T, K>::Forward(ep::Stream* stream, const T* in,
-                                                                const K* indices,
-                                                                const Shape& flat_out_shape,
-                                                                const int64_t gather_dim_size,
-                                                                T* out) {
+void BatchGatherKernelUtilImpl<DeviceType::kCUDA, T, K>::Forward(ep::Stream* stream, const T* in,
+                                                                 const K* indices,
+                                                                 const Shape& flat_out_shape,
+                                                                 const int64_t gather_dim_size,
+                                                                 T* out) {
   const int64_t batch_num = flat_out_shape.At(0);
   const int64_t indices_num = flat_out_shape.At(1);
   const int64_t instance_size = flat_out_shape.At(2);
@@ -80,7 +80,7 @@ void BatchGatherKernelUtilImpl<DeviceType::kGPU, T, K>::Forward(ep::Stream* stre
 }
 
 template<typename T, typename K>
-void BatchGatherKernelUtilImpl<DeviceType::kGPU, T, K>::Backward(
+void BatchGatherKernelUtilImpl<DeviceType::kCUDA, T, K>::Backward(
     ep::Stream* stream, const T* out_diff, const K* indices, const Shape& flat_out_diff_shape,
     const int64_t gather_dim_size, T* in_diff) {
   const int64_t batch_num = flat_out_diff_shape.At(0);
@@ -92,11 +92,11 @@ void BatchGatherKernelUtilImpl<DeviceType::kGPU, T, K>::Backward(
       elem_cnt, out_diff, indices, indices_num, instance_size, gather_dim_size, in_diff);
 }
 
-#define INSTANTIATE_BATCH_GATHER_KERNEL_UTIL_IMPL_GPU(in_type_pair, index_type_pair)          \
-  template struct BatchGatherKernelUtilImpl<DeviceType::kGPU, OF_PP_PAIR_FIRST(in_type_pair), \
+#define INSTANTIATE_BATCH_GATHER_KERNEL_UTIL_IMPL_CUDA(in_type_pair, index_type_pair)          \
+  template struct BatchGatherKernelUtilImpl<DeviceType::kCUDA, OF_PP_PAIR_FIRST(in_type_pair), \
                                             OF_PP_PAIR_FIRST(index_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BATCH_GATHER_KERNEL_UTIL_IMPL_GPU,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BATCH_GATHER_KERNEL_UTIL_IMPL_CUDA,
                                  FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ);
-#undef INSTANTIATE_BATCH_GATHER_KERNEL_UTIL_IMPL_GPU
+#undef INSTANTIATE_BATCH_GATHER_KERNEL_UTIL_IMPL_CUDA
 
 }  // namespace oneflow

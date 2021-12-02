@@ -30,7 +30,7 @@ namespace oneflow {
 
 REGISTER_SQUEEZE_KERNEL(kCPU)
 #ifdef WITH_CUDA
-REGISTER_SQUEEZE_KERNEL(kGPU)
+REGISTER_SQUEEZE_KERNEL(kCUDA)
 #endif
 
 }  // namespace oneflow

@@ -176,30 +176,30 @@ struct ReluGradFunctor<half> {
   }
 };
 
-#define REGISTER_ACTIVATION_GPU_KERNEL(dtype)            \
-  REGISTER_ELU_KERNEL(DeviceType::kGPU, dtype);          \
-  REGISTER_CELU_KERNEL(DeviceType::kGPU, dtype);         \
-  REGISTER_HARDSWISH_KERNEL(DeviceType::kGPU, dtype);    \
-  REGISTER_HARDSIGMOID_KERNEL(DeviceType::kGPU, dtype);  \
-  REGISTER_HARDTANH_KERNEL(DeviceType::kGPU, dtype);     \
-  REGISTER_MISH_KERNEL(DeviceType::kGPU, dtype);         \
-  REGISTER_SILU_KERNEL(DeviceType::kGPU, dtype);         \
-  REGISTER_SELU_KERNEL(DeviceType::kGPU, dtype);         \
-  REGISTER_SOFTSIGN_KERNEL(DeviceType::kGPU, dtype);     \
-  REGISTER_RELU_FORWARD_KERNEL(DeviceType::kGPU, dtype); \
-  REGISTER_RELU_BACKWARD_KERNEL(DeviceType::kGPU, dtype);
+#define REGISTER_ACTIVATION_CUDA_KERNEL(dtype)            \
+  REGISTER_ELU_KERNEL(DeviceType::kCUDA, dtype);          \
+  REGISTER_CELU_KERNEL(DeviceType::kCUDA, dtype);         \
+  REGISTER_HARDSWISH_KERNEL(DeviceType::kCUDA, dtype);    \
+  REGISTER_HARDSIGMOID_KERNEL(DeviceType::kCUDA, dtype);  \
+  REGISTER_HARDTANH_KERNEL(DeviceType::kCUDA, dtype);     \
+  REGISTER_MISH_KERNEL(DeviceType::kCUDA, dtype);         \
+  REGISTER_SILU_KERNEL(DeviceType::kCUDA, dtype);         \
+  REGISTER_SELU_KERNEL(DeviceType::kCUDA, dtype);         \
+  REGISTER_SOFTSIGN_KERNEL(DeviceType::kCUDA, dtype);     \
+  REGISTER_RELU_FORWARD_KERNEL(DeviceType::kCUDA, dtype); \
+  REGISTER_RELU_BACKWARD_KERNEL(DeviceType::kCUDA, dtype);
 
 namespace {
 
-REGISTER_ACTIVATION_GPU_KERNEL(half);
-REGISTER_ACTIVATION_GPU_KERNEL(float);
-REGISTER_ACTIVATION_GPU_KERNEL(double);
+REGISTER_ACTIVATION_CUDA_KERNEL(half);
+REGISTER_ACTIVATION_CUDA_KERNEL(float);
+REGISTER_ACTIVATION_CUDA_KERNEL(double);
 
 // For some special DType
-REGISTER_RELU_FORWARD_KERNEL(DeviceType::kGPU, uint8_t);
-REGISTER_RELU_FORWARD_KERNEL(DeviceType::kGPU, int8_t);
-REGISTER_RELU_FORWARD_KERNEL(DeviceType::kGPU, int32_t);
-REGISTER_RELU_FORWARD_KERNEL(DeviceType::kGPU, int64_t);
+REGISTER_RELU_FORWARD_KERNEL(DeviceType::kCUDA, uint8_t);
+REGISTER_RELU_FORWARD_KERNEL(DeviceType::kCUDA, int8_t);
+REGISTER_RELU_FORWARD_KERNEL(DeviceType::kCUDA, int32_t);
+REGISTER_RELU_FORWARD_KERNEL(DeviceType::kCUDA, int64_t);
 
 }  // namespace
 

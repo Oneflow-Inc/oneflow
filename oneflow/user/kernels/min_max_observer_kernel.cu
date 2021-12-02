@@ -235,7 +235,7 @@ class GpuMinMaxObserverKernel final : public user_op::OpKernel {
 #define REGISTER_MIN_MAX_OBSERVER_KERNEL(dtype)                                         \
   REGISTER_USER_KERNEL("min_max_observer")                                              \
       .SetCreateFn<GpuMinMaxObserverKernel<dtype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                     \
         size_t tmp_buffer_size = 1;                                                     \

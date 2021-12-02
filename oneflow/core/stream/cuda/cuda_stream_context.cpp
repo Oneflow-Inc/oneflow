@@ -21,6 +21,8 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_check_numerics_kernel_observer.h"
 #include "oneflow/core/graph/stream_id.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/ep/cuda/cuda_device.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/common/channel.h"
 
 #ifdef WITH_CUDA
@@ -30,47 +32,37 @@ namespace oneflow {
 
 namespace {
 
-constexpr int kCudaEventReuseRecycleThreshold = 32;
-
 class CudaStreamContext : public StreamContext, public KernelObserverProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaStreamContext);
-  explicit CudaStreamContext(int device_ordinal);
+  explicit CudaStreamContext(int device_index);
   virtual ~CudaStreamContext();
 
   Maybe<void> AddCallback(std::function<void()> callback) override;
-  DeviceType device_type() const override { return DeviceType::kGPU; }
+  DeviceType device_type() const override { return DeviceType::kCUDA; }
   KernelObserver* GetKernelObserver() override;
 
   ep::Stream* stream() override;
 
  private:
-  cudaEvent_t GetEvent();
-  void SyncRecycleEvent(cudaEvent_t event);
-
-  ep::CudaStream stream_;
-  Channel<std::pair<cudaEvent_t, std::function<void()>>> cb_event_chan_;
-  int cuda_event_flags_;
-  bool reuse_cuda_event_;
-  std::deque<cudaEvent_t> consumer_event_queue_;
-  std::deque<cudaEvent_t> producer_event_queue_;
-  std::deque<cudaEvent_t> global_event_queue_;
-  std::mutex global_event_queue_mutex_;
+  ep::CudaStream* stream_;
+  Channel<std::pair<ep::Event*, std::function<void()>>> cb_event_chan_;
   std::thread poller_thread_;
-  int device_ordinal_;
+  int device_index_;
   std::unique_ptr<KernelObserver> kernel_observer_;
+  std::shared_ptr<ep::CudaDevice> device_;
 };
 
 }  // namespace
 
-CudaStreamContext::CudaStreamContext(int device_ordinal)
-    : stream_(device_ordinal), device_ordinal_(device_ordinal) {
-  CudaCurrentDeviceGuard guard(device_ordinal_);
-  cuda_event_flags_ = cudaEventDisableTiming;
-  if (ParseBooleanFromEnv("ONEFLOW_STREAM_CUDA_EVENT_FLAG_BLOCKING_SYNC", false)) {
-    cuda_event_flags_ |= cudaEventBlockingSync;
-  }
-  reuse_cuda_event_ = ParseBooleanFromEnv("ONEFLOW_STREAM_REUSE_CUDA_EVENT", false);
+CudaStreamContext::CudaStreamContext(int device_index)
+    : stream_(nullptr), device_index_(device_index) {
+  CudaCurrentDeviceGuard guard(device_index_);
+  device_ = std::dynamic_pointer_cast<ep::CudaDevice>(
+      Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index));
+  CHECK(device_);
+  stream_ = dynamic_cast<ep::CudaStream*>(device_->CreateStream());
+  CHECK(stream_ != nullptr);
 
   std::vector<std::shared_ptr<KernelObserver>> kernel_observers;
   if (ParseBooleanFromEnv("ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS", false)) {
@@ -82,76 +74,40 @@ CudaStreamContext::CudaStreamContext(int device_ordinal)
   kernel_observer_.reset(new ChainKernelObserver(kernel_observers));
 
   poller_thread_ = std::thread([this]() {
-    CudaCurrentDeviceGuard guard(device_ordinal_);
-    stream_.OnExecutionContextSetup();
-    OF_PROFILER_NAME_THIS_HOST_THREAD("GPU " + std::to_string(device_ordinal_) + " Poller : ("
-                                      + std::to_string(device_ordinal_) + ")");
-    std::pair<cudaEvent_t, std::function<void()>> cb_event;
+    stream_->OnExecutionContextSetup();
+    OF_PROFILER_NAME_THIS_HOST_THREAD("_cuda" + std::to_string(device_index_) + " Poller : ("
+                                      + std::to_string(device_index_) + ")");
+    std::pair<ep::Event*, std::function<void()>> cb_event;
     while (cb_event_chan_.Receive(&cb_event) == kChannelStatusSuccess) {
-      SyncRecycleEvent(cb_event.first);
+      cb_event.first->Sync();
       cb_event.second();
+      device_->DestroyEvent(cb_event.first);
     }
-    stream_.OnExecutionContextTeardown();
+    stream_->OnExecutionContextTeardown();
   });
 }
 
 CudaStreamContext::~CudaStreamContext() {
-  CudaCurrentDeviceGuard guard(device_ordinal_);
+  CudaCurrentDeviceGuard guard(device_index_);
   cb_event_chan_.Close();
   poller_thread_.join();
-  for (cudaEvent_t event : consumer_event_queue_) { OF_CUDA_CHECK(cudaEventDestroy(event)); }
-  for (cudaEvent_t event : producer_event_queue_) { OF_CUDA_CHECK(cudaEventDestroy(event)); }
-  for (cudaEvent_t event : global_event_queue_) { OF_CUDA_CHECK(cudaEventDestroy(event)); }
+  device_->DestroyStream(stream_);
 }
 
 Maybe<void> CudaStreamContext::AddCallback(std::function<void()> callback) {
-  cudaEvent_t cuda_event = GetEvent();
-  OF_CUDA_CHECK(cudaEventRecord(cuda_event, stream_.cuda_stream()));
-  cb_event_chan_.Send(std::make_pair(cuda_event, std::move(callback)));
+  ep::Event* event = device_->CreateEvent();
+  stream_->RecordEvent(event);
+  cb_event_chan_.Send(std::make_pair(event, std::move(callback)));
   return Maybe<void>::Ok();
-}
-
-cudaEvent_t CudaStreamContext::GetEvent() {
-  cudaEvent_t cuda_event{};
-  if (reuse_cuda_event_) {
-    if (consumer_event_queue_.empty()) {
-      std::unique_lock<std::mutex> lock(global_event_queue_mutex_);
-      consumer_event_queue_.swap(global_event_queue_);
-    }
-    if (consumer_event_queue_.empty()) {
-      OF_CUDA_CHECK(cudaEventCreateWithFlags(&cuda_event, cuda_event_flags_));
-    } else {
-      cuda_event = consumer_event_queue_.back();
-      consumer_event_queue_.pop_back();
-    }
-  } else {
-    OF_CUDA_CHECK(cudaEventCreateWithFlags(&cuda_event, cuda_event_flags_));
-  }
-  return cuda_event;
-}
-
-void CudaStreamContext::SyncRecycleEvent(cudaEvent_t event) {
-  OF_CUDA_CHECK(cudaEventSynchronize(event));
-  if (reuse_cuda_event_) {
-    producer_event_queue_.push_back(event);
-    if (producer_event_queue_.size() >= kCudaEventReuseRecycleThreshold) {
-      std::unique_lock<std::mutex> lock(global_event_queue_mutex_);
-      global_event_queue_.insert(global_event_queue_.end(), producer_event_queue_.begin(),
-                                 producer_event_queue_.end());
-      producer_event_queue_.clear();
-    }
-  } else {
-    OF_CUDA_CHECK(cudaEventDestroy(event));
-  }
 }
 
 KernelObserver* CudaStreamContext::GetKernelObserver() { return kernel_observer_.get(); }
 
-ep::Stream* CudaStreamContext::stream() { return &stream_; }
+ep::Stream* CudaStreamContext::stream() { return stream_; }
 
 REGISTER_STREAM_CONTEXT_CREATOR_WITH_STREAM_ID(
-    DeviceType::kGPU, ([](const StreamId& stream_id) -> StreamContext* {
-      CHECK_EQ(stream_id.device_type(), DeviceType::kGPU);
+    DeviceType::kCUDA, ([](const StreamId& stream_id) -> StreamContext* {
+      CHECK_EQ(stream_id.device_type(), DeviceType::kCUDA);
       return new CudaStreamContext(stream_id.device_index());
     }));
 

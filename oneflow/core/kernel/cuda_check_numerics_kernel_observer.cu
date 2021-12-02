@@ -26,10 +26,12 @@ __device__ bool IsNotFinite(T x) {
   return !isfinite(x);
 }
 
+#if __CUDA_ARCH__ >= 530
 template<>
 __device__ bool IsNotFinite<half>(half x) {
   return (__hisinf(x) || __hisnan(x));
 }
+#endif
 
 template<typename T>
 __global__ void HasNotFiniteGpuKernel(const int64_t n, const T* x, volatile bool* has_not_finite) {
@@ -67,8 +69,13 @@ bool HasNotFiniteGpu(ep::Stream* stream, const Blob* blob, bool* has_not_finite_
     return HasNotFinite<double>(stream, elem_cnt, blob->dptr<double>(), has_not_finite_host,
                                 has_not_finite_device);
   } else if (dtype == kFloat16) {
+#if __CUDA_ARCH__ >= 530
     return HasNotFinite<half>(stream, elem_cnt, blob->dptr<half>(), has_not_finite_host,
                               has_not_finite_device);
+#else
+    LOG(FATAL) << "use half need nvcc arch >= 530";
+    return true;
+#endif
   } else {
     return false;
   }

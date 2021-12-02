@@ -20,8 +20,18 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/graph/task_stream_id.h"
+#include "oneflow/core/ep/include/primitive/copy_nd.h"
 
 namespace oneflow {
+
+namespace {
+
+bool IsCopyNdPrimitiveSupported(DeviceType device_type, int64_t ndims) {
+  auto primitive = ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(device_type, ndims);
+  return primitive.operator bool();
+}
+
+}  // namespace
 
 Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
@@ -30,6 +40,14 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const cfg::SbpParallel& in_sbp_parallel,
     const cfg::SbpParallel& out_sbp_parallel, const Shape& time_shape) const {
+  if (!IsCopyNdPrimitiveSupported(in_parallel_desc.device_type(),
+                                  logical_blob_desc.shape().NumAxes())) {
+    return Error::BoxingNotSupportedError();
+  }
+  if (!IsCopyNdPrimitiveSupported(out_parallel_desc.device_type(),
+                                  logical_blob_desc.shape().NumAxes())) {
+    return Error::BoxingNotSupportedError();
+  }
   if (SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)) {
     return Error::BoxingNotSupportedError();
   }
@@ -95,7 +113,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
                 in_node, lbi, dynamic_cast<TaskNode*>(out_node)->MemZoneId121());
             out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), in_slice);
           }
-          out_nodes->push_back(out_node);
+          out_nodes->emplace_back(out_node);
         }
       };
   const auto BuildSubTaskGphS2S = [&ctx, &lbi, &CreateSliceBoxingNode, &GetSliceCopyNode, &NewEdge](
@@ -123,7 +141,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
             slice_copy_node, lbi, dynamic_cast<TaskNode*>(out_node)->MemZoneId121());
         out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), intersection);
       }
-      out_nodes->push_back(out_node);
+      out_nodes->emplace_back(out_node);
     }
   };
   const auto BuildSubTaskGphP2S = [&ctx, &lbi, &CreateSliceBoxingNode, &GetSliceCopyNode, &NewEdge](
@@ -149,7 +167,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
             slice_copy_node, lbi, dynamic_cast<TaskNode*>(out_node)->MemZoneId121());
         out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), intersection);
       }
-      out_nodes->push_back(out_node);
+      out_nodes->emplace_back(out_node);
     }
   };
 
@@ -169,7 +187,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
                 in_node, lbi, dynamic_cast<TaskNode*>(out_node)->MemZoneId121());
             out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), slice);
           }
-          out_nodes->push_back(out_node);
+          out_nodes->emplace_back(out_node);
         }
       };
 
@@ -192,7 +210,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
           slice_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
           TaskNode* out_node = ctx->task_graph()->GetProxyNode(slice_node, lbi, out_pd, out_id);
 
-          out_nodes->push_back(out_node);
+          out_nodes->emplace_back(out_node);
         }
       };
 

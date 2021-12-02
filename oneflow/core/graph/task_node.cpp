@@ -310,7 +310,7 @@ void TaskNode::InitProducedRegstMemCase(RegstDesc* regst) {
 void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
   if (device_type() == DeviceType::kCPU) {
     mem_case->mutable_host_mem();
-  } else if (device_type() == DeviceType::kGPU) {
+  } else if (device_type() == DeviceType::kCUDA) {
     mem_case->mutable_device_cuda_mem()->set_device_id(stream_id().device_id().device_index());
   } else {
     UNIMPLEMENTED();
@@ -318,7 +318,7 @@ void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
 }
 
 void TaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
-  if (mem_case->has_host_mem() && device_type() == DeviceType::kGPU) {
+  if (mem_case->has_host_mem() && device_type() == DeviceType::kCUDA) {
     mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(
         stream_id().device_id().device_index());
   }
@@ -330,7 +330,7 @@ void TaskNode::ConsumeRegst(const std::string& name) {
 
 void TaskNode::ConsumeRegst(const std::string& name, const std::shared_ptr<RegstDesc>& regst) {
   regst->AddConsumer(this);
-  consumed_regsts_[name].push_back(regst);
+  consumed_regsts_[name].emplace_back(regst);
 }
 
 void TaskNode::UpdateTaskId() {
@@ -359,6 +359,7 @@ std::shared_ptr<RegstDesc> TaskEdge::GetSoleRegst() const {
 
 std::vector<std::shared_ptr<RegstDesc>> TaskEdge::GetRegsts() const {
   std::vector<std::shared_ptr<RegstDesc>> regst_descs;
+  regst_descs.reserve(name_in_producer2regst_.size());
   for (auto& pair : name_in_producer2regst_) { regst_descs.emplace_back(pair.second); }
   return regst_descs;
 }

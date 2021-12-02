@@ -34,6 +34,7 @@ limitations under the License.
 #include "oneflow/core/control/ctrl_bootstrap.h"
 #include "oneflow/core/rpc/include/base.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/thread/thread_consistent_id.h"
 
 namespace oneflow_api {
 
@@ -41,26 +42,26 @@ namespace of = oneflow;
 
 namespace {  // for inltialize
 
-inline bool isEnvInited() { return of::Global<of::EnvGlobalObjectsScope>::Get() != nullptr; }
+inline bool IsEnvInited() { return of::Global<of::EnvGlobalObjectsScope>::Get() != nullptr; }
 
-bool hasEnvVar(const std::string& key) {
+bool HasEnvVar(const std::string& key) {
   const char* value = getenv(key.c_str());
   return value != nullptr;
 }
 
-std::string getEnvVar(const std::string& key, const std::string& default_value) {
+std::string GetEnvVar(const std::string& key, const std::string& default_value) {
   const char* value = getenv(key.c_str());
   if (value == nullptr) { return default_value; }
   return std::string(value);
 }
 
-int64_t getEnvVar(const std::string& key, int64_t default_value) {
+int64_t GetEnvVar(const std::string& key, int64_t default_value) {
   const char* value = getenv(key.c_str());
   if (value == nullptr) { return default_value; }
   return std::atoll(value);
 }
 
-int32_t findFreePort(const std::string& addr) {
+int32_t FindFreePort(const std::string& addr) {
 #ifdef __linux__
   int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   CHECK_GE(sock, 0) << "fail to find a free port.";
@@ -89,28 +90,28 @@ int32_t findFreePort(const std::string& addr) {
   return -1;
 }
 
-void completeEnvProto(of::EnvProto& env_proto) {
+void CompleteEnvProto(of::EnvProto& env_proto) {
   auto bootstrap_conf = env_proto.mutable_ctrl_bootstrap_conf();
   auto master_addr = bootstrap_conf->mutable_master_addr();
-  const std::string addr = getEnvVar("MASTER_ADDR", "127.0.0.1");
+  const std::string addr = GetEnvVar("MASTER_ADDR", "127.0.0.1");
   master_addr->set_host(addr);
-  master_addr->set_port(getEnvVar("MASTER_PORT", findFreePort(addr)));
-  bootstrap_conf->set_world_size(getEnvVar("WORLD_SIZE", 1));
-  bootstrap_conf->set_rank(getEnvVar("RANK", 0));
+  master_addr->set_port(GetEnvVar("MASTER_PORT", FindFreePort(addr)));
+  bootstrap_conf->set_world_size(GetEnvVar("WORLD_SIZE", 1));
+  bootstrap_conf->set_rank(GetEnvVar("RANK", 0));
 
   auto cpp_logging_conf = env_proto.mutable_cpp_logging_conf();
-  if (hasEnvVar("GLOG_log_dir")) { cpp_logging_conf->set_log_dir(getEnvVar("GLOG_log_dir", "")); }
-  if (hasEnvVar("GLOG_logtostderr")) {
-    cpp_logging_conf->set_logtostderr(getEnvVar("GLOG_logtostderr", -1));
+  if (HasEnvVar("GLOG_log_dir")) { cpp_logging_conf->set_log_dir(GetEnvVar("GLOG_log_dir", "")); }
+  if (HasEnvVar("GLOG_logtostderr")) {
+    cpp_logging_conf->set_logtostderr(GetEnvVar("GLOG_logtostderr", -1));
   }
-  if (hasEnvVar("GLOG_logbuflevel")) {
-    cpp_logging_conf->set_logbuflevel(getEnvVar("GLOG_logbuflevel", -1));
+  if (HasEnvVar("GLOG_logbuflevel")) {
+    cpp_logging_conf->set_logbuflevel(GetEnvVar("GLOG_logbuflevel", -1));
   }
 }
 
 of::Maybe<void> initEnv() {
   of::EnvProto env_proto;
-  completeEnvProto(env_proto);
+  CompleteEnvProto(env_proto);
   of::Global<of::EnvGlobalObjectsScope>::SetAllocated(new of::EnvGlobalObjectsScope());
   JUST(of::Global<of::EnvGlobalObjectsScope>::Get()->Init(env_proto));
   return of::Maybe<void>::Ok();
@@ -120,11 +121,12 @@ of::Maybe<void> initEnv() {
 
 void initialize() {
   of::SetIsMultiClient(true).GetOrThrow();
-  if (!isEnvInited()) { initEnv().GetOrThrow(); }
+  if (!IsEnvInited()) { initEnv().GetOrThrow(); }
+  of::SetShuttingDown(false);
 }
 
 void release() {
-  if (isEnvInited()) {
+  if (IsEnvInited()) {
     // sync multi_client
     of::vm::ClusterSync().GetOrThrow();
     // destory env
@@ -137,6 +139,7 @@ void release() {
   }
   // TODO close session
   of::SetShuttingDown();
+  of::ResetThisThreadUniqueConsistentId().GetOrThrow();
 }
 
 }  // namespace oneflow_api

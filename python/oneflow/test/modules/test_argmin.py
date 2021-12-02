@@ -93,7 +93,7 @@ class TestArgmin(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=5, auto_backward=False, rtol=1e-5, atol=1e-5)
+    @autotest(n=5, auto_backward=False, rtol=1e-5, atol=1e-5, check_graph=False)
     def test_argmin_with_random_data(test_case):
         device = random_device()
         ndim = random(1, 6).to(int)

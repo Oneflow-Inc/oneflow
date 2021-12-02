@@ -124,16 +124,12 @@ inline int32_t SMBlocksNum4ThreadsNum(const int32_t n) {
                   GetSMCudaMaxBlocksNum());
 }
 
-class DeviceCtx;
-
 namespace ep {
 
 class Stream;
 class CudaStream;
 
 }  // namespace ep
-
-cudaStream_t RunCudaKernelGetStream(DeviceCtx* ctx);
 
 cudaStream_t RunCudaKernelGetStream(ep::Stream* stream);
 

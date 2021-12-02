@@ -33,7 +33,7 @@ __global__ void CudaClipBackward(F clip_func, int64_t n, const T* x, const T* dy
 }  // namespace
 
 template<typename T>
-struct ClipKernelUtil<DeviceType::kGPU, T> {
+struct ClipKernelUtil<DeviceType::kCUDA, T> {
   template<typename F>
   static void Forward(ep::Stream* stream, F clip_func, const int64_t n, const T* x, T* y) {
     if (n == 0) { return; }
@@ -48,24 +48,24 @@ struct ClipKernelUtil<DeviceType::kGPU, T> {
   }
 };
 
-#define INITIATE_CLIP_KERNEL_UTIL_GPU(dtype, dtype_v)                                           \
-  template struct ClipKernelUtil<DeviceType::kGPU, dtype>;                                      \
-  template void ClipKernelUtil<DeviceType::kGPU, dtype>::Forward(                               \
+#define INITIATE_CLIP_KERNEL_UTIL_CUDA(dtype, dtype_v)                                          \
+  template struct ClipKernelUtil<DeviceType::kCUDA, dtype>;                                     \
+  template void ClipKernelUtil<DeviceType::kCUDA, dtype>::Forward(                              \
       ep::Stream*, ClipByMinFunctor<dtype>, const int64_t n, const dtype*, dtype*);             \
-  template void ClipKernelUtil<DeviceType::kGPU, dtype>::Forward(                               \
+  template void ClipKernelUtil<DeviceType::kCUDA, dtype>::Forward(                              \
       ep::Stream*, ClipByMaxFunctor<dtype>, const int64_t n, const dtype*, dtype*);             \
-  template void ClipKernelUtil<DeviceType::kGPU, dtype>::Forward(                               \
+  template void ClipKernelUtil<DeviceType::kCUDA, dtype>::Forward(                              \
       ep::Stream*, ClipByMinMaxFunctor<dtype>, const int64_t n, const dtype*, dtype*);          \
-  template void ClipKernelUtil<DeviceType::kGPU, dtype>::Backward(                              \
+  template void ClipKernelUtil<DeviceType::kCUDA, dtype>::Backward(                             \
       ep::Stream*, ClipByMinGradFunctor<dtype>, const int64_t n, const dtype*, const dtype*,    \
       dtype*);                                                                                  \
-  template void ClipKernelUtil<DeviceType::kGPU, dtype>::Backward(                              \
+  template void ClipKernelUtil<DeviceType::kCUDA, dtype>::Backward(                             \
       ep::Stream*, ClipByMaxGradFunctor<dtype>, const int64_t n, const dtype*, const dtype*,    \
       dtype*);                                                                                  \
-  template void ClipKernelUtil<DeviceType::kGPU, dtype>::Backward(                              \
+  template void ClipKernelUtil<DeviceType::kCUDA, dtype>::Backward(                             \
       ep::Stream*, ClipByMinMaxGradFunctor<dtype>, const int64_t n, const dtype*, const dtype*, \
       dtype*);
 
-OF_PP_FOR_EACH_TUPLE(INITIATE_CLIP_KERNEL_UTIL_GPU, ARITHMETIC_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INITIATE_CLIP_KERNEL_UTIL_CUDA, ARITHMETIC_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

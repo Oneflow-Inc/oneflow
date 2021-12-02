@@ -48,7 +48,7 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
       std::string num = std::to_string(i);
       int32_t zero_count =
           std::max(part_name_suffix_length - static_cast<int32_t>(num.length()), 0);
-      data_file_paths_.push_back(
+      data_file_paths_.emplace_back(
           JoinPath(data_dir, part_name_prefix + std::string(zero_count, '0') + num));
     }
 
@@ -84,7 +84,7 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
     LoadTargetPtrList ret;
     LoadTargetPtr sample_ptr(new TensorBuffer());
     ReadSample(*sample_ptr);
-    ret.push_back(std::move(sample_ptr));
+    ret.emplace_back(std::move(sample_ptr));
     return ret;
   }
 
@@ -112,7 +112,9 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
 
   std::vector<std::string> GetLocalFilePaths() {
     std::vector<std::string> ret;
-    for (int i = range_.begin(); i < range_.end(); ++i) { ret.push_back(data_file_paths_.at(i)); }
+    for (int i = range_.begin(); i < range_.end(); ++i) {
+      ret.emplace_back(data_file_paths_.at(i));
+    }
     return ret;
   }
 

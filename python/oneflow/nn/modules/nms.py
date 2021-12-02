@@ -18,19 +18,6 @@ from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 
 
-class Nms(Module):
-    def __init__(self, iou_threshold: float) -> None:
-        super().__init__()
-        self.iou_threshold = iou_threshold
-
-    def forward(self, boxes, scores):
-        score_inds = flow.argsort(scores, dim=0, descending=True)
-        boxes = flow._C.gather(boxes, score_inds, axis=0)
-        keep = flow._C.nms(boxes, self.iou_threshold)
-        index = flow.squeeze(flow.argwhere(keep), dim=[1])
-        return flow._C.gather(score_inds, index, axis=0)
-
-
 @register_tensor_op("nms")
 def nms_op(boxes, scores, iou_threshold: float):
     """
@@ -51,4 +38,8 @@ def nms_op(boxes, scores, iou_threshold: float):
     Returns:
         Tensor: int64 tensor with the indices of the elements that have been kept by NMS, sorted in decreasing order of scores
     """
-    return Nms(iou_threshold=iou_threshold)(boxes, scores)
+    score_inds = flow.argsort(scores, dim=0, descending=True)
+    boxes = flow._C.gather(boxes, score_inds, axis=0)
+    keep = flow._C.nms(boxes, iou_threshold)
+    index = flow.squeeze(flow.argwhere(keep), dim=[1])
+    return flow._C.gather(score_inds, index, axis=0)

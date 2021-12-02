@@ -44,7 +44,7 @@ __global__ void DoCUDAReflectionPad2dGrad(const IN_T* src, IN_T* dest,
 };
 
 template<typename IN_T>
-struct ReflectionPad2dFunctor<DeviceType::kGPU, IN_T> final {
+struct ReflectionPad2dFunctor<DeviceType::kCUDA, IN_T> final {
   void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t y_height, int64_t y_width, int64_t x_height,
@@ -61,7 +61,7 @@ struct ReflectionPad2dFunctor<DeviceType::kGPU, IN_T> final {
 
 // float16 implementation
 template<>
-void ReflectionPad2dFunctor<DeviceType::kGPU, float16>::operator()(
+void ReflectionPad2dFunctor<DeviceType::kCUDA, float16>::operator()(
     ep::Stream* stream, const float16* src, float16* dest,
     const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch, int64_t n_channel,
     int64_t y_height, int64_t y_width, int64_t x_height, int64_t x_width, int64_t pad_left,
@@ -76,7 +76,7 @@ void ReflectionPad2dFunctor<DeviceType::kGPU, float16>::operator()(
 }
 
 template<typename IN_T>
-struct ReflectionPad2dGradFunctor<DeviceType::kGPU, IN_T> final {
+struct ReflectionPad2dGradFunctor<DeviceType::kCUDA, IN_T> final {
   void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t dy_height, int64_t dy_width, int64_t dx_height,
@@ -93,7 +93,7 @@ struct ReflectionPad2dGradFunctor<DeviceType::kGPU, IN_T> final {
 
 // float16 implementation
 template<>
-void ReflectionPad2dGradFunctor<DeviceType::kGPU, float16>::operator()(
+void ReflectionPad2dGradFunctor<DeviceType::kCUDA, float16>::operator()(
     ep::Stream* stream, const float16* src, float16* dest,
     const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch, int64_t n_channel,
     int64_t dy_height, int64_t dy_width, int64_t dx_height, int64_t dx_width, int64_t pad_left,
@@ -108,10 +108,12 @@ void ReflectionPad2dGradFunctor<DeviceType::kGPU, float16>::operator()(
 }
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REFLECTION_PAD2D_FUNCTOR,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU), PADDING_DATA_TYPE_GPU_SEQ);
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
+                                 PADDING_DATA_TYPE_CUDA_SEQ);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REFLECTION_PAD2D_GRAD_FUNCTOR,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU), PADDING_DATA_TYPE_GPU_SEQ);
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
+                                 PADDING_DATA_TYPE_CUDA_SEQ);
 
 template<typename IN_T>
 __global__ void DoCUDAReplicationPad2d(const IN_T* src, IN_T* dest,
@@ -134,7 +136,7 @@ __global__ void DoCUDAReplicationPad2dGrad(const IN_T* src, IN_T* dest,
 };
 
 template<typename IN_T>
-struct ReplicationPad2dFunctor<DeviceType::kGPU, IN_T> final {
+struct ReplicationPad2dFunctor<DeviceType::kCUDA, IN_T> final {
   void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t y_height, int64_t y_width, int64_t x_height,
@@ -151,7 +153,7 @@ struct ReplicationPad2dFunctor<DeviceType::kGPU, IN_T> final {
 
 // float16 implementation
 template<>
-void ReplicationPad2dFunctor<DeviceType::kGPU, float16>::operator()(
+void ReplicationPad2dFunctor<DeviceType::kCUDA, float16>::operator()(
     ep::Stream* stream, const float16* src, float16* dest,
     const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch, int64_t n_channel,
     int64_t y_height, int64_t y_width, int64_t x_height, int64_t x_width, int64_t pad_left,
@@ -166,7 +168,7 @@ void ReplicationPad2dFunctor<DeviceType::kGPU, float16>::operator()(
 }
 
 template<typename IN_T>
-struct ReplicationPad2dGradFunctor<DeviceType::kGPU, IN_T> final {
+struct ReplicationPad2dGradFunctor<DeviceType::kCUDA, IN_T> final {
   void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t dy_height, int64_t dy_width, int64_t dx_height,
@@ -183,7 +185,7 @@ struct ReplicationPad2dGradFunctor<DeviceType::kGPU, IN_T> final {
 
 // float16 implementation
 template<>
-void ReplicationPad2dGradFunctor<DeviceType::kGPU, float16>::operator()(
+void ReplicationPad2dGradFunctor<DeviceType::kCUDA, float16>::operator()(
     ep::Stream* stream, const float16* src, float16* dest,
     const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch, int64_t n_channel,
     int64_t dy_height, int64_t dy_width, int64_t dx_height, int64_t dx_width, int64_t pad_left,
@@ -198,10 +200,12 @@ void ReplicationPad2dGradFunctor<DeviceType::kGPU, float16>::operator()(
 }
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REPLICATION_PAD2D_FUNCTOR,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU), PADDING_DATA_TYPE_GPU_SEQ);
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
+                                 PADDING_DATA_TYPE_CUDA_SEQ);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REPLICATION_PAD2D_GRAD_FUNCTOR,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU), PADDING_DATA_TYPE_GPU_SEQ);
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
+                                 PADDING_DATA_TYPE_CUDA_SEQ);
 
 template<typename IN_T>
 __global__ void DoCUDAConstantPad2d(const IN_T* src, IN_T* dest,
@@ -225,7 +229,7 @@ __global__ void DoCUDAConstantPad2dGrad(const IN_T* src, IN_T* dest,
 };
 
 template<typename IN_T>
-struct ConstantPad2dFunctor<DeviceType::kGPU, IN_T> final {
+struct ConstantPad2dFunctor<DeviceType::kCUDA, IN_T> final {
   void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t y_height, int64_t y_width, int64_t x_height,
@@ -242,7 +246,7 @@ struct ConstantPad2dFunctor<DeviceType::kGPU, IN_T> final {
 
 // float16 implementation
 template<>
-void ConstantPad2dFunctor<DeviceType::kGPU, float16>::operator()(
+void ConstantPad2dFunctor<DeviceType::kCUDA, float16>::operator()(
     ep::Stream* stream, const float16* src, float16* dest,
     const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch, int64_t n_channel,
     int64_t y_height, int64_t y_width, int64_t x_height, int64_t x_width, int64_t pad_left,
@@ -258,7 +262,7 @@ void ConstantPad2dFunctor<DeviceType::kGPU, float16>::operator()(
 }
 
 template<typename IN_T>
-struct ConstantPad2dGradFunctor<DeviceType::kGPU, IN_T> final {
+struct ConstantPad2dGradFunctor<DeviceType::kCUDA, IN_T> final {
   void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t dy_height, int64_t dy_width, int64_t dx_height,
@@ -275,7 +279,7 @@ struct ConstantPad2dGradFunctor<DeviceType::kGPU, IN_T> final {
 
 // float16 implementation
 template<>
-void ConstantPad2dGradFunctor<DeviceType::kGPU, float16>::operator()(
+void ConstantPad2dGradFunctor<DeviceType::kCUDA, float16>::operator()(
     ep::Stream* stream, const float16* src, float16* dest,
     const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch, int64_t n_channel,
     int64_t dy_height, int64_t dy_width, int64_t dx_height, int64_t dx_width, int64_t pad_left,
@@ -290,10 +294,12 @@ void ConstantPad2dGradFunctor<DeviceType::kGPU, float16>::operator()(
 }
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CONSTANT_PAD2D_FUNCTOR,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU), PADDING_DATA_TYPE_GPU_SEQ);
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
+                                 PADDING_DATA_TYPE_CUDA_SEQ);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CONSTANT_PAD2D_GRAD_FUNCTOR,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU), PADDING_DATA_TYPE_GPU_SEQ);
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
+                                 PADDING_DATA_TYPE_CUDA_SEQ);
 }  // namespace user_op
 }  // namespace oneflow
 
