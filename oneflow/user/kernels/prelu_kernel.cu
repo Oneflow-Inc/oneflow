@@ -256,7 +256,7 @@ class GpuPReluKernel final : public user_op::OpKernel {
       PReluForwardSingleAlphaGpu<T>
           <<<grid_size, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
               elem_cnt, x->dptr<T>(), alpha->dptr<T>(), y->mut_dptr<T>());
-    } else if (inner_size % alpha_size != 0) {
+    } else if (inner_size % pack_size != 0) {
       PReluForwardNaiveMultiAlphaGpu<T>
           <<<grid_size, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
               elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), y->mut_dptr<T>());
