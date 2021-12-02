@@ -1262,14 +1262,15 @@ add_docstr(
     .. code-block:: python
         
         >>> import oneflow as flow
-        >>> t = flow.Tensor([[[-0.1523],
+        
+        >>> t = flow.tensor([[[-0.1523],
                 [-0.6242]],
 
                 [[-0.1521],
                 [ 0.5220]],
 
                 [[-0.2166],
-                [ 1.5300]]])
+                [ 1.5300]]],dtype=flow.float32)
         >>> t
         tensor([[[-0.1523],
                 [-0.6242]],
