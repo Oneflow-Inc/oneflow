@@ -131,7 +131,7 @@ class CombinedMarginLossGradCpuKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const T* dy_ptr = dy->dptr<T>();
@@ -141,8 +141,8 @@ class CombinedMarginLossGradCpuKernel final : public user_op::OpKernel {
     const float m1 = ctx->Attr<float>("m1");
     const float m2 = ctx->Attr<float>("m2");
     int64_t lower_bound = 0;
-    if (state != nullptr) {
-      auto* kernel_state = dynamic_cast<CombinedMarginLossOpKernelCache*>(state);
+    if (cache != nullptr) {
+      auto* kernel_state = dynamic_cast<const CombinedMarginLossOpKernelCache*>(cache);
       CHECK_NOTNULL(kernel_state);
       CHECK_EQ(dy->shape().Count(1), kernel_state->upper() - kernel_state->lower());
       lower_bound = kernel_state->lower();
