@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+import os
 import oneflow as flow
 from oneflow.nn.parallel import DistributedDataParallel as ddp
 import oneflow.unittest
@@ -75,7 +76,9 @@ def train(test_case, train_x, device, output, requires_grad):
 class TestDdpMultmpleOutputs(flow.unittest.TestCase):
     def test_outputs_float32(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["device"] = [
+            "cpu"
+        ] if os.getenv("ONEFLOW_TEST_CPU_ONLY") else ["cpu", "cuda"]
         arg_dict["output"] = [train_float32]
         arg_dict["requires_grad"] = [True, False]
         for arg in GenArgDict(arg_dict):
@@ -83,7 +86,9 @@ class TestDdpMultmpleOutputs(flow.unittest.TestCase):
 
     def test_outputs_int32(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["device"] = [
+            "cpu"
+        ] if os.getenv("ONEFLOW_TEST_CPU_ONLY") else ["cpu", "cuda"]
         arg_dict["output"] = [train_int32]
         arg_dict["requires_grad"] = [False]
         for arg in GenArgDict(arg_dict):

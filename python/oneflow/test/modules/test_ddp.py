@@ -28,7 +28,6 @@ def np_allclose_with_shape(a, b, *args, **kwargs):
     return np.allclose(a, b, *args, **kwargs)
 
 
-
 @flow.unittest.skip_unless_1n2d()
 class TestDDP(flow.unittest.TestCase):
     def _test_ddp_basic(test_case, dev_type):
@@ -55,8 +54,7 @@ class TestDDP(flow.unittest.TestCase):
         y.sum().backward()
 
         test_case.assertTrue(
-            np_allclose_with_shape(m.w.grad.numpy(), np.array([1.5, 1.5]))
-        )
+            np_allclose_with_shape(m.w.grad.numpy(), np.array([1.5, 1.5])))
 
     def test_ddp_basic(test_case):
         for dev_type in ["cuda", "cpu"]:
@@ -90,16 +88,19 @@ class TestDDP(flow.unittest.TestCase):
         y = m(x)
         y.backward()
 
-        test_case.assertTrue(np_allclose_with_shape(m.w.grad.numpy(), np.array([2])))
         test_case.assertTrue(
-            np_allclose_with_shape(m.used_only_in_rank0.grad.numpy(), np.array([0.5]))
-        )
+            np_allclose_with_shape(m.w.grad.numpy(), np.array([2])))
         test_case.assertTrue(
-            np_allclose_with_shape(m.unused_in_all_ranks.grad.numpy(), np.array([0]))
-        )
+            np_allclose_with_shape(m.used_only_in_rank0.grad.numpy(),
+                                   np.array([0.5])))
+        test_case.assertTrue(
+            np_allclose_with_shape(m.unused_in_all_ranks.grad.numpy(),
+                                   np.array([0])))
 
     def test_ddp_with_unused_param(test_case):
-        for dev_type in ["cuda", "cpu"]:
+        device = ["cpu"
+                  ] if os.getenv("ONEFLOW_TEST_CPU_ONLY") else ["cpu", "cuda"]
+        for dev_type in device:
             test_case._test_ddp_with_unused_param(dev_type)
 
     def _test_out_of_order_execution(test_case, dev_type):
@@ -135,12 +136,17 @@ class TestDDP(flow.unittest.TestCase):
         y = m(x)
         y.backward()
 
-        test_case.assertTrue(np_allclose_with_shape(m.w1.grad.numpy(), np.array([9])))
-        test_case.assertTrue(np_allclose_with_shape(m.w2.grad.numpy(), np.array([4.5])))
-        test_case.assertTrue(np_allclose_with_shape(m.w3.grad.numpy(), np.array([3])))
+        test_case.assertTrue(
+            np_allclose_with_shape(m.w1.grad.numpy(), np.array([9])))
+        test_case.assertTrue(
+            np_allclose_with_shape(m.w2.grad.numpy(), np.array([4.5])))
+        test_case.assertTrue(
+            np_allclose_with_shape(m.w3.grad.numpy(), np.array([3])))
 
     def test_out_of_order_execution(test_case):
-        for dev_type in ["cuda", "cpu"]:
+        device = ["cpu"
+                  ] if os.getenv("ONEFLOW_TEST_CPU_ONLY") else ["cpu", "cuda"]
+        for dev_type in device:
             test_case._test_out_of_order_execution(dev_type)
 
     def _test_broadcast_buffer(test_case, dev_type):
@@ -174,20 +180,30 @@ class TestDDP(flow.unittest.TestCase):
         y4 = m(x)
 
         if rank == 0:
-            test_case.assertTrue(np_allclose_with_shape(y1.numpy(), np.array([3, 5])))
-            test_case.assertTrue(np_allclose_with_shape(y2.numpy(), np.array([4, 6])))
-            test_case.assertTrue(np_allclose_with_shape(y3.numpy(), np.array([3, 5])))
-            test_case.assertTrue(np_allclose_with_shape(y4.numpy(), np.array([4, 6])))
+            test_case.assertTrue(
+                np_allclose_with_shape(y1.numpy(), np.array([3, 5])))
+            test_case.assertTrue(
+                np_allclose_with_shape(y2.numpy(), np.array([4, 6])))
+            test_case.assertTrue(
+                np_allclose_with_shape(y3.numpy(), np.array([3, 5])))
+            test_case.assertTrue(
+                np_allclose_with_shape(y4.numpy(), np.array([4, 6])))
         elif rank == 1:
-            test_case.assertTrue(np_allclose_with_shape(y1.numpy(), np.array([5, 8])))
-            test_case.assertTrue(np_allclose_with_shape(y2.numpy(), np.array([6, 9])))
-            test_case.assertTrue(np_allclose_with_shape(y3.numpy(), np.array([6, 10])))
-            test_case.assertTrue(np_allclose_with_shape(y4.numpy(), np.array([8, 12])))
+            test_case.assertTrue(
+                np_allclose_with_shape(y1.numpy(), np.array([5, 8])))
+            test_case.assertTrue(
+                np_allclose_with_shape(y2.numpy(), np.array([6, 9])))
+            test_case.assertTrue(
+                np_allclose_with_shape(y3.numpy(), np.array([6, 10])))
+            test_case.assertTrue(
+                np_allclose_with_shape(y4.numpy(), np.array([8, 12])))
         else:
             raise ValueError()
 
     def test_broadcast_buffer(test_case):
-        for dev_type in ["cuda", "cpu"]:
+        device = ["cpu"
+                  ] if os.getenv("ONEFLOW_TEST_CPU_ONLY") else ["cpu", "cuda"]
+        for dev_type in device:
             test_case._test_broadcast_buffer(dev_type)
 
 
