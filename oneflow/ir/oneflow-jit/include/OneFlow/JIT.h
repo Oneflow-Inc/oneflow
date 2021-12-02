@@ -166,7 +166,8 @@ class ProcessOpContext {
 
 class ProcessFuncContext {
  public:
-  ProcessFuncContext() = default;
+  ProcessFuncContext(llvm::StringRef name, const std::vector<std::shared_ptr<one::Tensor>>& args)
+      : func_name_(name), forward_args_(args){};
   ProcessFuncContext(ProcessFuncContext&&) = default;
   ProcessFuncContext(const ProcessFuncContext&) = default;
   ProcessFuncContext& operator=(ProcessFuncContext&&) = default;
@@ -181,7 +182,12 @@ class ProcessFuncContext {
     return intermediate_tensors_mapping_;
   }
 
+  const std::string& GetFuncName() { return func_name_; }
+  const std::vector<std::shared_ptr<one::Tensor>>& GetArgs() { return forward_args_; }
+
  private:
+  std::string func_name_;
+  std::vector<std::shared_ptr<one::Tensor>> forward_args_;
   llvm::DenseMap<Tensor*, mlir::Value> value_mapping_;
   llvm::DenseMap<Value, std::shared_ptr<TensorRef>> intermediate_tensors_mapping_;
 };
@@ -225,28 +231,39 @@ class JitImporter : public Importer {
   void SetParallelDesc(const std::shared_ptr<const ParallelDesc>& parallel_desc) {
     GetProcessOpContext().SetParallelDesc(parallel_desc);
   }
-  LogicalResult FinalizeProcessFunction();
+  FuncOp FinalizeProcessFunction();
   ProcessOpContext& GetProcessOpContext() { return process_op_context_; }
   const llvm::DenseMap<Value, std::shared_ptr<TensorRef>>& GetIntermediateTensorsMapping() {
-    return process_func_context_.GetIntermediateTensorsMapping();
+    CHECK(process_func_context_.hasValue());
+    return process_func_context_->GetIntermediateTensorsMapping();
   }
   const llvm::DenseMap<Tensor*, mlir::Value>& GetValueMapping() {
-    return process_func_context_.GetValueMapping();
+    CHECK(process_func_context_.hasValue());
+    return process_func_context_->GetValueMapping();
   }
   void SaveIntermediate(Value v, std::shared_ptr<TensorRef> r) {
-    process_func_context_.InsertIntermediateTensor(v, std::move(r));
+    CHECK(process_func_context_.hasValue());
+    process_func_context_->InsertIntermediateTensor(v, std::move(r));
   }
   void TrackTensorAndValue(Tensor* t, mlir::Value v) {
-    process_func_context_.InsertValueMapping(t, v);
+    CHECK(process_func_context_.hasValue());
+    process_func_context_->InsertValueMapping(t, v);
   }
+  const std::vector<std::shared_ptr<one::Tensor>>& GetJitForwardArgs() {
+    CHECK(process_func_context_.hasValue());
+    return process_func_context_->GetArgs();
+  }
+  const std::string& GetJitFuncName() { return process_func_context_.getValue().GetFuncName(); }
+  void StartProcessFunc(llvm::StringRef name,
+                        const std::vector<std::shared_ptr<one::Tensor>>& args);
 
  private:
   // reset every func
-  ProcessFuncContext process_func_context_;
+  llvm::Optional<ProcessFuncContext> process_func_context_;
   // reset every op
   ProcessOpContext process_op_context_;
   // persistent
-  DenseMap<llvm::hash_code, std::string> func_hash_symbol_mapping_;
+  DenseMap<llvm::hash_code, FuncOp> func_hash_symbol_mapping_;
 };
 
 OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context);

@@ -35,14 +35,6 @@ bool* MutJitEnabled();
 
 bool IsJitEnabled();
 
-std::string* MutJitFuncName();
-
-const std::string& GetJitFuncName();
-
-void SetJitForwardArgs(const std::vector<std::shared_ptr<one::Tensor>>& tensors);
-
-const std::vector<std::shared_ptr<one::Tensor>>& GetJitForwardArgs();
-
 void SetJitInterpreter(const std::shared_ptr<OpExprInterpreter>& jit_interpreter);
 
 std::shared_ptr<AutogradInterpreter> GetAutogradJitInterpreter();

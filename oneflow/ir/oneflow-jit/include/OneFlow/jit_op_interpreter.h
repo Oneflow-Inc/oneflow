@@ -30,27 +30,6 @@ namespace one {
 
 using namespace mlir;
 
-class JitFunctionContext {
- public:
-  JitFunctionContext() = default;
-  JitFunctionContext(const std::string& func_name,
-                     const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors)
-      : func_name_(func_name), forward_args_(arg_tensors){};
-  JitFunctionContext(JitFunctionContext&&) = default;
-  JitFunctionContext(const JitFunctionContext&) = default;
-  JitFunctionContext& operator=(JitFunctionContext&&) = default;
-  JitFunctionContext& operator=(const JitFunctionContext&) = default;
-  ~JitFunctionContext() = default;
-
-  std::string GetFuncName() { return func_name_; }
-  const std::string& GetJitFuncName() { return func_name_; }
-  const std::vector<std::shared_ptr<one::Tensor>>& GetJitForwardArgs() { return forward_args_; }
-
- private:
-  std::string func_name_;
-  std::vector<std::shared_ptr<one::Tensor>> forward_args_;
-};
-
 class JitInterpreter : public OpExprInterpreter {
  public:
   JitInterpreter()
@@ -84,15 +63,10 @@ class JitInterpreter : public OpExprInterpreter {
                                .count();
     return mlir_trace_time / jit_time;
   }
-  void Trace(ir::JitImporter& importer, const std::string& func_name,
-             const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
-             const std::function<std::vector<std::shared_ptr<one::Tensor>>(void)>& forward_func);
-  void DispatchModule(ModuleOp module, const std::string& func_name,
-                      const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors);
-  const std::string& GetJitFuncName() const { return jit_function_context_.GetJitFuncName(); }
-  const std::vector<std::shared_ptr<one::Tensor>>& GetJitForwardArgs() const {
-    return jit_function_context_.GetJitForwardArgs();
-  }
+  FuncOp Trace(ir::JitImporter& importer, const std::string& func_name,
+               const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
+               const std::function<std::vector<std::shared_ptr<one::Tensor>>(void)>& forward_func);
+  void DispatchFunc(FuncOp func, const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors);
 
  private:
   DECLARE_NORMAL_APPLY_FUNC(UserOp);  // note(BBuf) jit deal with user op only, now.
@@ -104,7 +78,6 @@ class JitInterpreter : public OpExprInterpreter {
   mutable std::chrono::steady_clock::time_point trace_start_time_;
   mutable std::chrono::steady_clock::time_point trace_end_time_;
   mutable std::chrono::steady_clock::time_point dispatch_end_time_;
-  mutable JitFunctionContext jit_function_context_;
 };
 
 }  // namespace one

@@ -251,26 +251,6 @@ bool* MutJitEnabled() {
 
 bool IsJitEnabled() { return *MutJitEnabled(); }
 
-std::string* MutJitFuncName() {
-  static std::string func_name = "";
-  return &func_name;
-}
-
-const std::string& GetJitFuncName() { return *MutJitFuncName(); }
-
-std::vector<std::shared_ptr<one::Tensor>>* MutJitForwardArgs() {
-  static std::vector<std::shared_ptr<one::Tensor>> arg_tensors{};
-  return &arg_tensors;
-}
-
-void SetJitForwardArgs(const std::vector<std::shared_ptr<one::Tensor>>& tensors) {
-  *MutJitForwardArgs() = tensors;
-}
-
-const std::vector<std::shared_ptr<one::Tensor>>& GetJitForwardArgs() {
-  return *MutJitForwardArgs();
-}
-
 #endif  // WITH_MLIR
 
 }  // namespace one

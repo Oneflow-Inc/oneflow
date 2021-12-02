@@ -276,12 +276,14 @@ LogicalResult JitImporter::InsertOpResults(const ::oneflow::OperatorConf& op_con
   return success();
 }
 
-mlir::FuncOp JitImporter::GetOrInsertFunc(const std::string& func_name) {
+void JitImporter::StartProcessFunc(llvm::StringRef func_name,
+                                   const std::vector<std::shared_ptr<one::Tensor>>& args) {
+  process_func_context_ = ProcessFuncContext(func_name, args);
   auto result_types = llvm::SmallVector<Type, 8>();
   SymbolTable symbol_table(GetModule());
   FuncOp found_func = symbol_table.lookup<FuncOp>(func_name);
   if (found_func) {
-    return found_func;
+    return;
   } else {
     auto arg_tensors = GetJitForwardArgs();
     auto arg_types = llvm::SmallVector<Type, 8>();
@@ -303,8 +305,7 @@ mlir::FuncOp JitImporter::GetOrInsertFunc(const std::string& func_name) {
     }
     GetBuilder().setInsertionPointToStart(entryBlock);
     GetModule().push_back(function);
-    LOG(ERROR) << "func created: " << func_name;
-    return function;
+    LOG(ERROR) << "arg_tensors size: " << arg_tensors.size();
   }
 }
 
@@ -377,22 +378,21 @@ llvm::Optional<mlir::Value> JitImporter::GetResultByBnAndIndex(const std::string
   }
 }
 
-LogicalResult JitImporter::FinalizeProcessFunction() {
+FuncOp JitImporter::FinalizeProcessFunction() {
   llvm::SmallVector<Value, 8> return_values{};
   llvm::SmallVector<Type, 8> out_types{};
   SymbolTable symbol_table(GetModule());
   auto func_name = GetJitFuncName();
   auto function = symbol_table.lookup<FuncOp>(func_name);
-  if (!function) { return GetModule().emitError("function not found: " + func_name); }
+  if (!function) { LOG(FATAL) << "function not found: " << func_name; }
   llvm::hash_code function_hash{};
   auto it = func_hash_symbol_mapping_.find(function_hash);
   if (it != func_hash_symbol_mapping_.end()) {
     function.erase();
     llvm::errs() << "cache hit: " << func_name << " -> " << it->second << "\n";
-    *MutJitFuncName() = it->second;
-    return success();
+    return it->second;
   }
-  func_hash_symbol_mapping_.insert({function_hash, func_name});
+  func_hash_symbol_mapping_.insert({function_hash, function});
   auto return_op = GetBuilder().create<ReturnOp>(GetModule()->getLoc(), return_values);
   CHECK(return_op);
   llvm::errs() << function.sym_name() << ", "
@@ -405,7 +405,8 @@ LogicalResult JitImporter::FinalizeProcessFunction() {
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createCreateComputeCtxPass());
   pm.addPass(::mlir::oneflow::createFuseIntoExistingOpPass());
   // function->dump();
-  return pm.run(function);
+  CHECK(pm.run(function).succeeded());
+  return function;
 }
 
 }  // namespace ir

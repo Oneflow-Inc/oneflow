@@ -88,19 +88,13 @@ void InsertLbnSegmentIntoVec(Operation* op, std::vector<std::string>& indexed_bn
   }
 }
 
-void JitInterpreter::DispatchModule(ModuleOp module, const std::string& func_name,
-                                    const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors) {
+void JitInterpreter::DispatchFunc(FuncOp func_op,
+                                  const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors) {
   llvm::DenseMap<Value, std::shared_ptr<Tensor>> mapping;
   // TODO: handle the case if there are more than one function in the module.
-  SymbolTable symbol_table(module);
-  auto function = symbol_table.lookup(func_name);
-  if (!function) {
-    module->dump();
-    LOG(FATAL) << "The function " << func_name << " is not found in the module.";
-  }
   llvm::DenseSet<Value> values_to_materialize{};
   const bool was_interrupted =
-      function
+      func_op
           ->walk([&](mlir::Operation* op) {
             if (llvm::dyn_cast<mlir::oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
               if (auto expr = GetExpr(op)) {
@@ -153,12 +147,12 @@ void JitInterpreter::DispatchModule(ModuleOp module, const std::string& func_nam
 }
 
 void JitInterpreter::Interrupt() {
-  CHECK(GetImporter().FinalizeProcessFunction().succeeded());
+  FuncOp func_op = GetImporter().FinalizeProcessFunction();
   if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module_->print(llvm::outs()); }
   MlirTraceEnd();
   std::vector<std::shared_ptr<one::Tensor>> ret{};
   for (const auto& kv : GetImporter().GetIntermediateTensorsMapping()) { ret.push_back(kv.second); }
-  DispatchModule(*module_, GetJitFuncName(), GetJitForwardArgs());
+  DispatchFunc(func_op, importer_.GetJitForwardArgs());
 }
 
 Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
@@ -178,7 +172,6 @@ Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTup
   CHECK_EQ_OR_RETURN(outputs->size(), op_expr.output_size());
   auto indexed_arg_name_and_index = op_expr.input_arg_tuple()->indexed_arg_name_and_index();
   CHECK_EQ_OR_RETURN(indexed_arg_name_and_index.size(), inputs.size());
-  GetImporter().GetOrInsertFunc(GetJitFuncName());
   GetImporter().CreateOperandMapping(*op_conf, parallel_desc, op_expr.input_arg_tuple(), inputs,
                                      outputs);
   CHECK_OR_RETURN(GetImporter().ProcessUserOp(*op_conf).succeeded());
@@ -213,17 +206,16 @@ llvm::Optional<std::shared_ptr<one::UserOpExpr>> JitInterpreter::GetExpr(Operati
   return None;
 }
 
-void JitInterpreter::Trace(
+FuncOp JitInterpreter::Trace(
     ir::JitImporter& importer, const std::string& func_name,
     const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
     const std::function<std::vector<std::shared_ptr<one::Tensor>>(void)>& forward_func) {
   Start();
   current_importer_ = &importer;  // TODO: extract function
   LOG(ERROR) << "importer reset";
-  JitFunctionContext jit_function_context_(func_name, arg_tensors);
+  importer.StartProcessFunc(func_name, arg_tensors);
   auto return_tensors = forward_func();
-  CHECK(importer.FinalizeProcessFunction().succeeded());
-  MlirTraceEnd();
+  return importer.FinalizeProcessFunction();
 }
 
 std::shared_ptr<JitInterpreter> JitInterpreter::Get() {

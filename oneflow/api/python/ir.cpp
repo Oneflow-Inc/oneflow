@@ -59,15 +59,16 @@ struct Module {
     arg_tensors.insert(arg_tensors.end(), parameters.begin(), parameters.end());
     py::object ret;
     std::vector<std::shared_ptr<one::Tensor>> tensors_to_materialize{};
-    jit_interpreter->Trace(importer_, func_name, arg_tensors, [&]() {
+    FuncOp func_op = jit_interpreter->Trace(importer_, func_name, arg_tensors, [&]() {
       ret = py_module_.attr("forward")(*args, **kwargs);
       if (auto tensor = ret.cast<std::shared_ptr<one::Tensor>>()) {
         tensors_to_materialize.push_back(tensor);
       }
       return tensors_to_materialize;
     });
+    jit_interpreter->MlirTraceEnd();
     *one::MutJitEnabled() = false;
-    jit_interpreter->DispatchModule(*module_, one::GetJitFuncName(), arg_tensors);
+    jit_interpreter->DispatchFunc(func_op, arg_tensors);
     jit_interpreter->End();
     LOG(ERROR) << "JIT trace overhead: " << jit_interpreter->TraceOverhead();
     nth_call_ += 1;
@@ -89,7 +90,6 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
         [](const std::string& lib_path) { MutSharedLibPaths()->insert(lib_path); });
   m.def("toggle_jit", [](const std::string& func_name) {
     *one::MutJitEnabled() = !*one::MutJitEnabled();
-    *one::MutJitFuncName() = func_name;
     // when false => true, start jit
     auto jit_interpreter =
         std::dynamic_pointer_cast<one::JitInterpreter>(one::JitInterpreter::Get());
@@ -107,7 +107,7 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
                                    const std::vector<std::shared_ptr<one::Tensor>>& parameters) {
     auto arg_tensors(tensors);
     for (const auto& p : parameters) { arg_tensors.push_back((p)); }
-    SetJitForwardArgs(arg_tensors);
+    TODO() << "set global fw args";
   });
 
   py::class_<jit::Module, std::shared_ptr<jit::Module>>(m, "JitModule")
