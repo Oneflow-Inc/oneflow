@@ -218,8 +218,8 @@ void JitInterpreter::Trace(
     const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
     const std::function<std::vector<std::shared_ptr<one::Tensor>>(void)>& forward_func) {
   Start();
-  LOG(ERROR) << "importer reset";
   current_importer_ = &importer;  // TODO: extract function
+  LOG(ERROR) << "importer reset";
   JitFunctionContext jit_function_context_(func_name, arg_tensors);
   auto return_tensors = forward_func();
   CHECK(importer.FinalizeProcessFunction().succeeded());
