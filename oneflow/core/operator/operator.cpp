@@ -456,13 +456,13 @@ Maybe<const Shape> Operator::GetInputOutputFastestTimeShape() const {
   return input_output_fastest_time_shape_;
 }
 
+bool Operator::AddBroadcast() const { return true; }
+
 Maybe<void> Operator::GetSbpSignaturesIf(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, cfg::SbpSignatureList* sbp_sig_list) const {
   JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, parallel_desc, sbp_sig_list));
-  // Not supporting broadcast sbp for some operator
-  // TODO: Instead of adding judgement here, we might figure out another way to do so
-  if (!op_conf().has_output_conf()) {
+  if (AddBroadcast()) {
     SbpSignatureBuilder()
         .Broadcast(input_bns())
         .Broadcast(output_bns())

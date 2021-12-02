@@ -114,6 +114,8 @@ Symbol<OperatorConf> OutputOp::GetOpConfWithoutOpNameAndLbn() const {
   return SymbolOf(this->op_conf());
 }
 
+bool OutputOp::AddBroadcast() const { return false; }
+
 REGISTER_OP(OperatorConf::kOutputConf, OutputOp);
 REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kOutputConf, 1);
 REGISTER_INTERFACE_OP(OperatorConf::kOutputConf);
