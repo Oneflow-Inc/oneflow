@@ -154,7 +154,6 @@ int JpegPartialDecode(const unsigned char* data, size_t length, RandomCropGenera
   struct jpeg_decompress_struct cinfo = {};
   struct jpeg_error_mgr jerr = {};
   int crop_x = 0, crop_y = 0, crop_w = 0, crop_h = 0, rc = 0;
-  unsigned int tmp = 0;
   unsigned char* crop_buf = nullptr;
 
   cinfo.err = jpeg_std_error(&jerr);
@@ -189,7 +188,7 @@ int JpegPartialDecode(const unsigned char* data, size_t length, RandomCropGenera
 
   jpeg_crop_scanline(&cinfo, &u_crop_x, &u_crop_w);
   int row_stride = u_crop_w * pixel_size;
-  if ((tmp = jpeg_skip_scanlines(&cinfo, u_crop_y)) != u_crop_y) { return -2; }
+  if (jpeg_skip_scanlines(&cinfo, u_crop_y) != u_crop_y) { return -2; }
 
   while (cinfo.output_scanline < u_crop_y + u_crop_h) {
     unsigned char* buffer_array[1];
