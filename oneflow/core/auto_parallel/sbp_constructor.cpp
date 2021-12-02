@@ -144,15 +144,16 @@ Maybe<void> SbpConstructor::FillSbpSignatureForOpNode(const OpGraph& op_graph, c
     auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc&> {
       auto it = ibn2blob_desc.find(ibn);
       if (it == ibn2blob_desc.end()) {
-        return Error::CheckFailedError()
-               << "cannot find corresponding blob description for input_blob_name : " << ibn;
+        return Error::InvalidValueError(
+            "Cannot find corresponding blob description for input_blob_name : " + ibn + " in "
+            + op_node->op().op_name());
       }
       return *(it->second);
     };
     // Get all valid sbp_signatures
     SbpNode<cfg::NdSbpSignature>* sbp_node = op_name2sbp_node_[op_node->op().op_name()];
-    JUST(op_node->op().GetNdSbpSignaturesIf(LogicalBlobDesc4Ibn, op_node->parallel_desc(),
-                                            sbp_node->SbpSignatureObjList));
+    JUST(op_node->op().GetValidNdSbpSignatureList(LogicalBlobDesc4Ibn, op_node->parallel_desc(),
+                                                  sbp_node->SbpSignatureObjList));
     sbp_node->InitializeSbp();
     return Maybe<void>::Ok();
   }));
@@ -176,9 +177,9 @@ Maybe<void> SbpConstructor::InitComputationCost(const OpGraph& op_graph) {
       double comp_cost = JUST(op_node->op().GetComputeComplexity(
           sbp_node->SbpSignatureList[sbp_id], logical_blob_desc4bn, parallel_desc));
       if (comp_cost > cut_cost) {
-        sbp_node->Cost[sbp_id] = comp_cost;
+        sbp_node->Cost.at(sbp_id) = comp_cost;
       } else {
-        sbp_node->Cost[sbp_id] = cost_ratio_ * comp_cost;
+        sbp_node->Cost.at(sbp_id) = cost_ratio_ * comp_cost;
       }
     }
     return Maybe<void>::Ok();

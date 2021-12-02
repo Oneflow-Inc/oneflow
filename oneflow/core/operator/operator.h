@@ -138,10 +138,6 @@ class Operator {
   Maybe<const Shape> GetInputBlobFastestTimeShape() const;
   Maybe<const Shape> GetInputOutputFastestTimeShape() const;
 
-  Maybe<cfg::SbpSignatureList> GetValidSbpSignatureList(
-      const ParallelDesc& parallel_desc,
-      const std::function<Maybe<const NdSbpInferHint*>(const std::string&)>& NdSbpInferHint4Ibn)
-      const;
   Maybe<void> InferSbpSignature(cfg::SbpSignature* sbp_signature,
                                 const cfg::SbpSignature& sbp_sig_conf,
                                 const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint) const;
@@ -175,9 +171,9 @@ class Operator {
       cfg::NdSbpSignature* sbp_signature,
       std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
       const ParallelDesc& parallel_desc) const;
-  Maybe<void> GetNdSbpSignaturesIf(
+  Maybe<void> GetValidNdSbpSignatureList(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& ndsbp_sig_list) const;
+      const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const;
 
   void ForEachBnInOp(const std::function<void(const std::string&)>&) const;
 
