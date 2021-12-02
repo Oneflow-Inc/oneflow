@@ -151,11 +151,11 @@ class CpuDecodeHandle final : public DecodeHandle {
 int JpegPartialDecode(const unsigned char* data, size_t length, RandomCropGenerator* crop_generator,
                       unsigned char* workspace, size_t workspace_size, unsigned char* dst,
                       int target_width, int target_height) {
-  struct jpeg_decompress_struct cinfo;
-  struct jpeg_error_mgr jerr;
-  int row_stride, width, height, pixel_size, crop_x, crop_y, crop_w, crop_h, rc;
-  unsigned int tmp;
-  unsigned char* crop_buf;
+  struct jpeg_decompress_struct cinfo = {};
+  struct jpeg_error_mgr jerr = {};
+  int crop_x = 0, crop_y = 0, crop_w = 0, crop_h = 0, rc = 0;
+  unsigned int tmp = 0;
+  unsigned char* crop_buf = nullptr;
 
   cinfo.err = jpeg_std_error(&jerr);
   jpeg_create_decompress(&cinfo);
@@ -165,9 +165,9 @@ int JpegPartialDecode(const unsigned char* data, size_t length, RandomCropGenera
   if (rc != 1) { return -1; }
 
   jpeg_start_decompress(&cinfo);
-  width = cinfo.output_width;
-  height = cinfo.output_height;
-  pixel_size = cinfo.output_components;
+  int width = cinfo.output_width;
+  int height = cinfo.output_height;
+  int pixel_size = cinfo.output_components;
 
   if (width * height * pixel_size > workspace_size) {
     std::vector<unsigned char> tmp_buf(width * height * pixel_size);
@@ -188,7 +188,7 @@ int JpegPartialDecode(const unsigned char* data, size_t length, RandomCropGenera
   unsigned int u_crop_x = crop_x, u_crop_y = crop_y, u_crop_w = crop_w, u_crop_h = crop_h;
 
   jpeg_crop_scanline(&cinfo, &u_crop_x, &u_crop_w);
-  row_stride = u_crop_w * pixel_size;
+  int row_stride = u_crop_w * pixel_size;
   if ((tmp = jpeg_skip_scanlines(&cinfo, u_crop_y)) != u_crop_y) { return -2; }
 
   while (cinfo.output_scanline < u_crop_y + u_crop_h) {
