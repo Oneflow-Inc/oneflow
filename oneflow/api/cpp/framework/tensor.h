@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_API_CPP_TENSOR_H_
-#define ONEFLOW_API_CPP_TENSOR_H_
+#ifndef ONEFLOW_API_CPP_FRAMEWORK_TENSOR_H_
+#define ONEFLOW_API_CPP_FRAMEWORK_TENSOR_H_
 
 #include <memory>
 #include "device.h"
@@ -37,6 +37,15 @@ class Tensor final {
   explicit Tensor(const Shape& shape = Shape(), const Device& device = Device("cpu"),
                   const DType& dtype = DType::kFloat);
   explicit Tensor(const std::shared_ptr<oneflow::one::Tensor>& tensor);
+
+  Tensor(const Tensor& tensor);
+  Tensor(Tensor&& tensor) noexcept;
+
+  ~Tensor();
+
+  Tensor& operator=(const Tensor& tensor);
+  Tensor& operator=(Tensor&& tensor) noexcept;
+
   const Shape shape() const;
   const Device device() const;
   const DType dtype() const;
@@ -58,4 +67,4 @@ class Tensor final {
 
 }  // namespace oneflow_api
 
-#endif  // ONEFLOW_API_CPP_TENSOR_H_
+#endif  // ONEFLOW_API_CPP_FRAMEWORK_TENSOR_H_

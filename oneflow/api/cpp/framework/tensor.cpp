@@ -14,7 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/api/cpp/framework/tensor.h"
+#include <cstddef>
 #include <memory>
+#include <utility>
 #include "oneflow/api/cpp/framework/device.h"
 #include "oneflow/api/cpp/framework/dtype.h"
 #include "oneflow/api/cpp/framework/shape.h"
@@ -41,6 +43,22 @@ Tensor::Tensor(const Shape& shape, const Device& device, const DType& dtype) {
                 .GetPtrOrThrow();
 }
 Tensor::Tensor(const std::shared_ptr<oneflow::one::Tensor>& tensor) : tensor_(tensor) {}
+
+Tensor::Tensor(const Tensor& tensor) : tensor_(tensor.tensor_) {}
+Tensor::Tensor(Tensor&& tensor) noexcept : tensor_(std::move(tensor.tensor_)) {}
+
+Tensor::~Tensor() {}
+
+Tensor& Tensor::operator=(const Tensor& tensor) {
+  tensor_.reset();
+  tensor_ = tensor.tensor_;
+  return *this;
+}
+Tensor& Tensor::operator=(Tensor&& tensor) noexcept {
+  tensor_.reset();
+  tensor_ = std::move(tensor.tensor_);
+  return *this;
+}
 
 const Shape Tensor::shape() const {
   const auto shape_ = tensor_->shape();

@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "ivalue.h"
+#include "oneflow/api/cpp/framework/ivalue.h"
+#include "oneflow/api/cpp/framework/tensor.h"
 #include <glog/logging.h>
-#include <memory>
 
 namespace oneflow_api {
 
@@ -25,13 +25,36 @@ std::ostream& operator<<(std::ostream& os, const IValue::Tag& tag) {
   os << static_cast<int>(tag);
   return os;
 }
-
+IValue::IValue(int value) : tag_(IValue::Tag::kInt) { payload_.i.v_int = value; }
 IValue::IValue(int64_t value) : tag_(IValue::Tag::kInt) { payload_.i.v_int = value; }
 IValue::IValue(double value) : tag_(IValue::Tag::kDouble) { payload_.i.v_double = value; }
 IValue::IValue(bool value) : tag_(IValue::Tag::kBool) { payload_.i.v_bool = value; }
-IValue::IValue(const Tensor& value) : tag_(IValue::Tag::kTensor) { payload_.v_tensor = value; }
+IValue::IValue(const Tensor& value) : tag_(IValue::Tag::kTensor) {
+  new (&payload_.v_tensor) Tensor(value);
+}
+IValue::IValue(Tensor&& value) : tag_(IValue::Tag::kTensor) {
+  new (&payload_.v_tensor) Tensor(std::move(value));
+}
 IValue::IValue(const std::vector<Tensor>& value) : tag_(IValue::Tag::kTensorVector) {
-  payload_.v_tensor_vector = value;
+  new (&payload_.v_tensor_vector) std::vector<Tensor>(value);
+}
+
+IValue::IValue(std::vector<Tensor>&& value) : tag_(IValue::Tag::kTensorVector) {
+  new (&payload_.v_tensor_vector) std::vector<Tensor>(std::move(value));
+}
+
+IValue::IValue(const IValue& value) : tag_(value.tag_) {
+  if (IsTensor()) {
+    new (&payload_.v_tensor) Tensor(value.ToTensor());
+  } else if (IsTensorVector()) {
+    new (&payload_.v_tensor_vector) std::vector<Tensor>(value.ToTensorVector());
+  } else {
+    payload_.i = value.payload_.i;
+  }
+}
+IValue::~IValue() {
+  if (IsTensor()) { payload_.v_tensor.~Tensor(); }
+  if (IsTensorVector()) { payload_.v_tensor_vector.~vector(); }
 }
 
 bool IValue::IsInt() { return tag_ == Tag::kInt; }
@@ -44,20 +67,20 @@ const int64_t IValue::ToInt() const {
   CHECK_EQ(tag_, Tag::kInt) << "Current value is not int.";
   return payload_.i.v_int;
 }
-double IValue::ToDouble() {
+const double IValue::ToDouble() const {
   CHECK_EQ(tag_, Tag::kDouble) << "Current value is not double.";
   return payload_.i.v_double;
 }
-bool IValue::ToBool() {
+const bool IValue::ToBool() const {
   CHECK_EQ(tag_, Tag::kBool) << "Current value is not bool.";
   return payload_.i.v_bool;
 }
-Tensor IValue::ToTensor() {
+const Tensor& IValue::ToTensor() const {
   CHECK_EQ(tag_, Tag::kTensor) << "Current value is not tensor.";
   return payload_.v_tensor;
 }
-std::vector<Tensor> IValue::ToTensorVector() {
-  CHECK_EQ(tag_, Tag::kTensor) << "Current value is not vector of tensor.";
+const std::vector<Tensor>& IValue::ToTensorVector() const {
+  CHECK_EQ(tag_, Tag::kTensorVector) << "Current value is not vector of tensor.";
   return payload_.v_tensor_vector;
 }
 

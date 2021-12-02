@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_API_CPP_IVALUE_H_
-#define ONEFLOW_API_CPP_IVALUE_H_
+#ifndef ONEFLOW_API_CPP_FRAMEWORK_IVALUE_H_
+#define ONEFLOW_API_CPP_FRAMEWORK_IVALUE_H_
 
 #include <cstdint>
 #include <memory>
@@ -25,11 +25,16 @@ namespace oneflow_api {
 
 class IValue {
  public:
-  IValue(int64_t value);  // NOLINT
-  IValue(double value);   // NOLINT
+  explicit IValue(int value);
+  explicit IValue(int64_t value);
+  explicit IValue(double value);
   explicit IValue(bool value);
   explicit IValue(const Tensor& value);
+  explicit IValue(Tensor&& value);
   explicit IValue(const std::vector<Tensor>& value);
+  explicit IValue(std::vector<Tensor>&& value);
+  IValue(const IValue& value);
+  ~IValue();
 
   bool IsInt();
   bool IsDouble();
@@ -38,14 +43,14 @@ class IValue {
   bool IsTensorVector();
 
   const int64_t ToInt() const;
-  double ToDouble();
-  bool ToBool();
-  Tensor ToTensor();
-  std::vector<Tensor> ToTensorVector();
+  const double ToDouble() const;
+  const bool ToBool() const;
+  const Tensor& ToTensor() const;
+  const std::vector<Tensor>& ToTensorVector() const;
 
  private:
   enum class Tag { kInt = 0, kDouble = 1, kBool = 2, kTensor = 3, kTensorVector = 4 };
-  friend std::ostream & operator << (std::ostream &, const Tag &);
+  friend std::ostream& operator<<(std::ostream&, const Tag&);
 
   union Payload {  // NOLINT
     union InternalPayload {
@@ -69,4 +74,4 @@ class IValue {
 
 }  // namespace oneflow_api
 
-#endif  // ONEFLOW_API_CPP_IVALUE_H_
+#endif  // ONEFLOW_API_CPP_FRAMEWORK_IVALUE_H_
