@@ -69,14 +69,13 @@ def train(test_case, train_x, device, output, requires_grad):
         optimizer.step()
         optimizer.zero_grad()
 
+test_device = ["cpu"] if os.getenv("ONEFLOW_TEST_CPU_ONLY") else ["cpu", "cuda"]
 
 @flow.unittest.skip_unless_1n2d()
 class TestDdpMultmpleOutputs(flow.unittest.TestCase):
     def test_outputs_float32(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device"] = [
-            "cpu"
-        ] if os.getenv("ONEFLOW_TEST_CPU_ONLY") else ["cpu", "cuda"]
+        arg_dict["device"] = test_device
         arg_dict["output"] = [train_float32]
         arg_dict["requires_grad"] = [True, False]
         for arg in GenArgDict(arg_dict):
@@ -84,9 +83,7 @@ class TestDdpMultmpleOutputs(flow.unittest.TestCase):
 
     def test_outputs_int32(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device"] = [
-            "cpu"
-        ] if os.getenv("ONEFLOW_TEST_CPU_ONLY") else ["cpu", "cuda"]
+        arg_dict["device"] = test_device
         arg_dict["output"] = [train_int32]
         arg_dict["requires_grad"] = [False]
         for arg in GenArgDict(arg_dict):
