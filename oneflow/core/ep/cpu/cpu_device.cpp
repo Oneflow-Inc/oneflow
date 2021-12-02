@@ -59,7 +59,7 @@ void CpuDevice::Free(const AllocationOptions& options, void* ptr) {
     CHECK(device);
     return device->FreePinned(options, ptr);
   } else {
-    free(ptr);
+    free(ptr);  // NOLINT
   }
 }
 

@@ -71,7 +71,9 @@ void* MemoryAllocatorImpl::AllocateUnPinnedHostMem(size_t size) {
   return ptr;
 }
 
-void MemoryAllocatorImpl::DeallocateUnPinnedHostMem(void* ptr) { free(ptr); }
+void MemoryAllocatorImpl::DeallocateUnPinnedHostMem(void* ptr) {
+  free(ptr);  // NOLINT
+}
 
 MemoryAllocator::~MemoryAllocator() {
   for (const std::function<void()>& deleter : deleters_) { deleter(); }
