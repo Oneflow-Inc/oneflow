@@ -104,7 +104,7 @@ class ScalarMathBaseFunctor {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
                                   << " should be float or int.";
     }
-    JUST(tensor_processor.AddInputs({x->contiguous()}, lowest_dtype).Apply());
+    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
     TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
     if (inplace) {
       JUST(CheckInplaceCastValid(x, casted_vec[0]));
@@ -538,7 +538,11 @@ class TransposeFunctor {
           << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
           << ndims << " ] but got " << ndims;
     }
-    if (input->is_eager() && input->is_local()) { return JUST(view::Transpose(input->contiguous(), permute)); }
+    if (input->is_eager() && input->is_local()) { 
+      if(!(input->shape()->NumAxes()<=1 || input->shape()->elem_cnt()<=1)){
+        return JUST(view::Transpose(input->contiguous(), permute)); 
+      }
+    }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()}, attrs);

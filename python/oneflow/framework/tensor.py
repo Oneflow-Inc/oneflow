@@ -571,6 +571,9 @@ def _roll(self, shifts, dims=None):
 def _bmm(self, other):
     return flow.bmm(self, other)
 
+def _contiguous(self):
+    return flow._C.contiguous(self)
+
 
 def _len(self):
     if self.dim() == 0:
@@ -847,6 +850,7 @@ def RegisterMethods():
     Tensor.logical_not = _not
     Tensor.roll = _roll
     Tensor.bmm = _bmm
+    Tensor.contiguous = _contiguous
     Tensor.squeeze = _squeeze
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow

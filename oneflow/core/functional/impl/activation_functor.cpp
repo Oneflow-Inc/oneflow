@@ -302,10 +302,10 @@ class SoftmaxFunctorBase {
 
       return sequence_function(functional::Transpose)
           .then([&](const std::shared_ptr<one::Tensor>& x) {
-            return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+            return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()});
           })
           .then(std::bind(functional::Transpose, std::placeholders::_1, input_perm))
-          .call(input, input_perm);
+          .call(input->contiguous(), input_perm);
     }
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()});

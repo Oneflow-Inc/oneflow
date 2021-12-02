@@ -150,6 +150,7 @@ from oneflow._C import concat
 from oneflow._C import concat as cat
 from oneflow._C import to
 from oneflow._C import roi_align
+from oneflow._C import contiguous
 
 
 from . import sbp

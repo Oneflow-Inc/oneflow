@@ -83,8 +83,8 @@ Maybe<TensorTuple> ExpandMaskIndex(const std::shared_ptr<Tensor>& index) {
 
   for (int i = 0; i < index->shape()->NumAxes(); ++i) {
     auto item = JUST(functional::Slice(res->at(0), {0, i}, {size, i + 1}, {1, 1}));
-    item = JUST(functional::Reshape(item, {size}));
-    indices->emplace_back(item);
+    item = JUST(functional::Reshape(item->contiguous(), {size}));
+    indices->emplace_back(item->contiguous());
   }
   return indices;
 }
@@ -166,7 +166,7 @@ Maybe<void> TransposeFront(const std::shared_ptr<Tensor>& input, const TensorTup
     return false;
   }();
   if (need_transpose) {
-    *output = JUST(Transpose(input, permute));
+    *output = JUST(Transpose(input, permute))->contiguous();
   } else {
     *output = input;
   }
@@ -341,7 +341,7 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   std::vector<int> permute(packed_ndim);
   permute[packed_ndim - 1] = 0;
   std::iota(permute.begin(), permute.end() - 1, 1);
-  packed_indices = JUST(Transpose(packed_indices, permute));
+  packed_indices = JUST(Transpose(packed_indices, permute))->contiguous();
 
   if (transposed_input->is_consistent()) {
     const auto& placement = JUST(transposed_input->parallel_desc());

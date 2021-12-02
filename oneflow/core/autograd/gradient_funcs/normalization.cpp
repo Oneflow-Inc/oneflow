@@ -145,8 +145,8 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
       }
     }
     Shape shape(dim_vec);
-    const auto& reshaped_gamma = JUST(functional::Reshape(gamma, shape));
-    const auto& reshaped_inv_variance = JUST(functional::Reshape(inv_variance, shape));
+    const auto& reshaped_gamma = JUST(functional::Reshape(gamma, shape))->contiguous();
+    const auto& reshaped_inv_variance = JUST(functional::Reshape(inv_variance, shape))->contiguous();
 
     std::shared_ptr<Tensor> y_grad_fp32 = y_grad;
     bool is_fp16 = y_grad->dtype()->data_type() == DataType::kFloat16;

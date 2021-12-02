@@ -64,7 +64,7 @@ class Narrow : public OpExprGradFunction<NarrowCaptureState> {
     if (ctx->requires_grad) {
       std::shared_ptr<Tensor> like;
       if (LazyMode::is_enabled()) {
-        like = ctx->SavedTensors().at(0);
+        like = ctx->SavedTensors().at(0)->contiguous();
       } else {
         like = JUST(functional::Empty(ctx->shape, dy->dtype(), JUST(dy->device())));
       }

@@ -69,7 +69,7 @@ Maybe<void> Unsqueeze::Apply(const UnsqueezeCaptureState* ctx, const TensorTuple
     const auto& like = ctx->SavedTensors().at(0);
     in_grads->at(0) = JUST(functional::ReshapeLike(out_grads.at(0), like));
   } else {
-    in_grads->at(0) = JUST(functional::Reshape(out_grads.at(0), ctx->shape));
+    in_grads->at(0) = JUST(functional::Reshape(out_grads.at(0), ctx->shape))->contiguous();
   }
   return Maybe<void>::Ok();
 }

@@ -875,7 +875,7 @@ class FusedScaleMaskSoftmaxGradFunctor {
                            const std::shared_ptr<one::Tensor>& mask, const float& scale) const {
     MutableAttrMap attrs_;
     JUST(attrs_.SetAttr<float>("scale_value", scale));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {y, dy, mask}, attrs_);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {y->contiguous(), dy->contiguous(), mask->contiguous()}, attrs_);
   }
 
  private:
@@ -902,7 +902,7 @@ class FusedScaleMaskSoftmaxDropoutGradFunctor {
     JUST(attrs_.SetAttr<float>("scale_value", scale));
     JUST(attrs_.SetAttr<float>("dropout_scale_value", dropout_scale));
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {softmax_y, dy, mask, dropout_mask}, attrs_);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {softmax_y->contiguous(), dy->contiguous(), mask->contiguous(), dropout_mask->contiguous()}, attrs_);
   }
 
  private:

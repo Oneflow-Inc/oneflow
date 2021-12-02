@@ -30,6 +30,9 @@ namespace one {
 
 Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
   const Shape& shape = *tensor->shape();
+  if(!shape.is_initialized() || shape.NumAxes()<=1 || shape.elem_cnt() <= 1 ){
+    return true;
+  }
   const Stride& stride = *JUST(tensor->stride());
   int64_t dim = shape.NumAxes();
   int64_t expected_stride = 1;
@@ -169,8 +172,7 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
     target_strides[i] = step * strides->At(i);
     storage_offset += start * strides->At(i);
   }
-  // Slice 1-d tensor maybe generate 0-dim tensor.
-  if (ndim == 1 && target_dims.at(0) == 1) { target_dims = DimVector{}; }
+
   auto output = JUST(BasicView(input, Shape(target_dims), Stride(target_strides), storage_offset));
   if (input->requires_grad()) {
     auto backward_fn =

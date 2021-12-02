@@ -406,7 +406,7 @@ class ConcatFunctor {
     }
   }
   Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& dim) const {
-    if (inputs.size() == 1) { return inputs.at(0)->contiguous(); }
+    if (inputs.size() == 1) { return inputs.at(0); }
     int64_t axis = dim;
     int64_t ndim = inputs[0]->ndim();
     int64_t max_dim_size = 0;
@@ -438,9 +438,9 @@ class ConcatFunctor {
     for (int i = 0; i < inputs.size(); i += kMaxInputCount) {
       size_t size = (i + kMaxInputCount) < inputs.size() ? kMaxInputCount : inputs.size() - i;
       TensorTuple partial_inputs(size);
-      for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]->contiguous(); }
+      for (int j = 0; j < size; ++j) { partial_inputs[j] = JUST(functional::ToContiguous(inputs[i + j])); }
       outputs.emplace_back(
-          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs))->contiguous()
+          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs))
       );
     }
     if (outputs.size() == 1) { return outputs.at(0); }
@@ -892,7 +892,11 @@ class ReshapeFunctor {
       JUST(attrs.SetAttr<Shape>("shape", infered_shape));
     }
     // if input tensor is eager local, than return tensor's view
-    if (x->is_eager() && x->is_local()) { return view::Reshape(x->contiguous(), infered_shape); }
+    if (x->is_eager() && x->is_local()) {
+      if(!(x->shape()->NumAxes()<=1 || x->shape()->elem_cnt()<=1)){
+        return view::Reshape(x->contiguous(), infered_shape);
+      }
+    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
@@ -911,8 +915,12 @@ class ToContiguousFunctor {
 
     const auto& stride = JUST(input->stride())->StrideVec();
     JUST(attrs.SetAttr<std::vector<int64_t>>("stride", {stride.begin(), stride.end()}));
+    printf("\ninput shape >>> %s; stride >>> %s", input->shape()->DebugStr().c_str(), JUST(input->stride())->ToString().c_str());
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs));
+    printf("\noutput shape >>> %s; stride >>> %s", result->shape()->DebugStr().c_str(), JUST(result->stride())->ToString().c_str());
+    return result;
+    // return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
  private:
@@ -926,9 +934,14 @@ class SliceBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
                            const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
+    
     if (x->is_eager() && x->is_local()) {
-      return view::Slice(x->contiguous(), start, stop, step);
+      // TODO: view support 0-dim tensor 
+      if(!(x->shape()->NumAxes()<=1 || x->shape()->elem_cnt()<=1)){
+        return view::Slice(x->contiguous(), start, stop, step);
+      }
     }
+
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
@@ -983,13 +996,15 @@ class NarrowFunctor {
         << "], but got:" << dim << ")";
     if (narrow_dim < 0) { narrow_dim += ndim; }
     if (input->is_eager() && input->is_local()) {
-      return JUST(view::Narrow(input->contiguous(), narrow_dim, start, length));
+      if(!(input->shape()->NumAxes()<=1 || input->shape()->elem_cnt()<=1)){
+        return JUST(view::Narrow(input->contiguous(), narrow_dim, start, length));
+      }
     }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("dim", narrow_dim));
     JUST(attrs.SetAttr<int64_t>("start", start));
     JUST(attrs.SetAttr<int64_t>("length", length));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()}, attrs);
   }
 
  private:
@@ -1636,7 +1651,7 @@ class TensorGetItemFunctor {
 
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
     if (shape != *(result->shape())) { result = JUST(Reshape(result, shape)); }
-    if (!tensor_indices.empty()) { result = JUST(ApplyAdvancedIndexing(result->contiguous(), tensor_indices)); }
+    if (!tensor_indices.empty()) { result = JUST(ApplyAdvancedIndexing(result, tensor_indices)); }
 
     // TODO(): Returns a view of tensor `x`.
     if (result == x) { result = JUST(Identity(x)); }
@@ -1686,7 +1701,7 @@ class TensorSetItemFunctor {
     if (tensor_indices.size() == ndims) {  // advance indexing
       std::shared_ptr<Tensor> indices = JUST(functional::Stack(tensor_indices, 0));
       if (indices->shape()->elem_cnt() == 0) { return Maybe<void>::Ok(); }
-      indices = JUST(functional::Transpose(indices, {1, 0}));
+      indices = JUST(functional::Transpose(indices, {1, 0}))->contiguous();
       value_tensor = JUST(functional::Expand(value_tensor, {indices->shape()->At(0)}));
       JUST(functional::TensorScatterNdUpdate(x, indices, value_tensor, /*inplace=*/true));
     } else {                              // slice update
@@ -1696,7 +1711,7 @@ class TensorSetItemFunctor {
         if (value_shape->NumAxes() > target_shape.NumAxes()) {
           int64_t start_axis = value_shape->NumAxes() - target_shape.NumAxes();
           const auto& shape = JUST(value_shape->Slice(start_axis, value_shape->NumAxes()));
-          value_tensor = JUST(Reshape(value, *shape));
+          value_tensor = JUST(Reshape(value, *shape))->contiguous();
         }
         value_tensor = JUST(Expand(value_tensor, target_shape));
       }
@@ -1711,7 +1726,7 @@ class TensorSetItemFunctor {
       }
       Shape slice_shape(slice_dims);
       if (slice_shape != *(value_tensor->shape())) {
-        value_tensor = JUST(Reshape(value_tensor, slice_shape));
+        value_tensor = JUST(Reshape(value_tensor, slice_shape))->contiguous();
       }
       if (x->is_local()) {
         JUST(SliceUpdate(x, value_tensor, start, end, step, /*inplace=*/true));
@@ -1904,7 +1919,7 @@ class BroadcastReduceSumLikeFunctor {
       const Shape& left_extended_shape =
           CreateLeftExtendedShape(ShapeView(like_shape), in_shape.NumAxes());
       if (in_shape == left_extended_shape) {
-        return JUST(ReshapeLike(input, like));
+        return JUST(ReshapeLike(input, like))->contiguous();
       } else {
         const AxisVector& broadcast_axis_vec = left_extended_shape.Axes4BroadcastTo(in_shape);
         return JUST(ReduceSumLike(
@@ -1933,7 +1948,7 @@ class SplitFunctor {
     int64_t last_split_size = split_size - (split_size * num_splits - dim_size);
     for (int i = 0; i < num_splits; ++i) {
       int64_t length = i < num_splits - 1 ? split_size : last_split_size;
-      splits[i] = JUST(Narrow(x, axis, i * split_size, length))->contiguous();
+      splits[i] = JUST(Narrow(x->contiguous(), axis, i * split_size, length))->contiguous();
     }
     return splits;
   }
@@ -1958,8 +1973,8 @@ class SplitLikeFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("axis", axis));
     TensorTuple inputs(like.size() + 1);
-    inputs[0] = x->contiguous();
-    for (int i = 0; i < like.size(); ++i) { inputs[i + 1] = like[i]->contiguous(); }
+    inputs[0] = x;
+    for (int i = 0; i < like.size(); ++i) { inputs[i + 1] = like[i]; }
     return OpInterpUtil::Dispatch<TensorTuple>(*ops_.at(like.size() - 1), inputs, attrs);
   }
 
@@ -1985,7 +2000,7 @@ class SplitWithSizeFunctor {
       CHECK_GE_OR_RETURN(length, 0) << "split_with_sizes expects split_sizes have only "
                                        "non-negative entries, but split_sizes["
                                     << i << "] = " << length;
-      splits[i] = JUST(Narrow(x, axis, start_idx, length))->contiguous();
+      splits[i] = JUST(ToContiguous(JUST(Narrow(x, axis, start_idx, length))));
       start_idx += length;
     }
     CHECK_EQ_OR_RETURN(start_idx, dim_size)
@@ -2101,7 +2116,7 @@ class MeshgridFunctor {
       DimVector view_shape_vec(size, 1);
       view_shape_vec[i] = -1;
       Shape view_shape(view_shape_vec);
-      std::shared_ptr<one::Tensor> reshaped = JUST(Reshape(tensors.at(i), view_shape));
+      std::shared_ptr<one::Tensor> reshaped = JUST(Reshape(tensors.at(i), view_shape))->contiguous();
       outputs[i] = JUST(Expand(reshaped, shape));
     }
 
