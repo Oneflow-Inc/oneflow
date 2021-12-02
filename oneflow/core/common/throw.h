@@ -13,34 +13,32 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_API_PYTHON_FRAMEWORK_THROW_H_
-#define ONEFLOW_API_PYTHON_FRAMEWORK_THROW_H_
+#ifndef ONEFLOW_CORE_COMMON_THROW_H_
+#define ONEFLOW_CORE_COMMON_THROW_H_
 
 #include "oneflow/core/common/error.h"
 
 namespace oneflow {
 
-class Throw final {
- public:
-  Throw(const Error& error) : error_(error) {}
-  ~Throw() noexcept(false) { ThrowError(error_.error_proto()); }
+namespace details {
 
-  Error& error() { return error_; }
-
- private:
-  Error error_;
+struct Throw final {
+  void operator=(Error&& error) { ThrowError(error.error_proto()); }
 };
+
+}  // namespace details
 
 }  // namespace oneflow
 
-#define THROW(err_type)                                                                     \
-  Throw(oneflow::Error::err_type().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)).error() \
+#define THROW(err_type)                                                          \
+  oneflow::details::Throw() =                                                    \
+      oneflow::Error::err_type().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \
       << #err_type << ": "
 
-#define CHECK_OR_THROW(expr)                                                                \
-  if (!(expr))                                                                              \
-  Throw(oneflow::Error::CheckFailedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)) \
-          .error()                                                                          \
+#define CHECK_OR_THROW(expr)                                                             \
+  if (!(expr))                                                                           \
+  oneflow::details::Throw() =                                                            \
+      oneflow::Error::CheckFailedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \
       << " Check failed: " << OF_PP_STRINGIZE(expr) << ": "
 
 #define CHECK_EQ_OR_THROW(lhs, rhs) \
@@ -69,11 +67,12 @@ class Throw final {
 
 #define CHECK_ISNULL_OR_THROW(ptr) CHECK_OR_THROW(ptr == nullptr)
 
-#define TODO_THEN_THROW()                                                                     \
-  oneflow::Throw(oneflow::Error::TodoError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)) \
-      .error()
-#define UNIMPLEMENTED_THEN_THROW()                                                            \
-  Throw(oneflow::Error::UnimplementedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)) \
-      .error()
+#define TODO_THEN_THROW()     \
+  oneflow::details::Throw() = \
+      oneflow::Error::TodoError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
 
-#endif  // ONEFLOW_API_PYTHON_FRAMEWORK_THROW_H_
+#define UNIMPLEMENTED_THEN_THROW() \
+  oneflow::details::Throw() =      \
+      oneflow::Error::UnimplementedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
+
+#endif  // ONEFLOW_CORE_COMMON_THROW_H_
