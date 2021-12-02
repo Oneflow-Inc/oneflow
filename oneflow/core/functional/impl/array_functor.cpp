@@ -253,15 +253,17 @@ class FlattenFunctor {
                            const int32_t& end_dim) const {
     const auto& x_shape = x->shape();
     const int32_t x_dim = x_shape->dim_vec().size();
+
+    int new_start_dim = start_dim;
+    int new_end_dim = end_dim;
+    if (start_dim < 0) { new_start_dim += x_dim; }
+    if (end_dim < 0) { new_end_dim += x_dim; }
+    if (new_start_dim == new_end_dim) { return x; }
+
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("start_dim", start_dim));
     JUST(attrs.SetAttr<int32_t>("end_dim", end_dim));
 
-    int new_start_dim = start_dim;
-    int new_end_dim = end_dim;
-    if (start_dim == -1) { new_start_dim += x_dim; }
-    if (end_dim == -1) { new_end_dim += x_dim; }
-    if (new_start_dim == new_end_dim) { return x; }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
