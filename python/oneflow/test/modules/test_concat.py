@@ -134,13 +134,13 @@ class TestModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_cat_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
         return torch.cat((x, x, x), random(0, 2).to(int))
 
-    @autotest(n=10, auto_backward=False)
+    @autotest(n=10, auto_backward=False, check_graph=False)
     def test_concat_with_input_0shape_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 3, 2, 4).to(device)
@@ -148,7 +148,7 @@ class TestModule(flow.unittest.TestCase):
         z = torch.cat((x, y), dim=2)
         return z
 
-    @autotest(n=10, auto_backward=False)
+    @autotest(n=10, auto_backward=False, check_graph=False)
     def test_concat_with_output_0shape_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 0, 2, 4).to(device)
