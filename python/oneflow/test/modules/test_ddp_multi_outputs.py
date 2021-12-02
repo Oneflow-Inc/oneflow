@@ -41,10 +41,8 @@ class Model(flow.nn.Module):
         super().__init__()
         self.lr = 0.01
         self.iter_count = 10
-        self.w1 = flow.nn.Parameter(flow.tensor([[0], [0]],
-                                                dtype=flow.float32))
-        self.w2 = flow.nn.Parameter(flow.tensor([[0], [0]],
-                                                dtype=flow.float32))
+        self.w1 = flow.nn.Parameter(flow.tensor([[0], [0]], dtype=flow.float32))
+        self.w2 = flow.nn.Parameter(flow.tensor([[0], [0]], dtype=flow.float32))
 
     def forward(self, x, label):
         x1 = flow.matmul(x, self.w1)
