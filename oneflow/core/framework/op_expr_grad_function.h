@@ -70,7 +70,7 @@ class OpExprGradFunctionIf {
 
   virtual std::shared_ptr<AutoGradCaptureState> MakeCustomState() const = 0;
 
-  virtual Maybe<void> Init(const OpExpr& op) = 0;
+  virtual Maybe<void> Init(const OpExpr& op) { return Maybe<void>::Ok(); }
 
   // Capture forward inputs and outputs for backward.
   virtual Maybe<void> CaptureIf(AutoGradCaptureState* state, const TensorTuple& inputs,
