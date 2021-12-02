@@ -849,7 +849,7 @@ class TestTensor(flow.unittest.TestCase):
         np_shape = (2, 2, 2, 2)
         test_case.assertTrue(np.allclose(of_shape, np_shape))
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_flatten_tensor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
