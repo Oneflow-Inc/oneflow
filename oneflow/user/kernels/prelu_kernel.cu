@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
-#include "oneflow/core/cuda/elementwise.cuh"
 
 namespace oneflow {
 
@@ -201,18 +200,17 @@ class GpuPReluKernel final : public user_op::OpKernel {
     const int32_t channels = x->shape().At(1);
     const int32_t alpha_size = alpha->shape().elem_cnt();
     const int32_t inner_size = elem_cnt / batch / channels;
-    int grid_size;
-    cudaError_t err = cuda::elementwise::GetNumBlocks(1, &grid_size);
 
     if (alpha_size == 1) {
       BroadcastPReluSingleAlphaForwardGpu<T>
-          <<<grid_size, cuda::elementwise::kBlockSize, 0,
+          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
               elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), y->mut_dptr<T>());
     } else {
-      BroadcastPReluMultiAlphaForwardGpu<T><<<grid_size, cuda::elementwise::kBlockSize, 0,
-                                              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-          elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), y->mut_dptr<T>());
+      BroadcastPReluMultiAlphaForwardGpu<T>
+          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+              elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), y->mut_dptr<T>());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -243,9 +241,6 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
     user_op::Tensor* alpha_diff = ctx->Tensor4ArgNameAndIndex("alpha_diff", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int32_t elem_cnt = x->shape().elem_cnt();
-    int grid_size;
-    cudaError_t err = cuda::elementwise::GetNumBlocks(1, &grid_size);
-
     T* broadcasted_alpha_diff = tmp_buffer->mut_dptr<T>();
     T* reduce_sum_tmp_buf = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>()
                                                  + GetCudaAlignedSize(elem_cnt * sizeof(T)));
@@ -258,13 +253,13 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
     const int32_t inner_size = elem_cnt / batch / channels;
     if (alpha_size == 1) {
       BroadcastPReluSingleAlphaBackwardGpu<T>
-          <<<grid_size, cuda::elementwise::kBlockSize, 0,
+          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
               elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), dy->dptr<T>(),
               dx->mut_dptr<T>(), broadcasted_alpha_diff);
     } else {
       BroadcastPReluMultiAlphaBackwardGpu<T>
-          <<<grid_size, cuda::elementwise::kBlockSize, 0,
+          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
               elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), dy->dptr<T>(),
               dx->mut_dptr<T>(), broadcasted_alpha_diff);
