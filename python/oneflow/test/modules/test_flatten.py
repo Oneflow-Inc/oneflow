@@ -79,7 +79,7 @@ class TestFlattenModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(auto_backward=False)
+    @autotest(auto_backward=False, check_graph=False)
     def test_tensor_against_pytorch(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)

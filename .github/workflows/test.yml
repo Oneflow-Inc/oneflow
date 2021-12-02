@@ -52,6 +52,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           repository: ${{github.event.pull_request.head.repo.full_name}}
+          ref: ${{ github.head_ref }}
       - name: Check license
         id: license_check
         run: |
@@ -100,6 +101,17 @@ jobs:
         with:
           name: license_and_format-${{ github.sha }}.patch
           path: license_and_format.patch
+      - name: Add comment
+        if: ${{ failure() }}
+        uses: actions/github-script@v4
+        with:
+          script: |
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'Code got formatted by CI. Please request CI again. If the PR is from a forked repo, please download the patch files from the GitHub Action web page and apply it.'
+            })
       - name: Please request CI again
         if: ${{ failure() }}
         run: |
