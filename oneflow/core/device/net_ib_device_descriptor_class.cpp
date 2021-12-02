@@ -58,7 +58,7 @@ class NetIBDeviceDescriptorClass : public DeviceDescriptorClass {
       for (int port = 1; port <= device_attr.phys_port_cnt; ++port) {
         auto device_desc =
             NetIBDeviceDescriptor::Query(static_cast<int32_t>(devices.size()), context, port);
-        if (device_desc) { devices.push_back(device_desc); }
+        if (device_desc) { devices.emplace_back(device_desc); }
       }
     }
     ibv::wrapper.ibv_free_device_list(device_list);
@@ -76,7 +76,7 @@ class NetIBDeviceDescriptorClass : public DeviceDescriptorClass {
       CHECK(ib_device);
       std::string serialized_device;
       ib_device->Serialize(&serialized_device);
-      serialized_devices.push_back(std::move(serialized_device));
+      serialized_devices.emplace_back(std::move(serialized_device));
     }
     nlohmann::json json_object;
     json_object[kJsonKeyDevices] = serialized_devices;

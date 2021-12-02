@@ -147,7 +147,7 @@ class TfGpuPReluKernel final : public user_op::OpKernel {
       user_op::Tensor* broadcasted_alpha = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
       const Shape& left_extended_shape =
           CreateLeftExtendedShape(ShapeView(alpha->shape()), x->shape().NumAxes());
-      NdarrayUtil<DeviceType::kGPU, T>::BroadcastTo(
+      NdarrayUtil<DeviceType::kCUDA, T>::BroadcastTo(
           ctx->stream(), XpuVarNdarray<T>(x->shape(), broadcasted_alpha->mut_dptr<T>()),
           XpuVarNdarray<const T>(left_extended_shape, alpha->dptr<T>()));
       ElemwisePReluForwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
@@ -158,10 +158,10 @@ class TfGpuPReluKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_TF_GPU_PRELU_KERNEL(dtype)                                            \
+#define REGISTER_TF_CUDA_PRELU_KERNEL(dtype)                                           \
   REGISTER_USER_KERNEL("tf_prelu")                                                     \
       .SetCreateFn<TfGpuPReluKernel<dtype>>()                                          \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                              \
         const Shape& in_shape = ctx->InputShape("x", 0);                               \
@@ -173,8 +173,8 @@ class TfGpuPReluKernel final : public user_op::OpKernel {
         return tmp_buffer_size;                                                        \
       });
 
-REGISTER_TF_GPU_PRELU_KERNEL(float)
-REGISTER_TF_GPU_PRELU_KERNEL(double)
+REGISTER_TF_CUDA_PRELU_KERNEL(float)
+REGISTER_TF_CUDA_PRELU_KERNEL(double)
 
 template<typename T>
 class TfGpuPReluGradKernel final : public user_op::OpKernel {
@@ -209,7 +209,7 @@ class TfGpuPReluGradKernel final : public user_op::OpKernel {
       T* broadcasted_alpha = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>()
                                                   + 2 * GetCudaAlignedSize(elem_cnt * sizeof(T)));
 
-      NdarrayUtil<DeviceType::kGPU, T>::BroadcastTo(
+      NdarrayUtil<DeviceType::kCUDA, T>::BroadcastTo(
           ctx->stream(), XpuVarNdarray<T>(x->shape(), broadcasted_alpha),
           XpuVarNdarray<const T>(left_extended_shape, alpha->dptr<T>()));
 
@@ -218,7 +218,7 @@ class TfGpuPReluGradKernel final : public user_op::OpKernel {
           elem_cnt, x->dptr<T>(), broadcasted_alpha, dy->dptr<T>(), dx->mut_dptr<T>(),
           broadcasted_alpha_diff);
     }
-    NdarrayUtil<DeviceType::kGPU, T>::ReduceSum(
+    NdarrayUtil<DeviceType::kCUDA, T>::ReduceSum(
         ctx->stream(), XpuVarNdarray<T>(left_extended_shape, alpha_diff->mut_dptr<T>()),
         XpuVarNdarray<const T>(x->shape(), broadcasted_alpha_diff),
         XpuVarNdarray<T>(x->shape(), reduce_sum_tmp_buf));
@@ -226,10 +226,10 @@ class TfGpuPReluGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_TF_GPU_PRELU_GRAD_KERNEL(dtype)                                        \
+#define REGISTER_TF_CUDA_PRELU_GRAD_KERNEL(dtype)                                       \
   REGISTER_USER_KERNEL("tf_prelu_grad")                                                 \
       .SetCreateFn<TfGpuPReluGradKernel<dtype>>()                                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                               \
         const Shape& in_shape = ctx->InputShape("x", 0);                                \
@@ -241,7 +241,7 @@ class TfGpuPReluGradKernel final : public user_op::OpKernel {
         return tmp_buffer_size;                                                         \
       });
 
-REGISTER_TF_GPU_PRELU_GRAD_KERNEL(float)
-REGISTER_TF_GPU_PRELU_GRAD_KERNEL(double)
+REGISTER_TF_CUDA_PRELU_GRAD_KERNEL(float)
+REGISTER_TF_CUDA_PRELU_GRAD_KERNEL(double)
 
 }  // namespace oneflow

@@ -913,6 +913,17 @@ def set_use_tensorrt(func_desc, value=True):
     func_desc.job_config_proto.mutable_xrt_config().set_use_tensorrt(value)
 
 
+@oneflow_function_config("use_openvino")
+def set_use_openvino(func_desc, value=True):
+    """Whether use openvino or not
+
+    Args:
+        func_desc ([type]): [description]
+        value (bool, optional): [description]. Defaults to True.
+    """
+    func_desc.job_config_proto.mutable_xrt_config().set_use_openvino(value)
+
+
 @oneflow_function_config("tensorrt.use_fp16")
 def set_tensorrt_use_fp16(func_desc, value=True):
     """Whether use tensorrt fp16  or not

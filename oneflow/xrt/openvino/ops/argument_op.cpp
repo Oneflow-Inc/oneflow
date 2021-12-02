@@ -13,34 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_API_CPP_DEVICE_H_
-#define ONEFLOW_API_CPP_DEVICE_H_
-
-#include <string>
-#include <memory>
+#include "oneflow/xrt/openvino/ops/op_context.h"
+#include "oneflow/xrt/openvino/ops/op_kernel.h"
 
 namespace oneflow {
+namespace xrt {
+namespace openvino {
 
-class Device;
-
-template<typename T>
-class Symbol;
-
-}  // namespace oneflow
-
-namespace oneflow_api {
-
-class Device final {
+class ArgumentOp : public OpenvinoOpKernel {
  public:
-  explicit Device(const std::string& type_or_type_with_device_id);
-  explicit Device(const std::string& type, int64_t device_id);
-  const std::string& type() const;
-  int64_t device_id() const;
-
- private:
-  std::shared_ptr<oneflow::Symbol<oneflow::Device>> device_ = nullptr;
+  void Compile(OpenvinoOpContext* ctx) override {}
 };
 
-}  // namespace oneflow_api
+REGISTER_OPENVINO_OP_KERNEL(Argument, ArgumentOp).Finalize();
 
-#endif  // !ONEFLOW_API_CPP_DEVICE_H_
+}  // namespace openvino
+}  // namespace xrt
+}  // namespace oneflow

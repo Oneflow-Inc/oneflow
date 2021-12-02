@@ -34,7 +34,7 @@ Maybe<void> CheckCudaCopyH2D(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   bool equal = JUST(IgnoringDeviceTypeEqual(in->placement(), out->placement()));
   CHECK_OR_RETURN(equal);
   CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCPU);
-  CHECK_EQ_OR_RETURN(out->placement()->device_type(), DeviceType::kGPU);
+  CHECK_EQ_OR_RETURN(out->placement()->device_type(), DeviceType::kCUDA);
   CHECK_OR_RETURN(in->nd_sbp() == out->nd_sbp());
   return Maybe<void>::Ok();
 }
@@ -42,7 +42,7 @@ Maybe<void> CheckCudaCopyH2D(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
 Maybe<void> CheckCudaCopyD2H(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   bool equal = JUST(IgnoringDeviceTypeEqual(in->placement(), out->placement()));
   CHECK_OR_RETURN(equal);
-  CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kGPU);
+  CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCUDA);
   CHECK_EQ_OR_RETURN(out->placement()->device_type(), DeviceType::kCPU);
   CHECK_OR_RETURN(in->nd_sbp() == out->nd_sbp());
   return Maybe<void>::Ok();

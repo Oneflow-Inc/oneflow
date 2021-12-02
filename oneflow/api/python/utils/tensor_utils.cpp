@@ -55,8 +55,8 @@ Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t) {
 template<typename T>
 Maybe<void> CopyMirroredTensorFromUntypedArray(const std::shared_ptr<Tensor>& tensor,
                                                PyObject* array) {
-  return CopyBetweenMirroredTensorAndNumpy<T>(tensor, array, OfBlob_CopyBuffer::template From<T>,
-                                              "mut", /*block_host_until_done=*/false);
+  return CopyBetweenMirroredTensorAndNumpy<T>(tensor, array, BlobNumpyCopyUtil<T>::From, "mut",
+                                              /*block_host_until_done=*/false);
 }
 
 Maybe<std::string> GetCopyMirroredTensorToNumpyFuncName(DataType dtype) {
@@ -103,8 +103,8 @@ MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
   const auto* tensor_buffer_ptr = blob.dptr<TensorBuffer>();
   for (int64_t i = 0; i < blob_shape.elem_cnt(); ++i) {
     const TensorBuffer* tensor_buffer = tensor_buffer_ptr + i;
-    shapes.push_back(tensor_buffer->shape());
-    dtypes.push_back(DType::Get(tensor_buffer->data_type()).GetOrThrow());
+    shapes.emplace_back(tensor_buffer->shape());
+    dtypes.emplace_back(DType::Get(tensor_buffer->data_type()).GetOrThrow());
   }
   return std::make_tuple(shapes, dtypes);
 }

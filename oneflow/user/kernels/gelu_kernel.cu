@@ -79,14 +79,14 @@ class GpuGeluKernel final : public user_op::OpKernel, public user_op::CudaGraphS
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_GELU_KERNEL(dtype)                                             \
+#define REGISTER_CUDA_GELU_KERNEL(dtype)                                            \
   REGISTER_USER_KERNEL("gelu").SetCreateFn<GpuGeluKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kGPU)                                \
+      (user_op::HobDeviceType() == DeviceType::kCUDA)                               \
       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_GELU_KERNEL(float)
-REGISTER_GPU_GELU_KERNEL(double)
-REGISTER_GPU_GELU_KERNEL(half)
+REGISTER_CUDA_GELU_KERNEL(float)
+REGISTER_CUDA_GELU_KERNEL(double)
+REGISTER_CUDA_GELU_KERNEL(half)
 
 template<typename T>
 class GpuGeluGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -109,14 +109,14 @@ class GpuGeluGradKernel final : public user_op::OpKernel, public user_op::CudaGr
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_GELU_GRAD_KERNEL(dtype)                          \
-  REGISTER_USER_KERNEL("gelu_grad")                                   \
-      .SetCreateFn<GpuGeluGradKernel<dtype>>()                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_CUDA_GELU_GRAD_KERNEL(dtype)                          \
+  REGISTER_USER_KERNEL("gelu_grad")                                    \
+      .SetCreateFn<GpuGeluGradKernel<dtype>>()                         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_GELU_GRAD_KERNEL(float)
-REGISTER_GPU_GELU_GRAD_KERNEL(double)
-REGISTER_GPU_GELU_GRAD_KERNEL(half)
+REGISTER_CUDA_GELU_GRAD_KERNEL(float)
+REGISTER_CUDA_GELU_GRAD_KERNEL(double)
+REGISTER_CUDA_GELU_GRAD_KERNEL(half)
 
 }  // namespace oneflow

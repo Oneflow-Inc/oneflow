@@ -34,7 +34,7 @@ namespace oneflow {
 inline std::string DeviceTypeName(DeviceType device_type) {
   switch (device_type) {
     case kCPU: return "cpu";
-    case kGPU: return "cuda";
+    case kCUDA: return "cuda";
     default: return "invalid";
   }
 }
@@ -53,7 +53,7 @@ inline std::string PrintAvailableDevices() {
 #if defined(WITH_CUDA)
 #define DEVICE_TYPE_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU) \
-  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU)
+  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA)
 #else
 #define DEVICE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)
 #endif

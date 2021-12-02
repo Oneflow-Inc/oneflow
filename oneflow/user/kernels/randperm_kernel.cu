@@ -41,7 +41,7 @@ class GpuRandPermKernel final : public user_op::OpKernel {
   ~GpuRandPermKernel() = default;
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const auto& generator = CHECK_JUST(one::MakeGenerator(kGPU));
+    const auto& generator = CHECK_JUST(one::MakeGenerator(kCUDA));
     generator->set_current_seed(ctx->Attr<int64_t>("seed"));
     return std::make_shared<DistributionKernelState>(generator);
   }
@@ -100,7 +100,7 @@ class GpuRandPermKernel final : public user_op::OpKernel {
 };
 REGISTER_USER_KERNEL("randperm")
     .SetCreateFn<GpuRandPermKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU)
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA)
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
       const int32_t n = ctx->Attr<int32_t>("n");
       /* Sorted In */

@@ -29,7 +29,7 @@ __global__ void ArangeForwardGpuKernel(const T start, const T delta, const int64
 }
 
 template<typename T>
-struct ArangeFunctor<DeviceType::kGPU, T> final {
+struct ArangeFunctor<DeviceType::kCUDA, T> final {
   void operator()(ep::Stream* stream, const T start, const T delta, const int64_t arange_elem_cnt,
                   T* out) {
     // The thread num is set as arange_elem_cnt
@@ -38,7 +38,7 @@ struct ArangeFunctor<DeviceType::kGPU, T> final {
   }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_ARANGE_FUNCTOR, (DeviceType::kGPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_ARANGE_FUNCTOR, (DeviceType::kCUDA),
                                  ARANGE_DATA_TYPE_SEQ);
 }  // namespace user_op
 }  // namespace oneflow
