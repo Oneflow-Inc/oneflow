@@ -187,8 +187,8 @@ int JpegPartialDecode(const unsigned char* data, size_t length, RandomCropGenera
 
   unsigned int u_crop_x = crop_x, u_crop_y = crop_y, u_crop_w = crop_w, u_crop_h = crop_h;
 
-  row_stride = crop_w * pixel_size;
   jpeg_crop_scanline(&cinfo, &u_crop_x, &u_crop_w);
+  row_stride = u_crop_w * pixel_size;
   if ((tmp = jpeg_skip_scanlines(&cinfo, u_crop_y)) != u_crop_y) { return -2; }
 
   while (cinfo.output_scanline < u_crop_y + u_crop_h) {
@@ -202,9 +202,23 @@ int JpegPartialDecode(const unsigned char* data, size_t length, RandomCropGenera
   jpeg_destroy_decompress(&cinfo);
 
   cv::Mat image(u_crop_h, u_crop_w, CV_8UC3, crop_buf, cv::Mat::AUTO_STEP);
+
+  cv::Rect roi;
+  cv::Mat cropped;
+
+  if (u_crop_w != crop_w) {
+    roi.x = u_crop_w - crop_w;
+    roi.y = 0;
+    roi.width = crop_w;
+    roi.height = crop_h;
+    image(roi).copyTo(cropped);
+  } else {
+    cropped = image;
+  }
+
   cv::Mat dst_mat(target_height, target_width, CV_8UC3, dst, cv::Mat::AUTO_STEP);
 
-  cv::resize(image, dst_mat, cv::Size(target_width, target_height), 0, 0, cv::INTER_LINEAR);
+  cv::resize(cropped, dst_mat, cv::Size(target_width, target_height), 0, 0, cv::INTER_LINEAR);
 
   return 0;
 }
