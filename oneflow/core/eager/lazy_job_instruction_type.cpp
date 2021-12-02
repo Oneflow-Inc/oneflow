@@ -59,7 +59,6 @@ class EpBasedEventRecord : public EventRecord {
 std::shared_ptr<EventRecord> MakeEventRecord(ep::Stream* stream) {
   ep::Device* device = stream->device();
   ep::ActiveDeviceGuard guard(device);
-  device->SetAsActiveDevice();
   ep::Event* event = device->CreateEvent();
   stream->RecordEvent(event);
   return std::make_shared<EpBasedEventRecord>(event, device);
