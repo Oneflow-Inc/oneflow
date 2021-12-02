@@ -582,6 +582,7 @@ LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op
                                   ::oneflow::UserOpConf* user_conf) {
   std::vector<std::string> keys{};
   std::vector<int32_t> sizes{};
+  std::cout << "ConvertUserOpInputs " << user_op_adaptor.op_name().str() << std::endl;
   assert(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(op, keys, sizes)
              .succeeded());
   const std::string op_name = user_op_adaptor.op_name().getValue().str();

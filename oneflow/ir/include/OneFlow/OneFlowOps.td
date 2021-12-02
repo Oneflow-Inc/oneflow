@@ -4,10 +4,12 @@
 include "OneFlowDialect.td"
 include "OneFlowEnums.td"
 include "OneFlowInterfaces.td"
-include "mlir/Interfaces/SideEffectInterfaces.td"
-include "mlir/Pass/PassBase.td"
-include "mlir/Interfaces/CallInterfaces.td"
 include "OneFlowBase.td"
+
+include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/CallInterfaces.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Pass/PassBase.td"
 
 def OneFlow_UserOp : OneFlow_UserBaseWithCtrlOp<"user", [OneFlow_IsImportCompatible]> {
   let summary = "";
@@ -93,20 +95,24 @@ def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpI
 }
 
 class OneFlow_ConcreteSystemOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_BaseOp<mnemonic, !listconcat(traits, [])> {
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [OneFlow_IsImportCompatible, 
+        DeclareOpInterfaceMethods<ControlEdgeCompatibleInterface>])> {
   let input = (ins);
   let output = (ins);
   let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
   let ctrl_output = (outs Optional<AnyType>:$ctrl_output);
-  let attrs = (ins
-    StrArrayAttr:$output_lbns
+  dag required_attrs = (ins StrArrayAttr:$output_lbns);
+  dag custom_attrs = (ins);
+  let attrs = !con(
+    required_attrs,
+    custom_attrs
   );
   let hasCanonicalizer = 1;
 }
 
 def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", []> {
   let summary = "";
-  let output = (outs AnyType:$out);
+  let output = (outs AnyType:$output);
   let custom_attrs = (ins
     AnyI64ElementsAttr:$shape,
     OptionalAttr<StrAttr>:$data_type,
@@ -120,7 +126,8 @@ def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", []> {
 
 def OneFlow_InputOp : OneFlow_ConcreteSystemOp<"input", []> {
   let summary = "";
-  let output = (outs AnyType:$out);
+  let input = (ins AnyType:$input);
+  let output = (outs AnyType:$output);
   let custom_attrs = (ins
     OptionalAttr<AnyI64ElementsAttr>:$shape,
     OptionalAttr<StrAttr>:$data_type,
@@ -132,8 +139,8 @@ def OneFlow_InputOp : OneFlow_ConcreteSystemOp<"input", []> {
 
 def OneFlow_OutputOp : OneFlow_ConcreteSystemOp<"output", []> {
   let summary = "";
-  let input = (ins AnyType:$in);
-  let output = (outs AnyType:$out);
+  let input = (ins AnyType:$input);
+  let output = (outs AnyType:$output);
   let custom_attrs = (ins
     OptionalAttr<AnyI64ElementsAttr>:$shape,
     OptionalAttr<StrAttr>:$data_type,
@@ -141,6 +148,38 @@ def OneFlow_OutputOp : OneFlow_ConcreteSystemOp<"output", []> {
     OptionalAttr<StrArrayAttr>:$nd_sbp,
     OptionalAttr<StrAttr>:$job_name
   );
+}
+
+def OneFlow_Job : OneFlow_JobOp<"job", []>;
+
+def OneFlow_ReturnOp : Op<OneFlow_Dialect, "return", [NoSideEffect, HasParent<"Job">,
+                                MemRefsNormalizable, ReturnLike, Terminator]> {
+  let summary = "return operation";
+  let description = [{
+    The "return" operation represents a return operation within a Job.
+    The operation takes an optional tensor operand and produces no results.
+    The operand type must match the signature of the job function that contains
+    the operation. For example:
+
+    ```mlir
+      job @foo() -> tensor<2xf64> {
+        ...
+        oneflow.return %0 : tensor<2xf64>
+      }
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$operands);
+
+  let builders = [
+    OpBuilder<(ins),
+    [{ build($_builder, $_state, llvm::None); }]>];
+
+  let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
+
+  let printer = [{ return ::print(p, *this); }];
+  let verifier = [{ return ::verify(*this); }];
+  let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
 #endif // ONEFLOW_OPS

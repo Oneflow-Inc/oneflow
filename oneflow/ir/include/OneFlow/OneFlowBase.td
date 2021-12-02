@@ -4,6 +4,9 @@
 include "OneFlowDialect.td"
 include "OneFlowInterfaces.td"
 
+include "mlir/IR/SymbolInterfaces.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
+
 def SI32ArrayAttr : TypedArrayAttrBase<SI32Attr,
                                       "signed 32-bit integer array attribute"> {
   let constBuilderCall = "$_builder.getArrayAttr(llvm::to_vector<8>(llvm::map_range(values, [this](int32_t v) -> Attribute { return builder_.getSI32IntegerAttr($0); })))";
@@ -39,7 +42,6 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
   dag attrs = (ins);
   dag trait_attrs = (ins);
   dag user_op_attrs = (ins);
-  dag custom_attrs = (ins);
   dag input = (ins Variadic<AnyType>:$data_input);
   dag output = (outs Variadic<AnyType>:$data_output);
   dag ctrl_input = (ins);
@@ -50,7 +52,6 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
       op_conf_attrs,
       trait_attrs,
       user_op_attrs,
-      custom_attrs,
       attrs
   );
   let results = !con(
@@ -215,6 +216,49 @@ def OneFlow_Involution : NativeOpTrait<"IsInvolutionOfIdenticalPlacement">;
 
 class OneFlow_InvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_UnaryBaseOp<mnemonic, !listconcat(traits, [OneFlow_Involution])> {
+}
+
+class OneFlow_JobOp<string mnemonic, list<OpTrait> traits = []> :
+        Op<OneFlow_Dialect, mnemonic, !listconcat(traits, [FunctionLike, Symbol])> {
+  let regions = (region AnyRegion:$body);
+
+  let arguments = (ins 
+    SymbolNameAttr:$sym_name,
+    TypeAttr:$type,
+    OptionalAttr<StrAttr>:$sym_visibility
+  );
+
+  let builders = [OpBuilder<(ins
+    "StringRef":$name, "FunctionType":$type)
+  >];
+
+  let extraClassDeclaration = [{
+    // FuncOp clone(BlockAndValueMapping &mapper);
+    // FuncOp clone();
+
+    // void cloneInto(FuncOp dest, BlockAndValueMapping &mapper);
+  
+    // ::mlir::Region *getCallableRegion() { return isExternal() ? nullptr : &getBody(); }
+
+    // ArrayRef<Type> getCallableResults() { return getType().getResults(); }
+
+    // bool isDeclaration() { return isExternal(); }
+
+  private:
+    friend class OpTrait::FunctionLike<Job>;
+
+    unsigned getNumFuncArguments() { return getType().getInputs().size(); }
+
+    unsigned getNumFuncResults() { return getType().getResults().size(); }
+
+    LogicalResult verifyType() {
+      auto type = getTypeAttr().getValue();
+      if (!type.isa<FunctionType>())
+        return emitOpError("requires '" + getTypeAttrName() +
+                           "' attribute of function type");
+      return success();
+    }
+  }];
 }
 
 #define GET_ONEFLOW_BASE_OP_DEFINITIONS

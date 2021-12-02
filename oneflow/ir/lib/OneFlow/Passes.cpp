@@ -97,7 +97,7 @@ FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, 
   for (auto op : ops) { nb.clone(*op, mapping); }
   SmallVector<::mlir::Value, 4> mapped_results;
   for (auto result : results) { mapped_results.push_back(mapping.lookup(result)); }
-  rewriter.create<ReturnOp>(loc, mapped_results);
+  rewriter.create<mlir::ReturnOp>(loc, mapped_results);
   assert(!symbol_table.lookup(func_name));
   return function;
 }
