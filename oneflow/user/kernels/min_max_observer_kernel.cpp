@@ -120,7 +120,7 @@ class CpuMinMaxObserverKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("min_max_observer")                            \
       .SetCreateFn<CpuMinMaxObserverKernel<dtype>>()                  \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
 
 REGISTER_MIN_MAX_OBSERVER_KERNEL(float);
 REGISTER_MIN_MAX_OBSERVER_KERNEL(double);

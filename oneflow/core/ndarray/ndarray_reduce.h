@@ -32,7 +32,7 @@ struct NdarrayReduce<
     device_type, T, binary_func,
     typename std::enable_if<std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
     final {
-  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& origin_y,
+  static void Reduce(ep::Stream* stream, const XpuVarNdarray<T>& origin_y,
                      const XpuVarNdarray<const T>& origin_x, const XpuVarNdarray<T>& tmp_storage) {
     DimVector simplified_x_dim;
     DimVector simplified_y_dim;
@@ -42,17 +42,17 @@ struct NdarrayReduce<
 
     CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
     if (NdarrayNoReduce<device_type, T, binary_func>::Matched(y, x)) {
-      NdarrayNoReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
+      NdarrayNoReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
     } else if (NdarrayScalarReduce<device_type, T, binary_func>::Matched(y, x)) {
-      NdarrayScalarReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
+      NdarrayScalarReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
     } else if (NdarrayMatrixRowReduce<device_type, T, binary_func>::Matched(y, x)) {
-      NdarrayMatrixRowReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
+      NdarrayMatrixRowReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
     } else if (NdarrayMatrixColReduce<device_type, T, binary_func>::Matched(y, x)) {
-      NdarrayMatrixColReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
+      NdarrayMatrixColReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
     } else if (NdarrayXYZCubeXZReduce<device_type, T, binary_func>::Matched(y, x)) {
-      NdarrayXYZCubeXZReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
+      NdarrayXYZCubeXZReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
     } else {
-      NdarrayDefaultReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
+      NdarrayDefaultReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
     }
   }
 
@@ -62,8 +62,8 @@ struct NdarrayReduce<
     CHECK(y.At(0) == 1 || y.At(0) == x.At(0));
     CHECK(simplified_x->empty());
     CHECK(simplified_y->empty());
-    simplified_x->push_back(x.At(0));
-    simplified_y->push_back(y.At(0));
+    simplified_x->emplace_back(x.At(0));
+    simplified_y->emplace_back(y.At(0));
     bool prev_axis_is_reduced = (y.At(0) == 1);
     FOR_RANGE(int, i, 1, x.NumAxes()) {
       const int64_t x_dim = x.At(i);
@@ -74,8 +74,8 @@ struct NdarrayReduce<
         simplified_x->back() *= x_dim;
         simplified_y->back() *= y_dim;
       } else {
-        simplified_x->push_back(x_dim);
-        simplified_y->push_back(y_dim);
+        simplified_x->emplace_back(x_dim);
+        simplified_y->emplace_back(y_dim);
       }
       prev_axis_is_reduced = cur_axis_is_reduced;
     }
@@ -87,11 +87,11 @@ struct NdarrayReduce<
     device_type, T, binary_func,
     typename std::enable_if<!std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
     final {
-  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
+  static void Reduce(ep::Stream* stream, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
     using NewT = typename DevDType<device_type, T>::type;
     return NdarrayReduce<device_type, NewT, binary_func>::Reduce(
-        ctx, reinterpret_cast<const XpuVarNdarray<NewT>&>(y),
+        stream, reinterpret_cast<const XpuVarNdarray<NewT>&>(y),
         reinterpret_cast<const XpuVarNdarray<const NewT>&>(x),
         reinterpret_cast<const XpuVarNdarray<NewT>&>(tmp_storage));
   }

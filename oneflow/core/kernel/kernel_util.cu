@@ -25,9 +25,9 @@ namespace oneflow {
   template<typename T, typename Derived> \
   void GpuKernelUtilIf<T, Derived>::
 
-KU_IF_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+KU_IF_METHOD InitializeWithConf(ep::Stream* stream, const InitializerConf& initializer_conf,
                                 uint32_t random_seed, Blob* blob) {
-  WithHostBlobAndStreamSynchronizeEnv(ctx, blob, [&](Blob* host_blob) {
+  WithHostBlobAndStreamSynchronizeEnv(stream, blob, [&](Blob* host_blob) {
     KernelUtil<DeviceType::kCPU, T>::InitializeWithConf(nullptr, initializer_conf, random_seed,
                                                         host_blob);
   });
@@ -35,15 +35,15 @@ KU_IF_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializ
 
 #define KU_FLOATING_METHOD \
   template<typename T>     \
-  void KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::value>::type>::
+  void KernelUtil<DeviceType::kCUDA, T, typename std::enable_if<IsFloating<T>::value>::type>::
 
 #define KU_INTEGRAL_METHOD \
   template<typename T>     \
-  void KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsIntegral<T>::value>::type>::
+  void KernelUtil<DeviceType::kCUDA, T, typename std::enable_if<IsIntegral<T>::value>::type>::
 
-#define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto)                                \
-  template struct GpuKernelUtilIf<type_cpp, KernelUtil<DeviceType::kGPU, type_cpp>>; \
-  template struct KernelUtil<DeviceType::kGPU, type_cpp>;
+#define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto)                                 \
+  template struct GpuKernelUtilIf<type_cpp, KernelUtil<DeviceType::kCUDA, type_cpp>>; \
+  template struct KernelUtil<DeviceType::kCUDA, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

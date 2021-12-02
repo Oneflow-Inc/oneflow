@@ -33,8 +33,8 @@ class BatchMatmulImpl : public BatchMatmul {
         broadcast_matmul_(std::move(broadcast_matmul)) {}
   ~BatchMatmulImpl() override = default;
 
-  void Launch(StreamContext* stream_ctx, size_t batch_size, size_t m, size_t n, size_t k,
-              Scalar alpha, const void* a, const void* b, Scalar beta, void* c) override {
+  void Launch(Stream* stream, size_t batch_size, size_t m, size_t n, size_t k, Scalar alpha,
+              const void* a, const void* b, Scalar beta, void* c) override {
     int64_t a_dims[3];
     int64_t b_dims[3];
     int64_t c_dims[3];
@@ -61,7 +61,7 @@ class BatchMatmulImpl : public BatchMatmul {
     }
     c_dims[1] = m;
     c_dims[2] = n;
-    broadcast_matmul_->Launch(stream_ctx, alpha, 3, a_dims, a, 3, b_dims, b, beta, 3, c_dims, c);
+    broadcast_matmul_->Launch(stream, alpha, 3, a_dims, a, 3, b_dims, b, beta, 3, c_dims, c);
   }
 
  private:
@@ -90,8 +90,8 @@ REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, BatchMatmulFactory,
                            BatchMatmulFactoryImpl<DeviceType::kCPU>);
 
 #ifdef WITH_CUDA
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, BatchMatmulFactory,
-                           BatchMatmulFactoryImpl<DeviceType::kGPU>);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, BatchMatmulFactory,
+                           BatchMatmulFactoryImpl<DeviceType::kCUDA>);
 #endif  // WITH_CUDA
 
 }  // namespace

@@ -29,8 +29,8 @@ class LogSoftmaxBackward : public Primitive {
   LogSoftmaxBackward() = default;
   ~LogSoftmaxBackward() override = default;
 
-  virtual void Launch(StreamContext* stream_ctx, size_t rows, size_t cols, const void* y,
-                      const void* dy, void* dx) = 0;
+  virtual void Launch(Stream* stream, size_t rows, size_t cols, const void* y, const void* dy,
+                      void* dx) = 0;
 };
 
 class LogSoftmaxBackwardFactory : public Factory<LogSoftmaxBackward> {

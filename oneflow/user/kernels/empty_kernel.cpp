@@ -30,7 +30,7 @@ class EmptyKernel final : public OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     // None POD type need check
-    if (!IsPODDataType(GetDataType<T>::value)) {
+    if (!IsPODAndHalfDataType(GetDataType<T>::value)) {
       const user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
       CHECK(out->shape().NumAxes() > 0 && out->shape().elem_cnt() == 0)
           << "None POD Tensor created by empty op must be 0-Size tensor.";
@@ -42,7 +42,7 @@ class EmptyKernel final : public OpKernel {
 #define REGISTER_EMPTY_XPU_KERNEL(device, dtype)                                           \
   REGISTER_USER_KERNEL("empty").SetCreateFn<EmptyKernel<device, dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceType() == device)                                                 \
-      & (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
+      && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
 #define REGISTER_EMPTY_KERNEL(device, dtype_pair) \
   REGISTER_EMPTY_XPU_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
@@ -52,8 +52,9 @@ class EmptyKernel final : public OpKernel {
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_EMPTY_KERNEL, DEVICE_TYPE_SEQ, TOTAL_DATA_TYPE_SEQ)
 #undef TOTAL_DATA_TYPE_SEQ
 
+REGISTER_EMPTY_XPU_KERNEL(DeviceType::kCPU, float16);
 #ifdef WITH_CUDA
-REGISTER_EMPTY_XPU_KERNEL(DeviceType::kGPU, float16);
+REGISTER_EMPTY_XPU_KERNEL(DeviceType::kCUDA, float16);
 #endif  // WITH_CUDA
 
 }  // namespace user_op

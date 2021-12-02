@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/ep/common/primitive/broadcast_matmul.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/stream/cuda/cuda_stream_context.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #include <cuda.h>
 
 namespace oneflow {
@@ -83,13 +83,13 @@ cudaDataType_t GetComputeType(DataType data_type) {
   }
 }
 
-void LaunchBroadcastMatmul(StreamContext* stream_ctx, DataType data_type,
-                           BlasTransposeType transpose_a, BlasTransposeType transpose_b,
-                           int64_t num_batch_dims, const int64_t* broadcast_batch_dims,
-                           const int64_t* a_batch_dims, const int64_t* b_batch_dims,
-                           const int64_t* c_batch_dims, int64_t m, int64_t n, int64_t k,
-                           Scalar alpha, const void* a, const void* b, Scalar beta, void* c) {
-  auto* cuda_stream_ctx = stream_ctx->As<CudaStreamContext>();
+void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType transpose_a,
+                           BlasTransposeType transpose_b, int64_t num_batch_dims,
+                           const int64_t* broadcast_batch_dims, const int64_t* a_batch_dims,
+                           const int64_t* b_batch_dims, const int64_t* c_batch_dims, int64_t m,
+                           int64_t n, int64_t k, Scalar alpha, const void* a, const void* b,
+                           Scalar beta, void* c) {
+  auto* cuda_stream = stream->As<CudaStream>();
   const auto cuda_data_type = GetCudaDataType(data_type);
   const auto compute_type = GetComputeType(data_type);
   const auto sp_alpha = GetCublasScalarParameter(alpha, compute_type);
@@ -125,7 +125,7 @@ void LaunchBroadcastMatmul(StreamContext* stream_ctx, DataType data_type,
     UNIMPLEMENTED();
   }
   const int cublas_ldc = n;
-  CublasMathModeGuard guard(cuda_stream_ctx->cublas_handle());
+  CublasMathModeGuard guard(cuda_stream->cublas_handle());
   if (data_type == DataType::kFloat16) {
 #if CUDA_VERSION < 11000
     guard.SetMathMode(CUBLAS_TENSOR_OP_MATH);
@@ -154,9 +154,9 @@ void LaunchBroadcastMatmul(StreamContext* stream_ctx, DataType data_type,
     const long long int cublas_stride_c = cublas_m * cublas_n;
     const auto sp_beta = GetCublasScalarParameter(beta, compute_type);
     OF_CUBLAS_CHECK(cublasGemmStridedBatchedEx(
-        cuda_stream_ctx->cublas_handle(), cublas_trans_a, cublas_trans_b, cublas_m, cublas_n,
-        cublas_k, &sp_alpha, cublas_a, cuda_data_type, cublas_lda, cublas_stride_a, cublas_b,
-        cuda_data_type, cublas_ldb, cublas_stride_b, &sp_beta, cublas_c, cuda_data_type, cublas_ldc,
+        cuda_stream->cublas_handle(), cublas_trans_a, cublas_trans_b, cublas_m, cublas_n, cublas_k,
+        &sp_alpha, cublas_a, cuda_data_type, cublas_lda, cublas_stride_a, cublas_b, cuda_data_type,
+        cublas_ldb, cublas_stride_b, &sp_beta, cublas_c, cuda_data_type, cublas_ldc,
         cublas_stride_c, batch_count, compute_type, algo));
   } else {
     auto func = [&](const void* batch_a, const void* batch_b, void* batch_c, Scalar batch_beta) {
@@ -165,7 +165,7 @@ void LaunchBroadcastMatmul(StreamContext* stream_ctx, DataType data_type,
       const void* cublas_b = batch_a;
       void* cublas_c = batch_c;
       OF_CUBLAS_CHECK(cublasGemmEx(
-          cuda_stream_ctx->cublas_handle(), cublas_trans_a, cublas_trans_b, cublas_m, cublas_n,
+          cuda_stream->cublas_handle(), cublas_trans_a, cublas_trans_b, cublas_m, cublas_n,
           cublas_k, &sp_alpha, cublas_a, cuda_data_type, cublas_lda, cublas_b, cuda_data_type,
           cublas_ldb, &sp_beta, cublas_c, cuda_data_type, cublas_ldc, compute_type, algo));
     };
@@ -193,7 +193,7 @@ class BroadcastMatmulFactoryImpl : public BroadcastMatmulFactory {
   }
 };
 
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, BroadcastMatmulFactory, BroadcastMatmulFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, BroadcastMatmulFactory, BroadcastMatmulFactoryImpl);
 
 }  // namespace
 

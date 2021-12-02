@@ -31,8 +31,7 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
   ElementwiseUnaryImpl() = default;
   ~ElementwiseUnaryImpl() override = default;
 
-  void Launch(StreamContext* stream_ctx, const void* src_ptr, void* dst_ptr,
-              size_t count) override {
+  void Launch(Stream* stream, const void* src_ptr, void* dst_ptr, size_t count) override {
     Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
     const Src* src = reinterpret_cast<const Src*>(src_ptr);
     for (size_t i = 0; i < count; ++i) {

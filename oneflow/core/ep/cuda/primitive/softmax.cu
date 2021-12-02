@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/log_softmax.h"
 #include "oneflow/core/ep/cuda/primitive/type_seq.h"
 #include "oneflow/core/cuda/softmax.cuh"
-#include "oneflow/core/stream/cuda/cuda_stream_context.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -54,9 +54,8 @@ class SoftmaxImpl : public SoftmaxBase {
   SoftmaxImpl() = default;
   ~SoftmaxImpl() override = default;
 
-  void Launch(StreamContext* stream_ctx, size_t rows, size_t cols, const void* x,
-              void* y) override {
-    cudaStream_t cuda_stream = stream_ctx->As<CudaStreamContext>()->cuda_stream();
+  void Launch(Stream* stream, size_t rows, size_t cols, const void* x, void* y) override {
+    cudaStream_t cuda_stream = stream->As<CudaStream>()->cuda_stream();
     SoftmaxGpu<algorithm, T>(cuda_stream, rows, cols, reinterpret_cast<const T*>(x),
                              reinterpret_cast<T*>(y));
   }
@@ -96,8 +95,8 @@ class GenericSoftmaxFactoryImpl : public FactoryBase {
 using SoftmaxFactoryImpl = GenericSoftmaxFactoryImpl<SoftmaxFactory, Softmax, Algorithm::kSoftmax>;
 using LogSoftmaxFactoryImpl =
     GenericSoftmaxFactoryImpl<LogSoftmaxFactory, LogSoftmax, Algorithm::kLogSoftmax>;
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, SoftmaxFactory, SoftmaxFactoryImpl);
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, LogSoftmaxFactory, LogSoftmaxFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, SoftmaxFactory, SoftmaxFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, LogSoftmaxFactory, LogSoftmaxFactoryImpl);
 
 }  // namespace
 

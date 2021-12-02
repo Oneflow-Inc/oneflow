@@ -34,6 +34,7 @@ template<typename Context, typename ValueT>
 struct BaseExpr {
   ALWAYS_INLINE virtual scalar_or_const_ref_t<ValueT> get(const Context&) const = 0;
   virtual std::string DebugStr(const Context&, bool display_result = true) const = 0;  // NOLINT
+  operator bool() = delete;
 };
 
 template<typename Context, typename ValueT, typename E>
@@ -59,7 +60,7 @@ template<typename Fn,
              std::decay_t<typename oneflow::function_traits<Fn>::template arg_type<0>>,
          typename ValueT = std::decay_t<typename oneflow::function_traits<Fn>::return_type>>
 struct Custom final : public Expr<Context, ValueT, Custom<Fn>> {
-  explicit Custom(Fn fn) : Custom(fn, "") {}
+  explicit Custom(Fn fn) : Custom("", fn) {}
   Custom(std::string debug_str, Fn fn) : fn_(std::move(fn)), debug_str_(std::move(debug_str)) {}
   ALWAYS_INLINE scalar_or_const_ref_t<ValueT> get(const Context& context) const override {
     return fn_(context);
@@ -88,9 +89,7 @@ template<typename Context, typename E>
 struct NotBoolFunctor final : public BoolExpr<Context, NotBoolFunctor<Context, E>> {
   explicit NotBoolFunctor(const E& expr) : expr_(expr) {}
 
-  ALWAYS_INLINE bool get(const Context& context) const override {
-    return !expr_.get(expr_, context);
-  }
+  ALWAYS_INLINE bool get(const Context& context) const override { return !expr_.get(context); }
 
   std::string DebugStr(const Context& ctx, bool display_result) const override {
     std::ostringstream string_stream;
@@ -104,7 +103,7 @@ struct NotBoolFunctor final : public BoolExpr<Context, NotBoolFunctor<Context, E
 };
 
 template<typename Context, typename E>
-NotBoolFunctor<Context, E> operator~(BoolExpr<Context, E> const& lhs) {
+NotBoolFunctor<Context, E> operator!(BoolExpr<Context, E> const& lhs) {
   return NotBoolFunctor<Context, E>(*static_cast<const E*>(&lhs));
 }
 
@@ -113,9 +112,7 @@ NotBoolFunctor<Context, E> operator~(BoolExpr<Context, E> const& lhs) {
   struct name##BoolFunctor final : public BoolExpr<Context, name##BoolFunctor<Context, E1, E2>> { \
     name##BoolFunctor(const E1& lhs, const E2& rhs) : lhs_(lhs), rhs_(rhs) {}                     \
                                                                                                   \
-    ALWAYS_INLINE bool get(const Context& context) const override {                               \
-      return lhs_.get(context) op rhs_.get(context);                                              \
-    }                                                                                             \
+    ALWAYS_INLINE bool get(const Context& context) const override;                                \
                                                                                                   \
     std::string DebugStr(const Context& ctx, bool display_result) const override;                 \
                                                                                                   \
@@ -139,8 +136,8 @@ NotBoolFunctor<Context, E> operator~(BoolExpr<Context, E> const& lhs) {
   }
 
 DEFINE_BINARY_FUNCTOR(Equal, ==)
-DEFINE_BINARY_FUNCTOR(And, &)
-DEFINE_BINARY_FUNCTOR(Or, |)
+DEFINE_BINARY_FUNCTOR(And, &&)
+DEFINE_BINARY_FUNCTOR(Or, ||)
 DEFINE_BINARY_FUNCTOR(Greater, >)
 DEFINE_BINARY_FUNCTOR(Less, <)
 DEFINE_BINARY_FUNCTOR(EqualOrGreater, >=)
@@ -148,24 +145,36 @@ DEFINE_BINARY_FUNCTOR(EqualOrLess, <=)
 
 #undef DEFINE_BINARY_FUNCTOR
 
-#define DEFINE_NON_SHORT_CIRCUIT_DEBUG_STR(name, op)                                    \
-  template<typename Context, typename E1, typename E2>                                  \
-  std::string name##BoolFunctor<Context, E1, E2>::DebugStr(const Context& ctx,          \
-                                                           bool display_result) const { \
-    std::string l_str = lhs_.DebugStr(ctx, display_result);                             \
-    std::string r_str = rhs_.DebugStr(ctx, display_result);                             \
-    std::ostringstream string_stream;                                                   \
-    string_stream << "(" << l_str << " OF_PP_STRINGIZE(op) " << r_str << ")";           \
-    return string_stream.str();                                                         \
+#define DEFINE_NON_SHORT_CIRCUIT_FUNCTOR_METHODS(name, op)                                  \
+  template<typename Context, typename E1, typename E2>                                      \
+  ALWAYS_INLINE inline bool name##BoolFunctor<Context, E1, E2>::get(const Context& context) \
+      const {                                                                               \
+    return lhs_.get(context) op rhs_.get(context);                                          \
+  }                                                                                         \
+  template<typename Context, typename E1, typename E2>                                      \
+  std::string name##BoolFunctor<Context, E1, E2>::DebugStr(const Context& ctx,              \
+                                                           bool display_result) const {     \
+    std::string l_str = lhs_.DebugStr(ctx, display_result);                                 \
+    std::string r_str = rhs_.DebugStr(ctx, display_result);                                 \
+    std::ostringstream string_stream;                                                       \
+    string_stream << "(" << l_str << " OF_PP_STRINGIZE(op) " << r_str << ")";               \
+    return string_stream.str();                                                             \
   }
 
-DEFINE_NON_SHORT_CIRCUIT_DEBUG_STR(Equal, ==)
-DEFINE_NON_SHORT_CIRCUIT_DEBUG_STR(Greater, >)
-DEFINE_NON_SHORT_CIRCUIT_DEBUG_STR(Less, <)
-DEFINE_NON_SHORT_CIRCUIT_DEBUG_STR(EqualOrGreater, >=)
-DEFINE_NON_SHORT_CIRCUIT_DEBUG_STR(EqualOrLess, <=)
+DEFINE_NON_SHORT_CIRCUIT_FUNCTOR_METHODS(Equal, ==)
+DEFINE_NON_SHORT_CIRCUIT_FUNCTOR_METHODS(Greater, >)
+DEFINE_NON_SHORT_CIRCUIT_FUNCTOR_METHODS(Less, <)
+DEFINE_NON_SHORT_CIRCUIT_FUNCTOR_METHODS(EqualOrGreater, >=)
+DEFINE_NON_SHORT_CIRCUIT_FUNCTOR_METHODS(EqualOrLess, <=)
 
-#undef DEFINE_NON_SHORT_CIRCUIT_DEBUG_STR
+#undef DEFINE_NON_SHORT_CIRCUIT_FUNCTOR_METHODS
+
+template<typename Context, typename E1, typename E2>
+ALWAYS_INLINE inline bool AndBoolFunctor<Context, E1, E2>::get(const Context& context) const {
+  bool lhs_result = lhs_.get(context);
+  if (!lhs_result) { return false; }
+  return rhs_.get(context);
+}
 
 template<typename Context, typename E1, typename E2>
 std::string AndBoolFunctor<Context, E1, E2>::DebugStr(const Context& ctx,
@@ -176,6 +185,13 @@ std::string AndBoolFunctor<Context, E1, E2>::DebugStr(const Context& ctx,
   std::ostringstream string_stream;
   string_stream << "(" << l_str << " and " << r_str << ")";
   return string_stream.str();
+}
+
+template<typename Context, typename E1, typename E2>
+ALWAYS_INLINE inline bool OrBoolFunctor<Context, E1, E2>::get(const Context& context) const {
+  bool lhs_result = lhs_.get(context);
+  if (lhs_result) { return true; }
+  return rhs_.get(context);
 }
 
 template<typename Context, typename E1, typename E2>

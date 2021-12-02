@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/radix_sort.cuh"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -93,26 +94,26 @@ class GpuRadixSortTopKKernel final : public user_op::OpKernel {
     const int32_t instance_num = elem_cnt / instance_size;
     const int32_t k = std::min(ctx->Attr<int32_t>("k"), instance_size);
     InitializeIndices<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                        ctx->device_ctx()->cuda_stream()>>>(elem_cnt, buf_manager.IndicesPtr(),
-                                                            instance_size);
+                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+        elem_cnt, buf_manager.IndicesPtr(), instance_size);
     SortPairsDescending(in->dptr<T>(), buf_manager.IndicesPtr(), instance_num, instance_size,
                         buf_manager.TempStoragePtr(), buf_manager.TempStorageBytes(),
                         buf_manager.SortedInPtr(), buf_manager.SortedIndicesPtr(),
-                        ctx->device_ctx()->cuda_stream());
+                        ctx->stream()->As<ep::CudaStream>()->cuda_stream());
     OF_CUDA_CHECK(cudaMemcpy2DAsync(out->mut_dptr<int32_t>(), k * sizeof(int32_t),
                                     buf_manager.SortedIndicesPtr(), instance_size * sizeof(int32_t),
                                     k * sizeof(int32_t), instance_num, cudaMemcpyDefault,
-                                    ctx->device_ctx()->cuda_stream()));
+                                    ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(dtype)                                              \
+#define REGISTER_CUDA_RADIX_SORT_TOP_K_KERNEL(dtype)                                             \
   REGISTER_USER_KERNEL("top_k")                                                                  \
       .SetCreateFn<GpuRadixSortTopKKernel<dtype>>()                                              \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                            \
-                       & (user_op::HobAttr<int32_t>("k") > 128)                                  \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                           \
+                       && (user_op::HobAttr<int32_t>("k") > 128)                                 \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))          \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
         const Shape& in_shape = ctx->InputShape("in", 0);                                        \
         const int32_t elem_cnt = in_shape.elem_cnt();                                            \
@@ -133,11 +134,11 @@ class GpuRadixSortTopKKernel final : public user_op::OpKernel {
                + temp_storage_bytes;                                                             \
       });
 
-REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(float)
-REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(double)
-REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(uint8_t)
-REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(int8_t)
-REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(int32_t)
-REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(int64_t)
+REGISTER_CUDA_RADIX_SORT_TOP_K_KERNEL(float)
+REGISTER_CUDA_RADIX_SORT_TOP_K_KERNEL(double)
+REGISTER_CUDA_RADIX_SORT_TOP_K_KERNEL(uint8_t)
+REGISTER_CUDA_RADIX_SORT_TOP_K_KERNEL(int8_t)
+REGISTER_CUDA_RADIX_SORT_TOP_K_KERNEL(int32_t)
+REGISTER_CUDA_RADIX_SORT_TOP_K_KERNEL(int64_t)
 
 }  // namespace oneflow

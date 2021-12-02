@@ -64,7 +64,7 @@ class LogSoftmaxKernel final : public user_op::OpKernel, public user_op::CudaGra
     const int64_t num_instances = in->shape().Count(0, in->shape().NumAxes() - 1);
     std::unique_ptr<ep::primitive::LogSoftmax> primitive = NewLogSoftmaxPrimitive(ctx);
     CHECK(primitive);
-    primitive->Launch(ctx->stream_ctx(), num_instances, num_classes, in->dptr(), prob->mut_dptr());
+    primitive->Launch(ctx->stream(), num_instances, num_classes, in->dptr(), prob->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -88,7 +88,7 @@ class LogSoftmaxGradKernel final : public user_op::OpKernel, public user_op::Cud
     std::unique_ptr<ep::primitive::LogSoftmaxBackward> primitive =
         NewLogSoftmaxBackwardPrimitive(ctx);
     CHECK(primitive);
-    primitive->Launch(ctx->stream_ctx(), num_instances, num_classes, prob->dptr(), dy->dptr(),
+    primitive->Launch(ctx->stream(), num_instances, num_classes, prob->dptr(), dy->dptr(),
                       dx->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

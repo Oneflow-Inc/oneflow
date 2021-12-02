@@ -35,7 +35,7 @@ class CastImpl : public Cast {
   CastImpl() = default;
   ~CastImpl() override = default;
 
-  void Launch(StreamContext* stream_ctx, const void* from, void* to, size_t count) override {
+  void Launch(Stream* stream, const void* from, void* to, size_t count) override {
     CastCpu(reinterpret_cast<const From*>(from), reinterpret_cast<To*>(to), count);
   }
 };

@@ -23,7 +23,7 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T, int NDIMS>
 struct NdarrayAssignCoreWrapper final {
-  static void Assign(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+  static void Assign(ep::Stream* stream, const XpuVarNdarray<T>& y,
                      const XpuReducedNdarray<T, NDIMS>& reduced);
 };
 

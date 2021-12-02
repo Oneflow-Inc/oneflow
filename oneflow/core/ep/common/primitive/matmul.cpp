@@ -30,9 +30,9 @@ class MatmulImpl : public Matmul {
       : batch_matmul_(std::move(batch_matmul)) {}
   ~MatmulImpl() override = default;
 
-  void Launch(StreamContext* stream_ctx, size_t m, size_t n, size_t k, Scalar alpha, const void* a,
+  void Launch(Stream* stream, size_t m, size_t n, size_t k, Scalar alpha, const void* a,
               const void* b, Scalar beta, void* c) override {
-    batch_matmul_->Launch(stream_ctx, 1, m, n, k, alpha, a, b, beta, c);
+    batch_matmul_->Launch(stream, 1, m, n, k, alpha, a, b, beta, c);
   }
 
  private:
@@ -58,7 +58,7 @@ class MatmulFactoryImpl : public MatmulFactory {
 REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, MatmulFactory, MatmulFactoryImpl<DeviceType::kCPU>);
 
 #ifdef WITH_CUDA
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, MatmulFactory, MatmulFactoryImpl<DeviceType::kGPU>);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, MatmulFactory, MatmulFactoryImpl<DeviceType::kCUDA>);
 #endif  // WITH_CUDA
 
 }  // namespace

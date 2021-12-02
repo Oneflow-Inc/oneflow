@@ -185,7 +185,7 @@ class EagerBToSKernel final : public user_op::OpKernel {
         const auto& elem_cnt2tensor_slice_copier_pair =
             sorted_elem_cnt2in_tensor_slice_copier_pair.at(i);
         const auto& tensor_slice_copier = elem_cnt2tensor_slice_copier_pair.second;
-        tensor_slice_copier->Copy(ctx->stream_ctx(), out_ptr, in_ptr);
+        tensor_slice_copier->Copy(ctx->stream(), out_ptr, in_ptr);
         continue;
       }
       if (GlobalProcessCtx::Rank() == src) {
@@ -193,9 +193,9 @@ class EagerBToSKernel final : public user_op::OpKernel {
             sorted_elem_cnt2in_tensor_slice_copier_pair.at(i);
         const auto& elem_cnt = elem_cnt2tensor_slice_copier_pair.first;
         const auto& tensor_slice_copier = elem_cnt2tensor_slice_copier_pair.second;
-        tensor_slice_copier->Copy(ctx->stream_ctx(), tmp_buffer_ptr, in_ptr);
+        tensor_slice_copier->Copy(ctx->stream(), tmp_buffer_ptr, in_ptr);
         CHECK_JUST(Send<device_type>(reinterpret_cast<const void*>(tmp_buffer_ptr), elem_cnt,
-                                     in->data_type(), dst, ctx->device_ctx()));
+                                     in->data_type(), dst, ctx->stream()));
       }
       if (GlobalProcessCtx::Rank() == dst) {
         const auto& elem_cnt2tensor_slice_copier_pair =
@@ -203,8 +203,8 @@ class EagerBToSKernel final : public user_op::OpKernel {
         const auto& elem_cnt = elem_cnt2tensor_slice_copier_pair.first;
         const auto& tensor_slice_copier = elem_cnt2tensor_slice_copier_pair.second;
         CHECK_JUST(
-            Recv<device_type>(tmp_buffer_ptr, elem_cnt, out->data_type(), src, ctx->device_ctx()));
-        tensor_slice_copier->Copy(ctx->stream_ctx(), out_ptr,
+            Recv<device_type>(tmp_buffer_ptr, elem_cnt, out->data_type(), src, ctx->stream()));
+        tensor_slice_copier->Copy(ctx->stream(), out_ptr,
                                   reinterpret_cast<const void*>(tmp_buffer_ptr));
       }
     }
@@ -219,8 +219,8 @@ class EagerBToSKernel final : public user_op::OpKernel {
       .SetInferTmpSizeFn(InferEagerBToSKernelTmpBufferSize);
 
 REGISTER_EAGER_B_TO_S_KERNEL(DeviceType::kCPU)
-#if defined(WITH_CUDA) && HAS_GPU_SEND_RECV
-REGISTER_EAGER_B_TO_S_KERNEL(DeviceType::kGPU)
+#if defined(WITH_CUDA) && HAS_NCCL_SEND_RECV
+REGISTER_EAGER_B_TO_S_KERNEL(DeviceType::kCUDA)
 #endif
 
 }  // namespace oneflow

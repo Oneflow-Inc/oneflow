@@ -87,12 +87,12 @@ class SamePaddingKernel final : public user_op::OpKernel {
     CHECK_EQ(padding_before.size(), num_axes);
     std::unique_ptr<ep::primitive::Fill> fill_primitive = NewFillPrimitive(ctx);
     CHECK(fill_primitive);
-    fill_primitive->Launch(ctx->stream_ctx(), y->mut_dptr(), Scalar(0), y->shape().elem_cnt());
+    fill_primitive->Launch(ctx->stream(), y->mut_dptr(), Scalar(0), y->shape().elem_cnt());
     DimVector src_pos_vec(num_axes, 0);
     DimVector dst_pos_vec(padding_before.cbegin(), padding_before.cend());
     std::unique_ptr<ep::primitive::CopyNd> copy_nd_primitive = NewCopyNdPrimitive(ctx);
     CHECK(copy_nd_primitive);
-    copy_nd_primitive->Launch(ctx->stream_ctx(), x->data_type(), num_axes, y->mut_dptr(),
+    copy_nd_primitive->Launch(ctx->stream(), x->data_type(), num_axes, y->mut_dptr(),
                               y->shape().ptr(), dst_pos_vec.data(), x->dptr(), x->shape().ptr(),
                               src_pos_vec.data(), x->shape().ptr());
   }
@@ -101,7 +101,7 @@ class SamePaddingKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("same_padding")
     .SetCreateFn<SamePaddingKernel>()
-    .SetIsMatchedHob((FillPrimitiveExists() == true) & (CopyNdPrimitiveExists() == true));
+    .SetIsMatchedHob(FillPrimitiveExists() && CopyNdPrimitiveExists());
 
 class SamePaddingGradKernel final : public user_op::OpKernel {
  public:
@@ -141,9 +141,9 @@ class SamePaddingGradKernel final : public user_op::OpKernel {
     DimVector src_pos_vec(padding_before.cbegin(), padding_before.cend());
     std::unique_ptr<ep::primitive::CopyNd> primitive = NewCopyNdPrimitive(ctx);
     CHECK(primitive);
-    primitive->Launch(ctx->stream_ctx(), dy->data_type(), num_axes, dx->mut_dptr(),
-                      dx->shape().ptr(), dst_pos_vec.data(), dy->dptr(), dy->shape().ptr(),
-                      src_pos_vec.data(), dx->shape().ptr());
+    primitive->Launch(ctx->stream(), dy->data_type(), num_axes, dx->mut_dptr(), dx->shape().ptr(),
+                      dst_pos_vec.data(), dy->dptr(), dy->shape().ptr(), src_pos_vec.data(),
+                      dx->shape().ptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

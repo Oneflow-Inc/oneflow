@@ -105,7 +105,7 @@ class CMNAttr final : public user_op::OpKernelState {
     int64_t C = ImageUtil::IsColor(color_space) ? 3 : 1;
     CHECK(mean_vec_.size() == 1 || mean_vec_.size() == C);
     CHECK(std_vec.size() == 1 || std_vec.size() == C);
-    for (float elem : std_vec) { inv_std_vec_.push_back(1.0f / elem); }
+    for (float elem : std_vec) { inv_std_vec_.emplace_back(1.0f / elem); }
     if (mean_vec_.size() == 1) { mean_vec_.resize(C, mean_vec_.at(0)); }
     if (inv_std_vec_.size() == 1) { inv_std_vec_.resize(C, inv_std_vec_.at(0)); }
   }
@@ -199,8 +199,8 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
 REGISTER_USER_KERNEL("crop_mirror_normalize_from_uint8")
     .SetCreateFn<CropMirrorNormalizeFromStaticShapeToFloatKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("in", 0) == DataType::kUInt8)
-                     & (user_op::HobDataType("out", 0) == DataType::kFloat));
+                     && (user_op::HobDataType("in", 0) == DataType::kUInt8)
+                     && (user_op::HobDataType("out", 0) == DataType::kFloat));
 
 class CropMirrorNormalizeFromTensorBufferToFloatKernel final : public user_op::OpKernel {
  public:
@@ -289,8 +289,8 @@ class CropMirrorNormalizeFromTensorBufferToFloatKernel final : public user_op::O
 REGISTER_USER_KERNEL("crop_mirror_normalize_from_tensorbuffer")
     .SetCreateFn<CropMirrorNormalizeFromTensorBufferToFloatKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
-                     & (user_op::HobDataType("out", 0) == DataType::kFloat));
+                     && (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
+                     && (user_op::HobDataType("out", 0) == DataType::kFloat));
 
 namespace {
 
@@ -336,7 +336,7 @@ class CoinFlipKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("coin_flip")
     .SetCreateFn<CoinFlipKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("out", 0) == DataType::kInt8));
+                     && (user_op::HobDataType("out", 0) == DataType::kInt8));
 
 namespace {
 
@@ -401,7 +401,7 @@ class ImageRandomCropKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("image_random_crop")
     .SetCreateFn<ImageRandomCropKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
-                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
+                     && (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
+                     && (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
 
 }  // namespace oneflow

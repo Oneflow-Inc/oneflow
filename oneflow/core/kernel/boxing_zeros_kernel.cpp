@@ -40,7 +40,7 @@ void BoxingZerosKernel::VirtualKernelInit(KernelContext* ctx) {
 
 void BoxingZerosKernel::ForwardDataContent(KernelContext* ctx) const {
   Blob* out = ctx->BnInOp2Blob("out");
-  primitive_->Launch(ctx->stream_ctx(), out->mut_dptr(), 0, out->ByteSizeOfBlobBody());
+  primitive_->Launch(ctx->stream(), out->mut_dptr(), 0, out->ByteSizeOfBlobBody());
 }
 
 REGISTER_KERNEL(OperatorConf::kBoxingZerosConf, BoxingZerosKernel);

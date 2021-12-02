@@ -72,7 +72,7 @@ class UnfoldTensorKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("unfold_tensor")                               \
       .SetCreateFn<UnfoldTensorKernel<dtype>>()                       \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_UNFOLD_TENSOR_KERNEL(float)
 REGISTER_UNFOLD_TENSOR_KERNEL(double)
@@ -134,7 +134,7 @@ class UnfoldTensorGradKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("unfold_tensor_grad")                          \
       .SetCreateFn<UnfoldTensorGradKernel<dtype>>()                   \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
 REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(float)
 REGISTER_UNFOLD_TENSOR_GRAD_KERNEL(double)

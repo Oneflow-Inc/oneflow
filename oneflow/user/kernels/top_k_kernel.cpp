@@ -53,7 +53,7 @@ void ComputeTopK(const T* in_ptr, int32_t* indices_ptr, const Range& range, int3
 }
 
 template<typename T>
-void CpuTopK(DeviceCtx* ctx, const T* in_ptr, int32_t* indices_ptr, int32_t instance_num,
+void CpuTopK(ep::Stream* /*stream*/, const T* in_ptr, int32_t* indices_ptr, int32_t instance_num,
              int32_t instance_size, int32_t k, bool sorted, int32_t* out_ptr) {
   const int32_t num_thread = std::min(instance_num, Global<ThreadPool>::Get()->thread_num());
   const BalancedSplitter bs(instance_num, num_thread);
@@ -91,7 +91,7 @@ class TopKCpuKernel final : public user_op::OpKernel {
     const int32_t instance_num = in->shape().elem_cnt() / instance_size;
     const int32_t k = std::min(ctx->Attr<int32_t>("k"), instance_size);
     int32_t* indices_ptr = tmp_buffer ? tmp_buffer->mut_dptr<int32_t>() : nullptr;
-    CpuTopK(ctx->device_ctx(), in->dptr<T>(), indices_ptr, instance_num, instance_size, k,
+    CpuTopK(ctx->stream(), in->dptr<T>(), indices_ptr, instance_num, instance_size, k,
             ctx->Attr<bool>("sorted"), out->mut_dptr<int32_t>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -101,7 +101,7 @@ class TopKCpuKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("top_k")                                                         \
       .SetCreateFn<TopKCpuKernel<dtype>>()                                              \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                   \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))  \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                               \
         const Shape& in_shape = ctx->InputShape("in", 0);                               \
         return ctx->Attr<int32_t>("k") > 1 ? in_shape.elem_cnt() * sizeof(int32_t) : 0; \

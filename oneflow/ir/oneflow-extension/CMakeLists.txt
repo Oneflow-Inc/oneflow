@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
 set(LLVM_ENABLE_RTTI ON) # turn this on to make it compatible with protobuf
 add_llvm_library(MLIROneFlowExtension
   extension.cpp
+  ir_pass.cpp
   DEPENDS
 	LINK_LIBS PUBLIC
 	MLIRIR
@@ -16,7 +17,7 @@ llvm_update_compile_flags(MLIROneFlowExtension)
 if(WITH_MLIR_CUDA_CODEGEN)
   set(MLIR_RUNTIME_GPU_LIBS -Wl,--no-as-needed mlir_cuda_runtime -Wl,--as-needed)
 endif(WITH_MLIR_CUDA_CODEGEN)
-
+set(MLIR_RUNTIME_LIBS -Wl,--no-as-needed mlir_c_runner_utils -Wl,--as-needed)
 target_link_libraries(MLIROneFlowExtension
   PRIVATE
   ${dialect_libs}
@@ -29,9 +30,10 @@ target_link_libraries(MLIROneFlowExtension
   MLIRSupport
   MLIROneFlow
   MLIRExecutionEngine
-  of_protoobj
+  MLIROneFlowTranslation
   oneflow
   PUBLIC
+  ${MLIR_RUNTIME_LIBS}
   ${MLIR_RUNTIME_GPU_LIBS}
 )
 

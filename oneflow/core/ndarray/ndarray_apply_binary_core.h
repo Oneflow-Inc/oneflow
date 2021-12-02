@@ -26,10 +26,10 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T, template<typename> class binary_func>
 struct NdarrayApplyBinaryCoreWrapper final {
-  static void Apply(DeviceCtx* ctx,
+  static void Apply(ep::Stream* stream,
                     const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
                     const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b);
-  static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+  static void InplaceApply(ep::Stream* stream, const XpuVarNdarray<T>& y,
                            const XpuVarNdarray<const T>& x);
 };
 

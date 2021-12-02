@@ -32,8 +32,8 @@ class TensorSliceCopier final {
                     DataType data_type, DeviceType device_type);
   virtual ~TensorSliceCopier() = default;
 
-  void Copy(StreamContext* stream_ctx, void* dst, const void* src) const;
-  void Copy(StreamContext* stream_ctx, Blob* dst_blob, const Blob* src_blob) const;
+  void Copy(ep::Stream* stream, void* dst, const void* src) const;
+  void Copy(ep::Stream* stream, Blob* dst_blob, const Blob* src_blob) const;
 
  private:
   const TensorSliceView dst_view_;

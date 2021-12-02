@@ -44,7 +44,7 @@ class ConstantLikeKernel final : public Kernel {
         ep::primitive::NewPrimitive<ep::primitive::FillFactory>(this->op_conf().device_tag(),
                                                                 out_blob->data_type());
     CHECK(primitive);
-    primitive->Launch(ctx->stream_ctx(), out_blob->mut_dptr(), value,
+    primitive->Launch(ctx->stream(), out_blob->mut_dptr(), value,
                       out_blob->static_shape().elem_cnt());
     is_init_ = true;
   }

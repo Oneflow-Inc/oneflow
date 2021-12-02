@@ -68,8 +68,7 @@ class SoftmaxImpl : public SoftmaxBase {
   SoftmaxImpl() = default;
   ~SoftmaxImpl() override = default;
 
-  void Launch(StreamContext* stream_ctx, size_t rows, size_t cols, const void* x,
-              void* y) override {
+  void Launch(Stream* stream, size_t rows, size_t cols, const void* x, void* y) override {
     SoftmaxCpu<algorithm, T>(rows, cols, reinterpret_cast<const T*>(x), reinterpret_cast<T*>(y));
   }
 };

@@ -30,7 +30,7 @@ class ElementwiseUnary : public Primitive {
   ElementwiseUnary() = default;
   ~ElementwiseUnary() override = default;
 
-  virtual void Launch(StreamContext* stream_ctx, const void* src, void* dst, size_t count) = 0;
+  virtual void Launch(Stream* stream, const void* src, void* dst, size_t count) = 0;
 };
 
 class ElementwiseUnaryFactory : public Factory<ElementwiseUnary> {

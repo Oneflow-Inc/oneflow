@@ -98,9 +98,9 @@ class GatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
       offset = gather_state->lower();
     }
 
-    GatherKernelUtilImpl<device_type, T, K>::Forward(
-        ctx->device_ctx(), indices->dptr<K>(), num_indices, in->dptr<T>(),
-        GetFlatShape(in->shape(), axis), out->mut_dptr<T>(), offset);
+    GatherKernelUtilImpl<device_type, T, K>::Forward(ctx->stream(), indices->dptr<K>(), num_indices,
+                                                     in->dptr<T>(), GetFlatShape(in->shape(), axis),
+                                                     out->mut_dptr<T>(), offset);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -109,9 +109,10 @@ class GatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
   REGISTER_USER_KERNEL("gather")                                                             \
       .SetCreateFn<                                                                          \
           GatherKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                  \
-                       & (user_op::HobDataType("in", 0) == OF_PP_PAIR_SECOND(in_type))       \
-                       & (user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(indices_type)));
+      .SetIsMatchedHob(                                                                      \
+          (user_op::HobDeviceType() == device)                                               \
+          && (user_op::HobDataType("in", 0) == OF_PP_PAIR_SECOND(in_type))                   \
+          && (user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(indices_type)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_GATHER_KERNEL, DEVICE_TYPE_SEQ, GATHER_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)

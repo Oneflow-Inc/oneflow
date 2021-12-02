@@ -164,7 +164,7 @@ class CpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("moving_average_min_max_observer")             \
       .SetCreateFn<CpuMovingAverageMinMaxObserverKernel<dtype>>()     \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
 
 REGISTER_MOVING_AVERAGE_MIN_MAX_OBSERVER_KERNEL(float);
 REGISTER_MOVING_AVERAGE_MIN_MAX_OBSERVER_KERNEL(double);

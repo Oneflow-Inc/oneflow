@@ -16,7 +16,7 @@ limitations under the License.
 #ifdef WITH_CUDA
 
 #include "oneflow/core/ep/include/primitive/memcpy.h"
-#include "oneflow/core/stream/cuda/cuda_stream_context.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #include <cuda_runtime.h>
 
 namespace oneflow {
@@ -32,11 +32,10 @@ class MemcpyImpl : public Memcpy {
   MemcpyImpl() = default;
   ~MemcpyImpl() override = default;
 
-  void Launch(StreamContext* stream_ctx, void* dst, const void* src, size_t count) override {
+  void Launch(Stream* stream, void* dst, const void* src, size_t count) override {
     if (dst == src) { return; }
-    auto* cuda_stream_ctx = stream_ctx->As<CudaStreamContext>();
-    OF_CUDA_CHECK(
-        cudaMemcpyAsync(dst, src, count, cudaMemcpyDefault, cuda_stream_ctx->cuda_stream()));
+    auto* cuda_stream = stream->As<CudaStream>();
+    OF_CUDA_CHECK(cudaMemcpyAsync(dst, src, count, cudaMemcpyDefault, cuda_stream->cuda_stream()));
   }
 };
 
@@ -51,7 +50,7 @@ class MemcpyFactoryImpl : public MemcpyFactory {
   }
 };
 
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, MemcpyFactory, MemcpyFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, MemcpyFactory, MemcpyFactoryImpl);
 
 }  // namespace
 

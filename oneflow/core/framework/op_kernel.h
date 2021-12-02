@@ -26,10 +26,10 @@ limitations under the License.
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/infer_util.h"
-#include "oneflow/core/device/device_context.h"
-#include "oneflow/core/stream/include/stream_context.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 
@@ -42,8 +42,7 @@ class KernelInitContext {
   OF_DISALLOW_COPY_AND_MOVE(KernelInitContext);
   virtual ~KernelInitContext() = default;
 
-  virtual DeviceCtx* device_ctx() = 0;
-  virtual StreamContext* stream_ctx() = 0;
+  virtual ep::Stream* stream() = 0;
 
   virtual DeviceType device_type() const = 0;
   virtual const ParallelContext& parallel_ctx() const = 0;
@@ -107,8 +106,7 @@ class KernelInferContext {
   virtual DeviceType device_type() const = 0;
   virtual const ParallelContext& parallel_ctx() const = 0;
 
-  virtual DeviceCtx* device_ctx() = 0;
-  virtual StreamContext* stream_ctx() = 0;
+  virtual ep::Stream* stream() = 0;
   virtual Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) = 0;
   virtual const ShapeView& ShapeView4ArgNameAndIndex(const std::string& arg_name,
                                                      int32_t arg_index) = 0;
@@ -167,8 +165,7 @@ class KernelComputeContext {
   virtual ~KernelComputeContext() = default;
 
   virtual Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) = 0;
-  virtual DeviceCtx* device_ctx() = 0;
-  virtual StreamContext* stream_ctx() = 0;
+  virtual ep::Stream* stream() = 0;
 
   virtual const TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                        int32_t index) const = 0;

@@ -18,7 +18,7 @@ limitations under the License.
 #include <pybind11/functional.h>
 #include <pybind11/numpy.h>
 
-#include "oneflow/api/python/framework/throw.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/ofblob/ofblob.e.h"
@@ -26,13 +26,14 @@ limitations under the License.
 #include "oneflow/api/python/functional/tensor_api.yaml.pybind.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
-#include "oneflow/core/framework/tensor_method.h"
+#include "oneflow/core/framework/tensor_methods.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/framework/py_distribute.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/common/decorator.h"
 
@@ -54,8 +55,7 @@ void ApiEagerMirroredTensorZeros(const std::shared_ptr<Tensor>& tensor) {
 
 template<typename T>
 void ApiCopyMirroredTensorToNumpy(const std::shared_ptr<Tensor>& tensor, py::array_t<T> array) {
-  CopyBetweenMirroredTensorAndNumpy<T>(tensor, array.ptr(), OfBlob_CopyBuffer::template To<T>,
-                                       "const",
+  CopyBetweenMirroredTensorAndNumpy<T>(tensor, array.ptr(), BlobNumpyCopyUtil<T>::To, "const",
                                        /*block_host_until_done=*/true)
       .GetOrThrow();
 }
@@ -66,8 +66,7 @@ void ApiCopyMirroredTensorFromNumpy(const std::shared_ptr<Tensor>& tensor, py::a
   // array at the same time.
   // Only NPY_CORDER is supported, and it makes sure that the array is C-style contiguous.
   auto* copied_array = PyArray_NewCopy((PyArrayObject*)array.ptr(), NPY_CORDER);
-  CopyBetweenMirroredTensorAndNumpy<T>(tensor, copied_array, OfBlob_CopyBuffer::template From<T>,
-                                       "mut",
+  CopyBetweenMirroredTensorAndNumpy<T>(tensor, copied_array, BlobNumpyCopyUtil<T>::From, "mut",
                                        /*block_host_until_done=*/false)
       .GetOrThrow();
 
@@ -96,13 +95,6 @@ std::tuple<std::vector<Shape>, std::vector<Symbol<DType>>> GetTensorBufferShapes
 void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMeta::Hook& hook) {
   return RegisterTensorHook(self, hook).GetOrThrow();
 }
-
-Maybe<void> TouchConsistentTensor(const std::shared_ptr<one::Tensor>& tensor) {
-  CHECK_OR_RETURN(tensor->is_consistent());
-  return Maybe<void>::Ok();
-}
-
-auto* CheckMetaConsistency = DECORATE(&TouchConsistentTensor, CheckConsistentTensorMeta);
 
 bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
   return IsContiguous(tensor).GetOrThrow();

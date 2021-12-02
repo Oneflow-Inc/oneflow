@@ -95,12 +95,12 @@ constexpr size_t kMaxMovementSize = 16;
 constexpr size_t kMaxNumDims = 8;
 
 template<size_t num_dims, size_t movement_size, typename IndexType>
-void LaunchKernel(StreamContext* stream_ctx, CopyNdKernelParams<num_dims, IndexType> params);
+void LaunchKernel(Stream* stream, CopyNdKernelParams<num_dims, IndexType> params);
 
 template<size_t num_dims, size_t movement_size, typename IndexType>
-void LaunchKernel(StreamContext* stream_ctx, void* dst, const int64_t* dst_dims,
-                  const int64_t* dst_pos, const void* src, const int64_t* src_dims,
-                  const int64_t* src_pos, const int64_t* extent, size_t count) {
+void LaunchKernel(Stream* stream, void* dst, const int64_t* dst_dims, const int64_t* dst_pos,
+                  const void* src, const int64_t* src_dims, const int64_t* src_pos,
+                  const int64_t* extent, size_t count) {
   CopyNdKernelParams<num_dims, IndexType> params;
   params.dst_index_helper = NdIndexOffsetHelper<IndexType, num_dims>(dst_dims);
   params.src_index_helper = NdIndexOffsetHelper<IndexType, num_dims>(src_dims);
@@ -112,29 +112,29 @@ void LaunchKernel(StreamContext* stream_ctx, void* dst, const int64_t* dst_dims,
   params.src = src;
   params.dst = dst;
   params.count = static_cast<IndexType>(count);
-  LaunchKernel<num_dims, movement_size, IndexType>(stream_ctx, params);
+  LaunchKernel<num_dims, movement_size, IndexType>(stream, params);
 }
 
 template<size_t num_dims, size_t movement_size>
-void DispatchIndexType(StreamContext* stream_ctx, void* dst, const int64_t* dst_dims,
-                       const int64_t* dst_pos, const void* src, const int64_t* src_dims,
-                       const int64_t* src_pos, const int64_t* extent) {
+void DispatchIndexType(Stream* stream, void* dst, const int64_t* dst_dims, const int64_t* dst_pos,
+                       const void* src, const int64_t* src_dims, const int64_t* src_pos,
+                       const int64_t* extent) {
   size_t count = 1;
   for (size_t i = 0; i < num_dims; ++i) { count *= extent[i]; }
   if (count < GetMaxVal<int32_t>()) {
-    LaunchKernel<num_dims, movement_size, int32_t>(stream_ctx, dst, dst_dims, dst_pos, src,
-                                                   src_dims, src_pos, extent, count);
+    LaunchKernel<num_dims, movement_size, int32_t>(stream, dst, dst_dims, dst_pos, src, src_dims,
+                                                   src_pos, extent, count);
   } else {
-    LaunchKernel<num_dims, movement_size, int64_t>(stream_ctx, dst, dst_dims, dst_pos, src,
-                                                   src_dims, src_pos, extent, count);
+    LaunchKernel<num_dims, movement_size, int64_t>(stream, dst, dst_dims, dst_pos, src, src_dims,
+                                                   src_pos, extent, count);
   }
 }
 
 template<size_t num_dims>
-void DispatchMovementSize(StreamContext* stream_ctx, size_t movement_size, void* dst,
-                          const int64_t* dst_dims, const int64_t* dst_pos, const void* src,
-                          const int64_t* src_dims, const int64_t* src_pos, const int64_t* extent) {
-  void (*func)(StreamContext* /*stream_ctx*/, void* /*dst*/, const int64_t* /*dst_dims*/,
+void DispatchMovementSize(Stream* stream, size_t movement_size, void* dst, const int64_t* dst_dims,
+                          const int64_t* dst_pos, const void* src, const int64_t* src_dims,
+                          const int64_t* src_pos, const int64_t* extent) {
+  void (*func)(Stream* /*stream*/, void* /*dst*/, const int64_t* /*dst_dims*/,
                const int64_t* /*dst_pos*/, const void* /*src*/, const int64_t* /*src_dims*/,
                const int64_t* /*src_pos*/, const int64_t* /*extent*/) = nullptr;
   if (movement_size == 1) {
@@ -150,14 +150,13 @@ void DispatchMovementSize(StreamContext* stream_ctx, size_t movement_size, void*
   } else {
     UNIMPLEMENTED();
   }
-  func(stream_ctx, dst, dst_dims, dst_pos, src, src_dims, src_pos, extent);
+  func(stream, dst, dst_dims, dst_pos, src, src_dims, src_pos, extent);
 }
 
-void LaunchWithSimplified(StreamContext* stream_ctx, size_t movement_size, size_t num_dims,
-                          void* dst, const int64_t* dst_dims, const int64_t* dst_pos,
-                          const void* src, const int64_t* src_dims, const int64_t* src_pos,
-                          const int64_t* extent) {
-  void (*func)(StreamContext* /*stream_ctx*/, size_t /*movement_size*/, void* /*dst*/,
+void LaunchWithSimplified(Stream* stream, size_t movement_size, size_t num_dims, void* dst,
+                          const int64_t* dst_dims, const int64_t* dst_pos, const void* src,
+                          const int64_t* src_dims, const int64_t* src_pos, const int64_t* extent) {
+  void (*func)(Stream* /*stream*/, size_t /*movement_size*/, void* /*dst*/,
                const int64_t* /*dst_dims*/, const int64_t* /*dst_pos*/, const void* /*src*/,
                const int64_t* /*src_dims*/, const int64_t* /*src_pos*/, const int64_t* /*extent*/) =
       nullptr;
@@ -180,7 +179,7 @@ void LaunchWithSimplified(StreamContext* stream_ctx, size_t movement_size, size_
   } else {
     UNIMPLEMENTED();
   }
-  func(stream_ctx, movement_size, dst, dst_dims, dst_pos, src, src_dims, src_pos, extent);
+  func(stream, movement_size, dst, dst_dims, dst_pos, src, src_dims, src_pos, extent);
 }
 
 template<size_t max_movement_size>
@@ -204,7 +203,7 @@ void SimplifyCopyNd(size_t num_dims, const int64_t* dst_dims, const int64_t* dst
   simplified_extent[*simplified_num_dims - 1] /= movement_elem_num;
 }
 
-void SimplifyThenLaunch(StreamContext* stream_ctx, DataType data_type, size_t num_dims, void* dst,
+void SimplifyThenLaunch(Stream* stream, DataType data_type, size_t num_dims, void* dst,
                         const int64_t* dst_dims, const int64_t* dst_pos, const void* src,
                         const int64_t* src_dims, const int64_t* src_pos, const int64_t* extent) {
   CHECK_LE(num_dims, kMaxNumDims);
@@ -219,7 +218,7 @@ void SimplifyThenLaunch(StreamContext* stream_ctx, DataType data_type, size_t nu
                                    &simplified_num_dims, simplified_dst_dims, simplified_dst_pos,
                                    simplified_src_dims, simplified_src_pos, simplified_extent,
                                    GetSizeOfDataType(data_type), dst, src, &movement_size);
-  LaunchWithSimplified(stream_ctx, movement_size, simplified_num_dims, dst, simplified_dst_dims,
+  LaunchWithSimplified(stream, movement_size, simplified_num_dims, dst, simplified_dst_dims,
                        simplified_dst_pos, src, simplified_src_dims, simplified_src_pos,
                        simplified_extent);
 }

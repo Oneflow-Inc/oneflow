@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/cast.h"
 #include "oneflow/core/ep/cuda/primitive/type_seq.h"
 #include "oneflow/core/cuda/elementwise.cuh"
-#include "oneflow/core/stream/cuda/cuda_stream_context.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -84,11 +84,11 @@ class CastImpl : public Cast {
   explicit CastImpl() = default;
   ~CastImpl() override = default;
 
-  void Launch(StreamContext* stream_ctx, const void* from, void* to, size_t count) override {
-    auto* cuda_stream_ctx = stream_ctx->As<CudaStreamContext>();
+  void Launch(Stream* stream, const void* from, void* to, size_t count) override {
+    auto* cuda_stream = stream->As<CudaStream>();
     OF_CUDA_CHECK((cuda::elementwise::Unary<CastFunctor<To, From>, To, From>(
         CastFunctor<To, From>(), count, reinterpret_cast<To*>(to),
-        reinterpret_cast<const From*>(from), cuda_stream_ctx->cuda_stream())));
+        reinterpret_cast<const From*>(from), cuda_stream->cuda_stream())));
   }
 };
 
@@ -123,7 +123,7 @@ class CastFactoryImpl : public CastFactory {
   }
 };
 
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, CastFactory, CastFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, CastFactory, CastFactoryImpl);
 
 }  // namespace
 

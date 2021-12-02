@@ -26,7 +26,7 @@ REGISTER_NO_GRAD_USER_OP("constant")
     .Attr<DataType>("dtype")
     .Attr<Shape>("shape")
     .Attr<std::vector<std::string>>("nd_sbp")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = Shape(ctx->Attr<Shape>("shape").dim_vec());
       return Maybe<void>::Ok();
     })

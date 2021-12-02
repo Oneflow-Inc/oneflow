@@ -187,7 +187,7 @@ class SliceKernel final : public user_op::OpKernel, public user_op::CudaGraphSup
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     SliceParams params = ConstructSliceParams(ctx, x_tensor, y_tensor);
-    SliceKernelUtil<device_type, T>::Forward(ctx->device_ctx(), params, x_tensor->dptr<T>(),
+    SliceKernelUtil<device_type, T>::Forward(ctx->stream(), params, x_tensor->dptr<T>(),
                                              y_tensor->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -204,9 +204,9 @@ class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGrap
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
     size_t dx_byte_size = dx_tensor->shape().elem_cnt() * sizeof(T);
-    Memset<device_type>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0, dx_byte_size);
+    Memset<device_type>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0, dx_byte_size);
     SliceParams params = ConstructSliceParams(ctx, dx_tensor, dy_tensor);
-    SliceKernelUtil<device_type, T>::Backward(ctx->device_ctx(), params, dy_tensor->dptr<T>(),
+    SliceKernelUtil<device_type, T>::Backward(ctx->stream(), params, dy_tensor->dptr<T>(),
                                               dx_tensor->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -230,9 +230,9 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
   const int64_t ndim = start_attr.size();
   for (int i = 0; i < ndim; i++) {
     const int64_t dim_size = large->shape().At(i);
-    positive_start_vec.push_back(RegulateSliceStart(
+    positive_start_vec.emplace_back(RegulateSliceStart(
         start_attr.at(i), i == slice_ctx.split_axis ? slice_ctx.logical_length : dim_size));
-    positive_stop_vec.push_back(RegulateSliceStop(
+    positive_stop_vec.emplace_back(RegulateSliceStop(
         stop_attr.at(i), i == slice_ctx.split_axis ? slice_ctx.logical_length : dim_size));
   }
   SliceParams large_slice_param;
@@ -263,7 +263,7 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
         i, small_slice_param, entire_full_small_idx_cvtr, sliced_full_small_idx_cvtr);
     const int64_t src_offset = from_large_to_small ? large_offset : small_offset;
     const int64_t dst_offset = from_large_to_small ? small_offset : large_offset;
-    AutoMemcpy(ctx->device_ctx(), dst_ptr + dst_offset, src_ptr + src_offset,
+    AutoMemcpy(ctx->stream(), dst_ptr + dst_offset, src_ptr + src_offset,
                cnt * GetSizeOfDataType(src->data_type()), src->mem_case(), dst->mem_case());
   }
 }
@@ -383,10 +383,10 @@ class SliceUpdateKernel final : public user_op::OpKernel {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* update_tensor = ctx->Tensor4ArgNameAndIndex("update", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
-    Memcpy<device_type>(ctx->device_ctx(), y_tensor->mut_dptr<T>(), x_tensor->dptr<T>(),
+    Memcpy<device_type>(ctx->stream(), y_tensor->mut_dptr<T>(), x_tensor->dptr<T>(),
                         y_tensor->shape().elem_cnt() * sizeof(T));
     SliceParams params = ConstructSliceParams(ctx, y_tensor, update_tensor);
-    SliceKernelUtil<device_type, T>::Backward(ctx->device_ctx(), params, update_tensor->dptr<T>(),
+    SliceKernelUtil<device_type, T>::Backward(ctx->stream(), params, update_tensor->dptr<T>(),
                                               y_tensor->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -395,16 +395,16 @@ class SliceUpdateKernel final : public user_op::OpKernel {
 #define REGISTER_SLICE_KERNELS(device, dtype)                                                   \
   REGISTER_USER_KERNEL("slice").SetCreateFn<SliceKernel<device, dtype>>().SetIsMatchedHob(      \
       (user_op::HobDeviceType() == device)                                                      \
-      & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));                           \
+      && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));                          \
   REGISTER_USER_KERNEL("slice_grad")                                                            \
       .SetCreateFn<SliceGradKernel<device, dtype>>()                                            \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));         \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));        \
   REGISTER_USER_KERNEL("slice_update")                                                          \
       .SetCreateFn<SliceUpdateKernel<device, dtype>>()                                          \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)            \
-                       & (user_op::HobDataType("update", 0) == GetDataType<dtype>::value))      \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)           \
+                       && (user_op::HobDataType("update", 0) == GetDataType<dtype>::value))     \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));                          \
@@ -421,8 +421,8 @@ class SliceUpdateKernel final : public user_op::OpKernel {
 
 REGISTER_SLICE_KERNELS_WITH_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_SLICE_KERNELS_WITH_DEVICE(DeviceType::kGPU)
-REGISTER_SLICE_KERNELS(DeviceType::kGPU, float16)
+REGISTER_SLICE_KERNELS_WITH_DEVICE(DeviceType::kCUDA)
+REGISTER_SLICE_KERNELS(DeviceType::kCUDA, float16)
 #endif
 
 #define REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(dtype)               \

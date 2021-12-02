@@ -174,12 +174,12 @@ namespace internal {
 
 namespace {
 
-void LaunchBroadcastMatmul(StreamContext* stream_ctx, DataType data_type,
-                           BlasTransposeType transpose_a, BlasTransposeType transpose_b,
-                           int64_t num_batch_dims, const int64_t* broadcast_batch_dims,
-                           const int64_t* a_batch_dims, const int64_t* b_batch_dims,
-                           const int64_t* c_batch_dims, int64_t m, int64_t n, int64_t k,
-                           Scalar alpha, const void* a, const void* b, Scalar beta, void* c);
+void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType transpose_a,
+                           BlasTransposeType transpose_b, int64_t num_batch_dims,
+                           const int64_t* broadcast_batch_dims, const int64_t* a_batch_dims,
+                           const int64_t* b_batch_dims, const int64_t* c_batch_dims, int64_t m,
+                           int64_t n, int64_t k, Scalar alpha, const void* a, const void* b,
+                           Scalar beta, void* c);
 
 template<size_t max_num_dims>
 class BroadcastMatmulImpl : public BroadcastMatmul {
@@ -190,8 +190,8 @@ class BroadcastMatmulImpl : public BroadcastMatmul {
       : data_type_(data_type), transpose_a_(transpose_a), transpose_b_(transpose_b) {}
   ~BroadcastMatmulImpl() override = default;
 
-  void Launch(StreamContext* stream_ctx, Scalar alpha, size_t num_a_dims, const int64_t* a_dims,
-              const void* a, size_t num_b_dims, const int64_t* b_dims, const void* b, Scalar beta,
+  void Launch(Stream* stream, Scalar alpha, size_t num_a_dims, const int64_t* a_dims, const void* a,
+              size_t num_b_dims, const int64_t* b_dims, const void* b, Scalar beta,
               size_t num_c_dims, const int64_t* c_dims, void* c) override {
     CHECK_LE(num_a_dims, max_num_dims);
     CHECK_LE(num_b_dims, max_num_dims);
@@ -207,7 +207,7 @@ class BroadcastMatmulImpl : public BroadcastMatmul {
     Simplify(num_a_dims, a_dims, num_b_dims, b_dims, num_c_dims, c_dims, transpose_a_, transpose_b_,
              &m, &n, &k, &num_batch_dims, broadcast_batch_dims, a_batch_dims, b_batch_dims,
              c_batch_dims);
-    LaunchBroadcastMatmul(stream_ctx, data_type_, transpose_a_, transpose_b_, num_batch_dims,
+    LaunchBroadcastMatmul(stream, data_type_, transpose_a_, transpose_b_, num_batch_dims,
                           broadcast_batch_dims, a_batch_dims, b_batch_dims, c_batch_dims, m, n, k,
                           alpha, a, b, beta, c);
   }

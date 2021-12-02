@@ -50,7 +50,7 @@ class UniformKernel final : public user_op::OpKernel {
     const auto& generator = distribution_state->generator();
     CHECK_NOTNULL(generator);
     UniformDistribution<device_type, T> distribution(static_cast<T>(from), static_cast<T>(to));
-    distribution(ctx->device_ctx(), elem_cnt, out_dptr, generator);
+    distribution(ctx->stream(), elem_cnt, out_dptr, generator);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
