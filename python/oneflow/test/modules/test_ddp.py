@@ -101,7 +101,7 @@ class TestDDP(flow.unittest.TestCase):
                                    np.array([0])))
 
     def test_ddp_with_unused_param(test_case):
-        for dev_type in ["cuda", "cpu"]:
+        for dev_type in test_device:
             test_case._test_ddp_with_unused_param(dev_type)
 
     def _test_out_of_order_execution(test_case, dev_type):
