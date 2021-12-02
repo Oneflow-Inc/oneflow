@@ -107,14 +107,14 @@ class UserKernelBaseContext {
   ParallelContext parallel_ctx_;
 };
 
-class UserKernelInitAndCacheContext final : public user_op::KernelInitContext, public user_op::KernelCacheContext {
+class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
+                                            public user_op::KernelCacheContext {
  public:
   explicit UserKernelInitAndCacheContext(ep::Stream* stream, const KernelConf& kernel_conf)
       : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         stream_(stream),
         base_ctx_(UserKernelBaseContext(kernel_conf)),
-        parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf())
-  {
+        parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
     nd_sbp_signature_ = cfg::NdSbpSignature(kernel_conf.op_attribute().nd_sbp_signature());
     if (kernel_conf.op_attribute().has_sbp_signature()) {
       sbp_signature_ = cfg::SbpSignature(kernel_conf.op_attribute().sbp_signature());
@@ -768,8 +768,8 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   }
   std::shared_ptr<user_op::OpKernelCache> cache = nullptr;
   kernel_->InitOpKernelCache(
-      &init_and_cache_ctx, user_op::OpKernelCache::AttrMayChanged | user_op::OpKernelCache::ShapeMayChanged,
-      &cache);
+      &init_and_cache_ctx,
+      user_op::OpKernelCache::AttrMayChanged | user_op::OpKernelCache::ShapeMayChanged, &cache);
 
   if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob)
       && !kernel_->AlwaysComputeWhenAllOutputsEmpty()) {
