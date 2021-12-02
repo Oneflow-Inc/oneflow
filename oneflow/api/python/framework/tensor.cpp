@@ -18,7 +18,7 @@ limitations under the License.
 #include <pybind11/functional.h>
 #include <pybind11/numpy.h>
 
-#include "oneflow/api/python/framework/throw.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/ofblob/ofblob.e.h"
@@ -55,8 +55,7 @@ void ApiEagerMirroredTensorZeros(const std::shared_ptr<Tensor>& tensor) {
 
 template<typename T>
 void ApiCopyMirroredTensorToNumpy(const std::shared_ptr<Tensor>& tensor, py::array_t<T> array) {
-  CopyBetweenMirroredTensorAndNumpy<T>(tensor, array.ptr(), OfBlob_CopyBuffer::template To<T>,
-                                       "const",
+  CopyBetweenMirroredTensorAndNumpy<T>(tensor, array.ptr(), BlobNumpyCopyUtil<T>::To, "const",
                                        /*block_host_until_done=*/true)
       .GetOrThrow();
 }
@@ -67,8 +66,7 @@ void ApiCopyMirroredTensorFromNumpy(const std::shared_ptr<Tensor>& tensor, py::a
   // array at the same time.
   // Only NPY_CORDER is supported, and it makes sure that the array is C-style contiguous.
   auto* copied_array = PyArray_NewCopy((PyArrayObject*)array.ptr(), NPY_CORDER);
-  CopyBetweenMirroredTensorAndNumpy<T>(tensor, copied_array, OfBlob_CopyBuffer::template From<T>,
-                                       "mut",
+  CopyBetweenMirroredTensorAndNumpy<T>(tensor, copied_array, BlobNumpyCopyUtil<T>::From, "mut",
                                        /*block_host_until_done=*/false)
       .GetOrThrow();
 

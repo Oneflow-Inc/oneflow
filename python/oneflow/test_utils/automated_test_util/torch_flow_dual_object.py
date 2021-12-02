@@ -34,6 +34,7 @@ from .generators import Nothing, generator, random_tensor
 postulate = [".rand", ".Tensor"]
 
 testing = False
+testing_graph = False
 
 
 def torch_tensor_to_flow(x):
@@ -47,6 +48,7 @@ vis_tensor = []
 vis_parameters = {}
 call_tensor_id = []
 extra_input_tensor = set()
+flow_res_id_eager2_graph = dict()
 
 
 class PyTorchDoesNotSupportError(Exception):
@@ -274,6 +276,28 @@ def GetDualObject(name, pytorch, oneflow):
                             oneflow_res = torch_tensor_to_flow(pytorch_res)
                         else:
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
+                            if testing_graph:
+                                if isinstance(oneflow, flow.nn.Module):
+
+                                    class TestGraphOfModule(flow.nn.Graph):
+                                        def __init__(self):
+                                            super().__init__()
+                                            self.test_module = oneflow
+
+                                        def build(self, *args):
+                                            return self.test_module(*args)
+
+                                    test_g = TestGraphOfModule()
+                                    test_g_res = test_g(*oneflow_args)
+                                    if isinstance(test_g_res, tuple):
+                                        for idx, g_res in enumerate(test_g_res):
+                                            flow_res_id_eager2_graph[
+                                                id(oneflow_res[idx])
+                                            ] = g_res
+                                    else:
+                                        flow_res_id_eager2_graph[
+                                            id(oneflow_res)
+                                        ] = test_g_res
 
                         return GetDualObject("unused", pytorch_res, oneflow_res)
 
@@ -412,6 +436,7 @@ def clear_note_fake_program():
     note_pytorch_kwargs.clear()
     call_tensor_id.clear()
     vis_tensor.clear()
+    flow_res_id_eager2_graph.clear()
     vis_parameters.clear()
     extra_input_tensor.clear()
 
@@ -524,7 +549,7 @@ def check_nonetype_equality(a, b, ignored1, ignored2):
     return True
 
 
-def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
+def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05, check_graph=True):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
     def deco(f):
@@ -542,8 +567,12 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                 try:
                     global testing
                     testing = True
+                    global testing_graph
+                    if check_graph:
+                        testing_graph = True
                     res = f(test_case)
                     testing = False
+                    testing_graph = False
                 except (PyTorchDoesNotSupportError, BothDoNotSupportError) as e:
                     if verbose:
                         print(f"{f.__name__}")
@@ -553,6 +582,7 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                 if res is not None:
                     if not isinstance(res, collections.abc.Sequence):
                         res = [res]
+                    func_outputs = res
                     for x in res:
                         if auto_backward:
                             if isinstance(x.pytorch, torch_original.Tensor):
@@ -588,10 +618,37 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                         and id(x.pytorch) not in call_tensor_id
                     ):
                         vis_tensor.append(x.pytorch)
+                # check eager
                 for x in dual_objects_to_test:
                     test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol), x)
-                if verbose:
-                    print("test passed")
+                    if verbose:
+                        print(f"{f.__name__} test eager passed.")
+                # check graph
+                for output in func_outputs:
+                    flow_tensor = output.oneflow
+                    if isinstance(flow_tensor, flow.Tensor):
+                        if id(flow_tensor) in flow_res_id_eager2_graph:
+                            test_case.assertTrue(
+                                np.allclose(
+                                    flow_tensor.numpy(),
+                                    flow_res_id_eager2_graph[id(flow_tensor)].numpy(),
+                                    rtol=rtol,
+                                    atol=atol,
+                                    equal_nan=True,
+                                )
+                            )
+                            if verbose:
+                                print(f"{f.__name__} test graph passed.")
+                        else:
+                            if check_graph:
+                                test_case.assertTrue(
+                                    False,
+                                    f"{f.__name__} cannot find module to check graph.",
+                                )
+                    else:
+                        warnings.warn(
+                            f"some outputs of {f.__name__} fail to check graph."
+                        )
                 n -= 1
                 loop += 1
 

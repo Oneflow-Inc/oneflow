@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/api/cpp/device.h"
+#include "oneflow/api/cpp/framework/device.h"
+#include "oneflow/api/common/device.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
-#include "oneflow/api/common/device.h"
 
 namespace oneflow_api {
 
@@ -34,5 +34,8 @@ Device::Device(const std::string& type, int64_t device_id)
 const std::string& Device::type() const { return (*device_)->type(); }
 
 int64_t Device::device_id() const { return (*device_)->device_id(); }
+
+bool Device::operator==(const Device& rhs) const { return *device_ == *rhs.device_; }
+bool Device::operator!=(const Device& rhs) const { return *device_ != *rhs.device_; }
 
 }  // namespace oneflow_api
