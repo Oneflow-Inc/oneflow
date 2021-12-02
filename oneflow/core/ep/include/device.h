@@ -33,6 +33,8 @@ class Device {
 
   virtual void SetAsActiveDevice() = 0;
 
+  virtual DeviceType device_type() const = 0;
+
   virtual Stream* CreateStream() = 0;
   virtual void DestroyStream(Stream* stream) = 0;
 
