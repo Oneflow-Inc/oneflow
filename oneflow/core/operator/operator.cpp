@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/instructions_builder.h"
@@ -458,20 +459,15 @@ Maybe<const Shape> Operator::GetInputOutputFastestTimeShape() const {
 Maybe<void> Operator::GetSbpSignaturesIf(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, cfg::SbpSignatureList* sbp_sig_list) const {
-  cfg::SbpSignatureList sbp_sig_candidates;
-  JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, parallel_desc, &sbp_sig_candidates));
-  // Not supporting partial sbp for some operator
-  // TODO: Instead of adding judgement here, we should override GetSbpSignaturesIf for these kind of
-  // operators
-  if (op_conf().op_type_case() != /*output_op*/ 138) {
+  JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, parallel_desc, sbp_sig_list));
+  // Not supporting broadcast sbp for some operator
+  // TODO: Instead of adding judgement here, we might figure out another way to do so
+  if (!op_conf().has_output_conf()) {
     SbpSignatureBuilder()
         .Broadcast(input_bns())
         .Broadcast(output_bns())
-        .Build(sbp_sig_candidates.mutable_sbp_signature()->Add());
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   }
-  // filter sbp signatures by logical shape
-  FilterAndCheckValidSbpSignatureListByLogicalShape(sbp_sig_candidates, LogicalBlobDesc4Ibn,
-                                                    parallel_desc, sbp_sig_list);
   return Maybe<void>::Ok();
 }
 
@@ -491,6 +487,8 @@ Maybe<void> Operator::GetValidNdSbpSignatureList(
   // ND sbp signature list would be direct product of 1D sbp signatures
   nd_sbp_sig_list.clear();
   DFS_SetNdSbpSignature(nd_sbp_sig, 0, sbp_dimension, nd_sbp_sig_list, &sbp_sig_list);
+  // Leave those valid Nd SBPs
+  FilterNdSbpSignatureListByLogicalShape(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list);
 
   return Maybe<void>::Ok();
 }
@@ -647,6 +645,46 @@ Maybe<void> Operator::FilterAndCheckValidSbpSignatureListByLogicalShape(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> Operator::FilterNdSbpSignatureListByLogicalShape(
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const {
+  // Go down from the tail to the head, since we might drop the tail.
+  for (int32_t sbp_id = nd_sbp_sig_list.size() - 1; sbp_id >= 0; sbp_id--) {
+    bool not_valid = false;
+    // {in_0 : (S(6), B), in_1 : (S(0), S(1)), out : (B, S(1))}
+    // look through input blob name in_0 and in_1
+    for (const auto& ibn : input_bns()) {
+      const auto& nd_sbp_it = nd_sbp_sig_list[sbp_id].bn_in_op2nd_sbp().find(ibn);
+      // Find an unexpected blob name
+      CHECK_OR_RETURN(nd_sbp_it != nd_sbp_sig_list[sbp_id].bn_in_op2nd_sbp().end());
+      const auto& nd_sbp = nd_sbp_it->second;
+      const auto& logical_shape = JUST(LogicalBlobDesc4Ibn(ibn)).shape();
+      const auto& parallel_hierarchy = parallel_desc.hierarchy();
+      // For in_0, look through S(6) and B
+      for (int32_t dim_sbp = 0; dim_sbp < nd_sbp.sbp_parallel_size(); dim_sbp++) {
+        const auto& sbp_parallel = nd_sbp.sbp_parallel(dim_sbp);
+        if (sbp_parallel.has_split_parallel()) {
+          // For S(6) in (S(6), B) of {in_0 : (S(6), B)}, axis = 0
+          const int64_t axis = sbp_parallel.split_parallel().axis();
+          // No need to CHECK_LE_OR_RETURN(axis, logical_shape.NumAxes()),
+          // since we have already do so in FilterAndCheckValidSbpSignatureListByLogicalShape()
+          if (logical_shape.At(axis) < parallel_hierarchy->At(dim_sbp)) {
+            not_valid = true;
+            break;
+          }
+        }
+      }
+      if (not_valid) { break; }
+    }
+    // Remove the Nd SBP candidate
+    if (not_valid) {
+      nd_sbp_sig_list[sbp_id] = nd_sbp_sig_list[nd_sbp_sig_list.size() - 1];
+      nd_sbp_sig_list.pop_back();
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> Operator::InferSbpSignature(
     cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
@@ -658,7 +696,13 @@ Maybe<void> Operator::InferSbpSignature(
     return Maybe<const BlobDesc&>(sbp_infer_hint->logical_blob_desc());
   };
   cfg::SbpSignatureList valid_sbp_sig_list;
-  JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &valid_sbp_sig_list));
+  {
+    cfg::SbpSignatureList sbp_sig_candidates;
+    JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &sbp_sig_candidates));
+    // filter sbp signatures by logical shape
+    FilterAndCheckValidSbpSignatureListByLogicalShape(sbp_sig_candidates, LogicalBlobDesc4Ibn,
+                                                      parallel_desc, &valid_sbp_sig_list);
+  }
   // filter sbp signatures by sbp signature conf
   cfg::SbpSignatureList filtered_sbp_sigs_by_conf;
   FilterSbpSignatureList(valid_sbp_sig_list, sbp_sig_conf, &filtered_sbp_sigs_by_conf);
