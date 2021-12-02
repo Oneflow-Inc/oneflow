@@ -54,12 +54,15 @@ namespace oneflow_api {
 
 namespace of = oneflow;
 
+namespace {
+
 class CompileScope {
  public:
   CompileScope(const of::JobConfigProto& job_config) {
     std::shared_ptr<of::Scope> scope = of::MakeInitialScope();
     of::ThreadLocalScopeStackPush(scope).GetOrThrow();
     of::JobBuildAndInferCtx_Open(job_config.job_name()).GetOrThrow();
+    CHECK_JUST(of::JobBuildAndInferCtx_Open(job_config.job_name()));
     of::cfg::JobConfigProto job_config_cfg(job_config);
     of::CurJobBuildAndInferCtx_SetJobConf(job_config_cfg).GetOrThrow();
   }
@@ -70,18 +73,21 @@ class CompileScope {
   }
 
  private:
-  of::LazyMode::Guard lazy_mode_enabled_guard{/*is_enabled*/ true};
+  of::LazyMode::Guard lazy_mode_enabled_guard{true};
 };
 
-Graph::Graph(const std::string& model_path, const Device& device) {
+}  // namespace
+
+Graph::Graph(const std::string& model_path, const Device& device) : device_(device) {
   // TODO(zzk0): model_path is a directory, need to concatenate filename
+  // we need a mlir model name.
   of::LoadJobFromIR(&job_, model_path).GetOrThrow();
   graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name());
 }
 
 Graph::Graph(const std::string& model_path) : Graph(model_path, Device("cpu")) {}
 
-std::vector<Tensor> Graph::forward(const std::vector<Tensor>& inputs) {
+std::vector<Tensor> Graph::Forward(const std::vector<Tensor>& inputs) {
   if (!is_compiled_) {
     Compile();
     is_compiled_ = true;
@@ -89,10 +95,29 @@ std::vector<Tensor> Graph::forward(const std::vector<Tensor>& inputs) {
   return Run(inputs);
 }
 
+void Graph::SetBatchSize(int batch_size) { batch_size_ = batch_size; }
+
 void Graph::Compile() {
   BuildGraph();
+  LoadCheckpoint();
   RegisterTensors();
   graph_->CompileAndInitRuntime().GetOrThrow();
+}
+
+std::vector<Tensor> Run(const std::vector<Tensor>& inputs) {
+  // RunLazyNNGraph && SoftSyncNNGraphBuffers
+  return std::vector<Tensor>{};
+}
+
+void Graph::AddOp(oneflow::OperatorConf op_conf) {
+  // TODO(zzk0): scope_symbol_id(x), device, batch_size
+  std::shared_ptr<of::Scope> scope = oneflow::GetCurrentScope().GetPtrOrThrow();
+  op_conf.set_scope_symbol_id(scope->symbol_id().value_or(0));
+  op_conf.set_device_tag(device_.type());
+  if (batch_size_ > 0) {
+  }
+  auto* ctx = of::GetCurInferCtx().GetOrThrow();
+  ctx->AddAndInferConsistentOp(op_conf).GetOrThrow();
 }
 
 void Graph::BuildGraph() {
@@ -101,12 +126,12 @@ void Graph::BuildGraph() {
   of::OpGraph op_graph(job_);
   op_graph
       .ForEachOpNode([&](const of::OpNode& node) -> of::Maybe<void> {
-        // add op
-        auto* ctx = of::GetCurInferCtx().GetOrThrow();
-        ctx->AddAndInferConsistentOp(node.op().op_conf()).GetOrThrow();
+        AddOp(node.op().op_conf());
 
         // input tensor
-        if (node.op().op_conf().has_input_conf()) {}
+        if (node.op().op_conf().has_input_conf()) {
+          // TODO(zzk0): input tensor order
+        }
 
         // create variable op tensor
         if (node.op().op_conf().has_variable_conf()) {
@@ -126,19 +151,15 @@ void Graph::BuildGraph() {
       })
       .GetOrThrow();
 
-  // CurJobBuildAndInferCtx_Complete
   of::CurJobBuildAndInferCtx_Complete().GetOrThrow();
 }
+
+void Graph::LoadCheckpoint() {}
 
 void Graph::RegisterTensors() {
   // graph_->RegisterInputOpNamesAndTensors
   // graph_->RegisterOutputOpNamesAndTensors
   // graph_->RegisterVariableOpNamesAndTensors
-}
-
-std::vector<Tensor> Run(const std::vector<Tensor>& inputs) {
-  // RunLazyNNGraph && SoftSyncNNGraphBuffers
-  return std::vector<Tensor>{};
 }
 
 Graph Load(const std::string& model_path, const Device& device) {

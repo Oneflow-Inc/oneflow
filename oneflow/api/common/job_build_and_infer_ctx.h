@@ -22,15 +22,6 @@ limitations under the License.
 
 namespace oneflow {
 
-inline Maybe<std::string> CurJobBuildAndInferCtx_AddAndInferConsistentOp(
-    const std::string& op_conf_str) {
-  OperatorConf op_conf;
-  CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
-  auto* ctx = JUST(GetCurInferCtx());
-  const auto& op_attribute = JUST(ctx->AddAndInferConsistentOp(op_conf));
-  return PbMessage2TxtString(*op_attribute);
-}
-
 inline Maybe<Job> GetCurrentJob() {
   auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
   CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
@@ -42,4 +33,4 @@ inline Maybe<Job> GetCurrentJob() {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_API_COMMON_JOB_BUILD_AND_INFER_CTX_H_
+#endif // ONEFLOW_API_COMMON_JOB_BUILD_AND_INFER_CTX_H_
