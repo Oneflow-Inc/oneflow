@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/user/image/random_crop_generator.h"
 #include "oneflow/user/image/image_util.h"
 #include "oneflow/user/kernels/random_crop_kernel_state.h"
-#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/user/kernels/op_kernel_wrapper.h"
 #include "oneflow/user/kernels/random_seed_util.h"
 
 #include <opencv2/opencv.hpp>
