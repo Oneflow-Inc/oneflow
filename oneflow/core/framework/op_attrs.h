@@ -21,8 +21,11 @@ limitations under the License.
 
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/attr_value.h"
 
 namespace oneflow {
+
+using user_op::AttrVal;
 
 class OpInterpCtx;
 
@@ -34,45 +37,46 @@ class OpAttrs {
 
   template<typename T>
   Maybe<const T&> at(const std::string& attr_name) {
-    return *(JUST(this->at(attr_name)));
+    return AttrValueCast<T>(*JUST(this->at(attr_name)));
   }
-  Maybe<const void*> at(const std::string& attr_name) const;
-  Maybe<const void*> operator[](const std::string& attr_name) const;
+  Maybe<AttrVal> at(const std::string& attr_name) const;
+  Maybe<AttrVal> operator[](const std::string& attr_name) const;
 
   class const_iterator {
    public:
     using bucket_iter = HashSet<std::string>::const_iterator;
-    using reference = const std::pair<std::string, Maybe<const void*>>&;
-    using pointer = const std::pair<std::string, Maybe<const void*>>*;
+    using reference = const std::pair<std::string, std::shared_ptr<AttrVal>>&;
+    using pointer = const std::pair<std::string, std::shared_ptr<AttrVal>>*;
 
     const_iterator() = default;
     const_iterator(bucket_iter pos, bucket_iter limit, const OpAttrs* self)
         : pos_(pos), limit_(limit), self_(self) {
-      UpdateKV();
+      CHECK_JUST(UpdateKV());
     }
     reference operator*() const { return kv_; }
     pointer operator->() const { return &kv_; }
 
     const_iterator& operator++() {
       pos_++;
-      UpdateKV();
+      CHECK_JUST(UpdateKV());
       return *this;
     }
     bool operator==(const const_iterator& x) const { return pos_ == x.pos_ && self_ == x.self_; }
     bool operator!=(const const_iterator& x) const { return !(*this == x); }
 
    private:
-    void UpdateKV() {
+    Maybe<void> UpdateKV() {
       if (pos_ != limit_) {
         kv_.first = *pos_;
-        kv_.second = self_->at(*pos_);
+        kv_.second = JUST(self_->at(*pos_));
       }
+      return Maybe<void>::Ok();
     }
 
     bucket_iter pos_;
     bucket_iter limit_;
     const OpAttrs* self_;
-    std::pair<std::string, Maybe<const void*>> kv_;
+    std::pair<std::string, std::shared_ptr<AttrVal>> kv_;
   };
 
   const_iterator begin() const;

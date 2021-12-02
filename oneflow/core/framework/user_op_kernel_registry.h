@@ -48,13 +48,13 @@ class KernelRegContext {
 
   template<typename T>
   const T& Attr(const std::string& attr_name) const {
-    return *reinterpret_cast<const T*>(Attr4Name(attr_name));
+    return AttrValueCast<T>(*CHECK_JUST(Attr4Name(attr_name)));
   }
 
  protected:
   KernelRegContext() = default;
   KernelRegContext(const KernelRegContext&) = delete;
-  virtual const void* Attr4Name(const std::string& attr_name) const = 0;
+  virtual Maybe<user_op::AttrVal> Attr4Name(const std::string& attr_name) const = 0;
 };
 
 using OpKernelCreateFn = std::function<const OpKernel*()>;

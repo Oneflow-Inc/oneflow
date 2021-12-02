@@ -97,24 +97,44 @@ class AttrVal {
 };
 
 template<typename T>
-class TypedAttrVal final : public AttrVal {
+class TypedAttrValIf : public AttrVal {
+ public:
+  virtual const T& val() const = 0;
+  size_t hash_value() const override { return std::hash<T>()(val()); }
+
+  bool operator==(const AttrVal& other) const override {
+    auto* that = dynamic_cast<const TypedAttrValIf<T>*>(&other);
+    if (that == nullptr) { return false; }
+    return this->val() == that->val();
+  }
+};
+
+template<typename T>
+class TypedAttrVal final : public TypedAttrValIf<T> {
  public:
   TypedAttrVal(T v) : val_(v) {}
   ~TypedAttrVal() = default;
 
-  size_t hash_value() const override { return std::hash<T>()(val_); }
-  bool operator==(const AttrVal& other) const override {
-    auto* that = dynamic_cast<const TypedAttrVal<T>*>(&other);
-    if (that == nullptr) { return false; }
-    return this->val_ == that->val_;
-  }
-
-  const T& val() const { return val_; }
+  const T& val() const override { return val_; }
 
  private:
   OF_DISALLOW_COPY_AND_MOVE(TypedAttrVal);
 
   T val_;
+};
+
+template<typename T>
+class TypedAttrValRef final : public TypedAttrValIf<T> {
+ public:
+  TypedAttrValRef(const T* v) : val_(v) {}
+  ~TypedAttrValRef() = default;
+
+  const T& val() const override { return *val_; }
+
+ private:
+  OF_DISALLOW_COPY_AND_MOVE(TypedAttrValRef);
+
+  const T* val_;
 };
 
 }  // namespace user_op

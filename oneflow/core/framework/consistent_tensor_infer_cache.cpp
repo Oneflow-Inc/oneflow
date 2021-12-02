@@ -222,8 +222,8 @@ class UserOpExprOpDeviceInferContext final : public user_op::DeviceInferContext 
   }
 
  private:
-  const void* Attr4Name(const std::string& attr_name) const override {
-    return CHECK_JUST(op_interp_ctx_->GetAttr(attr_name));
+  Maybe<user_op::AttrVal> Attr4Name(const std::string& attr_name) const override {
+    return op_interp_ctx_->GetAttr(attr_name);
   }
   const UserOpExpr* user_op_expr_;
   const std::shared_ptr<const OpInterpCtx> op_interp_ctx_;

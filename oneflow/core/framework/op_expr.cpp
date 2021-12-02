@@ -99,13 +99,12 @@ Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(
     OperatorConf* op_conf, const std::shared_ptr<const OpInterpCtx>& ctx) const {
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_user_conf()) = op_proto_;
-  // TODO(hjchen2)
-  // auto* user_op_conf = op_conf->mutable_user_conf();
-  // for (const auto& it : ctx->GetAttrs()) {
-  //   AttrValue attr_val;
-  //   JUST(user_op::AttrValueUtil::ToProtoAttrValue(*it.second, &attr_val));
-  //   (*(user_op_conf->mutable_attr()))[it.first] = attr_val;
-  // }
+  auto* user_op_conf = op_conf->mutable_user_conf();
+  for (const auto& it : ctx->GetAttrs()) {
+    AttrValue attr_val;
+    JUST(user_op::AttrValueUtil::ToProtoAttrValue(*it.second, &attr_val));
+    (*(user_op_conf->mutable_attr()))[it.first] = attr_val;
+  }
   return Maybe<void>::Ok();
 }
 
@@ -263,8 +262,8 @@ class UserOpExprInferContext : public user_op::InferContext {
   const std::string& device_tag() const override { return device_tag_; }
 
  private:
-  const void* Attr4Name(const std::string& attr_name) const override {
-    return CHECK_JUST(op_interp_ctx_->GetAttr(attr_name));
+  Maybe<user_op::AttrVal> Attr4Name(const std::string& attr_name) const override {
+    return op_interp_ctx_->GetAttr(attr_name);
   }
   const UserOpExpr* user_op_expr_;
   const std::shared_ptr<const OpInterpCtx> op_interp_ctx_;
@@ -387,8 +386,8 @@ class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
   }
 
  private:
-  const void* Attr4Name(const std::string& attr_name) const override {
-    return CHECK_JUST(op_interp_ctx_->GetAttr(attr_name));
+  Maybe<user_op::AttrVal> Attr4Name(const std::string& attr_name) const override {
+    return op_interp_ctx_->GetAttr(attr_name);
   }
   const UserOpExpr* user_op_expr_;
   const std::shared_ptr<const OpInterpCtx> op_interp_ctx_;
