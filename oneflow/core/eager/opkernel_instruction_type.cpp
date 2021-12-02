@@ -490,8 +490,9 @@ struct LocalCallOpKernelUtil final {
   }
 
   static inline void TryInitOpKernelStateAndCache(LocalCallOpKernelPhyInstrOperand* operand,
-                                          DeviceCtx* device_ctx, user_op::OpKernelState** state,
-                                          std::shared_ptr<user_op::OpKernelCache>* cache) {
+                                                  DeviceCtx* device_ctx,
+                                                  user_op::OpKernelState** state,
+                                                  std::shared_ptr<user_op::OpKernelCache>* cache) {
     if (likely(operand->op_interp_ctx().state)) {
       *state = operand->op_interp_ctx().state.get();
       // set state to nullptr so that state initialization in TryInitOpKernelStateAndCache will be
