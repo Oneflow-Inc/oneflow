@@ -29,7 +29,7 @@ class COCOReaderOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "COCOReader op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"session_id", "annotation_file", "image_dir", "batch_size", "shuffle_after_epoch", "random_seed", "group_by_ratio", "remove_images_without_annotations", "stride_partition", "nd_sbp"};
     return attr_names;
   }
@@ -55,7 +55,7 @@ class CategoricalOrdinalEncodeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CategoricalOrdinalEncode op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"hash_precomputed"};
     return attr_names;
   }
@@ -90,7 +90,7 @@ class OFRecordReaderOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "OFRecordReader op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"data_dir", "data_part_num", "batch_size", "part_name_prefix", "part_name_suffix_length", "random_shuffle", "seed", "shuffle_buffer_size", "shuffle_after_epoch", "nd_sbp"};
     return attr_names;
   }
@@ -130,7 +130,7 @@ class OneRecReaderOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "OneRecReader op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"files", "batch_size", "random_shuffle", "shuffle_mode", "seed", "shuffle_buffer_size", "shuffle_after_epoch", "verify_example"};
     return attr_names;
   }
@@ -154,7 +154,7 @@ class TestDataTypeAttrOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TestDataTypeAttr op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"output_type"};
     return attr_names;
   }
@@ -182,7 +182,7 @@ class TestListDataTypeAndListShapeAndListStringAttrOpInterpCtx : public OpInterp
       return Error::RuntimeError() << "TestListDataTypeAndListShapeAndListStringAttr op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"out_shapes", "out_types", "string_list"};
     return attr_names;
   }
@@ -222,7 +222,7 @@ class TestRandomSourceOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TestRandomSource op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"seed"};
     return attr_names;
   }
@@ -239,7 +239,7 @@ class TestReshapeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TestReshape op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"shape"};
     return attr_names;
   }
@@ -263,7 +263,7 @@ class TestSourceMultiGpuFixedOutNumOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TestSourceMultiGpuFixedOutNum op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"out_num"};
     return attr_names;
   }
@@ -282,7 +282,7 @@ class _ncclLogical_2DSameDim0All2allOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "_ncclLogical_2DSameDim0All2all op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"in_dim1_split_axis", "out_dim1_split_axis"};
     return attr_names;
   }
@@ -307,7 +307,7 @@ class _ncclLogical_2DSameDim0AllGatherNoncontinuousOpInterpCtx : public OpInterp
       return Error::RuntimeError() << "_ncclLogical_2DSameDim0AllGatherNoncontinuous op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"in_dim1_split_axis"};
     return attr_names;
   }
@@ -345,7 +345,7 @@ class _ncclLogicalAllGatherNoncontinuousOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "_ncclLogicalAllGatherNoncontinuous op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"in_split_axis"};
     return attr_names;
   }
@@ -378,7 +378,7 @@ class _ncclLogicalS2sOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "_ncclLogicalS2s op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"in_split_axis", "out_split_axis"};
     return attr_names;
   }
@@ -410,7 +410,7 @@ class AccOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Acc op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"max_acc_num"};
     return attr_names;
   }
@@ -469,7 +469,7 @@ class AdagradUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdagradUpdate op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"train_step_val", "learning_rate_val", "scale", "l1", "l2", "lr_decay", "weight_decay", "epsilon"};
     return attr_names;
   }
@@ -493,7 +493,7 @@ class AdamBiasCorrectionFactorOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdamBiasCorrectionFactor op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"beta"};
     return attr_names;
   }
@@ -532,7 +532,7 @@ class AdamUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdamUpdate op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"learning_rate_val", "bias_correction1_val", "bias_correction2_val", "scale", "l1", "l2", "beta1", "beta2", "epsilon", "weight_decay", "amsgrad", "do_bias_correction"};
     return attr_names;
   }
@@ -560,7 +560,7 @@ class AdaptiveAvgPool1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdaptiveAvgPool1D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"output_size"};
     return attr_names;
   }
@@ -577,7 +577,7 @@ class AdaptiveAvgPool1DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdaptiveAvgPool1DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"output_size"};
     return attr_names;
   }
@@ -594,7 +594,7 @@ class AdaptiveAvgPool2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdaptiveAvgPool2D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"output_size"};
     return attr_names;
   }
@@ -611,7 +611,7 @@ class AdaptiveAvgPool2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdaptiveAvgPool2DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"output_size"};
     return attr_names;
   }
@@ -628,7 +628,7 @@ class AdaptiveAvgPool3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdaptiveAvgPool3D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"output_size"};
     return attr_names;
   }
@@ -645,7 +645,7 @@ class AdaptiveAvgPool3DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AdaptiveAvgPool3DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"output_size"};
     return attr_names;
   }
@@ -671,7 +671,7 @@ class AffineGridOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AffineGrid op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"size", "align_corners"};
     return attr_names;
   }
@@ -691,7 +691,7 @@ class AffineGridGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AffineGridGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"size", "align_corners"};
     return attr_names;
   }
@@ -730,7 +730,7 @@ class ArangeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Arange op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"integer_start", "integer_delta", "integer_limit", "float_start", "float_delta", "float_limit", "dtype", "nd_sbp"};
     return attr_names;
   }
@@ -754,7 +754,7 @@ class ArgSortOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ArgSort op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"direction"};
     return attr_names;
   }
@@ -778,7 +778,7 @@ class ArgwhereOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Argwhere op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"dtype"};
     return attr_names;
   }
@@ -905,7 +905,7 @@ class AvgPool1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AvgPool1D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
     return attr_names;
   }
@@ -940,7 +940,7 @@ class AvgPool1DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AvgPool1DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
     return attr_names;
   }
@@ -975,7 +975,7 @@ class AvgPool2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AvgPool2D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
     return attr_names;
   }
@@ -1010,7 +1010,7 @@ class AvgPool2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AvgPool2DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
     return attr_names;
   }
@@ -1045,7 +1045,7 @@ class AvgPool3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AvgPool3D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
     return attr_names;
   }
@@ -1080,7 +1080,7 @@ class AvgPool3DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "AvgPool3DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
     return attr_names;
   }
@@ -1114,7 +1114,7 @@ class BatchMatmulOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BatchMatmul op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"transpose_a", "transpose_b", "alpha"};
     return attr_names;
   }
@@ -1137,7 +1137,7 @@ class BernoulliOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Bernoulli op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"seed", "has_seed", "dtype"};
     return attr_names;
   }
@@ -1156,7 +1156,7 @@ class BiasAddOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BiasAdd op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
@@ -1173,7 +1173,7 @@ class BinaryCrossEntropyOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BinaryCrossEntropy op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"reduction"};
     return attr_names;
   }
@@ -1190,7 +1190,7 @@ class BinaryCrossEntropyGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BinaryCrossEntropyGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"reduction"};
     return attr_names;
   }
@@ -1209,7 +1209,7 @@ class BinaryCrossEntropyWithLogitsOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BinaryCrossEntropyWithLogits op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"has_pos_weight", "reduction"};
     return attr_names;
   }
@@ -1229,7 +1229,7 @@ class BinaryCrossEntropyWithLogitsGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BinaryCrossEntropyWithLogitsGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"has_pos_weight", "reduction"};
     return attr_names;
   }
@@ -1317,7 +1317,7 @@ class BroadcastLikeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BroadcastLike op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"broadcast_axes"};
     return attr_names;
   }
@@ -1359,7 +1359,7 @@ class BroadcastMatmulOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BroadcastMatmul op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"transpose_a", "transpose_b", "alpha"};
     return attr_names;
   }
@@ -1378,7 +1378,7 @@ class BroadcastMatmulGradBOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "BroadcastMatmulGradB op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"alpha"};
     return attr_names;
   }
@@ -1451,7 +1451,7 @@ class CastOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Cast op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"dtype"};
     return attr_names;
   }
@@ -1517,7 +1517,7 @@ class CeluOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Celu op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"alpha"};
     return attr_names;
   }
@@ -1534,7 +1534,7 @@ class CeluGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CeluGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"alpha"};
     return attr_names;
   }
@@ -1557,7 +1557,7 @@ class ClipByScalarOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ClipByScalar op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"floating_min", "integral_min", "floating_max", "integral_max"};
     return attr_names;
   }
@@ -1583,7 +1583,7 @@ class ClipByScalarGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ClipByScalarGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"floating_min", "integral_min", "floating_max", "integral_max"};
     return attr_names;
   }
@@ -1605,7 +1605,7 @@ class ClipByScalarMaxOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ClipByScalarMax op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"floating_max", "integral_max"};
     return attr_names;
   }
@@ -1625,7 +1625,7 @@ class ClipByScalarMaxGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ClipByScalarMaxGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"floating_max", "integral_max"};
     return attr_names;
   }
@@ -1645,7 +1645,7 @@ class ClipByScalarMinOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ClipByScalarMin op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"floating_min", "integral_min"};
     return attr_names;
   }
@@ -1665,7 +1665,7 @@ class ClipByScalarMinGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ClipByScalarMinGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"floating_min", "integral_min"};
     return attr_names;
   }
@@ -1691,7 +1691,7 @@ class CoinFlipOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CoinFlip op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"probability", "batch_size", "seed", "has_seed", "nd_sbp"};
     return attr_names;
   }
@@ -1718,7 +1718,7 @@ class CombinedMarginLossOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CombinedMarginLoss op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"m1", "m2", "m3", "depth"};
     return attr_names;
   }
@@ -1744,7 +1744,7 @@ class CombinedMarginLossGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CombinedMarginLossGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"m1", "m2", "m3", "depth"};
     return attr_names;
   }
@@ -1766,7 +1766,7 @@ class ConcatOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Concat op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis", "max_dim_size"};
     return attr_names;
   }
@@ -1794,7 +1794,7 @@ class ConstantOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Constant op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"floating_value", "integer_value", "is_floating_value", "dtype", "shape", "nd_sbp"};
     return attr_names;
   }
@@ -1820,7 +1820,7 @@ class ConstantPad1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConstantPad1D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "floating_value", "integral_value"};
     return attr_names;
   }
@@ -1843,7 +1843,7 @@ class ConstantPad1DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConstantPad1DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "floating_value", "integral_value"};
     return attr_names;
   }
@@ -1866,7 +1866,7 @@ class ConstantPad2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConstantPad2D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "floating_value", "integral_value"};
     return attr_names;
   }
@@ -1889,7 +1889,7 @@ class ConstantPad2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConstantPad2DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "floating_value", "integral_value"};
     return attr_names;
   }
@@ -1912,7 +1912,7 @@ class ConstantPad3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConstantPad3D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "floating_value", "integral_value"};
     return attr_names;
   }
@@ -1935,7 +1935,7 @@ class ConstantPad3DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConstantPad3DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "floating_value", "integral_value"};
     return attr_names;
   }
@@ -1966,7 +1966,7 @@ class Conv1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Conv1D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"filters", "padding_before", "data_format", "kernel_size", "strides", "dilation_rate", "groups"};
     return attr_names;
   }
@@ -2001,7 +2001,7 @@ class Conv2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Conv2D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"filters", "padding_before", "data_format", "kernel_size", "strides", "dilation_rate", "groups"};
     return attr_names;
   }
@@ -2036,7 +2036,7 @@ class Conv3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Conv3D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"filters", "padding_before", "data_format", "kernel_size", "strides", "dilation_rate", "groups"};
     return attr_names;
   }
@@ -2061,7 +2061,7 @@ class ConvBiasGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConvBiasGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"data_format", "num_spatial_dims"};
     return attr_names;
   }
@@ -2091,7 +2091,7 @@ class ConvDataGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConvDataGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"num_spatial_dims", "padding_before", "data_format", "kernel_size", "strides", "dilation_rate", "groups"};
     return attr_names;
   }
@@ -2126,7 +2126,7 @@ class ConvFilterGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ConvFilterGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"num_spatial_dims", "padding_before", "data_format", "kernel_size", "strides", "dilation_rate", "groups"};
     return attr_names;
   }
@@ -2151,7 +2151,7 @@ class CopyOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Copy op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"device_type", "device_id"};
     return attr_names;
   }
@@ -2211,7 +2211,7 @@ class CreateSummaryWriterOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CreateSummaryWriter op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"logdir"};
     return attr_names;
   }
@@ -2244,7 +2244,7 @@ class CropMirrorNormalizeFromTensorbufferOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CropMirrorNormalizeFromTensorbuffer op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"color_space", "output_layout", "mean", "std", "crop_h", "crop_w", "crop_pos_x", "crop_pos_y", "output_dtype"};
     return attr_names;
   }
@@ -2285,7 +2285,7 @@ class CropMirrorNormalizeFromUint8OpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CropMirrorNormalizeFromUint8 op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"color_space", "output_layout", "mean", "std", "crop_h", "crop_w", "crop_pos_x", "crop_pos_y", "output_dtype"};
     return attr_names;
   }
@@ -2310,7 +2310,7 @@ class CtcGreedyDecoderOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CtcGreedyDecoder op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"merge_repeated"};
     return attr_names;
   }
@@ -2331,7 +2331,7 @@ class CtcLossOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CtcLoss op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"max_target_length", "blank", "zero_infinity"};
     return attr_names;
   }
@@ -2354,7 +2354,7 @@ class CtcLossGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CtcLossGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"max_target_length", "blank", "zero_infinity"};
     return attr_names;
   }
@@ -2377,7 +2377,7 @@ class CudnnFusedNormalizationAddReluOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CudnnFusedNormalizationAddRelu op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis", "epsilon", "momentum"};
     return attr_names;
   }
@@ -2398,7 +2398,7 @@ class CudnnFusedNormalizationAddReluGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "CudnnFusedNormalizationAddReluGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis", "epsilon"};
     return attr_names;
   }
@@ -2430,7 +2430,7 @@ class Deconv1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Deconv1D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"filters", "padding_before", "data_format", "kernel_size", "output_padding", "strides", "dilation_rate", "groups"};
     return attr_names;
   }
@@ -2468,7 +2468,7 @@ class Deconv2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Deconv2D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"filters", "padding_before", "data_format", "kernel_size", "output_padding", "strides", "dilation_rate", "groups"};
     return attr_names;
   }
@@ -2506,7 +2506,7 @@ class Deconv3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Deconv3D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"filters", "padding_before", "data_format", "kernel_size", "output_padding", "strides", "dilation_rate", "groups"};
     return attr_names;
   }
@@ -2530,7 +2530,7 @@ class DiagOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Diag op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"diagonal"};
     return attr_names;
   }
@@ -2547,7 +2547,7 @@ class DiagGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DiagGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"diagonal"};
     return attr_names;
   }
@@ -2564,7 +2564,7 @@ class DimGatherOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimGather op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"dim"};
     return attr_names;
   }
@@ -2581,7 +2581,7 @@ class DimScatterAddOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimScatterAdd op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"dim"};
     return attr_names;
   }
@@ -2598,7 +2598,7 @@ class DimScatterAddLikeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimScatterAddLike op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"dim"};
     return attr_names;
   }
@@ -2617,7 +2617,7 @@ class DimScatterAddScalarOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimScatterAddScalar op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"src_scalar", "dim"};
     return attr_names;
   }
@@ -2635,7 +2635,7 @@ class DimScatterMulOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimScatterMul op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"dim"};
     return attr_names;
   }
@@ -2654,7 +2654,7 @@ class DimScatterMulScalarOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimScatterMulScalar op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"src_scalar", "dim"};
     return attr_names;
   }
@@ -2672,7 +2672,7 @@ class DimScatterUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimScatterUpdate op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"dim"};
     return attr_names;
   }
@@ -2691,7 +2691,7 @@ class DimScatterUpdateScalarOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DimScatterUpdateScalar op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"src_scalar", "dim"};
     return attr_names;
   }
@@ -2711,7 +2711,7 @@ class DistributedPartialFcSampleOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DistributedPartialFcSample op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"num_sample", "seed"};
     return attr_names;
   }
@@ -2736,7 +2736,7 @@ class DropoutOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Dropout op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"scale"};
     return attr_names;
   }
@@ -2753,7 +2753,7 @@ class DropoutGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DropoutGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"scale"};
     return attr_names;
   }
@@ -2772,7 +2772,7 @@ class DynamicLossScaleScheduleOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "DynamicLossScaleSchedule op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"increment_period", "multiplier"};
     return attr_names;
   }
@@ -2796,7 +2796,7 @@ class EagerBToSOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerBToS op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"out_split_axis", "in_parallel_conf", "out_parallel_conf", "shape"};
     return attr_names;
   }
@@ -2824,7 +2824,7 @@ class EagerNaiveSToSOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerNaiveSToS op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"in_split_axis", "out_split_axis", "in_parallel_conf", "out_parallel_conf", "shape"};
     return attr_names;
   }
@@ -2845,7 +2845,7 @@ class EagerNcclAllGatherOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerNcclAllGather op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"parallel_conf"};
     return attr_names;
   }
@@ -2864,7 +2864,7 @@ class EagerNcclAllReduceOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerNcclAllReduce op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"parallel_conf", "async_launch"};
     return attr_names;
   }
@@ -2884,7 +2884,7 @@ class EagerNcclBroadcastOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerNcclBroadcast op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"parallel_conf", "root"};
     return attr_names;
   }
@@ -2904,7 +2904,7 @@ class EagerNcclReduceOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerNcclReduce op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"parallel_conf", "root"};
     return attr_names;
   }
@@ -2924,7 +2924,7 @@ class EagerNcclReduceScatterOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerNcclReduceScatter op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"parallel_conf", "op_type"};
     return attr_names;
   }
@@ -2946,7 +2946,7 @@ class EagerNcclS2sOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerNcclS2s op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"in_split_axis", "out_split_axis", "parallel_conf"};
     return attr_names;
   }
@@ -2969,7 +2969,7 @@ class EagerPToBOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerPToB op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"in_parallel_conf", "out_parallel_conf", "shape"};
     return attr_names;
   }
@@ -2994,7 +2994,7 @@ class EagerPToSOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerPToS op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"out_split_axis", "in_parallel_conf", "out_parallel_conf", "shape"};
     return attr_names;
   }
@@ -3020,7 +3020,7 @@ class EagerSToBOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerSToB op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"in_split_axis", "in_parallel_conf", "out_parallel_conf", "shape"};
     return attr_names;
   }
@@ -3042,7 +3042,7 @@ class EagerSymmetricSToPOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EagerSymmetricSToP op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"in_split_axis", "parallel_conf"};
     return attr_names;
   }
@@ -3088,7 +3088,7 @@ class EluOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Elu op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"alpha"};
     return attr_names;
   }
@@ -3105,7 +3105,7 @@ class EluGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "EluGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"alpha"};
     return attr_names;
   }
@@ -3126,7 +3126,7 @@ class EmptyOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Empty op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"dtype", "shape", "nd_sbp"};
     return attr_names;
   }
@@ -3189,7 +3189,7 @@ class ExpandOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Expand op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"logical_in_shape", "logical_expand_shape"};
     return attr_names;
   }
@@ -3207,7 +3207,7 @@ class ExpandDimsOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ExpandDims op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
@@ -3226,7 +3226,7 @@ class ExpandGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ExpandGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"logical_out_shape", "logical_expand_shape"};
     return attr_names;
   }
@@ -3264,7 +3264,7 @@ class EyeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Eye op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"rows", "cols", "dtype", "nd_sbp"};
     return attr_names;
   }
@@ -3288,7 +3288,7 @@ class FakeQuantizationOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FakeQuantization op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"quantization_formula", "quantization_bit", "quantization_scheme"};
     return attr_names;
   }
@@ -3309,7 +3309,7 @@ class FlattenOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Flatten op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"start_dim", "end_dim"};
     return attr_names;
   }
@@ -3327,7 +3327,7 @@ class FlipOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Flip op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"dims"};
     return attr_names;
   }
@@ -3344,7 +3344,7 @@ class FlipGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FlipGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"dims"};
     return attr_names;
   }
@@ -3411,7 +3411,7 @@ class FoldOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Fold op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"output_size", "kernel_size", "strides", "padding", "dilation_rate"};
     return attr_names;
   }
@@ -3432,7 +3432,7 @@ class FusedBiasAddGeluOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedBiasAddGelu op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
@@ -3449,7 +3449,7 @@ class FusedBiasAddGeluGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedBiasAddGeluGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
@@ -3468,7 +3468,7 @@ class FusedBiasAddMaskScaleOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedBiasAddMaskScale op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis", "scale"};
     return attr_names;
   }
@@ -3486,7 +3486,7 @@ class FusedCastScaleOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedCastScale op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"scale"};
     return attr_names;
   }
@@ -3505,7 +3505,7 @@ class FusedScaleMaskSoftmaxOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedScaleMaskSoftmax op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"scale_value", "mask_fill_value"};
     return attr_names;
   }
@@ -3527,7 +3527,7 @@ class FusedScaleMaskSoftmaxDropoutOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedScaleMaskSoftmaxDropout op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"scale_value", "mask_fill_value", "dropout_scale_value"};
     return attr_names;
   }
@@ -3548,7 +3548,7 @@ class FusedScaleMaskSoftmaxDropoutGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedScaleMaskSoftmaxDropoutGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"scale_value", "dropout_scale_value"};
     return attr_names;
   }
@@ -3566,7 +3566,7 @@ class FusedScaleMaskSoftmaxGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedScaleMaskSoftmaxGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"scale_value"};
     return attr_names;
   }
@@ -3595,7 +3595,7 @@ class FusedScaleTrilOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedScaleTril op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"diagonal", "floating_fill_value", "integer_fill_value", "is_floating_fill_value", "floating_scale_value", "integer_scale_value", "is_floating_scale_value"};
     return attr_names;
   }
@@ -3620,7 +3620,7 @@ class FusedSelfAttentionQueryMulKeyAndValueOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedSelfAttentionQueryMulKeyAndValue op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"head_size", "alpha"};
     return attr_names;
   }
@@ -3638,7 +3638,7 @@ class FusedSelfAttentionQueryMulKeyAndValueGradOpInterpCtx : public OpInterpCtx 
       return Error::RuntimeError() << "FusedSelfAttentionQueryMulKeyAndValueGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"alpha"};
     return attr_names;
   }
@@ -3661,7 +3661,7 @@ class FusedTrilScaleSoftmaxMaskScaleOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedTrilScaleSoftmaxMaskScale op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"diagonal", "tril_fill_value", "tril_scale_value", "mask_scale_value"};
     return attr_names;
   }
@@ -3685,7 +3685,7 @@ class FusedTrilScaleSoftmaxMaskScaleGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "FusedTrilScaleSoftmaxMaskScaleGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"diagonal", "tril_scale_value", "mask_scale_value"};
     return attr_names;
   }
@@ -3704,7 +3704,7 @@ class GatherOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Gather op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
@@ -3750,7 +3750,7 @@ class GenTensorBufferOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "GenTensorBuffer op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"shape", "shape_list", "value_list", "data_type", "dynamic_out"};
     return attr_names;
   }
@@ -3771,7 +3771,7 @@ class GenerateRandomBatchPermutationIndicesOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "GenerateRandomBatchPermutationIndices op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"seed"};
     return attr_names;
   }
@@ -3792,7 +3792,7 @@ class GridSampleOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "GridSample op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"interpolation_mode", "padding_mode", "align_corners"};
     return attr_names;
   }
@@ -3815,7 +3815,7 @@ class GridSampleGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "GridSampleGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"interpolation_mode", "padding_mode", "align_corners"};
     return attr_names;
   }
@@ -3864,7 +3864,7 @@ class HardtanhOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Hardtanh op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"min_val", "max_val"};
     return attr_names;
   }
@@ -3884,7 +3884,7 @@ class HardtanhGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "HardtanhGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"min_val", "max_val"};
     return attr_names;
   }
@@ -3906,7 +3906,7 @@ class HierarchicalParallelCastOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "HierarchicalParallelCast op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"nd_sbp", "grad_mode", "grad_nd_sbp"};
     return attr_names;
   }
@@ -3939,7 +3939,7 @@ class IdentityBufferOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "IdentityBuffer op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"buffer_size"};
     return attr_names;
   }
@@ -3962,7 +3962,7 @@ class ImageBatchAlignOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ImageBatchAlign op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"shape", "data_type", "alignment", "dynamic_out"};
     return attr_names;
   }
@@ -3984,7 +3984,7 @@ class ImageDecodeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ImageDecode op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"color_space", "data_type"};
     return attr_names;
   }
@@ -4011,7 +4011,7 @@ class ImageNormalizeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ImageNormalize op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"std", "mean"};
     return attr_names;
   }
@@ -4037,7 +4037,7 @@ class ImageRandomCropOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ImageRandomCrop op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"num_attempts", "seed", "has_seed", "random_area", "random_aspect_ratio"};
     return attr_names;
   }
@@ -4066,7 +4066,7 @@ class ImageResizeKeepAspectRatioOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ImageResizeKeepAspectRatio op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"target_size", "min_size", "max_size", "resize_longer", "interpolation_type"};
     return attr_names;
   }
@@ -4095,7 +4095,7 @@ class ImageResizeToFixedOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ImageResizeToFixed op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"target_width", "target_height", "channels", "data_type", "interpolation_type"};
     return attr_names;
   }
@@ -4118,7 +4118,7 @@ class ImageTargetResizeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ImageTargetResize op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"target_size", "max_size"};
     return attr_names;
   }
@@ -4136,7 +4136,7 @@ class InTopKOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "InTopK op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"k"};
     return attr_names;
   }
@@ -4165,7 +4165,7 @@ class IndexedSlicesAdamUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "IndexedSlicesAdamUpdate op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"learning_rate_val", "beta1", "beta2", "epsilon", "weight_decay", "amsgrad", "do_bias_correction"};
     return attr_names;
   }
@@ -4190,7 +4190,7 @@ class IndexedSlicesMomentumUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "IndexedSlicesMomentumUpdate op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"beta", "weight_decay"};
     return attr_names;
   }
@@ -4215,7 +4215,7 @@ class IndexedSlicesSgdUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "IndexedSlicesSgdUpdate op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"weight_decay"};
     return attr_names;
   }
@@ -4234,7 +4234,7 @@ class KlDivLossOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "KlDivLoss op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"reduction", "log_target"};
     return attr_names;
   }
@@ -4254,7 +4254,7 @@ class KlDivLossGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "KlDivLossGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"reduction", "log_target"};
     return attr_names;
   }
@@ -4274,7 +4274,7 @@ class L1L2RegularizeGradientOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "L1L2RegularizeGradient op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"l1", "l2"};
     return attr_names;
   }
@@ -4294,7 +4294,7 @@ class L2NormalizeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "L2Normalize op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis", "epsilon"};
     return attr_names;
   }
@@ -4314,7 +4314,7 @@ class L2NormalizeGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "L2NormalizeGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis", "epsilon"};
     return attr_names;
   }
@@ -4344,7 +4344,7 @@ class LambUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LambUpdate op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"beta1", "beta2", "epsilon", "scale", "l1", "l2", "weight_decay"};
     return attr_names;
   }
@@ -4379,7 +4379,7 @@ class LarsUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LarsUpdate op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"scale", "l1", "l2", "momentum_beta", "epsilon", "lars_coefficient", "weight_decay"};
     return attr_names;
   }
@@ -4410,7 +4410,7 @@ class LayerNormOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LayerNorm op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"center", "scale", "begin_norm_axis", "begin_params_axis", "epsilon"};
     return attr_names;
   }
@@ -4433,7 +4433,7 @@ class LayerNormGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LayerNormGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"begin_norm_axis", "epsilon"};
     return attr_names;
   }
@@ -4451,7 +4451,7 @@ class LayerNormParamGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LayerNormParamGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"begin_params_axis"};
     return attr_names;
   }
@@ -4468,7 +4468,7 @@ class LeakyReluOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LeakyRelu op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"alpha"};
     return attr_names;
   }
@@ -4485,7 +4485,7 @@ class LeakyReluGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LeakyReluGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"alpha"};
     return attr_names;
   }
@@ -4583,7 +4583,7 @@ class LogicalSliceOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LogicalSlice op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"start", "stop", "step"};
     return attr_names;
   }
@@ -4606,7 +4606,7 @@ class LogicalSliceAssignOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "LogicalSliceAssign op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"start", "stop", "step"};
     return attr_names;
   }
@@ -4631,7 +4631,7 @@ class MaskedFillOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MaskedFill op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
@@ -4655,7 +4655,7 @@ class MatmulOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Matmul op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"transpose_a", "transpose_b", "alpha"};
     return attr_names;
   }
@@ -4686,7 +4686,7 @@ class MaxPool1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MaxPool1D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
     return attr_names;
   }
@@ -4721,7 +4721,7 @@ class MaxPool1DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MaxPool1DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
     return attr_names;
   }
@@ -4756,7 +4756,7 @@ class MaxPool2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MaxPool2D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
     return attr_names;
   }
@@ -4791,7 +4791,7 @@ class MaxPool2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MaxPool2DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
     return attr_names;
   }
@@ -4826,7 +4826,7 @@ class MaxPool3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MaxPool3D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
     return attr_names;
   }
@@ -4861,7 +4861,7 @@ class MaxPool3DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MaxPool3DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
     return attr_names;
   }
@@ -4904,7 +4904,7 @@ class MegatronGptMmapDataLoaderOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MegatronGptMmapDataLoader op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"data_file_prefix", "seq_length", "label_length", "num_samples", "batch_size", "dtype", "split_sizes", "split_index", "shuffle", "random_seed", "nd_sbp"};
     return attr_names;
   }
@@ -4937,7 +4937,7 @@ class MinMaxObserverOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MinMaxObserver op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"quantization_formula", "quantization_bit", "quantization_scheme", "per_layer_quantization"};
     return attr_names;
   }
@@ -4981,7 +4981,7 @@ class MomentumUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MomentumUpdate op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"learning_rate_val", "scale", "l1", "l2", "beta", "weight_decay"};
     return attr_names;
   }
@@ -5013,7 +5013,7 @@ class MovingAverageMinMaxObserverOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "MovingAverageMinMaxObserver op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"training", "quantization_formula", "stop_update_after_iters", "quantization_bit", "quantization_scheme", "momentum"};
     return attr_names;
   }
@@ -5060,7 +5060,7 @@ class NarrowOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Narrow op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"dim", "start", "length"};
     return attr_names;
   }
@@ -5083,7 +5083,7 @@ class NarrowGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "NarrowGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"dim", "start", "length"};
     return attr_names;
   }
@@ -5118,7 +5118,7 @@ class NllOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Nll op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"ignore_index", "reduction"};
     return attr_names;
   }
@@ -5138,7 +5138,7 @@ class NllGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "NllGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"ignore_index", "reduction"};
     return attr_names;
   }
@@ -5158,7 +5158,7 @@ class NmsOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Nms op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"iou_threshold", "keep_n"};
     return attr_names;
   }
@@ -5186,7 +5186,7 @@ class NormalOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Normal op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"mean", "std", "seed", "dtype", "shape", "nd_sbp"};
     return attr_names;
   }
@@ -5214,7 +5214,7 @@ class NormalizationOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Normalization op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis", "epsilon", "training", "momentum"};
     return attr_names;
   }
@@ -5240,7 +5240,7 @@ class NormalizationAddReluBaseOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "NormalizationAddReluBase op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis", "epsilon", "training", "momentum"};
     return attr_names;
   }
@@ -5262,7 +5262,7 @@ class NormalizationAddReluGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "NormalizationAddReluGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis", "epsilon"};
     return attr_names;
   }
@@ -5282,7 +5282,7 @@ class NormalizationGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "NormalizationGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis", "epsilon"};
     return attr_names;
   }
@@ -5300,7 +5300,7 @@ class NvtxEndOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "NvtxEnd op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"mark_prefix"};
     return attr_names;
   }
@@ -5317,7 +5317,7 @@ class NvtxStartOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "NvtxStart op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"mark_prefix"};
     return attr_names;
   }
@@ -5369,7 +5369,7 @@ class OfrecordBytesDecoderOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "OfrecordBytesDecoder op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"name"};
     return attr_names;
   }
@@ -5412,7 +5412,7 @@ class OfrecordImageClassificationReaderOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "OfrecordImageClassificationReader op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"data_dir", "data_part_num", "batch_size", "part_name_prefix", "part_name_suffix_length", "random_shuffle", "seed", "shuffle_buffer_size", "shuffle_after_epoch", "color_space", "image_feature_name", "label_feature_name", "decode_buffer_size_per_thread", "num_decode_threads_per_machine"};
     return attr_names;
   }
@@ -5444,7 +5444,7 @@ class OfrecordImageDecoderOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "OfrecordImageDecoder op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"name", "color_space"};
     return attr_names;
   }
@@ -5474,7 +5474,7 @@ class OfrecordImageDecoderRandomCropOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "OfrecordImageDecoderRandomCrop op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"name", "color_space", "num_attempts", "seed", "has_seed", "random_area", "random_aspect_ratio"};
     return attr_names;
   }
@@ -5505,7 +5505,7 @@ class OfrecordRawDecoderOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "OfrecordRawDecoder op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"name", "shape", "data_type", "dim1_varying_length", "truncate"};
     return attr_names;
   }
@@ -5536,7 +5536,7 @@ class OneHotOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "OneHot op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"depth", "floating_on_value", "integer_on_value", "floating_off_value", "integer_off_value", "dtype"};
     return attr_names;
   }
@@ -5572,7 +5572,7 @@ class OnerecDecoderOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "OnerecDecoder op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"key", "data_type", "static_shape", "is_dynamic", "has_reshape", "reshape", "has_batch_padding", "batch_padding"};
     return attr_names;
   }
@@ -5603,7 +5603,7 @@ class PackOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Pack op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"pack_num"};
     return attr_names;
   }
@@ -5626,7 +5626,7 @@ class PadOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Pad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding_before", "padding_after", "floating_constant_value", "integral_constant_value"};
     return attr_names;
   }
@@ -5652,7 +5652,7 @@ class PadGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "PadGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding_before", "padding_after", "floating_constant_value", "integral_constant_value"};
     return attr_names;
   }
@@ -5674,7 +5674,7 @@ class ParallelCastOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ParallelCast op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"sbp_parallel", "grad_sbp_parallel"};
     return attr_names;
   }
@@ -5731,7 +5731,7 @@ class QuantizationOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Quantization op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"quantization_formula", "quantization_bit", "quantization_scheme"};
     return attr_names;
   }
@@ -5752,7 +5752,7 @@ class RandomMaskLikeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "RandomMaskLike op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"rate", "seed"};
     return attr_names;
   }
@@ -5774,7 +5774,7 @@ class RandpermOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Randperm op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"n", "seed", "nd_sbp"};
     return attr_names;
   }
@@ -5829,7 +5829,7 @@ class RecvOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Recv op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"src_process_id", "dtype", "shape", "device_type", "device_id"};
     return attr_names;
   }
@@ -5852,7 +5852,7 @@ class ReduceAllOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceAll op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis", "keepdims"};
     return attr_names;
   }
@@ -5872,7 +5872,7 @@ class ReduceAnyOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceAny op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis", "keepdims"};
     return attr_names;
   }
@@ -5892,7 +5892,7 @@ class ReduceMaxOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceMax op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis", "keepdims"};
     return attr_names;
   }
@@ -5910,7 +5910,7 @@ class ReduceMaxDeviceStageOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceMaxDeviceStage op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
@@ -5927,7 +5927,7 @@ class ReduceMaxDeviceStageGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceMaxDeviceStageGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
@@ -5946,7 +5946,7 @@ class ReduceMaxGlobalStageOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceMaxGlobalStage op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis", "keepdims"};
     return attr_names;
   }
@@ -5966,7 +5966,7 @@ class ReduceMaxGlobalStageGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceMaxGlobalStageGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis", "keepdims"};
     return attr_names;
   }
@@ -5986,7 +5986,7 @@ class ReduceMinOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceMin op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis", "keepdims"};
     return attr_names;
   }
@@ -6004,7 +6004,7 @@ class ReduceMinDeviceStageOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceMinDeviceStage op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
@@ -6021,7 +6021,7 @@ class ReduceMinDeviceStageGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceMinDeviceStageGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
@@ -6040,7 +6040,7 @@ class ReduceMinGlobalStageOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceMinGlobalStage op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis", "keepdims"};
     return attr_names;
   }
@@ -6060,7 +6060,7 @@ class ReduceMinGlobalStageGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceMinGlobalStageGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis", "keepdims"};
     return attr_names;
   }
@@ -6080,7 +6080,7 @@ class ReduceProdOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceProd op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis", "keepdims"};
     return attr_names;
   }
@@ -6100,7 +6100,7 @@ class ReduceSumOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceSum op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis", "keepdims"};
     return attr_names;
   }
@@ -6118,7 +6118,7 @@ class ReduceSumLikeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReduceSumLike op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
@@ -6135,7 +6135,7 @@ class ReflectionPad2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReflectionPad2D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding"};
     return attr_names;
   }
@@ -6152,7 +6152,7 @@ class ReflectionPad2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReflectionPad2DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding"};
     return attr_names;
   }
@@ -6183,7 +6183,7 @@ class RepeatOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Repeat op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"repeat_num"};
     return attr_names;
   }
@@ -6200,7 +6200,7 @@ class ReplicationPad2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReplicationPad2D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding"};
     return attr_names;
   }
@@ -6217,7 +6217,7 @@ class ReplicationPad2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ReplicationPad2DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding"};
     return attr_names;
   }
@@ -6234,7 +6234,7 @@ class ReshapeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Reshape op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"shape"};
     return attr_names;
   }
@@ -6286,7 +6286,7 @@ class RmspropUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "RmspropUpdate op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"learning_rate_val", "scale", "l1", "l2", "centered", "epsilon", "decay_rate", "weight_decay"};
     return attr_names;
   }
@@ -6312,7 +6312,7 @@ class RollOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Roll op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"shifts", "dims"};
     return attr_names;
   }
@@ -6366,7 +6366,7 @@ class SamePaddingOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SamePadding op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "strides", "dilation_rate"};
     return attr_names;
   }
@@ -6395,7 +6395,7 @@ class SamePaddingGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SamePaddingGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "strides", "dilation_rate"};
     return attr_names;
   }
@@ -6422,7 +6422,7 @@ class ScalarAddOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarAdd op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
@@ -6462,7 +6462,7 @@ class ScalarFloordivOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarFloordiv op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
@@ -6488,7 +6488,7 @@ class ScalarFmodOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarFmod op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
@@ -6514,7 +6514,7 @@ class ScalarLogicalAndOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalAnd op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
@@ -6540,7 +6540,7 @@ class ScalarLogicalEqualOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalEqual op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
@@ -6566,7 +6566,7 @@ class ScalarLogicalGreaterOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalGreater op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
@@ -6592,7 +6592,7 @@ class ScalarLogicalGreaterEqualOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalGreaterEqual op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
@@ -6618,7 +6618,7 @@ class ScalarLogicalLessOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalLess op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
@@ -6644,7 +6644,7 @@ class ScalarLogicalLessEqualOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalLessEqual op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
@@ -6670,7 +6670,7 @@ class ScalarLogicalNotEqualOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalNotEqual op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
@@ -6696,7 +6696,7 @@ class ScalarLogicalOrOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalOr op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
@@ -6722,7 +6722,7 @@ class ScalarLogicalXorOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarLogicalXor op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
@@ -6748,7 +6748,7 @@ class ScalarMulOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarMul op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
@@ -6781,7 +6781,7 @@ class ScalarPowOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarPow op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
@@ -6807,7 +6807,7 @@ class ScalarPowGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScalarPowGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
@@ -6834,7 +6834,7 @@ class ScatterNdOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "ScatterNd op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"shape"};
     return attr_names;
   }
@@ -6872,7 +6872,7 @@ class SendOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Send op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"dst_process_id"};
     return attr_names;
   }
@@ -6897,7 +6897,7 @@ class SgdUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SgdUpdate op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"learning_rate_val", "scale", "l1", "l2", "weight_decay"};
     return attr_names;
   }
@@ -7020,7 +7020,7 @@ class SliceOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Slice op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"start", "stop", "step"};
     return attr_names;
   }
@@ -7043,7 +7043,7 @@ class SliceGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SliceGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"start", "stop", "step"};
     return attr_names;
   }
@@ -7066,7 +7066,7 @@ class SliceUpdateOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SliceUpdate op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"start", "stop", "step"};
     return attr_names;
   }
@@ -7087,7 +7087,7 @@ class SmoothL1LossOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SmoothL1Loss op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"reduction", "beta"};
     return attr_names;
   }
@@ -7107,7 +7107,7 @@ class SmoothL1LossGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SmoothL1LossGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"reduction", "beta"};
     return attr_names;
   }
@@ -7181,7 +7181,7 @@ class SortOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Sort op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"direction"};
     return attr_names;
   }
@@ -7198,7 +7198,7 @@ class SparseCrossEntropyOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SparseCrossEntropy op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"depth"};
     return attr_names;
   }
@@ -7215,7 +7215,7 @@ class SparseCrossEntropyGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SparseCrossEntropyGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"depth"};
     return attr_names;
   }
@@ -7232,7 +7232,7 @@ class SparseCrossEntropyMsOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SparseCrossEntropyMs op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"depth"};
     return attr_names;
   }
@@ -7249,7 +7249,7 @@ class SparseCrossEntropyMsGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SparseCrossEntropyMsGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"depth"};
     return attr_names;
   }
@@ -7266,7 +7266,7 @@ class SparseSoftmaxCrossEntropyOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SparseSoftmaxCrossEntropy op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"depth"};
     return attr_names;
   }
@@ -7283,7 +7283,7 @@ class SparseSoftmaxCrossEntropyGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SparseSoftmaxCrossEntropyGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"depth"};
     return attr_names;
   }
@@ -7300,7 +7300,7 @@ class SparseSoftmaxCrossEntropyMsOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SparseSoftmaxCrossEntropyMs op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"depth"};
     return attr_names;
   }
@@ -7317,7 +7317,7 @@ class SparseSoftmaxCrossEntropyMsGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SparseSoftmaxCrossEntropyMsGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"depth"};
     return attr_names;
   }
@@ -7334,7 +7334,7 @@ class SplitLikeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SplitLike op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
@@ -7386,7 +7386,7 @@ class SqueezeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Squeeze op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axes"};
     return attr_names;
   }
@@ -7403,7 +7403,7 @@ class SspVariableProxyOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "SspVariableProxy op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"buffer_size"};
     return attr_names;
   }
@@ -7480,7 +7480,7 @@ class TensorBufferToListOfTensorsOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TensorBufferToListOfTensors op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"out_shape", "out_dtype", "dynamic_out"};
     return attr_names;
   }
@@ -7503,7 +7503,7 @@ class TensorBufferToListOfTensorsV2OpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TensorBufferToListOfTensorsV2 op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"out_shapes", "out_dtypes", "dynamic_out"};
     return attr_names;
   }
@@ -7524,7 +7524,7 @@ class TensorBufferToTensorOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TensorBufferToTensor op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"instance_shape", "dtype"};
     return attr_names;
   }
@@ -7556,7 +7556,7 @@ class TensorToTensorBufferOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TensorToTensorBuffer op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"instance_dims"};
     return attr_names;
   }
@@ -7575,7 +7575,7 @@ class TestUserOpAttrAutoTypeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TestUserOpAttrAutoType op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"int1", "int2"};
     return attr_names;
   }
@@ -7605,7 +7605,7 @@ class TfAvgPool1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfAvgPool1D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
@@ -7640,7 +7640,7 @@ class TfAvgPool1DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfAvgPool1DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
@@ -7675,7 +7675,7 @@ class TfAvgPool2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfAvgPool2D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
@@ -7710,7 +7710,7 @@ class TfAvgPool2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfAvgPool2DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
@@ -7745,7 +7745,7 @@ class TfAvgPool3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfAvgPool3D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
@@ -7780,7 +7780,7 @@ class TfAvgPool3DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfAvgPool3DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
@@ -7815,7 +7815,7 @@ class TfMaxPool1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfMaxPool1D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
@@ -7850,7 +7850,7 @@ class TfMaxPool1DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfMaxPool1DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
@@ -7885,7 +7885,7 @@ class TfMaxPool2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfMaxPool2D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
@@ -7920,7 +7920,7 @@ class TfMaxPool2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfMaxPool2DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
@@ -7955,7 +7955,7 @@ class TfMaxPool3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfMaxPool3D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
@@ -7990,7 +7990,7 @@ class TfMaxPool3DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TfMaxPool3DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
@@ -8029,7 +8029,7 @@ class TopKOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "TopK op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"k", "sorted"};
     return attr_names;
   }
@@ -8047,7 +8047,7 @@ class TransposeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Transpose op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"perm"};
     return attr_names;
   }
@@ -8070,7 +8070,7 @@ class TrilOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Tril op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"diagonal", "floating_fill_value", "integer_fill_value", "is_floating_fill_value"};
     return attr_names;
   }
@@ -8090,7 +8090,7 @@ class TriuOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Triu op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"diagonal"};
     return attr_names;
   }
@@ -8122,7 +8122,7 @@ class UnfoldOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Unfold op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"data_format", "kernel_size", "padding", "strides", "dilation_rate"};
     return attr_names;
   }
@@ -8147,7 +8147,7 @@ class UnfoldTensorOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UnfoldTensor op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"dimension", "size", "step"};
     return attr_names;
   }
@@ -8170,7 +8170,7 @@ class UnfoldTensorGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UnfoldTensorGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"dimension", "size", "step"};
     return attr_names;
   }
@@ -8199,7 +8199,7 @@ class UniformOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Uniform op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"from", "to", "seed", "dtype", "shape", "nd_sbp"};
     return attr_names;
   }
@@ -8231,7 +8231,7 @@ class UniformIntOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UniformInt op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"from", "to", "seed", "dtype", "shape", "nd_sbp"};
     return attr_names;
   }
@@ -8253,7 +8253,7 @@ class UniqueWithCountsOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UniqueWithCounts op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"out_idx"};
     return attr_names;
   }
@@ -8270,7 +8270,7 @@ class UnpackOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Unpack op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"unpack_num"};
     return attr_names;
   }
@@ -8287,7 +8287,7 @@ class UnsortedBatchSegmentSumOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UnsortedBatchSegmentSum op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"num_segments"};
     return attr_names;
   }
@@ -8306,7 +8306,7 @@ class UnsortedSegmentSumOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UnsortedSegmentSum op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis", "num_segments"};
     return attr_names;
   }
@@ -8324,7 +8324,7 @@ class UnsortedSegmentSumLikeOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UnsortedSegmentSumLike op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
@@ -8349,7 +8349,7 @@ class UpsampleOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "Upsample op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"height_scale", "width_scale", "align_corners", "data_format", "interpolation"};
     return attr_names;
   }
@@ -8376,7 +8376,7 @@ class UpsampleBicubic2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleBicubic2D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"height_scale", "width_scale", "align_corners", "data_format"};
     return attr_names;
   }
@@ -8402,7 +8402,7 @@ class UpsampleBicubic2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleBicubic2DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"height_scale", "width_scale", "align_corners", "data_format"};
     return attr_names;
   }
@@ -8428,7 +8428,7 @@ class UpsampleBilinear2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleBilinear2D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"height_scale", "width_scale", "align_corners", "data_format"};
     return attr_names;
   }
@@ -8454,7 +8454,7 @@ class UpsampleBilinear2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleBilinear2DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"height_scale", "width_scale", "align_corners", "data_format"};
     return attr_names;
   }
@@ -8482,7 +8482,7 @@ class UpsampleGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"height_scale", "width_scale", "align_corners", "data_format", "interpolation"};
     return attr_names;
   }
@@ -8507,7 +8507,7 @@ class UpsampleLinear1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleLinear1D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"scale_factor", "align_corners", "data_format"};
     return attr_names;
   }
@@ -8530,7 +8530,7 @@ class UpsampleLinear1DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleLinear1DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"scale_factor", "align_corners", "data_format"};
     return attr_names;
   }
@@ -8551,7 +8551,7 @@ class UpsampleNearest1DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleNearest1D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"scale_factor", "data_format"};
     return attr_names;
   }
@@ -8571,7 +8571,7 @@ class UpsampleNearest1DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleNearest1DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"scale_factor", "data_format"};
     return attr_names;
   }
@@ -8593,7 +8593,7 @@ class UpsampleNearest2DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleNearest2D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"height_scale", "width_scale", "data_format"};
     return attr_names;
   }
@@ -8616,7 +8616,7 @@ class UpsampleNearest2DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleNearest2DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"height_scale", "width_scale", "data_format"};
     return attr_names;
   }
@@ -8641,7 +8641,7 @@ class UpsampleNearest3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleNearest3D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"depth_scale", "height_scale", "width_scale", "data_format"};
     return attr_names;
   }
@@ -8667,7 +8667,7 @@ class UpsampleNearest3DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleNearest3DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"depth_scale", "height_scale", "width_scale", "data_format"};
     return attr_names;
   }
@@ -8695,7 +8695,7 @@ class UpsampleTrilinear3DOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleTrilinear3D op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"depth_scale", "height_scale", "width_scale", "align_corners", "data_format"};
     return attr_names;
   }
@@ -8724,7 +8724,7 @@ class UpsampleTrilinear3DGradOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "UpsampleTrilinear3DGrad op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"depth_scale", "height_scale", "width_scale", "align_corners", "data_format"};
     return attr_names;
   }
@@ -8758,7 +8758,7 @@ class WhereScalarXOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "WhereScalarX op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
@@ -8792,7 +8792,7 @@ class WhereScalarXyOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "WhereScalarXy op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"has_x_int_operand", "has_x_float_operand", "has_y_int_operand", "has_y_float_operand", "x_int_operand", "x_float_operand", "y_int_operand", "y_float_operand"};
     return attr_names;
   }
@@ -8822,7 +8822,7 @@ class WhereScalarYOpInterpCtx : public OpInterpCtx {
       return Error::RuntimeError() << "WhereScalarY op has no attribute named " << attr_name;
     }
   }
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }

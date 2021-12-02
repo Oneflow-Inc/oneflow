@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/framework/op_attrs.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 
@@ -37,21 +38,31 @@ class OpInterpCtx {
  public:
   virtual ~OpInterpCtx() = default;
 
-  virtual Maybe<const void*> GetAttr(const std::string& attr_name) const = 0;
+  bool HasAttr(const std::string& attr_name) const { return AttrNamesSet().count(attr_name); }
 
   template<typename T>
   Maybe<const T&> GetAttr(const std::string& attr_name) const {
     return *reinterpret_cast<const T*>(JUST(GetAttr(attr_name)));
   }
+  virtual Maybe<const void*> GetAttr(const std::string& attr_name) const = 0;
 
-  bool HasAttr(const std::string& attr_name) const { return AttrNamesList().count(attr_name); }
+  OpAttrs GetAttrs() const { return OpAttrs(this); }
+
+  template<typename T>
+  Maybe<void> SetAttr(const std::string& attr_name, const T& attr_value) {
+    return SetAttr(attr_name, (const void*)&attr_value);
+  }
+  virtual Maybe<void> SetAttr(const std::string& attr_name, const void* attr_value) {
+    // TODO(hjchen2)
+    return Maybe<void>::Ok();
+  }
 
   size_t hash_value() const {
     // TODO(hjchen2)
     return 0;
   }
 
-  virtual const HashSet<std::string>& AttrNamesList() const { return EmptyAttrNamesList(); }
+  virtual const HashSet<std::string>& AttrNamesSet() const { return EmptyAttrNamesSet(); }
 
  public:
   Optional<Symbol<Device>> device;               // for local op
@@ -62,7 +73,7 @@ class OpInterpCtx {
  protected:
   OpInterpCtx() = default;
 
-  const HashSet<std::string>& EmptyAttrNamesList() const {
+  const HashSet<std::string>& EmptyAttrNamesSet() const {
     static HashSet<std::string> attr_names;
     return attr_names;
   }
@@ -93,7 +104,7 @@ class CastToConsistentOpInterpCtx : public OpInterpCtx {
     }
   }
 
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"shape", "dtype"};
     return attr_names;
   }
@@ -113,7 +124,7 @@ class SelectTopNOpInterpCtx : public OpInterpCtx {
     }
   }
 
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"top_n"};
     return attr_names;
   }
@@ -146,7 +157,7 @@ class FeedVariableOpInterpCtx : public OpInterpCtx {
     }
   }
 
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"_l2"};
     return attr_names;
   }
@@ -185,7 +196,7 @@ class ImageDecoderRandomCropResizeOpInterpCtx : public OpInterpCtx {
     }
   }
 
-  const HashSet<std::string>& AttrNamesList() const override {
+  const HashSet<std::string>& AttrNamesSet() const override {
     static HashSet<std::string> attr_names{"target_width",
                                            "target_height",
                                            "num_workers",
