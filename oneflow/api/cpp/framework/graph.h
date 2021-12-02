@@ -47,10 +47,10 @@ class Graph final {
   // void To(const Device& device);
 
  private:
-  void Compile();
+  void Compile(const std::vector<Tensor>& inputs);
   std::vector<Tensor> Run(const std::vector<Tensor>& inputs);
   void AddOp(oneflow::OperatorConf op_conf);
-  void BuildGraph();
+  void BuildGraph(const std::vector<Tensor>& inputs);
   void LoadCheckpoint();
   void RegisterTensors();
 
@@ -59,7 +59,7 @@ class Graph final {
   int batch_size_ = 0;
   Device device_;
   oneflow::Job job_;
-  oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>> input_name_to_tensor;
+  oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>> input_name_to_tensor_;
   oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>> output_name_to_tensor_;
   oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>> variable_op_name_to_tensor_;
 };

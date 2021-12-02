@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/api/common/scope.h"
 #include "oneflow/api/cpp/framework/device.h"
 #include "oneflow/api/cpp/framework/graph.h"
+#include "oneflow/api/cpp/framework/shape.h"
 #include "oneflow/api/cpp/framework/tensor.h"
 #include "oneflow/api/common/job_build_and_infer_ctx.h"
 #include <cstddef>
@@ -34,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/tensor.h"
@@ -49,6 +51,7 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/operator/interface_blob_conf.pb.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow_api {
 
@@ -89,7 +92,7 @@ Graph::Graph(const std::string& model_path) : Graph(model_path, Device("cpu")) {
 
 std::vector<Tensor> Graph::Forward(const std::vector<Tensor>& inputs) {
   if (!is_compiled_) {
-    Compile();
+    Compile(inputs);
     is_compiled_ = true;
   }
   return Run(inputs);
@@ -97,8 +100,8 @@ std::vector<Tensor> Graph::Forward(const std::vector<Tensor>& inputs) {
 
 void Graph::SetBatchSize(int batch_size) { batch_size_ = batch_size; }
 
-void Graph::Compile() {
-  BuildGraph();
+void Graph::Compile(const std::vector<Tensor>& inputs) {
+  BuildGraph(inputs);
   LoadCheckpoint();
   RegisterTensors();
   graph_->CompileAndInitRuntime().GetOrThrow();
@@ -110,48 +113,70 @@ std::vector<Tensor> Run(const std::vector<Tensor>& inputs) {
 }
 
 void Graph::AddOp(oneflow::OperatorConf op_conf) {
-  // TODO(zzk0): scope_symbol_id(x), device, batch_size
   std::shared_ptr<of::Scope> scope = oneflow::GetCurrentScope().GetPtrOrThrow();
   op_conf.set_scope_symbol_id(scope->symbol_id().value_or(0));
-  op_conf.set_device_tag(device_.type());
+  if (device_.type() == "cpu") {
+    op_conf.set_device_tag(device_.type());
+  } else {
+    op_conf.set_device_tag(device_.type() + ":" + std::to_string(device_.device_id()));
+  }
   if (batch_size_ > 0) {
+    op_conf.mutable_input_conf()->mutable_blob_conf()->mutable_shape()->mutable_dim()->Set(
+        0, batch_size_);
   }
   auto* ctx = of::GetCurInferCtx().GetOrThrow();
   ctx->AddAndInferConsistentOp(op_conf).GetOrThrow();
 }
 
-void Graph::BuildGraph() {
+void Graph::BuildGraph(const std::vector<Tensor>& inputs) {
   CompileScope build_graph_scope(job_.job_conf());
+
+  // TODO(zzk0): remove this; used for input tensor order
+  int input_tensor_order = 0;
 
   of::OpGraph op_graph(job_);
   op_graph
       .ForEachOpNode([&](const of::OpNode& node) -> of::Maybe<void> {
-        AddOp(node.op().op_conf());
-
-        // input tensor
-        if (node.op().op_conf().has_input_conf()) {
+        const oneflow::OperatorConf& op_conf = node.op().op_conf();
+        AddOp(op_conf);
+        if (op_conf.has_input_conf()) {
           // TODO(zzk0): input tensor order
-        }
-
-        // create variable op tensor
-        if (node.op().op_conf().has_variable_conf()) {
+          input_name_to_tensor_[op_conf.name()] = inputs.at(input_tensor_order).tensor_;
+          ++input_tensor_order;
+        } else if (op_conf.has_variable_conf()) {
           // TODO(zzk0): load from local path
-          // variable_op_name_to_tensor_[node.op().op_name()] =
-          // of::one::MirroredTensor::MakeTensor();
+          oneflow::VariableOpConf variable_conf = op_conf.variable_conf();
+          variable_op_name_to_tensor_[op_conf.name()] =
+              of::one::functional::Empty(
+                  of::Shape(variable_conf.shape()),
+                  of::DType::Get(static_cast<of::DataType>(variable_conf.data_type())).GetOrThrow(),
+                  device_.device_.get())
+                  .GetPtrOrThrow();
         }
-
-        // output tensor
-        if (node.op().op_conf().has_output_conf()) {
-          oneflow::InterfaceBlobConf blob_conf = node.op().op_conf().output_conf().blob_conf();
-          blob_conf.shape();
-          // oneflow::one::functional::Empty()
-        }
-
         return of::Maybe<void>::Ok();
       })
       .GetOrThrow();
 
   of::CurJobBuildAndInferCtx_Complete().GetOrThrow();
+  of::CurJobBuildAndInferCtx_Rebuild().GetOrThrow();
+
+  oneflow::Job complete_job = oneflow::GetCurrentJob().GetOrThrow();
+  of::OpGraph complete_graph(complete_job);
+  complete_graph
+      .ForEachOpNode([&](const of::OpNode& node) -> of::Maybe<void> {
+        // Build output tensors since batch size may changed
+        const oneflow::OperatorConf& op_conf = node.op().op_conf();
+        if (op_conf.has_output_conf()) {
+          oneflow::InterfaceBlobConf blob_conf = op_conf.output_conf().blob_conf();
+          output_name_to_tensor_[op_conf.name()] =
+              of::one::functional::Empty(
+                  of::Shape(blob_conf.shape()),
+                  of::DType::Get(static_cast<of::DataType>(blob_conf.data_type())).GetOrThrow(),
+                  device_.device_.get())
+                  .GetPtrOrThrow();
+        }
+      })
+      .GetOrThrow();
 }
 
 void Graph::LoadCheckpoint() {}
