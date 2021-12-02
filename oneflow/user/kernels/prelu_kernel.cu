@@ -23,10 +23,9 @@ namespace {
 
 Shape CreatePreluLeftExtendedShape(const ShapeView& shape) {
   DimVector dim_vec(shape.NumAxes());
-  const size_t left_ones_num = 1;
-  int i = 0;
-  for (; i < left_ones_num; ++i) { dim_vec.at(i) = 1LL; }
-  for (; i < shape.NumAxes(); ++i) { dim_vec.at(i) = shape.At(i); }
+  dim_vec.at(0) = 1LL;
+  dim_vec.at(1) = shape.At(1);
+  for (int i = 2; i < shape.NumAxes(); i++) { dim_vec.at(i) = 1LL; }
   return Shape(std::move(dim_vec));
 }
 
