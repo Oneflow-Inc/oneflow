@@ -259,15 +259,9 @@ class FlattenFunctor {
 
     int new_start_dim = start_dim;
     int new_end_dim = end_dim;
-    if (start_dim == -1) {
-      new_start_dim += x_dim;
-    }
-    if (end_dim == -1) {
-      new_end_dim += x_dim;
-    }
-    if (new_start_dim == new_end_dim) {
-      return x;
-    }
+    if (start_dim == -1) { new_start_dim += x_dim; }
+    if (end_dim == -1) { new_end_dim += x_dim; }
+    if (new_start_dim == new_end_dim) { return x; }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
