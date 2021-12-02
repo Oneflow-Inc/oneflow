@@ -81,7 +81,7 @@ int32_t UserOpConfWrapper::output_size(const std::string& arg_name) const {
 }
 
 const void* UserOpConfWrapper::Attr4Name(const std::string& attr_name) const {
-  return CHECK_JUST(op_interp_ctx_->GetAttr(attr_name.data()));
+  return CHECK_JUST(op_interp_ctx_->GetAttr(attr_name));
 }
 
 #define OP_WRAPPER_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                                    \

@@ -317,7 +317,7 @@ class LocalUserOpInferContext : public user_op::InferContext {
   }
   const user_op::UserOpConfWrapper& user_op_conf() const { return *user_op_conf_; }
   const void* Attr4Name(const std::string& attr_name) const override {
-    return CHECK_JUST((*op_interp_ctx_)->GetAttr(attr_name.data()));
+    return CHECK_JUST((*op_interp_ctx_)->GetAttr(attr_name));
   }
 
   const user_op::UserOpConfWrapper* user_op_conf_;
@@ -361,7 +361,7 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
   const void* Attr4Name(const std::string& attr_name) const override {
-    return CHECK_JUST((*op_interp_ctx_)->GetAttr(attr_name.data()));
+    return CHECK_JUST((*op_interp_ctx_)->GetAttr(attr_name));
   }
 
   const user_op::UserOpConfWrapper* user_op_conf_;

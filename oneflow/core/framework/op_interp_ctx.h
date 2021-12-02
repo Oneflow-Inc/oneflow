@@ -20,6 +20,7 @@ limitations under the License.
 #include <vector>
 
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/symbol.h"
@@ -34,19 +35,23 @@ class OpKernelState;
 
 class OpInterpCtx {
  public:
+  virtual ~OpInterpCtx() = default;
+
+  virtual Maybe<const void*> GetAttr(const std::string& attr_name) const = 0;
+
   template<typename T>
-  Maybe<const T&> GetAttr(const char* attr_name) const {
+  Maybe<const T&> GetAttr(const std::string& attr_name) const {
     return *reinterpret_cast<const T*>(JUST(GetAttr(attr_name)));
   }
 
-  virtual Maybe<const void*> GetAttr(const char* attr_name) const = 0;
+  bool HasAttr(const std::string& attr_name) const { return AttrNamesList().count(attr_name); }
 
   size_t hash_value() const {
     // TODO(hjchen2)
     return 0;
   }
 
-  virtual const std::vector<const char*>& AttrNamesList() const { return EmptyAttrNamesList(); }
+  virtual const HashSet<std::string>& AttrNamesList() const { return EmptyAttrNamesList(); }
 
  public:
   Optional<Symbol<Device>> device;               // for local op
@@ -55,15 +60,17 @@ class OpInterpCtx {
   Optional<user_op::OpKernelState> state;
 
  protected:
-  const std::vector<const char*>& EmptyAttrNamesList() const {
-    static std::vector<const char*> attr_names;
+  OpInterpCtx() = default;
+
+  const HashSet<std::string>& EmptyAttrNamesList() const {
+    static HashSet<std::string> attr_names;
     return attr_names;
   }
 };
 
 class FakeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Should not access attribute for `FakeOpInterpCtx`.";
   }
 };
@@ -76,18 +83,18 @@ class FakeOpInterpCtx : public OpInterpCtx {
 
 class CastToConsistentOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "shape")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "shape") {
       return (const void*)&shape;
-    } else if (!strcmp(attr_name, "dtype")) {
+    } else if (attr_name == "dtype") {
       return (const void*)&dtype;
     } else {
       return Error::RuntimeError() << "CastToConsistent op has no attribute named " << attr_name;
     }
   }
 
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"shape", "dtype"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"shape", "dtype"};
     return attr_names;
   }
 
@@ -98,16 +105,16 @@ class CastToConsistentOpInterpCtx : public OpInterpCtx {
 
 class SelectTopNOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "top_n")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "top_n") {
       return (const void*)&top_n;
     } else {
       return Error::RuntimeError() << "SelectTopN op has no attribute named " << attr_name;
     }
   }
 
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"top_n"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"top_n"};
     return attr_names;
   }
 
@@ -117,30 +124,30 @@ class SelectTopNOpInterpCtx : public OpInterpCtx {
 
 class FeedInputOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "FeedInput op has no attribute named " << attr_name;
   }
 };
 
 class FetchOutputOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "FetchOutput op has no attribute named " << attr_name;
   }
 };
 
 class FeedVariableOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "_l2")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "_l2") {
       return (const void*)&_l2;
     } else {
       return Error::RuntimeError() << "FeedVariable op has no attribute named " << attr_name;
     }
   }
 
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"_l2"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"_l2"};
     return attr_names;
   }
 
@@ -150,46 +157,46 @@ class FeedVariableOpInterpCtx : public OpInterpCtx {
 
 class ImageDecoderRandomCropResizeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "target_width")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "target_width") {
       return (const void*)&target_width;
-    } else if (!strcmp(attr_name, "target_height")) {
+    } else if (attr_name == "target_height") {
       return (const void*)&target_height;
-    } else if (!strcmp(attr_name, "num_workers")) {
+    } else if (attr_name == "num_workers") {
       return (const void*)&num_workers;
-    } else if (!strcmp(attr_name, "max_num_pixels")) {
+    } else if (attr_name == "max_num_pixels") {
       return (const void*)&max_num_pixels;
-    } else if (!strcmp(attr_name, "warmup_size")) {
+    } else if (attr_name == "warmup_size") {
       return (const void*)&warmup_size;
-    } else if (!strcmp(attr_name, "seed")) {
+    } else if (attr_name == "seed") {
       return (const void*)&seed;
-    } else if (!strcmp(attr_name, "num_attempts")) {
+    } else if (attr_name == "num_attempts") {
       return (const void*)&num_attempts;
-    } else if (!strcmp(attr_name, "random_area_min")) {
+    } else if (attr_name == "random_area_min") {
       return (const void*)&random_area_min;
-    } else if (!strcmp(attr_name, "random_area_max")) {
+    } else if (attr_name == "random_area_max") {
       return (const void*)&random_area_max;
-    } else if (!strcmp(attr_name, "random_aspect_ratio_min")) {
+    } else if (attr_name == "random_aspect_ratio_min") {
       return (const void*)&random_aspect_ratio_min;
-    } else if (!strcmp(attr_name, "random_aspect_ratio_max")) {
+    } else if (attr_name == "random_aspect_ratio_max") {
       return (const void*)&random_aspect_ratio_max;
     } else {
       return Error::RuntimeError() << "FeedVariable op has no attribute named " << attr_name;
     }
   }
 
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"target_width",
-                                               "target_height",
-                                               "num_workers",
-                                               "max_num_pixels",
-                                               "warmup_size",
-                                               "seed",
-                                               "num_attempts",
-                                               "random_area_min",
-                                               "random_area_max",
-                                               "random_aspect_ratio_min",
-                                               "random_aspect_ratio_max"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"target_width",
+                                           "target_height",
+                                           "num_workers",
+                                           "max_num_pixels",
+                                           "warmup_size",
+                                           "seed",
+                                           "num_attempts",
+                                           "random_area_min",
+                                           "random_area_max",
+                                           "random_aspect_ratio_min",
+                                           "random_aspect_ratio_max"};
     return attr_names;
   }
 

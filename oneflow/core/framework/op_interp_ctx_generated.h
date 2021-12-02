@@ -4,33 +4,33 @@
 
 class COCOReaderOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "session_id")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "session_id") {
       return (const void*)&session_id;
-    } else if (!strcmp(attr_name, "annotation_file")) {
+    } else if (attr_name == "annotation_file") {
       return (const void*)&annotation_file;
-    } else if (!strcmp(attr_name, "image_dir")) {
+    } else if (attr_name == "image_dir") {
       return (const void*)&image_dir;
-    } else if (!strcmp(attr_name, "batch_size")) {
+    } else if (attr_name == "batch_size") {
       return (const void*)&batch_size;
-    } else if (!strcmp(attr_name, "shuffle_after_epoch")) {
+    } else if (attr_name == "shuffle_after_epoch") {
       return (const void*)&shuffle_after_epoch;
-    } else if (!strcmp(attr_name, "random_seed")) {
+    } else if (attr_name == "random_seed") {
       return (const void*)&random_seed;
-    } else if (!strcmp(attr_name, "group_by_ratio")) {
+    } else if (attr_name == "group_by_ratio") {
       return (const void*)&group_by_ratio;
-    } else if (!strcmp(attr_name, "remove_images_without_annotations")) {
+    } else if (attr_name == "remove_images_without_annotations") {
       return (const void*)&remove_images_without_annotations;
-    } else if (!strcmp(attr_name, "stride_partition")) {
+    } else if (attr_name == "stride_partition") {
       return (const void*)&stride_partition;
-    } else if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (attr_name == "nd_sbp") {
       return (const void*)&nd_sbp;
     } else {
       return Error::RuntimeError() << "COCOReader op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"session_id", "annotation_file", "image_dir", "batch_size", "shuffle_after_epoch", "random_seed", "group_by_ratio", "remove_images_without_annotations", "stride_partition", "nd_sbp"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"session_id", "annotation_file", "image_dir", "batch_size", "shuffle_after_epoch", "random_seed", "group_by_ratio", "remove_images_without_annotations", "stride_partition", "nd_sbp"};
     return attr_names;
   }
 
@@ -48,15 +48,15 @@ class COCOReaderOpInterpCtx : public OpInterpCtx {
 };
 class CategoricalOrdinalEncodeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "hash_precomputed")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "hash_precomputed") {
       return (const void*)&hash_precomputed;
     } else {
       return Error::RuntimeError() << "CategoricalOrdinalEncode op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"hash_precomputed"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"hash_precomputed"};
     return attr_names;
   }
 
@@ -65,33 +65,33 @@ class CategoricalOrdinalEncodeOpInterpCtx : public OpInterpCtx {
 };
 class OFRecordReaderOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "data_dir")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "data_dir") {
       return (const void*)&data_dir;
-    } else if (!strcmp(attr_name, "data_part_num")) {
+    } else if (attr_name == "data_part_num") {
       return (const void*)&data_part_num;
-    } else if (!strcmp(attr_name, "batch_size")) {
+    } else if (attr_name == "batch_size") {
       return (const void*)&batch_size;
-    } else if (!strcmp(attr_name, "part_name_prefix")) {
+    } else if (attr_name == "part_name_prefix") {
       return (const void*)&part_name_prefix;
-    } else if (!strcmp(attr_name, "part_name_suffix_length")) {
+    } else if (attr_name == "part_name_suffix_length") {
       return (const void*)&part_name_suffix_length;
-    } else if (!strcmp(attr_name, "random_shuffle")) {
+    } else if (attr_name == "random_shuffle") {
       return (const void*)&random_shuffle;
-    } else if (!strcmp(attr_name, "seed")) {
+    } else if (attr_name == "seed") {
       return (const void*)&seed;
-    } else if (!strcmp(attr_name, "shuffle_buffer_size")) {
+    } else if (attr_name == "shuffle_buffer_size") {
       return (const void*)&shuffle_buffer_size;
-    } else if (!strcmp(attr_name, "shuffle_after_epoch")) {
+    } else if (attr_name == "shuffle_after_epoch") {
       return (const void*)&shuffle_after_epoch;
-    } else if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (attr_name == "nd_sbp") {
       return (const void*)&nd_sbp;
     } else {
       return Error::RuntimeError() << "OFRecordReader op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"data_dir", "data_part_num", "batch_size", "part_name_prefix", "part_name_suffix_length", "random_shuffle", "seed", "shuffle_buffer_size", "shuffle_after_epoch", "nd_sbp"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"data_dir", "data_part_num", "batch_size", "part_name_prefix", "part_name_suffix_length", "random_shuffle", "seed", "shuffle_buffer_size", "shuffle_after_epoch", "nd_sbp"};
     return attr_names;
   }
 
@@ -109,29 +109,29 @@ class OFRecordReaderOpInterpCtx : public OpInterpCtx {
 };
 class OneRecReaderOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "files")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "files") {
       return (const void*)&files;
-    } else if (!strcmp(attr_name, "batch_size")) {
+    } else if (attr_name == "batch_size") {
       return (const void*)&batch_size;
-    } else if (!strcmp(attr_name, "random_shuffle")) {
+    } else if (attr_name == "random_shuffle") {
       return (const void*)&random_shuffle;
-    } else if (!strcmp(attr_name, "shuffle_mode")) {
+    } else if (attr_name == "shuffle_mode") {
       return (const void*)&shuffle_mode;
-    } else if (!strcmp(attr_name, "seed")) {
+    } else if (attr_name == "seed") {
       return (const void*)&seed;
-    } else if (!strcmp(attr_name, "shuffle_buffer_size")) {
+    } else if (attr_name == "shuffle_buffer_size") {
       return (const void*)&shuffle_buffer_size;
-    } else if (!strcmp(attr_name, "shuffle_after_epoch")) {
+    } else if (attr_name == "shuffle_after_epoch") {
       return (const void*)&shuffle_after_epoch;
-    } else if (!strcmp(attr_name, "verify_example")) {
+    } else if (attr_name == "verify_example") {
       return (const void*)&verify_example;
     } else {
       return Error::RuntimeError() << "OneRecReader op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"files", "batch_size", "random_shuffle", "shuffle_mode", "seed", "shuffle_buffer_size", "shuffle_after_epoch", "verify_example"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"files", "batch_size", "random_shuffle", "shuffle_mode", "seed", "shuffle_buffer_size", "shuffle_after_epoch", "verify_example"};
     return attr_names;
   }
 
@@ -147,15 +147,15 @@ class OneRecReaderOpInterpCtx : public OpInterpCtx {
 };
 class TestDataTypeAttrOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "output_type")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "output_type") {
       return (const void*)&output_type;
     } else {
       return Error::RuntimeError() << "TestDataTypeAttr op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"output_type"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"output_type"};
     return attr_names;
   }
 
@@ -164,26 +164,26 @@ class TestDataTypeAttrOpInterpCtx : public OpInterpCtx {
 };
 class TestDynamicSourceOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "TestDynamicSource op has no attribute named " << attr_name;
   }
 
 };
 class TestListDataTypeAndListShapeAndListStringAttrOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "out_shapes")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "out_shapes") {
       return (const void*)&out_shapes;
-    } else if (!strcmp(attr_name, "out_types")) {
+    } else if (attr_name == "out_types") {
       return (const void*)&out_types;
-    } else if (!strcmp(attr_name, "string_list")) {
+    } else if (attr_name == "string_list") {
       return (const void*)&string_list;
     } else {
       return Error::RuntimeError() << "TestListDataTypeAndListShapeAndListStringAttr op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"out_shapes", "out_types", "string_list"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"out_shapes", "out_types", "string_list"};
     return attr_names;
   }
 
@@ -194,36 +194,36 @@ class TestListDataTypeAndListShapeAndListStringAttrOpInterpCtx : public OpInterp
 };
 class TestMultiInputOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "TestMultiInput op has no attribute named " << attr_name;
   }
 
 };
 class TestMultiInputGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "TestMultiInputGrad op has no attribute named " << attr_name;
   }
 
 };
 class TestMultiOutputOrderOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "TestMultiOutputOrder op has no attribute named " << attr_name;
   }
 
 };
 class TestRandomSourceOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "seed")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "seed") {
       return (const void*)&seed;
     } else {
       return Error::RuntimeError() << "TestRandomSource op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"seed"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"seed"};
     return attr_names;
   }
 
@@ -232,15 +232,15 @@ class TestRandomSourceOpInterpCtx : public OpInterpCtx {
 };
 class TestReshapeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "shape")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "shape") {
       return (const void*)&shape;
     } else {
       return Error::RuntimeError() << "TestReshape op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"shape"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"shape"};
     return attr_names;
   }
 
@@ -249,22 +249,22 @@ class TestReshapeOpInterpCtx : public OpInterpCtx {
 };
 class TestSourceOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "TestSource op has no attribute named " << attr_name;
   }
 
 };
 class TestSourceMultiGpuFixedOutNumOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "out_num")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "out_num") {
       return (const void*)&out_num;
     } else {
       return Error::RuntimeError() << "TestSourceMultiGpuFixedOutNum op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"out_num"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"out_num"};
     return attr_names;
   }
 
@@ -273,17 +273,17 @@ class TestSourceMultiGpuFixedOutNumOpInterpCtx : public OpInterpCtx {
 };
 class _ncclLogical_2DSameDim0All2allOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "in_dim1_split_axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "in_dim1_split_axis") {
       return (const void*)&in_dim1_split_axis;
-    } else if (!strcmp(attr_name, "out_dim1_split_axis")) {
+    } else if (attr_name == "out_dim1_split_axis") {
       return (const void*)&out_dim1_split_axis;
     } else {
       return Error::RuntimeError() << "_ncclLogical_2DSameDim0All2all op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"in_dim1_split_axis", "out_dim1_split_axis"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"in_dim1_split_axis", "out_dim1_split_axis"};
     return attr_names;
   }
 
@@ -293,22 +293,22 @@ class _ncclLogical_2DSameDim0All2allOpInterpCtx : public OpInterpCtx {
 };
 class _ncclLogical_2DSameDim0AllGatherOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "_ncclLogical_2DSameDim0AllGather op has no attribute named " << attr_name;
   }
 
 };
 class _ncclLogical_2DSameDim0AllGatherNoncontinuousOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "in_dim1_split_axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "in_dim1_split_axis") {
       return (const void*)&in_dim1_split_axis;
     } else {
       return Error::RuntimeError() << "_ncclLogical_2DSameDim0AllGatherNoncontinuous op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"in_dim1_split_axis"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"in_dim1_split_axis"};
     return attr_names;
   }
 
@@ -317,36 +317,36 @@ class _ncclLogical_2DSameDim0AllGatherNoncontinuousOpInterpCtx : public OpInterp
 };
 class _ncclLogical_2DSameDim0AllReduceOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "_ncclLogical_2DSameDim0AllReduce op has no attribute named " << attr_name;
   }
 
 };
 class _ncclLogical_2DSameDim1AllReduceOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "_ncclLogical_2DSameDim1AllReduce op has no attribute named " << attr_name;
   }
 
 };
 class _ncclLogicalAllGatherOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "_ncclLogicalAllGather op has no attribute named " << attr_name;
   }
 
 };
 class _ncclLogicalAllGatherNoncontinuousOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "in_split_axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "in_split_axis") {
       return (const void*)&in_split_axis;
     } else {
       return Error::RuntimeError() << "_ncclLogicalAllGatherNoncontinuous op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"in_split_axis"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"in_split_axis"};
     return attr_names;
   }
 
@@ -355,31 +355,31 @@ class _ncclLogicalAllGatherNoncontinuousOpInterpCtx : public OpInterpCtx {
 };
 class _ncclLogicalAllReduceOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "_ncclLogicalAllReduce op has no attribute named " << attr_name;
   }
 
 };
 class _ncclLogicalReduceScatterOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "_ncclLogicalReduceScatter op has no attribute named " << attr_name;
   }
 
 };
 class _ncclLogicalS2sOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "in_split_axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "in_split_axis") {
       return (const void*)&in_split_axis;
-    } else if (!strcmp(attr_name, "out_split_axis")) {
+    } else if (attr_name == "out_split_axis") {
       return (const void*)&out_split_axis;
     } else {
       return Error::RuntimeError() << "_ncclLogicalS2s op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"in_split_axis", "out_split_axis"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"in_split_axis", "out_split_axis"};
     return attr_names;
   }
 
@@ -389,29 +389,29 @@ class _ncclLogicalS2sOpInterpCtx : public OpInterpCtx {
 };
 class AbsOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Abs op has no attribute named " << attr_name;
   }
 
 };
 class AbsGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "AbsGrad op has no attribute named " << attr_name;
   }
 
 };
 class AccOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "max_acc_num")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "max_acc_num") {
       return (const void*)&max_acc_num;
     } else {
       return Error::RuntimeError() << "Acc op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"max_acc_num"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"max_acc_num"};
     return attr_names;
   }
 
@@ -420,57 +420,57 @@ class AccOpInterpCtx : public OpInterpCtx {
 };
 class AcosOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Acos op has no attribute named " << attr_name;
   }
 
 };
 class AcosGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "AcosGrad op has no attribute named " << attr_name;
   }
 
 };
 class AcoshOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Acosh op has no attribute named " << attr_name;
   }
 
 };
 class AcoshGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "AcoshGrad op has no attribute named " << attr_name;
   }
 
 };
 class AdagradUpdateOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "train_step_val")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "train_step_val") {
       return (const void*)&train_step_val;
-    } else if (!strcmp(attr_name, "learning_rate_val")) {
+    } else if (attr_name == "learning_rate_val") {
       return (const void*)&learning_rate_val;
-    } else if (!strcmp(attr_name, "scale")) {
+    } else if (attr_name == "scale") {
       return (const void*)&scale;
-    } else if (!strcmp(attr_name, "l1")) {
+    } else if (attr_name == "l1") {
       return (const void*)&l1;
-    } else if (!strcmp(attr_name, "l2")) {
+    } else if (attr_name == "l2") {
       return (const void*)&l2;
-    } else if (!strcmp(attr_name, "lr_decay")) {
+    } else if (attr_name == "lr_decay") {
       return (const void*)&lr_decay;
-    } else if (!strcmp(attr_name, "weight_decay")) {
+    } else if (attr_name == "weight_decay") {
       return (const void*)&weight_decay;
-    } else if (!strcmp(attr_name, "epsilon")) {
+    } else if (attr_name == "epsilon") {
       return (const void*)&epsilon;
     } else {
       return Error::RuntimeError() << "AdagradUpdate op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"train_step_val", "learning_rate_val", "scale", "l1", "l2", "lr_decay", "weight_decay", "epsilon"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"train_step_val", "learning_rate_val", "scale", "l1", "l2", "lr_decay", "weight_decay", "epsilon"};
     return attr_names;
   }
 
@@ -486,15 +486,15 @@ class AdagradUpdateOpInterpCtx : public OpInterpCtx {
 };
 class AdamBiasCorrectionFactorOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "beta")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "beta") {
       return (const void*)&beta;
     } else {
       return Error::RuntimeError() << "AdamBiasCorrectionFactor op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"beta"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"beta"};
     return attr_names;
   }
 
@@ -503,37 +503,37 @@ class AdamBiasCorrectionFactorOpInterpCtx : public OpInterpCtx {
 };
 class AdamUpdateOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "learning_rate_val")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "learning_rate_val") {
       return (const void*)&learning_rate_val;
-    } else if (!strcmp(attr_name, "bias_correction1_val")) {
+    } else if (attr_name == "bias_correction1_val") {
       return (const void*)&bias_correction1_val;
-    } else if (!strcmp(attr_name, "bias_correction2_val")) {
+    } else if (attr_name == "bias_correction2_val") {
       return (const void*)&bias_correction2_val;
-    } else if (!strcmp(attr_name, "scale")) {
+    } else if (attr_name == "scale") {
       return (const void*)&scale;
-    } else if (!strcmp(attr_name, "l1")) {
+    } else if (attr_name == "l1") {
       return (const void*)&l1;
-    } else if (!strcmp(attr_name, "l2")) {
+    } else if (attr_name == "l2") {
       return (const void*)&l2;
-    } else if (!strcmp(attr_name, "beta1")) {
+    } else if (attr_name == "beta1") {
       return (const void*)&beta1;
-    } else if (!strcmp(attr_name, "beta2")) {
+    } else if (attr_name == "beta2") {
       return (const void*)&beta2;
-    } else if (!strcmp(attr_name, "epsilon")) {
+    } else if (attr_name == "epsilon") {
       return (const void*)&epsilon;
-    } else if (!strcmp(attr_name, "weight_decay")) {
+    } else if (attr_name == "weight_decay") {
       return (const void*)&weight_decay;
-    } else if (!strcmp(attr_name, "amsgrad")) {
+    } else if (attr_name == "amsgrad") {
       return (const void*)&amsgrad;
-    } else if (!strcmp(attr_name, "do_bias_correction")) {
+    } else if (attr_name == "do_bias_correction") {
       return (const void*)&do_bias_correction;
     } else {
       return Error::RuntimeError() << "AdamUpdate op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"learning_rate_val", "bias_correction1_val", "bias_correction2_val", "scale", "l1", "l2", "beta1", "beta2", "epsilon", "weight_decay", "amsgrad", "do_bias_correction"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"learning_rate_val", "bias_correction1_val", "bias_correction2_val", "scale", "l1", "l2", "beta1", "beta2", "epsilon", "weight_decay", "amsgrad", "do_bias_correction"};
     return attr_names;
   }
 
@@ -553,15 +553,15 @@ class AdamUpdateOpInterpCtx : public OpInterpCtx {
 };
 class AdaptiveAvgPool1DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "output_size")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "output_size") {
       return (const void*)&output_size;
     } else {
       return Error::RuntimeError() << "AdaptiveAvgPool1D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"output_size"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"output_size"};
     return attr_names;
   }
 
@@ -570,15 +570,15 @@ class AdaptiveAvgPool1DOpInterpCtx : public OpInterpCtx {
 };
 class AdaptiveAvgPool1DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "output_size")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "output_size") {
       return (const void*)&output_size;
     } else {
       return Error::RuntimeError() << "AdaptiveAvgPool1DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"output_size"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"output_size"};
     return attr_names;
   }
 
@@ -587,15 +587,15 @@ class AdaptiveAvgPool1DGradOpInterpCtx : public OpInterpCtx {
 };
 class AdaptiveAvgPool2DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "output_size")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "output_size") {
       return (const void*)&output_size;
     } else {
       return Error::RuntimeError() << "AdaptiveAvgPool2D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"output_size"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"output_size"};
     return attr_names;
   }
 
@@ -604,15 +604,15 @@ class AdaptiveAvgPool2DOpInterpCtx : public OpInterpCtx {
 };
 class AdaptiveAvgPool2DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "output_size")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "output_size") {
       return (const void*)&output_size;
     } else {
       return Error::RuntimeError() << "AdaptiveAvgPool2DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"output_size"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"output_size"};
     return attr_names;
   }
 
@@ -621,15 +621,15 @@ class AdaptiveAvgPool2DGradOpInterpCtx : public OpInterpCtx {
 };
 class AdaptiveAvgPool3DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "output_size")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "output_size") {
       return (const void*)&output_size;
     } else {
       return Error::RuntimeError() << "AdaptiveAvgPool3D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"output_size"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"output_size"};
     return attr_names;
   }
 
@@ -638,15 +638,15 @@ class AdaptiveAvgPool3DOpInterpCtx : public OpInterpCtx {
 };
 class AdaptiveAvgPool3DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "output_size")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "output_size") {
       return (const void*)&output_size;
     } else {
       return Error::RuntimeError() << "AdaptiveAvgPool3DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"output_size"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"output_size"};
     return attr_names;
   }
 
@@ -655,24 +655,24 @@ class AdaptiveAvgPool3DGradOpInterpCtx : public OpInterpCtx {
 };
 class AddNOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "AddN op has no attribute named " << attr_name;
   }
 
 };
 class AffineGridOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "size")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "size") {
       return (const void*)&size;
-    } else if (!strcmp(attr_name, "align_corners")) {
+    } else if (attr_name == "align_corners") {
       return (const void*)&align_corners;
     } else {
       return Error::RuntimeError() << "AffineGrid op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"size", "align_corners"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"size", "align_corners"};
     return attr_names;
   }
 
@@ -682,17 +682,17 @@ class AffineGridOpInterpCtx : public OpInterpCtx {
 };
 class AffineGridGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "size")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "size") {
       return (const void*)&size;
-    } else if (!strcmp(attr_name, "align_corners")) {
+    } else if (attr_name == "align_corners") {
       return (const void*)&align_corners;
     } else {
       return Error::RuntimeError() << "AffineGridGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"size", "align_corners"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"size", "align_corners"};
     return attr_names;
   }
 
@@ -702,36 +702,36 @@ class AffineGridGradOpInterpCtx : public OpInterpCtx {
 };
 class AmpWhiteIdentityOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "AmpWhiteIdentity op has no attribute named " << attr_name;
   }
 
 };
 class ArangeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "integer_start")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "integer_start") {
       return (const void*)&integer_start;
-    } else if (!strcmp(attr_name, "integer_delta")) {
+    } else if (attr_name == "integer_delta") {
       return (const void*)&integer_delta;
-    } else if (!strcmp(attr_name, "integer_limit")) {
+    } else if (attr_name == "integer_limit") {
       return (const void*)&integer_limit;
-    } else if (!strcmp(attr_name, "float_start")) {
+    } else if (attr_name == "float_start") {
       return (const void*)&float_start;
-    } else if (!strcmp(attr_name, "float_delta")) {
+    } else if (attr_name == "float_delta") {
       return (const void*)&float_delta;
-    } else if (!strcmp(attr_name, "float_limit")) {
+    } else if (attr_name == "float_limit") {
       return (const void*)&float_limit;
-    } else if (!strcmp(attr_name, "dtype")) {
+    } else if (attr_name == "dtype") {
       return (const void*)&dtype;
-    } else if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (attr_name == "nd_sbp") {
       return (const void*)&nd_sbp;
     } else {
       return Error::RuntimeError() << "Arange op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"integer_start", "integer_delta", "integer_limit", "float_start", "float_delta", "float_limit", "dtype", "nd_sbp"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"integer_start", "integer_delta", "integer_limit", "float_start", "float_delta", "float_limit", "dtype", "nd_sbp"};
     return attr_names;
   }
 
@@ -747,15 +747,15 @@ class ArangeOpInterpCtx : public OpInterpCtx {
 };
 class ArgSortOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "direction")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "direction") {
       return (const void*)&direction;
     } else {
       return Error::RuntimeError() << "ArgSort op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"direction"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"direction"};
     return attr_names;
   }
 
@@ -764,22 +764,22 @@ class ArgSortOpInterpCtx : public OpInterpCtx {
 };
 class ArgmaxOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Argmax op has no attribute named " << attr_name;
   }
 
 };
 class ArgwhereOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "dtype")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "dtype") {
       return (const void*)&dtype;
     } else {
       return Error::RuntimeError() << "Argwhere op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"dtype"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"dtype"};
     return attr_names;
   }
 
@@ -788,125 +788,125 @@ class ArgwhereOpInterpCtx : public OpInterpCtx {
 };
 class AsinOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Asin op has no attribute named " << attr_name;
   }
 
 };
 class AsinGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "AsinGrad op has no attribute named " << attr_name;
   }
 
 };
 class AsinhOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Asinh op has no attribute named " << attr_name;
   }
 
 };
 class AsinhGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "AsinhGrad op has no attribute named " << attr_name;
   }
 
 };
 class AssignOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Assign op has no attribute named " << attr_name;
   }
 
 };
 class AssignIfOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "AssignIf op has no attribute named " << attr_name;
   }
 
 };
 class AssignIfNotOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "AssignIfNot op has no attribute named " << attr_name;
   }
 
 };
 class AtanOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Atan op has no attribute named " << attr_name;
   }
 
 };
 class Atan2OpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Atan2 op has no attribute named " << attr_name;
   }
 
 };
 class Atan2XGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Atan2XGrad op has no attribute named " << attr_name;
   }
 
 };
 class Atan2YGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Atan2YGrad op has no attribute named " << attr_name;
   }
 
 };
 class AtanGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "AtanGrad op has no attribute named " << attr_name;
   }
 
 };
 class AtanhOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Atanh op has no attribute named " << attr_name;
   }
 
 };
 class AtanhGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "AtanhGrad op has no attribute named " << attr_name;
   }
 
 };
 class AvgPool1DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "stride")) {
+    } else if (attr_name == "stride") {
       return (const void*)&stride;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
-    } else if (!strcmp(attr_name, "count_include_pad")) {
+    } else if (attr_name == "count_include_pad") {
       return (const void*)&count_include_pad;
-    } else if (!strcmp(attr_name, "divisor_override")) {
+    } else if (attr_name == "divisor_override") {
       return (const void*)&divisor_override;
     } else {
       return Error::RuntimeError() << "AvgPool1D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
     return attr_names;
   }
 
@@ -921,27 +921,27 @@ class AvgPool1DOpInterpCtx : public OpInterpCtx {
 };
 class AvgPool1DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "stride")) {
+    } else if (attr_name == "stride") {
       return (const void*)&stride;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
-    } else if (!strcmp(attr_name, "count_include_pad")) {
+    } else if (attr_name == "count_include_pad") {
       return (const void*)&count_include_pad;
-    } else if (!strcmp(attr_name, "divisor_override")) {
+    } else if (attr_name == "divisor_override") {
       return (const void*)&divisor_override;
     } else {
       return Error::RuntimeError() << "AvgPool1DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
     return attr_names;
   }
 
@@ -956,27 +956,27 @@ class AvgPool1DGradOpInterpCtx : public OpInterpCtx {
 };
 class AvgPool2DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "stride")) {
+    } else if (attr_name == "stride") {
       return (const void*)&stride;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
-    } else if (!strcmp(attr_name, "count_include_pad")) {
+    } else if (attr_name == "count_include_pad") {
       return (const void*)&count_include_pad;
-    } else if (!strcmp(attr_name, "divisor_override")) {
+    } else if (attr_name == "divisor_override") {
       return (const void*)&divisor_override;
     } else {
       return Error::RuntimeError() << "AvgPool2D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
     return attr_names;
   }
 
@@ -991,27 +991,27 @@ class AvgPool2DOpInterpCtx : public OpInterpCtx {
 };
 class AvgPool2DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "stride")) {
+    } else if (attr_name == "stride") {
       return (const void*)&stride;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
-    } else if (!strcmp(attr_name, "count_include_pad")) {
+    } else if (attr_name == "count_include_pad") {
       return (const void*)&count_include_pad;
-    } else if (!strcmp(attr_name, "divisor_override")) {
+    } else if (attr_name == "divisor_override") {
       return (const void*)&divisor_override;
     } else {
       return Error::RuntimeError() << "AvgPool2DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
     return attr_names;
   }
 
@@ -1026,27 +1026,27 @@ class AvgPool2DGradOpInterpCtx : public OpInterpCtx {
 };
 class AvgPool3DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "stride")) {
+    } else if (attr_name == "stride") {
       return (const void*)&stride;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
-    } else if (!strcmp(attr_name, "count_include_pad")) {
+    } else if (attr_name == "count_include_pad") {
       return (const void*)&count_include_pad;
-    } else if (!strcmp(attr_name, "divisor_override")) {
+    } else if (attr_name == "divisor_override") {
       return (const void*)&divisor_override;
     } else {
       return Error::RuntimeError() << "AvgPool3D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
     return attr_names;
   }
 
@@ -1061,27 +1061,27 @@ class AvgPool3DOpInterpCtx : public OpInterpCtx {
 };
 class AvgPool3DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "stride")) {
+    } else if (attr_name == "stride") {
       return (const void*)&stride;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
-    } else if (!strcmp(attr_name, "count_include_pad")) {
+    } else if (attr_name == "count_include_pad") {
       return (const void*)&count_include_pad;
-    } else if (!strcmp(attr_name, "divisor_override")) {
+    } else if (attr_name == "divisor_override") {
       return (const void*)&divisor_override;
     } else {
       return Error::RuntimeError() << "AvgPool3DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "ceil_mode", "count_include_pad", "divisor_override"};
     return attr_names;
   }
 
@@ -1096,26 +1096,26 @@ class AvgPool3DGradOpInterpCtx : public OpInterpCtx {
 };
 class BatchGatherOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "BatchGather op has no attribute named " << attr_name;
   }
 
 };
 class BatchMatmulOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "transpose_a")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "transpose_a") {
       return (const void*)&transpose_a;
-    } else if (!strcmp(attr_name, "transpose_b")) {
+    } else if (attr_name == "transpose_b") {
       return (const void*)&transpose_b;
-    } else if (!strcmp(attr_name, "alpha")) {
+    } else if (attr_name == "alpha") {
       return (const void*)&alpha;
     } else {
       return Error::RuntimeError() << "BatchMatmul op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"transpose_a", "transpose_b", "alpha"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"transpose_a", "transpose_b", "alpha"};
     return attr_names;
   }
 
@@ -1126,19 +1126,19 @@ class BatchMatmulOpInterpCtx : public OpInterpCtx {
 };
 class BernoulliOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "seed")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "seed") {
       return (const void*)&seed;
-    } else if (!strcmp(attr_name, "has_seed")) {
+    } else if (attr_name == "has_seed") {
       return (const void*)&has_seed;
-    } else if (!strcmp(attr_name, "dtype")) {
+    } else if (attr_name == "dtype") {
       return (const void*)&dtype;
     } else {
       return Error::RuntimeError() << "Bernoulli op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"seed", "has_seed", "dtype"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"seed", "has_seed", "dtype"};
     return attr_names;
   }
 
@@ -1149,15 +1149,15 @@ class BernoulliOpInterpCtx : public OpInterpCtx {
 };
 class BiasAddOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
     } else {
       return Error::RuntimeError() << "BiasAdd op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
 
@@ -1166,15 +1166,15 @@ class BiasAddOpInterpCtx : public OpInterpCtx {
 };
 class BinaryCrossEntropyOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "reduction")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "reduction") {
       return (const void*)&reduction;
     } else {
       return Error::RuntimeError() << "BinaryCrossEntropy op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"reduction"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"reduction"};
     return attr_names;
   }
 
@@ -1183,15 +1183,15 @@ class BinaryCrossEntropyOpInterpCtx : public OpInterpCtx {
 };
 class BinaryCrossEntropyGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "reduction")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "reduction") {
       return (const void*)&reduction;
     } else {
       return Error::RuntimeError() << "BinaryCrossEntropyGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"reduction"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"reduction"};
     return attr_names;
   }
 
@@ -1200,17 +1200,17 @@ class BinaryCrossEntropyGradOpInterpCtx : public OpInterpCtx {
 };
 class BinaryCrossEntropyWithLogitsOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "has_pos_weight")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "has_pos_weight") {
       return (const void*)&has_pos_weight;
-    } else if (!strcmp(attr_name, "reduction")) {
+    } else if (attr_name == "reduction") {
       return (const void*)&reduction;
     } else {
       return Error::RuntimeError() << "BinaryCrossEntropyWithLogits op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"has_pos_weight", "reduction"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"has_pos_weight", "reduction"};
     return attr_names;
   }
 
@@ -1220,17 +1220,17 @@ class BinaryCrossEntropyWithLogitsOpInterpCtx : public OpInterpCtx {
 };
 class BinaryCrossEntropyWithLogitsGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "has_pos_weight")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "has_pos_weight") {
       return (const void*)&has_pos_weight;
-    } else if (!strcmp(attr_name, "reduction")) {
+    } else if (attr_name == "reduction") {
       return (const void*)&reduction;
     } else {
       return Error::RuntimeError() << "BinaryCrossEntropyWithLogitsGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"has_pos_weight", "reduction"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"has_pos_weight", "reduction"};
     return attr_names;
   }
 
@@ -1240,85 +1240,85 @@ class BinaryCrossEntropyWithLogitsGradOpInterpCtx : public OpInterpCtx {
 };
 class BroadcastAddOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "BroadcastAdd op has no attribute named " << attr_name;
   }
 
 };
 class BroadcastDivOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "BroadcastDiv op has no attribute named " << attr_name;
   }
 
 };
 class BroadcastDivGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "BroadcastDivGrad op has no attribute named " << attr_name;
   }
 
 };
 class BroadcastEqualOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "BroadcastEqual op has no attribute named " << attr_name;
   }
 
 };
 class BroadcastFloorModOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "BroadcastFloorMod op has no attribute named " << attr_name;
   }
 
 };
 class BroadcastFmodOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "BroadcastFmod op has no attribute named " << attr_name;
   }
 
 };
 class BroadcastGreaterOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "BroadcastGreater op has no attribute named " << attr_name;
   }
 
 };
 class BroadcastGreaterEqualOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "BroadcastGreaterEqual op has no attribute named " << attr_name;
   }
 
 };
 class BroadcastLessOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "BroadcastLess op has no attribute named " << attr_name;
   }
 
 };
 class BroadcastLessEqualOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "BroadcastLessEqual op has no attribute named " << attr_name;
   }
 
 };
 class BroadcastLikeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "broadcast_axes")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "broadcast_axes") {
       return (const void*)&broadcast_axes;
     } else {
       return Error::RuntimeError() << "BroadcastLike op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"broadcast_axes"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"broadcast_axes"};
     return attr_names;
   }
 
@@ -1327,40 +1327,40 @@ class BroadcastLikeOpInterpCtx : public OpInterpCtx {
 };
 class BroadcastLogicalAndOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "BroadcastLogicalAnd op has no attribute named " << attr_name;
   }
 
 };
 class BroadcastLogicalOrOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "BroadcastLogicalOr op has no attribute named " << attr_name;
   }
 
 };
 class BroadcastLogicalXorOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "BroadcastLogicalXor op has no attribute named " << attr_name;
   }
 
 };
 class BroadcastMatmulOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "transpose_a")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "transpose_a") {
       return (const void*)&transpose_a;
-    } else if (!strcmp(attr_name, "transpose_b")) {
+    } else if (attr_name == "transpose_b") {
       return (const void*)&transpose_b;
-    } else if (!strcmp(attr_name, "alpha")) {
+    } else if (attr_name == "alpha") {
       return (const void*)&alpha;
     } else {
       return Error::RuntimeError() << "BroadcastMatmul op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"transpose_a", "transpose_b", "alpha"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"transpose_a", "transpose_b", "alpha"};
     return attr_names;
   }
 
@@ -1371,15 +1371,15 @@ class BroadcastMatmulOpInterpCtx : public OpInterpCtx {
 };
 class BroadcastMatmulGradBOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "alpha")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "alpha") {
       return (const void*)&alpha;
     } else {
       return Error::RuntimeError() << "BroadcastMatmulGradB op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"alpha"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"alpha"};
     return attr_names;
   }
 
@@ -1388,71 +1388,71 @@ class BroadcastMatmulGradBOpInterpCtx : public OpInterpCtx {
 };
 class BroadcastMaximumOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "BroadcastMaximum op has no attribute named " << attr_name;
   }
 
 };
 class BroadcastMinimumOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "BroadcastMinimum op has no attribute named " << attr_name;
   }
 
 };
 class BroadcastMulOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "BroadcastMul op has no attribute named " << attr_name;
   }
 
 };
 class BroadcastNotEqualOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "BroadcastNotEqual op has no attribute named " << attr_name;
   }
 
 };
 class BroadcastPowOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "BroadcastPow op has no attribute named " << attr_name;
   }
 
 };
 class BroadcastPowXGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "BroadcastPowXGrad op has no attribute named " << attr_name;
   }
 
 };
 class BroadcastPowYGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "BroadcastPowYGrad op has no attribute named " << attr_name;
   }
 
 };
 class BroadcastSubOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "BroadcastSub op has no attribute named " << attr_name;
   }
 
 };
 class CastOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "dtype")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "dtype") {
       return (const void*)&dtype;
     } else {
       return Error::RuntimeError() << "Cast op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"dtype"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"dtype"};
     return attr_names;
   }
 
@@ -1461,64 +1461,64 @@ class CastOpInterpCtx : public OpInterpCtx {
 };
 class CastLikeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "CastLike op has no attribute named " << attr_name;
   }
 
 };
 class CastToStaticShapeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "CastToStaticShape op has no attribute named " << attr_name;
   }
 
 };
 class CastToTickOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "CastToTick op has no attribute named " << attr_name;
   }
 
 };
 class CcreluOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Ccrelu op has no attribute named " << attr_name;
   }
 
 };
 class CcreluGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "CcreluGrad op has no attribute named " << attr_name;
   }
 
 };
 class CeilOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Ceil op has no attribute named " << attr_name;
   }
 
 };
 class CeilGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "CeilGrad op has no attribute named " << attr_name;
   }
 
 };
 class CeluOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "alpha")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "alpha") {
       return (const void*)&alpha;
     } else {
       return Error::RuntimeError() << "Celu op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"alpha"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"alpha"};
     return attr_names;
   }
 
@@ -1527,15 +1527,15 @@ class CeluOpInterpCtx : public OpInterpCtx {
 };
 class CeluGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "alpha")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "alpha") {
       return (const void*)&alpha;
     } else {
       return Error::RuntimeError() << "CeluGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"alpha"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"alpha"};
     return attr_names;
   }
 
@@ -1544,21 +1544,21 @@ class CeluGradOpInterpCtx : public OpInterpCtx {
 };
 class ClipByScalarOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "floating_min")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "floating_min") {
       return (const void*)&floating_min;
-    } else if (!strcmp(attr_name, "integral_min")) {
+    } else if (attr_name == "integral_min") {
       return (const void*)&integral_min;
-    } else if (!strcmp(attr_name, "floating_max")) {
+    } else if (attr_name == "floating_max") {
       return (const void*)&floating_max;
-    } else if (!strcmp(attr_name, "integral_max")) {
+    } else if (attr_name == "integral_max") {
       return (const void*)&integral_max;
     } else {
       return Error::RuntimeError() << "ClipByScalar op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"floating_min", "integral_min", "floating_max", "integral_max"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"floating_min", "integral_min", "floating_max", "integral_max"};
     return attr_names;
   }
 
@@ -1570,21 +1570,21 @@ class ClipByScalarOpInterpCtx : public OpInterpCtx {
 };
 class ClipByScalarGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "floating_min")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "floating_min") {
       return (const void*)&floating_min;
-    } else if (!strcmp(attr_name, "integral_min")) {
+    } else if (attr_name == "integral_min") {
       return (const void*)&integral_min;
-    } else if (!strcmp(attr_name, "floating_max")) {
+    } else if (attr_name == "floating_max") {
       return (const void*)&floating_max;
-    } else if (!strcmp(attr_name, "integral_max")) {
+    } else if (attr_name == "integral_max") {
       return (const void*)&integral_max;
     } else {
       return Error::RuntimeError() << "ClipByScalarGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"floating_min", "integral_min", "floating_max", "integral_max"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"floating_min", "integral_min", "floating_max", "integral_max"};
     return attr_names;
   }
 
@@ -1596,17 +1596,17 @@ class ClipByScalarGradOpInterpCtx : public OpInterpCtx {
 };
 class ClipByScalarMaxOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "floating_max")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "floating_max") {
       return (const void*)&floating_max;
-    } else if (!strcmp(attr_name, "integral_max")) {
+    } else if (attr_name == "integral_max") {
       return (const void*)&integral_max;
     } else {
       return Error::RuntimeError() << "ClipByScalarMax op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"floating_max", "integral_max"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"floating_max", "integral_max"};
     return attr_names;
   }
 
@@ -1616,17 +1616,17 @@ class ClipByScalarMaxOpInterpCtx : public OpInterpCtx {
 };
 class ClipByScalarMaxGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "floating_max")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "floating_max") {
       return (const void*)&floating_max;
-    } else if (!strcmp(attr_name, "integral_max")) {
+    } else if (attr_name == "integral_max") {
       return (const void*)&integral_max;
     } else {
       return Error::RuntimeError() << "ClipByScalarMaxGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"floating_max", "integral_max"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"floating_max", "integral_max"};
     return attr_names;
   }
 
@@ -1636,17 +1636,17 @@ class ClipByScalarMaxGradOpInterpCtx : public OpInterpCtx {
 };
 class ClipByScalarMinOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "floating_min")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "floating_min") {
       return (const void*)&floating_min;
-    } else if (!strcmp(attr_name, "integral_min")) {
+    } else if (attr_name == "integral_min") {
       return (const void*)&integral_min;
     } else {
       return Error::RuntimeError() << "ClipByScalarMin op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"floating_min", "integral_min"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"floating_min", "integral_min"};
     return attr_names;
   }
 
@@ -1656,17 +1656,17 @@ class ClipByScalarMinOpInterpCtx : public OpInterpCtx {
 };
 class ClipByScalarMinGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "floating_min")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "floating_min") {
       return (const void*)&floating_min;
-    } else if (!strcmp(attr_name, "integral_min")) {
+    } else if (attr_name == "integral_min") {
       return (const void*)&integral_min;
     } else {
       return Error::RuntimeError() << "ClipByScalarMinGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"floating_min", "integral_min"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"floating_min", "integral_min"};
     return attr_names;
   }
 
@@ -1676,23 +1676,23 @@ class ClipByScalarMinGradOpInterpCtx : public OpInterpCtx {
 };
 class CoinFlipOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "probability")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "probability") {
       return (const void*)&probability;
-    } else if (!strcmp(attr_name, "batch_size")) {
+    } else if (attr_name == "batch_size") {
       return (const void*)&batch_size;
-    } else if (!strcmp(attr_name, "seed")) {
+    } else if (attr_name == "seed") {
       return (const void*)&seed;
-    } else if (!strcmp(attr_name, "has_seed")) {
+    } else if (attr_name == "has_seed") {
       return (const void*)&has_seed;
-    } else if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (attr_name == "nd_sbp") {
       return (const void*)&nd_sbp;
     } else {
       return Error::RuntimeError() << "CoinFlip op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"probability", "batch_size", "seed", "has_seed", "nd_sbp"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"probability", "batch_size", "seed", "has_seed", "nd_sbp"};
     return attr_names;
   }
 
@@ -1705,21 +1705,21 @@ class CoinFlipOpInterpCtx : public OpInterpCtx {
 };
 class CombinedMarginLossOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "m1")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "m1") {
       return (const void*)&m1;
-    } else if (!strcmp(attr_name, "m2")) {
+    } else if (attr_name == "m2") {
       return (const void*)&m2;
-    } else if (!strcmp(attr_name, "m3")) {
+    } else if (attr_name == "m3") {
       return (const void*)&m3;
-    } else if (!strcmp(attr_name, "depth")) {
+    } else if (attr_name == "depth") {
       return (const void*)&depth;
     } else {
       return Error::RuntimeError() << "CombinedMarginLoss op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"m1", "m2", "m3", "depth"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"m1", "m2", "m3", "depth"};
     return attr_names;
   }
 
@@ -1731,21 +1731,21 @@ class CombinedMarginLossOpInterpCtx : public OpInterpCtx {
 };
 class CombinedMarginLossGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "m1")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "m1") {
       return (const void*)&m1;
-    } else if (!strcmp(attr_name, "m2")) {
+    } else if (attr_name == "m2") {
       return (const void*)&m2;
-    } else if (!strcmp(attr_name, "m3")) {
+    } else if (attr_name == "m3") {
       return (const void*)&m3;
-    } else if (!strcmp(attr_name, "depth")) {
+    } else if (attr_name == "depth") {
       return (const void*)&depth;
     } else {
       return Error::RuntimeError() << "CombinedMarginLossGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"m1", "m2", "m3", "depth"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"m1", "m2", "m3", "depth"};
     return attr_names;
   }
 
@@ -1757,17 +1757,17 @@ class CombinedMarginLossGradOpInterpCtx : public OpInterpCtx {
 };
 class ConcatOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
-    } else if (!strcmp(attr_name, "max_dim_size")) {
+    } else if (attr_name == "max_dim_size") {
       return (const void*)&max_dim_size;
     } else {
       return Error::RuntimeError() << "Concat op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis", "max_dim_size"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis", "max_dim_size"};
     return attr_names;
   }
 
@@ -1777,25 +1777,25 @@ class ConcatOpInterpCtx : public OpInterpCtx {
 };
 class ConstantOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "floating_value")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "floating_value") {
       return (const void*)&floating_value;
-    } else if (!strcmp(attr_name, "integer_value")) {
+    } else if (attr_name == "integer_value") {
       return (const void*)&integer_value;
-    } else if (!strcmp(attr_name, "is_floating_value")) {
+    } else if (attr_name == "is_floating_value") {
       return (const void*)&is_floating_value;
-    } else if (!strcmp(attr_name, "dtype")) {
+    } else if (attr_name == "dtype") {
       return (const void*)&dtype;
-    } else if (!strcmp(attr_name, "shape")) {
+    } else if (attr_name == "shape") {
       return (const void*)&shape;
-    } else if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (attr_name == "nd_sbp") {
       return (const void*)&nd_sbp;
     } else {
       return Error::RuntimeError() << "Constant op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"floating_value", "integer_value", "is_floating_value", "dtype", "shape", "nd_sbp"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"floating_value", "integer_value", "is_floating_value", "dtype", "shape", "nd_sbp"};
     return attr_names;
   }
 
@@ -1809,19 +1809,19 @@ class ConstantOpInterpCtx : public OpInterpCtx {
 };
 class ConstantPad1DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "floating_value")) {
+    } else if (attr_name == "floating_value") {
       return (const void*)&floating_value;
-    } else if (!strcmp(attr_name, "integral_value")) {
+    } else if (attr_name == "integral_value") {
       return (const void*)&integral_value;
     } else {
       return Error::RuntimeError() << "ConstantPad1D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "floating_value", "integral_value"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "floating_value", "integral_value"};
     return attr_names;
   }
 
@@ -1832,19 +1832,19 @@ class ConstantPad1DOpInterpCtx : public OpInterpCtx {
 };
 class ConstantPad1DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "floating_value")) {
+    } else if (attr_name == "floating_value") {
       return (const void*)&floating_value;
-    } else if (!strcmp(attr_name, "integral_value")) {
+    } else if (attr_name == "integral_value") {
       return (const void*)&integral_value;
     } else {
       return Error::RuntimeError() << "ConstantPad1DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "floating_value", "integral_value"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "floating_value", "integral_value"};
     return attr_names;
   }
 
@@ -1855,19 +1855,19 @@ class ConstantPad1DGradOpInterpCtx : public OpInterpCtx {
 };
 class ConstantPad2DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "floating_value")) {
+    } else if (attr_name == "floating_value") {
       return (const void*)&floating_value;
-    } else if (!strcmp(attr_name, "integral_value")) {
+    } else if (attr_name == "integral_value") {
       return (const void*)&integral_value;
     } else {
       return Error::RuntimeError() << "ConstantPad2D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "floating_value", "integral_value"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "floating_value", "integral_value"};
     return attr_names;
   }
 
@@ -1878,19 +1878,19 @@ class ConstantPad2DOpInterpCtx : public OpInterpCtx {
 };
 class ConstantPad2DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "floating_value")) {
+    } else if (attr_name == "floating_value") {
       return (const void*)&floating_value;
-    } else if (!strcmp(attr_name, "integral_value")) {
+    } else if (attr_name == "integral_value") {
       return (const void*)&integral_value;
     } else {
       return Error::RuntimeError() << "ConstantPad2DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "floating_value", "integral_value"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "floating_value", "integral_value"};
     return attr_names;
   }
 
@@ -1901,19 +1901,19 @@ class ConstantPad2DGradOpInterpCtx : public OpInterpCtx {
 };
 class ConstantPad3DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "floating_value")) {
+    } else if (attr_name == "floating_value") {
       return (const void*)&floating_value;
-    } else if (!strcmp(attr_name, "integral_value")) {
+    } else if (attr_name == "integral_value") {
       return (const void*)&integral_value;
     } else {
       return Error::RuntimeError() << "ConstantPad3D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "floating_value", "integral_value"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "floating_value", "integral_value"};
     return attr_names;
   }
 
@@ -1924,19 +1924,19 @@ class ConstantPad3DOpInterpCtx : public OpInterpCtx {
 };
 class ConstantPad3DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "floating_value")) {
+    } else if (attr_name == "floating_value") {
       return (const void*)&floating_value;
-    } else if (!strcmp(attr_name, "integral_value")) {
+    } else if (attr_name == "integral_value") {
       return (const void*)&integral_value;
     } else {
       return Error::RuntimeError() << "ConstantPad3DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "floating_value", "integral_value"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "floating_value", "integral_value"};
     return attr_names;
   }
 
@@ -1947,27 +1947,27 @@ class ConstantPad3DGradOpInterpCtx : public OpInterpCtx {
 };
 class Conv1DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "filters")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "filters") {
       return (const void*)&filters;
-    } else if (!strcmp(attr_name, "padding_before")) {
+    } else if (attr_name == "padding_before") {
       return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "dilation_rate")) {
+    } else if (attr_name == "dilation_rate") {
       return (const void*)&dilation_rate;
-    } else if (!strcmp(attr_name, "groups")) {
+    } else if (attr_name == "groups") {
       return (const void*)&groups;
     } else {
       return Error::RuntimeError() << "Conv1D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"filters", "padding_before", "data_format", "kernel_size", "strides", "dilation_rate", "groups"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"filters", "padding_before", "data_format", "kernel_size", "strides", "dilation_rate", "groups"};
     return attr_names;
   }
 
@@ -1982,27 +1982,27 @@ class Conv1DOpInterpCtx : public OpInterpCtx {
 };
 class Conv2DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "filters")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "filters") {
       return (const void*)&filters;
-    } else if (!strcmp(attr_name, "padding_before")) {
+    } else if (attr_name == "padding_before") {
       return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "dilation_rate")) {
+    } else if (attr_name == "dilation_rate") {
       return (const void*)&dilation_rate;
-    } else if (!strcmp(attr_name, "groups")) {
+    } else if (attr_name == "groups") {
       return (const void*)&groups;
     } else {
       return Error::RuntimeError() << "Conv2D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"filters", "padding_before", "data_format", "kernel_size", "strides", "dilation_rate", "groups"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"filters", "padding_before", "data_format", "kernel_size", "strides", "dilation_rate", "groups"};
     return attr_names;
   }
 
@@ -2017,27 +2017,27 @@ class Conv2DOpInterpCtx : public OpInterpCtx {
 };
 class Conv3DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "filters")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "filters") {
       return (const void*)&filters;
-    } else if (!strcmp(attr_name, "padding_before")) {
+    } else if (attr_name == "padding_before") {
       return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "dilation_rate")) {
+    } else if (attr_name == "dilation_rate") {
       return (const void*)&dilation_rate;
-    } else if (!strcmp(attr_name, "groups")) {
+    } else if (attr_name == "groups") {
       return (const void*)&groups;
     } else {
       return Error::RuntimeError() << "Conv3D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"filters", "padding_before", "data_format", "kernel_size", "strides", "dilation_rate", "groups"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"filters", "padding_before", "data_format", "kernel_size", "strides", "dilation_rate", "groups"};
     return attr_names;
   }
 
@@ -2052,17 +2052,17 @@ class Conv3DOpInterpCtx : public OpInterpCtx {
 };
 class ConvBiasGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "data_format")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "num_spatial_dims")) {
+    } else if (attr_name == "num_spatial_dims") {
       return (const void*)&num_spatial_dims;
     } else {
       return Error::RuntimeError() << "ConvBiasGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"data_format", "num_spatial_dims"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"data_format", "num_spatial_dims"};
     return attr_names;
   }
 
@@ -2072,27 +2072,27 @@ class ConvBiasGradOpInterpCtx : public OpInterpCtx {
 };
 class ConvDataGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "num_spatial_dims")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "num_spatial_dims") {
       return (const void*)&num_spatial_dims;
-    } else if (!strcmp(attr_name, "padding_before")) {
+    } else if (attr_name == "padding_before") {
       return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "dilation_rate")) {
+    } else if (attr_name == "dilation_rate") {
       return (const void*)&dilation_rate;
-    } else if (!strcmp(attr_name, "groups")) {
+    } else if (attr_name == "groups") {
       return (const void*)&groups;
     } else {
       return Error::RuntimeError() << "ConvDataGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"num_spatial_dims", "padding_before", "data_format", "kernel_size", "strides", "dilation_rate", "groups"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"num_spatial_dims", "padding_before", "data_format", "kernel_size", "strides", "dilation_rate", "groups"};
     return attr_names;
   }
 
@@ -2107,27 +2107,27 @@ class ConvDataGradOpInterpCtx : public OpInterpCtx {
 };
 class ConvFilterGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "num_spatial_dims")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "num_spatial_dims") {
       return (const void*)&num_spatial_dims;
-    } else if (!strcmp(attr_name, "padding_before")) {
+    } else if (attr_name == "padding_before") {
       return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "dilation_rate")) {
+    } else if (attr_name == "dilation_rate") {
       return (const void*)&dilation_rate;
-    } else if (!strcmp(attr_name, "groups")) {
+    } else if (attr_name == "groups") {
       return (const void*)&groups;
     } else {
       return Error::RuntimeError() << "ConvFilterGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"num_spatial_dims", "padding_before", "data_format", "kernel_size", "strides", "dilation_rate", "groups"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"num_spatial_dims", "padding_before", "data_format", "kernel_size", "strides", "dilation_rate", "groups"};
     return attr_names;
   }
 
@@ -2142,17 +2142,17 @@ class ConvFilterGradOpInterpCtx : public OpInterpCtx {
 };
 class CopyOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "device_type")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "device_type") {
       return (const void*)&device_type;
-    } else if (!strcmp(attr_name, "device_id")) {
+    } else if (attr_name == "device_id") {
       return (const void*)&device_id;
     } else {
       return Error::RuntimeError() << "Copy op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"device_type", "device_id"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"device_type", "device_id"};
     return attr_names;
   }
 
@@ -2162,57 +2162,57 @@ class CopyOpInterpCtx : public OpInterpCtx {
 };
 class CosOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Cos op has no attribute named " << attr_name;
   }
 
 };
 class CosGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "CosGrad op has no attribute named " << attr_name;
   }
 
 };
 class CoshOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Cosh op has no attribute named " << attr_name;
   }
 
 };
 class CoshGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "CoshGrad op has no attribute named " << attr_name;
   }
 
 };
 class CountNotFiniteOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "CountNotFinite op has no attribute named " << attr_name;
   }
 
 };
 class CpuOnlyReluTestOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "CpuOnlyReluTest op has no attribute named " << attr_name;
   }
 
 };
 class CreateSummaryWriterOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "logdir")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "logdir") {
       return (const void*)&logdir;
     } else {
       return Error::RuntimeError() << "CreateSummaryWriter op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"logdir"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"logdir"};
     return attr_names;
   }
 
@@ -2221,31 +2221,31 @@ class CreateSummaryWriterOpInterpCtx : public OpInterpCtx {
 };
 class CropMirrorNormalizeFromTensorbufferOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "color_space")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "color_space") {
       return (const void*)&color_space;
-    } else if (!strcmp(attr_name, "output_layout")) {
+    } else if (attr_name == "output_layout") {
       return (const void*)&output_layout;
-    } else if (!strcmp(attr_name, "mean")) {
+    } else if (attr_name == "mean") {
       return (const void*)&mean;
-    } else if (!strcmp(attr_name, "std")) {
+    } else if (attr_name == "std") {
       return (const void*)&std;
-    } else if (!strcmp(attr_name, "crop_h")) {
+    } else if (attr_name == "crop_h") {
       return (const void*)&crop_h;
-    } else if (!strcmp(attr_name, "crop_w")) {
+    } else if (attr_name == "crop_w") {
       return (const void*)&crop_w;
-    } else if (!strcmp(attr_name, "crop_pos_x")) {
+    } else if (attr_name == "crop_pos_x") {
       return (const void*)&crop_pos_x;
-    } else if (!strcmp(attr_name, "crop_pos_y")) {
+    } else if (attr_name == "crop_pos_y") {
       return (const void*)&crop_pos_y;
-    } else if (!strcmp(attr_name, "output_dtype")) {
+    } else if (attr_name == "output_dtype") {
       return (const void*)&output_dtype;
     } else {
       return Error::RuntimeError() << "CropMirrorNormalizeFromTensorbuffer op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"color_space", "output_layout", "mean", "std", "crop_h", "crop_w", "crop_pos_x", "crop_pos_y", "output_dtype"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"color_space", "output_layout", "mean", "std", "crop_h", "crop_w", "crop_pos_x", "crop_pos_y", "output_dtype"};
     return attr_names;
   }
 
@@ -2262,31 +2262,31 @@ class CropMirrorNormalizeFromTensorbufferOpInterpCtx : public OpInterpCtx {
 };
 class CropMirrorNormalizeFromUint8OpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "color_space")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "color_space") {
       return (const void*)&color_space;
-    } else if (!strcmp(attr_name, "output_layout")) {
+    } else if (attr_name == "output_layout") {
       return (const void*)&output_layout;
-    } else if (!strcmp(attr_name, "mean")) {
+    } else if (attr_name == "mean") {
       return (const void*)&mean;
-    } else if (!strcmp(attr_name, "std")) {
+    } else if (attr_name == "std") {
       return (const void*)&std;
-    } else if (!strcmp(attr_name, "crop_h")) {
+    } else if (attr_name == "crop_h") {
       return (const void*)&crop_h;
-    } else if (!strcmp(attr_name, "crop_w")) {
+    } else if (attr_name == "crop_w") {
       return (const void*)&crop_w;
-    } else if (!strcmp(attr_name, "crop_pos_x")) {
+    } else if (attr_name == "crop_pos_x") {
       return (const void*)&crop_pos_x;
-    } else if (!strcmp(attr_name, "crop_pos_y")) {
+    } else if (attr_name == "crop_pos_y") {
       return (const void*)&crop_pos_y;
-    } else if (!strcmp(attr_name, "output_dtype")) {
+    } else if (attr_name == "output_dtype") {
       return (const void*)&output_dtype;
     } else {
       return Error::RuntimeError() << "CropMirrorNormalizeFromUint8 op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"color_space", "output_layout", "mean", "std", "crop_h", "crop_w", "crop_pos_x", "crop_pos_y", "output_dtype"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"color_space", "output_layout", "mean", "std", "crop_h", "crop_w", "crop_pos_x", "crop_pos_y", "output_dtype"};
     return attr_names;
   }
 
@@ -2303,15 +2303,15 @@ class CropMirrorNormalizeFromUint8OpInterpCtx : public OpInterpCtx {
 };
 class CtcGreedyDecoderOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "merge_repeated")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "merge_repeated") {
       return (const void*)&merge_repeated;
     } else {
       return Error::RuntimeError() << "CtcGreedyDecoder op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"merge_repeated"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"merge_repeated"};
     return attr_names;
   }
 
@@ -2320,19 +2320,19 @@ class CtcGreedyDecoderOpInterpCtx : public OpInterpCtx {
 };
 class CtcLossOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "max_target_length")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "max_target_length") {
       return (const void*)&max_target_length;
-    } else if (!strcmp(attr_name, "blank")) {
+    } else if (attr_name == "blank") {
       return (const void*)&blank;
-    } else if (!strcmp(attr_name, "zero_infinity")) {
+    } else if (attr_name == "zero_infinity") {
       return (const void*)&zero_infinity;
     } else {
       return Error::RuntimeError() << "CtcLoss op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"max_target_length", "blank", "zero_infinity"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"max_target_length", "blank", "zero_infinity"};
     return attr_names;
   }
 
@@ -2343,19 +2343,19 @@ class CtcLossOpInterpCtx : public OpInterpCtx {
 };
 class CtcLossGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "max_target_length")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "max_target_length") {
       return (const void*)&max_target_length;
-    } else if (!strcmp(attr_name, "blank")) {
+    } else if (attr_name == "blank") {
       return (const void*)&blank;
-    } else if (!strcmp(attr_name, "zero_infinity")) {
+    } else if (attr_name == "zero_infinity") {
       return (const void*)&zero_infinity;
     } else {
       return Error::RuntimeError() << "CtcLossGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"max_target_length", "blank", "zero_infinity"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"max_target_length", "blank", "zero_infinity"};
     return attr_names;
   }
 
@@ -2366,19 +2366,19 @@ class CtcLossGradOpInterpCtx : public OpInterpCtx {
 };
 class CudnnFusedNormalizationAddReluOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
-    } else if (!strcmp(attr_name, "epsilon")) {
+    } else if (attr_name == "epsilon") {
       return (const void*)&epsilon;
-    } else if (!strcmp(attr_name, "momentum")) {
+    } else if (attr_name == "momentum") {
       return (const void*)&momentum;
     } else {
       return Error::RuntimeError() << "CudnnFusedNormalizationAddRelu op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis", "epsilon", "momentum"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis", "epsilon", "momentum"};
     return attr_names;
   }
 
@@ -2389,17 +2389,17 @@ class CudnnFusedNormalizationAddReluOpInterpCtx : public OpInterpCtx {
 };
 class CudnnFusedNormalizationAddReluGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
-    } else if (!strcmp(attr_name, "epsilon")) {
+    } else if (attr_name == "epsilon") {
       return (const void*)&epsilon;
     } else {
       return Error::RuntimeError() << "CudnnFusedNormalizationAddReluGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis", "epsilon"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis", "epsilon"};
     return attr_names;
   }
 
@@ -2409,29 +2409,29 @@ class CudnnFusedNormalizationAddReluGradOpInterpCtx : public OpInterpCtx {
 };
 class Deconv1DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "filters")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "filters") {
       return (const void*)&filters;
-    } else if (!strcmp(attr_name, "padding_before")) {
+    } else if (attr_name == "padding_before") {
       return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "output_padding")) {
+    } else if (attr_name == "output_padding") {
       return (const void*)&output_padding;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "dilation_rate")) {
+    } else if (attr_name == "dilation_rate") {
       return (const void*)&dilation_rate;
-    } else if (!strcmp(attr_name, "groups")) {
+    } else if (attr_name == "groups") {
       return (const void*)&groups;
     } else {
       return Error::RuntimeError() << "Deconv1D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"filters", "padding_before", "data_format", "kernel_size", "output_padding", "strides", "dilation_rate", "groups"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"filters", "padding_before", "data_format", "kernel_size", "output_padding", "strides", "dilation_rate", "groups"};
     return attr_names;
   }
 
@@ -2447,29 +2447,29 @@ class Deconv1DOpInterpCtx : public OpInterpCtx {
 };
 class Deconv2DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "filters")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "filters") {
       return (const void*)&filters;
-    } else if (!strcmp(attr_name, "padding_before")) {
+    } else if (attr_name == "padding_before") {
       return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "output_padding")) {
+    } else if (attr_name == "output_padding") {
       return (const void*)&output_padding;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "dilation_rate")) {
+    } else if (attr_name == "dilation_rate") {
       return (const void*)&dilation_rate;
-    } else if (!strcmp(attr_name, "groups")) {
+    } else if (attr_name == "groups") {
       return (const void*)&groups;
     } else {
       return Error::RuntimeError() << "Deconv2D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"filters", "padding_before", "data_format", "kernel_size", "output_padding", "strides", "dilation_rate", "groups"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"filters", "padding_before", "data_format", "kernel_size", "output_padding", "strides", "dilation_rate", "groups"};
     return attr_names;
   }
 
@@ -2485,29 +2485,29 @@ class Deconv2DOpInterpCtx : public OpInterpCtx {
 };
 class Deconv3DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "filters")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "filters") {
       return (const void*)&filters;
-    } else if (!strcmp(attr_name, "padding_before")) {
+    } else if (attr_name == "padding_before") {
       return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "output_padding")) {
+    } else if (attr_name == "output_padding") {
       return (const void*)&output_padding;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "dilation_rate")) {
+    } else if (attr_name == "dilation_rate") {
       return (const void*)&dilation_rate;
-    } else if (!strcmp(attr_name, "groups")) {
+    } else if (attr_name == "groups") {
       return (const void*)&groups;
     } else {
       return Error::RuntimeError() << "Deconv3D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"filters", "padding_before", "data_format", "kernel_size", "output_padding", "strides", "dilation_rate", "groups"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"filters", "padding_before", "data_format", "kernel_size", "output_padding", "strides", "dilation_rate", "groups"};
     return attr_names;
   }
 
@@ -2523,15 +2523,15 @@ class Deconv3DOpInterpCtx : public OpInterpCtx {
 };
 class DiagOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "diagonal")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "diagonal") {
       return (const void*)&diagonal;
     } else {
       return Error::RuntimeError() << "Diag op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"diagonal"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"diagonal"};
     return attr_names;
   }
 
@@ -2540,15 +2540,15 @@ class DiagOpInterpCtx : public OpInterpCtx {
 };
 class DiagGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "diagonal")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "diagonal") {
       return (const void*)&diagonal;
     } else {
       return Error::RuntimeError() << "DiagGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"diagonal"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"diagonal"};
     return attr_names;
   }
 
@@ -2557,15 +2557,15 @@ class DiagGradOpInterpCtx : public OpInterpCtx {
 };
 class DimGatherOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "dim")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "dim") {
       return (const void*)&dim;
     } else {
       return Error::RuntimeError() << "DimGather op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"dim"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"dim"};
     return attr_names;
   }
 
@@ -2574,15 +2574,15 @@ class DimGatherOpInterpCtx : public OpInterpCtx {
 };
 class DimScatterAddOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "dim")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "dim") {
       return (const void*)&dim;
     } else {
       return Error::RuntimeError() << "DimScatterAdd op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"dim"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"dim"};
     return attr_names;
   }
 
@@ -2591,15 +2591,15 @@ class DimScatterAddOpInterpCtx : public OpInterpCtx {
 };
 class DimScatterAddLikeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "dim")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "dim") {
       return (const void*)&dim;
     } else {
       return Error::RuntimeError() << "DimScatterAddLike op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"dim"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"dim"};
     return attr_names;
   }
 
@@ -2608,17 +2608,17 @@ class DimScatterAddLikeOpInterpCtx : public OpInterpCtx {
 };
 class DimScatterAddScalarOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "src_scalar")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "src_scalar") {
       return (const void*)&src_scalar;
-    } else if (!strcmp(attr_name, "dim")) {
+    } else if (attr_name == "dim") {
       return (const void*)&dim;
     } else {
       return Error::RuntimeError() << "DimScatterAddScalar op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"src_scalar", "dim"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"src_scalar", "dim"};
     return attr_names;
   }
 
@@ -2628,15 +2628,15 @@ class DimScatterAddScalarOpInterpCtx : public OpInterpCtx {
 };
 class DimScatterMulOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "dim")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "dim") {
       return (const void*)&dim;
     } else {
       return Error::RuntimeError() << "DimScatterMul op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"dim"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"dim"};
     return attr_names;
   }
 
@@ -2645,17 +2645,17 @@ class DimScatterMulOpInterpCtx : public OpInterpCtx {
 };
 class DimScatterMulScalarOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "src_scalar")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "src_scalar") {
       return (const void*)&src_scalar;
-    } else if (!strcmp(attr_name, "dim")) {
+    } else if (attr_name == "dim") {
       return (const void*)&dim;
     } else {
       return Error::RuntimeError() << "DimScatterMulScalar op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"src_scalar", "dim"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"src_scalar", "dim"};
     return attr_names;
   }
 
@@ -2665,15 +2665,15 @@ class DimScatterMulScalarOpInterpCtx : public OpInterpCtx {
 };
 class DimScatterUpdateOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "dim")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "dim") {
       return (const void*)&dim;
     } else {
       return Error::RuntimeError() << "DimScatterUpdate op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"dim"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"dim"};
     return attr_names;
   }
 
@@ -2682,17 +2682,17 @@ class DimScatterUpdateOpInterpCtx : public OpInterpCtx {
 };
 class DimScatterUpdateScalarOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "src_scalar")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "src_scalar") {
       return (const void*)&src_scalar;
-    } else if (!strcmp(attr_name, "dim")) {
+    } else if (attr_name == "dim") {
       return (const void*)&dim;
     } else {
       return Error::RuntimeError() << "DimScatterUpdateScalar op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"src_scalar", "dim"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"src_scalar", "dim"};
     return attr_names;
   }
 
@@ -2702,17 +2702,17 @@ class DimScatterUpdateScalarOpInterpCtx : public OpInterpCtx {
 };
 class DistributedPartialFcSampleOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "num_sample")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "num_sample") {
       return (const void*)&num_sample;
-    } else if (!strcmp(attr_name, "seed")) {
+    } else if (attr_name == "seed") {
       return (const void*)&seed;
     } else {
       return Error::RuntimeError() << "DistributedPartialFcSample op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"num_sample", "seed"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"num_sample", "seed"};
     return attr_names;
   }
 
@@ -2722,22 +2722,22 @@ class DistributedPartialFcSampleOpInterpCtx : public OpInterpCtx {
 };
 class DistributedPartialFcSampleDisableBoxingOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "DistributedPartialFcSampleDisableBoxing op has no attribute named " << attr_name;
   }
 
 };
 class DropoutOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "scale")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "scale") {
       return (const void*)&scale;
     } else {
       return Error::RuntimeError() << "Dropout op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"scale"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"scale"};
     return attr_names;
   }
 
@@ -2746,15 +2746,15 @@ class DropoutOpInterpCtx : public OpInterpCtx {
 };
 class DropoutGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "scale")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "scale") {
       return (const void*)&scale;
     } else {
       return Error::RuntimeError() << "DropoutGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"scale"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"scale"};
     return attr_names;
   }
 
@@ -2763,17 +2763,17 @@ class DropoutGradOpInterpCtx : public OpInterpCtx {
 };
 class DynamicLossScaleScheduleOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "increment_period")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "increment_period") {
       return (const void*)&increment_period;
-    } else if (!strcmp(attr_name, "multiplier")) {
+    } else if (attr_name == "multiplier") {
       return (const void*)&multiplier;
     } else {
       return Error::RuntimeError() << "DynamicLossScaleSchedule op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"increment_period", "multiplier"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"increment_period", "multiplier"};
     return attr_names;
   }
 
@@ -2783,21 +2783,21 @@ class DynamicLossScaleScheduleOpInterpCtx : public OpInterpCtx {
 };
 class EagerBToSOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "out_split_axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "out_split_axis") {
       return (const void*)&out_split_axis;
-    } else if (!strcmp(attr_name, "in_parallel_conf")) {
+    } else if (attr_name == "in_parallel_conf") {
       return (const void*)&in_parallel_conf;
-    } else if (!strcmp(attr_name, "out_parallel_conf")) {
+    } else if (attr_name == "out_parallel_conf") {
       return (const void*)&out_parallel_conf;
-    } else if (!strcmp(attr_name, "shape")) {
+    } else if (attr_name == "shape") {
       return (const void*)&shape;
     } else {
       return Error::RuntimeError() << "EagerBToS op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"out_split_axis", "in_parallel_conf", "out_parallel_conf", "shape"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"out_split_axis", "in_parallel_conf", "out_parallel_conf", "shape"};
     return attr_names;
   }
 
@@ -2809,23 +2809,23 @@ class EagerBToSOpInterpCtx : public OpInterpCtx {
 };
 class EagerNaiveSToSOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "in_split_axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "in_split_axis") {
       return (const void*)&in_split_axis;
-    } else if (!strcmp(attr_name, "out_split_axis")) {
+    } else if (attr_name == "out_split_axis") {
       return (const void*)&out_split_axis;
-    } else if (!strcmp(attr_name, "in_parallel_conf")) {
+    } else if (attr_name == "in_parallel_conf") {
       return (const void*)&in_parallel_conf;
-    } else if (!strcmp(attr_name, "out_parallel_conf")) {
+    } else if (attr_name == "out_parallel_conf") {
       return (const void*)&out_parallel_conf;
-    } else if (!strcmp(attr_name, "shape")) {
+    } else if (attr_name == "shape") {
       return (const void*)&shape;
     } else {
       return Error::RuntimeError() << "EagerNaiveSToS op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"in_split_axis", "out_split_axis", "in_parallel_conf", "out_parallel_conf", "shape"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"in_split_axis", "out_split_axis", "in_parallel_conf", "out_parallel_conf", "shape"};
     return attr_names;
   }
 
@@ -2838,15 +2838,15 @@ class EagerNaiveSToSOpInterpCtx : public OpInterpCtx {
 };
 class EagerNcclAllGatherOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "parallel_conf")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "parallel_conf") {
       return (const void*)&parallel_conf;
     } else {
       return Error::RuntimeError() << "EagerNcclAllGather op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"parallel_conf"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"parallel_conf"};
     return attr_names;
   }
 
@@ -2855,17 +2855,17 @@ class EagerNcclAllGatherOpInterpCtx : public OpInterpCtx {
 };
 class EagerNcclAllReduceOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "parallel_conf")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "parallel_conf") {
       return (const void*)&parallel_conf;
-    } else if (!strcmp(attr_name, "async_launch")) {
+    } else if (attr_name == "async_launch") {
       return (const void*)&async_launch;
     } else {
       return Error::RuntimeError() << "EagerNcclAllReduce op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"parallel_conf", "async_launch"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"parallel_conf", "async_launch"};
     return attr_names;
   }
 
@@ -2875,17 +2875,17 @@ class EagerNcclAllReduceOpInterpCtx : public OpInterpCtx {
 };
 class EagerNcclBroadcastOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "parallel_conf")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "parallel_conf") {
       return (const void*)&parallel_conf;
-    } else if (!strcmp(attr_name, "root")) {
+    } else if (attr_name == "root") {
       return (const void*)&root;
     } else {
       return Error::RuntimeError() << "EagerNcclBroadcast op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"parallel_conf", "root"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"parallel_conf", "root"};
     return attr_names;
   }
 
@@ -2895,17 +2895,17 @@ class EagerNcclBroadcastOpInterpCtx : public OpInterpCtx {
 };
 class EagerNcclReduceOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "parallel_conf")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "parallel_conf") {
       return (const void*)&parallel_conf;
-    } else if (!strcmp(attr_name, "root")) {
+    } else if (attr_name == "root") {
       return (const void*)&root;
     } else {
       return Error::RuntimeError() << "EagerNcclReduce op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"parallel_conf", "root"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"parallel_conf", "root"};
     return attr_names;
   }
 
@@ -2915,17 +2915,17 @@ class EagerNcclReduceOpInterpCtx : public OpInterpCtx {
 };
 class EagerNcclReduceScatterOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "parallel_conf")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "parallel_conf") {
       return (const void*)&parallel_conf;
-    } else if (!strcmp(attr_name, "op_type")) {
+    } else if (attr_name == "op_type") {
       return (const void*)&op_type;
     } else {
       return Error::RuntimeError() << "EagerNcclReduceScatter op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"parallel_conf", "op_type"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"parallel_conf", "op_type"};
     return attr_names;
   }
 
@@ -2935,19 +2935,19 @@ class EagerNcclReduceScatterOpInterpCtx : public OpInterpCtx {
 };
 class EagerNcclS2sOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "in_split_axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "in_split_axis") {
       return (const void*)&in_split_axis;
-    } else if (!strcmp(attr_name, "out_split_axis")) {
+    } else if (attr_name == "out_split_axis") {
       return (const void*)&out_split_axis;
-    } else if (!strcmp(attr_name, "parallel_conf")) {
+    } else if (attr_name == "parallel_conf") {
       return (const void*)&parallel_conf;
     } else {
       return Error::RuntimeError() << "EagerNcclS2s op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"in_split_axis", "out_split_axis", "parallel_conf"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"in_split_axis", "out_split_axis", "parallel_conf"};
     return attr_names;
   }
 
@@ -2958,19 +2958,19 @@ class EagerNcclS2sOpInterpCtx : public OpInterpCtx {
 };
 class EagerPToBOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "in_parallel_conf")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "in_parallel_conf") {
       return (const void*)&in_parallel_conf;
-    } else if (!strcmp(attr_name, "out_parallel_conf")) {
+    } else if (attr_name == "out_parallel_conf") {
       return (const void*)&out_parallel_conf;
-    } else if (!strcmp(attr_name, "shape")) {
+    } else if (attr_name == "shape") {
       return (const void*)&shape;
     } else {
       return Error::RuntimeError() << "EagerPToB op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"in_parallel_conf", "out_parallel_conf", "shape"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"in_parallel_conf", "out_parallel_conf", "shape"};
     return attr_names;
   }
 
@@ -2981,21 +2981,21 @@ class EagerPToBOpInterpCtx : public OpInterpCtx {
 };
 class EagerPToSOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "out_split_axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "out_split_axis") {
       return (const void*)&out_split_axis;
-    } else if (!strcmp(attr_name, "in_parallel_conf")) {
+    } else if (attr_name == "in_parallel_conf") {
       return (const void*)&in_parallel_conf;
-    } else if (!strcmp(attr_name, "out_parallel_conf")) {
+    } else if (attr_name == "out_parallel_conf") {
       return (const void*)&out_parallel_conf;
-    } else if (!strcmp(attr_name, "shape")) {
+    } else if (attr_name == "shape") {
       return (const void*)&shape;
     } else {
       return Error::RuntimeError() << "EagerPToS op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"out_split_axis", "in_parallel_conf", "out_parallel_conf", "shape"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"out_split_axis", "in_parallel_conf", "out_parallel_conf", "shape"};
     return attr_names;
   }
 
@@ -3007,21 +3007,21 @@ class EagerPToSOpInterpCtx : public OpInterpCtx {
 };
 class EagerSToBOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "in_split_axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "in_split_axis") {
       return (const void*)&in_split_axis;
-    } else if (!strcmp(attr_name, "in_parallel_conf")) {
+    } else if (attr_name == "in_parallel_conf") {
       return (const void*)&in_parallel_conf;
-    } else if (!strcmp(attr_name, "out_parallel_conf")) {
+    } else if (attr_name == "out_parallel_conf") {
       return (const void*)&out_parallel_conf;
-    } else if (!strcmp(attr_name, "shape")) {
+    } else if (attr_name == "shape") {
       return (const void*)&shape;
     } else {
       return Error::RuntimeError() << "EagerSToB op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"in_split_axis", "in_parallel_conf", "out_parallel_conf", "shape"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"in_split_axis", "in_parallel_conf", "out_parallel_conf", "shape"};
     return attr_names;
   }
 
@@ -3033,17 +3033,17 @@ class EagerSToBOpInterpCtx : public OpInterpCtx {
 };
 class EagerSymmetricSToPOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "in_split_axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "in_split_axis") {
       return (const void*)&in_split_axis;
-    } else if (!strcmp(attr_name, "parallel_conf")) {
+    } else if (attr_name == "parallel_conf") {
       return (const void*)&parallel_conf;
     } else {
       return Error::RuntimeError() << "EagerSymmetricSToP op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"in_split_axis", "parallel_conf"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"in_split_axis", "parallel_conf"};
     return attr_names;
   }
 
@@ -3053,43 +3053,43 @@ class EagerSymmetricSToPOpInterpCtx : public OpInterpCtx {
 };
 class ElementwiseMaximumOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ElementwiseMaximum op has no attribute named " << attr_name;
   }
 
 };
 class ElementwiseMaximumBackwardOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ElementwiseMaximumBackward op has no attribute named " << attr_name;
   }
 
 };
 class ElementwiseMinimumOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ElementwiseMinimum op has no attribute named " << attr_name;
   }
 
 };
 class ElementwiseMinimumBackwardOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ElementwiseMinimumBackward op has no attribute named " << attr_name;
   }
 
 };
 class EluOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "alpha")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "alpha") {
       return (const void*)&alpha;
     } else {
       return Error::RuntimeError() << "Elu op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"alpha"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"alpha"};
     return attr_names;
   }
 
@@ -3098,15 +3098,15 @@ class EluOpInterpCtx : public OpInterpCtx {
 };
 class EluGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "alpha")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "alpha") {
       return (const void*)&alpha;
     } else {
       return Error::RuntimeError() << "EluGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"alpha"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"alpha"};
     return attr_names;
   }
 
@@ -3115,19 +3115,19 @@ class EluGradOpInterpCtx : public OpInterpCtx {
 };
 class EmptyOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "dtype")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "dtype") {
       return (const void*)&dtype;
-    } else if (!strcmp(attr_name, "shape")) {
+    } else if (attr_name == "shape") {
       return (const void*)&shape;
-    } else if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (attr_name == "nd_sbp") {
       return (const void*)&nd_sbp;
     } else {
       return Error::RuntimeError() << "Empty op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"dtype", "shape", "nd_sbp"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"dtype", "shape", "nd_sbp"};
     return attr_names;
   }
 
@@ -3138,59 +3138,59 @@ class EmptyOpInterpCtx : public OpInterpCtx {
 };
 class ErfOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Erf op has no attribute named " << attr_name;
   }
 
 };
 class ErfGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ErfGrad op has no attribute named " << attr_name;
   }
 
 };
 class ErfcOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Erfc op has no attribute named " << attr_name;
   }
 
 };
 class ErfcGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ErfcGrad op has no attribute named " << attr_name;
   }
 
 };
 class ExpOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Exp op has no attribute named " << attr_name;
   }
 
 };
 class ExpGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ExpGrad op has no attribute named " << attr_name;
   }
 
 };
 class ExpandOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "logical_in_shape")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "logical_in_shape") {
       return (const void*)&logical_in_shape;
-    } else if (!strcmp(attr_name, "logical_expand_shape")) {
+    } else if (attr_name == "logical_expand_shape") {
       return (const void*)&logical_expand_shape;
     } else {
       return Error::RuntimeError() << "Expand op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"logical_in_shape", "logical_expand_shape"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"logical_in_shape", "logical_expand_shape"};
     return attr_names;
   }
 
@@ -3200,15 +3200,15 @@ class ExpandOpInterpCtx : public OpInterpCtx {
 };
 class ExpandDimsOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
     } else {
       return Error::RuntimeError() << "ExpandDims op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
 
@@ -3217,17 +3217,17 @@ class ExpandDimsOpInterpCtx : public OpInterpCtx {
 };
 class ExpandGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "logical_out_shape")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "logical_out_shape") {
       return (const void*)&logical_out_shape;
-    } else if (!strcmp(attr_name, "logical_expand_shape")) {
+    } else if (attr_name == "logical_expand_shape") {
       return (const void*)&logical_expand_shape;
     } else {
       return Error::RuntimeError() << "ExpandGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"logical_out_shape", "logical_expand_shape"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"logical_out_shape", "logical_expand_shape"};
     return attr_names;
   }
 
@@ -3237,35 +3237,35 @@ class ExpandGradOpInterpCtx : public OpInterpCtx {
 };
 class Expm1OpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Expm1 op has no attribute named " << attr_name;
   }
 
 };
 class Expm1GradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Expm1Grad op has no attribute named " << attr_name;
   }
 
 };
 class EyeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "rows")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "rows") {
       return (const void*)&rows;
-    } else if (!strcmp(attr_name, "cols")) {
+    } else if (attr_name == "cols") {
       return (const void*)&cols;
-    } else if (!strcmp(attr_name, "dtype")) {
+    } else if (attr_name == "dtype") {
       return (const void*)&dtype;
-    } else if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (attr_name == "nd_sbp") {
       return (const void*)&nd_sbp;
     } else {
       return Error::RuntimeError() << "Eye op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"rows", "cols", "dtype", "nd_sbp"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"rows", "cols", "dtype", "nd_sbp"};
     return attr_names;
   }
 
@@ -3277,19 +3277,19 @@ class EyeOpInterpCtx : public OpInterpCtx {
 };
 class FakeQuantizationOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "quantization_formula")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "quantization_formula") {
       return (const void*)&quantization_formula;
-    } else if (!strcmp(attr_name, "quantization_bit")) {
+    } else if (attr_name == "quantization_bit") {
       return (const void*)&quantization_bit;
-    } else if (!strcmp(attr_name, "quantization_scheme")) {
+    } else if (attr_name == "quantization_scheme") {
       return (const void*)&quantization_scheme;
     } else {
       return Error::RuntimeError() << "FakeQuantization op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"quantization_formula", "quantization_bit", "quantization_scheme"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"quantization_formula", "quantization_bit", "quantization_scheme"};
     return attr_names;
   }
 
@@ -3300,17 +3300,17 @@ class FakeQuantizationOpInterpCtx : public OpInterpCtx {
 };
 class FlattenOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "start_dim")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "start_dim") {
       return (const void*)&start_dim;
-    } else if (!strcmp(attr_name, "end_dim")) {
+    } else if (attr_name == "end_dim") {
       return (const void*)&end_dim;
     } else {
       return Error::RuntimeError() << "Flatten op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"start_dim", "end_dim"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"start_dim", "end_dim"};
     return attr_names;
   }
 
@@ -3320,15 +3320,15 @@ class FlattenOpInterpCtx : public OpInterpCtx {
 };
 class FlipOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "dims")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "dims") {
       return (const void*)&dims;
     } else {
       return Error::RuntimeError() << "Flip op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"dims"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"dims"};
     return attr_names;
   }
 
@@ -3337,15 +3337,15 @@ class FlipOpInterpCtx : public OpInterpCtx {
 };
 class FlipGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "dims")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "dims") {
       return (const void*)&dims;
     } else {
       return Error::RuntimeError() << "FlipGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"dims"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"dims"};
     return attr_names;
   }
 
@@ -3354,65 +3354,65 @@ class FlipGradOpInterpCtx : public OpInterpCtx {
 };
 class FloorOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Floor op has no attribute named " << attr_name;
   }
 
 };
 class FloorGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "FloorGrad op has no attribute named " << attr_name;
   }
 
 };
 class FloordivOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Floordiv op has no attribute named " << attr_name;
   }
 
 };
 class FloordivXGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "FloordivXGrad op has no attribute named " << attr_name;
   }
 
 };
 class FloordivYGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "FloordivYGrad op has no attribute named " << attr_name;
   }
 
 };
 class FlushSummaryWriterOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "FlushSummaryWriter op has no attribute named " << attr_name;
   }
 
 };
 class FoldOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "output_size")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "output_size") {
       return (const void*)&output_size;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "padding")) {
+    } else if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "dilation_rate")) {
+    } else if (attr_name == "dilation_rate") {
       return (const void*)&dilation_rate;
     } else {
       return Error::RuntimeError() << "Fold op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"output_size", "kernel_size", "strides", "padding", "dilation_rate"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"output_size", "kernel_size", "strides", "padding", "dilation_rate"};
     return attr_names;
   }
 
@@ -3425,15 +3425,15 @@ class FoldOpInterpCtx : public OpInterpCtx {
 };
 class FusedBiasAddGeluOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
     } else {
       return Error::RuntimeError() << "FusedBiasAddGelu op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
 
@@ -3442,15 +3442,15 @@ class FusedBiasAddGeluOpInterpCtx : public OpInterpCtx {
 };
 class FusedBiasAddGeluGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
     } else {
       return Error::RuntimeError() << "FusedBiasAddGeluGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
 
@@ -3459,17 +3459,17 @@ class FusedBiasAddGeluGradOpInterpCtx : public OpInterpCtx {
 };
 class FusedBiasAddMaskScaleOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
-    } else if (!strcmp(attr_name, "scale")) {
+    } else if (attr_name == "scale") {
       return (const void*)&scale;
     } else {
       return Error::RuntimeError() << "FusedBiasAddMaskScale op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis", "scale"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis", "scale"};
     return attr_names;
   }
 
@@ -3479,15 +3479,15 @@ class FusedBiasAddMaskScaleOpInterpCtx : public OpInterpCtx {
 };
 class FusedCastScaleOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "scale")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "scale") {
       return (const void*)&scale;
     } else {
       return Error::RuntimeError() << "FusedCastScale op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"scale"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"scale"};
     return attr_names;
   }
 
@@ -3496,17 +3496,17 @@ class FusedCastScaleOpInterpCtx : public OpInterpCtx {
 };
 class FusedScaleMaskSoftmaxOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "scale_value")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "scale_value") {
       return (const void*)&scale_value;
-    } else if (!strcmp(attr_name, "mask_fill_value")) {
+    } else if (attr_name == "mask_fill_value") {
       return (const void*)&mask_fill_value;
     } else {
       return Error::RuntimeError() << "FusedScaleMaskSoftmax op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"scale_value", "mask_fill_value"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"scale_value", "mask_fill_value"};
     return attr_names;
   }
 
@@ -3516,19 +3516,19 @@ class FusedScaleMaskSoftmaxOpInterpCtx : public OpInterpCtx {
 };
 class FusedScaleMaskSoftmaxDropoutOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "scale_value")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "scale_value") {
       return (const void*)&scale_value;
-    } else if (!strcmp(attr_name, "mask_fill_value")) {
+    } else if (attr_name == "mask_fill_value") {
       return (const void*)&mask_fill_value;
-    } else if (!strcmp(attr_name, "dropout_scale_value")) {
+    } else if (attr_name == "dropout_scale_value") {
       return (const void*)&dropout_scale_value;
     } else {
       return Error::RuntimeError() << "FusedScaleMaskSoftmaxDropout op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"scale_value", "mask_fill_value", "dropout_scale_value"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"scale_value", "mask_fill_value", "dropout_scale_value"};
     return attr_names;
   }
 
@@ -3539,17 +3539,17 @@ class FusedScaleMaskSoftmaxDropoutOpInterpCtx : public OpInterpCtx {
 };
 class FusedScaleMaskSoftmaxDropoutGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "scale_value")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "scale_value") {
       return (const void*)&scale_value;
-    } else if (!strcmp(attr_name, "dropout_scale_value")) {
+    } else if (attr_name == "dropout_scale_value") {
       return (const void*)&dropout_scale_value;
     } else {
       return Error::RuntimeError() << "FusedScaleMaskSoftmaxDropoutGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"scale_value", "dropout_scale_value"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"scale_value", "dropout_scale_value"};
     return attr_names;
   }
 
@@ -3559,15 +3559,15 @@ class FusedScaleMaskSoftmaxDropoutGradOpInterpCtx : public OpInterpCtx {
 };
 class FusedScaleMaskSoftmaxGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "scale_value")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "scale_value") {
       return (const void*)&scale_value;
     } else {
       return Error::RuntimeError() << "FusedScaleMaskSoftmaxGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"scale_value"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"scale_value"};
     return attr_names;
   }
 
@@ -3576,27 +3576,27 @@ class FusedScaleMaskSoftmaxGradOpInterpCtx : public OpInterpCtx {
 };
 class FusedScaleTrilOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "diagonal")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "diagonal") {
       return (const void*)&diagonal;
-    } else if (!strcmp(attr_name, "floating_fill_value")) {
+    } else if (attr_name == "floating_fill_value") {
       return (const void*)&floating_fill_value;
-    } else if (!strcmp(attr_name, "integer_fill_value")) {
+    } else if (attr_name == "integer_fill_value") {
       return (const void*)&integer_fill_value;
-    } else if (!strcmp(attr_name, "is_floating_fill_value")) {
+    } else if (attr_name == "is_floating_fill_value") {
       return (const void*)&is_floating_fill_value;
-    } else if (!strcmp(attr_name, "floating_scale_value")) {
+    } else if (attr_name == "floating_scale_value") {
       return (const void*)&floating_scale_value;
-    } else if (!strcmp(attr_name, "integer_scale_value")) {
+    } else if (attr_name == "integer_scale_value") {
       return (const void*)&integer_scale_value;
-    } else if (!strcmp(attr_name, "is_floating_scale_value")) {
+    } else if (attr_name == "is_floating_scale_value") {
       return (const void*)&is_floating_scale_value;
     } else {
       return Error::RuntimeError() << "FusedScaleTril op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"diagonal", "floating_fill_value", "integer_fill_value", "is_floating_fill_value", "floating_scale_value", "integer_scale_value", "is_floating_scale_value"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"diagonal", "floating_fill_value", "integer_fill_value", "is_floating_fill_value", "floating_scale_value", "integer_scale_value", "is_floating_scale_value"};
     return attr_names;
   }
 
@@ -3611,17 +3611,17 @@ class FusedScaleTrilOpInterpCtx : public OpInterpCtx {
 };
 class FusedSelfAttentionQueryMulKeyAndValueOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "head_size")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "head_size") {
       return (const void*)&head_size;
-    } else if (!strcmp(attr_name, "alpha")) {
+    } else if (attr_name == "alpha") {
       return (const void*)&alpha;
     } else {
       return Error::RuntimeError() << "FusedSelfAttentionQueryMulKeyAndValue op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"head_size", "alpha"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"head_size", "alpha"};
     return attr_names;
   }
 
@@ -3631,15 +3631,15 @@ class FusedSelfAttentionQueryMulKeyAndValueOpInterpCtx : public OpInterpCtx {
 };
 class FusedSelfAttentionQueryMulKeyAndValueGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "alpha")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "alpha") {
       return (const void*)&alpha;
     } else {
       return Error::RuntimeError() << "FusedSelfAttentionQueryMulKeyAndValueGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"alpha"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"alpha"};
     return attr_names;
   }
 
@@ -3648,21 +3648,21 @@ class FusedSelfAttentionQueryMulKeyAndValueGradOpInterpCtx : public OpInterpCtx 
 };
 class FusedTrilScaleSoftmaxMaskScaleOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "diagonal")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "diagonal") {
       return (const void*)&diagonal;
-    } else if (!strcmp(attr_name, "tril_fill_value")) {
+    } else if (attr_name == "tril_fill_value") {
       return (const void*)&tril_fill_value;
-    } else if (!strcmp(attr_name, "tril_scale_value")) {
+    } else if (attr_name == "tril_scale_value") {
       return (const void*)&tril_scale_value;
-    } else if (!strcmp(attr_name, "mask_scale_value")) {
+    } else if (attr_name == "mask_scale_value") {
       return (const void*)&mask_scale_value;
     } else {
       return Error::RuntimeError() << "FusedTrilScaleSoftmaxMaskScale op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"diagonal", "tril_fill_value", "tril_scale_value", "mask_scale_value"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"diagonal", "tril_fill_value", "tril_scale_value", "mask_scale_value"};
     return attr_names;
   }
 
@@ -3674,19 +3674,19 @@ class FusedTrilScaleSoftmaxMaskScaleOpInterpCtx : public OpInterpCtx {
 };
 class FusedTrilScaleSoftmaxMaskScaleGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "diagonal")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "diagonal") {
       return (const void*)&diagonal;
-    } else if (!strcmp(attr_name, "tril_scale_value")) {
+    } else if (attr_name == "tril_scale_value") {
       return (const void*)&tril_scale_value;
-    } else if (!strcmp(attr_name, "mask_scale_value")) {
+    } else if (attr_name == "mask_scale_value") {
       return (const void*)&mask_scale_value;
     } else {
       return Error::RuntimeError() << "FusedTrilScaleSoftmaxMaskScaleGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"diagonal", "tril_scale_value", "mask_scale_value"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"diagonal", "tril_scale_value", "mask_scale_value"};
     return attr_names;
   }
 
@@ -3697,15 +3697,15 @@ class FusedTrilScaleSoftmaxMaskScaleGradOpInterpCtx : public OpInterpCtx {
 };
 class GatherOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
     } else {
       return Error::RuntimeError() << "Gather op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
 
@@ -3714,44 +3714,44 @@ class GatherOpInterpCtx : public OpInterpCtx {
 };
 class GatherNdOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "GatherNd op has no attribute named " << attr_name;
   }
 
 };
 class GeluOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Gelu op has no attribute named " << attr_name;
   }
 
 };
 class GeluGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "GeluGrad op has no attribute named " << attr_name;
   }
 
 };
 class GenTensorBufferOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "shape")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "shape") {
       return (const void*)&shape;
-    } else if (!strcmp(attr_name, "shape_list")) {
+    } else if (attr_name == "shape_list") {
       return (const void*)&shape_list;
-    } else if (!strcmp(attr_name, "value_list")) {
+    } else if (attr_name == "value_list") {
       return (const void*)&value_list;
-    } else if (!strcmp(attr_name, "data_type")) {
+    } else if (attr_name == "data_type") {
       return (const void*)&data_type;
-    } else if (!strcmp(attr_name, "dynamic_out")) {
+    } else if (attr_name == "dynamic_out") {
       return (const void*)&dynamic_out;
     } else {
       return Error::RuntimeError() << "GenTensorBuffer op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"shape", "shape_list", "value_list", "data_type", "dynamic_out"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"shape", "shape_list", "value_list", "data_type", "dynamic_out"};
     return attr_names;
   }
 
@@ -3764,15 +3764,15 @@ class GenTensorBufferOpInterpCtx : public OpInterpCtx {
 };
 class GenerateRandomBatchPermutationIndicesOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "seed")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "seed") {
       return (const void*)&seed;
     } else {
       return Error::RuntimeError() << "GenerateRandomBatchPermutationIndices op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"seed"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"seed"};
     return attr_names;
   }
 
@@ -3781,19 +3781,19 @@ class GenerateRandomBatchPermutationIndicesOpInterpCtx : public OpInterpCtx {
 };
 class GridSampleOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "interpolation_mode")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "interpolation_mode") {
       return (const void*)&interpolation_mode;
-    } else if (!strcmp(attr_name, "padding_mode")) {
+    } else if (attr_name == "padding_mode") {
       return (const void*)&padding_mode;
-    } else if (!strcmp(attr_name, "align_corners")) {
+    } else if (attr_name == "align_corners") {
       return (const void*)&align_corners;
     } else {
       return Error::RuntimeError() << "GridSample op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"interpolation_mode", "padding_mode", "align_corners"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"interpolation_mode", "padding_mode", "align_corners"};
     return attr_names;
   }
 
@@ -3804,19 +3804,19 @@ class GridSampleOpInterpCtx : public OpInterpCtx {
 };
 class GridSampleGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "interpolation_mode")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "interpolation_mode") {
       return (const void*)&interpolation_mode;
-    } else if (!strcmp(attr_name, "padding_mode")) {
+    } else if (attr_name == "padding_mode") {
       return (const void*)&padding_mode;
-    } else if (!strcmp(attr_name, "align_corners")) {
+    } else if (attr_name == "align_corners") {
       return (const void*)&align_corners;
     } else {
       return Error::RuntimeError() << "GridSampleGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"interpolation_mode", "padding_mode", "align_corners"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"interpolation_mode", "padding_mode", "align_corners"};
     return attr_names;
   }
 
@@ -3827,45 +3827,45 @@ class GridSampleGradOpInterpCtx : public OpInterpCtx {
 };
 class HardsigmoidOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Hardsigmoid op has no attribute named " << attr_name;
   }
 
 };
 class HardsigmoidGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "HardsigmoidGrad op has no attribute named " << attr_name;
   }
 
 };
 class HardswishOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Hardswish op has no attribute named " << attr_name;
   }
 
 };
 class HardswishGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "HardswishGrad op has no attribute named " << attr_name;
   }
 
 };
 class HardtanhOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "min_val")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "min_val") {
       return (const void*)&min_val;
-    } else if (!strcmp(attr_name, "max_val")) {
+    } else if (attr_name == "max_val") {
       return (const void*)&max_val;
     } else {
       return Error::RuntimeError() << "Hardtanh op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"min_val", "max_val"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"min_val", "max_val"};
     return attr_names;
   }
 
@@ -3875,17 +3875,17 @@ class HardtanhOpInterpCtx : public OpInterpCtx {
 };
 class HardtanhGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "min_val")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "min_val") {
       return (const void*)&min_val;
-    } else if (!strcmp(attr_name, "max_val")) {
+    } else if (attr_name == "max_val") {
       return (const void*)&max_val;
     } else {
       return Error::RuntimeError() << "HardtanhGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"min_val", "max_val"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"min_val", "max_val"};
     return attr_names;
   }
 
@@ -3895,19 +3895,19 @@ class HardtanhGradOpInterpCtx : public OpInterpCtx {
 };
 class HierarchicalParallelCastOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "nd_sbp")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "nd_sbp") {
       return (const void*)&nd_sbp;
-    } else if (!strcmp(attr_name, "grad_mode")) {
+    } else if (attr_name == "grad_mode") {
       return (const void*)&grad_mode;
-    } else if (!strcmp(attr_name, "grad_nd_sbp")) {
+    } else if (attr_name == "grad_nd_sbp") {
       return (const void*)&grad_nd_sbp;
     } else {
       return Error::RuntimeError() << "HierarchicalParallelCast op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"nd_sbp", "grad_mode", "grad_nd_sbp"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"nd_sbp", "grad_mode", "grad_nd_sbp"};
     return attr_names;
   }
 
@@ -3918,29 +3918,29 @@ class HierarchicalParallelCastOpInterpCtx : public OpInterpCtx {
 };
 class HierarchicalParallelCastLikeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "HierarchicalParallelCastLike op has no attribute named " << attr_name;
   }
 
 };
 class IdentityOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Identity op has no attribute named " << attr_name;
   }
 
 };
 class IdentityBufferOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "buffer_size")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "buffer_size") {
       return (const void*)&buffer_size;
     } else {
       return Error::RuntimeError() << "IdentityBuffer op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"buffer_size"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"buffer_size"};
     return attr_names;
   }
 
@@ -3949,21 +3949,21 @@ class IdentityBufferOpInterpCtx : public OpInterpCtx {
 };
 class ImageBatchAlignOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "shape")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "shape") {
       return (const void*)&shape;
-    } else if (!strcmp(attr_name, "data_type")) {
+    } else if (attr_name == "data_type") {
       return (const void*)&data_type;
-    } else if (!strcmp(attr_name, "alignment")) {
+    } else if (attr_name == "alignment") {
       return (const void*)&alignment;
-    } else if (!strcmp(attr_name, "dynamic_out")) {
+    } else if (attr_name == "dynamic_out") {
       return (const void*)&dynamic_out;
     } else {
       return Error::RuntimeError() << "ImageBatchAlign op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"shape", "data_type", "alignment", "dynamic_out"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"shape", "data_type", "alignment", "dynamic_out"};
     return attr_names;
   }
 
@@ -3975,17 +3975,17 @@ class ImageBatchAlignOpInterpCtx : public OpInterpCtx {
 };
 class ImageDecodeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "color_space")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "color_space") {
       return (const void*)&color_space;
-    } else if (!strcmp(attr_name, "data_type")) {
+    } else if (attr_name == "data_type") {
       return (const void*)&data_type;
     } else {
       return Error::RuntimeError() << "ImageDecode op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"color_space", "data_type"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"color_space", "data_type"};
     return attr_names;
   }
 
@@ -3995,24 +3995,24 @@ class ImageDecodeOpInterpCtx : public OpInterpCtx {
 };
 class ImageFlipOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ImageFlip op has no attribute named " << attr_name;
   }
 
 };
 class ImageNormalizeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "std")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "std") {
       return (const void*)&std;
-    } else if (!strcmp(attr_name, "mean")) {
+    } else if (attr_name == "mean") {
       return (const void*)&mean;
     } else {
       return Error::RuntimeError() << "ImageNormalize op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"std", "mean"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"std", "mean"};
     return attr_names;
   }
 
@@ -4022,23 +4022,23 @@ class ImageNormalizeOpInterpCtx : public OpInterpCtx {
 };
 class ImageRandomCropOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "num_attempts")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "num_attempts") {
       return (const void*)&num_attempts;
-    } else if (!strcmp(attr_name, "seed")) {
+    } else if (attr_name == "seed") {
       return (const void*)&seed;
-    } else if (!strcmp(attr_name, "has_seed")) {
+    } else if (attr_name == "has_seed") {
       return (const void*)&has_seed;
-    } else if (!strcmp(attr_name, "random_area")) {
+    } else if (attr_name == "random_area") {
       return (const void*)&random_area;
-    } else if (!strcmp(attr_name, "random_aspect_ratio")) {
+    } else if (attr_name == "random_aspect_ratio") {
       return (const void*)&random_aspect_ratio;
     } else {
       return Error::RuntimeError() << "ImageRandomCrop op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"num_attempts", "seed", "has_seed", "random_area", "random_aspect_ratio"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"num_attempts", "seed", "has_seed", "random_area", "random_aspect_ratio"};
     return attr_names;
   }
 
@@ -4051,23 +4051,23 @@ class ImageRandomCropOpInterpCtx : public OpInterpCtx {
 };
 class ImageResizeKeepAspectRatioOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "target_size")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "target_size") {
       return (const void*)&target_size;
-    } else if (!strcmp(attr_name, "min_size")) {
+    } else if (attr_name == "min_size") {
       return (const void*)&min_size;
-    } else if (!strcmp(attr_name, "max_size")) {
+    } else if (attr_name == "max_size") {
       return (const void*)&max_size;
-    } else if (!strcmp(attr_name, "resize_longer")) {
+    } else if (attr_name == "resize_longer") {
       return (const void*)&resize_longer;
-    } else if (!strcmp(attr_name, "interpolation_type")) {
+    } else if (attr_name == "interpolation_type") {
       return (const void*)&interpolation_type;
     } else {
       return Error::RuntimeError() << "ImageResizeKeepAspectRatio op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"target_size", "min_size", "max_size", "resize_longer", "interpolation_type"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"target_size", "min_size", "max_size", "resize_longer", "interpolation_type"};
     return attr_names;
   }
 
@@ -4080,23 +4080,23 @@ class ImageResizeKeepAspectRatioOpInterpCtx : public OpInterpCtx {
 };
 class ImageResizeToFixedOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "target_width")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "target_width") {
       return (const void*)&target_width;
-    } else if (!strcmp(attr_name, "target_height")) {
+    } else if (attr_name == "target_height") {
       return (const void*)&target_height;
-    } else if (!strcmp(attr_name, "channels")) {
+    } else if (attr_name == "channels") {
       return (const void*)&channels;
-    } else if (!strcmp(attr_name, "data_type")) {
+    } else if (attr_name == "data_type") {
       return (const void*)&data_type;
-    } else if (!strcmp(attr_name, "interpolation_type")) {
+    } else if (attr_name == "interpolation_type") {
       return (const void*)&interpolation_type;
     } else {
       return Error::RuntimeError() << "ImageResizeToFixed op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"target_width", "target_height", "channels", "data_type", "interpolation_type"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"target_width", "target_height", "channels", "data_type", "interpolation_type"};
     return attr_names;
   }
 
@@ -4109,17 +4109,17 @@ class ImageResizeToFixedOpInterpCtx : public OpInterpCtx {
 };
 class ImageTargetResizeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "target_size")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "target_size") {
       return (const void*)&target_size;
-    } else if (!strcmp(attr_name, "max_size")) {
+    } else if (attr_name == "max_size") {
       return (const void*)&max_size;
     } else {
       return Error::RuntimeError() << "ImageTargetResize op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"target_size", "max_size"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"target_size", "max_size"};
     return attr_names;
   }
 
@@ -4129,15 +4129,15 @@ class ImageTargetResizeOpInterpCtx : public OpInterpCtx {
 };
 class InTopKOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "k")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "k") {
       return (const void*)&k;
     } else {
       return Error::RuntimeError() << "InTopK op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"k"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"k"};
     return attr_names;
   }
 
@@ -4146,27 +4146,27 @@ class InTopKOpInterpCtx : public OpInterpCtx {
 };
 class IndexedSlicesAdamUpdateOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "learning_rate_val")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "learning_rate_val") {
       return (const void*)&learning_rate_val;
-    } else if (!strcmp(attr_name, "beta1")) {
+    } else if (attr_name == "beta1") {
       return (const void*)&beta1;
-    } else if (!strcmp(attr_name, "beta2")) {
+    } else if (attr_name == "beta2") {
       return (const void*)&beta2;
-    } else if (!strcmp(attr_name, "epsilon")) {
+    } else if (attr_name == "epsilon") {
       return (const void*)&epsilon;
-    } else if (!strcmp(attr_name, "weight_decay")) {
+    } else if (attr_name == "weight_decay") {
       return (const void*)&weight_decay;
-    } else if (!strcmp(attr_name, "amsgrad")) {
+    } else if (attr_name == "amsgrad") {
       return (const void*)&amsgrad;
-    } else if (!strcmp(attr_name, "do_bias_correction")) {
+    } else if (attr_name == "do_bias_correction") {
       return (const void*)&do_bias_correction;
     } else {
       return Error::RuntimeError() << "IndexedSlicesAdamUpdate op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"learning_rate_val", "beta1", "beta2", "epsilon", "weight_decay", "amsgrad", "do_bias_correction"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"learning_rate_val", "beta1", "beta2", "epsilon", "weight_decay", "amsgrad", "do_bias_correction"};
     return attr_names;
   }
 
@@ -4181,17 +4181,17 @@ class IndexedSlicesAdamUpdateOpInterpCtx : public OpInterpCtx {
 };
 class IndexedSlicesMomentumUpdateOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "beta")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "beta") {
       return (const void*)&beta;
-    } else if (!strcmp(attr_name, "weight_decay")) {
+    } else if (attr_name == "weight_decay") {
       return (const void*)&weight_decay;
     } else {
       return Error::RuntimeError() << "IndexedSlicesMomentumUpdate op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"beta", "weight_decay"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"beta", "weight_decay"};
     return attr_names;
   }
 
@@ -4201,22 +4201,22 @@ class IndexedSlicesMomentumUpdateOpInterpCtx : public OpInterpCtx {
 };
 class IndexedSlicesReduceSumOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "IndexedSlicesReduceSum op has no attribute named " << attr_name;
   }
 
 };
 class IndexedSlicesSgdUpdateOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "weight_decay")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "weight_decay") {
       return (const void*)&weight_decay;
     } else {
       return Error::RuntimeError() << "IndexedSlicesSgdUpdate op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"weight_decay"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"weight_decay"};
     return attr_names;
   }
 
@@ -4225,17 +4225,17 @@ class IndexedSlicesSgdUpdateOpInterpCtx : public OpInterpCtx {
 };
 class KlDivLossOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "reduction")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "reduction") {
       return (const void*)&reduction;
-    } else if (!strcmp(attr_name, "log_target")) {
+    } else if (attr_name == "log_target") {
       return (const void*)&log_target;
     } else {
       return Error::RuntimeError() << "KlDivLoss op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"reduction", "log_target"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"reduction", "log_target"};
     return attr_names;
   }
 
@@ -4245,17 +4245,17 @@ class KlDivLossOpInterpCtx : public OpInterpCtx {
 };
 class KlDivLossGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "reduction")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "reduction") {
       return (const void*)&reduction;
-    } else if (!strcmp(attr_name, "log_target")) {
+    } else if (attr_name == "log_target") {
       return (const void*)&log_target;
     } else {
       return Error::RuntimeError() << "KlDivLossGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"reduction", "log_target"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"reduction", "log_target"};
     return attr_names;
   }
 
@@ -4265,17 +4265,17 @@ class KlDivLossGradOpInterpCtx : public OpInterpCtx {
 };
 class L1L2RegularizeGradientOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "l1")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "l1") {
       return (const void*)&l1;
-    } else if (!strcmp(attr_name, "l2")) {
+    } else if (attr_name == "l2") {
       return (const void*)&l2;
     } else {
       return Error::RuntimeError() << "L1L2RegularizeGradient op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"l1", "l2"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"l1", "l2"};
     return attr_names;
   }
 
@@ -4285,17 +4285,17 @@ class L1L2RegularizeGradientOpInterpCtx : public OpInterpCtx {
 };
 class L2NormalizeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
-    } else if (!strcmp(attr_name, "epsilon")) {
+    } else if (attr_name == "epsilon") {
       return (const void*)&epsilon;
     } else {
       return Error::RuntimeError() << "L2Normalize op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis", "epsilon"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis", "epsilon"};
     return attr_names;
   }
 
@@ -4305,17 +4305,17 @@ class L2NormalizeOpInterpCtx : public OpInterpCtx {
 };
 class L2NormalizeGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
-    } else if (!strcmp(attr_name, "epsilon")) {
+    } else if (attr_name == "epsilon") {
       return (const void*)&epsilon;
     } else {
       return Error::RuntimeError() << "L2NormalizeGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis", "epsilon"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis", "epsilon"};
     return attr_names;
   }
 
@@ -4325,27 +4325,27 @@ class L2NormalizeGradOpInterpCtx : public OpInterpCtx {
 };
 class LambUpdateOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "beta1")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "beta1") {
       return (const void*)&beta1;
-    } else if (!strcmp(attr_name, "beta2")) {
+    } else if (attr_name == "beta2") {
       return (const void*)&beta2;
-    } else if (!strcmp(attr_name, "epsilon")) {
+    } else if (attr_name == "epsilon") {
       return (const void*)&epsilon;
-    } else if (!strcmp(attr_name, "scale")) {
+    } else if (attr_name == "scale") {
       return (const void*)&scale;
-    } else if (!strcmp(attr_name, "l1")) {
+    } else if (attr_name == "l1") {
       return (const void*)&l1;
-    } else if (!strcmp(attr_name, "l2")) {
+    } else if (attr_name == "l2") {
       return (const void*)&l2;
-    } else if (!strcmp(attr_name, "weight_decay")) {
+    } else if (attr_name == "weight_decay") {
       return (const void*)&weight_decay;
     } else {
       return Error::RuntimeError() << "LambUpdate op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"beta1", "beta2", "epsilon", "scale", "l1", "l2", "weight_decay"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"beta1", "beta2", "epsilon", "scale", "l1", "l2", "weight_decay"};
     return attr_names;
   }
 
@@ -4360,27 +4360,27 @@ class LambUpdateOpInterpCtx : public OpInterpCtx {
 };
 class LarsUpdateOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "scale")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "scale") {
       return (const void*)&scale;
-    } else if (!strcmp(attr_name, "l1")) {
+    } else if (attr_name == "l1") {
       return (const void*)&l1;
-    } else if (!strcmp(attr_name, "l2")) {
+    } else if (attr_name == "l2") {
       return (const void*)&l2;
-    } else if (!strcmp(attr_name, "momentum_beta")) {
+    } else if (attr_name == "momentum_beta") {
       return (const void*)&momentum_beta;
-    } else if (!strcmp(attr_name, "epsilon")) {
+    } else if (attr_name == "epsilon") {
       return (const void*)&epsilon;
-    } else if (!strcmp(attr_name, "lars_coefficient")) {
+    } else if (attr_name == "lars_coefficient") {
       return (const void*)&lars_coefficient;
-    } else if (!strcmp(attr_name, "weight_decay")) {
+    } else if (attr_name == "weight_decay") {
       return (const void*)&weight_decay;
     } else {
       return Error::RuntimeError() << "LarsUpdate op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"scale", "l1", "l2", "momentum_beta", "epsilon", "lars_coefficient", "weight_decay"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"scale", "l1", "l2", "momentum_beta", "epsilon", "lars_coefficient", "weight_decay"};
     return attr_names;
   }
 
@@ -4395,23 +4395,23 @@ class LarsUpdateOpInterpCtx : public OpInterpCtx {
 };
 class LayerNormOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "center")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "center") {
       return (const void*)&center;
-    } else if (!strcmp(attr_name, "scale")) {
+    } else if (attr_name == "scale") {
       return (const void*)&scale;
-    } else if (!strcmp(attr_name, "begin_norm_axis")) {
+    } else if (attr_name == "begin_norm_axis") {
       return (const void*)&begin_norm_axis;
-    } else if (!strcmp(attr_name, "begin_params_axis")) {
+    } else if (attr_name == "begin_params_axis") {
       return (const void*)&begin_params_axis;
-    } else if (!strcmp(attr_name, "epsilon")) {
+    } else if (attr_name == "epsilon") {
       return (const void*)&epsilon;
     } else {
       return Error::RuntimeError() << "LayerNorm op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"center", "scale", "begin_norm_axis", "begin_params_axis", "epsilon"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"center", "scale", "begin_norm_axis", "begin_params_axis", "epsilon"};
     return attr_names;
   }
 
@@ -4424,17 +4424,17 @@ class LayerNormOpInterpCtx : public OpInterpCtx {
 };
 class LayerNormGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "begin_norm_axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "begin_norm_axis") {
       return (const void*)&begin_norm_axis;
-    } else if (!strcmp(attr_name, "epsilon")) {
+    } else if (attr_name == "epsilon") {
       return (const void*)&epsilon;
     } else {
       return Error::RuntimeError() << "LayerNormGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"begin_norm_axis", "epsilon"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"begin_norm_axis", "epsilon"};
     return attr_names;
   }
 
@@ -4444,15 +4444,15 @@ class LayerNormGradOpInterpCtx : public OpInterpCtx {
 };
 class LayerNormParamGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "begin_params_axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "begin_params_axis") {
       return (const void*)&begin_params_axis;
     } else {
       return Error::RuntimeError() << "LayerNormParamGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"begin_params_axis"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"begin_params_axis"};
     return attr_names;
   }
 
@@ -4461,15 +4461,15 @@ class LayerNormParamGradOpInterpCtx : public OpInterpCtx {
 };
 class LeakyReluOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "alpha")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "alpha") {
       return (const void*)&alpha;
     } else {
       return Error::RuntimeError() << "LeakyRelu op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"alpha"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"alpha"};
     return attr_names;
   }
 
@@ -4478,15 +4478,15 @@ class LeakyReluOpInterpCtx : public OpInterpCtx {
 };
 class LeakyReluGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "alpha")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "alpha") {
       return (const void*)&alpha;
     } else {
       return Error::RuntimeError() << "LeakyReluGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"alpha"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"alpha"};
     return attr_names;
   }
 
@@ -4495,96 +4495,96 @@ class LeakyReluGradOpInterpCtx : public OpInterpCtx {
 };
 class LgammaOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Lgamma op has no attribute named " << attr_name;
   }
 
 };
 class LgammaGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "LgammaGrad op has no attribute named " << attr_name;
   }
 
 };
 class LogOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Log op has no attribute named " << attr_name;
   }
 
 };
 class Log1pOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Log1p op has no attribute named " << attr_name;
   }
 
 };
 class Log1pGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Log1pGrad op has no attribute named " << attr_name;
   }
 
 };
 class LogGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "LogGrad op has no attribute named " << attr_name;
   }
 
 };
 class LogSigmoidOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "LogSigmoid op has no attribute named " << attr_name;
   }
 
 };
 class LogSigmoidGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "LogSigmoidGrad op has no attribute named " << attr_name;
   }
 
 };
 class LogSoftmaxOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "LogSoftmax op has no attribute named " << attr_name;
   }
 
 };
 class LogSoftmaxGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "LogSoftmaxGrad op has no attribute named " << attr_name;
   }
 
 };
 class LogicalNotOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "LogicalNot op has no attribute named " << attr_name;
   }
 
 };
 class LogicalSliceOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "start")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "start") {
       return (const void*)&start;
-    } else if (!strcmp(attr_name, "stop")) {
+    } else if (attr_name == "stop") {
       return (const void*)&stop;
-    } else if (!strcmp(attr_name, "step")) {
+    } else if (attr_name == "step") {
       return (const void*)&step;
     } else {
       return Error::RuntimeError() << "LogicalSlice op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"start", "stop", "step"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"start", "stop", "step"};
     return attr_names;
   }
 
@@ -4595,19 +4595,19 @@ class LogicalSliceOpInterpCtx : public OpInterpCtx {
 };
 class LogicalSliceAssignOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "start")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "start") {
       return (const void*)&start;
-    } else if (!strcmp(attr_name, "stop")) {
+    } else if (attr_name == "stop") {
       return (const void*)&stop;
-    } else if (!strcmp(attr_name, "step")) {
+    } else if (attr_name == "step") {
       return (const void*)&step;
     } else {
       return Error::RuntimeError() << "LogicalSliceAssign op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"start", "stop", "step"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"start", "stop", "step"};
     return attr_names;
   }
 
@@ -4618,21 +4618,21 @@ class LogicalSliceAssignOpInterpCtx : public OpInterpCtx {
 };
 class MaskedFillOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "has_int_operand")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "has_int_operand") {
       return (const void*)&has_int_operand;
-    } else if (!strcmp(attr_name, "has_float_operand")) {
+    } else if (attr_name == "has_float_operand") {
       return (const void*)&has_float_operand;
-    } else if (!strcmp(attr_name, "int_operand")) {
+    } else if (attr_name == "int_operand") {
       return (const void*)&int_operand;
-    } else if (!strcmp(attr_name, "float_operand")) {
+    } else if (attr_name == "float_operand") {
       return (const void*)&float_operand;
     } else {
       return Error::RuntimeError() << "MaskedFill op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
 
@@ -4644,19 +4644,19 @@ class MaskedFillOpInterpCtx : public OpInterpCtx {
 };
 class MatmulOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "transpose_a")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "transpose_a") {
       return (const void*)&transpose_a;
-    } else if (!strcmp(attr_name, "transpose_b")) {
+    } else if (attr_name == "transpose_b") {
       return (const void*)&transpose_b;
-    } else if (!strcmp(attr_name, "alpha")) {
+    } else if (attr_name == "alpha") {
       return (const void*)&alpha;
     } else {
       return Error::RuntimeError() << "Matmul op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"transpose_a", "transpose_b", "alpha"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"transpose_a", "transpose_b", "alpha"};
     return attr_names;
   }
 
@@ -4667,27 +4667,27 @@ class MatmulOpInterpCtx : public OpInterpCtx {
 };
 class MaxPool1DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "stride")) {
+    } else if (attr_name == "stride") {
       return (const void*)&stride;
-    } else if (!strcmp(attr_name, "dilation")) {
+    } else if (attr_name == "dilation") {
       return (const void*)&dilation;
-    } else if (!strcmp(attr_name, "return_indices")) {
+    } else if (attr_name == "return_indices") {
       return (const void*)&return_indices;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
     } else {
       return Error::RuntimeError() << "MaxPool1D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
     return attr_names;
   }
 
@@ -4702,27 +4702,27 @@ class MaxPool1DOpInterpCtx : public OpInterpCtx {
 };
 class MaxPool1DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "stride")) {
+    } else if (attr_name == "stride") {
       return (const void*)&stride;
-    } else if (!strcmp(attr_name, "dilation")) {
+    } else if (attr_name == "dilation") {
       return (const void*)&dilation;
-    } else if (!strcmp(attr_name, "return_indices")) {
+    } else if (attr_name == "return_indices") {
       return (const void*)&return_indices;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
     } else {
       return Error::RuntimeError() << "MaxPool1DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
     return attr_names;
   }
 
@@ -4737,27 +4737,27 @@ class MaxPool1DGradOpInterpCtx : public OpInterpCtx {
 };
 class MaxPool2DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "stride")) {
+    } else if (attr_name == "stride") {
       return (const void*)&stride;
-    } else if (!strcmp(attr_name, "dilation")) {
+    } else if (attr_name == "dilation") {
       return (const void*)&dilation;
-    } else if (!strcmp(attr_name, "return_indices")) {
+    } else if (attr_name == "return_indices") {
       return (const void*)&return_indices;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
     } else {
       return Error::RuntimeError() << "MaxPool2D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
     return attr_names;
   }
 
@@ -4772,27 +4772,27 @@ class MaxPool2DOpInterpCtx : public OpInterpCtx {
 };
 class MaxPool2DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "stride")) {
+    } else if (attr_name == "stride") {
       return (const void*)&stride;
-    } else if (!strcmp(attr_name, "dilation")) {
+    } else if (attr_name == "dilation") {
       return (const void*)&dilation;
-    } else if (!strcmp(attr_name, "return_indices")) {
+    } else if (attr_name == "return_indices") {
       return (const void*)&return_indices;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
     } else {
       return Error::RuntimeError() << "MaxPool2DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
     return attr_names;
   }
 
@@ -4807,27 +4807,27 @@ class MaxPool2DGradOpInterpCtx : public OpInterpCtx {
 };
 class MaxPool3DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "stride")) {
+    } else if (attr_name == "stride") {
       return (const void*)&stride;
-    } else if (!strcmp(attr_name, "dilation")) {
+    } else if (attr_name == "dilation") {
       return (const void*)&dilation;
-    } else if (!strcmp(attr_name, "return_indices")) {
+    } else if (attr_name == "return_indices") {
       return (const void*)&return_indices;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
     } else {
       return Error::RuntimeError() << "MaxPool3D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
     return attr_names;
   }
 
@@ -4842,27 +4842,27 @@ class MaxPool3DOpInterpCtx : public OpInterpCtx {
 };
 class MaxPool3DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "stride")) {
+    } else if (attr_name == "stride") {
       return (const void*)&stride;
-    } else if (!strcmp(attr_name, "dilation")) {
+    } else if (attr_name == "dilation") {
       return (const void*)&dilation;
-    } else if (!strcmp(attr_name, "return_indices")) {
+    } else if (attr_name == "return_indices") {
       return (const void*)&return_indices;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
     } else {
       return Error::RuntimeError() << "MaxPool3DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "stride", "dilation", "return_indices", "ceil_mode"};
     return attr_names;
   }
 
@@ -4877,35 +4877,35 @@ class MaxPool3DGradOpInterpCtx : public OpInterpCtx {
 };
 class MegatronGptMmapDataLoaderOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "data_file_prefix")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "data_file_prefix") {
       return (const void*)&data_file_prefix;
-    } else if (!strcmp(attr_name, "seq_length")) {
+    } else if (attr_name == "seq_length") {
       return (const void*)&seq_length;
-    } else if (!strcmp(attr_name, "label_length")) {
+    } else if (attr_name == "label_length") {
       return (const void*)&label_length;
-    } else if (!strcmp(attr_name, "num_samples")) {
+    } else if (attr_name == "num_samples") {
       return (const void*)&num_samples;
-    } else if (!strcmp(attr_name, "batch_size")) {
+    } else if (attr_name == "batch_size") {
       return (const void*)&batch_size;
-    } else if (!strcmp(attr_name, "dtype")) {
+    } else if (attr_name == "dtype") {
       return (const void*)&dtype;
-    } else if (!strcmp(attr_name, "split_sizes")) {
+    } else if (attr_name == "split_sizes") {
       return (const void*)&split_sizes;
-    } else if (!strcmp(attr_name, "split_index")) {
+    } else if (attr_name == "split_index") {
       return (const void*)&split_index;
-    } else if (!strcmp(attr_name, "shuffle")) {
+    } else if (attr_name == "shuffle") {
       return (const void*)&shuffle;
-    } else if (!strcmp(attr_name, "random_seed")) {
+    } else if (attr_name == "random_seed") {
       return (const void*)&random_seed;
-    } else if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (attr_name == "nd_sbp") {
       return (const void*)&nd_sbp;
     } else {
       return Error::RuntimeError() << "MegatronGptMmapDataLoader op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"data_file_prefix", "seq_length", "label_length", "num_samples", "batch_size", "dtype", "split_sizes", "split_index", "shuffle", "random_seed", "nd_sbp"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"data_file_prefix", "seq_length", "label_length", "num_samples", "batch_size", "dtype", "split_sizes", "split_index", "shuffle", "random_seed", "nd_sbp"};
     return attr_names;
   }
 
@@ -4924,21 +4924,21 @@ class MegatronGptMmapDataLoaderOpInterpCtx : public OpInterpCtx {
 };
 class MinMaxObserverOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "quantization_formula")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "quantization_formula") {
       return (const void*)&quantization_formula;
-    } else if (!strcmp(attr_name, "quantization_bit")) {
+    } else if (attr_name == "quantization_bit") {
       return (const void*)&quantization_bit;
-    } else if (!strcmp(attr_name, "quantization_scheme")) {
+    } else if (attr_name == "quantization_scheme") {
       return (const void*)&quantization_scheme;
-    } else if (!strcmp(attr_name, "per_layer_quantization")) {
+    } else if (attr_name == "per_layer_quantization") {
       return (const void*)&per_layer_quantization;
     } else {
       return Error::RuntimeError() << "MinMaxObserver op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"quantization_formula", "quantization_bit", "quantization_scheme", "per_layer_quantization"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"quantization_formula", "quantization_bit", "quantization_scheme", "per_layer_quantization"};
     return attr_names;
   }
 
@@ -4950,39 +4950,39 @@ class MinMaxObserverOpInterpCtx : public OpInterpCtx {
 };
 class MishOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Mish op has no attribute named " << attr_name;
   }
 
 };
 class MishGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "MishGrad op has no attribute named " << attr_name;
   }
 
 };
 class MomentumUpdateOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "learning_rate_val")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "learning_rate_val") {
       return (const void*)&learning_rate_val;
-    } else if (!strcmp(attr_name, "scale")) {
+    } else if (attr_name == "scale") {
       return (const void*)&scale;
-    } else if (!strcmp(attr_name, "l1")) {
+    } else if (attr_name == "l1") {
       return (const void*)&l1;
-    } else if (!strcmp(attr_name, "l2")) {
+    } else if (attr_name == "l2") {
       return (const void*)&l2;
-    } else if (!strcmp(attr_name, "beta")) {
+    } else if (attr_name == "beta") {
       return (const void*)&beta;
-    } else if (!strcmp(attr_name, "weight_decay")) {
+    } else if (attr_name == "weight_decay") {
       return (const void*)&weight_decay;
     } else {
       return Error::RuntimeError() << "MomentumUpdate op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"learning_rate_val", "scale", "l1", "l2", "beta", "weight_decay"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"learning_rate_val", "scale", "l1", "l2", "beta", "weight_decay"};
     return attr_names;
   }
 
@@ -4996,25 +4996,25 @@ class MomentumUpdateOpInterpCtx : public OpInterpCtx {
 };
 class MovingAverageMinMaxObserverOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "training")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "training") {
       return (const void*)&training;
-    } else if (!strcmp(attr_name, "quantization_formula")) {
+    } else if (attr_name == "quantization_formula") {
       return (const void*)&quantization_formula;
-    } else if (!strcmp(attr_name, "stop_update_after_iters")) {
+    } else if (attr_name == "stop_update_after_iters") {
       return (const void*)&stop_update_after_iters;
-    } else if (!strcmp(attr_name, "quantization_bit")) {
+    } else if (attr_name == "quantization_bit") {
       return (const void*)&quantization_bit;
-    } else if (!strcmp(attr_name, "quantization_scheme")) {
+    } else if (attr_name == "quantization_scheme") {
       return (const void*)&quantization_scheme;
-    } else if (!strcmp(attr_name, "momentum")) {
+    } else if (attr_name == "momentum") {
       return (const void*)&momentum;
     } else {
       return Error::RuntimeError() << "MovingAverageMinMaxObserver op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"training", "quantization_formula", "stop_update_after_iters", "quantization_bit", "quantization_scheme", "momentum"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"training", "quantization_formula", "stop_update_after_iters", "quantization_bit", "quantization_scheme", "momentum"};
     return attr_names;
   }
 
@@ -5028,40 +5028,40 @@ class MovingAverageMinMaxObserverOpInterpCtx : public OpInterpCtx {
 };
 class MultiCountNotFiniteOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "MultiCountNotFinite op has no attribute named " << attr_name;
   }
 
 };
 class MultiSquareSumOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "MultiSquareSum op has no attribute named " << attr_name;
   }
 
 };
 class MultiplyOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Multiply op has no attribute named " << attr_name;
   }
 
 };
 class NarrowOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "dim")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "dim") {
       return (const void*)&dim;
-    } else if (!strcmp(attr_name, "start")) {
+    } else if (attr_name == "start") {
       return (const void*)&start;
-    } else if (!strcmp(attr_name, "length")) {
+    } else if (attr_name == "length") {
       return (const void*)&length;
     } else {
       return Error::RuntimeError() << "Narrow op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"dim", "start", "length"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"dim", "start", "length"};
     return attr_names;
   }
 
@@ -5072,19 +5072,19 @@ class NarrowOpInterpCtx : public OpInterpCtx {
 };
 class NarrowGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "dim")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "dim") {
       return (const void*)&dim;
-    } else if (!strcmp(attr_name, "start")) {
+    } else if (attr_name == "start") {
       return (const void*)&start;
-    } else if (!strcmp(attr_name, "length")) {
+    } else if (attr_name == "length") {
       return (const void*)&length;
     } else {
       return Error::RuntimeError() << "NarrowGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"dim", "start", "length"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"dim", "start", "length"};
     return attr_names;
   }
 
@@ -5095,31 +5095,31 @@ class NarrowGradOpInterpCtx : public OpInterpCtx {
 };
 class NegativeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Negative op has no attribute named " << attr_name;
   }
 
 };
 class NegativeGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "NegativeGrad op has no attribute named " << attr_name;
   }
 
 };
 class NllOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "ignore_index")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "ignore_index") {
       return (const void*)&ignore_index;
-    } else if (!strcmp(attr_name, "reduction")) {
+    } else if (attr_name == "reduction") {
       return (const void*)&reduction;
     } else {
       return Error::RuntimeError() << "Nll op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"ignore_index", "reduction"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"ignore_index", "reduction"};
     return attr_names;
   }
 
@@ -5129,17 +5129,17 @@ class NllOpInterpCtx : public OpInterpCtx {
 };
 class NllGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "ignore_index")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "ignore_index") {
       return (const void*)&ignore_index;
-    } else if (!strcmp(attr_name, "reduction")) {
+    } else if (attr_name == "reduction") {
       return (const void*)&reduction;
     } else {
       return Error::RuntimeError() << "NllGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"ignore_index", "reduction"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"ignore_index", "reduction"};
     return attr_names;
   }
 
@@ -5149,17 +5149,17 @@ class NllGradOpInterpCtx : public OpInterpCtx {
 };
 class NmsOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "iou_threshold")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "iou_threshold") {
       return (const void*)&iou_threshold;
-    } else if (!strcmp(attr_name, "keep_n")) {
+    } else if (attr_name == "keep_n") {
       return (const void*)&keep_n;
     } else {
       return Error::RuntimeError() << "Nms op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"iou_threshold", "keep_n"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"iou_threshold", "keep_n"};
     return attr_names;
   }
 
@@ -5169,25 +5169,25 @@ class NmsOpInterpCtx : public OpInterpCtx {
 };
 class NormalOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "mean")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "mean") {
       return (const void*)&mean;
-    } else if (!strcmp(attr_name, "std")) {
+    } else if (attr_name == "std") {
       return (const void*)&std;
-    } else if (!strcmp(attr_name, "seed")) {
+    } else if (attr_name == "seed") {
       return (const void*)&seed;
-    } else if (!strcmp(attr_name, "dtype")) {
+    } else if (attr_name == "dtype") {
       return (const void*)&dtype;
-    } else if (!strcmp(attr_name, "shape")) {
+    } else if (attr_name == "shape") {
       return (const void*)&shape;
-    } else if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (attr_name == "nd_sbp") {
       return (const void*)&nd_sbp;
     } else {
       return Error::RuntimeError() << "Normal op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"mean", "std", "seed", "dtype", "shape", "nd_sbp"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"mean", "std", "seed", "dtype", "shape", "nd_sbp"};
     return attr_names;
   }
 
@@ -5201,21 +5201,21 @@ class NormalOpInterpCtx : public OpInterpCtx {
 };
 class NormalizationOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
-    } else if (!strcmp(attr_name, "epsilon")) {
+    } else if (attr_name == "epsilon") {
       return (const void*)&epsilon;
-    } else if (!strcmp(attr_name, "training")) {
+    } else if (attr_name == "training") {
       return (const void*)&training;
-    } else if (!strcmp(attr_name, "momentum")) {
+    } else if (attr_name == "momentum") {
       return (const void*)&momentum;
     } else {
       return Error::RuntimeError() << "Normalization op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis", "epsilon", "training", "momentum"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis", "epsilon", "training", "momentum"};
     return attr_names;
   }
 
@@ -5227,21 +5227,21 @@ class NormalizationOpInterpCtx : public OpInterpCtx {
 };
 class NormalizationAddReluBaseOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
-    } else if (!strcmp(attr_name, "epsilon")) {
+    } else if (attr_name == "epsilon") {
       return (const void*)&epsilon;
-    } else if (!strcmp(attr_name, "training")) {
+    } else if (attr_name == "training") {
       return (const void*)&training;
-    } else if (!strcmp(attr_name, "momentum")) {
+    } else if (attr_name == "momentum") {
       return (const void*)&momentum;
     } else {
       return Error::RuntimeError() << "NormalizationAddReluBase op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis", "epsilon", "training", "momentum"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis", "epsilon", "training", "momentum"};
     return attr_names;
   }
 
@@ -5253,17 +5253,17 @@ class NormalizationAddReluBaseOpInterpCtx : public OpInterpCtx {
 };
 class NormalizationAddReluGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
-    } else if (!strcmp(attr_name, "epsilon")) {
+    } else if (attr_name == "epsilon") {
       return (const void*)&epsilon;
     } else {
       return Error::RuntimeError() << "NormalizationAddReluGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis", "epsilon"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis", "epsilon"};
     return attr_names;
   }
 
@@ -5273,17 +5273,17 @@ class NormalizationAddReluGradOpInterpCtx : public OpInterpCtx {
 };
 class NormalizationGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
-    } else if (!strcmp(attr_name, "epsilon")) {
+    } else if (attr_name == "epsilon") {
       return (const void*)&epsilon;
     } else {
       return Error::RuntimeError() << "NormalizationGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis", "epsilon"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis", "epsilon"};
     return attr_names;
   }
 
@@ -5293,15 +5293,15 @@ class NormalizationGradOpInterpCtx : public OpInterpCtx {
 };
 class NvtxEndOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "mark_prefix")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "mark_prefix") {
       return (const void*)&mark_prefix;
     } else {
       return Error::RuntimeError() << "NvtxEnd op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"mark_prefix"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"mark_prefix"};
     return attr_names;
   }
 
@@ -5310,15 +5310,15 @@ class NvtxEndOpInterpCtx : public OpInterpCtx {
 };
 class NvtxStartOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "mark_prefix")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "mark_prefix") {
       return (const void*)&mark_prefix;
     } else {
       return Error::RuntimeError() << "NvtxStart op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"mark_prefix"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"mark_prefix"};
     return attr_names;
   }
 
@@ -5327,50 +5327,50 @@ class NvtxStartOpInterpCtx : public OpInterpCtx {
 };
 class ObjectBboxFlipOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ObjectBboxFlip op has no attribute named " << attr_name;
   }
 
 };
 class ObjectBboxScaleOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ObjectBboxScale op has no attribute named " << attr_name;
   }
 
 };
 class ObjectSegmentationPolygonFlipOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ObjectSegmentationPolygonFlip op has no attribute named " << attr_name;
   }
 
 };
 class ObjectSegmentationPolygonScaleOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ObjectSegmentationPolygonScale op has no attribute named " << attr_name;
   }
 
 };
 class ObjectSegmentationPolygonToMaskOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ObjectSegmentationPolygonToMask op has no attribute named " << attr_name;
   }
 
 };
 class OfrecordBytesDecoderOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "name")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "name") {
       return (const void*)&name;
     } else {
       return Error::RuntimeError() << "OfrecordBytesDecoder op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"name"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"name"};
     return attr_names;
   }
 
@@ -5379,41 +5379,41 @@ class OfrecordBytesDecoderOpInterpCtx : public OpInterpCtx {
 };
 class OfrecordImageClassificationReaderOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "data_dir")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "data_dir") {
       return (const void*)&data_dir;
-    } else if (!strcmp(attr_name, "data_part_num")) {
+    } else if (attr_name == "data_part_num") {
       return (const void*)&data_part_num;
-    } else if (!strcmp(attr_name, "batch_size")) {
+    } else if (attr_name == "batch_size") {
       return (const void*)&batch_size;
-    } else if (!strcmp(attr_name, "part_name_prefix")) {
+    } else if (attr_name == "part_name_prefix") {
       return (const void*)&part_name_prefix;
-    } else if (!strcmp(attr_name, "part_name_suffix_length")) {
+    } else if (attr_name == "part_name_suffix_length") {
       return (const void*)&part_name_suffix_length;
-    } else if (!strcmp(attr_name, "random_shuffle")) {
+    } else if (attr_name == "random_shuffle") {
       return (const void*)&random_shuffle;
-    } else if (!strcmp(attr_name, "seed")) {
+    } else if (attr_name == "seed") {
       return (const void*)&seed;
-    } else if (!strcmp(attr_name, "shuffle_buffer_size")) {
+    } else if (attr_name == "shuffle_buffer_size") {
       return (const void*)&shuffle_buffer_size;
-    } else if (!strcmp(attr_name, "shuffle_after_epoch")) {
+    } else if (attr_name == "shuffle_after_epoch") {
       return (const void*)&shuffle_after_epoch;
-    } else if (!strcmp(attr_name, "color_space")) {
+    } else if (attr_name == "color_space") {
       return (const void*)&color_space;
-    } else if (!strcmp(attr_name, "image_feature_name")) {
+    } else if (attr_name == "image_feature_name") {
       return (const void*)&image_feature_name;
-    } else if (!strcmp(attr_name, "label_feature_name")) {
+    } else if (attr_name == "label_feature_name") {
       return (const void*)&label_feature_name;
-    } else if (!strcmp(attr_name, "decode_buffer_size_per_thread")) {
+    } else if (attr_name == "decode_buffer_size_per_thread") {
       return (const void*)&decode_buffer_size_per_thread;
-    } else if (!strcmp(attr_name, "num_decode_threads_per_machine")) {
+    } else if (attr_name == "num_decode_threads_per_machine") {
       return (const void*)&num_decode_threads_per_machine;
     } else {
       return Error::RuntimeError() << "OfrecordImageClassificationReader op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"data_dir", "data_part_num", "batch_size", "part_name_prefix", "part_name_suffix_length", "random_shuffle", "seed", "shuffle_buffer_size", "shuffle_after_epoch", "color_space", "image_feature_name", "label_feature_name", "decode_buffer_size_per_thread", "num_decode_threads_per_machine"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"data_dir", "data_part_num", "batch_size", "part_name_prefix", "part_name_suffix_length", "random_shuffle", "seed", "shuffle_buffer_size", "shuffle_after_epoch", "color_space", "image_feature_name", "label_feature_name", "decode_buffer_size_per_thread", "num_decode_threads_per_machine"};
     return attr_names;
   }
 
@@ -5435,17 +5435,17 @@ class OfrecordImageClassificationReaderOpInterpCtx : public OpInterpCtx {
 };
 class OfrecordImageDecoderOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "name")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "name") {
       return (const void*)&name;
-    } else if (!strcmp(attr_name, "color_space")) {
+    } else if (attr_name == "color_space") {
       return (const void*)&color_space;
     } else {
       return Error::RuntimeError() << "OfrecordImageDecoder op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"name", "color_space"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"name", "color_space"};
     return attr_names;
   }
 
@@ -5455,27 +5455,27 @@ class OfrecordImageDecoderOpInterpCtx : public OpInterpCtx {
 };
 class OfrecordImageDecoderRandomCropOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "name")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "name") {
       return (const void*)&name;
-    } else if (!strcmp(attr_name, "color_space")) {
+    } else if (attr_name == "color_space") {
       return (const void*)&color_space;
-    } else if (!strcmp(attr_name, "num_attempts")) {
+    } else if (attr_name == "num_attempts") {
       return (const void*)&num_attempts;
-    } else if (!strcmp(attr_name, "seed")) {
+    } else if (attr_name == "seed") {
       return (const void*)&seed;
-    } else if (!strcmp(attr_name, "has_seed")) {
+    } else if (attr_name == "has_seed") {
       return (const void*)&has_seed;
-    } else if (!strcmp(attr_name, "random_area")) {
+    } else if (attr_name == "random_area") {
       return (const void*)&random_area;
-    } else if (!strcmp(attr_name, "random_aspect_ratio")) {
+    } else if (attr_name == "random_aspect_ratio") {
       return (const void*)&random_aspect_ratio;
     } else {
       return Error::RuntimeError() << "OfrecordImageDecoderRandomCrop op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"name", "color_space", "num_attempts", "seed", "has_seed", "random_area", "random_aspect_ratio"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"name", "color_space", "num_attempts", "seed", "has_seed", "random_area", "random_aspect_ratio"};
     return attr_names;
   }
 
@@ -5490,23 +5490,23 @@ class OfrecordImageDecoderRandomCropOpInterpCtx : public OpInterpCtx {
 };
 class OfrecordRawDecoderOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "name")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "name") {
       return (const void*)&name;
-    } else if (!strcmp(attr_name, "shape")) {
+    } else if (attr_name == "shape") {
       return (const void*)&shape;
-    } else if (!strcmp(attr_name, "data_type")) {
+    } else if (attr_name == "data_type") {
       return (const void*)&data_type;
-    } else if (!strcmp(attr_name, "dim1_varying_length")) {
+    } else if (attr_name == "dim1_varying_length") {
       return (const void*)&dim1_varying_length;
-    } else if (!strcmp(attr_name, "truncate")) {
+    } else if (attr_name == "truncate") {
       return (const void*)&truncate;
     } else {
       return Error::RuntimeError() << "OfrecordRawDecoder op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"name", "shape", "data_type", "dim1_varying_length", "truncate"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"name", "shape", "data_type", "dim1_varying_length", "truncate"};
     return attr_names;
   }
 
@@ -5519,25 +5519,25 @@ class OfrecordRawDecoderOpInterpCtx : public OpInterpCtx {
 };
 class OneHotOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "depth")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "depth") {
       return (const void*)&depth;
-    } else if (!strcmp(attr_name, "floating_on_value")) {
+    } else if (attr_name == "floating_on_value") {
       return (const void*)&floating_on_value;
-    } else if (!strcmp(attr_name, "integer_on_value")) {
+    } else if (attr_name == "integer_on_value") {
       return (const void*)&integer_on_value;
-    } else if (!strcmp(attr_name, "floating_off_value")) {
+    } else if (attr_name == "floating_off_value") {
       return (const void*)&floating_off_value;
-    } else if (!strcmp(attr_name, "integer_off_value")) {
+    } else if (attr_name == "integer_off_value") {
       return (const void*)&integer_off_value;
-    } else if (!strcmp(attr_name, "dtype")) {
+    } else if (attr_name == "dtype") {
       return (const void*)&dtype;
     } else {
       return Error::RuntimeError() << "OneHot op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"depth", "floating_on_value", "integer_on_value", "floating_off_value", "integer_off_value", "dtype"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"depth", "floating_on_value", "integer_on_value", "floating_off_value", "integer_off_value", "dtype"};
     return attr_names;
   }
 
@@ -5551,29 +5551,29 @@ class OneHotOpInterpCtx : public OpInterpCtx {
 };
 class OnerecDecoderOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "key")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "key") {
       return (const void*)&key;
-    } else if (!strcmp(attr_name, "data_type")) {
+    } else if (attr_name == "data_type") {
       return (const void*)&data_type;
-    } else if (!strcmp(attr_name, "static_shape")) {
+    } else if (attr_name == "static_shape") {
       return (const void*)&static_shape;
-    } else if (!strcmp(attr_name, "is_dynamic")) {
+    } else if (attr_name == "is_dynamic") {
       return (const void*)&is_dynamic;
-    } else if (!strcmp(attr_name, "has_reshape")) {
+    } else if (attr_name == "has_reshape") {
       return (const void*)&has_reshape;
-    } else if (!strcmp(attr_name, "reshape")) {
+    } else if (attr_name == "reshape") {
       return (const void*)&reshape;
-    } else if (!strcmp(attr_name, "has_batch_padding")) {
+    } else if (attr_name == "has_batch_padding") {
       return (const void*)&has_batch_padding;
-    } else if (!strcmp(attr_name, "batch_padding")) {
+    } else if (attr_name == "batch_padding") {
       return (const void*)&batch_padding;
     } else {
       return Error::RuntimeError() << "OnerecDecoder op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"key", "data_type", "static_shape", "is_dynamic", "has_reshape", "reshape", "has_batch_padding", "batch_padding"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"key", "data_type", "static_shape", "is_dynamic", "has_reshape", "reshape", "has_batch_padding", "batch_padding"};
     return attr_names;
   }
 
@@ -5589,22 +5589,22 @@ class OnerecDecoderOpInterpCtx : public OpInterpCtx {
 };
 class OnesLikeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "OnesLike op has no attribute named " << attr_name;
   }
 
 };
 class PackOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "pack_num")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "pack_num") {
       return (const void*)&pack_num;
     } else {
       return Error::RuntimeError() << "Pack op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"pack_num"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"pack_num"};
     return attr_names;
   }
 
@@ -5613,21 +5613,21 @@ class PackOpInterpCtx : public OpInterpCtx {
 };
 class PadOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding_before")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding_before") {
       return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
+    } else if (attr_name == "padding_after") {
       return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "floating_constant_value")) {
+    } else if (attr_name == "floating_constant_value") {
       return (const void*)&floating_constant_value;
-    } else if (!strcmp(attr_name, "integral_constant_value")) {
+    } else if (attr_name == "integral_constant_value") {
       return (const void*)&integral_constant_value;
     } else {
       return Error::RuntimeError() << "Pad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding_before", "padding_after", "floating_constant_value", "integral_constant_value"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding_before", "padding_after", "floating_constant_value", "integral_constant_value"};
     return attr_names;
   }
 
@@ -5639,21 +5639,21 @@ class PadOpInterpCtx : public OpInterpCtx {
 };
 class PadGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding_before")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding_before") {
       return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
+    } else if (attr_name == "padding_after") {
       return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "floating_constant_value")) {
+    } else if (attr_name == "floating_constant_value") {
       return (const void*)&floating_constant_value;
-    } else if (!strcmp(attr_name, "integral_constant_value")) {
+    } else if (attr_name == "integral_constant_value") {
       return (const void*)&integral_constant_value;
     } else {
       return Error::RuntimeError() << "PadGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding_before", "padding_after", "floating_constant_value", "integral_constant_value"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding_before", "padding_after", "floating_constant_value", "integral_constant_value"};
     return attr_names;
   }
 
@@ -5665,17 +5665,17 @@ class PadGradOpInterpCtx : public OpInterpCtx {
 };
 class ParallelCastOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "sbp_parallel")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "sbp_parallel") {
       return (const void*)&sbp_parallel;
-    } else if (!strcmp(attr_name, "grad_sbp_parallel")) {
+    } else if (attr_name == "grad_sbp_parallel") {
       return (const void*)&grad_sbp_parallel;
     } else {
       return Error::RuntimeError() << "ParallelCast op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"sbp_parallel", "grad_sbp_parallel"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"sbp_parallel", "grad_sbp_parallel"};
     return attr_names;
   }
 
@@ -5685,54 +5685,54 @@ class ParallelCastOpInterpCtx : public OpInterpCtx {
 };
 class PowOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Pow op has no attribute named " << attr_name;
   }
 
 };
 class PowXGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "PowXGrad op has no attribute named " << attr_name;
   }
 
 };
 class PowYGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "PowYGrad op has no attribute named " << attr_name;
   }
 
 };
 class PreluOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Prelu op has no attribute named " << attr_name;
   }
 
 };
 class PreluGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "PreluGrad op has no attribute named " << attr_name;
   }
 
 };
 class QuantizationOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "quantization_formula")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "quantization_formula") {
       return (const void*)&quantization_formula;
-    } else if (!strcmp(attr_name, "quantization_bit")) {
+    } else if (attr_name == "quantization_bit") {
       return (const void*)&quantization_bit;
-    } else if (!strcmp(attr_name, "quantization_scheme")) {
+    } else if (attr_name == "quantization_scheme") {
       return (const void*)&quantization_scheme;
     } else {
       return Error::RuntimeError() << "Quantization op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"quantization_formula", "quantization_bit", "quantization_scheme"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"quantization_formula", "quantization_bit", "quantization_scheme"};
     return attr_names;
   }
 
@@ -5743,17 +5743,17 @@ class QuantizationOpInterpCtx : public OpInterpCtx {
 };
 class RandomMaskLikeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "rate")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "rate") {
       return (const void*)&rate;
-    } else if (!strcmp(attr_name, "seed")) {
+    } else if (attr_name == "seed") {
       return (const void*)&seed;
     } else {
       return Error::RuntimeError() << "RandomMaskLike op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"rate", "seed"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"rate", "seed"};
     return attr_names;
   }
 
@@ -5763,19 +5763,19 @@ class RandomMaskLikeOpInterpCtx : public OpInterpCtx {
 };
 class RandpermOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "n")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "n") {
       return (const void*)&n;
-    } else if (!strcmp(attr_name, "seed")) {
+    } else if (attr_name == "seed") {
       return (const void*)&seed;
-    } else if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (attr_name == "nd_sbp") {
       return (const void*)&nd_sbp;
     } else {
       return Error::RuntimeError() << "Randperm op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"n", "seed", "nd_sbp"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"n", "seed", "nd_sbp"};
     return attr_names;
   }
 
@@ -5786,51 +5786,51 @@ class RandpermOpInterpCtx : public OpInterpCtx {
 };
 class ReciprocalOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Reciprocal op has no attribute named " << attr_name;
   }
 
 };
 class ReciprocalGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ReciprocalGrad op has no attribute named " << attr_name;
   }
 
 };
 class ReciprocalNoNanOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ReciprocalNoNan op has no attribute named " << attr_name;
   }
 
 };
 class ReciprocalNoNanGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ReciprocalNoNanGrad op has no attribute named " << attr_name;
   }
 
 };
 class RecvOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "src_process_id")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "src_process_id") {
       return (const void*)&src_process_id;
-    } else if (!strcmp(attr_name, "dtype")) {
+    } else if (attr_name == "dtype") {
       return (const void*)&dtype;
-    } else if (!strcmp(attr_name, "shape")) {
+    } else if (attr_name == "shape") {
       return (const void*)&shape;
-    } else if (!strcmp(attr_name, "device_type")) {
+    } else if (attr_name == "device_type") {
       return (const void*)&device_type;
-    } else if (!strcmp(attr_name, "device_id")) {
+    } else if (attr_name == "device_id") {
       return (const void*)&device_id;
     } else {
       return Error::RuntimeError() << "Recv op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"src_process_id", "dtype", "shape", "device_type", "device_id"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"src_process_id", "dtype", "shape", "device_type", "device_id"};
     return attr_names;
   }
 
@@ -5843,17 +5843,17 @@ class RecvOpInterpCtx : public OpInterpCtx {
 };
 class ReduceAllOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
-    } else if (!strcmp(attr_name, "keepdims")) {
+    } else if (attr_name == "keepdims") {
       return (const void*)&keepdims;
     } else {
       return Error::RuntimeError() << "ReduceAll op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis", "keepdims"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis", "keepdims"};
     return attr_names;
   }
 
@@ -5863,17 +5863,17 @@ class ReduceAllOpInterpCtx : public OpInterpCtx {
 };
 class ReduceAnyOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
-    } else if (!strcmp(attr_name, "keepdims")) {
+    } else if (attr_name == "keepdims") {
       return (const void*)&keepdims;
     } else {
       return Error::RuntimeError() << "ReduceAny op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis", "keepdims"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis", "keepdims"};
     return attr_names;
   }
 
@@ -5883,17 +5883,17 @@ class ReduceAnyOpInterpCtx : public OpInterpCtx {
 };
 class ReduceMaxOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
-    } else if (!strcmp(attr_name, "keepdims")) {
+    } else if (attr_name == "keepdims") {
       return (const void*)&keepdims;
     } else {
       return Error::RuntimeError() << "ReduceMax op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis", "keepdims"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis", "keepdims"};
     return attr_names;
   }
 
@@ -5903,15 +5903,15 @@ class ReduceMaxOpInterpCtx : public OpInterpCtx {
 };
 class ReduceMaxDeviceStageOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
     } else {
       return Error::RuntimeError() << "ReduceMaxDeviceStage op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
 
@@ -5920,15 +5920,15 @@ class ReduceMaxDeviceStageOpInterpCtx : public OpInterpCtx {
 };
 class ReduceMaxDeviceStageGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
     } else {
       return Error::RuntimeError() << "ReduceMaxDeviceStageGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
 
@@ -5937,17 +5937,17 @@ class ReduceMaxDeviceStageGradOpInterpCtx : public OpInterpCtx {
 };
 class ReduceMaxGlobalStageOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
-    } else if (!strcmp(attr_name, "keepdims")) {
+    } else if (attr_name == "keepdims") {
       return (const void*)&keepdims;
     } else {
       return Error::RuntimeError() << "ReduceMaxGlobalStage op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis", "keepdims"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis", "keepdims"};
     return attr_names;
   }
 
@@ -5957,17 +5957,17 @@ class ReduceMaxGlobalStageOpInterpCtx : public OpInterpCtx {
 };
 class ReduceMaxGlobalStageGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
-    } else if (!strcmp(attr_name, "keepdims")) {
+    } else if (attr_name == "keepdims") {
       return (const void*)&keepdims;
     } else {
       return Error::RuntimeError() << "ReduceMaxGlobalStageGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis", "keepdims"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis", "keepdims"};
     return attr_names;
   }
 
@@ -5977,17 +5977,17 @@ class ReduceMaxGlobalStageGradOpInterpCtx : public OpInterpCtx {
 };
 class ReduceMinOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
-    } else if (!strcmp(attr_name, "keepdims")) {
+    } else if (attr_name == "keepdims") {
       return (const void*)&keepdims;
     } else {
       return Error::RuntimeError() << "ReduceMin op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis", "keepdims"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis", "keepdims"};
     return attr_names;
   }
 
@@ -5997,15 +5997,15 @@ class ReduceMinOpInterpCtx : public OpInterpCtx {
 };
 class ReduceMinDeviceStageOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
     } else {
       return Error::RuntimeError() << "ReduceMinDeviceStage op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
 
@@ -6014,15 +6014,15 @@ class ReduceMinDeviceStageOpInterpCtx : public OpInterpCtx {
 };
 class ReduceMinDeviceStageGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
     } else {
       return Error::RuntimeError() << "ReduceMinDeviceStageGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
 
@@ -6031,17 +6031,17 @@ class ReduceMinDeviceStageGradOpInterpCtx : public OpInterpCtx {
 };
 class ReduceMinGlobalStageOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
-    } else if (!strcmp(attr_name, "keepdims")) {
+    } else if (attr_name == "keepdims") {
       return (const void*)&keepdims;
     } else {
       return Error::RuntimeError() << "ReduceMinGlobalStage op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis", "keepdims"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis", "keepdims"};
     return attr_names;
   }
 
@@ -6051,17 +6051,17 @@ class ReduceMinGlobalStageOpInterpCtx : public OpInterpCtx {
 };
 class ReduceMinGlobalStageGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
-    } else if (!strcmp(attr_name, "keepdims")) {
+    } else if (attr_name == "keepdims") {
       return (const void*)&keepdims;
     } else {
       return Error::RuntimeError() << "ReduceMinGlobalStageGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis", "keepdims"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis", "keepdims"};
     return attr_names;
   }
 
@@ -6071,17 +6071,17 @@ class ReduceMinGlobalStageGradOpInterpCtx : public OpInterpCtx {
 };
 class ReduceProdOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
-    } else if (!strcmp(attr_name, "keepdims")) {
+    } else if (attr_name == "keepdims") {
       return (const void*)&keepdims;
     } else {
       return Error::RuntimeError() << "ReduceProd op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis", "keepdims"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis", "keepdims"};
     return attr_names;
   }
 
@@ -6091,17 +6091,17 @@ class ReduceProdOpInterpCtx : public OpInterpCtx {
 };
 class ReduceSumOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
-    } else if (!strcmp(attr_name, "keepdims")) {
+    } else if (attr_name == "keepdims") {
       return (const void*)&keepdims;
     } else {
       return Error::RuntimeError() << "ReduceSum op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis", "keepdims"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis", "keepdims"};
     return attr_names;
   }
 
@@ -6111,15 +6111,15 @@ class ReduceSumOpInterpCtx : public OpInterpCtx {
 };
 class ReduceSumLikeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
     } else {
       return Error::RuntimeError() << "ReduceSumLike op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
 
@@ -6128,15 +6128,15 @@ class ReduceSumLikeOpInterpCtx : public OpInterpCtx {
 };
 class ReflectionPad2DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
     } else {
       return Error::RuntimeError() << "ReflectionPad2D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding"};
     return attr_names;
   }
 
@@ -6145,15 +6145,15 @@ class ReflectionPad2DOpInterpCtx : public OpInterpCtx {
 };
 class ReflectionPad2DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
     } else {
       return Error::RuntimeError() << "ReflectionPad2DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding"};
     return attr_names;
   }
 
@@ -6162,29 +6162,29 @@ class ReflectionPad2DGradOpInterpCtx : public OpInterpCtx {
 };
 class ReluOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Relu op has no attribute named " << attr_name;
   }
 
 };
 class ReluGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ReluGrad op has no attribute named " << attr_name;
   }
 
 };
 class RepeatOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "repeat_num")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "repeat_num") {
       return (const void*)&repeat_num;
     } else {
       return Error::RuntimeError() << "Repeat op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"repeat_num"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"repeat_num"};
     return attr_names;
   }
 
@@ -6193,15 +6193,15 @@ class RepeatOpInterpCtx : public OpInterpCtx {
 };
 class ReplicationPad2DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
     } else {
       return Error::RuntimeError() << "ReplicationPad2D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding"};
     return attr_names;
   }
 
@@ -6210,15 +6210,15 @@ class ReplicationPad2DOpInterpCtx : public OpInterpCtx {
 };
 class ReplicationPad2DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
     } else {
       return Error::RuntimeError() << "ReplicationPad2DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding"};
     return attr_names;
   }
 
@@ -6227,15 +6227,15 @@ class ReplicationPad2DGradOpInterpCtx : public OpInterpCtx {
 };
 class ReshapeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "shape")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "shape") {
       return (const void*)&shape;
     } else {
       return Error::RuntimeError() << "Reshape op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"shape"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"shape"};
     return attr_names;
   }
 
@@ -6244,50 +6244,50 @@ class ReshapeOpInterpCtx : public OpInterpCtx {
 };
 class ReshapeLikeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ReshapeLike op has no attribute named " << attr_name;
   }
 
 };
 class RintOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Rint op has no attribute named " << attr_name;
   }
 
 };
 class RintGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "RintGrad op has no attribute named " << attr_name;
   }
 
 };
 class RmspropUpdateOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "learning_rate_val")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "learning_rate_val") {
       return (const void*)&learning_rate_val;
-    } else if (!strcmp(attr_name, "scale")) {
+    } else if (attr_name == "scale") {
       return (const void*)&scale;
-    } else if (!strcmp(attr_name, "l1")) {
+    } else if (attr_name == "l1") {
       return (const void*)&l1;
-    } else if (!strcmp(attr_name, "l2")) {
+    } else if (attr_name == "l2") {
       return (const void*)&l2;
-    } else if (!strcmp(attr_name, "centered")) {
+    } else if (attr_name == "centered") {
       return (const void*)&centered;
-    } else if (!strcmp(attr_name, "epsilon")) {
+    } else if (attr_name == "epsilon") {
       return (const void*)&epsilon;
-    } else if (!strcmp(attr_name, "decay_rate")) {
+    } else if (attr_name == "decay_rate") {
       return (const void*)&decay_rate;
-    } else if (!strcmp(attr_name, "weight_decay")) {
+    } else if (attr_name == "weight_decay") {
       return (const void*)&weight_decay;
     } else {
       return Error::RuntimeError() << "RmspropUpdate op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"learning_rate_val", "scale", "l1", "l2", "centered", "epsilon", "decay_rate", "weight_decay"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"learning_rate_val", "scale", "l1", "l2", "centered", "epsilon", "decay_rate", "weight_decay"};
     return attr_names;
   }
 
@@ -6303,17 +6303,17 @@ class RmspropUpdateOpInterpCtx : public OpInterpCtx {
 };
 class RollOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "shifts")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "shifts") {
       return (const void*)&shifts;
-    } else if (!strcmp(attr_name, "dims")) {
+    } else if (attr_name == "dims") {
       return (const void*)&dims;
     } else {
       return Error::RuntimeError() << "Roll op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"shifts", "dims"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"shifts", "dims"};
     return attr_names;
   }
 
@@ -6323,51 +6323,51 @@ class RollOpInterpCtx : public OpInterpCtx {
 };
 class RoundOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Round op has no attribute named " << attr_name;
   }
 
 };
 class RoundGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "RoundGrad op has no attribute named " << attr_name;
   }
 
 };
 class RsqrtOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Rsqrt op has no attribute named " << attr_name;
   }
 
 };
 class RsqrtGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "RsqrtGrad op has no attribute named " << attr_name;
   }
 
 };
 class SamePaddingOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "dilation_rate")) {
+    } else if (attr_name == "dilation_rate") {
       return (const void*)&dilation_rate;
     } else {
       return Error::RuntimeError() << "SamePadding op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "strides", "dilation_rate"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "strides", "dilation_rate"};
     return attr_names;
   }
 
@@ -6380,23 +6380,23 @@ class SamePaddingOpInterpCtx : public OpInterpCtx {
 };
 class SamePaddingGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "dilation_rate")) {
+    } else if (attr_name == "dilation_rate") {
       return (const void*)&dilation_rate;
     } else {
       return Error::RuntimeError() << "SamePaddingGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "data_format", "kernel_size", "strides", "dilation_rate"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "data_format", "kernel_size", "strides", "dilation_rate"};
     return attr_names;
   }
 
@@ -6409,21 +6409,21 @@ class SamePaddingGradOpInterpCtx : public OpInterpCtx {
 };
 class ScalarAddOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "has_int_operand")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "has_int_operand") {
       return (const void*)&has_int_operand;
-    } else if (!strcmp(attr_name, "has_float_operand")) {
+    } else if (attr_name == "has_float_operand") {
       return (const void*)&has_float_operand;
-    } else if (!strcmp(attr_name, "int_operand")) {
+    } else if (attr_name == "int_operand") {
       return (const void*)&int_operand;
-    } else if (!strcmp(attr_name, "float_operand")) {
+    } else if (attr_name == "float_operand") {
       return (const void*)&float_operand;
     } else {
       return Error::RuntimeError() << "ScalarAdd op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
 
@@ -6435,35 +6435,35 @@ class ScalarAddOpInterpCtx : public OpInterpCtx {
 };
 class ScalarAddByTensorOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ScalarAddByTensor op has no attribute named " << attr_name;
   }
 
 };
 class ScalarDivByTensorOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ScalarDivByTensor op has no attribute named " << attr_name;
   }
 
 };
 class ScalarFloordivOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "has_int_operand")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "has_int_operand") {
       return (const void*)&has_int_operand;
-    } else if (!strcmp(attr_name, "has_float_operand")) {
+    } else if (attr_name == "has_float_operand") {
       return (const void*)&has_float_operand;
-    } else if (!strcmp(attr_name, "int_operand")) {
+    } else if (attr_name == "int_operand") {
       return (const void*)&int_operand;
-    } else if (!strcmp(attr_name, "float_operand")) {
+    } else if (attr_name == "float_operand") {
       return (const void*)&float_operand;
     } else {
       return Error::RuntimeError() << "ScalarFloordiv op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
 
@@ -6475,21 +6475,21 @@ class ScalarFloordivOpInterpCtx : public OpInterpCtx {
 };
 class ScalarFmodOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "has_int_operand")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "has_int_operand") {
       return (const void*)&has_int_operand;
-    } else if (!strcmp(attr_name, "has_float_operand")) {
+    } else if (attr_name == "has_float_operand") {
       return (const void*)&has_float_operand;
-    } else if (!strcmp(attr_name, "int_operand")) {
+    } else if (attr_name == "int_operand") {
       return (const void*)&int_operand;
-    } else if (!strcmp(attr_name, "float_operand")) {
+    } else if (attr_name == "float_operand") {
       return (const void*)&float_operand;
     } else {
       return Error::RuntimeError() << "ScalarFmod op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
 
@@ -6501,21 +6501,21 @@ class ScalarFmodOpInterpCtx : public OpInterpCtx {
 };
 class ScalarLogicalAndOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "has_int_operand")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "has_int_operand") {
       return (const void*)&has_int_operand;
-    } else if (!strcmp(attr_name, "has_float_operand")) {
+    } else if (attr_name == "has_float_operand") {
       return (const void*)&has_float_operand;
-    } else if (!strcmp(attr_name, "int_operand")) {
+    } else if (attr_name == "int_operand") {
       return (const void*)&int_operand;
-    } else if (!strcmp(attr_name, "float_operand")) {
+    } else if (attr_name == "float_operand") {
       return (const void*)&float_operand;
     } else {
       return Error::RuntimeError() << "ScalarLogicalAnd op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
 
@@ -6527,21 +6527,21 @@ class ScalarLogicalAndOpInterpCtx : public OpInterpCtx {
 };
 class ScalarLogicalEqualOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "has_int_operand")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "has_int_operand") {
       return (const void*)&has_int_operand;
-    } else if (!strcmp(attr_name, "has_float_operand")) {
+    } else if (attr_name == "has_float_operand") {
       return (const void*)&has_float_operand;
-    } else if (!strcmp(attr_name, "int_operand")) {
+    } else if (attr_name == "int_operand") {
       return (const void*)&int_operand;
-    } else if (!strcmp(attr_name, "float_operand")) {
+    } else if (attr_name == "float_operand") {
       return (const void*)&float_operand;
     } else {
       return Error::RuntimeError() << "ScalarLogicalEqual op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
 
@@ -6553,21 +6553,21 @@ class ScalarLogicalEqualOpInterpCtx : public OpInterpCtx {
 };
 class ScalarLogicalGreaterOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "has_int_operand")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "has_int_operand") {
       return (const void*)&has_int_operand;
-    } else if (!strcmp(attr_name, "has_float_operand")) {
+    } else if (attr_name == "has_float_operand") {
       return (const void*)&has_float_operand;
-    } else if (!strcmp(attr_name, "int_operand")) {
+    } else if (attr_name == "int_operand") {
       return (const void*)&int_operand;
-    } else if (!strcmp(attr_name, "float_operand")) {
+    } else if (attr_name == "float_operand") {
       return (const void*)&float_operand;
     } else {
       return Error::RuntimeError() << "ScalarLogicalGreater op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
 
@@ -6579,21 +6579,21 @@ class ScalarLogicalGreaterOpInterpCtx : public OpInterpCtx {
 };
 class ScalarLogicalGreaterEqualOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "has_int_operand")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "has_int_operand") {
       return (const void*)&has_int_operand;
-    } else if (!strcmp(attr_name, "has_float_operand")) {
+    } else if (attr_name == "has_float_operand") {
       return (const void*)&has_float_operand;
-    } else if (!strcmp(attr_name, "int_operand")) {
+    } else if (attr_name == "int_operand") {
       return (const void*)&int_operand;
-    } else if (!strcmp(attr_name, "float_operand")) {
+    } else if (attr_name == "float_operand") {
       return (const void*)&float_operand;
     } else {
       return Error::RuntimeError() << "ScalarLogicalGreaterEqual op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
 
@@ -6605,21 +6605,21 @@ class ScalarLogicalGreaterEqualOpInterpCtx : public OpInterpCtx {
 };
 class ScalarLogicalLessOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "has_int_operand")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "has_int_operand") {
       return (const void*)&has_int_operand;
-    } else if (!strcmp(attr_name, "has_float_operand")) {
+    } else if (attr_name == "has_float_operand") {
       return (const void*)&has_float_operand;
-    } else if (!strcmp(attr_name, "int_operand")) {
+    } else if (attr_name == "int_operand") {
       return (const void*)&int_operand;
-    } else if (!strcmp(attr_name, "float_operand")) {
+    } else if (attr_name == "float_operand") {
       return (const void*)&float_operand;
     } else {
       return Error::RuntimeError() << "ScalarLogicalLess op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
 
@@ -6631,21 +6631,21 @@ class ScalarLogicalLessOpInterpCtx : public OpInterpCtx {
 };
 class ScalarLogicalLessEqualOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "has_int_operand")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "has_int_operand") {
       return (const void*)&has_int_operand;
-    } else if (!strcmp(attr_name, "has_float_operand")) {
+    } else if (attr_name == "has_float_operand") {
       return (const void*)&has_float_operand;
-    } else if (!strcmp(attr_name, "int_operand")) {
+    } else if (attr_name == "int_operand") {
       return (const void*)&int_operand;
-    } else if (!strcmp(attr_name, "float_operand")) {
+    } else if (attr_name == "float_operand") {
       return (const void*)&float_operand;
     } else {
       return Error::RuntimeError() << "ScalarLogicalLessEqual op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
 
@@ -6657,21 +6657,21 @@ class ScalarLogicalLessEqualOpInterpCtx : public OpInterpCtx {
 };
 class ScalarLogicalNotEqualOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "has_int_operand")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "has_int_operand") {
       return (const void*)&has_int_operand;
-    } else if (!strcmp(attr_name, "has_float_operand")) {
+    } else if (attr_name == "has_float_operand") {
       return (const void*)&has_float_operand;
-    } else if (!strcmp(attr_name, "int_operand")) {
+    } else if (attr_name == "int_operand") {
       return (const void*)&int_operand;
-    } else if (!strcmp(attr_name, "float_operand")) {
+    } else if (attr_name == "float_operand") {
       return (const void*)&float_operand;
     } else {
       return Error::RuntimeError() << "ScalarLogicalNotEqual op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
 
@@ -6683,21 +6683,21 @@ class ScalarLogicalNotEqualOpInterpCtx : public OpInterpCtx {
 };
 class ScalarLogicalOrOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "has_int_operand")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "has_int_operand") {
       return (const void*)&has_int_operand;
-    } else if (!strcmp(attr_name, "has_float_operand")) {
+    } else if (attr_name == "has_float_operand") {
       return (const void*)&has_float_operand;
-    } else if (!strcmp(attr_name, "int_operand")) {
+    } else if (attr_name == "int_operand") {
       return (const void*)&int_operand;
-    } else if (!strcmp(attr_name, "float_operand")) {
+    } else if (attr_name == "float_operand") {
       return (const void*)&float_operand;
     } else {
       return Error::RuntimeError() << "ScalarLogicalOr op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
 
@@ -6709,21 +6709,21 @@ class ScalarLogicalOrOpInterpCtx : public OpInterpCtx {
 };
 class ScalarLogicalXorOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "has_int_operand")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "has_int_operand") {
       return (const void*)&has_int_operand;
-    } else if (!strcmp(attr_name, "has_float_operand")) {
+    } else if (attr_name == "has_float_operand") {
       return (const void*)&has_float_operand;
-    } else if (!strcmp(attr_name, "int_operand")) {
+    } else if (attr_name == "int_operand") {
       return (const void*)&int_operand;
-    } else if (!strcmp(attr_name, "float_operand")) {
+    } else if (attr_name == "float_operand") {
       return (const void*)&float_operand;
     } else {
       return Error::RuntimeError() << "ScalarLogicalXor op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
 
@@ -6735,21 +6735,21 @@ class ScalarLogicalXorOpInterpCtx : public OpInterpCtx {
 };
 class ScalarMulOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "has_int_operand")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "has_int_operand") {
       return (const void*)&has_int_operand;
-    } else if (!strcmp(attr_name, "has_float_operand")) {
+    } else if (attr_name == "has_float_operand") {
       return (const void*)&has_float_operand;
-    } else if (!strcmp(attr_name, "int_operand")) {
+    } else if (attr_name == "int_operand") {
       return (const void*)&int_operand;
-    } else if (!strcmp(attr_name, "float_operand")) {
+    } else if (attr_name == "float_operand") {
       return (const void*)&float_operand;
     } else {
       return Error::RuntimeError() << "ScalarMul op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
 
@@ -6761,28 +6761,28 @@ class ScalarMulOpInterpCtx : public OpInterpCtx {
 };
 class ScalarMulByTensorOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ScalarMulByTensor op has no attribute named " << attr_name;
   }
 
 };
 class ScalarPowOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "has_int_operand")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "has_int_operand") {
       return (const void*)&has_int_operand;
-    } else if (!strcmp(attr_name, "has_float_operand")) {
+    } else if (attr_name == "has_float_operand") {
       return (const void*)&has_float_operand;
-    } else if (!strcmp(attr_name, "int_operand")) {
+    } else if (attr_name == "int_operand") {
       return (const void*)&int_operand;
-    } else if (!strcmp(attr_name, "float_operand")) {
+    } else if (attr_name == "float_operand") {
       return (const void*)&float_operand;
     } else {
       return Error::RuntimeError() << "ScalarPow op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
 
@@ -6794,21 +6794,21 @@ class ScalarPowOpInterpCtx : public OpInterpCtx {
 };
 class ScalarPowGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "has_int_operand")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "has_int_operand") {
       return (const void*)&has_int_operand;
-    } else if (!strcmp(attr_name, "has_float_operand")) {
+    } else if (attr_name == "has_float_operand") {
       return (const void*)&has_float_operand;
-    } else if (!strcmp(attr_name, "int_operand")) {
+    } else if (attr_name == "int_operand") {
       return (const void*)&int_operand;
-    } else if (!strcmp(attr_name, "float_operand")) {
+    } else if (attr_name == "float_operand") {
       return (const void*)&float_operand;
     } else {
       return Error::RuntimeError() << "ScalarPowGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
 
@@ -6820,22 +6820,22 @@ class ScalarPowGradOpInterpCtx : public OpInterpCtx {
 };
 class ScalarSubByTensorOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ScalarSubByTensor op has no attribute named " << attr_name;
   }
 
 };
 class ScatterNdOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "shape")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "shape") {
       return (const void*)&shape;
     } else {
       return Error::RuntimeError() << "ScatterNd op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"shape"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"shape"};
     return attr_names;
   }
 
@@ -6844,36 +6844,36 @@ class ScatterNdOpInterpCtx : public OpInterpCtx {
 };
 class ScatterNdLikeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ScatterNdLike op has no attribute named " << attr_name;
   }
 
 };
 class SeluOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Selu op has no attribute named " << attr_name;
   }
 
 };
 class SeluGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "SeluGrad op has no attribute named " << attr_name;
   }
 
 };
 class SendOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "dst_process_id")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "dst_process_id") {
       return (const void*)&dst_process_id;
     } else {
       return Error::RuntimeError() << "Send op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"dst_process_id"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"dst_process_id"};
     return attr_names;
   }
 
@@ -6882,23 +6882,23 @@ class SendOpInterpCtx : public OpInterpCtx {
 };
 class SgdUpdateOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "learning_rate_val")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "learning_rate_val") {
       return (const void*)&learning_rate_val;
-    } else if (!strcmp(attr_name, "scale")) {
+    } else if (attr_name == "scale") {
       return (const void*)&scale;
-    } else if (!strcmp(attr_name, "l1")) {
+    } else if (attr_name == "l1") {
       return (const void*)&l1;
-    } else if (!strcmp(attr_name, "l2")) {
+    } else if (attr_name == "l2") {
       return (const void*)&l2;
-    } else if (!strcmp(attr_name, "weight_decay")) {
+    } else if (attr_name == "weight_decay") {
       return (const void*)&weight_decay;
     } else {
       return Error::RuntimeError() << "SgdUpdate op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"learning_rate_val", "scale", "l1", "l2", "weight_decay"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"learning_rate_val", "scale", "l1", "l2", "weight_decay"};
     return attr_names;
   }
 
@@ -6911,117 +6911,117 @@ class SgdUpdateOpInterpCtx : public OpInterpCtx {
 };
 class SigmoidOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Sigmoid op has no attribute named " << attr_name;
   }
 
 };
 class SigmoidCrossEntropyOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "SigmoidCrossEntropy op has no attribute named " << attr_name;
   }
 
 };
 class SigmoidCrossEntropyGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "SigmoidCrossEntropyGrad op has no attribute named " << attr_name;
   }
 
 };
 class SigmoidGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "SigmoidGrad op has no attribute named " << attr_name;
   }
 
 };
 class SigmoidV2OpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "SigmoidV2 op has no attribute named " << attr_name;
   }
 
 };
 class SigmoidV2GradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "SigmoidV2Grad op has no attribute named " << attr_name;
   }
 
 };
 class SignOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Sign op has no attribute named " << attr_name;
   }
 
 };
 class SignGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "SignGrad op has no attribute named " << attr_name;
   }
 
 };
 class SiluOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Silu op has no attribute named " << attr_name;
   }
 
 };
 class SiluGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "SiluGrad op has no attribute named " << attr_name;
   }
 
 };
 class SinOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Sin op has no attribute named " << attr_name;
   }
 
 };
 class SinGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "SinGrad op has no attribute named " << attr_name;
   }
 
 };
 class SinhOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Sinh op has no attribute named " << attr_name;
   }
 
 };
 class SinhGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "SinhGrad op has no attribute named " << attr_name;
   }
 
 };
 class SliceOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "start")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "start") {
       return (const void*)&start;
-    } else if (!strcmp(attr_name, "stop")) {
+    } else if (attr_name == "stop") {
       return (const void*)&stop;
-    } else if (!strcmp(attr_name, "step")) {
+    } else if (attr_name == "step") {
       return (const void*)&step;
     } else {
       return Error::RuntimeError() << "Slice op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"start", "stop", "step"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"start", "stop", "step"};
     return attr_names;
   }
 
@@ -7032,19 +7032,19 @@ class SliceOpInterpCtx : public OpInterpCtx {
 };
 class SliceGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "start")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "start") {
       return (const void*)&start;
-    } else if (!strcmp(attr_name, "stop")) {
+    } else if (attr_name == "stop") {
       return (const void*)&stop;
-    } else if (!strcmp(attr_name, "step")) {
+    } else if (attr_name == "step") {
       return (const void*)&step;
     } else {
       return Error::RuntimeError() << "SliceGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"start", "stop", "step"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"start", "stop", "step"};
     return attr_names;
   }
 
@@ -7055,19 +7055,19 @@ class SliceGradOpInterpCtx : public OpInterpCtx {
 };
 class SliceUpdateOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "start")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "start") {
       return (const void*)&start;
-    } else if (!strcmp(attr_name, "stop")) {
+    } else if (attr_name == "stop") {
       return (const void*)&stop;
-    } else if (!strcmp(attr_name, "step")) {
+    } else if (attr_name == "step") {
       return (const void*)&step;
     } else {
       return Error::RuntimeError() << "SliceUpdate op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"start", "stop", "step"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"start", "stop", "step"};
     return attr_names;
   }
 
@@ -7078,17 +7078,17 @@ class SliceUpdateOpInterpCtx : public OpInterpCtx {
 };
 class SmoothL1LossOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "reduction")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "reduction") {
       return (const void*)&reduction;
-    } else if (!strcmp(attr_name, "beta")) {
+    } else if (attr_name == "beta") {
       return (const void*)&beta;
     } else {
       return Error::RuntimeError() << "SmoothL1Loss op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"reduction", "beta"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"reduction", "beta"};
     return attr_names;
   }
 
@@ -7098,17 +7098,17 @@ class SmoothL1LossOpInterpCtx : public OpInterpCtx {
 };
 class SmoothL1LossGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "reduction")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "reduction") {
       return (const void*)&reduction;
-    } else if (!strcmp(attr_name, "beta")) {
+    } else if (attr_name == "beta") {
       return (const void*)&beta;
     } else {
       return Error::RuntimeError() << "SmoothL1LossGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"reduction", "beta"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"reduction", "beta"};
     return attr_names;
   }
 
@@ -7118,71 +7118,71 @@ class SmoothL1LossGradOpInterpCtx : public OpInterpCtx {
 };
 class SoftmaxOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Softmax op has no attribute named " << attr_name;
   }
 
 };
 class SoftmaxCrossEntropyOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "SoftmaxCrossEntropy op has no attribute named " << attr_name;
   }
 
 };
 class SoftmaxCrossEntropyGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "SoftmaxCrossEntropyGrad op has no attribute named " << attr_name;
   }
 
 };
 class SoftmaxGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "SoftmaxGrad op has no attribute named " << attr_name;
   }
 
 };
 class SoftplusOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Softplus op has no attribute named " << attr_name;
   }
 
 };
 class SoftplusGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "SoftplusGrad op has no attribute named " << attr_name;
   }
 
 };
 class SoftsignOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Softsign op has no attribute named " << attr_name;
   }
 
 };
 class SoftsignGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "SoftsignGrad op has no attribute named " << attr_name;
   }
 
 };
 class SortOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "direction")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "direction") {
       return (const void*)&direction;
     } else {
       return Error::RuntimeError() << "Sort op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"direction"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"direction"};
     return attr_names;
   }
 
@@ -7191,15 +7191,15 @@ class SortOpInterpCtx : public OpInterpCtx {
 };
 class SparseCrossEntropyOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "depth")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "depth") {
       return (const void*)&depth;
     } else {
       return Error::RuntimeError() << "SparseCrossEntropy op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"depth"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"depth"};
     return attr_names;
   }
 
@@ -7208,15 +7208,15 @@ class SparseCrossEntropyOpInterpCtx : public OpInterpCtx {
 };
 class SparseCrossEntropyGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "depth")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "depth") {
       return (const void*)&depth;
     } else {
       return Error::RuntimeError() << "SparseCrossEntropyGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"depth"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"depth"};
     return attr_names;
   }
 
@@ -7225,15 +7225,15 @@ class SparseCrossEntropyGradOpInterpCtx : public OpInterpCtx {
 };
 class SparseCrossEntropyMsOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "depth")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "depth") {
       return (const void*)&depth;
     } else {
       return Error::RuntimeError() << "SparseCrossEntropyMs op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"depth"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"depth"};
     return attr_names;
   }
 
@@ -7242,15 +7242,15 @@ class SparseCrossEntropyMsOpInterpCtx : public OpInterpCtx {
 };
 class SparseCrossEntropyMsGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "depth")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "depth") {
       return (const void*)&depth;
     } else {
       return Error::RuntimeError() << "SparseCrossEntropyMsGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"depth"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"depth"};
     return attr_names;
   }
 
@@ -7259,15 +7259,15 @@ class SparseCrossEntropyMsGradOpInterpCtx : public OpInterpCtx {
 };
 class SparseSoftmaxCrossEntropyOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "depth")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "depth") {
       return (const void*)&depth;
     } else {
       return Error::RuntimeError() << "SparseSoftmaxCrossEntropy op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"depth"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"depth"};
     return attr_names;
   }
 
@@ -7276,15 +7276,15 @@ class SparseSoftmaxCrossEntropyOpInterpCtx : public OpInterpCtx {
 };
 class SparseSoftmaxCrossEntropyGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "depth")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "depth") {
       return (const void*)&depth;
     } else {
       return Error::RuntimeError() << "SparseSoftmaxCrossEntropyGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"depth"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"depth"};
     return attr_names;
   }
 
@@ -7293,15 +7293,15 @@ class SparseSoftmaxCrossEntropyGradOpInterpCtx : public OpInterpCtx {
 };
 class SparseSoftmaxCrossEntropyMsOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "depth")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "depth") {
       return (const void*)&depth;
     } else {
       return Error::RuntimeError() << "SparseSoftmaxCrossEntropyMs op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"depth"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"depth"};
     return attr_names;
   }
 
@@ -7310,15 +7310,15 @@ class SparseSoftmaxCrossEntropyMsOpInterpCtx : public OpInterpCtx {
 };
 class SparseSoftmaxCrossEntropyMsGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "depth")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "depth") {
       return (const void*)&depth;
     } else {
       return Error::RuntimeError() << "SparseSoftmaxCrossEntropyMsGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"depth"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"depth"};
     return attr_names;
   }
 
@@ -7327,15 +7327,15 @@ class SparseSoftmaxCrossEntropyMsGradOpInterpCtx : public OpInterpCtx {
 };
 class SplitLikeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
     } else {
       return Error::RuntimeError() << "SplitLike op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
 
@@ -7344,50 +7344,50 @@ class SplitLikeOpInterpCtx : public OpInterpCtx {
 };
 class SqrtOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Sqrt op has no attribute named " << attr_name;
   }
 
 };
 class SqrtGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "SqrtGrad op has no attribute named " << attr_name;
   }
 
 };
 class SquareOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Square op has no attribute named " << attr_name;
   }
 
 };
 class SquareGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "SquareGrad op has no attribute named " << attr_name;
   }
 
 };
 class SquareSumOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "SquareSum op has no attribute named " << attr_name;
   }
 
 };
 class SqueezeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axes")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axes") {
       return (const void*)&axes;
     } else {
       return Error::RuntimeError() << "Squeeze op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axes"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axes"};
     return attr_names;
   }
 
@@ -7396,15 +7396,15 @@ class SqueezeOpInterpCtx : public OpInterpCtx {
 };
 class SspVariableProxyOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "buffer_size")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "buffer_size") {
       return (const void*)&buffer_size;
     } else {
       return Error::RuntimeError() << "SspVariableProxy op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"buffer_size"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"buffer_size"};
     return attr_names;
   }
 
@@ -7413,75 +7413,75 @@ class SspVariableProxyOpInterpCtx : public OpInterpCtx {
 };
 class SummaryWriteHistogramOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "SummaryWriteHistogram op has no attribute named " << attr_name;
   }
 
 };
 class SummaryWriteImageOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "SummaryWriteImage op has no attribute named " << attr_name;
   }
 
 };
 class SummaryWritePbOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "SummaryWritePb op has no attribute named " << attr_name;
   }
 
 };
 class SummaryWriteScalarOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "SummaryWriteScalar op has no attribute named " << attr_name;
   }
 
 };
 class TanOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Tan op has no attribute named " << attr_name;
   }
 
 };
 class TanGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "TanGrad op has no attribute named " << attr_name;
   }
 
 };
 class TanhOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Tanh op has no attribute named " << attr_name;
   }
 
 };
 class TanhGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "TanhGrad op has no attribute named " << attr_name;
   }
 
 };
 class TensorBufferToListOfTensorsOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "out_shape")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "out_shape") {
       return (const void*)&out_shape;
-    } else if (!strcmp(attr_name, "out_dtype")) {
+    } else if (attr_name == "out_dtype") {
       return (const void*)&out_dtype;
-    } else if (!strcmp(attr_name, "dynamic_out")) {
+    } else if (attr_name == "dynamic_out") {
       return (const void*)&dynamic_out;
     } else {
       return Error::RuntimeError() << "TensorBufferToListOfTensors op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"out_shape", "out_dtype", "dynamic_out"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"out_shape", "out_dtype", "dynamic_out"};
     return attr_names;
   }
 
@@ -7492,19 +7492,19 @@ class TensorBufferToListOfTensorsOpInterpCtx : public OpInterpCtx {
 };
 class TensorBufferToListOfTensorsV2OpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "out_shapes")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "out_shapes") {
       return (const void*)&out_shapes;
-    } else if (!strcmp(attr_name, "out_dtypes")) {
+    } else if (attr_name == "out_dtypes") {
       return (const void*)&out_dtypes;
-    } else if (!strcmp(attr_name, "dynamic_out")) {
+    } else if (attr_name == "dynamic_out") {
       return (const void*)&dynamic_out;
     } else {
       return Error::RuntimeError() << "TensorBufferToListOfTensorsV2 op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"out_shapes", "out_dtypes", "dynamic_out"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"out_shapes", "out_dtypes", "dynamic_out"};
     return attr_names;
   }
 
@@ -7515,17 +7515,17 @@ class TensorBufferToListOfTensorsV2OpInterpCtx : public OpInterpCtx {
 };
 class TensorBufferToTensorOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "instance_shape")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "instance_shape") {
       return (const void*)&instance_shape;
-    } else if (!strcmp(attr_name, "dtype")) {
+    } else if (attr_name == "dtype") {
       return (const void*)&dtype;
     } else {
       return Error::RuntimeError() << "TensorBufferToTensor op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"instance_shape", "dtype"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"instance_shape", "dtype"};
     return attr_names;
   }
 
@@ -7535,29 +7535,29 @@ class TensorBufferToTensorOpInterpCtx : public OpInterpCtx {
 };
 class TensorScatterNdAddOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "TensorScatterNdAdd op has no attribute named " << attr_name;
   }
 
 };
 class TensorScatterNdUpdateOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "TensorScatterNdUpdate op has no attribute named " << attr_name;
   }
 
 };
 class TensorToTensorBufferOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "instance_dims")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "instance_dims") {
       return (const void*)&instance_dims;
     } else {
       return Error::RuntimeError() << "TensorToTensorBuffer op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"instance_dims"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"instance_dims"};
     return attr_names;
   }
 
@@ -7566,17 +7566,17 @@ class TensorToTensorBufferOpInterpCtx : public OpInterpCtx {
 };
 class TestUserOpAttrAutoTypeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "int1")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "int1") {
       return (const void*)&int1;
-    } else if (!strcmp(attr_name, "int2")) {
+    } else if (attr_name == "int2") {
       return (const void*)&int2;
     } else {
       return Error::RuntimeError() << "TestUserOpAttrAutoType op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"int1", "int2"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"int1", "int2"};
     return attr_names;
   }
 
@@ -7586,27 +7586,27 @@ class TestUserOpAttrAutoTypeOpInterpCtx : public OpInterpCtx {
 };
 class TfAvgPool1DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
+    } else if (attr_name == "padding_before") {
       return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
+    } else if (attr_name == "padding_after") {
       return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
+    } else if (attr_name == "pool_size") {
       return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
     } else {
       return Error::RuntimeError() << "TfAvgPool1D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
 
@@ -7621,27 +7621,27 @@ class TfAvgPool1DOpInterpCtx : public OpInterpCtx {
 };
 class TfAvgPool1DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
+    } else if (attr_name == "padding_before") {
       return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
+    } else if (attr_name == "padding_after") {
       return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
+    } else if (attr_name == "pool_size") {
       return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
     } else {
       return Error::RuntimeError() << "TfAvgPool1DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
 
@@ -7656,27 +7656,27 @@ class TfAvgPool1DGradOpInterpCtx : public OpInterpCtx {
 };
 class TfAvgPool2DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
+    } else if (attr_name == "padding_before") {
       return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
+    } else if (attr_name == "padding_after") {
       return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
+    } else if (attr_name == "pool_size") {
       return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
     } else {
       return Error::RuntimeError() << "TfAvgPool2D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
 
@@ -7691,27 +7691,27 @@ class TfAvgPool2DOpInterpCtx : public OpInterpCtx {
 };
 class TfAvgPool2DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
+    } else if (attr_name == "padding_before") {
       return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
+    } else if (attr_name == "padding_after") {
       return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
+    } else if (attr_name == "pool_size") {
       return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
     } else {
       return Error::RuntimeError() << "TfAvgPool2DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
 
@@ -7726,27 +7726,27 @@ class TfAvgPool2DGradOpInterpCtx : public OpInterpCtx {
 };
 class TfAvgPool3DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
+    } else if (attr_name == "padding_before") {
       return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
+    } else if (attr_name == "padding_after") {
       return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
+    } else if (attr_name == "pool_size") {
       return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
     } else {
       return Error::RuntimeError() << "TfAvgPool3D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
 
@@ -7761,27 +7761,27 @@ class TfAvgPool3DOpInterpCtx : public OpInterpCtx {
 };
 class TfAvgPool3DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
+    } else if (attr_name == "padding_before") {
       return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
+    } else if (attr_name == "padding_after") {
       return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
+    } else if (attr_name == "pool_size") {
       return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
     } else {
       return Error::RuntimeError() << "TfAvgPool3DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
 
@@ -7796,27 +7796,27 @@ class TfAvgPool3DGradOpInterpCtx : public OpInterpCtx {
 };
 class TfMaxPool1DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
+    } else if (attr_name == "padding_before") {
       return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
+    } else if (attr_name == "padding_after") {
       return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
+    } else if (attr_name == "pool_size") {
       return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
     } else {
       return Error::RuntimeError() << "TfMaxPool1D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
 
@@ -7831,27 +7831,27 @@ class TfMaxPool1DOpInterpCtx : public OpInterpCtx {
 };
 class TfMaxPool1DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
+    } else if (attr_name == "padding_before") {
       return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
+    } else if (attr_name == "padding_after") {
       return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
+    } else if (attr_name == "pool_size") {
       return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
     } else {
       return Error::RuntimeError() << "TfMaxPool1DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
 
@@ -7866,27 +7866,27 @@ class TfMaxPool1DGradOpInterpCtx : public OpInterpCtx {
 };
 class TfMaxPool2DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
+    } else if (attr_name == "padding_before") {
       return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
+    } else if (attr_name == "padding_after") {
       return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
+    } else if (attr_name == "pool_size") {
       return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
     } else {
       return Error::RuntimeError() << "TfMaxPool2D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
 
@@ -7901,27 +7901,27 @@ class TfMaxPool2DOpInterpCtx : public OpInterpCtx {
 };
 class TfMaxPool2DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
+    } else if (attr_name == "padding_before") {
       return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
+    } else if (attr_name == "padding_after") {
       return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
+    } else if (attr_name == "pool_size") {
       return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
     } else {
       return Error::RuntimeError() << "TfMaxPool2DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
 
@@ -7936,27 +7936,27 @@ class TfMaxPool2DGradOpInterpCtx : public OpInterpCtx {
 };
 class TfMaxPool3DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
+    } else if (attr_name == "padding_before") {
       return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
+    } else if (attr_name == "padding_after") {
       return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
+    } else if (attr_name == "pool_size") {
       return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
     } else {
       return Error::RuntimeError() << "TfMaxPool3D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
 
@@ -7971,27 +7971,27 @@ class TfMaxPool3DOpInterpCtx : public OpInterpCtx {
 };
 class TfMaxPool3DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "padding")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "padding_before")) {
+    } else if (attr_name == "padding_before") {
       return (const void*)&padding_before;
-    } else if (!strcmp(attr_name, "padding_after")) {
+    } else if (attr_name == "padding_after") {
       return (const void*)&padding_after;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "pool_size")) {
+    } else if (attr_name == "pool_size") {
       return (const void*)&pool_size;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "ceil_mode")) {
+    } else if (attr_name == "ceil_mode") {
       return (const void*)&ceil_mode;
     } else {
       return Error::RuntimeError() << "TfMaxPool3DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"padding", "padding_before", "padding_after", "data_format", "pool_size", "strides", "ceil_mode"};
     return attr_names;
   }
 
@@ -8006,31 +8006,31 @@ class TfMaxPool3DGradOpInterpCtx : public OpInterpCtx {
 };
 class TfPreluOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "TfPrelu op has no attribute named " << attr_name;
   }
 
 };
 class TfPreluGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "TfPreluGrad op has no attribute named " << attr_name;
   }
 
 };
 class TopKOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "k")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "k") {
       return (const void*)&k;
-    } else if (!strcmp(attr_name, "sorted")) {
+    } else if (attr_name == "sorted") {
       return (const void*)&sorted;
     } else {
       return Error::RuntimeError() << "TopK op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"k", "sorted"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"k", "sorted"};
     return attr_names;
   }
 
@@ -8040,15 +8040,15 @@ class TopKOpInterpCtx : public OpInterpCtx {
 };
 class TransposeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "perm")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "perm") {
       return (const void*)&perm;
     } else {
       return Error::RuntimeError() << "Transpose op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"perm"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"perm"};
     return attr_names;
   }
 
@@ -8057,21 +8057,21 @@ class TransposeOpInterpCtx : public OpInterpCtx {
 };
 class TrilOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "diagonal")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "diagonal") {
       return (const void*)&diagonal;
-    } else if (!strcmp(attr_name, "floating_fill_value")) {
+    } else if (attr_name == "floating_fill_value") {
       return (const void*)&floating_fill_value;
-    } else if (!strcmp(attr_name, "integer_fill_value")) {
+    } else if (attr_name == "integer_fill_value") {
       return (const void*)&integer_fill_value;
-    } else if (!strcmp(attr_name, "is_floating_fill_value")) {
+    } else if (attr_name == "is_floating_fill_value") {
       return (const void*)&is_floating_fill_value;
     } else {
       return Error::RuntimeError() << "Tril op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"diagonal", "floating_fill_value", "integer_fill_value", "is_floating_fill_value"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"diagonal", "floating_fill_value", "integer_fill_value", "is_floating_fill_value"};
     return attr_names;
   }
 
@@ -8083,15 +8083,15 @@ class TrilOpInterpCtx : public OpInterpCtx {
 };
 class TriuOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "diagonal")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "diagonal") {
       return (const void*)&diagonal;
     } else {
       return Error::RuntimeError() << "Triu op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"diagonal"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"diagonal"};
     return attr_names;
   }
 
@@ -8100,30 +8100,30 @@ class TriuOpInterpCtx : public OpInterpCtx {
 };
 class TupleIdentityOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "TupleIdentity op has no attribute named " << attr_name;
   }
 
 };
 class UnfoldOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "data_format")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "kernel_size")) {
+    } else if (attr_name == "kernel_size") {
       return (const void*)&kernel_size;
-    } else if (!strcmp(attr_name, "padding")) {
+    } else if (attr_name == "padding") {
       return (const void*)&padding;
-    } else if (!strcmp(attr_name, "strides")) {
+    } else if (attr_name == "strides") {
       return (const void*)&strides;
-    } else if (!strcmp(attr_name, "dilation_rate")) {
+    } else if (attr_name == "dilation_rate") {
       return (const void*)&dilation_rate;
     } else {
       return Error::RuntimeError() << "Unfold op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"data_format", "kernel_size", "padding", "strides", "dilation_rate"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"data_format", "kernel_size", "padding", "strides", "dilation_rate"};
     return attr_names;
   }
 
@@ -8136,19 +8136,19 @@ class UnfoldOpInterpCtx : public OpInterpCtx {
 };
 class UnfoldTensorOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "dimension")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "dimension") {
       return (const void*)&dimension;
-    } else if (!strcmp(attr_name, "size")) {
+    } else if (attr_name == "size") {
       return (const void*)&size;
-    } else if (!strcmp(attr_name, "step")) {
+    } else if (attr_name == "step") {
       return (const void*)&step;
     } else {
       return Error::RuntimeError() << "UnfoldTensor op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"dimension", "size", "step"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"dimension", "size", "step"};
     return attr_names;
   }
 
@@ -8159,19 +8159,19 @@ class UnfoldTensorOpInterpCtx : public OpInterpCtx {
 };
 class UnfoldTensorGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "dimension")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "dimension") {
       return (const void*)&dimension;
-    } else if (!strcmp(attr_name, "size")) {
+    } else if (attr_name == "size") {
       return (const void*)&size;
-    } else if (!strcmp(attr_name, "step")) {
+    } else if (attr_name == "step") {
       return (const void*)&step;
     } else {
       return Error::RuntimeError() << "UnfoldTensorGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"dimension", "size", "step"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"dimension", "size", "step"};
     return attr_names;
   }
 
@@ -8182,25 +8182,25 @@ class UnfoldTensorGradOpInterpCtx : public OpInterpCtx {
 };
 class UniformOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "from")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "from") {
       return (const void*)&from;
-    } else if (!strcmp(attr_name, "to")) {
+    } else if (attr_name == "to") {
       return (const void*)&to;
-    } else if (!strcmp(attr_name, "seed")) {
+    } else if (attr_name == "seed") {
       return (const void*)&seed;
-    } else if (!strcmp(attr_name, "dtype")) {
+    } else if (attr_name == "dtype") {
       return (const void*)&dtype;
-    } else if (!strcmp(attr_name, "shape")) {
+    } else if (attr_name == "shape") {
       return (const void*)&shape;
-    } else if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (attr_name == "nd_sbp") {
       return (const void*)&nd_sbp;
     } else {
       return Error::RuntimeError() << "Uniform op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"from", "to", "seed", "dtype", "shape", "nd_sbp"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"from", "to", "seed", "dtype", "shape", "nd_sbp"};
     return attr_names;
   }
 
@@ -8214,25 +8214,25 @@ class UniformOpInterpCtx : public OpInterpCtx {
 };
 class UniformIntOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "from")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "from") {
       return (const void*)&from;
-    } else if (!strcmp(attr_name, "to")) {
+    } else if (attr_name == "to") {
       return (const void*)&to;
-    } else if (!strcmp(attr_name, "seed")) {
+    } else if (attr_name == "seed") {
       return (const void*)&seed;
-    } else if (!strcmp(attr_name, "dtype")) {
+    } else if (attr_name == "dtype") {
       return (const void*)&dtype;
-    } else if (!strcmp(attr_name, "shape")) {
+    } else if (attr_name == "shape") {
       return (const void*)&shape;
-    } else if (!strcmp(attr_name, "nd_sbp")) {
+    } else if (attr_name == "nd_sbp") {
       return (const void*)&nd_sbp;
     } else {
       return Error::RuntimeError() << "UniformInt op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"from", "to", "seed", "dtype", "shape", "nd_sbp"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"from", "to", "seed", "dtype", "shape", "nd_sbp"};
     return attr_names;
   }
 
@@ -8246,15 +8246,15 @@ class UniformIntOpInterpCtx : public OpInterpCtx {
 };
 class UniqueWithCountsOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "out_idx")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "out_idx") {
       return (const void*)&out_idx;
     } else {
       return Error::RuntimeError() << "UniqueWithCounts op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"out_idx"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"out_idx"};
     return attr_names;
   }
 
@@ -8263,15 +8263,15 @@ class UniqueWithCountsOpInterpCtx : public OpInterpCtx {
 };
 class UnpackOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "unpack_num")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "unpack_num") {
       return (const void*)&unpack_num;
     } else {
       return Error::RuntimeError() << "Unpack op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"unpack_num"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"unpack_num"};
     return attr_names;
   }
 
@@ -8280,15 +8280,15 @@ class UnpackOpInterpCtx : public OpInterpCtx {
 };
 class UnsortedBatchSegmentSumOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "num_segments")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "num_segments") {
       return (const void*)&num_segments;
     } else {
       return Error::RuntimeError() << "UnsortedBatchSegmentSum op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"num_segments"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"num_segments"};
     return attr_names;
   }
 
@@ -8297,17 +8297,17 @@ class UnsortedBatchSegmentSumOpInterpCtx : public OpInterpCtx {
 };
 class UnsortedSegmentSumOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
-    } else if (!strcmp(attr_name, "num_segments")) {
+    } else if (attr_name == "num_segments") {
       return (const void*)&num_segments;
     } else {
       return Error::RuntimeError() << "UnsortedSegmentSum op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis", "num_segments"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis", "num_segments"};
     return attr_names;
   }
 
@@ -8317,15 +8317,15 @@ class UnsortedSegmentSumOpInterpCtx : public OpInterpCtx {
 };
 class UnsortedSegmentSumLikeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "axis")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "axis") {
       return (const void*)&axis;
     } else {
       return Error::RuntimeError() << "UnsortedSegmentSumLike op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"axis"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"axis"};
     return attr_names;
   }
 
@@ -8334,23 +8334,23 @@ class UnsortedSegmentSumLikeOpInterpCtx : public OpInterpCtx {
 };
 class UpsampleOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "height_scale")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "height_scale") {
       return (const void*)&height_scale;
-    } else if (!strcmp(attr_name, "width_scale")) {
+    } else if (attr_name == "width_scale") {
       return (const void*)&width_scale;
-    } else if (!strcmp(attr_name, "align_corners")) {
+    } else if (attr_name == "align_corners") {
       return (const void*)&align_corners;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "interpolation")) {
+    } else if (attr_name == "interpolation") {
       return (const void*)&interpolation;
     } else {
       return Error::RuntimeError() << "Upsample op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"height_scale", "width_scale", "align_corners", "data_format", "interpolation"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"height_scale", "width_scale", "align_corners", "data_format", "interpolation"};
     return attr_names;
   }
 
@@ -8363,21 +8363,21 @@ class UpsampleOpInterpCtx : public OpInterpCtx {
 };
 class UpsampleBicubic2DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "height_scale")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "height_scale") {
       return (const void*)&height_scale;
-    } else if (!strcmp(attr_name, "width_scale")) {
+    } else if (attr_name == "width_scale") {
       return (const void*)&width_scale;
-    } else if (!strcmp(attr_name, "align_corners")) {
+    } else if (attr_name == "align_corners") {
       return (const void*)&align_corners;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
     } else {
       return Error::RuntimeError() << "UpsampleBicubic2D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"height_scale", "width_scale", "align_corners", "data_format"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"height_scale", "width_scale", "align_corners", "data_format"};
     return attr_names;
   }
 
@@ -8389,21 +8389,21 @@ class UpsampleBicubic2DOpInterpCtx : public OpInterpCtx {
 };
 class UpsampleBicubic2DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "height_scale")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "height_scale") {
       return (const void*)&height_scale;
-    } else if (!strcmp(attr_name, "width_scale")) {
+    } else if (attr_name == "width_scale") {
       return (const void*)&width_scale;
-    } else if (!strcmp(attr_name, "align_corners")) {
+    } else if (attr_name == "align_corners") {
       return (const void*)&align_corners;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
     } else {
       return Error::RuntimeError() << "UpsampleBicubic2DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"height_scale", "width_scale", "align_corners", "data_format"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"height_scale", "width_scale", "align_corners", "data_format"};
     return attr_names;
   }
 
@@ -8415,21 +8415,21 @@ class UpsampleBicubic2DGradOpInterpCtx : public OpInterpCtx {
 };
 class UpsampleBilinear2DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "height_scale")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "height_scale") {
       return (const void*)&height_scale;
-    } else if (!strcmp(attr_name, "width_scale")) {
+    } else if (attr_name == "width_scale") {
       return (const void*)&width_scale;
-    } else if (!strcmp(attr_name, "align_corners")) {
+    } else if (attr_name == "align_corners") {
       return (const void*)&align_corners;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
     } else {
       return Error::RuntimeError() << "UpsampleBilinear2D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"height_scale", "width_scale", "align_corners", "data_format"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"height_scale", "width_scale", "align_corners", "data_format"};
     return attr_names;
   }
 
@@ -8441,21 +8441,21 @@ class UpsampleBilinear2DOpInterpCtx : public OpInterpCtx {
 };
 class UpsampleBilinear2DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "height_scale")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "height_scale") {
       return (const void*)&height_scale;
-    } else if (!strcmp(attr_name, "width_scale")) {
+    } else if (attr_name == "width_scale") {
       return (const void*)&width_scale;
-    } else if (!strcmp(attr_name, "align_corners")) {
+    } else if (attr_name == "align_corners") {
       return (const void*)&align_corners;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
     } else {
       return Error::RuntimeError() << "UpsampleBilinear2DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"height_scale", "width_scale", "align_corners", "data_format"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"height_scale", "width_scale", "align_corners", "data_format"};
     return attr_names;
   }
 
@@ -8467,23 +8467,23 @@ class UpsampleBilinear2DGradOpInterpCtx : public OpInterpCtx {
 };
 class UpsampleGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "height_scale")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "height_scale") {
       return (const void*)&height_scale;
-    } else if (!strcmp(attr_name, "width_scale")) {
+    } else if (attr_name == "width_scale") {
       return (const void*)&width_scale;
-    } else if (!strcmp(attr_name, "align_corners")) {
+    } else if (attr_name == "align_corners") {
       return (const void*)&align_corners;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
-    } else if (!strcmp(attr_name, "interpolation")) {
+    } else if (attr_name == "interpolation") {
       return (const void*)&interpolation;
     } else {
       return Error::RuntimeError() << "UpsampleGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"height_scale", "width_scale", "align_corners", "data_format", "interpolation"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"height_scale", "width_scale", "align_corners", "data_format", "interpolation"};
     return attr_names;
   }
 
@@ -8496,19 +8496,19 @@ class UpsampleGradOpInterpCtx : public OpInterpCtx {
 };
 class UpsampleLinear1DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "scale_factor")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "scale_factor") {
       return (const void*)&scale_factor;
-    } else if (!strcmp(attr_name, "align_corners")) {
+    } else if (attr_name == "align_corners") {
       return (const void*)&align_corners;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
     } else {
       return Error::RuntimeError() << "UpsampleLinear1D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"scale_factor", "align_corners", "data_format"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"scale_factor", "align_corners", "data_format"};
     return attr_names;
   }
 
@@ -8519,19 +8519,19 @@ class UpsampleLinear1DOpInterpCtx : public OpInterpCtx {
 };
 class UpsampleLinear1DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "scale_factor")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "scale_factor") {
       return (const void*)&scale_factor;
-    } else if (!strcmp(attr_name, "align_corners")) {
+    } else if (attr_name == "align_corners") {
       return (const void*)&align_corners;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
     } else {
       return Error::RuntimeError() << "UpsampleLinear1DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"scale_factor", "align_corners", "data_format"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"scale_factor", "align_corners", "data_format"};
     return attr_names;
   }
 
@@ -8542,17 +8542,17 @@ class UpsampleLinear1DGradOpInterpCtx : public OpInterpCtx {
 };
 class UpsampleNearest1DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "scale_factor")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "scale_factor") {
       return (const void*)&scale_factor;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
     } else {
       return Error::RuntimeError() << "UpsampleNearest1D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"scale_factor", "data_format"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"scale_factor", "data_format"};
     return attr_names;
   }
 
@@ -8562,17 +8562,17 @@ class UpsampleNearest1DOpInterpCtx : public OpInterpCtx {
 };
 class UpsampleNearest1DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "scale_factor")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "scale_factor") {
       return (const void*)&scale_factor;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
     } else {
       return Error::RuntimeError() << "UpsampleNearest1DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"scale_factor", "data_format"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"scale_factor", "data_format"};
     return attr_names;
   }
 
@@ -8582,19 +8582,19 @@ class UpsampleNearest1DGradOpInterpCtx : public OpInterpCtx {
 };
 class UpsampleNearest2DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "height_scale")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "height_scale") {
       return (const void*)&height_scale;
-    } else if (!strcmp(attr_name, "width_scale")) {
+    } else if (attr_name == "width_scale") {
       return (const void*)&width_scale;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
     } else {
       return Error::RuntimeError() << "UpsampleNearest2D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"height_scale", "width_scale", "data_format"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"height_scale", "width_scale", "data_format"};
     return attr_names;
   }
 
@@ -8605,19 +8605,19 @@ class UpsampleNearest2DOpInterpCtx : public OpInterpCtx {
 };
 class UpsampleNearest2DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "height_scale")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "height_scale") {
       return (const void*)&height_scale;
-    } else if (!strcmp(attr_name, "width_scale")) {
+    } else if (attr_name == "width_scale") {
       return (const void*)&width_scale;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
     } else {
       return Error::RuntimeError() << "UpsampleNearest2DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"height_scale", "width_scale", "data_format"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"height_scale", "width_scale", "data_format"};
     return attr_names;
   }
 
@@ -8628,21 +8628,21 @@ class UpsampleNearest2DGradOpInterpCtx : public OpInterpCtx {
 };
 class UpsampleNearest3DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "depth_scale")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "depth_scale") {
       return (const void*)&depth_scale;
-    } else if (!strcmp(attr_name, "height_scale")) {
+    } else if (attr_name == "height_scale") {
       return (const void*)&height_scale;
-    } else if (!strcmp(attr_name, "width_scale")) {
+    } else if (attr_name == "width_scale") {
       return (const void*)&width_scale;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
     } else {
       return Error::RuntimeError() << "UpsampleNearest3D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"depth_scale", "height_scale", "width_scale", "data_format"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"depth_scale", "height_scale", "width_scale", "data_format"};
     return attr_names;
   }
 
@@ -8654,21 +8654,21 @@ class UpsampleNearest3DOpInterpCtx : public OpInterpCtx {
 };
 class UpsampleNearest3DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "depth_scale")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "depth_scale") {
       return (const void*)&depth_scale;
-    } else if (!strcmp(attr_name, "height_scale")) {
+    } else if (attr_name == "height_scale") {
       return (const void*)&height_scale;
-    } else if (!strcmp(attr_name, "width_scale")) {
+    } else if (attr_name == "width_scale") {
       return (const void*)&width_scale;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
     } else {
       return Error::RuntimeError() << "UpsampleNearest3DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"depth_scale", "height_scale", "width_scale", "data_format"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"depth_scale", "height_scale", "width_scale", "data_format"};
     return attr_names;
   }
 
@@ -8680,23 +8680,23 @@ class UpsampleNearest3DGradOpInterpCtx : public OpInterpCtx {
 };
 class UpsampleTrilinear3DOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "depth_scale")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "depth_scale") {
       return (const void*)&depth_scale;
-    } else if (!strcmp(attr_name, "height_scale")) {
+    } else if (attr_name == "height_scale") {
       return (const void*)&height_scale;
-    } else if (!strcmp(attr_name, "width_scale")) {
+    } else if (attr_name == "width_scale") {
       return (const void*)&width_scale;
-    } else if (!strcmp(attr_name, "align_corners")) {
+    } else if (attr_name == "align_corners") {
       return (const void*)&align_corners;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
     } else {
       return Error::RuntimeError() << "UpsampleTrilinear3D op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"depth_scale", "height_scale", "width_scale", "align_corners", "data_format"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"depth_scale", "height_scale", "width_scale", "align_corners", "data_format"};
     return attr_names;
   }
 
@@ -8709,23 +8709,23 @@ class UpsampleTrilinear3DOpInterpCtx : public OpInterpCtx {
 };
 class UpsampleTrilinear3DGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "depth_scale")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "depth_scale") {
       return (const void*)&depth_scale;
-    } else if (!strcmp(attr_name, "height_scale")) {
+    } else if (attr_name == "height_scale") {
       return (const void*)&height_scale;
-    } else if (!strcmp(attr_name, "width_scale")) {
+    } else if (attr_name == "width_scale") {
       return (const void*)&width_scale;
-    } else if (!strcmp(attr_name, "align_corners")) {
+    } else if (attr_name == "align_corners") {
       return (const void*)&align_corners;
-    } else if (!strcmp(attr_name, "data_format")) {
+    } else if (attr_name == "data_format") {
       return (const void*)&data_format;
     } else {
       return Error::RuntimeError() << "UpsampleTrilinear3DGrad op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"depth_scale", "height_scale", "width_scale", "align_corners", "data_format"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"depth_scale", "height_scale", "width_scale", "align_corners", "data_format"};
     return attr_names;
   }
 
@@ -8738,28 +8738,28 @@ class UpsampleTrilinear3DGradOpInterpCtx : public OpInterpCtx {
 };
 class WhereOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Where op has no attribute named " << attr_name;
   }
 
 };
 class WhereScalarXOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "has_int_operand")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "has_int_operand") {
       return (const void*)&has_int_operand;
-    } else if (!strcmp(attr_name, "has_float_operand")) {
+    } else if (attr_name == "has_float_operand") {
       return (const void*)&has_float_operand;
-    } else if (!strcmp(attr_name, "int_operand")) {
+    } else if (attr_name == "int_operand") {
       return (const void*)&int_operand;
-    } else if (!strcmp(attr_name, "float_operand")) {
+    } else if (attr_name == "float_operand") {
       return (const void*)&float_operand;
     } else {
       return Error::RuntimeError() << "WhereScalarX op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
 
@@ -8771,29 +8771,29 @@ class WhereScalarXOpInterpCtx : public OpInterpCtx {
 };
 class WhereScalarXyOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "has_x_int_operand")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "has_x_int_operand") {
       return (const void*)&has_x_int_operand;
-    } else if (!strcmp(attr_name, "has_x_float_operand")) {
+    } else if (attr_name == "has_x_float_operand") {
       return (const void*)&has_x_float_operand;
-    } else if (!strcmp(attr_name, "has_y_int_operand")) {
+    } else if (attr_name == "has_y_int_operand") {
       return (const void*)&has_y_int_operand;
-    } else if (!strcmp(attr_name, "has_y_float_operand")) {
+    } else if (attr_name == "has_y_float_operand") {
       return (const void*)&has_y_float_operand;
-    } else if (!strcmp(attr_name, "x_int_operand")) {
+    } else if (attr_name == "x_int_operand") {
       return (const void*)&x_int_operand;
-    } else if (!strcmp(attr_name, "x_float_operand")) {
+    } else if (attr_name == "x_float_operand") {
       return (const void*)&x_float_operand;
-    } else if (!strcmp(attr_name, "y_int_operand")) {
+    } else if (attr_name == "y_int_operand") {
       return (const void*)&y_int_operand;
-    } else if (!strcmp(attr_name, "y_float_operand")) {
+    } else if (attr_name == "y_float_operand") {
       return (const void*)&y_float_operand;
     } else {
       return Error::RuntimeError() << "WhereScalarXy op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"has_x_int_operand", "has_x_float_operand", "has_y_int_operand", "has_y_float_operand", "x_int_operand", "x_float_operand", "y_int_operand", "y_float_operand"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"has_x_int_operand", "has_x_float_operand", "has_y_int_operand", "has_y_float_operand", "x_int_operand", "x_float_operand", "y_int_operand", "y_float_operand"};
     return attr_names;
   }
 
@@ -8809,21 +8809,21 @@ class WhereScalarXyOpInterpCtx : public OpInterpCtx {
 };
 class WhereScalarYOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
-    if (!strcmp(attr_name, "has_int_operand")) {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+    if (attr_name == "has_int_operand") {
       return (const void*)&has_int_operand;
-    } else if (!strcmp(attr_name, "has_float_operand")) {
+    } else if (attr_name == "has_float_operand") {
       return (const void*)&has_float_operand;
-    } else if (!strcmp(attr_name, "int_operand")) {
+    } else if (attr_name == "int_operand") {
       return (const void*)&int_operand;
-    } else if (!strcmp(attr_name, "float_operand")) {
+    } else if (attr_name == "float_operand") {
       return (const void*)&float_operand;
     } else {
       return Error::RuntimeError() << "WhereScalarY op has no attribute named " << attr_name;
     }
   }
-  const std::vector<const char*>& AttrNamesList() const override {
-    static std::vector<const char*> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
+  const HashSet<std::string>& AttrNamesList() const override {
+    static HashSet<std::string> attr_names{"has_int_operand", "has_float_operand", "int_operand", "float_operand"};
     return attr_names;
   }
 
@@ -8835,49 +8835,49 @@ class WhereScalarYOpInterpCtx : public OpInterpCtx {
 };
 class XdivyOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Xdivy op has no attribute named " << attr_name;
   }
 
 };
 class XdivyXGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "XdivyXGrad op has no attribute named " << attr_name;
   }
 
 };
 class XdivyYGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "XdivyYGrad op has no attribute named " << attr_name;
   }
 
 };
 class XlogyOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "Xlogy op has no attribute named " << attr_name;
   }
 
 };
 class XlogyXGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "XlogyXGrad op has no attribute named " << attr_name;
   }
 
 };
 class XlogyYGradOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "XlogyYGrad op has no attribute named " << attr_name;
   }
 
 };
 class ZeroLikeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const char* attr_name) const override {
+  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "ZeroLike op has no attribute named " << attr_name;
   }
 
