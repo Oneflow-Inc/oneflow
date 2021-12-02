@@ -42,17 +42,15 @@ bool CheckNdSbp(const cfg::NdSbp& nd_sbp) {
 }
 
 // compute copy cost
-double ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& producer_sbp_parallel,
-                                           const cfg::SbpParallel& consumer_sbp_parallel,
-                                           const BlobDesc& logical_blob_desc,
-                                           const ParallelDesc& producer_parallel_desc,
-                                           const ParallelDesc& consumer_parallel_desc,
-                                           bool is_same_sbp, bool allow_cpu2gpu) {
+Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& producer_sbp_parallel,
+                                                  const cfg::SbpParallel& consumer_sbp_parallel,
+                                                  const BlobDesc& logical_blob_desc,
+                                                  const ParallelDesc& producer_parallel_desc,
+                                                  const ParallelDesc& consumer_parallel_desc,
+                                                  bool is_same_sbp, bool allow_cpu2gpu) {
   // Checking here.
   if (!(CheckSbpParallel(producer_sbp_parallel) && CheckSbpParallel(consumer_sbp_parallel))) {
-    // TODO: replace assert
-    std::cout << "Replace assert here!" << std::endl;
-    return GetMaxVal<float>();
+    return Error::RuntimeError() << "Illegal sbp parallel has been found.";
   }
   if (producer_parallel_desc == consumer_parallel_desc) {
     // S->S, B->B, P->P
@@ -147,16 +145,14 @@ double ComputCopyCostBetweenTwoDiffSbpParallel(const cfg::SbpParallel& producer_
 }
 
 // compute copy cost
-double ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
-                                  const cfg::NdSbp& consumer_sbp_parallel,
-                                  const BlobDesc& logical_blob_desc,
-                                  const ParallelDesc& producer_parallel_desc,
-                                  const ParallelDesc& consumer_parallel_desc, bool is_same_sbp,
-                                  bool allow_cpu2gpu) {
+Maybe<double> ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
+                                         const cfg::NdSbp& consumer_sbp_parallel,
+                                         const BlobDesc& logical_blob_desc,
+                                         const ParallelDesc& producer_parallel_desc,
+                                         const ParallelDesc& consumer_parallel_desc,
+                                         bool is_same_sbp, bool allow_cpu2gpu) {
   if (!(CheckNdSbp(producer_sbp_parallel) && CheckNdSbp(consumer_sbp_parallel))) {
-    // TODO: replace assert
-    std::cout << "Replace assert here!" << std::endl;
-    return GetMaxVal<float>();
+    return Error::RuntimeError() << "Illegal sbp parallel has been found.";
   }
 
   ParallelDesc reduced_in_parallel_desc = producer_parallel_desc;
@@ -224,17 +220,18 @@ double ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
   return GetMaxVal<float>();
 }
 
-double ComputCopyCostBetweenTwoNdSbp(const cfg::NdSbp& producer_nd_sbp,
-                                     const cfg::NdSbp& consumer_nd_sbp, double logical_blob_size,
-                                     const std::shared_ptr<Shape>& hierarchy,
-                                     bool on_same_devices) {
-  if (hierarchy->NumAxes() != 2) return GetMaxVal<float>();
+Maybe<double> ComputCopyCostBetweenTwoNdSbp(const cfg::NdSbp& producer_nd_sbp,
+                                            const cfg::NdSbp& consumer_nd_sbp,
+                                            double logical_blob_size,
+                                            const std::shared_ptr<Shape>& hierarchy,
+                                            bool on_same_devices) {
+  if (hierarchy->NumAxes() != 2) { return GetMaxVal<float>(); }
   const auto& producer_sbp_size = producer_nd_sbp.sbp_parallel_size();
   const auto& consumer_sbp_size = consumer_nd_sbp.sbp_parallel_size();
   // One of the SBP should have size 2
-  CHECK((producer_sbp_size == 1 && consumer_sbp_size == 2)
-        || (producer_sbp_size == 2 && consumer_sbp_size == 1)
-        || (producer_sbp_size == 2 && consumer_sbp_size == 2))
+  CHECK_OR_RETURN((producer_sbp_size == 1 && consumer_sbp_size == 2)
+                  || (producer_sbp_size == 2 && consumer_sbp_size == 1)
+                  || (producer_sbp_size == 2 && consumer_sbp_size == 2))
       << "Not supporting such boxing type. Check if we have bugs in auto parallel.";
   for (int32_t dim_same_sbp = 0; dim_same_sbp < 2; dim_same_sbp++) {
     // If the nd_sbp only have size 1, then make its dimension 0
