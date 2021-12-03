@@ -72,9 +72,7 @@ Maybe<void> AutogradMeta::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
   if (acc_grad_ != nullptr) {
     if (auto dtr_grad_ebo = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(
             JUST(acc_grad_->eager_blob_object()))) {
-      std::cout << "pin parameter.grad " << dtr_grad_ebo.get() << std::endl;
       dtr_grad_ebo->set_evict_attr(false);
-      std::cout << "pin parameter.grad ok" << std::endl;
     }
   }
   return Maybe<void>::Ok();

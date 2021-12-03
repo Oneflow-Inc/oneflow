@@ -694,102 +694,101 @@ struct LocalCallOpKernelUtil {
                             }));
 
     if (oneflow::DTRDebugEnabled()) {
-    for (int i : operand->opkernel().input_tuple_indexes4mut_ibns()) {
-      const std::string &op_type_name = operand->opkernel().op_type_name();
-      std::cout << "mutable! op: " << op_type_name << ", input " << i;
-      const auto& mut_input = operand->inputs()->at(i);
-      if (mut_input->mem_case().has_device_cuda_mem()) {
-        size_t bytes = mut_input->blob_desc().ByteSizeOfBlobBody();
-        std::vector<float> tmp(bytes / 4);
-        cudaMemcpy(tmp.data(), mut_input->blob().dptr(), bytes,
-                   cudaMemcpyKind::cudaMemcpyDeviceToHost);
-        float x = 0;
-        for (float f : tmp) { x += f; }
-        mut_input->hash_ = x;
-        mut_input->backup_data_.resize(bytes / 4);
-        memcpy(mut_input->backup_data_.data(), tmp.data(), bytes);
-        std::cout << ", gpu memory." << std::endl;
-      } else {
-        std::cout << ", non gpu memory." << std::endl;
-      }
-    }
-
-    // compare_input_hash flag
-    bool compare_input_hash = false;
-    for (const auto& base_class_output : *operand->outputs()) {
-      if (base_class_output->mem_case().has_device_cuda_mem()) {
-        size_t bytes = base_class_output->blob_desc().ByteSizeOfBlobBody();
-        CHECK_EQ_OR_RETURN(bytes % 4, 0);
-        std::vector<float> tmp(bytes / 4);
-        cudaMemcpy(tmp.data(), base_class_output->blob().dptr(), bytes,
-                   cudaMemcpyKind::cudaMemcpyDeviceToHost);
-        float x = 0;
-        for (float f : tmp) { x += f; }
-        if (const auto output = std::dynamic_pointer_cast<DTREagerBlobObject>(base_class_output))
-        {
-          if (output->hash_ != -1) {
-            if (output->hash_ != x) {
-              std::cout << "wrong!!!!"
-                        << " compute op: "
-                        << output->compute_op()->shared_opkernel()->user_op_conf_->op_type_name()
-                        << ", old hash: " << output->hash_ << ", new hash: " << x
-                        << ", old data[0]: " << output->backup_data_[0]
-                        << ", new data[0]: " << tmp[0] << ", shape: " <<
-                        output->blob_desc().shape()
-                        << std::endl;
-
-              // compare hash of inputs
-              compare_input_hash = true;
-            } else {
-              std::cout << "correct :)"
-                        << " compute op: "
-                        << output->compute_op()->shared_opkernel()->user_op_conf_->op_type_name()
-                        << ", old hash: " << output->hash_ << ", new hash: " << x << std::endl;
-            }
-          } else {
-            std::cout << "first! set hash to " << x << std::endl;
-          }
+      for (int i : operand->opkernel().input_tuple_indexes4mut_ibns()) {
+        const std::string& op_type_name = operand->opkernel().op_type_name();
+        std::cout << "mutable! op: " << op_type_name << ", input " << i;
+        const auto& mut_input = operand->inputs()->at(i);
+        if (mut_input->mem_case().has_device_cuda_mem()) {
+          size_t bytes = mut_input->blob_desc().ByteSizeOfBlobBody();
+          std::vector<float> tmp(bytes / 4);
+          cudaMemcpy(tmp.data(), mut_input->blob().dptr(), bytes,
+                     cudaMemcpyKind::cudaMemcpyDeviceToHost);
+          float x = 0;
+          for (float f : tmp) { x += f; }
+          mut_input->hash_ = x;
+          mut_input->backup_data_.resize(bytes / 4);
+          memcpy(mut_input->backup_data_.data(), tmp.data(), bytes);
+          std::cout << ", gpu memory." << std::endl;
+        } else {
+          std::cout << ", non gpu memory." << std::endl;
         }
-        base_class_output->hash_ = x;
-        base_class_output->backup_data_.resize(bytes / 4);
-        memcpy(base_class_output->backup_data_.data(), tmp.data(), bytes);
-      } else {
-        std::cout << "compute non gpu memory, op is: " << operand->opkernel().op_type_name() <<
-        std::endl;
       }
-    }
-    if (compare_input_hash) {
-      for (const auto& base_class_input : *operand->inputs()) {
-        if (const auto input = std::dynamic_pointer_cast<DTREagerBlobObject>(base_class_input)) {
-          if (input->mem_case().has_device_cuda_mem()) {
-            size_t bytes = input->blob_desc().ByteSizeOfBlobBody();
-            CHECK_EQ_OR_RETURN(bytes % 4, 0);
-            std::vector<float> tmp(bytes / 4);
-            cudaMemcpy(tmp.data(), input->blob().dptr(), bytes,
-                       cudaMemcpyKind::cudaMemcpyDeviceToHost);
-            float x = 0;
-            for (float f : tmp) { x += f; }
-            if (input->hash_ != -1) {
-              if (input->hash_ != x) {
-                std::cout << "input hash wrong!!!!"
-                          << ", old hash: " << input->hash_ << ", new hash: " << x
-                          << ", old data[0]: " << input->backup_data_[0]
+
+      // compare_input_hash flag
+      bool compare_input_hash = false;
+      for (const auto& base_class_output : *operand->outputs()) {
+        if (base_class_output->mem_case().has_device_cuda_mem()) {
+          size_t bytes = base_class_output->blob_desc().ByteSizeOfBlobBody();
+          CHECK_EQ_OR_RETURN(bytes % 4, 0);
+          std::vector<float> tmp(bytes / 4);
+          cudaMemcpy(tmp.data(), base_class_output->blob().dptr(), bytes,
+                     cudaMemcpyKind::cudaMemcpyDeviceToHost);
+          float x = 0;
+          for (float f : tmp) { x += f; }
+          if (const auto output =
+                  std::dynamic_pointer_cast<DTREagerBlobObject>(base_class_output)) {
+            if (output->hash_ != -1) {
+              if (output->hash_ != x) {
+                std::cout << "wrong!!!!"
+                          << " compute op: "
+                          << output->compute_op()->shared_opkernel()->user_op_conf_->op_type_name()
+                          << ", old hash: " << output->hash_ << ", new hash: " << x
+                          << ", old data[0]: " << output->backup_data_[0]
                           << ", new data[0]: " << tmp[0]
-                          << ", shape: " << input->blob_desc().shape() << std::endl;
+                          << ", shape: " << output->blob_desc().shape() << std::endl;
+
+                // compare hash of inputs
+                compare_input_hash = true;
               } else {
-                std::cout << "input hash correct :)"
-                          << ", shape: " << input->blob_desc().shape() << std::endl;
+                std::cout << "correct :)"
+                          << " compute op: "
+                          << output->compute_op()->shared_opkernel()->user_op_conf_->op_type_name()
+                          << ", old hash: " << output->hash_ << ", new hash: " << x << std::endl;
               }
             } else {
-              std::cout << "input not initialized!!!!!" << x << std::endl;
+              std::cout << "first! set hash to " << x << std::endl;
             }
-          } else {
-            std::cout << "input non gpu memory, op is: " << operand->opkernel().op_type_name() <<
-            std::endl;
+          }
+          base_class_output->hash_ = x;
+          base_class_output->backup_data_.resize(bytes / 4);
+          memcpy(base_class_output->backup_data_.data(), tmp.data(), bytes);
+        } else {
+          std::cout << "compute non gpu memory, op is: " << operand->opkernel().op_type_name()
+                    << std::endl;
+        }
+      }
+      if (compare_input_hash) {
+        for (const auto& base_class_input : *operand->inputs()) {
+          if (const auto input = std::dynamic_pointer_cast<DTREagerBlobObject>(base_class_input)) {
+            if (input->mem_case().has_device_cuda_mem()) {
+              size_t bytes = input->blob_desc().ByteSizeOfBlobBody();
+              CHECK_EQ_OR_RETURN(bytes % 4, 0);
+              std::vector<float> tmp(bytes / 4);
+              cudaMemcpy(tmp.data(), input->blob().dptr(), bytes,
+                         cudaMemcpyKind::cudaMemcpyDeviceToHost);
+              float x = 0;
+              for (float f : tmp) { x += f; }
+              if (input->hash_ != -1) {
+                if (input->hash_ != x) {
+                  std::cout << "input hash wrong!!!!"
+                            << ", old hash: " << input->hash_ << ", new hash: " << x
+                            << ", old data[0]: " << input->backup_data_[0]
+                            << ", new data[0]: " << tmp[0]
+                            << ", shape: " << input->blob_desc().shape() << std::endl;
+                } else {
+                  std::cout << "input hash correct :)"
+                            << ", shape: " << input->blob_desc().shape() << std::endl;
+                }
+              } else {
+                std::cout << "input not initialized!!!!!" << x << std::endl;
+              }
+            } else {
+              std::cout << "input non gpu memory, op is: " << operand->opkernel().op_type_name()
+                        << std::endl;
+            }
           }
         }
       }
-    }
     }
     return Maybe<void>::Ok();
   }
@@ -877,7 +876,9 @@ struct PinGuard {
 struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
   static inline Maybe<void> Prepare(vm::Instruction* instruction) {
     auto operand = JUST(GetSharedLocalCallOpKernelPhyInstrOperand(instruction));
-    if (oneflow::DTRDebugEnabled()) { std::cout << "prepare start for " << operand->opkernel().op_type_name() << std::endl; }
+    if (oneflow::DTRDebugEnabled()) {
+      std::cout << "prepare start for " << operand->opkernel().op_type_name() << std::endl;
+    }
     auto& stream = instruction->stream();
     JUST(
         ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
@@ -897,7 +898,9 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
           dtr_blob_object->update_user_ops(operand);
           return Maybe<void>::Ok();
         }));
-    if (oneflow::DTRDebugEnabled()) { std::cout << "prepare ok for " << operand->opkernel().op_type_name() << std::endl; }
+    if (oneflow::DTRDebugEnabled()) {
+      std::cout << "prepare ok for " << operand->opkernel().op_type_name() << std::endl;
+    }
     return Maybe<void>::Ok();
   }
 
@@ -946,10 +949,12 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
   }
 
   static inline Maybe<void> recompute(vm::DTREagerBlobObject* object, const vm::Stream& stream) {
-  if (oneflow::DTRDebugEnabled()) {
-    std::cout << "going to recompute " << object->compute_op()->shared_opkernel()->user_op_conf_->op_type_name() << " for " << object << ", whose dptr is " << object->blob().dptr() << ", is in memory: " << object->is_in_memory()
-              << std::endl;
-  }
+    if (oneflow::DTRDebugEnabled()) {
+      std::cout << "going to recompute "
+                << object->compute_op()->shared_opkernel()->user_op_conf_->op_type_name() << " for "
+                << object << ", whose dptr is " << object->blob().dptr()
+                << ", is in memory: " << object->is_in_memory() << std::endl;
+    }
     auto unique_op = DTROp2LocalCallOp(object->compute_op());
     CHECK_NOTNULL_OR_RETURN(unique_op);
     DeviceCtx* device_ctx = stream.device_ctx().get();
@@ -1019,7 +1024,8 @@ void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) con
     CHECK_OK(DTRLocalCallOpKernelUtil::Prepare(instruction));
     CHECK_OK(DTRLocalCallOpKernelUtil::Compute(instruction));
     CHECK_OK(DTRLocalCallOpKernelUtil::UpdateTensorInfo(instruction));
-    auto operand = CHECK_JUST(LocalCallOpKernelUtil::GetSharedLocalCallOpKernelPhyInstrOperand(instruction));
+    auto operand =
+        CHECK_JUST(LocalCallOpKernelUtil::GetSharedLocalCallOpKernelPhyInstrOperand(instruction));
     std::cout << "all compute ok for " << operand->opkernel().op_type_name() << std::endl;
   } else {
     CHECK_OK(EagerLocalCallOpKernelUtil::Infer(instruction));

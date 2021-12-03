@@ -21,8 +21,8 @@ limitations under the License.
 #include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/memory/memory_case.pb.h"
-#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/framework/transport_token.h"
@@ -496,15 +496,19 @@ class DTRMirroredTensor final : public MirroredTensor {
   explicit DTRMirroredTensor(const std::shared_ptr<DTREagerMirroredTensorImpl>& impl) : MirroredTensor(impl) {
   }
   ~DTRMirroredTensor() {
+    if (oneflow::DTRDebugEnabled()) {
     std::cout << "destruct " << this << ", ebo: " << CHECK_JUST(eager_blob_object()).get() << std::endl;
+    }
   }
 
   void set_tensor_inputs(const TensorTuple& inputs) {
-    std::cout << "set inputs of " << this << " (ebo " << CHECK_JUST(eager_blob_object()).get() << ") to ";
+    if (oneflow::DTRDebugEnabled()) {
+      std::cout << "set inputs of " << this << " (ebo " << CHECK_JUST(eager_blob_object()).get() << ") to ";
     for (const auto &x : inputs) {
       std::cout << x.get() << " (ebo " << CHECK_JUST(x->eager_blob_object()).get() << "), ";
     }
     std::cout << std::endl;
+    }
     inputs_ = inputs; }
 
  private:
