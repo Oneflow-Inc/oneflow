@@ -24,7 +24,7 @@ namespace ep {
 
 void CpuDevice::SetAsActiveDevice() {}
 
-Stream* CpuDevice::CreateStream() { return new CpuStream(); }
+Stream* CpuDevice::CreateStream() { return new CpuStream(this); }
 
 void CpuDevice::DestroyStream(Stream* stream) { delete stream; }
 

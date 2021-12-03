@@ -32,6 +32,9 @@ class CudaDevice : public Device {
 
   void SetAsActiveDevice() override;
 
+  DeviceType device_type() const override { return DeviceType::kCUDA; }
+  size_t device_index() const override { return device_index_; }
+
   Stream* CreateStream() override;
   void DestroyStream(Stream* stream) override;
 
