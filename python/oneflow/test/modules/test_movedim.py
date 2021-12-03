@@ -14,34 +14,37 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-import numpy as np
-
 from oneflow.test_utils.automated_test_util import *
-
 import oneflow as flow
 import oneflow.unittest
 
 
-class TestNarrow(flow.unittest.TestCase):
+class TestMovedim(flow.unittest.TestCase):
     @autotest(check_graph=False)
-    def test_flow_narrow_start_with_random_data(test_case):
-        k0 = random(2, 6)
-        k1 = random(2, 6)
-        k2 = random(2, 6)
-        rand_dim = random(0, 3).to(int)
+    def test_flow_movedim_with_vector(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim3=k2).to(device)
-        return torch.narrow(x, dim=rand_dim, start=2, length=1)
+        x = random_pytorch_tensor(
+            ndim=4,
+            dim1=random(3, 6),
+            dim2=random(3, 6),
+            dim3=random(3, 6),
+            dim4=random(3, 6),
+        ).to(device)
+        z = torch.movedim(x, (0, 1), (2, 3))
+        return z
 
     @autotest(check_graph=False)
-    def test_flow_narrow_length_with_random_data(test_case):
-        k0 = random(2, 6)
-        k1 = random(2, 6)
-        k2 = random(2, 6)
-        rand_dim = random(0, 3).to(int)
+    def test_flow_movedim_with_int(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim3=k2).to(device)
-        return torch.narrow(x, dim=rand_dim, start=0, length=2)
+        x = random_pytorch_tensor(
+            ndim=4,
+            dim1=random(3, 6),
+            dim2=random(3, 6),
+            dim3=random(3, 6),
+            dim4=random(3, 6),
+        ).to(device)
+        z = torch.movedim(x, 0, 3)
+        return z
 
 
 if __name__ == "__main__":
