@@ -240,8 +240,8 @@ class GluFunctor {
     std::vector<int64_t> split_sizes(2, nc);
     const auto split_x = JUST(SplitWithSize(input, split_sizes, dim));
     return sequence_function(functional::Sigmoid)
-        .then(std::bind(functional::Mul, JUST(ToContiguous(split_x->at(0))), std::placeholders::_1))
-        .call(JUST(ToContiguous(split_x->at(1))));
+        .then(std::bind(functional::Mul, split_x->at(0)->contiguous(), std::placeholders::_1))
+        .call(split_x->at(1)->contiguous());
   }
 };
 
