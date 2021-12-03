@@ -6,25 +6,25 @@ class COCOReaderOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "session_id") {
-      return MakeAttr(&session_id);
+      return CastAttr(&session_id);
     } else if (attr_name == "annotation_file") {
-      return MakeAttr(&annotation_file);
+      return CastAttr(&annotation_file);
     } else if (attr_name == "image_dir") {
-      return MakeAttr(&image_dir);
+      return CastAttr(&image_dir);
     } else if (attr_name == "batch_size") {
-      return MakeAttr(&batch_size);
+      return CastAttr(&batch_size);
     } else if (attr_name == "shuffle_after_epoch") {
-      return MakeAttr(&shuffle_after_epoch);
+      return CastAttr(&shuffle_after_epoch);
     } else if (attr_name == "random_seed") {
-      return MakeAttr(&random_seed);
+      return CastAttr(&random_seed);
     } else if (attr_name == "group_by_ratio") {
-      return MakeAttr(&group_by_ratio);
+      return CastAttr(&group_by_ratio);
     } else if (attr_name == "remove_images_without_annotations") {
-      return MakeAttr(&remove_images_without_annotations);
+      return CastAttr(&remove_images_without_annotations);
     } else if (attr_name == "stride_partition") {
-      return MakeAttr(&stride_partition);
+      return CastAttr(&stride_partition);
     } else if (attr_name == "nd_sbp") {
-      return MakeAttr(&*JUST(nd_sbp));
+      return CastAttr(&nd_sbp);
     } else {
       return Error::RuntimeError() << "COCOReader op has no attribute named " << attr_name;
     }
@@ -44,13 +44,13 @@ class COCOReaderOpInterpCtx : public OpInterpCtx {
   bool group_by_ratio;
   bool remove_images_without_annotations;
   bool stride_partition;
-  // std::vector<std::string> nd_sbp;
+  std::vector<std::string> nd_sbp;
 };
 class CategoricalOrdinalEncodeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "hash_precomputed") {
-      return MakeAttr(&hash_precomputed);
+      return CastAttr(&hash_precomputed);
     } else {
       return Error::RuntimeError() << "CategoricalOrdinalEncode op has no attribute named " << attr_name;
     }
@@ -67,25 +67,25 @@ class OFRecordReaderOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "data_dir") {
-      return MakeAttr(&data_dir);
+      return CastAttr(&data_dir);
     } else if (attr_name == "data_part_num") {
-      return MakeAttr(&data_part_num);
+      return CastAttr(&data_part_num);
     } else if (attr_name == "batch_size") {
-      return MakeAttr(&batch_size);
+      return CastAttr(&batch_size);
     } else if (attr_name == "part_name_prefix") {
-      return MakeAttr(&part_name_prefix);
+      return CastAttr(&part_name_prefix);
     } else if (attr_name == "part_name_suffix_length") {
-      return MakeAttr(&part_name_suffix_length);
+      return CastAttr(&part_name_suffix_length);
     } else if (attr_name == "random_shuffle") {
-      return MakeAttr(&random_shuffle);
+      return CastAttr(&random_shuffle);
     } else if (attr_name == "seed") {
-      return MakeAttr(&seed);
+      return CastAttr(&seed);
     } else if (attr_name == "shuffle_buffer_size") {
-      return MakeAttr(&shuffle_buffer_size);
+      return CastAttr(&shuffle_buffer_size);
     } else if (attr_name == "shuffle_after_epoch") {
-      return MakeAttr(&shuffle_after_epoch);
+      return CastAttr(&shuffle_after_epoch);
     } else if (attr_name == "nd_sbp") {
-      return MakeAttr(&*JUST(nd_sbp));
+      return CastAttr(&nd_sbp);
     } else {
       return Error::RuntimeError() << "OFRecordReader op has no attribute named " << attr_name;
     }
@@ -105,27 +105,27 @@ class OFRecordReaderOpInterpCtx : public OpInterpCtx {
   int64_t seed;
   int32_t shuffle_buffer_size;
   bool shuffle_after_epoch;
-  // std::vector<std::string> nd_sbp;
+  std::vector<std::string> nd_sbp;
 };
 class OneRecReaderOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "files") {
-      return MakeAttr(&files);
+      return CastAttr(&files);
     } else if (attr_name == "batch_size") {
-      return MakeAttr(&batch_size);
+      return CastAttr(&batch_size);
     } else if (attr_name == "random_shuffle") {
-      return MakeAttr(&random_shuffle);
+      return CastAttr(&random_shuffle);
     } else if (attr_name == "shuffle_mode") {
-      return MakeAttr(&shuffle_mode);
+      return CastAttr(&shuffle_mode);
     } else if (attr_name == "seed") {
-      return MakeAttr(&seed);
+      return CastAttr(&seed);
     } else if (attr_name == "shuffle_buffer_size") {
-      return MakeAttr(&shuffle_buffer_size);
+      return CastAttr(&shuffle_buffer_size);
     } else if (attr_name == "shuffle_after_epoch") {
-      return MakeAttr(&shuffle_after_epoch);
+      return CastAttr(&shuffle_after_epoch);
     } else if (attr_name == "verify_example") {
-      return MakeAttr(&verify_example);
+      return CastAttr(&verify_example);
     } else {
       return Error::RuntimeError() << "OneRecReader op has no attribute named " << attr_name;
     }
@@ -149,7 +149,7 @@ class TestDataTypeAttrOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "output_type") {
-      return MakeAttr(&output_type);
+      return CastAttr(&output_type);
     } else {
       return Error::RuntimeError() << "TestDataTypeAttr op has no attribute named " << attr_name;
     }
@@ -173,11 +173,11 @@ class TestListDataTypeAndListShapeAndListStringAttrOpInterpCtx : public OpInterp
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "out_shapes") {
-      return MakeAttr(&out_shapes);
+      return CastAttr(&out_shapes);
     } else if (attr_name == "out_types") {
-      return MakeAttr(&out_types);
+      return CastAttr(&out_types);
     } else if (attr_name == "string_list") {
-      return MakeAttr(&string_list);
+      return CastAttr(&string_list);
     } else {
       return Error::RuntimeError() << "TestListDataTypeAndListShapeAndListStringAttr op has no attribute named " << attr_name;
     }
@@ -217,7 +217,7 @@ class TestRandomSourceOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "seed") {
-      return MakeAttr(&seed);
+      return CastAttr(&seed);
     } else {
       return Error::RuntimeError() << "TestRandomSource op has no attribute named " << attr_name;
     }
@@ -234,7 +234,7 @@ class TestReshapeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "shape") {
-      return MakeAttr(&shape);
+      return CastAttr(&shape);
     } else {
       return Error::RuntimeError() << "TestReshape op has no attribute named " << attr_name;
     }
@@ -258,7 +258,7 @@ class TestSourceMultiGpuFixedOutNumOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "out_num") {
-      return MakeAttr(&out_num);
+      return CastAttr(&out_num);
     } else {
       return Error::RuntimeError() << "TestSourceMultiGpuFixedOutNum op has no attribute named " << attr_name;
     }
@@ -275,9 +275,9 @@ class _ncclLogical_2DSameDim0All2allOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "in_dim1_split_axis") {
-      return MakeAttr(&in_dim1_split_axis);
+      return CastAttr(&in_dim1_split_axis);
     } else if (attr_name == "out_dim1_split_axis") {
-      return MakeAttr(&out_dim1_split_axis);
+      return CastAttr(&out_dim1_split_axis);
     } else {
       return Error::RuntimeError() << "_ncclLogical_2DSameDim0All2all op has no attribute named " << attr_name;
     }
@@ -302,7 +302,7 @@ class _ncclLogical_2DSameDim0AllGatherNoncontinuousOpInterpCtx : public OpInterp
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "in_dim1_split_axis") {
-      return MakeAttr(&in_dim1_split_axis);
+      return CastAttr(&in_dim1_split_axis);
     } else {
       return Error::RuntimeError() << "_ncclLogical_2DSameDim0AllGatherNoncontinuous op has no attribute named " << attr_name;
     }
@@ -340,7 +340,7 @@ class _ncclLogicalAllGatherNoncontinuousOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "in_split_axis") {
-      return MakeAttr(&in_split_axis);
+      return CastAttr(&in_split_axis);
     } else {
       return Error::RuntimeError() << "_ncclLogicalAllGatherNoncontinuous op has no attribute named " << attr_name;
     }
@@ -371,9 +371,9 @@ class _ncclLogicalS2sOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "in_split_axis") {
-      return MakeAttr(&in_split_axis);
+      return CastAttr(&in_split_axis);
     } else if (attr_name == "out_split_axis") {
-      return MakeAttr(&out_split_axis);
+      return CastAttr(&out_split_axis);
     } else {
       return Error::RuntimeError() << "_ncclLogicalS2s op has no attribute named " << attr_name;
     }
@@ -405,7 +405,7 @@ class AccOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "max_acc_num") {
-      return MakeAttr(&max_acc_num);
+      return CastAttr(&max_acc_num);
     } else {
       return Error::RuntimeError() << "Acc op has no attribute named " << attr_name;
     }
@@ -450,21 +450,21 @@ class AdagradUpdateOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "train_step_val") {
-      return MakeAttr(&train_step_val);
+      return CastAttr(&train_step_val);
     } else if (attr_name == "learning_rate_val") {
-      return MakeAttr(&learning_rate_val);
+      return CastAttr(&learning_rate_val);
     } else if (attr_name == "scale") {
-      return MakeAttr(&scale);
+      return CastAttr(&scale);
     } else if (attr_name == "l1") {
-      return MakeAttr(&l1);
+      return CastAttr(&l1);
     } else if (attr_name == "l2") {
-      return MakeAttr(&l2);
+      return CastAttr(&l2);
     } else if (attr_name == "lr_decay") {
-      return MakeAttr(&lr_decay);
+      return CastAttr(&lr_decay);
     } else if (attr_name == "weight_decay") {
-      return MakeAttr(&weight_decay);
+      return CastAttr(&weight_decay);
     } else if (attr_name == "epsilon") {
-      return MakeAttr(&epsilon);
+      return CastAttr(&epsilon);
     } else {
       return Error::RuntimeError() << "AdagradUpdate op has no attribute named " << attr_name;
     }
@@ -488,7 +488,7 @@ class AdamBiasCorrectionFactorOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "beta") {
-      return MakeAttr(&beta);
+      return CastAttr(&beta);
     } else {
       return Error::RuntimeError() << "AdamBiasCorrectionFactor op has no attribute named " << attr_name;
     }
@@ -505,29 +505,29 @@ class AdamUpdateOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "learning_rate_val") {
-      return MakeAttr(&learning_rate_val);
+      return CastAttr(&learning_rate_val);
     } else if (attr_name == "bias_correction1_val") {
-      return MakeAttr(&bias_correction1_val);
+      return CastAttr(&bias_correction1_val);
     } else if (attr_name == "bias_correction2_val") {
-      return MakeAttr(&bias_correction2_val);
+      return CastAttr(&bias_correction2_val);
     } else if (attr_name == "scale") {
-      return MakeAttr(&scale);
+      return CastAttr(&scale);
     } else if (attr_name == "l1") {
-      return MakeAttr(&l1);
+      return CastAttr(&l1);
     } else if (attr_name == "l2") {
-      return MakeAttr(&l2);
+      return CastAttr(&l2);
     } else if (attr_name == "beta1") {
-      return MakeAttr(&beta1);
+      return CastAttr(&beta1);
     } else if (attr_name == "beta2") {
-      return MakeAttr(&beta2);
+      return CastAttr(&beta2);
     } else if (attr_name == "epsilon") {
-      return MakeAttr(&epsilon);
+      return CastAttr(&epsilon);
     } else if (attr_name == "weight_decay") {
-      return MakeAttr(&weight_decay);
+      return CastAttr(&weight_decay);
     } else if (attr_name == "amsgrad") {
-      return MakeAttr(&amsgrad);
+      return CastAttr(&amsgrad);
     } else if (attr_name == "do_bias_correction") {
-      return MakeAttr(&do_bias_correction);
+      return CastAttr(&do_bias_correction);
     } else {
       return Error::RuntimeError() << "AdamUpdate op has no attribute named " << attr_name;
     }
@@ -555,7 +555,7 @@ class AdaptiveAvgPool1DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "output_size") {
-      return MakeAttr(&output_size);
+      return CastAttr(&output_size);
     } else {
       return Error::RuntimeError() << "AdaptiveAvgPool1D op has no attribute named " << attr_name;
     }
@@ -572,7 +572,7 @@ class AdaptiveAvgPool1DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "output_size") {
-      return MakeAttr(&output_size);
+      return CastAttr(&output_size);
     } else {
       return Error::RuntimeError() << "AdaptiveAvgPool1DGrad op has no attribute named " << attr_name;
     }
@@ -589,7 +589,7 @@ class AdaptiveAvgPool2DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "output_size") {
-      return MakeAttr(&output_size);
+      return CastAttr(&output_size);
     } else {
       return Error::RuntimeError() << "AdaptiveAvgPool2D op has no attribute named " << attr_name;
     }
@@ -606,7 +606,7 @@ class AdaptiveAvgPool2DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "output_size") {
-      return MakeAttr(&output_size);
+      return CastAttr(&output_size);
     } else {
       return Error::RuntimeError() << "AdaptiveAvgPool2DGrad op has no attribute named " << attr_name;
     }
@@ -623,7 +623,7 @@ class AdaptiveAvgPool3DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "output_size") {
-      return MakeAttr(&output_size);
+      return CastAttr(&output_size);
     } else {
       return Error::RuntimeError() << "AdaptiveAvgPool3D op has no attribute named " << attr_name;
     }
@@ -640,7 +640,7 @@ class AdaptiveAvgPool3DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "output_size") {
-      return MakeAttr(&output_size);
+      return CastAttr(&output_size);
     } else {
       return Error::RuntimeError() << "AdaptiveAvgPool3DGrad op has no attribute named " << attr_name;
     }
@@ -664,9 +664,9 @@ class AffineGridOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "size") {
-      return MakeAttr(&size);
+      return CastAttr(&size);
     } else if (attr_name == "align_corners") {
-      return MakeAttr(&align_corners);
+      return CastAttr(&align_corners);
     } else {
       return Error::RuntimeError() << "AffineGrid op has no attribute named " << attr_name;
     }
@@ -684,9 +684,9 @@ class AffineGridGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "size") {
-      return MakeAttr(&size);
+      return CastAttr(&size);
     } else if (attr_name == "align_corners") {
-      return MakeAttr(&align_corners);
+      return CastAttr(&align_corners);
     } else {
       return Error::RuntimeError() << "AffineGridGrad op has no attribute named " << attr_name;
     }
@@ -711,21 +711,21 @@ class ArangeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "integer_start") {
-      return MakeAttr(&integer_start);
+      return CastAttr(&integer_start);
     } else if (attr_name == "integer_delta") {
-      return MakeAttr(&integer_delta);
+      return CastAttr(&integer_delta);
     } else if (attr_name == "integer_limit") {
-      return MakeAttr(&integer_limit);
+      return CastAttr(&integer_limit);
     } else if (attr_name == "float_start") {
-      return MakeAttr(&float_start);
+      return CastAttr(&float_start);
     } else if (attr_name == "float_delta") {
-      return MakeAttr(&float_delta);
+      return CastAttr(&float_delta);
     } else if (attr_name == "float_limit") {
-      return MakeAttr(&float_limit);
+      return CastAttr(&float_limit);
     } else if (attr_name == "dtype") {
-      return MakeAttr(&dtype);
+      return CastAttr(&dtype);
     } else if (attr_name == "nd_sbp") {
-      return MakeAttr(&*JUST(nd_sbp));
+      return CastAttr(&nd_sbp);
     } else {
       return Error::RuntimeError() << "Arange op has no attribute named " << attr_name;
     }
@@ -743,13 +743,13 @@ class ArangeOpInterpCtx : public OpInterpCtx {
   double float_delta;
   double float_limit;
   DataType dtype;
-  // std::vector<std::string> nd_sbp;
+  std::vector<std::string> nd_sbp;
 };
 class ArgSortOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "direction") {
-      return MakeAttr(&direction);
+      return CastAttr(&direction);
     } else {
       return Error::RuntimeError() << "ArgSort op has no attribute named " << attr_name;
     }
@@ -773,7 +773,7 @@ class ArgwhereOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "dtype") {
-      return MakeAttr(&dtype);
+      return CastAttr(&dtype);
     } else {
       return Error::RuntimeError() << "Argwhere op has no attribute named " << attr_name;
     }
@@ -888,19 +888,19 @@ class AvgPool1DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "stride") {
-      return MakeAttr(&stride);
+      return CastAttr(&stride);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else if (attr_name == "count_include_pad") {
-      return MakeAttr(&count_include_pad);
+      return CastAttr(&count_include_pad);
     } else if (attr_name == "divisor_override") {
-      return MakeAttr(&divisor_override);
+      return CastAttr(&divisor_override);
     } else {
       return Error::RuntimeError() << "AvgPool1D op has no attribute named " << attr_name;
     }
@@ -923,19 +923,19 @@ class AvgPool1DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "stride") {
-      return MakeAttr(&stride);
+      return CastAttr(&stride);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else if (attr_name == "count_include_pad") {
-      return MakeAttr(&count_include_pad);
+      return CastAttr(&count_include_pad);
     } else if (attr_name == "divisor_override") {
-      return MakeAttr(&divisor_override);
+      return CastAttr(&divisor_override);
     } else {
       return Error::RuntimeError() << "AvgPool1DGrad op has no attribute named " << attr_name;
     }
@@ -958,19 +958,19 @@ class AvgPool2DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "stride") {
-      return MakeAttr(&stride);
+      return CastAttr(&stride);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else if (attr_name == "count_include_pad") {
-      return MakeAttr(&count_include_pad);
+      return CastAttr(&count_include_pad);
     } else if (attr_name == "divisor_override") {
-      return MakeAttr(&divisor_override);
+      return CastAttr(&divisor_override);
     } else {
       return Error::RuntimeError() << "AvgPool2D op has no attribute named " << attr_name;
     }
@@ -993,19 +993,19 @@ class AvgPool2DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "stride") {
-      return MakeAttr(&stride);
+      return CastAttr(&stride);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else if (attr_name == "count_include_pad") {
-      return MakeAttr(&count_include_pad);
+      return CastAttr(&count_include_pad);
     } else if (attr_name == "divisor_override") {
-      return MakeAttr(&divisor_override);
+      return CastAttr(&divisor_override);
     } else {
       return Error::RuntimeError() << "AvgPool2DGrad op has no attribute named " << attr_name;
     }
@@ -1028,19 +1028,19 @@ class AvgPool3DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "stride") {
-      return MakeAttr(&stride);
+      return CastAttr(&stride);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else if (attr_name == "count_include_pad") {
-      return MakeAttr(&count_include_pad);
+      return CastAttr(&count_include_pad);
     } else if (attr_name == "divisor_override") {
-      return MakeAttr(&divisor_override);
+      return CastAttr(&divisor_override);
     } else {
       return Error::RuntimeError() << "AvgPool3D op has no attribute named " << attr_name;
     }
@@ -1063,19 +1063,19 @@ class AvgPool3DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "stride") {
-      return MakeAttr(&stride);
+      return CastAttr(&stride);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else if (attr_name == "count_include_pad") {
-      return MakeAttr(&count_include_pad);
+      return CastAttr(&count_include_pad);
     } else if (attr_name == "divisor_override") {
-      return MakeAttr(&divisor_override);
+      return CastAttr(&divisor_override);
     } else {
       return Error::RuntimeError() << "AvgPool3DGrad op has no attribute named " << attr_name;
     }
@@ -1105,11 +1105,11 @@ class BatchMatmulOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "transpose_a") {
-      return MakeAttr(&transpose_a);
+      return CastAttr(&transpose_a);
     } else if (attr_name == "transpose_b") {
-      return MakeAttr(&transpose_b);
+      return CastAttr(&transpose_b);
     } else if (attr_name == "alpha") {
-      return MakeAttr(&alpha);
+      return CastAttr(&alpha);
     } else {
       return Error::RuntimeError() << "BatchMatmul op has no attribute named " << attr_name;
     }
@@ -1128,11 +1128,11 @@ class BernoulliOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "seed") {
-      return MakeAttr(&seed);
+      return CastAttr(&seed);
     } else if (attr_name == "has_seed") {
-      return MakeAttr(&has_seed);
+      return CastAttr(&has_seed);
     } else if (attr_name == "dtype") {
-      return MakeAttr(&dtype);
+      return CastAttr(&dtype);
     } else {
       return Error::RuntimeError() << "Bernoulli op has no attribute named " << attr_name;
     }
@@ -1151,7 +1151,7 @@ class BiasAddOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else {
       return Error::RuntimeError() << "BiasAdd op has no attribute named " << attr_name;
     }
@@ -1168,7 +1168,7 @@ class BinaryCrossEntropyOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "reduction") {
-      return MakeAttr(&reduction);
+      return CastAttr(&reduction);
     } else {
       return Error::RuntimeError() << "BinaryCrossEntropy op has no attribute named " << attr_name;
     }
@@ -1185,7 +1185,7 @@ class BinaryCrossEntropyGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "reduction") {
-      return MakeAttr(&reduction);
+      return CastAttr(&reduction);
     } else {
       return Error::RuntimeError() << "BinaryCrossEntropyGrad op has no attribute named " << attr_name;
     }
@@ -1202,9 +1202,9 @@ class BinaryCrossEntropyWithLogitsOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "has_pos_weight") {
-      return MakeAttr(&has_pos_weight);
+      return CastAttr(&has_pos_weight);
     } else if (attr_name == "reduction") {
-      return MakeAttr(&reduction);
+      return CastAttr(&reduction);
     } else {
       return Error::RuntimeError() << "BinaryCrossEntropyWithLogits op has no attribute named " << attr_name;
     }
@@ -1222,9 +1222,9 @@ class BinaryCrossEntropyWithLogitsGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "has_pos_weight") {
-      return MakeAttr(&has_pos_weight);
+      return CastAttr(&has_pos_weight);
     } else if (attr_name == "reduction") {
-      return MakeAttr(&reduction);
+      return CastAttr(&reduction);
     } else {
       return Error::RuntimeError() << "BinaryCrossEntropyWithLogitsGrad op has no attribute named " << attr_name;
     }
@@ -1312,7 +1312,7 @@ class BroadcastLikeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "broadcast_axes") {
-      return MakeAttr(&broadcast_axes);
+      return CastAttr(&broadcast_axes);
     } else {
       return Error::RuntimeError() << "BroadcastLike op has no attribute named " << attr_name;
     }
@@ -1350,11 +1350,11 @@ class BroadcastMatmulOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "transpose_a") {
-      return MakeAttr(&transpose_a);
+      return CastAttr(&transpose_a);
     } else if (attr_name == "transpose_b") {
-      return MakeAttr(&transpose_b);
+      return CastAttr(&transpose_b);
     } else if (attr_name == "alpha") {
-      return MakeAttr(&alpha);
+      return CastAttr(&alpha);
     } else {
       return Error::RuntimeError() << "BroadcastMatmul op has no attribute named " << attr_name;
     }
@@ -1373,7 +1373,7 @@ class BroadcastMatmulGradBOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "alpha") {
-      return MakeAttr(&alpha);
+      return CastAttr(&alpha);
     } else {
       return Error::RuntimeError() << "BroadcastMatmulGradB op has no attribute named " << attr_name;
     }
@@ -1446,7 +1446,7 @@ class CastOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "dtype") {
-      return MakeAttr(&dtype);
+      return CastAttr(&dtype);
     } else {
       return Error::RuntimeError() << "Cast op has no attribute named " << attr_name;
     }
@@ -1512,7 +1512,7 @@ class CeluOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "alpha") {
-      return MakeAttr(&alpha);
+      return CastAttr(&alpha);
     } else {
       return Error::RuntimeError() << "Celu op has no attribute named " << attr_name;
     }
@@ -1529,7 +1529,7 @@ class CeluGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "alpha") {
-      return MakeAttr(&alpha);
+      return CastAttr(&alpha);
     } else {
       return Error::RuntimeError() << "CeluGrad op has no attribute named " << attr_name;
     }
@@ -1546,13 +1546,13 @@ class ClipByScalarOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "floating_min") {
-      return MakeAttr(&floating_min);
+      return CastAttr(&floating_min);
     } else if (attr_name == "integral_min") {
-      return MakeAttr(&integral_min);
+      return CastAttr(&integral_min);
     } else if (attr_name == "floating_max") {
-      return MakeAttr(&floating_max);
+      return CastAttr(&floating_max);
     } else if (attr_name == "integral_max") {
-      return MakeAttr(&integral_max);
+      return CastAttr(&integral_max);
     } else {
       return Error::RuntimeError() << "ClipByScalar op has no attribute named " << attr_name;
     }
@@ -1572,13 +1572,13 @@ class ClipByScalarGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "floating_min") {
-      return MakeAttr(&floating_min);
+      return CastAttr(&floating_min);
     } else if (attr_name == "integral_min") {
-      return MakeAttr(&integral_min);
+      return CastAttr(&integral_min);
     } else if (attr_name == "floating_max") {
-      return MakeAttr(&floating_max);
+      return CastAttr(&floating_max);
     } else if (attr_name == "integral_max") {
-      return MakeAttr(&integral_max);
+      return CastAttr(&integral_max);
     } else {
       return Error::RuntimeError() << "ClipByScalarGrad op has no attribute named " << attr_name;
     }
@@ -1598,9 +1598,9 @@ class ClipByScalarMaxOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "floating_max") {
-      return MakeAttr(&floating_max);
+      return CastAttr(&floating_max);
     } else if (attr_name == "integral_max") {
-      return MakeAttr(&integral_max);
+      return CastAttr(&integral_max);
     } else {
       return Error::RuntimeError() << "ClipByScalarMax op has no attribute named " << attr_name;
     }
@@ -1618,9 +1618,9 @@ class ClipByScalarMaxGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "floating_max") {
-      return MakeAttr(&floating_max);
+      return CastAttr(&floating_max);
     } else if (attr_name == "integral_max") {
-      return MakeAttr(&integral_max);
+      return CastAttr(&integral_max);
     } else {
       return Error::RuntimeError() << "ClipByScalarMaxGrad op has no attribute named " << attr_name;
     }
@@ -1638,9 +1638,9 @@ class ClipByScalarMinOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "floating_min") {
-      return MakeAttr(&floating_min);
+      return CastAttr(&floating_min);
     } else if (attr_name == "integral_min") {
-      return MakeAttr(&integral_min);
+      return CastAttr(&integral_min);
     } else {
       return Error::RuntimeError() << "ClipByScalarMin op has no attribute named " << attr_name;
     }
@@ -1658,9 +1658,9 @@ class ClipByScalarMinGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "floating_min") {
-      return MakeAttr(&floating_min);
+      return CastAttr(&floating_min);
     } else if (attr_name == "integral_min") {
-      return MakeAttr(&integral_min);
+      return CastAttr(&integral_min);
     } else {
       return Error::RuntimeError() << "ClipByScalarMinGrad op has no attribute named " << attr_name;
     }
@@ -1678,15 +1678,15 @@ class CoinFlipOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "probability") {
-      return MakeAttr(&probability);
+      return CastAttr(&probability);
     } else if (attr_name == "batch_size") {
-      return MakeAttr(&batch_size);
+      return CastAttr(&batch_size);
     } else if (attr_name == "seed") {
-      return MakeAttr(&seed);
+      return CastAttr(&seed);
     } else if (attr_name == "has_seed") {
-      return MakeAttr(&has_seed);
+      return CastAttr(&has_seed);
     } else if (attr_name == "nd_sbp") {
-      return MakeAttr(&*JUST(nd_sbp));
+      return CastAttr(&nd_sbp);
     } else {
       return Error::RuntimeError() << "CoinFlip op has no attribute named " << attr_name;
     }
@@ -1701,19 +1701,19 @@ class CoinFlipOpInterpCtx : public OpInterpCtx {
   int64_t batch_size;
   int64_t seed;
   bool has_seed;
-  // std::vector<std::string> nd_sbp;
+  std::vector<std::string> nd_sbp;
 };
 class CombinedMarginLossOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "m1") {
-      return MakeAttr(&m1);
+      return CastAttr(&m1);
     } else if (attr_name == "m2") {
-      return MakeAttr(&m2);
+      return CastAttr(&m2);
     } else if (attr_name == "m3") {
-      return MakeAttr(&m3);
+      return CastAttr(&m3);
     } else if (attr_name == "depth") {
-      return MakeAttr(&depth);
+      return CastAttr(&depth);
     } else {
       return Error::RuntimeError() << "CombinedMarginLoss op has no attribute named " << attr_name;
     }
@@ -1733,13 +1733,13 @@ class CombinedMarginLossGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "m1") {
-      return MakeAttr(&m1);
+      return CastAttr(&m1);
     } else if (attr_name == "m2") {
-      return MakeAttr(&m2);
+      return CastAttr(&m2);
     } else if (attr_name == "m3") {
-      return MakeAttr(&m3);
+      return CastAttr(&m3);
     } else if (attr_name == "depth") {
-      return MakeAttr(&depth);
+      return CastAttr(&depth);
     } else {
       return Error::RuntimeError() << "CombinedMarginLossGrad op has no attribute named " << attr_name;
     }
@@ -1759,9 +1759,9 @@ class ConcatOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else if (attr_name == "max_dim_size") {
-      return MakeAttr(&max_dim_size);
+      return CastAttr(&max_dim_size);
     } else {
       return Error::RuntimeError() << "Concat op has no attribute named " << attr_name;
     }
@@ -1779,17 +1779,17 @@ class ConstantOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "floating_value") {
-      return MakeAttr(&floating_value);
+      return CastAttr(&floating_value);
     } else if (attr_name == "integer_value") {
-      return MakeAttr(&integer_value);
+      return CastAttr(&integer_value);
     } else if (attr_name == "is_floating_value") {
-      return MakeAttr(&is_floating_value);
+      return CastAttr(&is_floating_value);
     } else if (attr_name == "dtype") {
-      return MakeAttr(&dtype);
+      return CastAttr(&dtype);
     } else if (attr_name == "shape") {
-      return MakeAttr(&shape);
+      return CastAttr(&shape);
     } else if (attr_name == "nd_sbp") {
-      return MakeAttr(&*JUST(nd_sbp));
+      return CastAttr(&nd_sbp);
     } else {
       return Error::RuntimeError() << "Constant op has no attribute named " << attr_name;
     }
@@ -1805,17 +1805,17 @@ class ConstantOpInterpCtx : public OpInterpCtx {
   bool is_floating_value;
   DataType dtype;
   Shape shape;
-  // std::vector<std::string> nd_sbp;
+  std::vector<std::string> nd_sbp;
 };
 class ConstantPad1DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "floating_value") {
-      return MakeAttr(&floating_value);
+      return CastAttr(&floating_value);
     } else if (attr_name == "integral_value") {
-      return MakeAttr(&integral_value);
+      return CastAttr(&integral_value);
     } else {
       return Error::RuntimeError() << "ConstantPad1D op has no attribute named " << attr_name;
     }
@@ -1834,11 +1834,11 @@ class ConstantPad1DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "floating_value") {
-      return MakeAttr(&floating_value);
+      return CastAttr(&floating_value);
     } else if (attr_name == "integral_value") {
-      return MakeAttr(&integral_value);
+      return CastAttr(&integral_value);
     } else {
       return Error::RuntimeError() << "ConstantPad1DGrad op has no attribute named " << attr_name;
     }
@@ -1857,11 +1857,11 @@ class ConstantPad2DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "floating_value") {
-      return MakeAttr(&floating_value);
+      return CastAttr(&floating_value);
     } else if (attr_name == "integral_value") {
-      return MakeAttr(&integral_value);
+      return CastAttr(&integral_value);
     } else {
       return Error::RuntimeError() << "ConstantPad2D op has no attribute named " << attr_name;
     }
@@ -1880,11 +1880,11 @@ class ConstantPad2DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "floating_value") {
-      return MakeAttr(&floating_value);
+      return CastAttr(&floating_value);
     } else if (attr_name == "integral_value") {
-      return MakeAttr(&integral_value);
+      return CastAttr(&integral_value);
     } else {
       return Error::RuntimeError() << "ConstantPad2DGrad op has no attribute named " << attr_name;
     }
@@ -1903,11 +1903,11 @@ class ConstantPad3DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "floating_value") {
-      return MakeAttr(&floating_value);
+      return CastAttr(&floating_value);
     } else if (attr_name == "integral_value") {
-      return MakeAttr(&integral_value);
+      return CastAttr(&integral_value);
     } else {
       return Error::RuntimeError() << "ConstantPad3D op has no attribute named " << attr_name;
     }
@@ -1926,11 +1926,11 @@ class ConstantPad3DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "floating_value") {
-      return MakeAttr(&floating_value);
+      return CastAttr(&floating_value);
     } else if (attr_name == "integral_value") {
-      return MakeAttr(&integral_value);
+      return CastAttr(&integral_value);
     } else {
       return Error::RuntimeError() << "ConstantPad3DGrad op has no attribute named " << attr_name;
     }
@@ -1949,19 +1949,19 @@ class Conv1DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "filters") {
-      return MakeAttr(&filters);
+      return CastAttr(&filters);
     } else if (attr_name == "padding_before") {
-      return MakeAttr(&padding_before);
+      return CastAttr(&padding_before);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "dilation_rate") {
-      return MakeAttr(&dilation_rate);
+      return CastAttr(&dilation_rate);
     } else if (attr_name == "groups") {
-      return MakeAttr(&groups);
+      return CastAttr(&groups);
     } else {
       return Error::RuntimeError() << "Conv1D op has no attribute named " << attr_name;
     }
@@ -1984,19 +1984,19 @@ class Conv2DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "filters") {
-      return MakeAttr(&filters);
+      return CastAttr(&filters);
     } else if (attr_name == "padding_before") {
-      return MakeAttr(&padding_before);
+      return CastAttr(&padding_before);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "dilation_rate") {
-      return MakeAttr(&dilation_rate);
+      return CastAttr(&dilation_rate);
     } else if (attr_name == "groups") {
-      return MakeAttr(&groups);
+      return CastAttr(&groups);
     } else {
       return Error::RuntimeError() << "Conv2D op has no attribute named " << attr_name;
     }
@@ -2019,19 +2019,19 @@ class Conv3DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "filters") {
-      return MakeAttr(&filters);
+      return CastAttr(&filters);
     } else if (attr_name == "padding_before") {
-      return MakeAttr(&padding_before);
+      return CastAttr(&padding_before);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "dilation_rate") {
-      return MakeAttr(&dilation_rate);
+      return CastAttr(&dilation_rate);
     } else if (attr_name == "groups") {
-      return MakeAttr(&groups);
+      return CastAttr(&groups);
     } else {
       return Error::RuntimeError() << "Conv3D op has no attribute named " << attr_name;
     }
@@ -2054,9 +2054,9 @@ class ConvBiasGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "num_spatial_dims") {
-      return MakeAttr(&num_spatial_dims);
+      return CastAttr(&num_spatial_dims);
     } else {
       return Error::RuntimeError() << "ConvBiasGrad op has no attribute named " << attr_name;
     }
@@ -2074,19 +2074,19 @@ class ConvDataGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "num_spatial_dims") {
-      return MakeAttr(&num_spatial_dims);
+      return CastAttr(&num_spatial_dims);
     } else if (attr_name == "padding_before") {
-      return MakeAttr(&padding_before);
+      return CastAttr(&padding_before);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "dilation_rate") {
-      return MakeAttr(&dilation_rate);
+      return CastAttr(&dilation_rate);
     } else if (attr_name == "groups") {
-      return MakeAttr(&groups);
+      return CastAttr(&groups);
     } else {
       return Error::RuntimeError() << "ConvDataGrad op has no attribute named " << attr_name;
     }
@@ -2109,19 +2109,19 @@ class ConvFilterGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "num_spatial_dims") {
-      return MakeAttr(&num_spatial_dims);
+      return CastAttr(&num_spatial_dims);
     } else if (attr_name == "padding_before") {
-      return MakeAttr(&padding_before);
+      return CastAttr(&padding_before);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "dilation_rate") {
-      return MakeAttr(&dilation_rate);
+      return CastAttr(&dilation_rate);
     } else if (attr_name == "groups") {
-      return MakeAttr(&groups);
+      return CastAttr(&groups);
     } else {
       return Error::RuntimeError() << "ConvFilterGrad op has no attribute named " << attr_name;
     }
@@ -2144,9 +2144,9 @@ class CopyOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "device_type") {
-      return MakeAttr(&device_type);
+      return CastAttr(&device_type);
     } else if (attr_name == "device_id") {
-      return MakeAttr(&device_id);
+      return CastAttr(&device_id);
     } else {
       return Error::RuntimeError() << "Copy op has no attribute named " << attr_name;
     }
@@ -2206,7 +2206,7 @@ class CreateSummaryWriterOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "logdir") {
-      return MakeAttr(&logdir);
+      return CastAttr(&logdir);
     } else {
       return Error::RuntimeError() << "CreateSummaryWriter op has no attribute named " << attr_name;
     }
@@ -2223,23 +2223,23 @@ class CropMirrorNormalizeFromTensorbufferOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "color_space") {
-      return MakeAttr(&color_space);
+      return CastAttr(&color_space);
     } else if (attr_name == "output_layout") {
-      return MakeAttr(&output_layout);
+      return CastAttr(&output_layout);
     } else if (attr_name == "mean") {
-      return MakeAttr(&mean);
+      return CastAttr(&mean);
     } else if (attr_name == "std") {
-      return MakeAttr(&std);
+      return CastAttr(&std);
     } else if (attr_name == "crop_h") {
-      return MakeAttr(&crop_h);
+      return CastAttr(&crop_h);
     } else if (attr_name == "crop_w") {
-      return MakeAttr(&crop_w);
+      return CastAttr(&crop_w);
     } else if (attr_name == "crop_pos_x") {
-      return MakeAttr(&crop_pos_x);
+      return CastAttr(&crop_pos_x);
     } else if (attr_name == "crop_pos_y") {
-      return MakeAttr(&crop_pos_y);
+      return CastAttr(&crop_pos_y);
     } else if (attr_name == "output_dtype") {
-      return MakeAttr(&output_dtype);
+      return CastAttr(&output_dtype);
     } else {
       return Error::RuntimeError() << "CropMirrorNormalizeFromTensorbuffer op has no attribute named " << attr_name;
     }
@@ -2264,23 +2264,23 @@ class CropMirrorNormalizeFromUint8OpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "color_space") {
-      return MakeAttr(&color_space);
+      return CastAttr(&color_space);
     } else if (attr_name == "output_layout") {
-      return MakeAttr(&output_layout);
+      return CastAttr(&output_layout);
     } else if (attr_name == "mean") {
-      return MakeAttr(&mean);
+      return CastAttr(&mean);
     } else if (attr_name == "std") {
-      return MakeAttr(&std);
+      return CastAttr(&std);
     } else if (attr_name == "crop_h") {
-      return MakeAttr(&crop_h);
+      return CastAttr(&crop_h);
     } else if (attr_name == "crop_w") {
-      return MakeAttr(&crop_w);
+      return CastAttr(&crop_w);
     } else if (attr_name == "crop_pos_x") {
-      return MakeAttr(&crop_pos_x);
+      return CastAttr(&crop_pos_x);
     } else if (attr_name == "crop_pos_y") {
-      return MakeAttr(&crop_pos_y);
+      return CastAttr(&crop_pos_y);
     } else if (attr_name == "output_dtype") {
-      return MakeAttr(&output_dtype);
+      return CastAttr(&output_dtype);
     } else {
       return Error::RuntimeError() << "CropMirrorNormalizeFromUint8 op has no attribute named " << attr_name;
     }
@@ -2305,7 +2305,7 @@ class CtcGreedyDecoderOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "merge_repeated") {
-      return MakeAttr(&merge_repeated);
+      return CastAttr(&merge_repeated);
     } else {
       return Error::RuntimeError() << "CtcGreedyDecoder op has no attribute named " << attr_name;
     }
@@ -2322,11 +2322,11 @@ class CtcLossOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "max_target_length") {
-      return MakeAttr(&max_target_length);
+      return CastAttr(&max_target_length);
     } else if (attr_name == "blank") {
-      return MakeAttr(&blank);
+      return CastAttr(&blank);
     } else if (attr_name == "zero_infinity") {
-      return MakeAttr(&zero_infinity);
+      return CastAttr(&zero_infinity);
     } else {
       return Error::RuntimeError() << "CtcLoss op has no attribute named " << attr_name;
     }
@@ -2345,11 +2345,11 @@ class CtcLossGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "max_target_length") {
-      return MakeAttr(&max_target_length);
+      return CastAttr(&max_target_length);
     } else if (attr_name == "blank") {
-      return MakeAttr(&blank);
+      return CastAttr(&blank);
     } else if (attr_name == "zero_infinity") {
-      return MakeAttr(&zero_infinity);
+      return CastAttr(&zero_infinity);
     } else {
       return Error::RuntimeError() << "CtcLossGrad op has no attribute named " << attr_name;
     }
@@ -2368,11 +2368,11 @@ class CudnnFusedNormalizationAddReluOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else if (attr_name == "epsilon") {
-      return MakeAttr(&epsilon);
+      return CastAttr(&epsilon);
     } else if (attr_name == "momentum") {
-      return MakeAttr(&momentum);
+      return CastAttr(&momentum);
     } else {
       return Error::RuntimeError() << "CudnnFusedNormalizationAddRelu op has no attribute named " << attr_name;
     }
@@ -2391,9 +2391,9 @@ class CudnnFusedNormalizationAddReluGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else if (attr_name == "epsilon") {
-      return MakeAttr(&epsilon);
+      return CastAttr(&epsilon);
     } else {
       return Error::RuntimeError() << "CudnnFusedNormalizationAddReluGrad op has no attribute named " << attr_name;
     }
@@ -2411,21 +2411,21 @@ class Deconv1DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "filters") {
-      return MakeAttr(&filters);
+      return CastAttr(&filters);
     } else if (attr_name == "padding_before") {
-      return MakeAttr(&padding_before);
+      return CastAttr(&padding_before);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "output_padding") {
-      return MakeAttr(&output_padding);
+      return CastAttr(&output_padding);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "dilation_rate") {
-      return MakeAttr(&dilation_rate);
+      return CastAttr(&dilation_rate);
     } else if (attr_name == "groups") {
-      return MakeAttr(&groups);
+      return CastAttr(&groups);
     } else {
       return Error::RuntimeError() << "Deconv1D op has no attribute named " << attr_name;
     }
@@ -2449,21 +2449,21 @@ class Deconv2DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "filters") {
-      return MakeAttr(&filters);
+      return CastAttr(&filters);
     } else if (attr_name == "padding_before") {
-      return MakeAttr(&padding_before);
+      return CastAttr(&padding_before);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "output_padding") {
-      return MakeAttr(&output_padding);
+      return CastAttr(&output_padding);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "dilation_rate") {
-      return MakeAttr(&dilation_rate);
+      return CastAttr(&dilation_rate);
     } else if (attr_name == "groups") {
-      return MakeAttr(&groups);
+      return CastAttr(&groups);
     } else {
       return Error::RuntimeError() << "Deconv2D op has no attribute named " << attr_name;
     }
@@ -2487,21 +2487,21 @@ class Deconv3DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "filters") {
-      return MakeAttr(&filters);
+      return CastAttr(&filters);
     } else if (attr_name == "padding_before") {
-      return MakeAttr(&padding_before);
+      return CastAttr(&padding_before);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "output_padding") {
-      return MakeAttr(&output_padding);
+      return CastAttr(&output_padding);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "dilation_rate") {
-      return MakeAttr(&dilation_rate);
+      return CastAttr(&dilation_rate);
     } else if (attr_name == "groups") {
-      return MakeAttr(&groups);
+      return CastAttr(&groups);
     } else {
       return Error::RuntimeError() << "Deconv3D op has no attribute named " << attr_name;
     }
@@ -2525,7 +2525,7 @@ class DiagOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "diagonal") {
-      return MakeAttr(&diagonal);
+      return CastAttr(&diagonal);
     } else {
       return Error::RuntimeError() << "Diag op has no attribute named " << attr_name;
     }
@@ -2542,7 +2542,7 @@ class DiagGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "diagonal") {
-      return MakeAttr(&diagonal);
+      return CastAttr(&diagonal);
     } else {
       return Error::RuntimeError() << "DiagGrad op has no attribute named " << attr_name;
     }
@@ -2559,7 +2559,7 @@ class DimGatherOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "dim") {
-      return MakeAttr(&dim);
+      return CastAttr(&dim);
     } else {
       return Error::RuntimeError() << "DimGather op has no attribute named " << attr_name;
     }
@@ -2576,7 +2576,7 @@ class DimScatterAddOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "dim") {
-      return MakeAttr(&dim);
+      return CastAttr(&dim);
     } else {
       return Error::RuntimeError() << "DimScatterAdd op has no attribute named " << attr_name;
     }
@@ -2593,7 +2593,7 @@ class DimScatterAddLikeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "dim") {
-      return MakeAttr(&dim);
+      return CastAttr(&dim);
     } else {
       return Error::RuntimeError() << "DimScatterAddLike op has no attribute named " << attr_name;
     }
@@ -2610,9 +2610,9 @@ class DimScatterAddScalarOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "src_scalar") {
-      return MakeAttr(&src_scalar);
+      return CastAttr(&src_scalar);
     } else if (attr_name == "dim") {
-      return MakeAttr(&dim);
+      return CastAttr(&dim);
     } else {
       return Error::RuntimeError() << "DimScatterAddScalar op has no attribute named " << attr_name;
     }
@@ -2630,7 +2630,7 @@ class DimScatterMulOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "dim") {
-      return MakeAttr(&dim);
+      return CastAttr(&dim);
     } else {
       return Error::RuntimeError() << "DimScatterMul op has no attribute named " << attr_name;
     }
@@ -2647,9 +2647,9 @@ class DimScatterMulScalarOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "src_scalar") {
-      return MakeAttr(&src_scalar);
+      return CastAttr(&src_scalar);
     } else if (attr_name == "dim") {
-      return MakeAttr(&dim);
+      return CastAttr(&dim);
     } else {
       return Error::RuntimeError() << "DimScatterMulScalar op has no attribute named " << attr_name;
     }
@@ -2667,7 +2667,7 @@ class DimScatterUpdateOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "dim") {
-      return MakeAttr(&dim);
+      return CastAttr(&dim);
     } else {
       return Error::RuntimeError() << "DimScatterUpdate op has no attribute named " << attr_name;
     }
@@ -2684,9 +2684,9 @@ class DimScatterUpdateScalarOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "src_scalar") {
-      return MakeAttr(&src_scalar);
+      return CastAttr(&src_scalar);
     } else if (attr_name == "dim") {
-      return MakeAttr(&dim);
+      return CastAttr(&dim);
     } else {
       return Error::RuntimeError() << "DimScatterUpdateScalar op has no attribute named " << attr_name;
     }
@@ -2704,9 +2704,9 @@ class DistributedPartialFcSampleOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "num_sample") {
-      return MakeAttr(&num_sample);
+      return CastAttr(&num_sample);
     } else if (attr_name == "seed") {
-      return MakeAttr(&seed);
+      return CastAttr(&seed);
     } else {
       return Error::RuntimeError() << "DistributedPartialFcSample op has no attribute named " << attr_name;
     }
@@ -2731,7 +2731,7 @@ class DropoutOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "scale") {
-      return MakeAttr(&scale);
+      return CastAttr(&scale);
     } else {
       return Error::RuntimeError() << "Dropout op has no attribute named " << attr_name;
     }
@@ -2748,7 +2748,7 @@ class DropoutGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "scale") {
-      return MakeAttr(&scale);
+      return CastAttr(&scale);
     } else {
       return Error::RuntimeError() << "DropoutGrad op has no attribute named " << attr_name;
     }
@@ -2765,9 +2765,9 @@ class DynamicLossScaleScheduleOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "increment_period") {
-      return MakeAttr(&increment_period);
+      return CastAttr(&increment_period);
     } else if (attr_name == "multiplier") {
-      return MakeAttr(&multiplier);
+      return CastAttr(&multiplier);
     } else {
       return Error::RuntimeError() << "DynamicLossScaleSchedule op has no attribute named " << attr_name;
     }
@@ -2785,13 +2785,13 @@ class EagerBToSOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "out_split_axis") {
-      return MakeAttr(&out_split_axis);
+      return CastAttr(&out_split_axis);
     } else if (attr_name == "in_parallel_conf") {
-      return MakeAttr(&in_parallel_conf);
+      return CastAttr(&in_parallel_conf);
     } else if (attr_name == "out_parallel_conf") {
-      return MakeAttr(&out_parallel_conf);
+      return CastAttr(&out_parallel_conf);
     } else if (attr_name == "shape") {
-      return MakeAttr(&shape);
+      return CastAttr(&shape);
     } else {
       return Error::RuntimeError() << "EagerBToS op has no attribute named " << attr_name;
     }
@@ -2811,15 +2811,15 @@ class EagerNaiveSToSOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "in_split_axis") {
-      return MakeAttr(&in_split_axis);
+      return CastAttr(&in_split_axis);
     } else if (attr_name == "out_split_axis") {
-      return MakeAttr(&out_split_axis);
+      return CastAttr(&out_split_axis);
     } else if (attr_name == "in_parallel_conf") {
-      return MakeAttr(&in_parallel_conf);
+      return CastAttr(&in_parallel_conf);
     } else if (attr_name == "out_parallel_conf") {
-      return MakeAttr(&out_parallel_conf);
+      return CastAttr(&out_parallel_conf);
     } else if (attr_name == "shape") {
-      return MakeAttr(&shape);
+      return CastAttr(&shape);
     } else {
       return Error::RuntimeError() << "EagerNaiveSToS op has no attribute named " << attr_name;
     }
@@ -2840,7 +2840,7 @@ class EagerNcclAllGatherOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "parallel_conf") {
-      return MakeAttr(&parallel_conf);
+      return CastAttr(&parallel_conf);
     } else {
       return Error::RuntimeError() << "EagerNcclAllGather op has no attribute named " << attr_name;
     }
@@ -2857,9 +2857,9 @@ class EagerNcclAllReduceOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "parallel_conf") {
-      return MakeAttr(&parallel_conf);
+      return CastAttr(&parallel_conf);
     } else if (attr_name == "async_launch") {
-      return MakeAttr(&async_launch);
+      return CastAttr(&async_launch);
     } else {
       return Error::RuntimeError() << "EagerNcclAllReduce op has no attribute named " << attr_name;
     }
@@ -2877,9 +2877,9 @@ class EagerNcclBroadcastOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "parallel_conf") {
-      return MakeAttr(&parallel_conf);
+      return CastAttr(&parallel_conf);
     } else if (attr_name == "root") {
-      return MakeAttr(&root);
+      return CastAttr(&root);
     } else {
       return Error::RuntimeError() << "EagerNcclBroadcast op has no attribute named " << attr_name;
     }
@@ -2897,9 +2897,9 @@ class EagerNcclReduceOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "parallel_conf") {
-      return MakeAttr(&parallel_conf);
+      return CastAttr(&parallel_conf);
     } else if (attr_name == "root") {
-      return MakeAttr(&root);
+      return CastAttr(&root);
     } else {
       return Error::RuntimeError() << "EagerNcclReduce op has no attribute named " << attr_name;
     }
@@ -2917,9 +2917,9 @@ class EagerNcclReduceScatterOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "parallel_conf") {
-      return MakeAttr(&parallel_conf);
+      return CastAttr(&parallel_conf);
     } else if (attr_name == "op_type") {
-      return MakeAttr(&op_type);
+      return CastAttr(&op_type);
     } else {
       return Error::RuntimeError() << "EagerNcclReduceScatter op has no attribute named " << attr_name;
     }
@@ -2937,11 +2937,11 @@ class EagerNcclS2sOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "in_split_axis") {
-      return MakeAttr(&in_split_axis);
+      return CastAttr(&in_split_axis);
     } else if (attr_name == "out_split_axis") {
-      return MakeAttr(&out_split_axis);
+      return CastAttr(&out_split_axis);
     } else if (attr_name == "parallel_conf") {
-      return MakeAttr(&parallel_conf);
+      return CastAttr(&parallel_conf);
     } else {
       return Error::RuntimeError() << "EagerNcclS2s op has no attribute named " << attr_name;
     }
@@ -2960,11 +2960,11 @@ class EagerPToBOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "in_parallel_conf") {
-      return MakeAttr(&in_parallel_conf);
+      return CastAttr(&in_parallel_conf);
     } else if (attr_name == "out_parallel_conf") {
-      return MakeAttr(&out_parallel_conf);
+      return CastAttr(&out_parallel_conf);
     } else if (attr_name == "shape") {
-      return MakeAttr(&shape);
+      return CastAttr(&shape);
     } else {
       return Error::RuntimeError() << "EagerPToB op has no attribute named " << attr_name;
     }
@@ -2983,13 +2983,13 @@ class EagerPToSOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "out_split_axis") {
-      return MakeAttr(&out_split_axis);
+      return CastAttr(&out_split_axis);
     } else if (attr_name == "in_parallel_conf") {
-      return MakeAttr(&in_parallel_conf);
+      return CastAttr(&in_parallel_conf);
     } else if (attr_name == "out_parallel_conf") {
-      return MakeAttr(&out_parallel_conf);
+      return CastAttr(&out_parallel_conf);
     } else if (attr_name == "shape") {
-      return MakeAttr(&shape);
+      return CastAttr(&shape);
     } else {
       return Error::RuntimeError() << "EagerPToS op has no attribute named " << attr_name;
     }
@@ -3009,13 +3009,13 @@ class EagerSToBOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "in_split_axis") {
-      return MakeAttr(&in_split_axis);
+      return CastAttr(&in_split_axis);
     } else if (attr_name == "in_parallel_conf") {
-      return MakeAttr(&in_parallel_conf);
+      return CastAttr(&in_parallel_conf);
     } else if (attr_name == "out_parallel_conf") {
-      return MakeAttr(&out_parallel_conf);
+      return CastAttr(&out_parallel_conf);
     } else if (attr_name == "shape") {
-      return MakeAttr(&shape);
+      return CastAttr(&shape);
     } else {
       return Error::RuntimeError() << "EagerSToB op has no attribute named " << attr_name;
     }
@@ -3035,9 +3035,9 @@ class EagerSymmetricSToPOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "in_split_axis") {
-      return MakeAttr(&in_split_axis);
+      return CastAttr(&in_split_axis);
     } else if (attr_name == "parallel_conf") {
-      return MakeAttr(&parallel_conf);
+      return CastAttr(&parallel_conf);
     } else {
       return Error::RuntimeError() << "EagerSymmetricSToP op has no attribute named " << attr_name;
     }
@@ -3083,7 +3083,7 @@ class EluOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "alpha") {
-      return MakeAttr(&alpha);
+      return CastAttr(&alpha);
     } else {
       return Error::RuntimeError() << "Elu op has no attribute named " << attr_name;
     }
@@ -3100,7 +3100,7 @@ class EluGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "alpha") {
-      return MakeAttr(&alpha);
+      return CastAttr(&alpha);
     } else {
       return Error::RuntimeError() << "EluGrad op has no attribute named " << attr_name;
     }
@@ -3117,11 +3117,11 @@ class EmptyOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "dtype") {
-      return MakeAttr(&dtype);
+      return CastAttr(&dtype);
     } else if (attr_name == "shape") {
-      return MakeAttr(&shape);
+      return CastAttr(&shape);
     } else if (attr_name == "nd_sbp") {
-      return MakeAttr(&*JUST(nd_sbp));
+      return CastAttr(&nd_sbp);
     } else {
       return Error::RuntimeError() << "Empty op has no attribute named " << attr_name;
     }
@@ -3134,7 +3134,7 @@ class EmptyOpInterpCtx : public OpInterpCtx {
  public:
   DataType dtype;
   Shape shape;
-  // std::vector<std::string> nd_sbp;
+  std::vector<std::string> nd_sbp;
 };
 class ErfOpInterpCtx : public OpInterpCtx {
  public:
@@ -3182,9 +3182,9 @@ class ExpandOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "logical_in_shape") {
-      return MakeAttr(&logical_in_shape);
+      return CastAttr(&logical_in_shape);
     } else if (attr_name == "logical_expand_shape") {
-      return MakeAttr(&logical_expand_shape);
+      return CastAttr(&logical_expand_shape);
     } else {
       return Error::RuntimeError() << "Expand op has no attribute named " << attr_name;
     }
@@ -3202,7 +3202,7 @@ class ExpandDimsOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else {
       return Error::RuntimeError() << "ExpandDims op has no attribute named " << attr_name;
     }
@@ -3219,9 +3219,9 @@ class ExpandGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "logical_out_shape") {
-      return MakeAttr(&logical_out_shape);
+      return CastAttr(&logical_out_shape);
     } else if (attr_name == "logical_expand_shape") {
-      return MakeAttr(&logical_expand_shape);
+      return CastAttr(&logical_expand_shape);
     } else {
       return Error::RuntimeError() << "ExpandGrad op has no attribute named " << attr_name;
     }
@@ -3253,13 +3253,13 @@ class EyeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "rows") {
-      return MakeAttr(&rows);
+      return CastAttr(&rows);
     } else if (attr_name == "cols") {
-      return MakeAttr(&cols);
+      return CastAttr(&cols);
     } else if (attr_name == "dtype") {
-      return MakeAttr(&dtype);
+      return CastAttr(&dtype);
     } else if (attr_name == "nd_sbp") {
-      return MakeAttr(&*JUST(nd_sbp));
+      return CastAttr(&nd_sbp);
     } else {
       return Error::RuntimeError() << "Eye op has no attribute named " << attr_name;
     }
@@ -3273,17 +3273,17 @@ class EyeOpInterpCtx : public OpInterpCtx {
   int64_t rows;
   int64_t cols;
   DataType dtype;
-  // std::vector<std::string> nd_sbp;
+  std::vector<std::string> nd_sbp;
 };
 class FakeQuantizationOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "quantization_formula") {
-      return MakeAttr(&quantization_formula);
+      return CastAttr(&quantization_formula);
     } else if (attr_name == "quantization_bit") {
-      return MakeAttr(&quantization_bit);
+      return CastAttr(&quantization_bit);
     } else if (attr_name == "quantization_scheme") {
-      return MakeAttr(&quantization_scheme);
+      return CastAttr(&quantization_scheme);
     } else {
       return Error::RuntimeError() << "FakeQuantization op has no attribute named " << attr_name;
     }
@@ -3302,9 +3302,9 @@ class FlattenOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "start_dim") {
-      return MakeAttr(&start_dim);
+      return CastAttr(&start_dim);
     } else if (attr_name == "end_dim") {
-      return MakeAttr(&end_dim);
+      return CastAttr(&end_dim);
     } else {
       return Error::RuntimeError() << "Flatten op has no attribute named " << attr_name;
     }
@@ -3322,7 +3322,7 @@ class FlipOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "dims") {
-      return MakeAttr(&dims);
+      return CastAttr(&dims);
     } else {
       return Error::RuntimeError() << "Flip op has no attribute named " << attr_name;
     }
@@ -3339,7 +3339,7 @@ class FlipGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "dims") {
-      return MakeAttr(&dims);
+      return CastAttr(&dims);
     } else {
       return Error::RuntimeError() << "FlipGrad op has no attribute named " << attr_name;
     }
@@ -3398,15 +3398,15 @@ class FoldOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "output_size") {
-      return MakeAttr(&output_size);
+      return CastAttr(&output_size);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "dilation_rate") {
-      return MakeAttr(&dilation_rate);
+      return CastAttr(&dilation_rate);
     } else {
       return Error::RuntimeError() << "Fold op has no attribute named " << attr_name;
     }
@@ -3427,7 +3427,7 @@ class FusedBiasAddGeluOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else {
       return Error::RuntimeError() << "FusedBiasAddGelu op has no attribute named " << attr_name;
     }
@@ -3444,7 +3444,7 @@ class FusedBiasAddGeluGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else {
       return Error::RuntimeError() << "FusedBiasAddGeluGrad op has no attribute named " << attr_name;
     }
@@ -3461,9 +3461,9 @@ class FusedBiasAddMaskScaleOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else if (attr_name == "scale") {
-      return MakeAttr(&scale);
+      return CastAttr(&scale);
     } else {
       return Error::RuntimeError() << "FusedBiasAddMaskScale op has no attribute named " << attr_name;
     }
@@ -3481,7 +3481,7 @@ class FusedCastScaleOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "scale") {
-      return MakeAttr(&scale);
+      return CastAttr(&scale);
     } else {
       return Error::RuntimeError() << "FusedCastScale op has no attribute named " << attr_name;
     }
@@ -3498,9 +3498,9 @@ class FusedScaleMaskSoftmaxOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "scale_value") {
-      return MakeAttr(&scale_value);
+      return CastAttr(&scale_value);
     } else if (attr_name == "mask_fill_value") {
-      return MakeAttr(&mask_fill_value);
+      return CastAttr(&mask_fill_value);
     } else {
       return Error::RuntimeError() << "FusedScaleMaskSoftmax op has no attribute named " << attr_name;
     }
@@ -3518,11 +3518,11 @@ class FusedScaleMaskSoftmaxDropoutOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "scale_value") {
-      return MakeAttr(&scale_value);
+      return CastAttr(&scale_value);
     } else if (attr_name == "mask_fill_value") {
-      return MakeAttr(&mask_fill_value);
+      return CastAttr(&mask_fill_value);
     } else if (attr_name == "dropout_scale_value") {
-      return MakeAttr(&dropout_scale_value);
+      return CastAttr(&dropout_scale_value);
     } else {
       return Error::RuntimeError() << "FusedScaleMaskSoftmaxDropout op has no attribute named " << attr_name;
     }
@@ -3541,9 +3541,9 @@ class FusedScaleMaskSoftmaxDropoutGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "scale_value") {
-      return MakeAttr(&scale_value);
+      return CastAttr(&scale_value);
     } else if (attr_name == "dropout_scale_value") {
-      return MakeAttr(&dropout_scale_value);
+      return CastAttr(&dropout_scale_value);
     } else {
       return Error::RuntimeError() << "FusedScaleMaskSoftmaxDropoutGrad op has no attribute named " << attr_name;
     }
@@ -3561,7 +3561,7 @@ class FusedScaleMaskSoftmaxGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "scale_value") {
-      return MakeAttr(&scale_value);
+      return CastAttr(&scale_value);
     } else {
       return Error::RuntimeError() << "FusedScaleMaskSoftmaxGrad op has no attribute named " << attr_name;
     }
@@ -3578,19 +3578,19 @@ class FusedScaleTrilOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "diagonal") {
-      return MakeAttr(&diagonal);
+      return CastAttr(&diagonal);
     } else if (attr_name == "floating_fill_value") {
-      return MakeAttr(&floating_fill_value);
+      return CastAttr(&floating_fill_value);
     } else if (attr_name == "integer_fill_value") {
-      return MakeAttr(&integer_fill_value);
+      return CastAttr(&integer_fill_value);
     } else if (attr_name == "is_floating_fill_value") {
-      return MakeAttr(&is_floating_fill_value);
+      return CastAttr(&is_floating_fill_value);
     } else if (attr_name == "floating_scale_value") {
-      return MakeAttr(&floating_scale_value);
+      return CastAttr(&floating_scale_value);
     } else if (attr_name == "integer_scale_value") {
-      return MakeAttr(&integer_scale_value);
+      return CastAttr(&integer_scale_value);
     } else if (attr_name == "is_floating_scale_value") {
-      return MakeAttr(&is_floating_scale_value);
+      return CastAttr(&is_floating_scale_value);
     } else {
       return Error::RuntimeError() << "FusedScaleTril op has no attribute named " << attr_name;
     }
@@ -3613,9 +3613,9 @@ class FusedSelfAttentionQueryMulKeyAndValueOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "head_size") {
-      return MakeAttr(&head_size);
+      return CastAttr(&head_size);
     } else if (attr_name == "alpha") {
-      return MakeAttr(&alpha);
+      return CastAttr(&alpha);
     } else {
       return Error::RuntimeError() << "FusedSelfAttentionQueryMulKeyAndValue op has no attribute named " << attr_name;
     }
@@ -3633,7 +3633,7 @@ class FusedSelfAttentionQueryMulKeyAndValueGradOpInterpCtx : public OpInterpCtx 
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "alpha") {
-      return MakeAttr(&alpha);
+      return CastAttr(&alpha);
     } else {
       return Error::RuntimeError() << "FusedSelfAttentionQueryMulKeyAndValueGrad op has no attribute named " << attr_name;
     }
@@ -3650,13 +3650,13 @@ class FusedTrilScaleSoftmaxMaskScaleOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "diagonal") {
-      return MakeAttr(&diagonal);
+      return CastAttr(&diagonal);
     } else if (attr_name == "tril_fill_value") {
-      return MakeAttr(&tril_fill_value);
+      return CastAttr(&tril_fill_value);
     } else if (attr_name == "tril_scale_value") {
-      return MakeAttr(&tril_scale_value);
+      return CastAttr(&tril_scale_value);
     } else if (attr_name == "mask_scale_value") {
-      return MakeAttr(&mask_scale_value);
+      return CastAttr(&mask_scale_value);
     } else {
       return Error::RuntimeError() << "FusedTrilScaleSoftmaxMaskScale op has no attribute named " << attr_name;
     }
@@ -3676,11 +3676,11 @@ class FusedTrilScaleSoftmaxMaskScaleGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "diagonal") {
-      return MakeAttr(&diagonal);
+      return CastAttr(&diagonal);
     } else if (attr_name == "tril_scale_value") {
-      return MakeAttr(&tril_scale_value);
+      return CastAttr(&tril_scale_value);
     } else if (attr_name == "mask_scale_value") {
-      return MakeAttr(&mask_scale_value);
+      return CastAttr(&mask_scale_value);
     } else {
       return Error::RuntimeError() << "FusedTrilScaleSoftmaxMaskScaleGrad op has no attribute named " << attr_name;
     }
@@ -3699,7 +3699,7 @@ class GatherOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else {
       return Error::RuntimeError() << "Gather op has no attribute named " << attr_name;
     }
@@ -3737,15 +3737,15 @@ class GenTensorBufferOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "shape") {
-      return MakeAttr(&shape);
+      return CastAttr(&shape);
     } else if (attr_name == "shape_list") {
-      return MakeAttr(&shape_list);
+      return CastAttr(&shape_list);
     } else if (attr_name == "value_list") {
-      return MakeAttr(&value_list);
+      return CastAttr(&value_list);
     } else if (attr_name == "data_type") {
-      return MakeAttr(&data_type);
+      return CastAttr(&data_type);
     } else if (attr_name == "dynamic_out") {
-      return MakeAttr(&dynamic_out);
+      return CastAttr(&dynamic_out);
     } else {
       return Error::RuntimeError() << "GenTensorBuffer op has no attribute named " << attr_name;
     }
@@ -3766,7 +3766,7 @@ class GenerateRandomBatchPermutationIndicesOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "seed") {
-      return MakeAttr(&seed);
+      return CastAttr(&seed);
     } else {
       return Error::RuntimeError() << "GenerateRandomBatchPermutationIndices op has no attribute named " << attr_name;
     }
@@ -3783,11 +3783,11 @@ class GridSampleOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "interpolation_mode") {
-      return MakeAttr(&interpolation_mode);
+      return CastAttr(&interpolation_mode);
     } else if (attr_name == "padding_mode") {
-      return MakeAttr(&padding_mode);
+      return CastAttr(&padding_mode);
     } else if (attr_name == "align_corners") {
-      return MakeAttr(&align_corners);
+      return CastAttr(&align_corners);
     } else {
       return Error::RuntimeError() << "GridSample op has no attribute named " << attr_name;
     }
@@ -3806,11 +3806,11 @@ class GridSampleGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "interpolation_mode") {
-      return MakeAttr(&interpolation_mode);
+      return CastAttr(&interpolation_mode);
     } else if (attr_name == "padding_mode") {
-      return MakeAttr(&padding_mode);
+      return CastAttr(&padding_mode);
     } else if (attr_name == "align_corners") {
-      return MakeAttr(&align_corners);
+      return CastAttr(&align_corners);
     } else {
       return Error::RuntimeError() << "GridSampleGrad op has no attribute named " << attr_name;
     }
@@ -3857,9 +3857,9 @@ class HardtanhOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "min_val") {
-      return MakeAttr(&min_val);
+      return CastAttr(&min_val);
     } else if (attr_name == "max_val") {
-      return MakeAttr(&max_val);
+      return CastAttr(&max_val);
     } else {
       return Error::RuntimeError() << "Hardtanh op has no attribute named " << attr_name;
     }
@@ -3877,9 +3877,9 @@ class HardtanhGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "min_val") {
-      return MakeAttr(&min_val);
+      return CastAttr(&min_val);
     } else if (attr_name == "max_val") {
-      return MakeAttr(&max_val);
+      return CastAttr(&max_val);
     } else {
       return Error::RuntimeError() << "HardtanhGrad op has no attribute named " << attr_name;
     }
@@ -3897,11 +3897,11 @@ class HierarchicalParallelCastOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "nd_sbp") {
-      return MakeAttr(&*JUST(nd_sbp));
+      return CastAttr(&nd_sbp);
     } else if (attr_name == "grad_mode") {
-      return MakeAttr(&grad_mode);
+      return CastAttr(&grad_mode);
     } else if (attr_name == "grad_nd_sbp") {
-      return MakeAttr(&grad_nd_sbp);
+      return CastAttr(&grad_nd_sbp);
     } else {
       return Error::RuntimeError() << "HierarchicalParallelCast op has no attribute named " << attr_name;
     }
@@ -3912,7 +3912,7 @@ class HierarchicalParallelCastOpInterpCtx : public OpInterpCtx {
   }
 
  public:
-  // std::vector<std::string> nd_sbp;
+  std::vector<std::string> nd_sbp;
   std::string grad_mode;
   std::vector<std::string> grad_nd_sbp;
 };
@@ -3934,7 +3934,7 @@ class IdentityBufferOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "buffer_size") {
-      return MakeAttr(&buffer_size);
+      return CastAttr(&buffer_size);
     } else {
       return Error::RuntimeError() << "IdentityBuffer op has no attribute named " << attr_name;
     }
@@ -3951,13 +3951,13 @@ class ImageBatchAlignOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "shape") {
-      return MakeAttr(&shape);
+      return CastAttr(&shape);
     } else if (attr_name == "data_type") {
-      return MakeAttr(&data_type);
+      return CastAttr(&data_type);
     } else if (attr_name == "alignment") {
-      return MakeAttr(&alignment);
+      return CastAttr(&alignment);
     } else if (attr_name == "dynamic_out") {
-      return MakeAttr(&dynamic_out);
+      return CastAttr(&dynamic_out);
     } else {
       return Error::RuntimeError() << "ImageBatchAlign op has no attribute named " << attr_name;
     }
@@ -3977,9 +3977,9 @@ class ImageDecodeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "color_space") {
-      return MakeAttr(&color_space);
+      return CastAttr(&color_space);
     } else if (attr_name == "data_type") {
-      return MakeAttr(&data_type);
+      return CastAttr(&data_type);
     } else {
       return Error::RuntimeError() << "ImageDecode op has no attribute named " << attr_name;
     }
@@ -4004,9 +4004,9 @@ class ImageNormalizeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "std") {
-      return MakeAttr(&std);
+      return CastAttr(&std);
     } else if (attr_name == "mean") {
-      return MakeAttr(&mean);
+      return CastAttr(&mean);
     } else {
       return Error::RuntimeError() << "ImageNormalize op has no attribute named " << attr_name;
     }
@@ -4024,15 +4024,15 @@ class ImageRandomCropOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "num_attempts") {
-      return MakeAttr(&num_attempts);
+      return CastAttr(&num_attempts);
     } else if (attr_name == "seed") {
-      return MakeAttr(&seed);
+      return CastAttr(&seed);
     } else if (attr_name == "has_seed") {
-      return MakeAttr(&has_seed);
+      return CastAttr(&has_seed);
     } else if (attr_name == "random_area") {
-      return MakeAttr(&random_area);
+      return CastAttr(&random_area);
     } else if (attr_name == "random_aspect_ratio") {
-      return MakeAttr(&random_aspect_ratio);
+      return CastAttr(&random_aspect_ratio);
     } else {
       return Error::RuntimeError() << "ImageRandomCrop op has no attribute named " << attr_name;
     }
@@ -4053,15 +4053,15 @@ class ImageResizeKeepAspectRatioOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "target_size") {
-      return MakeAttr(&target_size);
+      return CastAttr(&target_size);
     } else if (attr_name == "min_size") {
-      return MakeAttr(&min_size);
+      return CastAttr(&min_size);
     } else if (attr_name == "max_size") {
-      return MakeAttr(&max_size);
+      return CastAttr(&max_size);
     } else if (attr_name == "resize_longer") {
-      return MakeAttr(&resize_longer);
+      return CastAttr(&resize_longer);
     } else if (attr_name == "interpolation_type") {
-      return MakeAttr(&interpolation_type);
+      return CastAttr(&interpolation_type);
     } else {
       return Error::RuntimeError() << "ImageResizeKeepAspectRatio op has no attribute named " << attr_name;
     }
@@ -4082,15 +4082,15 @@ class ImageResizeToFixedOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "target_width") {
-      return MakeAttr(&target_width);
+      return CastAttr(&target_width);
     } else if (attr_name == "target_height") {
-      return MakeAttr(&target_height);
+      return CastAttr(&target_height);
     } else if (attr_name == "channels") {
-      return MakeAttr(&channels);
+      return CastAttr(&channels);
     } else if (attr_name == "data_type") {
-      return MakeAttr(&data_type);
+      return CastAttr(&data_type);
     } else if (attr_name == "interpolation_type") {
-      return MakeAttr(&interpolation_type);
+      return CastAttr(&interpolation_type);
     } else {
       return Error::RuntimeError() << "ImageResizeToFixed op has no attribute named " << attr_name;
     }
@@ -4111,9 +4111,9 @@ class ImageTargetResizeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "target_size") {
-      return MakeAttr(&target_size);
+      return CastAttr(&target_size);
     } else if (attr_name == "max_size") {
-      return MakeAttr(&max_size);
+      return CastAttr(&max_size);
     } else {
       return Error::RuntimeError() << "ImageTargetResize op has no attribute named " << attr_name;
     }
@@ -4131,7 +4131,7 @@ class InTopKOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "k") {
-      return MakeAttr(&k);
+      return CastAttr(&k);
     } else {
       return Error::RuntimeError() << "InTopK op has no attribute named " << attr_name;
     }
@@ -4148,19 +4148,19 @@ class IndexedSlicesAdamUpdateOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "learning_rate_val") {
-      return MakeAttr(&learning_rate_val);
+      return CastAttr(&learning_rate_val);
     } else if (attr_name == "beta1") {
-      return MakeAttr(&beta1);
+      return CastAttr(&beta1);
     } else if (attr_name == "beta2") {
-      return MakeAttr(&beta2);
+      return CastAttr(&beta2);
     } else if (attr_name == "epsilon") {
-      return MakeAttr(&epsilon);
+      return CastAttr(&epsilon);
     } else if (attr_name == "weight_decay") {
-      return MakeAttr(&weight_decay);
+      return CastAttr(&weight_decay);
     } else if (attr_name == "amsgrad") {
-      return MakeAttr(&amsgrad);
+      return CastAttr(&amsgrad);
     } else if (attr_name == "do_bias_correction") {
-      return MakeAttr(&do_bias_correction);
+      return CastAttr(&do_bias_correction);
     } else {
       return Error::RuntimeError() << "IndexedSlicesAdamUpdate op has no attribute named " << attr_name;
     }
@@ -4183,9 +4183,9 @@ class IndexedSlicesMomentumUpdateOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "beta") {
-      return MakeAttr(&beta);
+      return CastAttr(&beta);
     } else if (attr_name == "weight_decay") {
-      return MakeAttr(&weight_decay);
+      return CastAttr(&weight_decay);
     } else {
       return Error::RuntimeError() << "IndexedSlicesMomentumUpdate op has no attribute named " << attr_name;
     }
@@ -4210,7 +4210,7 @@ class IndexedSlicesSgdUpdateOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "weight_decay") {
-      return MakeAttr(&weight_decay);
+      return CastAttr(&weight_decay);
     } else {
       return Error::RuntimeError() << "IndexedSlicesSgdUpdate op has no attribute named " << attr_name;
     }
@@ -4227,9 +4227,9 @@ class KlDivLossOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "reduction") {
-      return MakeAttr(&reduction);
+      return CastAttr(&reduction);
     } else if (attr_name == "log_target") {
-      return MakeAttr(&log_target);
+      return CastAttr(&log_target);
     } else {
       return Error::RuntimeError() << "KlDivLoss op has no attribute named " << attr_name;
     }
@@ -4247,9 +4247,9 @@ class KlDivLossGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "reduction") {
-      return MakeAttr(&reduction);
+      return CastAttr(&reduction);
     } else if (attr_name == "log_target") {
-      return MakeAttr(&log_target);
+      return CastAttr(&log_target);
     } else {
       return Error::RuntimeError() << "KlDivLossGrad op has no attribute named " << attr_name;
     }
@@ -4267,9 +4267,9 @@ class L1L2RegularizeGradientOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "l1") {
-      return MakeAttr(&l1);
+      return CastAttr(&l1);
     } else if (attr_name == "l2") {
-      return MakeAttr(&l2);
+      return CastAttr(&l2);
     } else {
       return Error::RuntimeError() << "L1L2RegularizeGradient op has no attribute named " << attr_name;
     }
@@ -4287,9 +4287,9 @@ class L2NormalizeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else if (attr_name == "epsilon") {
-      return MakeAttr(&epsilon);
+      return CastAttr(&epsilon);
     } else {
       return Error::RuntimeError() << "L2Normalize op has no attribute named " << attr_name;
     }
@@ -4307,9 +4307,9 @@ class L2NormalizeGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else if (attr_name == "epsilon") {
-      return MakeAttr(&epsilon);
+      return CastAttr(&epsilon);
     } else {
       return Error::RuntimeError() << "L2NormalizeGrad op has no attribute named " << attr_name;
     }
@@ -4327,19 +4327,19 @@ class LambUpdateOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "beta1") {
-      return MakeAttr(&beta1);
+      return CastAttr(&beta1);
     } else if (attr_name == "beta2") {
-      return MakeAttr(&beta2);
+      return CastAttr(&beta2);
     } else if (attr_name == "epsilon") {
-      return MakeAttr(&epsilon);
+      return CastAttr(&epsilon);
     } else if (attr_name == "scale") {
-      return MakeAttr(&scale);
+      return CastAttr(&scale);
     } else if (attr_name == "l1") {
-      return MakeAttr(&l1);
+      return CastAttr(&l1);
     } else if (attr_name == "l2") {
-      return MakeAttr(&l2);
+      return CastAttr(&l2);
     } else if (attr_name == "weight_decay") {
-      return MakeAttr(&weight_decay);
+      return CastAttr(&weight_decay);
     } else {
       return Error::RuntimeError() << "LambUpdate op has no attribute named " << attr_name;
     }
@@ -4362,19 +4362,19 @@ class LarsUpdateOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "scale") {
-      return MakeAttr(&scale);
+      return CastAttr(&scale);
     } else if (attr_name == "l1") {
-      return MakeAttr(&l1);
+      return CastAttr(&l1);
     } else if (attr_name == "l2") {
-      return MakeAttr(&l2);
+      return CastAttr(&l2);
     } else if (attr_name == "momentum_beta") {
-      return MakeAttr(&momentum_beta);
+      return CastAttr(&momentum_beta);
     } else if (attr_name == "epsilon") {
-      return MakeAttr(&epsilon);
+      return CastAttr(&epsilon);
     } else if (attr_name == "lars_coefficient") {
-      return MakeAttr(&lars_coefficient);
+      return CastAttr(&lars_coefficient);
     } else if (attr_name == "weight_decay") {
-      return MakeAttr(&weight_decay);
+      return CastAttr(&weight_decay);
     } else {
       return Error::RuntimeError() << "LarsUpdate op has no attribute named " << attr_name;
     }
@@ -4397,15 +4397,15 @@ class LayerNormOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "center") {
-      return MakeAttr(&center);
+      return CastAttr(&center);
     } else if (attr_name == "scale") {
-      return MakeAttr(&scale);
+      return CastAttr(&scale);
     } else if (attr_name == "begin_norm_axis") {
-      return MakeAttr(&begin_norm_axis);
+      return CastAttr(&begin_norm_axis);
     } else if (attr_name == "begin_params_axis") {
-      return MakeAttr(&begin_params_axis);
+      return CastAttr(&begin_params_axis);
     } else if (attr_name == "epsilon") {
-      return MakeAttr(&epsilon);
+      return CastAttr(&epsilon);
     } else {
       return Error::RuntimeError() << "LayerNorm op has no attribute named " << attr_name;
     }
@@ -4426,9 +4426,9 @@ class LayerNormGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "begin_norm_axis") {
-      return MakeAttr(&begin_norm_axis);
+      return CastAttr(&begin_norm_axis);
     } else if (attr_name == "epsilon") {
-      return MakeAttr(&epsilon);
+      return CastAttr(&epsilon);
     } else {
       return Error::RuntimeError() << "LayerNormGrad op has no attribute named " << attr_name;
     }
@@ -4446,7 +4446,7 @@ class LayerNormParamGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "begin_params_axis") {
-      return MakeAttr(&begin_params_axis);
+      return CastAttr(&begin_params_axis);
     } else {
       return Error::RuntimeError() << "LayerNormParamGrad op has no attribute named " << attr_name;
     }
@@ -4463,7 +4463,7 @@ class LeakyReluOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "alpha") {
-      return MakeAttr(&alpha);
+      return CastAttr(&alpha);
     } else {
       return Error::RuntimeError() << "LeakyRelu op has no attribute named " << attr_name;
     }
@@ -4480,7 +4480,7 @@ class LeakyReluGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "alpha") {
-      return MakeAttr(&alpha);
+      return CastAttr(&alpha);
     } else {
       return Error::RuntimeError() << "LeakyReluGrad op has no attribute named " << attr_name;
     }
@@ -4574,11 +4574,11 @@ class LogicalSliceOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "start") {
-      return MakeAttr(&start);
+      return CastAttr(&start);
     } else if (attr_name == "stop") {
-      return MakeAttr(&stop);
+      return CastAttr(&stop);
     } else if (attr_name == "step") {
-      return MakeAttr(&step);
+      return CastAttr(&step);
     } else {
       return Error::RuntimeError() << "LogicalSlice op has no attribute named " << attr_name;
     }
@@ -4597,11 +4597,11 @@ class LogicalSliceAssignOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "start") {
-      return MakeAttr(&start);
+      return CastAttr(&start);
     } else if (attr_name == "stop") {
-      return MakeAttr(&stop);
+      return CastAttr(&stop);
     } else if (attr_name == "step") {
-      return MakeAttr(&step);
+      return CastAttr(&step);
     } else {
       return Error::RuntimeError() << "LogicalSliceAssign op has no attribute named " << attr_name;
     }
@@ -4620,13 +4620,13 @@ class MaskedFillOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "has_int_operand") {
-      return MakeAttr(&has_int_operand);
+      return CastAttr(&has_int_operand);
     } else if (attr_name == "has_float_operand") {
-      return MakeAttr(&has_float_operand);
+      return CastAttr(&has_float_operand);
     } else if (attr_name == "int_operand") {
-      return MakeAttr(&int_operand);
+      return CastAttr(&int_operand);
     } else if (attr_name == "float_operand") {
-      return MakeAttr(&float_operand);
+      return CastAttr(&float_operand);
     } else {
       return Error::RuntimeError() << "MaskedFill op has no attribute named " << attr_name;
     }
@@ -4646,11 +4646,11 @@ class MatmulOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "transpose_a") {
-      return MakeAttr(&transpose_a);
+      return CastAttr(&transpose_a);
     } else if (attr_name == "transpose_b") {
-      return MakeAttr(&transpose_b);
+      return CastAttr(&transpose_b);
     } else if (attr_name == "alpha") {
-      return MakeAttr(&alpha);
+      return CastAttr(&alpha);
     } else {
       return Error::RuntimeError() << "Matmul op has no attribute named " << attr_name;
     }
@@ -4669,19 +4669,19 @@ class MaxPool1DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "stride") {
-      return MakeAttr(&stride);
+      return CastAttr(&stride);
     } else if (attr_name == "dilation") {
-      return MakeAttr(&dilation);
+      return CastAttr(&dilation);
     } else if (attr_name == "return_indices") {
-      return MakeAttr(&return_indices);
+      return CastAttr(&return_indices);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else {
       return Error::RuntimeError() << "MaxPool1D op has no attribute named " << attr_name;
     }
@@ -4704,19 +4704,19 @@ class MaxPool1DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "stride") {
-      return MakeAttr(&stride);
+      return CastAttr(&stride);
     } else if (attr_name == "dilation") {
-      return MakeAttr(&dilation);
+      return CastAttr(&dilation);
     } else if (attr_name == "return_indices") {
-      return MakeAttr(&return_indices);
+      return CastAttr(&return_indices);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else {
       return Error::RuntimeError() << "MaxPool1DGrad op has no attribute named " << attr_name;
     }
@@ -4739,19 +4739,19 @@ class MaxPool2DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "stride") {
-      return MakeAttr(&stride);
+      return CastAttr(&stride);
     } else if (attr_name == "dilation") {
-      return MakeAttr(&dilation);
+      return CastAttr(&dilation);
     } else if (attr_name == "return_indices") {
-      return MakeAttr(&return_indices);
+      return CastAttr(&return_indices);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else {
       return Error::RuntimeError() << "MaxPool2D op has no attribute named " << attr_name;
     }
@@ -4774,19 +4774,19 @@ class MaxPool2DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "stride") {
-      return MakeAttr(&stride);
+      return CastAttr(&stride);
     } else if (attr_name == "dilation") {
-      return MakeAttr(&dilation);
+      return CastAttr(&dilation);
     } else if (attr_name == "return_indices") {
-      return MakeAttr(&return_indices);
+      return CastAttr(&return_indices);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else {
       return Error::RuntimeError() << "MaxPool2DGrad op has no attribute named " << attr_name;
     }
@@ -4809,19 +4809,19 @@ class MaxPool3DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "stride") {
-      return MakeAttr(&stride);
+      return CastAttr(&stride);
     } else if (attr_name == "dilation") {
-      return MakeAttr(&dilation);
+      return CastAttr(&dilation);
     } else if (attr_name == "return_indices") {
-      return MakeAttr(&return_indices);
+      return CastAttr(&return_indices);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else {
       return Error::RuntimeError() << "MaxPool3D op has no attribute named " << attr_name;
     }
@@ -4844,19 +4844,19 @@ class MaxPool3DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "stride") {
-      return MakeAttr(&stride);
+      return CastAttr(&stride);
     } else if (attr_name == "dilation") {
-      return MakeAttr(&dilation);
+      return CastAttr(&dilation);
     } else if (attr_name == "return_indices") {
-      return MakeAttr(&return_indices);
+      return CastAttr(&return_indices);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else {
       return Error::RuntimeError() << "MaxPool3DGrad op has no attribute named " << attr_name;
     }
@@ -4879,27 +4879,27 @@ class MegatronGptMmapDataLoaderOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "data_file_prefix") {
-      return MakeAttr(&data_file_prefix);
+      return CastAttr(&data_file_prefix);
     } else if (attr_name == "seq_length") {
-      return MakeAttr(&seq_length);
+      return CastAttr(&seq_length);
     } else if (attr_name == "label_length") {
-      return MakeAttr(&label_length);
+      return CastAttr(&label_length);
     } else if (attr_name == "num_samples") {
-      return MakeAttr(&num_samples);
+      return CastAttr(&num_samples);
     } else if (attr_name == "batch_size") {
-      return MakeAttr(&batch_size);
+      return CastAttr(&batch_size);
     } else if (attr_name == "dtype") {
-      return MakeAttr(&dtype);
+      return CastAttr(&dtype);
     } else if (attr_name == "split_sizes") {
-      return MakeAttr(&split_sizes);
+      return CastAttr(&split_sizes);
     } else if (attr_name == "split_index") {
-      return MakeAttr(&split_index);
+      return CastAttr(&split_index);
     } else if (attr_name == "shuffle") {
-      return MakeAttr(&shuffle);
+      return CastAttr(&shuffle);
     } else if (attr_name == "random_seed") {
-      return MakeAttr(&random_seed);
+      return CastAttr(&random_seed);
     } else if (attr_name == "nd_sbp") {
-      return MakeAttr(&*JUST(nd_sbp));
+      return CastAttr(&nd_sbp);
     } else {
       return Error::RuntimeError() << "MegatronGptMmapDataLoader op has no attribute named " << attr_name;
     }
@@ -4920,19 +4920,19 @@ class MegatronGptMmapDataLoaderOpInterpCtx : public OpInterpCtx {
   int64_t split_index;
   bool shuffle;
   int64_t random_seed;
-  // std::vector<std::string> nd_sbp;
+  std::vector<std::string> nd_sbp;
 };
 class MinMaxObserverOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "quantization_formula") {
-      return MakeAttr(&quantization_formula);
+      return CastAttr(&quantization_formula);
     } else if (attr_name == "quantization_bit") {
-      return MakeAttr(&quantization_bit);
+      return CastAttr(&quantization_bit);
     } else if (attr_name == "quantization_scheme") {
-      return MakeAttr(&quantization_scheme);
+      return CastAttr(&quantization_scheme);
     } else if (attr_name == "per_layer_quantization") {
-      return MakeAttr(&per_layer_quantization);
+      return CastAttr(&per_layer_quantization);
     } else {
       return Error::RuntimeError() << "MinMaxObserver op has no attribute named " << attr_name;
     }
@@ -4966,17 +4966,17 @@ class MomentumUpdateOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "learning_rate_val") {
-      return MakeAttr(&learning_rate_val);
+      return CastAttr(&learning_rate_val);
     } else if (attr_name == "scale") {
-      return MakeAttr(&scale);
+      return CastAttr(&scale);
     } else if (attr_name == "l1") {
-      return MakeAttr(&l1);
+      return CastAttr(&l1);
     } else if (attr_name == "l2") {
-      return MakeAttr(&l2);
+      return CastAttr(&l2);
     } else if (attr_name == "beta") {
-      return MakeAttr(&beta);
+      return CastAttr(&beta);
     } else if (attr_name == "weight_decay") {
-      return MakeAttr(&weight_decay);
+      return CastAttr(&weight_decay);
     } else {
       return Error::RuntimeError() << "MomentumUpdate op has no attribute named " << attr_name;
     }
@@ -4998,17 +4998,17 @@ class MovingAverageMinMaxObserverOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "training") {
-      return MakeAttr(&training);
+      return CastAttr(&training);
     } else if (attr_name == "quantization_formula") {
-      return MakeAttr(&quantization_formula);
+      return CastAttr(&quantization_formula);
     } else if (attr_name == "stop_update_after_iters") {
-      return MakeAttr(&stop_update_after_iters);
+      return CastAttr(&stop_update_after_iters);
     } else if (attr_name == "quantization_bit") {
-      return MakeAttr(&quantization_bit);
+      return CastAttr(&quantization_bit);
     } else if (attr_name == "quantization_scheme") {
-      return MakeAttr(&quantization_scheme);
+      return CastAttr(&quantization_scheme);
     } else if (attr_name == "momentum") {
-      return MakeAttr(&momentum);
+      return CastAttr(&momentum);
     } else {
       return Error::RuntimeError() << "MovingAverageMinMaxObserver op has no attribute named " << attr_name;
     }
@@ -5051,11 +5051,11 @@ class NarrowOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "dim") {
-      return MakeAttr(&dim);
+      return CastAttr(&dim);
     } else if (attr_name == "start") {
-      return MakeAttr(&start);
+      return CastAttr(&start);
     } else if (attr_name == "length") {
-      return MakeAttr(&length);
+      return CastAttr(&length);
     } else {
       return Error::RuntimeError() << "Narrow op has no attribute named " << attr_name;
     }
@@ -5074,11 +5074,11 @@ class NarrowGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "dim") {
-      return MakeAttr(&dim);
+      return CastAttr(&dim);
     } else if (attr_name == "start") {
-      return MakeAttr(&start);
+      return CastAttr(&start);
     } else if (attr_name == "length") {
-      return MakeAttr(&length);
+      return CastAttr(&length);
     } else {
       return Error::RuntimeError() << "NarrowGrad op has no attribute named " << attr_name;
     }
@@ -5111,9 +5111,9 @@ class NllOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "ignore_index") {
-      return MakeAttr(&ignore_index);
+      return CastAttr(&ignore_index);
     } else if (attr_name == "reduction") {
-      return MakeAttr(&reduction);
+      return CastAttr(&reduction);
     } else {
       return Error::RuntimeError() << "Nll op has no attribute named " << attr_name;
     }
@@ -5131,9 +5131,9 @@ class NllGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "ignore_index") {
-      return MakeAttr(&ignore_index);
+      return CastAttr(&ignore_index);
     } else if (attr_name == "reduction") {
-      return MakeAttr(&reduction);
+      return CastAttr(&reduction);
     } else {
       return Error::RuntimeError() << "NllGrad op has no attribute named " << attr_name;
     }
@@ -5151,9 +5151,9 @@ class NmsOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "iou_threshold") {
-      return MakeAttr(&iou_threshold);
+      return CastAttr(&iou_threshold);
     } else if (attr_name == "keep_n") {
-      return MakeAttr(&keep_n);
+      return CastAttr(&keep_n);
     } else {
       return Error::RuntimeError() << "Nms op has no attribute named " << attr_name;
     }
@@ -5171,17 +5171,17 @@ class NormalOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "mean") {
-      return MakeAttr(&mean);
+      return CastAttr(&mean);
     } else if (attr_name == "std") {
-      return MakeAttr(&std);
+      return CastAttr(&std);
     } else if (attr_name == "seed") {
-      return MakeAttr(&seed);
+      return CastAttr(&seed);
     } else if (attr_name == "dtype") {
-      return MakeAttr(&dtype);
+      return CastAttr(&dtype);
     } else if (attr_name == "shape") {
-      return MakeAttr(&shape);
+      return CastAttr(&shape);
     } else if (attr_name == "nd_sbp") {
-      return MakeAttr(&*JUST(nd_sbp));
+      return CastAttr(&nd_sbp);
     } else {
       return Error::RuntimeError() << "Normal op has no attribute named " << attr_name;
     }
@@ -5197,19 +5197,19 @@ class NormalOpInterpCtx : public OpInterpCtx {
   int64_t seed;
   DataType dtype;
   Shape shape;
-  // std::string nd_sbp;
+  std::string nd_sbp;
 };
 class NormalizationOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else if (attr_name == "epsilon") {
-      return MakeAttr(&epsilon);
+      return CastAttr(&epsilon);
     } else if (attr_name == "training") {
-      return MakeAttr(&training);
+      return CastAttr(&training);
     } else if (attr_name == "momentum") {
-      return MakeAttr(&momentum);
+      return CastAttr(&momentum);
     } else {
       return Error::RuntimeError() << "Normalization op has no attribute named " << attr_name;
     }
@@ -5229,13 +5229,13 @@ class NormalizationAddReluBaseOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else if (attr_name == "epsilon") {
-      return MakeAttr(&epsilon);
+      return CastAttr(&epsilon);
     } else if (attr_name == "training") {
-      return MakeAttr(&training);
+      return CastAttr(&training);
     } else if (attr_name == "momentum") {
-      return MakeAttr(&momentum);
+      return CastAttr(&momentum);
     } else {
       return Error::RuntimeError() << "NormalizationAddReluBase op has no attribute named " << attr_name;
     }
@@ -5255,9 +5255,9 @@ class NormalizationAddReluGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else if (attr_name == "epsilon") {
-      return MakeAttr(&epsilon);
+      return CastAttr(&epsilon);
     } else {
       return Error::RuntimeError() << "NormalizationAddReluGrad op has no attribute named " << attr_name;
     }
@@ -5275,9 +5275,9 @@ class NormalizationGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else if (attr_name == "epsilon") {
-      return MakeAttr(&epsilon);
+      return CastAttr(&epsilon);
     } else {
       return Error::RuntimeError() << "NormalizationGrad op has no attribute named " << attr_name;
     }
@@ -5295,7 +5295,7 @@ class NvtxEndOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "mark_prefix") {
-      return MakeAttr(&mark_prefix);
+      return CastAttr(&mark_prefix);
     } else {
       return Error::RuntimeError() << "NvtxEnd op has no attribute named " << attr_name;
     }
@@ -5312,7 +5312,7 @@ class NvtxStartOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "mark_prefix") {
-      return MakeAttr(&mark_prefix);
+      return CastAttr(&mark_prefix);
     } else {
       return Error::RuntimeError() << "NvtxStart op has no attribute named " << attr_name;
     }
@@ -5364,7 +5364,7 @@ class OfrecordBytesDecoderOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "name") {
-      return MakeAttr(&name);
+      return CastAttr(&name);
     } else {
       return Error::RuntimeError() << "OfrecordBytesDecoder op has no attribute named " << attr_name;
     }
@@ -5381,33 +5381,33 @@ class OfrecordImageClassificationReaderOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "data_dir") {
-      return MakeAttr(&data_dir);
+      return CastAttr(&data_dir);
     } else if (attr_name == "data_part_num") {
-      return MakeAttr(&data_part_num);
+      return CastAttr(&data_part_num);
     } else if (attr_name == "batch_size") {
-      return MakeAttr(&batch_size);
+      return CastAttr(&batch_size);
     } else if (attr_name == "part_name_prefix") {
-      return MakeAttr(&part_name_prefix);
+      return CastAttr(&part_name_prefix);
     } else if (attr_name == "part_name_suffix_length") {
-      return MakeAttr(&part_name_suffix_length);
+      return CastAttr(&part_name_suffix_length);
     } else if (attr_name == "random_shuffle") {
-      return MakeAttr(&random_shuffle);
+      return CastAttr(&random_shuffle);
     } else if (attr_name == "seed") {
-      return MakeAttr(&seed);
+      return CastAttr(&seed);
     } else if (attr_name == "shuffle_buffer_size") {
-      return MakeAttr(&shuffle_buffer_size);
+      return CastAttr(&shuffle_buffer_size);
     } else if (attr_name == "shuffle_after_epoch") {
-      return MakeAttr(&shuffle_after_epoch);
+      return CastAttr(&shuffle_after_epoch);
     } else if (attr_name == "color_space") {
-      return MakeAttr(&color_space);
+      return CastAttr(&color_space);
     } else if (attr_name == "image_feature_name") {
-      return MakeAttr(&image_feature_name);
+      return CastAttr(&image_feature_name);
     } else if (attr_name == "label_feature_name") {
-      return MakeAttr(&label_feature_name);
+      return CastAttr(&label_feature_name);
     } else if (attr_name == "decode_buffer_size_per_thread") {
-      return MakeAttr(&decode_buffer_size_per_thread);
+      return CastAttr(&decode_buffer_size_per_thread);
     } else if (attr_name == "num_decode_threads_per_machine") {
-      return MakeAttr(&num_decode_threads_per_machine);
+      return CastAttr(&num_decode_threads_per_machine);
     } else {
       return Error::RuntimeError() << "OfrecordImageClassificationReader op has no attribute named " << attr_name;
     }
@@ -5437,9 +5437,9 @@ class OfrecordImageDecoderOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "name") {
-      return MakeAttr(&name);
+      return CastAttr(&name);
     } else if (attr_name == "color_space") {
-      return MakeAttr(&color_space);
+      return CastAttr(&color_space);
     } else {
       return Error::RuntimeError() << "OfrecordImageDecoder op has no attribute named " << attr_name;
     }
@@ -5457,19 +5457,19 @@ class OfrecordImageDecoderRandomCropOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "name") {
-      return MakeAttr(&name);
+      return CastAttr(&name);
     } else if (attr_name == "color_space") {
-      return MakeAttr(&color_space);
+      return CastAttr(&color_space);
     } else if (attr_name == "num_attempts") {
-      return MakeAttr(&num_attempts);
+      return CastAttr(&num_attempts);
     } else if (attr_name == "seed") {
-      return MakeAttr(&seed);
+      return CastAttr(&seed);
     } else if (attr_name == "has_seed") {
-      return MakeAttr(&has_seed);
+      return CastAttr(&has_seed);
     } else if (attr_name == "random_area") {
-      return MakeAttr(&random_area);
+      return CastAttr(&random_area);
     } else if (attr_name == "random_aspect_ratio") {
-      return MakeAttr(&random_aspect_ratio);
+      return CastAttr(&random_aspect_ratio);
     } else {
       return Error::RuntimeError() << "OfrecordImageDecoderRandomCrop op has no attribute named " << attr_name;
     }
@@ -5492,15 +5492,15 @@ class OfrecordRawDecoderOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "name") {
-      return MakeAttr(&name);
+      return CastAttr(&name);
     } else if (attr_name == "shape") {
-      return MakeAttr(&shape);
+      return CastAttr(&shape);
     } else if (attr_name == "data_type") {
-      return MakeAttr(&data_type);
+      return CastAttr(&data_type);
     } else if (attr_name == "dim1_varying_length") {
-      return MakeAttr(&dim1_varying_length);
+      return CastAttr(&dim1_varying_length);
     } else if (attr_name == "truncate") {
-      return MakeAttr(&truncate);
+      return CastAttr(&truncate);
     } else {
       return Error::RuntimeError() << "OfrecordRawDecoder op has no attribute named " << attr_name;
     }
@@ -5521,17 +5521,17 @@ class OneHotOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "depth") {
-      return MakeAttr(&depth);
+      return CastAttr(&depth);
     } else if (attr_name == "floating_on_value") {
-      return MakeAttr(&floating_on_value);
+      return CastAttr(&floating_on_value);
     } else if (attr_name == "integer_on_value") {
-      return MakeAttr(&integer_on_value);
+      return CastAttr(&integer_on_value);
     } else if (attr_name == "floating_off_value") {
-      return MakeAttr(&floating_off_value);
+      return CastAttr(&floating_off_value);
     } else if (attr_name == "integer_off_value") {
-      return MakeAttr(&integer_off_value);
+      return CastAttr(&integer_off_value);
     } else if (attr_name == "dtype") {
-      return MakeAttr(&dtype);
+      return CastAttr(&dtype);
     } else {
       return Error::RuntimeError() << "OneHot op has no attribute named " << attr_name;
     }
@@ -5553,21 +5553,21 @@ class OnerecDecoderOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "key") {
-      return MakeAttr(&key);
+      return CastAttr(&key);
     } else if (attr_name == "data_type") {
-      return MakeAttr(&data_type);
+      return CastAttr(&data_type);
     } else if (attr_name == "static_shape") {
-      return MakeAttr(&static_shape);
+      return CastAttr(&static_shape);
     } else if (attr_name == "is_dynamic") {
-      return MakeAttr(&is_dynamic);
+      return CastAttr(&is_dynamic);
     } else if (attr_name == "has_reshape") {
-      return MakeAttr(&has_reshape);
+      return CastAttr(&has_reshape);
     } else if (attr_name == "reshape") {
-      return MakeAttr(&reshape);
+      return CastAttr(&reshape);
     } else if (attr_name == "has_batch_padding") {
-      return MakeAttr(&has_batch_padding);
+      return CastAttr(&has_batch_padding);
     } else if (attr_name == "batch_padding") {
-      return MakeAttr(&batch_padding);
+      return CastAttr(&batch_padding);
     } else {
       return Error::RuntimeError() << "OnerecDecoder op has no attribute named " << attr_name;
     }
@@ -5598,7 +5598,7 @@ class PackOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "pack_num") {
-      return MakeAttr(&pack_num);
+      return CastAttr(&pack_num);
     } else {
       return Error::RuntimeError() << "Pack op has no attribute named " << attr_name;
     }
@@ -5615,13 +5615,13 @@ class PadOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding_before") {
-      return MakeAttr(&padding_before);
+      return CastAttr(&padding_before);
     } else if (attr_name == "padding_after") {
-      return MakeAttr(&padding_after);
+      return CastAttr(&padding_after);
     } else if (attr_name == "floating_constant_value") {
-      return MakeAttr(&floating_constant_value);
+      return CastAttr(&floating_constant_value);
     } else if (attr_name == "integral_constant_value") {
-      return MakeAttr(&integral_constant_value);
+      return CastAttr(&integral_constant_value);
     } else {
       return Error::RuntimeError() << "Pad op has no attribute named " << attr_name;
     }
@@ -5641,13 +5641,13 @@ class PadGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding_before") {
-      return MakeAttr(&padding_before);
+      return CastAttr(&padding_before);
     } else if (attr_name == "padding_after") {
-      return MakeAttr(&padding_after);
+      return CastAttr(&padding_after);
     } else if (attr_name == "floating_constant_value") {
-      return MakeAttr(&floating_constant_value);
+      return CastAttr(&floating_constant_value);
     } else if (attr_name == "integral_constant_value") {
-      return MakeAttr(&integral_constant_value);
+      return CastAttr(&integral_constant_value);
     } else {
       return Error::RuntimeError() << "PadGrad op has no attribute named " << attr_name;
     }
@@ -5667,9 +5667,9 @@ class ParallelCastOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "sbp_parallel") {
-      return MakeAttr(&sbp_parallel);
+      return CastAttr(&sbp_parallel);
     } else if (attr_name == "grad_sbp_parallel") {
-      return MakeAttr(&grad_sbp_parallel);
+      return CastAttr(&grad_sbp_parallel);
     } else {
       return Error::RuntimeError() << "ParallelCast op has no attribute named " << attr_name;
     }
@@ -5722,11 +5722,11 @@ class QuantizationOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "quantization_formula") {
-      return MakeAttr(&quantization_formula);
+      return CastAttr(&quantization_formula);
     } else if (attr_name == "quantization_bit") {
-      return MakeAttr(&quantization_bit);
+      return CastAttr(&quantization_bit);
     } else if (attr_name == "quantization_scheme") {
-      return MakeAttr(&quantization_scheme);
+      return CastAttr(&quantization_scheme);
     } else {
       return Error::RuntimeError() << "Quantization op has no attribute named " << attr_name;
     }
@@ -5745,9 +5745,9 @@ class RandomMaskLikeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "rate") {
-      return MakeAttr(&rate);
+      return CastAttr(&rate);
     } else if (attr_name == "seed") {
-      return MakeAttr(&seed);
+      return CastAttr(&seed);
     } else {
       return Error::RuntimeError() << "RandomMaskLike op has no attribute named " << attr_name;
     }
@@ -5765,11 +5765,11 @@ class RandpermOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "n") {
-      return MakeAttr(&n);
+      return CastAttr(&n);
     } else if (attr_name == "seed") {
-      return MakeAttr(&seed);
+      return CastAttr(&seed);
     } else if (attr_name == "nd_sbp") {
-      return MakeAttr(&*JUST(nd_sbp));
+      return CastAttr(&nd_sbp);
     } else {
       return Error::RuntimeError() << "Randperm op has no attribute named " << attr_name;
     }
@@ -5782,7 +5782,7 @@ class RandpermOpInterpCtx : public OpInterpCtx {
  public:
   int32_t n;
   int64_t seed;
-  // std::string nd_sbp;
+  std::string nd_sbp;
 };
 class ReciprocalOpInterpCtx : public OpInterpCtx {
  public:
@@ -5816,15 +5816,15 @@ class RecvOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "src_process_id") {
-      return MakeAttr(&src_process_id);
+      return CastAttr(&src_process_id);
     } else if (attr_name == "dtype") {
-      return MakeAttr(&dtype);
+      return CastAttr(&dtype);
     } else if (attr_name == "shape") {
-      return MakeAttr(&shape);
+      return CastAttr(&shape);
     } else if (attr_name == "device_type") {
-      return MakeAttr(&device_type);
+      return CastAttr(&device_type);
     } else if (attr_name == "device_id") {
-      return MakeAttr(&device_id);
+      return CastAttr(&device_id);
     } else {
       return Error::RuntimeError() << "Recv op has no attribute named " << attr_name;
     }
@@ -5845,9 +5845,9 @@ class ReduceAllOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else if (attr_name == "keepdims") {
-      return MakeAttr(&keepdims);
+      return CastAttr(&keepdims);
     } else {
       return Error::RuntimeError() << "ReduceAll op has no attribute named " << attr_name;
     }
@@ -5865,9 +5865,9 @@ class ReduceAnyOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else if (attr_name == "keepdims") {
-      return MakeAttr(&keepdims);
+      return CastAttr(&keepdims);
     } else {
       return Error::RuntimeError() << "ReduceAny op has no attribute named " << attr_name;
     }
@@ -5885,9 +5885,9 @@ class ReduceMaxOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else if (attr_name == "keepdims") {
-      return MakeAttr(&keepdims);
+      return CastAttr(&keepdims);
     } else {
       return Error::RuntimeError() << "ReduceMax op has no attribute named " << attr_name;
     }
@@ -5905,7 +5905,7 @@ class ReduceMaxDeviceStageOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else {
       return Error::RuntimeError() << "ReduceMaxDeviceStage op has no attribute named " << attr_name;
     }
@@ -5922,7 +5922,7 @@ class ReduceMaxDeviceStageGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else {
       return Error::RuntimeError() << "ReduceMaxDeviceStageGrad op has no attribute named " << attr_name;
     }
@@ -5939,9 +5939,9 @@ class ReduceMaxGlobalStageOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else if (attr_name == "keepdims") {
-      return MakeAttr(&keepdims);
+      return CastAttr(&keepdims);
     } else {
       return Error::RuntimeError() << "ReduceMaxGlobalStage op has no attribute named " << attr_name;
     }
@@ -5959,9 +5959,9 @@ class ReduceMaxGlobalStageGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else if (attr_name == "keepdims") {
-      return MakeAttr(&keepdims);
+      return CastAttr(&keepdims);
     } else {
       return Error::RuntimeError() << "ReduceMaxGlobalStageGrad op has no attribute named " << attr_name;
     }
@@ -5979,9 +5979,9 @@ class ReduceMinOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else if (attr_name == "keepdims") {
-      return MakeAttr(&keepdims);
+      return CastAttr(&keepdims);
     } else {
       return Error::RuntimeError() << "ReduceMin op has no attribute named " << attr_name;
     }
@@ -5999,7 +5999,7 @@ class ReduceMinDeviceStageOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else {
       return Error::RuntimeError() << "ReduceMinDeviceStage op has no attribute named " << attr_name;
     }
@@ -6016,7 +6016,7 @@ class ReduceMinDeviceStageGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else {
       return Error::RuntimeError() << "ReduceMinDeviceStageGrad op has no attribute named " << attr_name;
     }
@@ -6033,9 +6033,9 @@ class ReduceMinGlobalStageOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else if (attr_name == "keepdims") {
-      return MakeAttr(&keepdims);
+      return CastAttr(&keepdims);
     } else {
       return Error::RuntimeError() << "ReduceMinGlobalStage op has no attribute named " << attr_name;
     }
@@ -6053,9 +6053,9 @@ class ReduceMinGlobalStageGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else if (attr_name == "keepdims") {
-      return MakeAttr(&keepdims);
+      return CastAttr(&keepdims);
     } else {
       return Error::RuntimeError() << "ReduceMinGlobalStageGrad op has no attribute named " << attr_name;
     }
@@ -6073,9 +6073,9 @@ class ReduceProdOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else if (attr_name == "keepdims") {
-      return MakeAttr(&keepdims);
+      return CastAttr(&keepdims);
     } else {
       return Error::RuntimeError() << "ReduceProd op has no attribute named " << attr_name;
     }
@@ -6093,9 +6093,9 @@ class ReduceSumOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else if (attr_name == "keepdims") {
-      return MakeAttr(&keepdims);
+      return CastAttr(&keepdims);
     } else {
       return Error::RuntimeError() << "ReduceSum op has no attribute named " << attr_name;
     }
@@ -6113,7 +6113,7 @@ class ReduceSumLikeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else {
       return Error::RuntimeError() << "ReduceSumLike op has no attribute named " << attr_name;
     }
@@ -6130,7 +6130,7 @@ class ReflectionPad2DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else {
       return Error::RuntimeError() << "ReflectionPad2D op has no attribute named " << attr_name;
     }
@@ -6147,7 +6147,7 @@ class ReflectionPad2DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else {
       return Error::RuntimeError() << "ReflectionPad2DGrad op has no attribute named " << attr_name;
     }
@@ -6178,7 +6178,7 @@ class RepeatOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "repeat_num") {
-      return MakeAttr(&repeat_num);
+      return CastAttr(&repeat_num);
     } else {
       return Error::RuntimeError() << "Repeat op has no attribute named " << attr_name;
     }
@@ -6195,7 +6195,7 @@ class ReplicationPad2DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else {
       return Error::RuntimeError() << "ReplicationPad2D op has no attribute named " << attr_name;
     }
@@ -6212,7 +6212,7 @@ class ReplicationPad2DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else {
       return Error::RuntimeError() << "ReplicationPad2DGrad op has no attribute named " << attr_name;
     }
@@ -6229,7 +6229,7 @@ class ReshapeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "shape") {
-      return MakeAttr(&shape);
+      return CastAttr(&shape);
     } else {
       return Error::RuntimeError() << "Reshape op has no attribute named " << attr_name;
     }
@@ -6267,21 +6267,21 @@ class RmspropUpdateOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "learning_rate_val") {
-      return MakeAttr(&learning_rate_val);
+      return CastAttr(&learning_rate_val);
     } else if (attr_name == "scale") {
-      return MakeAttr(&scale);
+      return CastAttr(&scale);
     } else if (attr_name == "l1") {
-      return MakeAttr(&l1);
+      return CastAttr(&l1);
     } else if (attr_name == "l2") {
-      return MakeAttr(&l2);
+      return CastAttr(&l2);
     } else if (attr_name == "centered") {
-      return MakeAttr(&centered);
+      return CastAttr(&centered);
     } else if (attr_name == "epsilon") {
-      return MakeAttr(&epsilon);
+      return CastAttr(&epsilon);
     } else if (attr_name == "decay_rate") {
-      return MakeAttr(&decay_rate);
+      return CastAttr(&decay_rate);
     } else if (attr_name == "weight_decay") {
-      return MakeAttr(&weight_decay);
+      return CastAttr(&weight_decay);
     } else {
       return Error::RuntimeError() << "RmspropUpdate op has no attribute named " << attr_name;
     }
@@ -6305,9 +6305,9 @@ class RollOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "shifts") {
-      return MakeAttr(&shifts);
+      return CastAttr(&shifts);
     } else if (attr_name == "dims") {
-      return MakeAttr(&dims);
+      return CastAttr(&dims);
     } else {
       return Error::RuntimeError() << "Roll op has no attribute named " << attr_name;
     }
@@ -6353,15 +6353,15 @@ class SamePaddingOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "dilation_rate") {
-      return MakeAttr(&dilation_rate);
+      return CastAttr(&dilation_rate);
     } else {
       return Error::RuntimeError() << "SamePadding op has no attribute named " << attr_name;
     }
@@ -6382,15 +6382,15 @@ class SamePaddingGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "dilation_rate") {
-      return MakeAttr(&dilation_rate);
+      return CastAttr(&dilation_rate);
     } else {
       return Error::RuntimeError() << "SamePaddingGrad op has no attribute named " << attr_name;
     }
@@ -6411,13 +6411,13 @@ class ScalarAddOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "has_int_operand") {
-      return MakeAttr(&has_int_operand);
+      return CastAttr(&has_int_operand);
     } else if (attr_name == "has_float_operand") {
-      return MakeAttr(&has_float_operand);
+      return CastAttr(&has_float_operand);
     } else if (attr_name == "int_operand") {
-      return MakeAttr(&int_operand);
+      return CastAttr(&int_operand);
     } else if (attr_name == "float_operand") {
-      return MakeAttr(&float_operand);
+      return CastAttr(&float_operand);
     } else {
       return Error::RuntimeError() << "ScalarAdd op has no attribute named " << attr_name;
     }
@@ -6451,13 +6451,13 @@ class ScalarFloordivOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "has_int_operand") {
-      return MakeAttr(&has_int_operand);
+      return CastAttr(&has_int_operand);
     } else if (attr_name == "has_float_operand") {
-      return MakeAttr(&has_float_operand);
+      return CastAttr(&has_float_operand);
     } else if (attr_name == "int_operand") {
-      return MakeAttr(&int_operand);
+      return CastAttr(&int_operand);
     } else if (attr_name == "float_operand") {
-      return MakeAttr(&float_operand);
+      return CastAttr(&float_operand);
     } else {
       return Error::RuntimeError() << "ScalarFloordiv op has no attribute named " << attr_name;
     }
@@ -6477,13 +6477,13 @@ class ScalarFmodOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "has_int_operand") {
-      return MakeAttr(&has_int_operand);
+      return CastAttr(&has_int_operand);
     } else if (attr_name == "has_float_operand") {
-      return MakeAttr(&has_float_operand);
+      return CastAttr(&has_float_operand);
     } else if (attr_name == "int_operand") {
-      return MakeAttr(&int_operand);
+      return CastAttr(&int_operand);
     } else if (attr_name == "float_operand") {
-      return MakeAttr(&float_operand);
+      return CastAttr(&float_operand);
     } else {
       return Error::RuntimeError() << "ScalarFmod op has no attribute named " << attr_name;
     }
@@ -6503,13 +6503,13 @@ class ScalarLogicalAndOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "has_int_operand") {
-      return MakeAttr(&has_int_operand);
+      return CastAttr(&has_int_operand);
     } else if (attr_name == "has_float_operand") {
-      return MakeAttr(&has_float_operand);
+      return CastAttr(&has_float_operand);
     } else if (attr_name == "int_operand") {
-      return MakeAttr(&int_operand);
+      return CastAttr(&int_operand);
     } else if (attr_name == "float_operand") {
-      return MakeAttr(&float_operand);
+      return CastAttr(&float_operand);
     } else {
       return Error::RuntimeError() << "ScalarLogicalAnd op has no attribute named " << attr_name;
     }
@@ -6529,13 +6529,13 @@ class ScalarLogicalEqualOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "has_int_operand") {
-      return MakeAttr(&has_int_operand);
+      return CastAttr(&has_int_operand);
     } else if (attr_name == "has_float_operand") {
-      return MakeAttr(&has_float_operand);
+      return CastAttr(&has_float_operand);
     } else if (attr_name == "int_operand") {
-      return MakeAttr(&int_operand);
+      return CastAttr(&int_operand);
     } else if (attr_name == "float_operand") {
-      return MakeAttr(&float_operand);
+      return CastAttr(&float_operand);
     } else {
       return Error::RuntimeError() << "ScalarLogicalEqual op has no attribute named " << attr_name;
     }
@@ -6555,13 +6555,13 @@ class ScalarLogicalGreaterOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "has_int_operand") {
-      return MakeAttr(&has_int_operand);
+      return CastAttr(&has_int_operand);
     } else if (attr_name == "has_float_operand") {
-      return MakeAttr(&has_float_operand);
+      return CastAttr(&has_float_operand);
     } else if (attr_name == "int_operand") {
-      return MakeAttr(&int_operand);
+      return CastAttr(&int_operand);
     } else if (attr_name == "float_operand") {
-      return MakeAttr(&float_operand);
+      return CastAttr(&float_operand);
     } else {
       return Error::RuntimeError() << "ScalarLogicalGreater op has no attribute named " << attr_name;
     }
@@ -6581,13 +6581,13 @@ class ScalarLogicalGreaterEqualOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "has_int_operand") {
-      return MakeAttr(&has_int_operand);
+      return CastAttr(&has_int_operand);
     } else if (attr_name == "has_float_operand") {
-      return MakeAttr(&has_float_operand);
+      return CastAttr(&has_float_operand);
     } else if (attr_name == "int_operand") {
-      return MakeAttr(&int_operand);
+      return CastAttr(&int_operand);
     } else if (attr_name == "float_operand") {
-      return MakeAttr(&float_operand);
+      return CastAttr(&float_operand);
     } else {
       return Error::RuntimeError() << "ScalarLogicalGreaterEqual op has no attribute named " << attr_name;
     }
@@ -6607,13 +6607,13 @@ class ScalarLogicalLessOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "has_int_operand") {
-      return MakeAttr(&has_int_operand);
+      return CastAttr(&has_int_operand);
     } else if (attr_name == "has_float_operand") {
-      return MakeAttr(&has_float_operand);
+      return CastAttr(&has_float_operand);
     } else if (attr_name == "int_operand") {
-      return MakeAttr(&int_operand);
+      return CastAttr(&int_operand);
     } else if (attr_name == "float_operand") {
-      return MakeAttr(&float_operand);
+      return CastAttr(&float_operand);
     } else {
       return Error::RuntimeError() << "ScalarLogicalLess op has no attribute named " << attr_name;
     }
@@ -6633,13 +6633,13 @@ class ScalarLogicalLessEqualOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "has_int_operand") {
-      return MakeAttr(&has_int_operand);
+      return CastAttr(&has_int_operand);
     } else if (attr_name == "has_float_operand") {
-      return MakeAttr(&has_float_operand);
+      return CastAttr(&has_float_operand);
     } else if (attr_name == "int_operand") {
-      return MakeAttr(&int_operand);
+      return CastAttr(&int_operand);
     } else if (attr_name == "float_operand") {
-      return MakeAttr(&float_operand);
+      return CastAttr(&float_operand);
     } else {
       return Error::RuntimeError() << "ScalarLogicalLessEqual op has no attribute named " << attr_name;
     }
@@ -6659,13 +6659,13 @@ class ScalarLogicalNotEqualOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "has_int_operand") {
-      return MakeAttr(&has_int_operand);
+      return CastAttr(&has_int_operand);
     } else if (attr_name == "has_float_operand") {
-      return MakeAttr(&has_float_operand);
+      return CastAttr(&has_float_operand);
     } else if (attr_name == "int_operand") {
-      return MakeAttr(&int_operand);
+      return CastAttr(&int_operand);
     } else if (attr_name == "float_operand") {
-      return MakeAttr(&float_operand);
+      return CastAttr(&float_operand);
     } else {
       return Error::RuntimeError() << "ScalarLogicalNotEqual op has no attribute named " << attr_name;
     }
@@ -6685,13 +6685,13 @@ class ScalarLogicalOrOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "has_int_operand") {
-      return MakeAttr(&has_int_operand);
+      return CastAttr(&has_int_operand);
     } else if (attr_name == "has_float_operand") {
-      return MakeAttr(&has_float_operand);
+      return CastAttr(&has_float_operand);
     } else if (attr_name == "int_operand") {
-      return MakeAttr(&int_operand);
+      return CastAttr(&int_operand);
     } else if (attr_name == "float_operand") {
-      return MakeAttr(&float_operand);
+      return CastAttr(&float_operand);
     } else {
       return Error::RuntimeError() << "ScalarLogicalOr op has no attribute named " << attr_name;
     }
@@ -6711,13 +6711,13 @@ class ScalarLogicalXorOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "has_int_operand") {
-      return MakeAttr(&has_int_operand);
+      return CastAttr(&has_int_operand);
     } else if (attr_name == "has_float_operand") {
-      return MakeAttr(&has_float_operand);
+      return CastAttr(&has_float_operand);
     } else if (attr_name == "int_operand") {
-      return MakeAttr(&int_operand);
+      return CastAttr(&int_operand);
     } else if (attr_name == "float_operand") {
-      return MakeAttr(&float_operand);
+      return CastAttr(&float_operand);
     } else {
       return Error::RuntimeError() << "ScalarLogicalXor op has no attribute named " << attr_name;
     }
@@ -6737,13 +6737,13 @@ class ScalarMulOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "has_int_operand") {
-      return MakeAttr(&has_int_operand);
+      return CastAttr(&has_int_operand);
     } else if (attr_name == "has_float_operand") {
-      return MakeAttr(&has_float_operand);
+      return CastAttr(&has_float_operand);
     } else if (attr_name == "int_operand") {
-      return MakeAttr(&int_operand);
+      return CastAttr(&int_operand);
     } else if (attr_name == "float_operand") {
-      return MakeAttr(&float_operand);
+      return CastAttr(&float_operand);
     } else {
       return Error::RuntimeError() << "ScalarMul op has no attribute named " << attr_name;
     }
@@ -6770,13 +6770,13 @@ class ScalarPowOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "has_int_operand") {
-      return MakeAttr(&has_int_operand);
+      return CastAttr(&has_int_operand);
     } else if (attr_name == "has_float_operand") {
-      return MakeAttr(&has_float_operand);
+      return CastAttr(&has_float_operand);
     } else if (attr_name == "int_operand") {
-      return MakeAttr(&int_operand);
+      return CastAttr(&int_operand);
     } else if (attr_name == "float_operand") {
-      return MakeAttr(&float_operand);
+      return CastAttr(&float_operand);
     } else {
       return Error::RuntimeError() << "ScalarPow op has no attribute named " << attr_name;
     }
@@ -6796,13 +6796,13 @@ class ScalarPowGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "has_int_operand") {
-      return MakeAttr(&has_int_operand);
+      return CastAttr(&has_int_operand);
     } else if (attr_name == "has_float_operand") {
-      return MakeAttr(&has_float_operand);
+      return CastAttr(&has_float_operand);
     } else if (attr_name == "int_operand") {
-      return MakeAttr(&int_operand);
+      return CastAttr(&int_operand);
     } else if (attr_name == "float_operand") {
-      return MakeAttr(&float_operand);
+      return CastAttr(&float_operand);
     } else {
       return Error::RuntimeError() << "ScalarPowGrad op has no attribute named " << attr_name;
     }
@@ -6829,7 +6829,7 @@ class ScatterNdOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "shape") {
-      return MakeAttr(&shape);
+      return CastAttr(&shape);
     } else {
       return Error::RuntimeError() << "ScatterNd op has no attribute named " << attr_name;
     }
@@ -6867,7 +6867,7 @@ class SendOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "dst_process_id") {
-      return MakeAttr(&dst_process_id);
+      return CastAttr(&dst_process_id);
     } else {
       return Error::RuntimeError() << "Send op has no attribute named " << attr_name;
     }
@@ -6884,15 +6884,15 @@ class SgdUpdateOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "learning_rate_val") {
-      return MakeAttr(&learning_rate_val);
+      return CastAttr(&learning_rate_val);
     } else if (attr_name == "scale") {
-      return MakeAttr(&scale);
+      return CastAttr(&scale);
     } else if (attr_name == "l1") {
-      return MakeAttr(&l1);
+      return CastAttr(&l1);
     } else if (attr_name == "l2") {
-      return MakeAttr(&l2);
+      return CastAttr(&l2);
     } else if (attr_name == "weight_decay") {
-      return MakeAttr(&weight_decay);
+      return CastAttr(&weight_decay);
     } else {
       return Error::RuntimeError() << "SgdUpdate op has no attribute named " << attr_name;
     }
@@ -7011,11 +7011,11 @@ class SliceOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "start") {
-      return MakeAttr(&start);
+      return CastAttr(&start);
     } else if (attr_name == "stop") {
-      return MakeAttr(&stop);
+      return CastAttr(&stop);
     } else if (attr_name == "step") {
-      return MakeAttr(&step);
+      return CastAttr(&step);
     } else {
       return Error::RuntimeError() << "Slice op has no attribute named " << attr_name;
     }
@@ -7034,11 +7034,11 @@ class SliceGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "start") {
-      return MakeAttr(&start);
+      return CastAttr(&start);
     } else if (attr_name == "stop") {
-      return MakeAttr(&stop);
+      return CastAttr(&stop);
     } else if (attr_name == "step") {
-      return MakeAttr(&step);
+      return CastAttr(&step);
     } else {
       return Error::RuntimeError() << "SliceGrad op has no attribute named " << attr_name;
     }
@@ -7057,11 +7057,11 @@ class SliceUpdateOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "start") {
-      return MakeAttr(&start);
+      return CastAttr(&start);
     } else if (attr_name == "stop") {
-      return MakeAttr(&stop);
+      return CastAttr(&stop);
     } else if (attr_name == "step") {
-      return MakeAttr(&step);
+      return CastAttr(&step);
     } else {
       return Error::RuntimeError() << "SliceUpdate op has no attribute named " << attr_name;
     }
@@ -7080,9 +7080,9 @@ class SmoothL1LossOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "reduction") {
-      return MakeAttr(&reduction);
+      return CastAttr(&reduction);
     } else if (attr_name == "beta") {
-      return MakeAttr(&beta);
+      return CastAttr(&beta);
     } else {
       return Error::RuntimeError() << "SmoothL1Loss op has no attribute named " << attr_name;
     }
@@ -7100,9 +7100,9 @@ class SmoothL1LossGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "reduction") {
-      return MakeAttr(&reduction);
+      return CastAttr(&reduction);
     } else if (attr_name == "beta") {
-      return MakeAttr(&beta);
+      return CastAttr(&beta);
     } else {
       return Error::RuntimeError() << "SmoothL1LossGrad op has no attribute named " << attr_name;
     }
@@ -7176,7 +7176,7 @@ class SortOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "direction") {
-      return MakeAttr(&direction);
+      return CastAttr(&direction);
     } else {
       return Error::RuntimeError() << "Sort op has no attribute named " << attr_name;
     }
@@ -7193,7 +7193,7 @@ class SparseCrossEntropyOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "depth") {
-      return MakeAttr(&depth);
+      return CastAttr(&depth);
     } else {
       return Error::RuntimeError() << "SparseCrossEntropy op has no attribute named " << attr_name;
     }
@@ -7210,7 +7210,7 @@ class SparseCrossEntropyGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "depth") {
-      return MakeAttr(&depth);
+      return CastAttr(&depth);
     } else {
       return Error::RuntimeError() << "SparseCrossEntropyGrad op has no attribute named " << attr_name;
     }
@@ -7227,7 +7227,7 @@ class SparseCrossEntropyMsOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "depth") {
-      return MakeAttr(&depth);
+      return CastAttr(&depth);
     } else {
       return Error::RuntimeError() << "SparseCrossEntropyMs op has no attribute named " << attr_name;
     }
@@ -7244,7 +7244,7 @@ class SparseCrossEntropyMsGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "depth") {
-      return MakeAttr(&depth);
+      return CastAttr(&depth);
     } else {
       return Error::RuntimeError() << "SparseCrossEntropyMsGrad op has no attribute named " << attr_name;
     }
@@ -7261,7 +7261,7 @@ class SparseSoftmaxCrossEntropyOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "depth") {
-      return MakeAttr(&depth);
+      return CastAttr(&depth);
     } else {
       return Error::RuntimeError() << "SparseSoftmaxCrossEntropy op has no attribute named " << attr_name;
     }
@@ -7278,7 +7278,7 @@ class SparseSoftmaxCrossEntropyGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "depth") {
-      return MakeAttr(&depth);
+      return CastAttr(&depth);
     } else {
       return Error::RuntimeError() << "SparseSoftmaxCrossEntropyGrad op has no attribute named " << attr_name;
     }
@@ -7295,7 +7295,7 @@ class SparseSoftmaxCrossEntropyMsOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "depth") {
-      return MakeAttr(&depth);
+      return CastAttr(&depth);
     } else {
       return Error::RuntimeError() << "SparseSoftmaxCrossEntropyMs op has no attribute named " << attr_name;
     }
@@ -7312,7 +7312,7 @@ class SparseSoftmaxCrossEntropyMsGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "depth") {
-      return MakeAttr(&depth);
+      return CastAttr(&depth);
     } else {
       return Error::RuntimeError() << "SparseSoftmaxCrossEntropyMsGrad op has no attribute named " << attr_name;
     }
@@ -7329,7 +7329,7 @@ class SplitLikeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else {
       return Error::RuntimeError() << "SplitLike op has no attribute named " << attr_name;
     }
@@ -7381,7 +7381,7 @@ class SqueezeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axes") {
-      return MakeAttr(&axes);
+      return CastAttr(&axes);
     } else {
       return Error::RuntimeError() << "Squeeze op has no attribute named " << attr_name;
     }
@@ -7398,7 +7398,7 @@ class SspVariableProxyOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "buffer_size") {
-      return MakeAttr(&buffer_size);
+      return CastAttr(&buffer_size);
     } else {
       return Error::RuntimeError() << "SspVariableProxy op has no attribute named " << attr_name;
     }
@@ -7471,11 +7471,11 @@ class TensorBufferToListOfTensorsOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "out_shape") {
-      return MakeAttr(&out_shape);
+      return CastAttr(&out_shape);
     } else if (attr_name == "out_dtype") {
-      return MakeAttr(&out_dtype);
+      return CastAttr(&out_dtype);
     } else if (attr_name == "dynamic_out") {
-      return MakeAttr(&dynamic_out);
+      return CastAttr(&dynamic_out);
     } else {
       return Error::RuntimeError() << "TensorBufferToListOfTensors op has no attribute named " << attr_name;
     }
@@ -7494,11 +7494,11 @@ class TensorBufferToListOfTensorsV2OpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "out_shapes") {
-      return MakeAttr(&out_shapes);
+      return CastAttr(&out_shapes);
     } else if (attr_name == "out_dtypes") {
-      return MakeAttr(&out_dtypes);
+      return CastAttr(&out_dtypes);
     } else if (attr_name == "dynamic_out") {
-      return MakeAttr(&dynamic_out);
+      return CastAttr(&dynamic_out);
     } else {
       return Error::RuntimeError() << "TensorBufferToListOfTensorsV2 op has no attribute named " << attr_name;
     }
@@ -7517,9 +7517,9 @@ class TensorBufferToTensorOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "instance_shape") {
-      return MakeAttr(&instance_shape);
+      return CastAttr(&instance_shape);
     } else if (attr_name == "dtype") {
-      return MakeAttr(&dtype);
+      return CastAttr(&dtype);
     } else {
       return Error::RuntimeError() << "TensorBufferToTensor op has no attribute named " << attr_name;
     }
@@ -7551,7 +7551,7 @@ class TensorToTensorBufferOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "instance_dims") {
-      return MakeAttr(&instance_dims);
+      return CastAttr(&instance_dims);
     } else {
       return Error::RuntimeError() << "TensorToTensorBuffer op has no attribute named " << attr_name;
     }
@@ -7568,9 +7568,9 @@ class TestUserOpAttrAutoTypeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "int1") {
-      return MakeAttr(&int1);
+      return CastAttr(&int1);
     } else if (attr_name == "int2") {
-      return MakeAttr(&int2);
+      return CastAttr(&int2);
     } else {
       return Error::RuntimeError() << "TestUserOpAttrAutoType op has no attribute named " << attr_name;
     }
@@ -7588,19 +7588,19 @@ class TfAvgPool1DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "padding_before") {
-      return MakeAttr(&padding_before);
+      return CastAttr(&padding_before);
     } else if (attr_name == "padding_after") {
-      return MakeAttr(&padding_after);
+      return CastAttr(&padding_after);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "pool_size") {
-      return MakeAttr(&pool_size);
+      return CastAttr(&pool_size);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else {
       return Error::RuntimeError() << "TfAvgPool1D op has no attribute named " << attr_name;
     }
@@ -7623,19 +7623,19 @@ class TfAvgPool1DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "padding_before") {
-      return MakeAttr(&padding_before);
+      return CastAttr(&padding_before);
     } else if (attr_name == "padding_after") {
-      return MakeAttr(&padding_after);
+      return CastAttr(&padding_after);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "pool_size") {
-      return MakeAttr(&pool_size);
+      return CastAttr(&pool_size);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else {
       return Error::RuntimeError() << "TfAvgPool1DGrad op has no attribute named " << attr_name;
     }
@@ -7658,19 +7658,19 @@ class TfAvgPool2DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "padding_before") {
-      return MakeAttr(&padding_before);
+      return CastAttr(&padding_before);
     } else if (attr_name == "padding_after") {
-      return MakeAttr(&padding_after);
+      return CastAttr(&padding_after);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "pool_size") {
-      return MakeAttr(&pool_size);
+      return CastAttr(&pool_size);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else {
       return Error::RuntimeError() << "TfAvgPool2D op has no attribute named " << attr_name;
     }
@@ -7693,19 +7693,19 @@ class TfAvgPool2DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "padding_before") {
-      return MakeAttr(&padding_before);
+      return CastAttr(&padding_before);
     } else if (attr_name == "padding_after") {
-      return MakeAttr(&padding_after);
+      return CastAttr(&padding_after);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "pool_size") {
-      return MakeAttr(&pool_size);
+      return CastAttr(&pool_size);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else {
       return Error::RuntimeError() << "TfAvgPool2DGrad op has no attribute named " << attr_name;
     }
@@ -7728,19 +7728,19 @@ class TfAvgPool3DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "padding_before") {
-      return MakeAttr(&padding_before);
+      return CastAttr(&padding_before);
     } else if (attr_name == "padding_after") {
-      return MakeAttr(&padding_after);
+      return CastAttr(&padding_after);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "pool_size") {
-      return MakeAttr(&pool_size);
+      return CastAttr(&pool_size);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else {
       return Error::RuntimeError() << "TfAvgPool3D op has no attribute named " << attr_name;
     }
@@ -7763,19 +7763,19 @@ class TfAvgPool3DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "padding_before") {
-      return MakeAttr(&padding_before);
+      return CastAttr(&padding_before);
     } else if (attr_name == "padding_after") {
-      return MakeAttr(&padding_after);
+      return CastAttr(&padding_after);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "pool_size") {
-      return MakeAttr(&pool_size);
+      return CastAttr(&pool_size);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else {
       return Error::RuntimeError() << "TfAvgPool3DGrad op has no attribute named " << attr_name;
     }
@@ -7798,19 +7798,19 @@ class TfMaxPool1DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "padding_before") {
-      return MakeAttr(&padding_before);
+      return CastAttr(&padding_before);
     } else if (attr_name == "padding_after") {
-      return MakeAttr(&padding_after);
+      return CastAttr(&padding_after);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "pool_size") {
-      return MakeAttr(&pool_size);
+      return CastAttr(&pool_size);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else {
       return Error::RuntimeError() << "TfMaxPool1D op has no attribute named " << attr_name;
     }
@@ -7833,19 +7833,19 @@ class TfMaxPool1DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "padding_before") {
-      return MakeAttr(&padding_before);
+      return CastAttr(&padding_before);
     } else if (attr_name == "padding_after") {
-      return MakeAttr(&padding_after);
+      return CastAttr(&padding_after);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "pool_size") {
-      return MakeAttr(&pool_size);
+      return CastAttr(&pool_size);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else {
       return Error::RuntimeError() << "TfMaxPool1DGrad op has no attribute named " << attr_name;
     }
@@ -7868,19 +7868,19 @@ class TfMaxPool2DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "padding_before") {
-      return MakeAttr(&padding_before);
+      return CastAttr(&padding_before);
     } else if (attr_name == "padding_after") {
-      return MakeAttr(&padding_after);
+      return CastAttr(&padding_after);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "pool_size") {
-      return MakeAttr(&pool_size);
+      return CastAttr(&pool_size);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else {
       return Error::RuntimeError() << "TfMaxPool2D op has no attribute named " << attr_name;
     }
@@ -7903,19 +7903,19 @@ class TfMaxPool2DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "padding_before") {
-      return MakeAttr(&padding_before);
+      return CastAttr(&padding_before);
     } else if (attr_name == "padding_after") {
-      return MakeAttr(&padding_after);
+      return CastAttr(&padding_after);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "pool_size") {
-      return MakeAttr(&pool_size);
+      return CastAttr(&pool_size);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else {
       return Error::RuntimeError() << "TfMaxPool2DGrad op has no attribute named " << attr_name;
     }
@@ -7938,19 +7938,19 @@ class TfMaxPool3DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "padding_before") {
-      return MakeAttr(&padding_before);
+      return CastAttr(&padding_before);
     } else if (attr_name == "padding_after") {
-      return MakeAttr(&padding_after);
+      return CastAttr(&padding_after);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "pool_size") {
-      return MakeAttr(&pool_size);
+      return CastAttr(&pool_size);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else {
       return Error::RuntimeError() << "TfMaxPool3D op has no attribute named " << attr_name;
     }
@@ -7973,19 +7973,19 @@ class TfMaxPool3DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "padding_before") {
-      return MakeAttr(&padding_before);
+      return CastAttr(&padding_before);
     } else if (attr_name == "padding_after") {
-      return MakeAttr(&padding_after);
+      return CastAttr(&padding_after);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "pool_size") {
-      return MakeAttr(&pool_size);
+      return CastAttr(&pool_size);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "ceil_mode") {
-      return MakeAttr(&ceil_mode);
+      return CastAttr(&ceil_mode);
     } else {
       return Error::RuntimeError() << "TfMaxPool3DGrad op has no attribute named " << attr_name;
     }
@@ -8022,9 +8022,9 @@ class TopKOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "k") {
-      return MakeAttr(&k);
+      return CastAttr(&k);
     } else if (attr_name == "sorted") {
-      return MakeAttr(&sorted);
+      return CastAttr(&sorted);
     } else {
       return Error::RuntimeError() << "TopK op has no attribute named " << attr_name;
     }
@@ -8042,7 +8042,7 @@ class TransposeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "perm") {
-      return MakeAttr(&perm);
+      return CastAttr(&perm);
     } else {
       return Error::RuntimeError() << "Transpose op has no attribute named " << attr_name;
     }
@@ -8059,13 +8059,13 @@ class TrilOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "diagonal") {
-      return MakeAttr(&diagonal);
+      return CastAttr(&diagonal);
     } else if (attr_name == "floating_fill_value") {
-      return MakeAttr(&floating_fill_value);
+      return CastAttr(&floating_fill_value);
     } else if (attr_name == "integer_fill_value") {
-      return MakeAttr(&integer_fill_value);
+      return CastAttr(&integer_fill_value);
     } else if (attr_name == "is_floating_fill_value") {
-      return MakeAttr(&is_floating_fill_value);
+      return CastAttr(&is_floating_fill_value);
     } else {
       return Error::RuntimeError() << "Tril op has no attribute named " << attr_name;
     }
@@ -8085,7 +8085,7 @@ class TriuOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "diagonal") {
-      return MakeAttr(&diagonal);
+      return CastAttr(&diagonal);
     } else {
       return Error::RuntimeError() << "Triu op has no attribute named " << attr_name;
     }
@@ -8109,15 +8109,15 @@ class UnfoldOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "kernel_size") {
-      return MakeAttr(&kernel_size);
+      return CastAttr(&kernel_size);
     } else if (attr_name == "padding") {
-      return MakeAttr(&padding);
+      return CastAttr(&padding);
     } else if (attr_name == "strides") {
-      return MakeAttr(&strides);
+      return CastAttr(&strides);
     } else if (attr_name == "dilation_rate") {
-      return MakeAttr(&dilation_rate);
+      return CastAttr(&dilation_rate);
     } else {
       return Error::RuntimeError() << "Unfold op has no attribute named " << attr_name;
     }
@@ -8138,11 +8138,11 @@ class UnfoldTensorOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "dimension") {
-      return MakeAttr(&dimension);
+      return CastAttr(&dimension);
     } else if (attr_name == "size") {
-      return MakeAttr(&size);
+      return CastAttr(&size);
     } else if (attr_name == "step") {
-      return MakeAttr(&step);
+      return CastAttr(&step);
     } else {
       return Error::RuntimeError() << "UnfoldTensor op has no attribute named " << attr_name;
     }
@@ -8161,11 +8161,11 @@ class UnfoldTensorGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "dimension") {
-      return MakeAttr(&dimension);
+      return CastAttr(&dimension);
     } else if (attr_name == "size") {
-      return MakeAttr(&size);
+      return CastAttr(&size);
     } else if (attr_name == "step") {
-      return MakeAttr(&step);
+      return CastAttr(&step);
     } else {
       return Error::RuntimeError() << "UnfoldTensorGrad op has no attribute named " << attr_name;
     }
@@ -8184,17 +8184,17 @@ class UniformOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "from") {
-      return MakeAttr(&from);
+      return CastAttr(&from);
     } else if (attr_name == "to") {
-      return MakeAttr(&to);
+      return CastAttr(&to);
     } else if (attr_name == "seed") {
-      return MakeAttr(&seed);
+      return CastAttr(&seed);
     } else if (attr_name == "dtype") {
-      return MakeAttr(&dtype);
+      return CastAttr(&dtype);
     } else if (attr_name == "shape") {
-      return MakeAttr(&shape);
+      return CastAttr(&shape);
     } else if (attr_name == "nd_sbp") {
-      return MakeAttr(&*JUST(nd_sbp));
+      return CastAttr(&nd_sbp);
     } else {
       return Error::RuntimeError() << "Uniform op has no attribute named " << attr_name;
     }
@@ -8210,23 +8210,23 @@ class UniformOpInterpCtx : public OpInterpCtx {
   int64_t seed;
   DataType dtype;
   Shape shape;
-  // std::string nd_sbp;
+  std::string nd_sbp;
 };
 class UniformIntOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "from") {
-      return MakeAttr(&from);
+      return CastAttr(&from);
     } else if (attr_name == "to") {
-      return MakeAttr(&to);
+      return CastAttr(&to);
     } else if (attr_name == "seed") {
-      return MakeAttr(&seed);
+      return CastAttr(&seed);
     } else if (attr_name == "dtype") {
-      return MakeAttr(&dtype);
+      return CastAttr(&dtype);
     } else if (attr_name == "shape") {
-      return MakeAttr(&shape);
+      return CastAttr(&shape);
     } else if (attr_name == "nd_sbp") {
-      return MakeAttr(&*JUST(nd_sbp));
+      return CastAttr(&nd_sbp);
     } else {
       return Error::RuntimeError() << "UniformInt op has no attribute named " << attr_name;
     }
@@ -8242,13 +8242,13 @@ class UniformIntOpInterpCtx : public OpInterpCtx {
   int64_t seed;
   DataType dtype;
   Shape shape;
-  // std::string nd_sbp;
+  std::string nd_sbp;
 };
 class UniqueWithCountsOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "out_idx") {
-      return MakeAttr(&out_idx);
+      return CastAttr(&out_idx);
     } else {
       return Error::RuntimeError() << "UniqueWithCounts op has no attribute named " << attr_name;
     }
@@ -8265,7 +8265,7 @@ class UnpackOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "unpack_num") {
-      return MakeAttr(&unpack_num);
+      return CastAttr(&unpack_num);
     } else {
       return Error::RuntimeError() << "Unpack op has no attribute named " << attr_name;
     }
@@ -8282,7 +8282,7 @@ class UnsortedBatchSegmentSumOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "num_segments") {
-      return MakeAttr(&num_segments);
+      return CastAttr(&num_segments);
     } else {
       return Error::RuntimeError() << "UnsortedBatchSegmentSum op has no attribute named " << attr_name;
     }
@@ -8299,9 +8299,9 @@ class UnsortedSegmentSumOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else if (attr_name == "num_segments") {
-      return MakeAttr(&num_segments);
+      return CastAttr(&num_segments);
     } else {
       return Error::RuntimeError() << "UnsortedSegmentSum op has no attribute named " << attr_name;
     }
@@ -8319,7 +8319,7 @@ class UnsortedSegmentSumLikeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "axis") {
-      return MakeAttr(&axis);
+      return CastAttr(&axis);
     } else {
       return Error::RuntimeError() << "UnsortedSegmentSumLike op has no attribute named " << attr_name;
     }
@@ -8336,15 +8336,15 @@ class UpsampleOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "height_scale") {
-      return MakeAttr(&height_scale);
+      return CastAttr(&height_scale);
     } else if (attr_name == "width_scale") {
-      return MakeAttr(&width_scale);
+      return CastAttr(&width_scale);
     } else if (attr_name == "align_corners") {
-      return MakeAttr(&align_corners);
+      return CastAttr(&align_corners);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "interpolation") {
-      return MakeAttr(&interpolation);
+      return CastAttr(&interpolation);
     } else {
       return Error::RuntimeError() << "Upsample op has no attribute named " << attr_name;
     }
@@ -8365,13 +8365,13 @@ class UpsampleBicubic2DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "height_scale") {
-      return MakeAttr(&height_scale);
+      return CastAttr(&height_scale);
     } else if (attr_name == "width_scale") {
-      return MakeAttr(&width_scale);
+      return CastAttr(&width_scale);
     } else if (attr_name == "align_corners") {
-      return MakeAttr(&align_corners);
+      return CastAttr(&align_corners);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else {
       return Error::RuntimeError() << "UpsampleBicubic2D op has no attribute named " << attr_name;
     }
@@ -8391,13 +8391,13 @@ class UpsampleBicubic2DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "height_scale") {
-      return MakeAttr(&height_scale);
+      return CastAttr(&height_scale);
     } else if (attr_name == "width_scale") {
-      return MakeAttr(&width_scale);
+      return CastAttr(&width_scale);
     } else if (attr_name == "align_corners") {
-      return MakeAttr(&align_corners);
+      return CastAttr(&align_corners);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else {
       return Error::RuntimeError() << "UpsampleBicubic2DGrad op has no attribute named " << attr_name;
     }
@@ -8417,13 +8417,13 @@ class UpsampleBilinear2DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "height_scale") {
-      return MakeAttr(&height_scale);
+      return CastAttr(&height_scale);
     } else if (attr_name == "width_scale") {
-      return MakeAttr(&width_scale);
+      return CastAttr(&width_scale);
     } else if (attr_name == "align_corners") {
-      return MakeAttr(&align_corners);
+      return CastAttr(&align_corners);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else {
       return Error::RuntimeError() << "UpsampleBilinear2D op has no attribute named " << attr_name;
     }
@@ -8443,13 +8443,13 @@ class UpsampleBilinear2DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "height_scale") {
-      return MakeAttr(&height_scale);
+      return CastAttr(&height_scale);
     } else if (attr_name == "width_scale") {
-      return MakeAttr(&width_scale);
+      return CastAttr(&width_scale);
     } else if (attr_name == "align_corners") {
-      return MakeAttr(&align_corners);
+      return CastAttr(&align_corners);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else {
       return Error::RuntimeError() << "UpsampleBilinear2DGrad op has no attribute named " << attr_name;
     }
@@ -8469,15 +8469,15 @@ class UpsampleGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "height_scale") {
-      return MakeAttr(&height_scale);
+      return CastAttr(&height_scale);
     } else if (attr_name == "width_scale") {
-      return MakeAttr(&width_scale);
+      return CastAttr(&width_scale);
     } else if (attr_name == "align_corners") {
-      return MakeAttr(&align_corners);
+      return CastAttr(&align_corners);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else if (attr_name == "interpolation") {
-      return MakeAttr(&interpolation);
+      return CastAttr(&interpolation);
     } else {
       return Error::RuntimeError() << "UpsampleGrad op has no attribute named " << attr_name;
     }
@@ -8498,11 +8498,11 @@ class UpsampleLinear1DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "scale_factor") {
-      return MakeAttr(&scale_factor);
+      return CastAttr(&scale_factor);
     } else if (attr_name == "align_corners") {
-      return MakeAttr(&align_corners);
+      return CastAttr(&align_corners);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else {
       return Error::RuntimeError() << "UpsampleLinear1D op has no attribute named " << attr_name;
     }
@@ -8521,11 +8521,11 @@ class UpsampleLinear1DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "scale_factor") {
-      return MakeAttr(&scale_factor);
+      return CastAttr(&scale_factor);
     } else if (attr_name == "align_corners") {
-      return MakeAttr(&align_corners);
+      return CastAttr(&align_corners);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else {
       return Error::RuntimeError() << "UpsampleLinear1DGrad op has no attribute named " << attr_name;
     }
@@ -8544,9 +8544,9 @@ class UpsampleNearest1DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "scale_factor") {
-      return MakeAttr(&scale_factor);
+      return CastAttr(&scale_factor);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else {
       return Error::RuntimeError() << "UpsampleNearest1D op has no attribute named " << attr_name;
     }
@@ -8564,9 +8564,9 @@ class UpsampleNearest1DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "scale_factor") {
-      return MakeAttr(&scale_factor);
+      return CastAttr(&scale_factor);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else {
       return Error::RuntimeError() << "UpsampleNearest1DGrad op has no attribute named " << attr_name;
     }
@@ -8584,11 +8584,11 @@ class UpsampleNearest2DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "height_scale") {
-      return MakeAttr(&height_scale);
+      return CastAttr(&height_scale);
     } else if (attr_name == "width_scale") {
-      return MakeAttr(&width_scale);
+      return CastAttr(&width_scale);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else {
       return Error::RuntimeError() << "UpsampleNearest2D op has no attribute named " << attr_name;
     }
@@ -8607,11 +8607,11 @@ class UpsampleNearest2DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "height_scale") {
-      return MakeAttr(&height_scale);
+      return CastAttr(&height_scale);
     } else if (attr_name == "width_scale") {
-      return MakeAttr(&width_scale);
+      return CastAttr(&width_scale);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else {
       return Error::RuntimeError() << "UpsampleNearest2DGrad op has no attribute named " << attr_name;
     }
@@ -8630,13 +8630,13 @@ class UpsampleNearest3DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "depth_scale") {
-      return MakeAttr(&depth_scale);
+      return CastAttr(&depth_scale);
     } else if (attr_name == "height_scale") {
-      return MakeAttr(&height_scale);
+      return CastAttr(&height_scale);
     } else if (attr_name == "width_scale") {
-      return MakeAttr(&width_scale);
+      return CastAttr(&width_scale);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else {
       return Error::RuntimeError() << "UpsampleNearest3D op has no attribute named " << attr_name;
     }
@@ -8656,13 +8656,13 @@ class UpsampleNearest3DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "depth_scale") {
-      return MakeAttr(&depth_scale);
+      return CastAttr(&depth_scale);
     } else if (attr_name == "height_scale") {
-      return MakeAttr(&height_scale);
+      return CastAttr(&height_scale);
     } else if (attr_name == "width_scale") {
-      return MakeAttr(&width_scale);
+      return CastAttr(&width_scale);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else {
       return Error::RuntimeError() << "UpsampleNearest3DGrad op has no attribute named " << attr_name;
     }
@@ -8682,15 +8682,15 @@ class UpsampleTrilinear3DOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "depth_scale") {
-      return MakeAttr(&depth_scale);
+      return CastAttr(&depth_scale);
     } else if (attr_name == "height_scale") {
-      return MakeAttr(&height_scale);
+      return CastAttr(&height_scale);
     } else if (attr_name == "width_scale") {
-      return MakeAttr(&width_scale);
+      return CastAttr(&width_scale);
     } else if (attr_name == "align_corners") {
-      return MakeAttr(&align_corners);
+      return CastAttr(&align_corners);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else {
       return Error::RuntimeError() << "UpsampleTrilinear3D op has no attribute named " << attr_name;
     }
@@ -8711,15 +8711,15 @@ class UpsampleTrilinear3DGradOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "depth_scale") {
-      return MakeAttr(&depth_scale);
+      return CastAttr(&depth_scale);
     } else if (attr_name == "height_scale") {
-      return MakeAttr(&height_scale);
+      return CastAttr(&height_scale);
     } else if (attr_name == "width_scale") {
-      return MakeAttr(&width_scale);
+      return CastAttr(&width_scale);
     } else if (attr_name == "align_corners") {
-      return MakeAttr(&align_corners);
+      return CastAttr(&align_corners);
     } else if (attr_name == "data_format") {
-      return MakeAttr(&data_format);
+      return CastAttr(&data_format);
     } else {
       return Error::RuntimeError() << "UpsampleTrilinear3DGrad op has no attribute named " << attr_name;
     }
@@ -8747,13 +8747,13 @@ class WhereScalarXOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "has_int_operand") {
-      return MakeAttr(&has_int_operand);
+      return CastAttr(&has_int_operand);
     } else if (attr_name == "has_float_operand") {
-      return MakeAttr(&has_float_operand);
+      return CastAttr(&has_float_operand);
     } else if (attr_name == "int_operand") {
-      return MakeAttr(&int_operand);
+      return CastAttr(&int_operand);
     } else if (attr_name == "float_operand") {
-      return MakeAttr(&float_operand);
+      return CastAttr(&float_operand);
     } else {
       return Error::RuntimeError() << "WhereScalarX op has no attribute named " << attr_name;
     }
@@ -8773,21 +8773,21 @@ class WhereScalarXyOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "has_x_int_operand") {
-      return MakeAttr(&has_x_int_operand);
+      return CastAttr(&has_x_int_operand);
     } else if (attr_name == "has_x_float_operand") {
-      return MakeAttr(&has_x_float_operand);
+      return CastAttr(&has_x_float_operand);
     } else if (attr_name == "has_y_int_operand") {
-      return MakeAttr(&has_y_int_operand);
+      return CastAttr(&has_y_int_operand);
     } else if (attr_name == "has_y_float_operand") {
-      return MakeAttr(&has_y_float_operand);
+      return CastAttr(&has_y_float_operand);
     } else if (attr_name == "x_int_operand") {
-      return MakeAttr(&x_int_operand);
+      return CastAttr(&x_int_operand);
     } else if (attr_name == "x_float_operand") {
-      return MakeAttr(&x_float_operand);
+      return CastAttr(&x_float_operand);
     } else if (attr_name == "y_int_operand") {
-      return MakeAttr(&y_int_operand);
+      return CastAttr(&y_int_operand);
     } else if (attr_name == "y_float_operand") {
-      return MakeAttr(&y_float_operand);
+      return CastAttr(&y_float_operand);
     } else {
       return Error::RuntimeError() << "WhereScalarXy op has no attribute named " << attr_name;
     }
@@ -8811,13 +8811,13 @@ class WhereScalarYOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "has_int_operand") {
-      return MakeAttr(&has_int_operand);
+      return CastAttr(&has_int_operand);
     } else if (attr_name == "has_float_operand") {
-      return MakeAttr(&has_float_operand);
+      return CastAttr(&has_float_operand);
     } else if (attr_name == "int_operand") {
-      return MakeAttr(&int_operand);
+      return CastAttr(&int_operand);
     } else if (attr_name == "float_operand") {
-      return MakeAttr(&float_operand);
+      return CastAttr(&float_operand);
     } else {
       return Error::RuntimeError() << "WhereScalarY op has no attribute named " << attr_name;
     }

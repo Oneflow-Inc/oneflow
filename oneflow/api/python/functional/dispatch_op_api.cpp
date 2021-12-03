@@ -86,7 +86,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         ctx->shuffle_after_epoch = shuffle_after_epoch;
         ctx->seed = seed;
         ctx->parallel_desc = placement;
-        ctx->nd_sbp = JUST(GetNdSbp(sbp_tuple));
+        ctx->sbp = JUST(GetNdSbp(sbp_tuple));
         return OpInterpUtil::Dispatch<Tensor>(*op, {}, ctx);
       });
   m.add_functor("DispatchOfrecordRawDecoder",
@@ -123,7 +123,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   ctx->seed = seed;
                   ctx->has_seed = has_seed;
                   ctx->parallel_desc = placement;
-                  ctx->nd_sbp = JUST(GetNdSbp(sbp_tuple));
+                  ctx->sbp = JUST(GetNdSbp(sbp_tuple));
                   return OpInterpUtil::Dispatch<Tensor>(*op, {}, ctx);
                 });
   m.add_functor(
@@ -290,7 +290,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   ctx->remove_images_without_annotations = remove_images_without_annotations;
                   ctx->stride_partition = stride_partition;
                   ctx->parallel_desc = placement;
-                  ctx->nd_sbp = JUST(GetNdSbp(sbp_tuple));
+                  ctx->sbp = JUST(GetNdSbp(sbp_tuple));
                   return OpInterpUtil::Dispatch<TensorTuple>(*op, {}, ctx);
                 });
   m.add_functor(
@@ -350,7 +350,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         ctx->shuffle = shuffle;
         ctx->random_seed = random_seed;
         ctx->parallel_desc = placement;
-        ctx->nd_sbp = JUST(GetNdSbp(sbp_tuple));
+        ctx->sbp = JUST(GetNdSbp(sbp_tuple));
         return OpInterpUtil::Dispatch<Tensor>(*op, {}, ctx);
       });
 }

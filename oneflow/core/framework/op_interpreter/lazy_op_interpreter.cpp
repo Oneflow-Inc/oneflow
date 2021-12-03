@@ -430,7 +430,7 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
     is_local = false;
   } else {
     // NOTE(chengcheng): local
-    CHECK_OR_RETURN(!ctx->nd_sbp.has_value());
+    CHECK_OR_RETURN(!ctx->sbp.has_value());
     if (ctx->device.has_value()) {
       const auto& device = JUST(ctx->device);
       const auto& placement = JUST(Placement4Device(device));
@@ -703,8 +703,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
 
   CHECK_OR_RETURN(ctx->parallel_desc.has_value());
   const auto& parallel_desc_sym = JUST(ctx->parallel_desc);
-  CHECK_OR_RETURN(ctx->nd_sbp.has_value());
-  const auto& sbp_sym = JUST(ctx->nd_sbp);
+  CHECK_OR_RETURN(ctx->sbp.has_value());
+  const auto& sbp_sym = JUST(ctx->sbp);
 
   std::string input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   if (input_lbn.empty()) {

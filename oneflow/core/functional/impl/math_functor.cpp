@@ -547,7 +547,7 @@ class ConsistentEyeFunctor {
     ctx->cols = JUST(m.value_or(n).As<int64_t>());
     ctx->dtype = dtype ? JUST(dtype)->data_type() : DataType::kFloat;
     ctx->parallel_desc = placement;
-    ctx->nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    ctx->sbp = JUST(GetNdSbp(sbp_tuple));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }
 
@@ -639,7 +639,7 @@ class ConsistentArangeFunctor {
       ctx->float_delta = JUST(delta.As<double>());
     }
     ctx->parallel_desc = placement;
-    ctx->nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    ctx->sbp = JUST(GetNdSbp(sbp_tuple));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }
 

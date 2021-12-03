@@ -74,11 +74,11 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs,
   if (!LazyMode::is_enabled()) {
     if (inputs.empty()) {
       if (ctx->parallel_desc.has_value()) {
-        JUST(ctx->nd_sbp);
+        JUST(ctx->sbp);
         CHECK_OR_RETURN(!ctx->device.has_value());
         return g_eager_consistent_interpreter;
       } else {
-        CHECK_OR_RETURN(!ctx->nd_sbp.has_value());
+        CHECK_OR_RETURN(!ctx->sbp.has_value());
         return g_eager_mirrored_interpreter;
       }
     } else {
