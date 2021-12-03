@@ -66,6 +66,8 @@ size_t InferEagerNcclS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
 
 void InitEagerNcclOpKernelCache(user_op::KernelCacheContext* ctx,
                                 std::shared_ptr<user_op::OpKernelCache>* cache) {
+  // NOTE(jianhao): the cache only depends on parallel_conf, and the kernel is singleton
+  // once parallel_conf is determined, so only init the cache at the first time.
   if (*cache == nullptr) { *cache = std::make_shared<EagerNcclOpKernelCache>(ctx); }
 }
 }  // namespace
