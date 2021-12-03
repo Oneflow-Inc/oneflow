@@ -26,7 +26,7 @@ class TickActor final : public NaiveActor {
 
  private:
   void Act() override {
-    OF_PROFILER_RANGE_PUSH("tick");
+    OF_PROFILER_RANGE_PUSH(std::string("tick-") + exec_kernel_vec().at(0).kernel->op_conf().name());
     OF_PROFILER_RANGE_POP();
   }
 };
