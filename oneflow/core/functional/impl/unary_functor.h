@@ -45,14 +45,15 @@ class UnaryFunctor {
 
 class InplaceUnaryFunctor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
+    auto x = input->contiguous();
     JUST(CheckInplaceValid(x));
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-    outputs->at(0) = x->contiguous();
+    outputs->at(0) = x;
     if (x->requires_grad()) {
       JUST(OpInterpUtil::Dispatch(*op_, {JUST(functional::Identity(x))}, outputs.get()));
     } else {
-      JUST(OpInterpUtil::Dispatch(*op_, {x->contiguous()}, outputs.get()));
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get()));
     }
     return outputs->at(0);
   }
@@ -83,9 +84,10 @@ class FloatUnaryFunctor {
 
 class InplaceFloatUnaryFunctor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.AddInputs({x->contiguous()}, DType::Float()).Apply());
+    auto x = input->contiguous();
+    JUST(tensor_processor.AddInputs({x}, DType::Float()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     JUST(CheckInplaceCastValid(x, input_tuple.at(0)));
     JUST(CheckInplaceValid(x));
@@ -94,9 +96,9 @@ class InplaceFloatUnaryFunctor {
     if (x->requires_grad()) {
       // It should copy input tensor in autograd_mode because these operators can't calculate
       // in_grad with output.
-      JUST(OpInterpUtil::Dispatch(*op_, {JUST(functional::Identity(x->contiguous()))}, outputs.get()));
+      JUST(OpInterpUtil::Dispatch(*op_, {JUST(functional::Identity(x))}, outputs.get()));
     } else {
-      JUST(OpInterpUtil::Dispatch(*op_, {x->contiguous()}, outputs.get()));
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get()));
     }
     return outputs->at(0);
   }

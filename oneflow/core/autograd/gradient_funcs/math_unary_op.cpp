@@ -44,7 +44,7 @@ class UnaryMathOp : public OpExprGradFunction<UnaryMathCaptureState> {
                     TensorTuple* in_grads) const override {
     if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
     const auto& x = ctx->SavedTensors().at(0);
-    in_grads->at(0) = JUST(BwFunc(x, out_grads.at(0)));
+    in_grads->at(0) = JUST(BwFunc(x->contiguous(), out_grads.at(0)));
     return Maybe<void>::Ok();
   }
 

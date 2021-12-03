@@ -54,7 +54,7 @@ class AddNFunctor {
       if (i == 0 && inplace) {
         JUST(CheckInplaceValid(partial_inputs.at(0)));
         std::shared_ptr<TensorTuple> outs = std::make_shared<TensorTuple>(1);
-        outs->at(0) = partial_inputs.at(0);
+        outs->at(0) = partial_inputs.at(0)->contiguous();
         JUST(OpInterpUtil::Dispatch(*op_.at(size - 1), partial_inputs, outs.get()));
         outputs.emplace_back(outs->at(0));
       } else {
@@ -104,7 +104,7 @@ class ScalarMathBaseFunctor {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
                                   << " should be float or int.";
     }
-    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
+    JUST(tensor_processor.AddInputs({x->contiguous()}, lowest_dtype).Apply());
     TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
     if (inplace) {
       JUST(CheckInplaceCastValid(x, casted_vec[0]));
@@ -512,7 +512,7 @@ class ReduceProdFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -624,7 +624,7 @@ class Transpose2dimFunctor {
     std::swap(permute[dim_0], permute[dim_1]);
 
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -772,7 +772,7 @@ class ClampFunctor {
     } else {
       op = clip_op_.get();
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op, {x->contiguous()}, attrs);
   }
 
  private:
@@ -1201,7 +1201,7 @@ class ClampGradFunctor {
     } else {
       op = clip_op_.get();
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op, {dy, x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op, {dy->contiguous(), x->contiguous()}, attrs);
   }
 
  private:
@@ -1247,9 +1247,9 @@ class MinimumFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     if (*x->shape() == *y->shape()) {
-      return OpInterpUtil::Dispatch<Tensor>(*elementwise_minimum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*elementwise_minimum_op_, {x->contiguous(), y->contiguous()});
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*broadcast_minimum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*broadcast_minimum_op_, {x->contiguous(), y->contiguous()});
     }
   }
 
@@ -1270,9 +1270,9 @@ class MaximumFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     if (*x->shape() == *y->shape()) {
-      return OpInterpUtil::Dispatch<Tensor>(*elementwise_maximum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*elementwise_maximum_op_, {x->contiguous(), y->contiguous()});
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*broadcast_maximum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*broadcast_maximum_op_, {x->contiguous(), y->contiguous()});
     }
   }
 

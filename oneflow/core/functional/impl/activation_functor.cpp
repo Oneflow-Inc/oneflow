@@ -39,7 +39,8 @@ class ReluFunctor {
   ReluFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("relu").Input("in", 1).Output("out", 1).Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, bool inplace) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, bool inplace) const {
+    auto x = input->contiguous();
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
@@ -239,8 +240,8 @@ class GluFunctor {
     std::vector<int64_t> split_sizes(2, nc);
     const auto split_x = JUST(SplitWithSize(input, split_sizes, dim));
     return sequence_function(functional::Sigmoid)
-        .then(std::bind(functional::Mul, split_x->at(0), std::placeholders::_1))
-        .call(split_x->at(1));
+        .then(std::bind(functional::Mul, JUST(ToContiguous(split_x->at(0))), std::placeholders::_1))
+        .call(JUST(ToContiguous(split_x->at(1))));
   }
 };
 

@@ -48,8 +48,8 @@ class BinaryMathOp : public OpExprGradFunction<BinaryMathCaptureState> {
                     TensorTuple* in_grads) const override {
     if (!(ctx->x_requires_grad || ctx->y_requires_grad)) { return Maybe<void>::Ok(); }
     in_grads->resize(2);
-    const std::shared_ptr<one::Tensor>& x = ctx->SavedTensors().at(0);
-    const std::shared_ptr<one::Tensor>& y = ctx->SavedTensors().at(1);
+    const std::shared_ptr<one::Tensor>& x = JUST(functional::ToContiguous(ctx->SavedTensors().at(0)));
+    const std::shared_ptr<one::Tensor>& y = JUST(functional::ToContiguous(ctx->SavedTensors().at(1)));
     if (ctx->x_requires_grad) { in_grads->at(0) = JUST(BwXFunc(x, y, out_grads.at(0))); }
     if (ctx->y_requires_grad) { in_grads->at(1) = JUST(BwYFunc(x, y, out_grads.at(0))); }
     return Maybe<void>::Ok();

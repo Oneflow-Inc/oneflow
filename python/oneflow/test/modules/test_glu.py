@@ -33,7 +33,7 @@ class TestGluModule(flow.unittest.TestCase):
         y = m(x, dim)
         return y
 
-    @autotest(n=5)
+    @autotest(n=5, check_graph=False)
     def test_GLU_module_with_random_data(test_case):
         device = random_device()
         m = torch.nn.GLU()

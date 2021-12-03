@@ -1233,11 +1233,11 @@ class NormalizationFunctor {
       CHECK_OR_RETURN(moving_mean && moving_variance)
           << "Must have moving_mean and moving_variance in eval mode.";
       return OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_eval_op_, {x->contiguous(), JUST(ToContiguous(JUST(moving_mean))), JUST(ToContiguous(JUST(moving_variance))), gamma->contiguous(), beta->contiguous()}, attrs);
+          *norm_eval_op_, {x->contiguous(), JUST(moving_mean)->contiguous(), JUST(moving_variance)->contiguous(), gamma->contiguous(), beta->contiguous()}, attrs);
     }
     if (moving_mean) {
       return OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_training_stats_op_, {x->contiguous(), JUST(ToContiguous(JUST(moving_mean))), JUST(ToContiguous(JUST(moving_variance))), gamma->contiguous(), beta->contiguous()},
+          *norm_training_stats_op_, {x->contiguous(), JUST(moving_mean)->contiguous(), JUST(moving_variance)->contiguous(), gamma->contiguous(), beta->contiguous()},
           attrs);
     }
     return OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_, {x->contiguous(), gamma->contiguous(), beta->contiguous()},
@@ -1331,7 +1331,7 @@ class NormalizationAddReluFunctor {
       CHECK_OR_RETURN(moving_mean && moving_variance)
           << "Must have moving_mean and moving_variance in eval mode.";
       const auto& normalize_result = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs));
+          *norm_eval_op_, {x->contiguous(), JUST(moving_mean)->contiguous(), JUST(moving_variance)->contiguous(), gamma->contiguous(), beta->contiguous()}, attrs));
       if (addend) {
         const auto& add_result =
             JUST(OpInterpUtil::Dispatch<one::Tensor>(*add_op_, {normalize_result->contiguous(), JUST(addend)->contiguous()}));

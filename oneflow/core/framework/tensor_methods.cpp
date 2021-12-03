@@ -29,11 +29,14 @@ namespace oneflow {
 namespace one {
 
 Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
+  // printf("\nIsContiguous >>> tensor->is_eager():%d", tensor->is_eager());
   const Shape& shape = *tensor->shape();
-  if(!shape.is_initialized() || shape.NumAxes()<=1 || shape.elem_cnt() <= 1 ){
+  if(!shape.is_initialized() || shape.NumAxes()<1 || shape.elem_cnt() <= 1 ){
     return true;
   }
+  // printf("; >>> shape:%s", shape.DebugStr().c_str());
   const Stride& stride = *JUST(tensor->stride());
+  // printf("; >>> stride:%s", stride.ToString().c_str());
   int64_t dim = shape.NumAxes();
   int64_t expected_stride = 1;
   bool contig_if_nonempty = true;

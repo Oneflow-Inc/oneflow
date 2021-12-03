@@ -373,7 +373,7 @@ class ArgWhereFunctor {
                                 const Symbol<DType>& dtype) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -915,9 +915,9 @@ class ToContiguousFunctor {
 
     const auto& stride = JUST(input->stride())->StrideVec();
     JUST(attrs.SetAttr<std::vector<int64_t>>("stride", {stride.begin(), stride.end()}));
-    printf("\ninput shape >>> %s; stride >>> %s", input->shape()->DebugStr().c_str(), JUST(input->stride())->ToString().c_str());
+    // printf("\ninput shape >>> %s; stride >>> %s", input->shape()->DebugStr().c_str(), JUST(input->stride())->ToString().c_str());
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs));
-    printf("\noutput shape >>> %s; stride >>> %s", result->shape()->DebugStr().c_str(), JUST(result->stride())->ToString().c_str());
+    // printf("\noutput shape >>> %s; stride >>> %s", result->shape()->DebugStr().c_str(), JUST(result->stride())->ToString().c_str());
     return result;
     // return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
 
@@ -965,7 +965,7 @@ class SliceGradBaseFunctor {
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), like}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), like->contiguous()}, attrs);
   }
 
  protected:
@@ -997,6 +997,7 @@ class NarrowFunctor {
     if (narrow_dim < 0) { narrow_dim += ndim; }
     if (input->is_eager() && input->is_local()) {
       if(!(input->shape()->NumAxes()<=1 || input->shape()->elem_cnt()<=1)){
+        // printf("\n NarrowFunctor input shape >>> %s; stride >>> %s", input->shape()->DebugStr().c_str(), JUST(input->stride())->ToString().c_str());
         return JUST(view::Narrow(input->contiguous(), narrow_dim, start, length));
       }
     }
@@ -2000,7 +2001,7 @@ class SplitWithSizeFunctor {
       CHECK_GE_OR_RETURN(length, 0) << "split_with_sizes expects split_sizes have only "
                                        "non-negative entries, but split_sizes["
                                     << i << "] = " << length;
-      splits[i] = JUST(ToContiguous(JUST(Narrow(x, axis, start_idx, length))));
+      splits[i] = JUST(Narrow(x, axis, start_idx, length));
       start_idx += length;
     }
     CHECK_EQ_OR_RETURN(start_idx, dim_size)
