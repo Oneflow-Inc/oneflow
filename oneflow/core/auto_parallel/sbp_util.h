@@ -24,12 +24,22 @@ namespace auto_parallel {
 
 // check whether the sbp_parallel is legal
 bool CheckSbpParallel(const cfg::SbpParallel& sbp_parallel);
+// check whether the nd_sbp is legal
+bool CheckNdSbp(const cfg::NdSbp& nd_sbp);
 
 // compute copy cost
-double ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& producer_sbp_parallel,
-                                           const cfg::SbpParallel& consumer_sbp_parallel,
-                                           const BlobDesc& logical_blob_desc,
-                                           const ParallelDesc& parallel_desc, bool is_same_sbp);
+Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& producer_sbp_parallel,
+                                                  const cfg::SbpParallel& consumer_sbp_parallel,
+                                                  const BlobDesc& logical_blob_desc,
+                                                  const ParallelDesc& producer_parallel_desc,
+                                                  const ParallelDesc& consumer_parallel_desc,
+                                                  bool is_same_sbp, bool allow_cpu2gpu);
+Maybe<double> ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
+                                         const cfg::NdSbp& consumer_sbp_parallel,
+                                         const BlobDesc& logical_blob_desc,
+                                         const ParallelDesc& producer_parallel_desc,
+                                         const ParallelDesc& consumer_parallel_desc,
+                                         bool is_same_sbp, bool allow_cpu2gpu);
 
 // Judge whether we need the same SBP for both producer and consumer
 bool IsSameSBP(OpNode* consumer, const std::string& ibn);

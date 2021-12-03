@@ -17,6 +17,7 @@ limitations under the License.
 #include "sbp_collector.h"
 #include <string>
 #include "oneflow/core/auto_parallel/sbp_util.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "sbp_constructor.h"
 
 namespace oneflow {
@@ -24,17 +25,18 @@ namespace oneflow {
 namespace auto_parallel {
 
 // Default constructor for SbpCollector
+// Don't allow any special case for broadcast!
 SbpCollector::SbpCollector() {
   // initialize Sbp Parallel Universe with broadcast.
-  cfg::SbpParallel sbp_broadcast;
-  sbp_broadcast.mutable_broadcast_parallel();
-  SbpParallelUniverse[sbp_broadcast] = 0;
-  id2SbpParallel.push_back(sbp_broadcast);
+  // cfg::NdSbp sbp_broadcast;
+  // sbp_broadcast.mutable_broadcast_parallel();
+  // SbpParallelUniverse[sbp_broadcast] = 0;
+  // id2SbpParallel.push_back(sbp_broadcast);
 }
 
-// Collect all the possible Sbp Parallel from a cfg::SbpSignature
-void SbpCollector::CollectUniverse(cfg::SbpSignature& sbp_) {
-  auto& bn_in_op2sbp_parallels = *sbp_.mutable_bn_in_op2sbp_parallel();
+// Collect all the possible Sbp Parallel from a cfg::NdSbpSignature
+void SbpCollector::CollectUniverse(cfg::NdSbpSignature& sbp_) {
+  auto& bn_in_op2sbp_parallels = *sbp_.mutable_bn_in_op2nd_sbp();
   for (auto& OpSbpPair : bn_in_op2sbp_parallels) {
     if (SbpParallelUniverse.find(OpSbpPair.second) == SbpParallelUniverse.end()) {
       int32_t curr_size = SbpParallelUniverse.size();
@@ -44,21 +46,21 @@ void SbpCollector::CollectUniverse(cfg::SbpSignature& sbp_) {
   }
 }
 // Collect all the possible Sbp Parallel from a SbpNode
-void SbpCollector::CollectUniverse(SbpNode<cfg::SbpSignature>* sbp_node) {
+void SbpCollector::CollectUniverse(SbpNode<cfg::NdSbpSignature>* sbp_node) {
   for (auto& sbp_ : sbp_node->SbpSignatureObjList) { CollectUniverse(sbp_); }
 }
 // Collect all the possible Sbp Parallel from a SbpGraph
-void SbpCollector::CollectUniverse(SbpGraph<cfg::SbpSignature>& sbp_graph) {
+void SbpCollector::CollectUniverse(SbpGraph<cfg::NdSbpSignature>& sbp_graph) {
   for (auto* sbp_node : sbp_graph.NodeList) { CollectUniverse(sbp_node); }
   accumulator.resize(SbpParallelUniverse.size(), 0);
   bs_buffer.Initialize(SbpParallelUniverse.size());
 }
 // Initialize sbp proxy with given parallel candidates of a blob
-SbpNode<cfg::SbpSignature>* SbpCollector::InitializePorxy(
-    SbpGraph<cfg::SbpSignature>& sbp_graph,
+SbpNode<cfg::NdSbpSignature>* SbpCollector::InitializePorxy(
+    SbpGraph<cfg::NdSbpSignature>& sbp_graph,
     std::unordered_set<BinarySet, BinarySetHasher>& ParallelCandidates) {
   // Initialize sbp proxy
-  SbpNode<cfg::SbpSignature>* sbp_proxy = sbp_graph.GenerateNode();
+  SbpNode<cfg::NdSbpSignature>* sbp_proxy = sbp_graph.GenerateNode();
   // move parallel candidates
   for (const BinarySet& parallel_candidate : ParallelCandidates) {
     sbp_proxy->ParallelCandidates.emplace_back(parallel_candidate);
@@ -69,12 +71,16 @@ SbpNode<cfg::SbpSignature>* SbpCollector::InitializePorxy(
   return sbp_proxy;
 }
 
+// TODO: Auto Placement!
+// It only collect the same sbp with the same parallel description
+// In this moment their hierarchy is the same!
+
 // Initialize copy cost from producer to proxy of producer
-void SbpCollector::InitializeCopyCostFromNode2Proxy(SbpNode<cfg::SbpSignature>* sbp_proxy,
+void SbpCollector::InitializeCopyCostFromNode2Proxy(SbpNode<cfg::NdSbpSignature>* sbp_proxy,
                                                     const LogicalBlobId& lbi) {
   // the only edge from producer  to proxy of producer
-  SbpEdge<cfg::SbpSignature>* sbp_edge = sbp_proxy->EdgesIn[0];
-  SbpNode<cfg::SbpSignature>* sbp_node_producer = sbp_edge->StartNode;
+  SbpEdge<cfg::NdSbpSignature>* sbp_edge = sbp_proxy->EdgesIn[0];
+  SbpNode<cfg::NdSbpSignature>* sbp_node_producer = sbp_edge->StartNode;
   sbp_edge->Cost.resize(sbp_node_producer->SbpSignatureList.size());
   int32_t consumer_sbp_size = sbp_proxy->ParallelCandidates.size();
   // look through sbp signature in producer
@@ -87,9 +93,9 @@ void SbpCollector::InitializeCopyCostFromNode2Proxy(SbpNode<cfg::SbpSignature>* 
   OpNode* producer = sbp_node_producer->op_node;
 
   // get parallel description. Number of devices.
-  const ParallelDesc& parallel_desc = producer->parallel_desc();
+  const ParallelDesc& producer_parallel_desc = producer->parallel_desc();
   // Need to be careful, the logical blob description should be independent to current
-  // cfg::SbpParallel. Use producer or op_node?
+  // cfg::NdSbp. Use producer or op_node?
   const BlobDesc& logical_blob_desc = producer->LogicalBlobDesc4Lbi(lbi);
   const std::string& obn = *CHECK_JUST(producer->op().obn4lbi(lbi));
 
@@ -101,8 +107,8 @@ void SbpCollector::InitializeCopyCostFromNode2Proxy(SbpNode<cfg::SbpSignature>* 
        sbp_id_producer++) {
     // get sbp parallel for a logical blob in producer
     const auto producer_sbp_bn_in_op2sbp_parallel =
-        sbp_node_producer->SbpSignatureList[sbp_id_producer]->bn_in_op2sbp_parallel();
-    const cfg::SbpParallel& sbp_producer = producer_sbp_bn_in_op2sbp_parallel.at(obn);
+        sbp_node_producer->SbpSignatureList[sbp_id_producer]->bn_in_op2nd_sbp();
+    const cfg::NdSbp& sbp_producer = producer_sbp_bn_in_op2sbp_parallel.at(obn);
 
     // look through sbp parallel set in consumer
     for (int32_t sbp_id_consumer = 0; sbp_id_consumer < consumer_sbp_size; sbp_id_consumer++) {
@@ -112,11 +118,13 @@ void SbpCollector::InitializeCopyCostFromNode2Proxy(SbpNode<cfg::SbpSignature>* 
       // look through all sbp parallels in a sbp parallel set
       for (int32_t sbp_parallel_id : sbp_parallel_ids) {
         // get sbp parallel for a logical blob in consumer
-        const cfg::SbpParallel& sbp_consumer = id2SbpParallel[sbp_parallel_id];
+        const cfg::NdSbp& sbp_consumer = id2SbpParallel[sbp_parallel_id];
 
         // compute copy cost for a specific logical blob
-        sbp_edge->Cost[sbp_id_producer][sbp_id_consumer] += ComputCopyCostBetweenTwoSbpParallel(
-            sbp_producer, sbp_consumer, logical_blob_desc, parallel_desc, false);
+        // Use the parallel description of producer as those for consumer for now.
+        sbp_edge->Cost[sbp_id_producer][sbp_id_consumer] += CHECK_JUST(ComputCopyCostBetweenNdSbp(
+            sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc,
+            producer_parallel_desc, /*is_same=*/false, /*allow_cpu2gpu=*/false));
       }
     }
   }
@@ -124,13 +132,14 @@ void SbpCollector::InitializeCopyCostFromNode2Proxy(SbpNode<cfg::SbpSignature>* 
 
 // Initialize copy cost from proxy of producer to consumers
 void SbpCollector::InitializeCopyCostFromProxy2Consumer(
-    SbpNode<cfg::SbpSignature>* sbp_proxy,
+    SbpNode<cfg::NdSbpSignature>* sbp_proxy,
     HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>& consumer_bn2sbp_set,
-    HashMap<std::string, SbpNode<cfg::SbpSignature>*>& op_name2sbp_node) {
+    HashMap<std::string, SbpNode<cfg::NdSbpSignature>*>& op_name2sbp_node) {
   // Connect sbp proxy and consumers
   for (const auto& consumer_bn_group : consumer_bn2sbp_set) {
     // consumer in cost model
-    SbpNode<cfg::SbpSignature>* sbp_node_consumer = op_name2sbp_node[consumer_bn_group.first.first];
+    SbpNode<cfg::NdSbpSignature>* sbp_node_consumer =
+        op_name2sbp_node[consumer_bn_group.first.first];
     // input blob name of logical blob in consumer
     const std::string& ibn = consumer_bn_group.first.second;
 
@@ -141,7 +150,7 @@ void SbpCollector::InitializeCopyCostFromProxy2Consumer(
     // Connect sbp proxy and consumer
     sbp_proxy->PointTo(sbp_node_consumer);
     // the sbp edge connecting proxy and consumer
-    SbpEdge<cfg::SbpSignature>* sbp_edge = FindEdgeBetweenNodes(sbp_proxy, sbp_node_consumer);
+    SbpEdge<cfg::NdSbpSignature>* sbp_edge = FindEdgeBetweenNodes(sbp_proxy, sbp_node_consumer);
     sbp_edge->Cost.resize(sbp_proxy->ParallelCandidates.size());
     int32_t consumer_sbp_size = sbp_node_consumer->SbpSignatureList.size();
 
@@ -157,11 +166,10 @@ void SbpCollector::InitializeCopyCostFromProxy2Consumer(
       for (int32_t sbp_id_consumer = 0; sbp_id_consumer < consumer_sbp_size; sbp_id_consumer++) {
         // get sbp parallel for a logical blob in consumer
         const auto consumer_sbp_bn_in_op2sbp_parallel =
-            sbp_node_consumer->SbpSignatureList[sbp_id_consumer]->bn_in_op2sbp_parallel();
-        const cfg::SbpParallel& sbp_consumer = consumer_sbp_bn_in_op2sbp_parallel.at(ibn);
+            sbp_node_consumer->SbpSignatureList[sbp_id_consumer]->bn_in_op2nd_sbp();
+        const cfg::NdSbp& sbp_consumer = consumer_sbp_bn_in_op2sbp_parallel.at(ibn);
 
-        if ((!parallel_candidate.CheckExistency(SbpParallelUniverse[sbp_consumer]))
-            && (sbp_consumer.has_partial_sum_parallel() || !parallel_candidate.CheckExistency(0))) {
+        if ((!parallel_candidate.CheckExistency(SbpParallelUniverse[sbp_consumer]))) {
           sbp_edge->Cost[sbp_id_producer][sbp_id_consumer] = GetMaxVal<float>();
         }
       }
@@ -171,10 +179,10 @@ void SbpCollector::InitializeCopyCostFromProxy2Consumer(
 
 // Export list of possible combination of Sbp Parallels
 void SbpCollector::ProxySbpCandidate(
-    const OpGraph& op_graph, HashMap<std::string, SbpNode<cfg::SbpSignature>*>& op_name2sbp_node,
-    SbpGraph<cfg::SbpSignature>& sbp_graph) {
+    const OpGraph& op_graph, HashMap<std::string, SbpNode<cfg::NdSbpSignature>*>& op_name2sbp_node,
+    SbpGraph<cfg::NdSbpSignature>& sbp_graph) {
   // If needed, we can output the mapping from operator name to its proxy.
-  // HashMap<std::string, HashMap<LogicalBlobId, SbpNode<cfg::SbpSignature>*>>&
+  // HashMap<std::string, HashMap<LogicalBlobId, SbpNode<cfg::NdSbpSignature>*>>&
   //     op_name2lbi2sbp_proxy;
 
   // mapping from a logical blob id to a group of consumers and corresponding input blob names.
@@ -208,12 +216,10 @@ void SbpCollector::ProxySbpCandidate(
           producer.op().op_name(), lbi}][{node->op().op_name(), ibn}];
       // TODO: use SbpSignatureList instead of SbpSignatureObjList
       for (auto& sbp_sig : consumer_sbp_node->SbpSignatureObjList) {
-        const auto& map = sbp_sig.bn_in_op2sbp_parallel();
+        const auto& map = sbp_sig.bn_in_op2nd_sbp();
         const auto& iter = map.find(ibn);
         CHECK(iter != map.end()) << "blob_name " << ibn << " not found in sbp signature";
-        const cfg::SbpParallel& consumer_sbp = iter->second;
-        // filter out B
-        if (consumer_sbp.has_broadcast_parallel()) { continue; }
+        const cfg::NdSbp& consumer_sbp = iter->second;
         // filter out repeated SBP
         SbpParallelIDs.insert(SbpParallelUniverse[consumer_sbp]);
       }
@@ -232,7 +238,7 @@ void SbpCollector::ProxySbpCandidate(
     if (lbi7groups.second.size() < 2) { continue; }
     const std::string& producer_name = lbi7groups.first.first;
     // producer in cost model
-    SbpNode<cfg::SbpSignature>* sbp_node_producer = op_name2sbp_node[producer_name];
+    SbpNode<cfg::NdSbpSignature>* sbp_node_producer = op_name2sbp_node[producer_name];
     const LogicalBlobId& lbi = lbi7groups.first.second;
     HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>& consumer_bn2sbp_set =
         lbi7groups.second;
@@ -244,7 +250,7 @@ void SbpCollector::ProxySbpCandidate(
 
     DFS_SBPset(it_begin, consumer_bn2sbp_set, op_name2sbp_node, ParallelCandidates);
     // Initialize sbp proxy
-    SbpNode<cfg::SbpSignature>* sbp_proxy = InitializePorxy(sbp_graph, ParallelCandidates);
+    SbpNode<cfg::NdSbpSignature>* sbp_proxy = InitializePorxy(sbp_graph, ParallelCandidates);
     // Might be unnecessary
     // op_name2lbi2sbp_proxy[producer_name][lbi] = sbp_proxy;
 
@@ -260,10 +266,10 @@ void SbpCollector::ProxySbpCandidate(
     // Unloading
     for (const auto& consumer_bn_group : consumer_bn2sbp_set) {
       // consumer in cost model
-      SbpNode<cfg::SbpSignature>* sbp_node_consumer =
+      SbpNode<cfg::NdSbpSignature>* sbp_node_consumer =
           op_name2sbp_node[consumer_bn_group.first.first];
       // the sbp edge connecting producer and consumer
-      SbpEdge<cfg::SbpSignature>* edge_found =
+      SbpEdge<cfg::NdSbpSignature>* edge_found =
           FindEdgeBetweenNodes(sbp_node_producer, sbp_node_consumer);
       // unload logical blob from sbp edges
       edge_found->UnloadLbi(lbi);
@@ -280,7 +286,7 @@ void SbpCollector::ProxySbpCandidate(
 void SbpCollector::DFS_SBPset(
     HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>::iterator it,
     HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>& consumer_bn2sbp_set,
-    HashMap<std::string, SbpNode<cfg::SbpSignature>*>& op_name2sbp_node,
+    HashMap<std::string, SbpNode<cfg::NdSbpSignature>*>& op_name2sbp_node,
     std::unordered_set<BinarySet, BinarySetHasher>& ParallelCandidates) {
   if (it == consumer_bn2sbp_set.end()) {
     // store the binary set into an unordered_set
@@ -288,17 +294,16 @@ void SbpCollector::DFS_SBPset(
   } else {
     const std::string& consumer_name = it->first.first;
     const std::string& ibn = it->first.second;
-    SbpNode<cfg::SbpSignature>* consumer_sbp_node = op_name2sbp_node[consumer_name];
+    SbpNode<cfg::NdSbpSignature>* consumer_sbp_node = op_name2sbp_node[consumer_name];
     // a set to store the id of all possible SBP Parallel for a downstream op
     // should filter out B and other repeated SBP Parallel by pre-storing them into an
     // unordered_set
     std::unordered_set<int32_t> SbpParallelIDs;
     for (auto& sbp_sig : consumer_sbp_node->SbpSignatureObjList) {
-      const auto& map = sbp_sig.bn_in_op2sbp_parallel();
+      const auto& map = sbp_sig.bn_in_op2nd_sbp();
       const auto& iter = map.find(ibn);
       CHECK(iter != map.end()) << "blob_name " << ibn << " not found in sbp signature";
-      const cfg::SbpParallel& consumer_sbp = iter->second;
-      if (consumer_sbp.has_broadcast_parallel()) { continue; }
+      const cfg::NdSbp& consumer_sbp = iter->second;
       SbpParallelIDs.insert(SbpParallelUniverse[consumer_sbp]);
     }
     // next iterator

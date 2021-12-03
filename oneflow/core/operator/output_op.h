@@ -47,6 +47,8 @@ class OutputOp final : public Operator {
                                   const ParallelDesc& parallel_desc,
                                   std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
                                       NdSbpInferHint4Ibn) const override;
+  // Output op should only use the sbp given by the user. Please don't add an additional Broadcast.
+  bool AddBroadcast() const override { return false; };
 };
 
 }  // namespace oneflow

@@ -138,10 +138,6 @@ class Operator {
   Maybe<const Shape> GetInputBlobFastestTimeShape() const;
   Maybe<const Shape> GetInputOutputFastestTimeShape() const;
 
-  Maybe<cfg::SbpSignatureList> GetValidSbpSignatureList(
-      const ParallelDesc& parallel_desc,
-      const std::function<Maybe<const NdSbpInferHint*>(const std::string&)>& NdSbpInferHint4Ibn)
-      const;
   Maybe<void> InferSbpSignature(cfg::SbpSignature* sbp_signature,
                                 const cfg::SbpSignature& sbp_sig_conf,
                                 const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint) const;
@@ -172,11 +168,14 @@ class Operator {
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, cfg::SbpSignatureList* sbp_sig_list) const;
   virtual Maybe<double> GetComputeComplexity(
-      cfg::SbpSignature* sbp_signature,
+      cfg::NdSbpSignature* sbp_signature,
       std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
       const ParallelDesc& parallel_desc) const;
+  Maybe<void> GetValidNdSbpSignatureList(
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const;
 
-  void ForEachBnInOp(std::function<void(const std::string&)>) const;
+  void ForEachBnInOp(const std::function<void(const std::string&)>&) const;
 
   virtual Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const;
   std::shared_ptr<OpAttribute> GetOpAttributeWithoutOpNameAndLbn() const;
@@ -228,6 +227,8 @@ class Operator {
       std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
           MirroredSigInferHint4Ibn,
       bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc);
+  // Whether an operator should add the broadcast SBP into the GetSbpSignatureIf().
+  virtual bool AddBroadcast() const { return true; };
 
   virtual Maybe<void> InferInplaceObn2Ibn(
       HashMap<std::string, std::string>* mut_inplace_obn2ibn,
@@ -285,8 +286,11 @@ class Operator {
   };
   Maybe<void> FilterAndCheckValidSbpSignatureListByLogicalShape(
       const cfg::SbpSignatureList& total_sbp_sig_list,
-      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, cfg::SbpSignatureList* valid_sbp_sig_list) const;
+  Maybe<void> FilterNdSbpSignatureListByLogicalShape(
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const;
 
   LogicalBlobId tbn2lbi(const std::string& data_tmp_bn) const;
   std::string Bn2ConfName(const std::string& bn) const;

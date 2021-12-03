@@ -28,9 +28,12 @@ Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
   double logical_computation_cost =
       std::accumulate(pool_size.begin(), pool_size.end(),
                       ctx->Shape4ArgNameAndIndex("y", 0)->elem_cnt(), std::multiplies<double>());
-  const auto& sbp_parallel = ctx->SbpParallel4ArgNameAndIndex("y", 0);
-  if (sbp_parallel.has_split_parallel()) {
-    return logical_computation_cost / ctx->parallel_desc().parallel_num();
+  const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
+  const auto& nd_sbp_y = ctx->NdSbp4ArgNameAndIndex("y", 0);
+  for (int32_t dim_sbp = 0; dim_sbp < nd_sbp_y.sbp_parallel_size(); dim_sbp++) {
+    if (nd_sbp_y.sbp_parallel(dim_sbp).has_split_parallel()) {
+      logical_computation_cost /= parallel_hierarchy->At(dim_sbp);
+    }
   }
   return logical_computation_cost;
 }

@@ -18,6 +18,7 @@ limitations under the License.
 namespace oneflow {
 
 REGISTER_NO_GRAD_CPU_ONLY_USER_OP("OFRecordReader")
+    .NoBroadcast()
     .Output("out")
     .Attr<std::string>("data_dir")
     .Attr<int32_t>("data_part_num")
@@ -69,12 +70,10 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("OFRecordReader")
       return Maybe<void>::Ok();
     })
     .SetComputeComplexityFn([](user_op::ComputeComplexityFnContext* ctx) -> Maybe<double> {
-      if (ctx->SbpParallel4ArgNameAndIndex("out", 0).has_split_parallel()) {
-        return double(ctx->Shape4ArgNameAndIndex("out", 0)->elem_cnt()
-                      * GetSizeOfDataType(DataType::kOFRecord));
-      } else {
-        return GetMaxVal<float>();
-      }
+      // Don't support broadcast.
+      return double(ctx->Shape4ArgNameAndIndex("out", 0)->elem_cnt()
+                    * GetSizeOfDataType(DataType::kOFRecord))
+             / ctx->parallel_desc().hierarchy()->elem_cnt();
     });
 
 }  // namespace oneflow

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/user/ops/nn_util.h"
 
 namespace oneflow {
@@ -134,8 +135,12 @@ Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
   cost *= std::accumulate(out->shape().dim_vec().begin(), out->shape().dim_vec().end(), 1.0,
                           std::multiplies<double>());
 
-  if (ctx->SbpParallel4ArgNameAndIndex("out", 0).has_split_parallel()) {
-    return cost / ctx->parallel_desc().parallel_num();
+  const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
+  const auto& nd_sbp_out = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  for (int32_t dim_sbp = 0; dim_sbp < nd_sbp_out.sbp_parallel_size(); dim_sbp++) {
+    if (nd_sbp_out.sbp_parallel(dim_sbp).has_split_parallel()) {
+      cost /= parallel_hierarchy->At(dim_sbp);
+    }
   }
   return cost;
 }
@@ -386,8 +391,12 @@ REGISTER_USER_OP("conv_data_grad")
                                     filter->shape().dim_vec().end(), 2.0, std::multiplies<double>())
                     * std::accumulate(dy->shape().dim_vec().begin(), dy->shape().dim_vec().end(),
                                       1.0, std::multiplies<double>());
-      if (ctx->SbpParallel4ArgNameAndIndex("dy", 0).has_split_parallel()) {
-        return cost / ctx->parallel_desc().parallel_num();
+      const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
+      const auto& nd_sbp_dy = ctx->NdSbp4ArgNameAndIndex("dy", 0);
+      for (int32_t dim_sbp = 0; dim_sbp < nd_sbp_dy.sbp_parallel_size(); dim_sbp++) {
+        if (nd_sbp_dy.sbp_parallel(dim_sbp).has_split_parallel()) {
+          cost /= parallel_hierarchy->At(dim_sbp);
+        }
       }
       return cost;
     });
@@ -469,8 +478,12 @@ REGISTER_USER_OP("conv_filter_grad")
                           filter_diff->shape().dim_vec().end(), 2.0, std::multiplies<double>())
           * std::accumulate(dy->shape().dim_vec().begin(), dy->shape().dim_vec().end(), 1.0,
                             std::multiplies<double>());
-      if (ctx->SbpParallel4ArgNameAndIndex("dy", 0).has_split_parallel()) {
-        return cost / ctx->parallel_desc().parallel_num();
+      const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
+      const auto& nd_sbp_dy = ctx->NdSbp4ArgNameAndIndex("dy", 0);
+      for (int32_t dim_sbp = 0; dim_sbp < nd_sbp_dy.sbp_parallel_size(); dim_sbp++) {
+        if (nd_sbp_dy.sbp_parallel(dim_sbp).has_split_parallel()) {
+          cost /= parallel_hierarchy->At(dim_sbp);
+        }
       }
       return cost;
     });
@@ -533,8 +546,12 @@ REGISTER_USER_OP("conv_bias_grad")
       }
       double cost = std::accumulate(dy->shape().dim_vec().begin(), dy->shape().dim_vec().end(),
                                     2.0 * c, std::multiplies<double>());
-      if (ctx->SbpParallel4ArgNameAndIndex("dy", 0).has_split_parallel()) {
-        return cost / ctx->parallel_desc().parallel_num();
+      const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
+      const auto& nd_sbp_dy = ctx->NdSbp4ArgNameAndIndex("dy", 0);
+      for (int32_t dim_sbp = 0; dim_sbp < nd_sbp_dy.sbp_parallel_size(); dim_sbp++) {
+        if (nd_sbp_dy.sbp_parallel(dim_sbp).has_split_parallel()) {
+          cost /= parallel_hierarchy->At(dim_sbp);
+        }
       }
       return cost;
     });
