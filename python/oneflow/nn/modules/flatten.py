@@ -51,29 +51,6 @@ class Flatten(Module):
         return "start_dim={}, end_dim={}".format(self.start_dim, self.end_dim)
 
 
-@register_tensor_op("flatten")
-def _flow_flatten(input, start_dim: int = 0, end_dim: int = -1):
-    """Flattens a contiguous range of dims into a tensor.
-
-    Args:
-        start_dim: first dim to flatten (default = 0).
-        end_dim: last dim to flatten (default = -1).
-    
-    For example: 
-
-    .. code-block:: python 
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-        >>> input = flow.Tensor(32, 1, 5, 5)
-        >>> output = input.flatten(start_dim=1)
-        >>> output.shape
-        oneflow.Size([32, 25])
-
-    """
-    return Flatten(start_dim=start_dim, end_dim=end_dim)(input)
-
-
 if __name__ == "__main__":
     import doctest
 
