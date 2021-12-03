@@ -30,7 +30,7 @@ template<>
 struct TanhGradFunctor<float> {
   OF_DEVICE_FUNC float operator()(float x, float dy) const {
     float tanh_val = tanhf(x);
-    return dy * (1 - tanh_val * tanh_val);
+    return dy * (static_cast<float>(1.0) - tanh_val * tanh_val);
   }
 };
 
@@ -38,7 +38,7 @@ template<>
 struct TanhGradFunctor<double> {
   OF_DEVICE_FUNC double operator()(double x, double dy) const {
     double tanh_val = tanh(x);
-    return dy * (1 - tanh_val * tanh_val);
+    return dy * (static_cast<double>(1.0) - tanh_val * tanh_val);
   }
 };
 

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/ep/common/primitive/elementwise_unary.h"
-#include "oneflow/core/ep/common/primitive/unary_functor.h"
+#include "oneflow/core/ep/cpu/primitive/unary_functor.h"
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
 
 namespace oneflow {

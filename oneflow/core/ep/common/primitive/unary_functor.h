@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/ep/include/primitive/unary_op.h"
 #include "oneflow/core/common/data_type.h"
-#include <cmath>
 
 namespace oneflow {
 
@@ -38,19 +37,6 @@ struct UnaryFunctor<device, UnaryOp::kRelu, Dst, Src> {
       return static_cast<Dst>(zero_val);
     }
   }
-};
-
-template<typename Dst, typename Src>
-struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kGelu, Dst, Src> {
-  OF_DEVICE_FUNC Dst operator()(Src src) const {
-    return 0.5 * src * (1.0 + std::erf(inv_sqrt2 * src));
-  }
-  Src inv_sqrt2 = std::sqrt(0.5);
-};
-
-template<typename Dst, typename Src>
-struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kTanh, Dst, Src> {
-  OF_DEVICE_FUNC Dst operator()(Src src) const { return std::tanh(src); }
 };
 
 template<DeviceType device, typename Dst, typename Src>
