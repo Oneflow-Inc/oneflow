@@ -846,11 +846,14 @@ Maybe<double> Operator::GetComputeComplexity(
       for (int32_t sbp_dim = 0; sbp_dim < nd_sbp.sbp_parallel_size(); sbp_dim++) {
         const auto& sbp = nd_sbp.sbp_parallel(sbp_dim);
         if (sbp.has_split_parallel()) {
-          const int32_t axis = sbp.split_parallel().axis();
-          // Illegal split sbp has already been filtered.
-          CHECK_OR_RETURN(axis < logical_blob_desc.shape().NumAxes()
-                          && logical_blob_desc.shape().At(axis) >= parallel_hierarchy.At(sbp_dim));
-          total_cost /= parallel_hierarchy.At(sbp_dim);
+          const int64_t axis = sbp.split_parallel().axis();
+          if (axis >= logical_blob_desc.shape().NumAxes()
+              || logical_blob_desc.shape().At(axis) < parallel_hierarchy.At(sbp_dim)) {
+            complexity = GetMaxVal<float>();
+            return Maybe<void>::Ok();
+          } else {
+            total_cost /= parallel_hierarchy.At(sbp_dim);
+          }
         }
       }
       complexity += total_cost;
