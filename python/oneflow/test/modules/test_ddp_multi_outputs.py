@@ -69,7 +69,9 @@ def train(test_case, train_x, device, output, requires_grad):
         optimizer.step()
         optimizer.zero_grad()
 
+
 test_device = ["cpu"] if os.getenv("ONEFLOW_TEST_CPU_ONLY") else ["cpu", "cuda"]
+
 
 @flow.unittest.skip_unless_1n2d()
 class TestDdpMultmpleOutputs(flow.unittest.TestCase):
