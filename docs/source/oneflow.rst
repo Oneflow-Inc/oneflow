@@ -42,6 +42,7 @@ oneflow
             cos, 
             cosh, 
             diag, 
+            movedim,
             div, 
             dot, 
             eq, 

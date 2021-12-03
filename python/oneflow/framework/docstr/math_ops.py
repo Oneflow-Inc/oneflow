@@ -1241,7 +1241,6 @@ add_docstr(
     """,
 )
 
-
 add_docstr(
     oneflow.dot,
     r"""This operator computes the dot product of tensor input and other.
@@ -1268,5 +1267,38 @@ add_docstr(
         >>> flow.dot(flow.Tensor([2, 3]), flow.Tensor([2, 1]))
         tensor(7)
         
+    """,
+)
+
+add_docstr(
+    oneflow.movedim,
+    r"""
+    Moves the dimension(s) of input at the position(s) in source to the position(s) in destination.
+    Other dimensions of input that are not explicitly moved remain in their original order and appear at the positions not specified in destination.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.movedim.html#torch.movedim.
+
+    Args:
+        input (Tensor): the input tensor.
+        source  (int or a list): Original positions of the dims to move. These must be unique. 
+        destination (int or a list): Destination positions for each of the original dims. These must also be unique.
+    
+    Returns:
+        oneflow.Tensor: the output Tensor.
+
+    For example:
+
+    .. code-block:: python
+        
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> input = flow.tensor(np.random.randn(2, 3, 4, 5), dtype=flow.float32)
+        >>> output = flow.movedim(input, 1, 0)
+        >>> output.shape
+        oneflow.Size([3, 2, 4, 5])
+        >>> output = flow.movedim(input, (1, 2), (0, 1))
+        >>> output.shape
+        oneflow.Size([3, 4, 2, 5])
     """,
 )
