@@ -279,8 +279,9 @@ class OpKernelCache {
  public:
   virtual ~OpKernelCache() = default;
 
-  static const int8_t ShapeMayChanged = 0x1;
-  static const int8_t AttrMayChanged = 0x2;
+  static const int32_t kAllMayChanged = 0x0;
+  static const int32_t kShapeNotChanged = 0x1;
+  static const int32_t kAttrNotChanged = 0x2;
 
  protected:
   OpKernelCache() = default;

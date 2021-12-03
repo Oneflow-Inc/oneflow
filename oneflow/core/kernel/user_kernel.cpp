@@ -623,7 +623,7 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
 
   if (updated) {
     cache_ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
-    kernel_->InitOpKernelCache(cache_ctx_.get(), user_op::OpKernelCache::ShapeMayChanged,
+    kernel_->InitOpKernelCache(cache_ctx_.get(), user_op::OpKernelCache::kAttrNotChanged,
                                &opkernel_cache_);
   } else {
     // do nothing
@@ -668,7 +668,7 @@ void UserKernel::VirtualKernelInit(KernelContext* ctx) {
   opkernel_state_ = CreateOpKernelState(ctx);
   kernel_->InitOpKernelCache(
       cache_ctx_.get(),
-      user_op::OpKernelCache::ShapeMayChanged | user_op::OpKernelCache::AttrMayChanged,
+      user_op::OpKernelCache::kAllMayChanged,
       &opkernel_cache_);
 #ifdef WITH_CUDA_GRAPHS
   if (ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
@@ -768,7 +768,7 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   }
   kernel_->InitOpKernelCache(
       &init_and_cache_ctx,
-      user_op::OpKernelCache::AttrMayChanged | user_op::OpKernelCache::ShapeMayChanged, &cache_);
+      user_op::OpKernelCache::kAllMayChanged, &cache_);
 
   if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob)
       && !kernel_->AlwaysComputeWhenAllOutputsEmpty()) {

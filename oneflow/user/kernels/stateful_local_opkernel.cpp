@@ -487,7 +487,7 @@ void StatefulLocalOpKernel::TryInitOpKernelStateAndCache(
     auto& cache_in_map = op_kernel_cache_map_[op_kernel];
     op_kernel->InitOpKernelCache(
         &init_and_cache_ctx,
-        user_op::OpKernelCache::AttrMayChanged | user_op::OpKernelCache::ShapeMayChanged, &cache_in_map);
+        user_op::OpKernelCache::kAllMayChanged, &cache_in_map);
     *cache = cache_in_map;
   }
 }
