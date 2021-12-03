@@ -871,15 +871,15 @@ __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_DY load_dy, STORE stor
   const int lane_id = threadIdx.x;
   const int64_t step = num_global_thread_group * rows_per_access;
   for (int row = global_thread_group_id * rows_per_access; row < rows; row += step) {
-    ComputeType sum_loss1[rows_per_access];
-    ComputeType sum_loss2[rows_per_access];
+    ComputeType sum_stats1[rows_per_access];
+    ComputeType sum_stats2[rows_per_access];
 #pragma unroll
     for (int row_id = 0; row_id < rows_per_access; ++row_id) {
       const int global_row_id = row + row_id;
       mean_buf[row_id] = mean[global_row_id];
       inv_variance_buf[row_id] = inv_variance[global_row_id];
-      sum_loss1[row_id] = 0;
-      sum_loss2[row_id] = 0;
+      sum_stats1[row_id] = 0;
+      sum_stats2[row_id] = 0;
       ComputeType* row_x_buf = x_buf[row_id];
       ComputeType* row_dy_buf = dy_buf[row_id];
 #pragma unroll
@@ -892,21 +892,21 @@ __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_DY load_dy, STORE stor
 #pragma unroll
           for (int i = 0; i < pack_size; ++i) {
             const int col_id = pack_offset + i;
-            sum_loss1[row_id] += row_dy_buf[col_id];
-            sum_loss2[row_id] += row_dy_buf[col_id] * (row_x_buf[col_id] - mean_buf[row_id])
-                                 * inv_variance_buf[row_id];
+            sum_stats1[row_id] += row_dy_buf[col_id];
+            sum_stats2[row_id] += row_dy_buf[col_id] * (row_x_buf[col_id] - mean_buf[row_id])
+                                  * inv_variance_buf[row_id];
           }
         }
       }
     }
-    ComputeType warp_sum_loss1[rows_per_access];
-    ComputeType warp_sum_loss2[rows_per_access];
+    ComputeType warp_sum_stats1[rows_per_access];
+    ComputeType warp_sum_stats2[rows_per_access];
 #pragma unroll
     for (int row_id = 0; row_id < rows_per_access; ++row_id) {
-      warp_sum_loss1[row_id] =
-          WarpAllReduce<SumOp, ComputeType, thread_group_width>(sum_loss1[row_id]);
-      warp_sum_loss2[row_id] =
-          WarpAllReduce<SumOp, ComputeType, thread_group_width>(sum_loss2[row_id]);
+      warp_sum_stats1[row_id] =
+          WarpAllReduce<SumOp, ComputeType, thread_group_width>(sum_stats1[row_id]);
+      warp_sum_stats2[row_id] =
+          WarpAllReduce<SumOp, ComputeType, thread_group_width>(sum_stats2[row_id]);
     }
 #pragma unroll
     for (int row_id = 0; row_id < rows_per_access; ++row_id) {
@@ -921,9 +921,9 @@ __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_DY load_dy, STORE stor
         if (!padding || col < cols) {
           for (int i = 0; i < pack_size; ++i) {
             const int col_id = pack_id * pack_size + i;
-            row_dy_buf[col_id] = (cols * row_dy_buf[col_id] - warp_sum_loss1[row_id]
+            row_dy_buf[col_id] = (cols * row_dy_buf[col_id] - warp_sum_stats1[row_id]
                                   - (row_x_buf[col_id] - mean_buf[row_id])
-                                        * inv_variance_buf[row_id] * warp_sum_loss2[row_id])
+                                        * inv_variance_buf[row_id] * warp_sum_stats2[row_id])
                                  * inv_variance_over_cols;
           }
           store.template store<pack_size>(row_dy_buf + pack_id * pack_size, global_row_id, col);
@@ -1134,8 +1134,8 @@ __global__ void LayerNormGradBlockSMemImpl(LOAD_X load_x, LOAD_DY load_dy, STORE
   assert(cols % pack_size == 0);
   const int num_packs = static_cast<int>(cols) / pack_size;
   for (int row = blockIdx.x; row < rows; row += gridDim.x) {
-    ComputeType sum_loss1 = 0;
-    ComputeType sum_loss2 = 0;
+    ComputeType sum_stats1 = 0;
+    ComputeType sum_stats2 = 0;
     const ComputeType mean_val = mean[row];
     const ComputeType inv_variance_val = inv_variance[row];
     const ComputeType inv_variance_over_cols = inv_variance_val / cols;
@@ -1149,19 +1149,19 @@ __global__ void LayerNormGradBlockSMemImpl(LOAD_X load_x, LOAD_DY load_dy, STORE
         const int buf_offset = i * num_packs + pack_id;
         x_buf[buf_offset] = x_pack[i];
         dy_buf[buf_offset] = dy_pack[i];
-        sum_loss1 += dy_pack[i];
-        sum_loss2 += dy_pack[i] * (x_pack[i] - mean_val) * inv_variance_val;
+        sum_stats1 += dy_pack[i];
+        sum_stats2 += dy_pack[i] * (x_pack[i] - mean_val) * inv_variance_val;
       }
     }
-    const ComputeType row_sum_loss1 = BlockAllReduce<SumOp, ComputeType, block_size>(sum_loss1);
-    const ComputeType row_sum_loss2 = BlockAllReduce<SumOp, ComputeType, block_size>(sum_loss2);
+    const ComputeType row_sum_stats1 = BlockAllReduce<SumOp, ComputeType, block_size>(sum_stats1);
+    const ComputeType row_sum_stats2 = BlockAllReduce<SumOp, ComputeType, block_size>(sum_stats2);
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType pack[pack_size];
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
         const int buf_offset = i * num_packs + pack_id;
-        pack[i] = (cols * dy_buf[buf_offset] - row_sum_loss1
-                   - (x_buf[buf_offset] - mean_val) * inv_variance_val * row_sum_loss2)
+        pack[i] = (cols * dy_buf[buf_offset] - row_sum_stats1
+                   - (x_buf[buf_offset] - mean_val) * inv_variance_val * row_sum_stats2)
                   * inv_variance_over_cols;
       }
       store.template store<pack_size>(pack, row, pack_id * pack_size);
@@ -1300,8 +1300,8 @@ __global__ void LayerNormGradBlockUncachedImpl(LOAD_X load_x, LOAD_DY load_dy, S
     const ComputeType mean_val = mean[row];
     const ComputeType inv_variance_val = inv_variance[row];
     const ComputeType inv_variance_over_cols = inv_variance_val / cols;
-    ComputeType sum_loss1 = 0;
-    ComputeType sum_loss2 = 0;
+    ComputeType sum_stats1 = 0;
+    ComputeType sum_stats2 = 0;
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType x_pack[pack_size];
       ComputeType dy_pack[pack_size];
@@ -1310,12 +1310,12 @@ __global__ void LayerNormGradBlockUncachedImpl(LOAD_X load_x, LOAD_DY load_dy, S
 
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
-        sum_loss1 += dy_pack[i];
-        sum_loss2 += dy_pack[i] * (x_pack[i] - mean_val) * inv_variance_val;
+        sum_stats1 += dy_pack[i];
+        sum_stats2 += dy_pack[i] * (x_pack[i] - mean_val) * inv_variance_val;
       }
     }
-    const ComputeType row_sum_loss1 = BlockAllReduce<SumOp, ComputeType, block_size>(sum_loss1);
-    const ComputeType row_sum_loss2 = BlockAllReduce<SumOp, ComputeType, block_size>(sum_loss2);
+    const ComputeType row_sum_stats1 = BlockAllReduce<SumOp, ComputeType, block_size>(sum_stats1);
+    const ComputeType row_sum_stats2 = BlockAllReduce<SumOp, ComputeType, block_size>(sum_stats2);
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType x_pack[pack_size];
       ComputeType dy_pack[pack_size];
@@ -1323,8 +1323,8 @@ __global__ void LayerNormGradBlockUncachedImpl(LOAD_X load_x, LOAD_DY load_dy, S
       load_dy.template load<pack_size>(dy_pack, row, pack_id * pack_size);
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
-        dy_pack[i] = (cols * dy_pack[i] - row_sum_loss1
-                      - (x_pack[i] - mean_val) * inv_variance_val * row_sum_loss2)
+        dy_pack[i] = (cols * dy_pack[i] - row_sum_stats1
+                      - (x_pack[i] - mean_val) * inv_variance_val * row_sum_stats2)
                      * inv_variance_over_cols;
       }
       store.template store<pack_size>(dy_pack, row, pack_id * pack_size);
