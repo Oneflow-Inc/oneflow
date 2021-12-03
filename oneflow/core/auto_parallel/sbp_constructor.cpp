@@ -162,7 +162,7 @@ Maybe<void> SbpConstructor::FillSbpSignatureForOpNode(const OpGraph& op_graph, c
 
 Maybe<void> SbpConstructor::InitComputationCost(const OpGraph& op_graph) {
   // Compute computation cost for sbp nodes
-  op_graph.TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
+  JUST(op_graph.TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
     // get corresponding sbp node producer
     SbpNode<cfg::NdSbpSignature>* sbp_node = op_name2sbp_node_[op_node->op().op_name()];
     // get parallel description. Number of devices.
@@ -183,7 +183,7 @@ Maybe<void> SbpConstructor::InitComputationCost(const OpGraph& op_graph) {
       }
     }
     return Maybe<void>::Ok();
-  });
+  }));
   return Maybe<void>::Ok();
 }
 
