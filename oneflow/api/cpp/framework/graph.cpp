@@ -39,6 +39,7 @@ limitations under the License.
 #include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job.pb.h"
@@ -79,6 +80,14 @@ class CompileScope {
   of::LazyMode::Guard lazy_mode_enabled_guard{true};
 };
 
+std::shared_ptr<of::one::TensorTuple> ConvertToTensorTuple(const std::vector<std::shared_ptr<of::one::Tensor>>& tensors) {
+  auto tensor_tuple = std::make_shared<of::one::TensorTuple>();
+  for (const auto& tensor : tensors) {
+    tensor_tuple->emplace_back(tensor);
+  }
+  return tensor_tuple;
+}
+
 }  // namespace
 
 Graph::Graph(const std::string& model_path, const Device& device) : device_(device) {
@@ -107,9 +116,21 @@ void Graph::Compile(const std::vector<Tensor>& inputs) {
   graph_->CompileAndInitRuntime().GetOrThrow();
 }
 
-std::vector<Tensor> Run(const std::vector<Tensor>& inputs) {
+std::vector<Tensor> Graph::Run(const std::vector<Tensor>& inputs) {
   // RunLazyNNGraph && SoftSyncNNGraphBuffers
-  return std::vector<Tensor>{};
+  auto input_tensor_tuple = std::make_shared<of::one::TensorTuple>();
+  for (const auto& tensor : inputs) {
+    input_tensor_tuple->emplace_back(tensor.tensor_);
+  }
+
+  of::RunLazyNNGraph(*input_tensor_tuple, *output_tensor_tuple_, *parameter_tensor_tuple_, graph_).GetOrThrow();
+  of::SoftSyncNNGraphBuffers(*output_tensor_tuple_, graph_).GetOrThrow();
+
+  std::vector<Tensor> outputs;
+  for (const auto& tensor : *output_tensor_tuple_) {
+    outputs.emplace_back(Tensor(tensor));
+  }
+  return outputs;
 }
 
 void Graph::AddOp(oneflow::OperatorConf op_conf) {
@@ -175,6 +196,7 @@ void Graph::BuildGraph(const std::vector<Tensor>& inputs) {
                   device_.device_.get())
                   .GetPtrOrThrow();
         }
+        return of::Maybe<void>::Ok();
       })
       .GetOrThrow();
 }
@@ -182,9 +204,33 @@ void Graph::BuildGraph(const std::vector<Tensor>& inputs) {
 void Graph::LoadCheckpoint() {}
 
 void Graph::RegisterTensors() {
-  // graph_->RegisterInputOpNamesAndTensors
-  // graph_->RegisterOutputOpNamesAndTensors
-  // graph_->RegisterVariableOpNamesAndTensors
+  std::vector<std::string> input_op_names;
+  std::vector<std::shared_ptr<of::one::Tensor>> input_tensors;
+  for (auto name_to_tensor : input_name_to_tensor_) {
+    input_op_names.emplace_back(name_to_tensor.first);
+    input_tensors.emplace_back(name_to_tensor.second);
+  }
+
+  std::vector<std::string> output_op_names;
+  std::vector<std::shared_ptr<of::one::Tensor>> output_tensors;
+  for (auto name_to_tensor : output_name_to_tensor_) {
+    output_op_names.emplace_back(name_to_tensor.first);
+    output_tensors.emplace_back(name_to_tensor.second);
+  }
+
+  std::vector<std::string> variable_op_names;
+  std::vector<std::shared_ptr<of::one::Tensor>> variable_tensors;
+  for (auto name_to_tensor : variable_op_name_to_tensor_) {
+    variable_op_names.emplace_back(name_to_tensor.first);
+    variable_tensors.emplace_back(name_to_tensor.second);
+  }
+
+  graph_->RegisterInputOpNamesAndTensors(input_op_names, input_tensors).GetOrThrow();
+  graph_->RegisterVariableOpNamesAndTensors(variable_op_names, variable_tensors).GetOrThrow();
+  graph_->RegisterOutputOpNamesAndTensors(output_op_names, output_tensors).GetOrThrow();
+
+  output_tensor_tuple_ = ConvertToTensorTuple(output_tensors);
+  parameter_tensor_tuple_ = ConvertToTensorTuple(variable_tensors);
 }
 
 Graph Load(const std::string& model_path, const Device& device) {

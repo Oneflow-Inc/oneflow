@@ -59,9 +59,12 @@ class Graph final {
   int batch_size_ = 0;
   Device device_;
   oneflow::Job job_;
+
   oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>> input_name_to_tensor_;
   oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>> output_name_to_tensor_;
   oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>> variable_op_name_to_tensor_;
+  std::shared_ptr<oneflow::one::TensorTuple> output_tensor_tuple_;
+  std::shared_ptr<oneflow::one::TensorTuple> parameter_tensor_tuple_;
 };
 
 Graph Load(const std::string& model_path, const Device& device);
