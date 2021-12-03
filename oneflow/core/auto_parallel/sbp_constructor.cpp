@@ -73,7 +73,7 @@ Maybe<void> SbpConstructor::DumpNdSbpSignatureForJob(const OpGraph& op_graph, Jo
     sbp_node->FinalSbpSignature()->ToProto(
         &(*job->mutable_job_parallel_view_conf()
                ->mutable_op_name2nd_sbp_signature_conf())[node->op().op_name()]);
-    // Do we have 1D SbpSignature Conf
+    // If we have 1D SbpSignature Conf
     if (node->parallel_desc().hierarchy()->NumAxes() == 1) {
       // Update SbpSignature
       cfg::SbpSignature sbp_signature;
