@@ -852,6 +852,15 @@ inline cudaError_t DispatchLayerNorm(cudaStream_t stream, LOAD load, STORE store
   }
 }
 
+
+/*
+LayerNormGrad dx:
+normalized = (x - mean) * inv_var
+sum_stats1 = sum(scaled_dy)
+sum_stats2 = sum(scaled_dy * normalized)
+dx = cols * dy - sum_stats1 - normalized * sum_stats2
+dx *= inv_var / cols
+*/
 template<typename LOAD_X, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size,
          int cols_per_thread, int thread_group_width, int rows_per_access, bool padding>
 __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_DY load_dy, STORE store,
@@ -862,10 +871,8 @@ __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_DY load_dy, STORE stor
   assert(cols <= cols_per_thread * thread_group_width);
   static_assert(thread_group_width <= kWarpSize, "");
   static_assert(kWarpSize % thread_group_width == 0, "");
-  ComputeType x_buf[rows_per_access][cols_per_thread];
+  ComputeType normalized_buf[rows_per_access][cols_per_thread];
   ComputeType dy_buf[rows_per_access][cols_per_thread];
-  ComputeType mean_buf[rows_per_access];
-  ComputeType inv_variance_buf[rows_per_access];
   const int64_t global_thread_group_id = blockIdx.x * blockDim.y + threadIdx.y;
   const int64_t num_global_thread_group = gridDim.x * blockDim.y;
   const int lane_id = threadIdx.x;
@@ -873,28 +880,31 @@ __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_DY load_dy, STORE stor
   for (int row = global_thread_group_id * rows_per_access; row < rows; row += step) {
     ComputeType sum_stats1[rows_per_access];
     ComputeType sum_stats2[rows_per_access];
+    ComputeType inv_variance_buf[rows_per_access];
 #pragma unroll
     for (int row_id = 0; row_id < rows_per_access; ++row_id) {
       const int global_row_id = row + row_id;
-      mean_buf[row_id] = mean[global_row_id];
+      ComputeType mean_val = mean[global_row_id];
       inv_variance_buf[row_id] = inv_variance[global_row_id];
       sum_stats1[row_id] = 0;
       sum_stats2[row_id] = 0;
-      ComputeType* row_x_buf = x_buf[row_id];
+      ComputeType* row_normalized_buf = normalized_buf[row_id];
       ComputeType* row_dy_buf = dy_buf[row_id];
 #pragma unroll
       for (int pack_id = 0; pack_id < pack_per_thread; ++pack_id) {
         const int col = (pack_id * thread_group_width + lane_id) * pack_size;
         const int pack_offset = pack_id * pack_size;
         if (!padding || col < cols) {
-          load_x.template load<pack_size>(row_x_buf + pack_offset, global_row_id, col);
+          load_x.template load<pack_size>(row_normalized_buf + pack_offset, global_row_id, col);
           load_dy.template load<pack_size>(row_dy_buf + pack_offset, global_row_id, col);
 #pragma unroll
           for (int i = 0; i < pack_size; ++i) {
             const int col_id = pack_offset + i;
+            // row_normalized_buf store x
+            row_normalized_buf[col_id] =
+                (row_normalized_buf[col_id] - mean_val) * inv_variance_buf[row_id];
             sum_stats1[row_id] += row_dy_buf[col_id];
-            sum_stats2[row_id] += row_dy_buf[col_id] * (row_x_buf[col_id] - mean_buf[row_id])
-                                  * inv_variance_buf[row_id];
+            sum_stats2[row_id] += row_dy_buf[col_id] * row_normalized_buf[col_id];
           }
         }
       }
@@ -911,7 +921,7 @@ __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_DY load_dy, STORE stor
 #pragma unroll
     for (int row_id = 0; row_id < rows_per_access; ++row_id) {
       const int global_row_id = row + row_id;
-      ComputeType* row_x_buf = x_buf[row_id];
+      ComputeType* row_normalized_buf = normalized_buf[row_id];
       ComputeType* row_dy_buf = dy_buf[row_id];
       const ComputeType inv_variance_over_cols =
           inv_variance_buf[row_id] / static_cast<ComputeType>(cols);
@@ -922,8 +932,7 @@ __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_DY load_dy, STORE stor
           for (int i = 0; i < pack_size; ++i) {
             const int col_id = pack_id * pack_size + i;
             row_dy_buf[col_id] = (cols * row_dy_buf[col_id] - warp_sum_stats1[row_id]
-                                  - (row_x_buf[col_id] - mean_buf[row_id])
-                                        * inv_variance_buf[row_id] * warp_sum_stats2[row_id])
+                                  - row_normalized_buf[col_id] * warp_sum_stats2[row_id])
                                  * inv_variance_over_cols;
           }
           store.template store<pack_size>(row_dy_buf + pack_id * pack_size, global_row_id, col);
@@ -1128,8 +1137,8 @@ __global__ void LayerNormGradBlockSMemImpl(LOAD_X load_x, LOAD_DY load_dy, STORE
                                            const ComputeType* mean, const ComputeType* inv_variance,
                                            const int64_t rows, const int64_t cols) {
   extern __shared__ __align__(sizeof(double)) unsigned char grad_shared_buf[];
-  auto* x_buf = reinterpret_cast<ComputeType*>(grad_shared_buf);
-  auto* dy_buf = x_buf + cols;
+  auto* normalized_buf = reinterpret_cast<ComputeType*>(grad_shared_buf);
+  auto* dy_buf = normalized_buf + cols;
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = static_cast<int>(cols) / pack_size;
@@ -1147,10 +1156,11 @@ __global__ void LayerNormGradBlockSMemImpl(LOAD_X load_x, LOAD_DY load_dy, STORE
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
         const int buf_offset = i * num_packs + pack_id;
-        x_buf[buf_offset] = x_pack[i];
+        ComputeType normalized = (x_pack[i] - mean_val) * inv_variance_val;
+        normalized_buf[buf_offset] = normalized;
         dy_buf[buf_offset] = dy_pack[i];
         sum_stats1 += dy_pack[i];
-        sum_stats2 += dy_pack[i] * (x_pack[i] - mean_val) * inv_variance_val;
+        sum_stats2 += dy_pack[i] * normalized;
       }
     }
     const ComputeType row_sum_stats1 = BlockAllReduce<SumOp, ComputeType, block_size>(sum_stats1);
@@ -1161,7 +1171,7 @@ __global__ void LayerNormGradBlockSMemImpl(LOAD_X load_x, LOAD_DY load_dy, STORE
       for (int i = 0; i < pack_size; ++i) {
         const int buf_offset = i * num_packs + pack_id;
         pack[i] = (cols * dy_buf[buf_offset] - row_sum_stats1
-                   - (x_buf[buf_offset] - mean_val) * inv_variance_val * row_sum_stats2)
+                   - normalized_buf[buf_offset] * row_sum_stats2)
                   * inv_variance_over_cols;
       }
       store.template store<pack_size>(pack, row, pack_id * pack_size);
