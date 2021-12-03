@@ -25,16 +25,44 @@ namespace oneflow_api {
 
 class IValue {
  public:
-  explicit IValue(int value);
-  explicit IValue(int64_t value);
-  explicit IValue(double value);
-  explicit IValue(bool value);
-  explicit IValue(const Tensor& value);
-  explicit IValue(Tensor&& value);
-  explicit IValue(const std::vector<Tensor>& value);
-  explicit IValue(std::vector<Tensor>&& value);
-  IValue(const IValue& value);
-  ~IValue();
+  explicit IValue(int value) : tag_(IValue::Tag::kInt) { payload_.i.v_int = value; }
+
+  explicit IValue(int64_t value) : tag_(IValue::Tag::kInt) { payload_.i.v_int = value; }
+
+  explicit IValue(double value) : tag_(IValue::Tag::kDouble) { payload_.i.v_double = value; }
+
+  explicit IValue(bool value) : tag_(IValue::Tag::kBool) { payload_.i.v_bool = value; }
+
+  explicit IValue(const Tensor& value) : tag_(IValue::Tag::kTensor) {
+    new (&payload_.v_tensor) Tensor(value);
+  }
+
+  explicit IValue(Tensor&& value) : tag_(IValue::Tag::kTensor) {
+    new (&payload_.v_tensor) Tensor(std::move(value));
+  }
+
+  explicit IValue(const std::vector<Tensor>& value) : tag_(IValue::Tag::kTensorVector) {
+    new (&payload_.v_tensor_vector) std::vector<Tensor>(value);
+  }
+
+  explicit IValue(std::vector<Tensor>&& value) : tag_(IValue::Tag::kTensorVector) {
+    new (&payload_.v_tensor_vector) std::vector<Tensor>(std::move(value));
+  }
+
+  IValue(const IValue& value) : tag_(value.tag_) {
+    if (IsTensor()) {
+      new (&payload_.v_tensor) Tensor(value.ToTensor());
+    } else if (IsTensorVector()) {
+      new (&payload_.v_tensor_vector) std::vector<Tensor>(value.ToTensorVector());
+    } else {
+      payload_.i = value.payload_.i;
+    }
+  }
+
+  ~IValue() {
+    if (IsTensor()) { payload_.v_tensor.~Tensor(); }
+    if (IsTensorVector()) { payload_.v_tensor_vector.~vector(); }
+  }
 
   bool IsInt();
   bool IsDouble();
