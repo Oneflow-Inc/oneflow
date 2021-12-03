@@ -48,7 +48,7 @@ class UserOp final : public Operator {
       cfg::NdSbpSignature* sbp_signature,
       std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
       const ParallelDesc& parallel_desc) const override;
-  bool AddBroadcast() const override;
+  inline bool AddBroadcast() const override { return val_->add_broadcast; };
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
   const user_op::UserOpConfWrapper& user_op_conf() const;
   const ArgVec& inputs() const { return inputs_; }

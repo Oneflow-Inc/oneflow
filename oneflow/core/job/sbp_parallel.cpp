@@ -245,9 +245,9 @@ void CheckSbpSignatureAndNdSbpEquals(const cfg::SbpSignature& sbp_sig,
 }
 
 void ResizeNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t size) {
-  for (auto& it : *nd_sbp_sig.mutable_bn_in_op2nd_sbp()) {
-    if (it.second.sbp_parallel_size() > size) { it.second.clear_sbp_parallel(); }
-    while (it.second.sbp_parallel_size() < size) { it.second.add_sbp_parallel(); }
+  for (auto& pair : *nd_sbp_sig.mutable_bn_in_op2nd_sbp()) {
+    if (pair.second.sbp_parallel_size() > size) { pair.second.clear_sbp_parallel(); }
+    while (pair.second.sbp_parallel_size() < size) { pair.second.add_sbp_parallel(); }
   }
 }
 

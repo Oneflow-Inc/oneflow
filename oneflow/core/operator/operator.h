@@ -228,7 +228,7 @@ class Operator {
           MirroredSigInferHint4Ibn,
       bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc);
   // Whether an operator should add the broadcast SBP into the GetSbpSignatureIf().
-  virtual bool AddBroadcast() const;
+  inline virtual bool AddBroadcast() const { return true; };
 
   virtual Maybe<void> InferInplaceObn2Ibn(
       HashMap<std::string, std::string>* mut_inplace_obn2ibn,

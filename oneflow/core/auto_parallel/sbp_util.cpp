@@ -24,6 +24,96 @@ limitations under the License.
 namespace oneflow {
 namespace auto_parallel {
 
+namespace {
+
+// compute copy cost for two SBPs.
+// They may be either different or on different devices.
+double ComputCopyCostBetweenTwoDiffSbpParallel(const cfg::SbpParallel& producer_sbp_parallel,
+                                               const cfg::SbpParallel& consumer_sbp_parallel,
+                                               double logical_blob_size, double parallel_num,
+                                               bool on_same_devices) {
+  // Not supporting S->P, B->P for now. Actually yes for boxing op, but it does not work with some
+  // other ops.
+  if (consumer_sbp_parallel.has_partial_sum_parallel()) { return GetMaxVal<float>(); }
+  if (on_same_devices) {
+    // B->S
+    if (producer_sbp_parallel.has_broadcast_parallel()) { return 0; }
+    // has S
+    if (consumer_sbp_parallel.has_split_parallel() || producer_sbp_parallel.has_split_parallel()) {
+      if (consumer_sbp_parallel.has_split_parallel()
+          && producer_sbp_parallel.has_split_parallel()) {
+        // S(0)->S(1), S(1)->S(0), etc.
+        return logical_blob_size * (parallel_num - 1) / parallel_num;
+      } else {
+        // P->S, S->B
+        return logical_blob_size * (parallel_num - 1);
+      }
+    }
+    // P->B (= p->S + S->B)
+    return 2 * logical_blob_size * (parallel_num - 1);
+  } else {
+    // They have the same hierarchy at the transfer dimension.
+    double overall_cost = logical_blob_size;
+    // ? -> B
+    if (consumer_sbp_parallel.has_broadcast_parallel()) {
+      overall_cost += logical_blob_size * (parallel_num - 1);
+    }
+    // P -> ?
+    if (producer_sbp_parallel.has_partial_sum_parallel()) {
+      overall_cost += logical_blob_size * (parallel_num - 1);
+    }
+    return overall_cost;
+  }
+}
+
+Maybe<double> ComputCopyCostBetweenTwoNdSbp(const cfg::NdSbp& producer_nd_sbp,
+                                            const cfg::NdSbp& consumer_nd_sbp,
+                                            double logical_blob_size,
+                                            const std::shared_ptr<Shape>& hierarchy,
+                                            bool on_same_devices) {
+  if (hierarchy->NumAxes() != 2) { return GetMaxVal<float>(); }
+  const auto& producer_sbp_size = producer_nd_sbp.sbp_parallel_size();
+  const auto& consumer_sbp_size = consumer_nd_sbp.sbp_parallel_size();
+  // One of the SBP should have size 2
+  CHECK_OR_RETURN((producer_sbp_size == 1 && consumer_sbp_size == 2)
+                  || (producer_sbp_size == 2 && consumer_sbp_size == 1)
+                  || (producer_sbp_size == 2 && consumer_sbp_size == 2))
+      << "Not supporting such boxing type. Check if we have bugs in auto parallel.";
+  for (int32_t dim_same_sbp = 0; dim_same_sbp < 2; dim_same_sbp++) {
+    // If the nd_sbp only have size 1, then make its dimension 0
+    int32_t dim_producer = dim_same_sbp;
+    if (producer_sbp_size == 1) { dim_producer = 0; }
+    int32_t dim_consumer = dim_same_sbp;
+    if (consumer_sbp_size == 1) { dim_consumer = 0; }
+    // The SBP parallel are the same at dimension (dim_same_sbp)
+    if (producer_nd_sbp.sbp_parallel(dim_producer) == consumer_nd_sbp.sbp_parallel(dim_consumer)) {
+      if (!producer_nd_sbp.sbp_parallel(dim_producer).has_split_parallel()) {
+        logical_blob_size *= hierarchy->At(dim_same_sbp);
+      }
+      // The SBP parallel are different at dimension (dim_diff_sbp)
+      int32_t dim_diff_sbp = 1 - dim_same_sbp;
+      // If the nd_sbp only have size 1, then make its dimension 0.
+      // Since we have already do this before, we just maintain the value.
+      // Otherwise, switch the dimension to dim_diff_sbp
+      if (producer_sbp_size == 2) { dim_producer = dim_diff_sbp; }
+      if (consumer_sbp_size == 2) { dim_consumer = dim_diff_sbp; }
+      return ComputCopyCostBetweenTwoDiffSbpParallel(
+          producer_nd_sbp.sbp_parallel(dim_producer), consumer_nd_sbp.sbp_parallel(dim_consumer),
+          logical_blob_size, hierarchy->At(dim_diff_sbp), on_same_devices);
+    }
+  }
+  // (1, 2) || (2, 1):
+  // Not support something like S0 -> (B, P)
+  // (2, 2) :
+  // if both dimensions are different, like (S0, S1) -> (S1, S0)
+  // TODO: support it recently!
+  // TODO: support it recently!
+  // TODO: support it recently!
+  return GetMaxVal<float>();
+}
+
+}  // namespace
+
 // check whether the sbp_parallel is legal
 bool CheckSbpParallel(const cfg::SbpParallel& sbp_parallel) {
   // Which checking should we use?
@@ -104,46 +194,6 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& produc
   }
 }
 
-// compute copy cost for two SBPs.
-// They may be either different or on different devices.
-double ComputCopyCostBetweenTwoDiffSbpParallel(const cfg::SbpParallel& producer_sbp_parallel,
-                                               const cfg::SbpParallel& consumer_sbp_parallel,
-                                               double logical_blob_size, double parallel_num,
-                                               bool on_same_devices) {
-  // Not supporting S->P, B->P for now. Actually yes for boxing op, but it does not work with some
-  // other ops.
-  if (consumer_sbp_parallel.has_partial_sum_parallel()) { return GetMaxVal<float>(); }
-  if (on_same_devices) {
-    // B->S
-    if (producer_sbp_parallel.has_broadcast_parallel()) { return 0; }
-    // has S
-    if (consumer_sbp_parallel.has_split_parallel() || producer_sbp_parallel.has_split_parallel()) {
-      if (consumer_sbp_parallel.has_split_parallel()
-          && producer_sbp_parallel.has_split_parallel()) {
-        // S(0)->S(1), S(1)->S(0), etc.
-        return logical_blob_size * (parallel_num - 1) / parallel_num;
-      } else {
-        // P->S, S->B
-        return logical_blob_size * (parallel_num - 1);
-      }
-    }
-    // P->B (= p->S + S->B)
-    return 2 * logical_blob_size * (parallel_num - 1);
-  } else {
-    // They have the same hierarchy at the transfer dimension.
-    double overall_cost = logical_blob_size;
-    // ? -> B
-    if (consumer_sbp_parallel.has_broadcast_parallel()) {
-      overall_cost += logical_blob_size * (parallel_num - 1);
-    }
-    // P -> ?
-    if (producer_sbp_parallel.has_partial_sum_parallel()) {
-      overall_cost += logical_blob_size * (parallel_num - 1);
-    }
-    return overall_cost;
-  }
-}
-
 // compute copy cost
 Maybe<double> ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
                                          const cfg::NdSbp& consumer_sbp_parallel,
@@ -217,52 +267,6 @@ Maybe<double> ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel
 
   CHECK(false) << "Should not reach here. Something went wrong in ComputCopyCostBetweenNdSbp() in "
                   "sbp_util.cpp.";
-  return GetMaxVal<float>();
-}
-
-Maybe<double> ComputCopyCostBetweenTwoNdSbp(const cfg::NdSbp& producer_nd_sbp,
-                                            const cfg::NdSbp& consumer_nd_sbp,
-                                            double logical_blob_size,
-                                            const std::shared_ptr<Shape>& hierarchy,
-                                            bool on_same_devices) {
-  if (hierarchy->NumAxes() != 2) { return GetMaxVal<float>(); }
-  const auto& producer_sbp_size = producer_nd_sbp.sbp_parallel_size();
-  const auto& consumer_sbp_size = consumer_nd_sbp.sbp_parallel_size();
-  // One of the SBP should have size 2
-  CHECK_OR_RETURN((producer_sbp_size == 1 && consumer_sbp_size == 2)
-                  || (producer_sbp_size == 2 && consumer_sbp_size == 1)
-                  || (producer_sbp_size == 2 && consumer_sbp_size == 2))
-      << "Not supporting such boxing type. Check if we have bugs in auto parallel.";
-  for (int32_t dim_same_sbp = 0; dim_same_sbp < 2; dim_same_sbp++) {
-    // If the nd_sbp only have size 1, then make its dimension 0
-    int32_t dim_producer = dim_same_sbp;
-    if (producer_sbp_size == 1) { dim_producer = 0; }
-    int32_t dim_consumer = dim_same_sbp;
-    if (consumer_sbp_size == 1) { dim_consumer = 0; }
-    // The SBP parallel are the same at dimension (dim_same_sbp)
-    if (producer_nd_sbp.sbp_parallel(dim_producer) == consumer_nd_sbp.sbp_parallel(dim_consumer)) {
-      if (!producer_nd_sbp.sbp_parallel(dim_producer).has_split_parallel()) {
-        logical_blob_size *= hierarchy->At(dim_same_sbp);
-      }
-      // The SBP parallel are different at dimension (dim_diff_sbp)
-      int32_t dim_diff_sbp = 1 - dim_same_sbp;
-      // If the nd_sbp only have size 1, then make its dimension 0.
-      // Since we have already do this before, we just maintain the value.
-      // Otherwise, switch the dimension to dim_diff_sbp
-      if (producer_sbp_size == 2) { dim_producer = dim_diff_sbp; }
-      if (consumer_sbp_size == 2) { dim_consumer = dim_diff_sbp; }
-      return ComputCopyCostBetweenTwoDiffSbpParallel(
-          producer_nd_sbp.sbp_parallel(dim_producer), consumer_nd_sbp.sbp_parallel(dim_consumer),
-          logical_blob_size, hierarchy->At(dim_diff_sbp), on_same_devices);
-    }
-  }
-  // (1, 2) || (2, 1):
-  // Not support something like S0 -> (B, P)
-  // (2, 2) :
-  // if both dimensions are different, like (S0, S1) -> (S1, S0)
-  // TODO: support it recently!
-  // TODO: support it recently!
-  // TODO: support it recently!
   return GetMaxVal<float>();
 }
 

@@ -456,8 +456,6 @@ Maybe<const Shape> Operator::GetInputOutputFastestTimeShape() const {
   return input_output_fastest_time_shape_;
 }
 
-bool Operator::AddBroadcast() const { return true; }
-
 Maybe<void> Operator::GetSbpSignaturesIf(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, cfg::SbpSignatureList* sbp_sig_list) const {

@@ -810,8 +810,6 @@ Maybe<double> UserOp::GetComputeComplexity(
   }
 }
 
-bool UserOp::AddBroadcast() const { return val_->add_broadcast; }
-
 Maybe<void> UserOp::InferOpTimeShape(
     const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
     std::shared_ptr<const Shape>* time_shape) const {
