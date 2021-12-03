@@ -283,6 +283,7 @@ from oneflow.nn.modules.constant import zeros_op as zeros
 from oneflow.nn.modules.constant import full_op as full
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
+from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flatten import _flow_flatten as flatten

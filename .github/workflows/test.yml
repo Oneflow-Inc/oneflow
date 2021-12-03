@@ -110,7 +110,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: 'Code got formatted by CI. Please request CI again. If the PR is from a forked repo, please download the patch files from the GitHub Action web page and apply it.'
+              body: 'Code got formatted by CI. Please request CI again if you still want to have this PR merged. If the PR is from a forked repo, please download the patch files from the GitHub Actions web page and apply them locally.'
             })
       - name: Please request CI again
         if: ${{ failure() }}
@@ -712,7 +712,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: 'CI failed, removing label automerge'
+              body: 'CI failed when running job: ${{ matrix.entry }}. PR label automerge has been removed'
             })
       - name: Print stacks in all core files
         timeout-minutes: 45
@@ -819,5 +819,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: 'CI failed, removing label automerge'
+              body: 'Static analysis with clang failed. PR label automerge has been removed'
             })
