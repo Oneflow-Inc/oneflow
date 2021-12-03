@@ -290,6 +290,10 @@ def _floor_divide(self, other):
     return flow.floor_divide(self, other)
 
 
+def _floor(self):
+    return flow._C.floor(self)
+
+
 def _neg(self):
     return flow.neg(self)
 
@@ -452,6 +456,10 @@ def _expm1(self):
 
 def _fmod(self, other):
     return flow.fmod(self, other)
+
+
+def _flatten(self, start_dim: int = 0, end_dim: int = -1):
+    return flow._C.flatten(self, start_dim=start_dim, end_dim=end_dim)
 
 
 def _log(self):
@@ -772,6 +780,7 @@ def RegisterMethods():
     Tensor.abs = _abs
     Tensor.exp = _exp
     Tensor.floor_divide = _floor_divide
+    Tensor.floor = _floor
     Tensor.argmax = _argmax
     Tensor.argmin = _argmin
     Tensor.argsort = _argsort
@@ -822,6 +831,7 @@ def RegisterMethods():
     Tensor.erfc = _erfc
     Tensor.expm1 = _expm1
     Tensor.fmod = _fmod
+    Tensor.flatten = _flatten
     Tensor.log = _log
     Tensor.minimum = _minimum
     Tensor.maximum = _maximum
