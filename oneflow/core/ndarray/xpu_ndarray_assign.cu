@@ -47,7 +47,7 @@ struct NdarrayAssignCoreWrapper<DeviceType::kCUDA, T, X, NDIMS> final {
   }
 };
 
-#define INSTANTIATE_NDARRAY_ASSIGN(ret_dtype_pair, dtype_pair, NDIMS)                          \
+#define INSTANTIATE_NDARRAY_ASSIGN(ret_dtype_pair, dtype_pair, NDIMS)                           \
   template struct NdarrayAssignCoreWrapper<DeviceType::kCUDA, OF_PP_PAIR_FIRST(ret_dtype_pair), \
                                            OF_PP_PAIR_FIRST(dtype_pair), NDIMS>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_ASSIGN,

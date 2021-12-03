@@ -353,7 +353,7 @@ struct NdarrayReduceCoreWrapper<DeviceType::kCUDA, T, NDIMS, binary_func> final 
   }
 };
 
-#define INSTANTIATE_NDARRAY_REDUCE_IMPL(dtype, binary_func)                                       \
+#define INSTANTIATE_NDARRAY_REDUCE_IMPL(dtype, binary_func)                                        \
   template struct NdarrayScalarReduce<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype), binary_func>;    \
   template struct NdarrayMatrixRowReduce<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype), binary_func>; \
   template struct NdarrayMatrixColReduce<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype), binary_func>; \

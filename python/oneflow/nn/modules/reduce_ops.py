@@ -264,16 +264,6 @@ def all_op(input, dim=None, keepdim=False):
     return flow._C.reduce_all(input, axis=axis_checked, keepdims=keepdim)
 
 
-@register_tensor_op("all")
-def all_tensor_op(input, dim=None, keepdim=False):
-    """
-    input.all(dim, index) -> Tensor
-    See :func:`oneflow.all`
-    """
-
-    return all_op(input, dim, keepdim)
-
-
 def any_op(input, dim=None, keepdim=False):
     """Computes if any elements in the input tensor to true.
     
@@ -304,16 +294,6 @@ def any_op(input, dim=None, keepdim=False):
     if len(axis_checked) == 0:
         return input
     return flow._C.reduce_any(input, axis=axis_checked, keepdims=keepdim)
-
-
-@register_tensor_op("any")
-def any_tensor_op(input, dim=None, keepdim=False):
-    """
-    input.any(dim, index) -> Tensor
-    See :func:`oneflow.any`
-    """
-
-    return any_op(input, dim, keepdim)
 
 
 if __name__ == "__main__":

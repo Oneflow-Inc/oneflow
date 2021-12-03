@@ -124,7 +124,7 @@ OF_DEVICE_FUNC T GetMaxVal();
   OF_PP_MAKE_TUPLE_SEQ(uint64_t, UINT64_MAX) \
   OF_PP_MAKE_TUPLE_SEQ(float, FLT_MAX)       \
   OF_PP_MAKE_TUPLE_SEQ(double, DBL_MAX)      \
-  OF_PP_MAKE_TUPLE_SEQ(bool, 1)
+  OF_PP_MAKE_TUPLE_SEQ(bool, true)
 
 #ifdef __APPLE__
 #define APPLE_MIN_VAL_SEQ OF_PP_MAKE_TUPLE_SEQ(unsigned long, 0)
@@ -144,7 +144,7 @@ OF_DEVICE_FUNC T GetMaxVal();
   OF_PP_MAKE_TUPLE_SEQ(uint64_t, 0)        \
   OF_PP_MAKE_TUPLE_SEQ(float, -FLT_MAX)    \
   OF_PP_MAKE_TUPLE_SEQ(double, -DBL_MAX)   \
-  OF_PP_MAKE_TUPLE_SEQ(bool, 0)
+  OF_PP_MAKE_TUPLE_SEQ(bool, false)
 
 #define SPECIALIZE_MAX_VAL(T, limit_value) \
   template<>                               \
