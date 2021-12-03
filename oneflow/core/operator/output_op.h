@@ -48,7 +48,7 @@ class OutputOp final : public Operator {
                                   std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
                                       NdSbpInferHint4Ibn) const override;
   // Output op should only use the sbp given by the user. Please don't add an additional Broadcast.
-  inline bool AddBroadcast() const override { return false; };
+  bool AddBroadcast() const override { return false; };
 };
 
 }  // namespace oneflow

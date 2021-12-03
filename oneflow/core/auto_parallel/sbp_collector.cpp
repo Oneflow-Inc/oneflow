@@ -71,10 +71,10 @@ SbpNode<cfg::NdSbpSignature>* SbpCollector::InitializePorxy(
   return sbp_proxy;
 }
 
-// TODO: Change sbp to ndsbp
-// It only collect the same sbp with the same parallel description
-// In this moment they are all the same!
 // TODO: Auto Placement!
+// It only collect the same sbp with the same parallel description
+// In this moment their hierarchy is the same!
+
 // Initialize copy cost from producer to proxy of producer
 void SbpCollector::InitializeCopyCostFromNode2Proxy(SbpNode<cfg::NdSbpSignature>* sbp_proxy,
                                                     const LogicalBlobId& lbi) {
