@@ -100,7 +100,7 @@ struct ToContiguousUtil<DeviceType::kCUDA, T> : ToContiguousUtilBase {
   static to_contiguous_fn_map_t<T> to_contiguous_fn_map;
   void operator()() {
     if (contiguous_dim == -1) {
-      OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr, in_dptr, contiguous_block_size * dsize,
+      OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr, in_dptr, element_count * dsize,
                                     cudaMemcpyDeviceToDevice,
                                     stream->As<ep::CudaStream>()->cuda_stream()));
     } else {

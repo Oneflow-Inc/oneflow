@@ -47,15 +47,15 @@ class ToContiguousUtilBase : public ToContiguousUtilParam {
   ToContiguousUtilBase(ep::Stream* stream, const ShapeView& in_shape,
                        const std::vector<int64_t>& in_stride, const char* in_dptr, char* out_dptr)
       : ToContiguousUtilParam(stream, in_shape, in_stride, in_dptr, out_dptr),
-        contiguous_block_size(1),
+        element_count(1),
         contiguous_dim(in_shape.NumAxes() - 1),
         out_stride(in_shape.NumAxes()),
         index(contiguous_dim + 1),
         in_offset(0),
         out_offset(0) {
     for (; contiguous_dim != -1; --contiguous_dim) {
-      if (contiguous_block_size == in_stride[contiguous_dim]) {
-        contiguous_block_size *= in_shape.At(contiguous_dim);
+      if (element_count == in_stride[contiguous_dim]) {
+        element_count *= in_shape.At(contiguous_dim);
       } else {
         break;
       }
@@ -91,7 +91,7 @@ class ToContiguousUtilBase : public ToContiguousUtilParam {
     return i == -1;
   }
 
-  int64_t contiguous_block_size;
+  int64_t element_count;
   int64_t contiguous_dim;
 
   StrideVector out_stride;
