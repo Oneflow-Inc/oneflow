@@ -400,7 +400,8 @@ class ConvCpuKernel final : public user_op::OpKernel {
     return CreateConvOpKernelCache<T>(ctx, "in", "out", "weight");
   }
 
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const auto* conv_cache = dynamic_cast<const ConvOpKernelCache<T>*>(cache);
     CHECK_NOTNULL(conv_cache);
 
@@ -517,7 +518,8 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
     return CreateConvOpKernelCache<T>(ctx, "in", "out", "weight");
   }
 
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const auto* conv_cache = dynamic_cast<const ConvOpKernelCache<T>*>(cache);
     CHECK_NOTNULL(conv_cache);
 
@@ -614,7 +616,8 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
     return CreateConvOpKernelCache<T>(ctx, "in", "out", "weight");
   }
 
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const auto* conv_cache = dynamic_cast<const ConvOpKernelCache<T>*>(cache);
     CHECK_NOTNULL(conv_cache);
 

@@ -23,8 +23,8 @@ struct AvgPoolingOpKernelCache final : public user_op::OpKernelCache {
   const AvgPoolingParams3D& GetParams3D() const { return params_3d; }
 };
 
-std::shared_ptr<AvgPoolingOpKernelCache> CreateAvgOpKernelCache(
-    user_op::KernelCacheContext* ctx, const int32_t& dim) {
+std::shared_ptr<AvgPoolingOpKernelCache> CreateAvgOpKernelCache(user_op::KernelCacheContext* ctx,
+                                                                const int32_t& dim) {
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
   const std::string& data_format = ctx->Attr<std::string>("data_format");
   const std::vector<int32_t>& padding = ctx->Attr<std::vector<int32_t>>("padding");
@@ -131,7 +131,8 @@ class AvgPool1dKernel final : public user_op::OpKernel {
     return CreateAvgOpKernelCache(ctx, 1);
   }
 
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
 
@@ -163,7 +164,8 @@ class AvgPool1dGradKernel final : public user_op::OpKernel {
     return CreateAvgOpKernelCache(ctx, 1);
   }
 
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
@@ -197,7 +199,8 @@ class AvgPool2dKernel final : public user_op::OpKernel {
     return CreateAvgOpKernelCache(ctx, 1);
   }
 
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
 
@@ -229,7 +232,8 @@ class AvgPool2dGradKernel final : public user_op::OpKernel {
     return CreateAvgOpKernelCache(ctx, 1);
   }
 
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
@@ -263,7 +267,8 @@ class AvgPool3dKernel final : public user_op::OpKernel {
     return CreateAvgOpKernelCache(ctx, 1);
   }
 
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
 
@@ -295,7 +300,8 @@ class AvgPool3dGradKernel final : public user_op::OpKernel {
     return CreateAvgOpKernelCache(ctx, 1);
   }
 
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
 

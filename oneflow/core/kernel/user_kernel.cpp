@@ -79,7 +79,9 @@ class UserKernelBaseContext {
     device_type_ = CHECK_JUST(DeviceType4DeviceTag(device_tag_));
     parallel_ctx_ = kernel_conf.parallel_ctx();
     for (const auto& pair : kernel_conf.user_conf().bn_in_op2blob_desc()) {
-      arg2bn_and_tensor_desc_.emplace(GenUnRepeatedBn(pair.first), std::make_pair(pair.first, user_op::NaiveTensorDesc(pair.second)));
+      arg2bn_and_tensor_desc_.emplace(
+          GenUnRepeatedBn(pair.first),
+          std::make_pair(pair.first, user_op::NaiveTensorDesc(pair.second)));
     }
   }
   ~UserKernelBaseContext() = default;
@@ -99,7 +101,8 @@ class UserKernelBaseContext {
 
  private:
   friend class UserKernelInitAndCacheContext;
-  HashMap<std::pair<std::string, int32_t>, std::pair<std::string, user_op::NaiveTensorDesc>> arg2bn_and_tensor_desc_;
+  HashMap<std::pair<std::string, int32_t>, std::pair<std::string, user_op::NaiveTensorDesc>>
+      arg2bn_and_tensor_desc_;
   ArgVec inputs_;
   ArgVec outputs_;
   DeviceType device_type_;
@@ -140,7 +143,7 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
 
   void UpdateTensorWithCorrBlob(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
     for (auto& pair : base_ctx_.arg2bn_and_tensor_desc_) {
-      const std::string &bn = pair.second.first;
+      const std::string& bn = pair.second.first;
       auto& tensor_desc = pair.second.second;
       Blob* blob = BnInOp2Blob(bn);
       CHECK(blob != nullptr) << "Blob " << bn << " is not found in cache context.";
@@ -666,10 +669,8 @@ void UserKernel::VirtualKernelInit(KernelContext* ctx) {
   InitUserKernel(ctx->stream());
   CHECK(opkernel_state_.get() == nullptr);
   opkernel_state_ = CreateOpKernelState(ctx);
-  kernel_->InitOpKernelCache(
-      cache_ctx_.get(),
-      user_op::OpKernelCache::kAllMayChanged,
-      &opkernel_cache_);
+  kernel_->InitOpKernelCache(cache_ctx_.get(), user_op::OpKernelCache::kAllMayChanged,
+                             &opkernel_cache_);
 #ifdef WITH_CUDA_GRAPHS
   if (ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
     UserKernelInitContext init_ctx(ctx->stream(), kernel_conf());
@@ -766,9 +767,7 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   } else {
     new_opkernel_state = kernel_->CreateOpKernelState(&init_and_cache_ctx);
   }
-  kernel_->InitOpKernelCache(
-      &init_and_cache_ctx,
-      user_op::OpKernelCache::kAllMayChanged, &cache_);
+  kernel_->InitOpKernelCache(&init_and_cache_ctx, user_op::OpKernelCache::kAllMayChanged, &cache_);
 
   if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob)
       && !kernel_->AlwaysComputeWhenAllOutputsEmpty()) {

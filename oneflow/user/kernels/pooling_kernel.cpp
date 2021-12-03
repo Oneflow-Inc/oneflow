@@ -24,7 +24,7 @@ struct PoolingOpKernelCache final : public user_op::OpKernelCache {
 };
 
 std::shared_ptr<PoolingOpKernelCache> CreateOpKernelCache(user_op::KernelCacheContext* ctx,
-                                                            const int32_t& dim) {
+                                                          const int32_t& dim) {
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
   const std::string& data_format = ctx->Attr<std::string>("data_format");
   const std::vector<int32_t>& padding = ctx->Attr<std::vector<int32_t>>("padding");
@@ -125,7 +125,8 @@ class MaxPool1dKernel final : public user_op::OpKernel {
     return CreateOpKernelCache(ctx, 1);
   }
 
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
@@ -160,7 +161,8 @@ class MaxPool1dGradKernel final : public user_op::OpKernel {
     return CreateOpKernelCache(ctx, 1);
   }
 
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -197,7 +199,8 @@ class MaxPool2dKernel final : public user_op::OpKernel {
     return CreateOpKernelCache(ctx, 1);
   }
 
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
@@ -232,7 +235,8 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
     return CreateOpKernelCache(ctx, 1);
   }
 
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -269,7 +273,8 @@ class MaxPool3dKernel final : public user_op::OpKernel {
     return CreateOpKernelCache(ctx, 1);
   }
 
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
@@ -304,7 +309,8 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
     return CreateOpKernelCache(ctx, 1);
   }
 
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
