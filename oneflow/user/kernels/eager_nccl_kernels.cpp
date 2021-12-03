@@ -68,7 +68,7 @@ Maybe<std::vector<std::pair<int64_t, int64_t>>> RawGroupP2PPair(
 static constexpr auto* GroupP2PPair = DECORATE(&RawGroupP2PPair, ThreadLocal);
 
 void InitEagerCclOpKernelCache(user_op::KernelCacheContext* ctx,
-                                std::shared_ptr<user_op::OpKernelCache>* cache) {
+                               std::shared_ptr<user_op::OpKernelCache>* cache) {
   // NOTE(jianhao): the cache only depends on parallel_conf, and the kernel is singleton
   // once parallel_conf is determined, so only init the cache at the first time.
   if (*cache == nullptr) { *cache = std::make_shared<EagerCclOpKernelCache>(ctx); }
