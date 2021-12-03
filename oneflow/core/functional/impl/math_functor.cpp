@@ -1304,7 +1304,7 @@ class ScalarLogicalBaseFunctor {
                                   << " should be float or int.";
     }
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
