@@ -294,7 +294,7 @@ struct ConvKernelUtil final {
 };
 
 template<typename T>
-struct ConvOpKernelCache final : public user_op::OpKernelState {
+struct ConvOpKernelCache final : public user_op::OpKernelCache {
   Im2ColFunc<T> im2col_func_;
   Col2ImFunc<T> col2im_func_;
   GemmFunc<T> forward_func_;
@@ -310,21 +310,6 @@ struct ConvOpKernelCache final : public user_op::OpKernelState {
   enum CBLAS_TRANSPOSE is_out_diff_need_trans_;
   int32_t idx_offset_;
   bool is_dynamic_;
-
-  void Update(const ShapeView& x_shape, const ShapeView& out_shape) {
-    auto Gen5DShape = [](const ShapeView& shape, int32_t idx_offset) -> Shape {
-      DimVector ret_vec;
-      shape.ToDimVector(&ret_vec);
-      int32_t ndims = ret_vec.size() - 2;
-      ret_vec.insert(ret_vec.begin() + idx_offset, 3 - ndims, 1);
-      return Shape(ret_vec);
-    };
-    if (is_dynamic_) {
-      Shape in_shape;
-      in_5d_shape_ = Gen5DShape(x_shape, idx_offset_);
-      out_5d_shape_ = Gen5DShape(out_shape, idx_offset_);
-    }
-  }
 };
 
 template<typename T>

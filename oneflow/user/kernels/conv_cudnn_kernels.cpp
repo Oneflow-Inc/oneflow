@@ -138,7 +138,7 @@ CudnnTensorDesc* GetBiasCudnnTensorDesc<3>(const std::string& data_format, int32
   return new CudnnTensorDesc(data_type, NDims, bias_dim.data(), stride_of_bias_tensor.data());
 }
 
-struct ConvCudnnOpKernelCache final : public user_op::OpKernelState {
+struct ConvCudnnOpKernelCache final : public user_op::OpKernelCache {
   std::unique_ptr<CudnnTensorDesc> bias_desc;
 };
 

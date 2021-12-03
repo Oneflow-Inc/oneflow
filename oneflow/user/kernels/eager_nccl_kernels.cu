@@ -64,11 +64,10 @@ size_t InferEagerNcclS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
   return tensor_byte_size * 2;
 }
 
-void InitEagerNcclOpKernelCache(
-    user_op::KernelCacheContext* ctx, std::shared_ptr<user_op::OpKernelCache>* cache) {
-  if (*cache == nullptr) {
-    *cache = std::make_shared<EagerNcclOpKernelCache>(ctx);
-  }
+void InitEagerNcclOpKernelCache(user_op::KernelCacheContext* ctx,
+                                std::shared_ptr<user_op::OpKernelCache>* cache) {
+  if (*cache == nullptr) { *cache = std::make_shared<EagerNcclOpKernelCache>(ctx); }
+}
 }  // namespace
 
 class EagerNcclAllReduceKernel final : public user_op::OpKernel {
@@ -78,21 +77,21 @@ class EagerNcclAllReduceKernel final : public user_op::OpKernel {
 
  private:
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
-                                 std::shared_ptr<user_op::OpKernelCache>* cache) const override {
+                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     InitEagerNcclOpKernelCache(ctx, cache);
   }
 
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
-               const user_op::OpKernelCache*) const override {
-    auto* kernel_state = dynamic_cast<EagerNcclOpKernelCache*>(state);
-    CHECK(kernel_state != nullptr);
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    auto* kernel_cache = dynamic_cast<const EagerNcclOpKernelCache*>(cache);
+    CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->shape(), out->shape());
     CHECK_EQ(in->data_type(), out->data_type());
     OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
-                                GetNcclDataType(in->data_type()), ncclSum, kernel_state->comm(),
+                                GetNcclDataType(in->data_type()), ncclSum, kernel_cache->comm(),
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -109,21 +108,21 @@ class EagerNcclBroadcastKernel final : public user_op::OpKernel {
 
  private:
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
-                                 std::shared_ptr<user_op::OpKernelCache>* cache) const override {
+                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     InitEagerNcclOpKernelCache(ctx, cache);
   }
 
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
-               const user_op::OpKernelCache*) const override {
-    auto* kernel_state = dynamic_cast<EagerNcclOpKernelCache*>(state);
-    CHECK(kernel_state != nullptr);
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    auto* kernel_cache = dynamic_cast<const EagerNcclOpKernelCache*>(cache);
+    CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t root = ctx->Attr<int64_t>("root");
     int64_t dev_id = GlobalProcessCtx::LocalRank(root);
     int64_t nccl_root =
-        CHECK_JUST(kernel_state->parallel_desc()->ParallelId4MachineDeviceId(root, dev_id));
+        CHECK_JUST(kernel_cache->parallel_desc()->ParallelId4MachineDeviceId(root, dev_id));
     const void* in_ptr = nullptr;
     if (GlobalProcessCtx::Rank() == root) {
       CHECK_EQ(in->shape(), out->shape());
@@ -131,7 +130,7 @@ class EagerNcclBroadcastKernel final : public user_op::OpKernel {
       in_ptr = in->dptr();
     }
     OF_NCCL_CHECK(ncclBroadcast(in_ptr, out->mut_dptr(), out->shape().elem_cnt(),
-                                GetNcclDataType(out->data_type()), nccl_root, kernel_state->comm(),
+                                GetNcclDataType(out->data_type()), nccl_root, kernel_cache->comm(),
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -148,15 +147,15 @@ class EagerNcclReduceKernel final : public user_op::OpKernel {
 
  private:
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
-                                 std::shared_ptr<user_op::OpKernelCache>* cache) const override {
+                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     InitEagerNcclOpKernelCache(ctx, cache);
   }
 
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
-               const user_op::OpKernelCache*) const override {
-    auto* kernel_state = dynamic_cast<EagerNcclOpKernelCache*>(state);
-    CHECK(kernel_state != nullptr);
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    auto* kernel_cache = dynamic_cast<const EagerNcclOpKernelCache*>(cache);
+    CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t root = ctx->Attr<int64_t>("root");
@@ -167,7 +166,7 @@ class EagerNcclReduceKernel final : public user_op::OpKernel {
       out_ptr = out->mut_dptr();
     }
     OF_NCCL_CHECK(ncclReduce(in->dptr(), out_ptr, in->shape().elem_cnt(),
-                             GetNcclDataType(in->data_type()), ncclSum, root, kernel_state->comm(),
+                             GetNcclDataType(in->data_type()), ncclSum, root, kernel_cache->comm(),
                              ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -184,22 +183,22 @@ class EagerNcclReduceScatterKernel final : public user_op::OpKernel {
 
  private:
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
-                                 std::shared_ptr<user_op::OpKernelCache>* cache) const override {
+                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     InitEagerNcclOpKernelCache(ctx, cache);
   }
 
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
-               const user_op::OpKernelCache*) const override {
-    auto* kernel_state = dynamic_cast<EagerNcclOpKernelCache*>(state);
-    CHECK(kernel_state != nullptr);
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    auto* kernel_cache = dynamic_cast<const EagerNcclOpKernelCache*>(cache);
+    CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->data_type(), out->data_type());
     const auto& op_type = ctx->Attr<std::string>("op_type");
     OF_NCCL_CHECK(ncclReduceScatter(
         in->dptr(), out->mut_dptr(), out->shape().elem_cnt(), GetNcclDataType(in->data_type()),
-        CHECK_JUST(MapAt(op_type2ncclRedOp_t, op_type)), kernel_state->comm(),
+        CHECK_JUST(MapAt(op_type2ncclRedOp_t, op_type)), kernel_cache->comm(),
         ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -221,20 +220,20 @@ class EagerNcclAllGatherKernel final : public user_op::OpKernel {
 
  private:
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
-                                 std::shared_ptr<user_op::OpKernelCache>* cache) const override {
+                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     InitEagerNcclOpKernelCache(ctx, cache);
   }
 
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
-               const user_op::OpKernelCache*) const override {
-    auto* kernel_state = dynamic_cast<EagerNcclOpKernelCache*>(state);
-    CHECK(kernel_state != nullptr);
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    auto* kernel_cache = dynamic_cast<const EagerNcclOpKernelCache*>(cache);
+    CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->data_type(), out->data_type());
     OF_NCCL_CHECK(ncclAllGather(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
-                                GetNcclDataType(in->data_type()), kernel_state->comm(),
+                                GetNcclDataType(in->data_type()), kernel_cache->comm(),
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -252,15 +251,15 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
 
  private:
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
-                                 std::shared_ptr<user_op::OpKernelCache>* cache) const override {
+                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     InitEagerNcclOpKernelCache(ctx, cache);
   }
 
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
-               const user_op::OpKernelCache*) const override {
-    auto* kernel_state = dynamic_cast<EagerNcclOpKernelCache*>(state);
-    CHECK(kernel_state != nullptr);
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    auto* kernel_cache = dynamic_cast<const EagerNcclOpKernelCache*>(cache);
+    CHECK(kernel_cache != nullptr);
     // NOTE(hanbinbin): Compute logic copy from _nccl_logical_s2s
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -275,7 +274,7 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
     CHECK(tmp_size == 0 || tmp_size == data_size || tmp_size == data_size * 2);
 
     CHECK_EQ(in->data_type(), out->data_type());
-    const int64_t num_ranks = kernel_state->parallel_desc()->parallel_num();
+    const int64_t num_ranks = kernel_cache->parallel_desc()->parallel_num();
     CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt())
         << in->shape().ToString() << " vs " << out->shape().ToString();
     const int64_t elem_cnt = in->shape().elem_cnt();
@@ -324,11 +323,11 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
         OF_NCCL_CHECK(ncclSend(reinterpret_cast<const void*>(
                                    reinterpret_cast<const char*>(pack_to_ptr) + j * chunk_size),
                                elem_per_chunk, GetNcclDataType(in->data_type()), j,
-                               kernel_state->comm(),
+                               kernel_cache->comm(),
                                ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
         OF_NCCL_CHECK(ncclRecv(
             reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr) + j * chunk_size),
-            elem_per_chunk, GetNcclDataType(in->data_type()), j, kernel_state->comm(),
+            elem_per_chunk, GetNcclDataType(in->data_type()), j, kernel_cache->comm(),
             ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
       }
       OF_NCCL_CHECK(ncclGroupEnd());
