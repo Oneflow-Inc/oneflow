@@ -72,6 +72,8 @@ class OpInterpCtx {
     return 0;
   }
 
+  static Maybe<OpInterpCtx> New(const std::string& op_name);
+
  public:
   Optional<Symbol<Device>> device;               // for local op
   Optional<Symbol<ParallelDesc>> parallel_desc;  // for consistent op
@@ -90,7 +92,7 @@ class OpInterpCtx {
 class FakeOpInterpCtx : public OpInterpCtx {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
-    return Error::RuntimeError() << "Should not access attribute for `FakeOpInterpCtx`.";
+    return Error::RuntimeError() << "`FakeOpInterpCtx` has no attribute.";
   }
 };
 
