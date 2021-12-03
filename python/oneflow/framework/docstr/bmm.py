@@ -19,26 +19,26 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.bmm,
     """
-Performs a batch matrix-matrix product of matrices stored in input and mat2.
+    Performs a batch matrix-matrix product of matrices stored in input and mat2.
 
-`input` and `mat2` must be 3-D tensors each containing the same number of matrices.
+    `input` and `mat2` must be 3-D tensors each containing the same number of matrices.
 
-If input is a (b x n x m) tensor, mat2 is a (b x m x p) tensor, out will be a (b x n x p) tensor.
+    If input is a (b x n x m) tensor, mat2 is a (b x m x p) tensor, out will be a (b x n x p) tensor.
 
-Args:
-    input(oneflow.Tensor):  the first batch of matrices to be multiplied
-    mat2(oneflow.Tensor): the second batch of matrices to be multiplied
+    Args:
+        input(oneflow.Tensor):  the first batch of matrices to be multiplied
+        mat2(oneflow.Tensor): the second batch of matrices to be multiplied
 
-For example:
+    For example:
 
-.. code-block:: python
+    .. code-block:: python
 
-    >>> import oneflow as flow
-    >>> import numpy as np
-    >>> input1 = flow.Tensor(np.random.randn(10, 3, 4))
-    >>> input2 = flow.Tensor(np.random.randn(10, 4, 5))
-    >>> of_out = flow.bmm(input1, input2)
-    >>> of_out.shape
-    oneflow.Size([10, 3, 5])
-""",
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> input1 = flow.Tensor(flow.randn(10, 3, 4))
+        >>> input2 = flow.Tensor(flow.randn(10, 4, 5))
+        >>> of_out = flow.bmm(input1, input2)
+        >>> of_out.shape
+        oneflow.Size([10, 3, 5])
+    """,
 )
