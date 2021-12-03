@@ -126,6 +126,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   ReadyInstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
 
   void ReleaseFinishedInstructions();
+  void ReleaseFinishedRunningInstructions(Stream* stream);
   void HandlePending();
   void TryRunBarrierInstruction();
   void DispatchAndPrescheduleInstructions();

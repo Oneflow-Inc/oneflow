@@ -118,21 +118,44 @@ void VirtualMachineEngine::HandlePending() {
   OF_PROFILER_RANGE_POP();
 }
 
+void VirtualMachineEngine::ReleaseFinishedRunningInstructions(Stream* stream) {
+  while (unlikely(stream->mut_running_instruction_list()->size())) {
+    auto* instruction = stream->mut_running_instruction_list()->Begin();
+    if (instruction == nullptr || !instruction->QueryDoneAfterLaunched()) { break; }
+    stream->mut_running_instruction_list()->Erase(instruction);
+    ReleaseInstruction(instruction);
+  }
+}
+
 // Collect ready instructions onto ready_instruction_list_
 void VirtualMachineEngine::ReleaseFinishedInstructions() {
   INTRUSIVE_FOR_EACH_PTR(stream, mut_active_stream_list()) {
     // Handle finished instructions.
-    while (unlikely(stream->mut_running_instruction_list()->size())) {
-      auto* instruction = stream->mut_running_instruction_list()->Begin();
-      if (instruction == nullptr || !instruction->QueryDoneAfterLaunched()) { break; }
-      stream->mut_running_instruction_list()->Erase(instruction);
-      ReleaseInstruction(instruction);
-    }
+    ReleaseFinishedRunningInstructions(stream);
     // Handle launched instructions.
     while (unlikely(stream->mut_launching_instruction_list()->size())) {
       auto* instruction = stream->mut_launching_instruction_list()->Begin();
       if (instruction == nullptr || !instruction->QueryLaunched()) { break; }
       if (instruction->QueryDoneAfterLaunched()) {
+        // Make sure all finished instructions in running_instruction_list released.
+        // There is a subtle timeline bug without this line of code:
+        //
+        //  e.g.:
+        //
+        //     stream0 ... --> instr00  --> instr01 --> ...
+        //                       \              \
+        //                        \              \
+        //     stream1             \--> instr10   \--> instr11
+        //
+        // Condition:
+        //  1. instr00 on stream0->running_instruction_list.
+        //  2. instr01 on stream0->launching_instruction_list.
+        //  3. instr01->QueryDoneAfterLaunched() == true.
+        //
+        // Timeline bug:
+        // When the Condition occurs, instr11 will be scheduled before instr10. It's illegal.
+        ReleaseFinishedRunningInstructions(stream);
+
         stream->mut_launching_instruction_list()->Erase(instruction);
         ReleaseInstruction(instruction);
       } else {
