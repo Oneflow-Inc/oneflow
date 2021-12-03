@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
-#include "oneflow/core/profiler/profiler.h"
 namespace oneflow {
 
 namespace {
@@ -414,7 +413,6 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    OF_PROFILER_RANGE_PUSH("ProfileDropout");
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
@@ -443,7 +441,6 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
                              reinterpret_cast<int8_t*>(mask->mut_dptr()), nullptr,
                              reinterpret_cast<T*>(out->mut_dptr()));
     }
-    OF_PROFILER_RANGE_POP();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
