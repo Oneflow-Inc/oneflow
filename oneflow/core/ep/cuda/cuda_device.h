@@ -38,6 +38,11 @@ class CudaDevice : public Device {
   void CreateEvents(Event** events, size_t count) override;
   void DestroyEvents(Event** events, size_t count) override;
 
+  Maybe<void> Alloc(const AllocationOptions& options, void** ptr, size_t size) override;
+  void Free(const AllocationOptions& options, void* ptr) override;
+  Maybe<void> AllocPinned(const AllocationOptions& options, void** ptr, size_t size) override;
+  void FreePinned(const AllocationOptions& options, void* ptr) override;
+
  private:
   int device_index_;
   std::mutex events_mutex_;
