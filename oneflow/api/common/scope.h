@@ -17,13 +17,27 @@ limitations under the License.
 #ifndef ONEFLOW_API_COMMON_SCOPE_H_
 #define ONEFLOW_API_COMMON_SCOPE_H_
 
+#include <memory>
+#include "oneflow/core/common/just.h"
+#include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/framework/session_util.h"
+#include "oneflow/core/job/job_conf.cfg.h"
+#include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/scope.h"
 
 namespace oneflow {
 
-inline std::shared_ptr<oneflow::Scope> MakeInitialScope() {
-  // BuildScopeWithNewParallelDesc
-  return nullptr;
+inline Maybe<std::shared_ptr<Scope>> MakeInitialScope(const JobConfigProto& config_proto) {
+  std::shared_ptr<Scope> scope;
+  std::shared_ptr<cfg::JobConfigProto> cfg_config_proto =
+      std::make_shared<cfg::JobConfigProto>(config_proto);
+  JUST(LogicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    int64_t session_id = 0;
+    scope = builder->BuildInitialScope(session_id, cfg_config_proto, "cpu", {"0:0"}, nullptr, false)
+                .GetPtrOrThrow();
+    return Maybe<void>::Ok();
+  }));
+  return scope;
 }
 
 }  // namespace oneflow
