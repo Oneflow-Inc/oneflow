@@ -79,7 +79,7 @@ class UserKernelBaseContext {
     device_type_ = CHECK_JUST(DeviceType4DeviceTag(device_tag_));
     parallel_ctx_ = kernel_conf.parallel_ctx();
     for (const auto& pair : kernel_conf.user_conf().bn_in_op2blob_desc()) {
-      arg2tensor_desc_.emplace(GenUnRepeatedBn(pair.first), user_op::NaiveTensorDesc(pair.second));
+      arg2bn_and_tensor_desc_.emplace(GenUnRepeatedBn(pair.first), std::make_pair(pair.first, user_op::NaiveTensorDesc(pair.second)));
     }
   }
   ~UserKernelBaseContext() = default;
@@ -89,9 +89,9 @@ class UserKernelBaseContext {
   const ParallelContext& parallel_ctx() const { return parallel_ctx_; }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const {
-    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
-    if (it == arg2tensor_desc_.end()) { return nullptr; }
-    return &(it->second);
+    auto it = arg2bn_and_tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2bn_and_tensor_desc_.end()) { return nullptr; }
+    return &(it->second.second);
   }
 
   const ArgVec& inputs() const { return inputs_; }
@@ -99,7 +99,7 @@ class UserKernelBaseContext {
 
  private:
   friend class UserKernelInitAndCacheContext;
-  HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
+  HashMap<std::pair<std::string, int32_t>, std::pair<std::string, user_op::NaiveTensorDesc>> arg2bn_and_tensor_desc_;
   ArgVec inputs_;
   ArgVec outputs_;
   DeviceType device_type_;
@@ -139,9 +139,9 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
   ep::Stream* stream() override { return stream_; }
 
   void UpdateTensorWithCorrBlob(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-    for (auto& pair : base_ctx_.arg2tensor_desc_) {
-      auto& tensor_desc = pair.second;
-      std::string bn = GenRepeatedBn(pair.first.first, pair.first.second);
+    for (auto& pair : base_ctx_.arg2bn_and_tensor_desc_) {
+      const std::string &bn = pair.second.first;
+      auto& tensor_desc = pair.second.second;
       Blob* blob = BnInOp2Blob(bn);
       CHECK(blob != nullptr) << "Blob " << bn << " is not found in cache context.";
       if (blob->blob_desc().is_dynamic()) { blob->shape().ToShape(tensor_desc.mut_shape()); }
