@@ -13,26 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import unittest
-from collections import OrderedDict
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
 
-import numpy as np
+add_docstr(
+    oneflow.flatten,
+    """Flattens a contiguous range of dims into a tensor.
 
-import oneflow as flow
-from test_util import GenArgList
+    Args:
+        start_dim: first dim to flatten (default = 0).
+        end_dim: last dim to flatten (default = -1).
+    
+    For example: 
 
-from oneflow.test_utils.automated_test_util import *
+    .. code-block:: python 
 
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> input = flow.randn(32, 1, 5, 5)
+        >>> output = flow.flatten(input, start_dim=1)
+        >>> output.shape
+        oneflow.Size([32, 25])
 
-@flow.unittest.skip_unless_1n1d()
-class TestRound(flow.unittest.TestCase):
-    @autotest(check_graph=False)
-    def test_flow_round_with_random_data(test_case):
-        device = random_device()
-        x = random_pytorch_tensor().to(device)
-        y = torch.round(x)
-        return y
-
-
-if __name__ == "__main__":
-    unittest.main()
+    """,
+)
