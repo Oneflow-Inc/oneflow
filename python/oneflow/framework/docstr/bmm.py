@@ -35,8 +35,8 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> input1 = flow.Tensor(flow.randn(10, 3, 4))
-        >>> input2 = flow.Tensor(flow.randn(10, 4, 5))
+        >>> input1 = flow.randn(10, 3, 4)
+        >>> input2 = flow.randn(10, 4, 5)
         >>> of_out = flow.bmm(input1, input2)
         >>> of_out.shape
         oneflow.Size([10, 3, 5])
