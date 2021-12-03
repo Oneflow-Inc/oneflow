@@ -278,7 +278,7 @@ DEFINE_STATIC_SWITCH_FUNC(
                             ));
 #undef MAKE_WRITE_SLICE_SWITCH_ENTRY
 
-std::shared_ptr<user_op::OpKernelCache> CreateSliceState(user_op::KernelCacheContext* ctx,
+std::shared_ptr<user_op::OpKernelCache> CreateSliceCache(user_op::KernelCacheContext* ctx,
                                                          const std::string& large_tensor_name) {
   if (ctx->parallel_ctx().parallel_num() == 1) {
     // split_axis == SPLIT_AXIS_FOR_BROADCAST means the sbp attribute is broadcast instead of split
@@ -308,8 +308,7 @@ class LogicalSliceKernel final : public user_op::OpKernel {
   LogicalSliceKernel() = default;
   ~LogicalSliceKernel() = default;
 
-  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
-                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(user_op::KernelCacheContext* ctx) const override {
     const cfg::SbpParallel& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
     const cfg::SbpParallel& y_sbp = ctx->SbpParallel4ArgNameAndIndex("y", 0);
     if (ctx->parallel_ctx().parallel_num() > 1) {
@@ -319,7 +318,7 @@ class LogicalSliceKernel final : public user_op::OpKernel {
         CHECK(y_sbp.has_broadcast_parallel());
       }
     }
-    *cache = CreateSliceState(ctx, "x");
+    return CreateSliceCache(ctx, "x");
   }
 
  private:
@@ -354,13 +353,12 @@ class LogicalSliceAssignKernel final : public user_op::OpKernel {
   LogicalSliceAssignKernel() = default;
   ~LogicalSliceAssignKernel() = default;
 
-  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
-                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(user_op::KernelCacheContext* ctx) const override {
     if (ctx->parallel_ctx().parallel_num() > 1) {
       const cfg::SbpParallel& value_sbp = ctx->SbpParallel4ArgNameAndIndex("value", 0);
       CHECK(value_sbp.has_broadcast_parallel());
     }
-    *cache = CreateSliceState(ctx, "ref");
+    return CreateSliceCache(ctx, "ref");
   }
 
  private:

@@ -45,10 +45,10 @@ Maybe<Symbol<cfg::NdSbp>> GetAllPartialSumNdSbp(int64_t ndim) {
 
 auto* CachedGetAllPartialSumNdSbp = DECORATE(&GetAllPartialSumNdSbp, ThreadLocal);
 
-class EagerSymmetricSToPOpKernelState final : public user_op::OpKernelCache {
+class EagerSymmetricSToPOpKernelCache final : public user_op::OpKernelCache {
  public:
-  explicit EagerSymmetricSToPOpKernelState(user_op::KernelCacheContext* ctx) { Init(ctx); }
-  ~EagerSymmetricSToPOpKernelState() override = default;
+  explicit EagerSymmetricSToPOpKernelCache(user_op::KernelCacheContext* ctx) { Init(ctx); }
+  ~EagerSymmetricSToPOpKernelCache() override = default;
 
   const std::shared_ptr<TensorSliceCopier>& tensor_slice_copier() const {
     return tensor_slice_copier_;
@@ -95,13 +95,13 @@ class EagerSymmetricSToPKernel final : public user_op::OpKernel {
 
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
                          std::shared_ptr<user_op::OpKernelCache>* cache) const override {
-    if (*cache == nullptr) { *cache = std::make_shared<EagerSymmetricSToPOpKernelState>(ctx); }
+    if (*cache == nullptr) { *cache = std::make_shared<EagerSymmetricSToPOpKernelCache>(ctx); }
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    auto* kernel_cache = dynamic_cast<const EagerSymmetricSToPOpKernelState*>(cache);
+    auto* kernel_cache = dynamic_cast<const EagerSymmetricSToPOpKernelCache*>(cache);
     CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);

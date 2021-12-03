@@ -27,10 +27,10 @@ namespace oneflow {
 
 namespace {
 
-class EagerPToBOpKernelState final : public user_op::OpKernelCache {
+class EagerPToBOpKernelCache final : public user_op::OpKernelCache {
  public:
-  explicit EagerPToBOpKernelState(user_op::KernelCacheContext* ctx) { Init(ctx); }
-  ~EagerPToBOpKernelState() override = default;
+  explicit EagerPToBOpKernelCache(user_op::KernelCacheContext* ctx) { Init(ctx); }
+  ~EagerPToBOpKernelCache() override = default;
 
   const std::vector<std::pair<int64_t, int64_t>>& p2p_pair() const { return p2p_pair_; }
 
@@ -73,13 +73,13 @@ class EagerPToBKernel final : public user_op::OpKernel {
 
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
                          std::shared_ptr<user_op::OpKernelCache>* cache) const override {
-    if (*cache == nullptr) { *cache = std::make_shared<EagerPToBOpKernelState>(ctx); }
+    if (*cache == nullptr) { *cache = std::make_shared<EagerPToBOpKernelCache>(ctx); }
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    auto* kernel_cache = dynamic_cast<const EagerPToBOpKernelState*>(cache);
+    auto* kernel_cache = dynamic_cast<const EagerPToBOpKernelCache*>(cache);
     CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);

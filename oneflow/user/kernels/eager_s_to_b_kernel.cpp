@@ -48,10 +48,10 @@ Maybe<Symbol<cfg::NdSbp>> GetAllBroadcastNdSbp(int64_t ndim) {
 
 auto* CachedGetAllBroadcastNdSbp = DECORATE(&GetAllBroadcastNdSbp, ThreadLocal);
 
-class EagerSToBOpKernelState final : public user_op::OpKernelCache {
+class EagerSToBOpKernelCache final : public user_op::OpKernelCache {
  public:
-  explicit EagerSToBOpKernelState(user_op::KernelCacheContext* ctx) { Init(ctx); }
-  ~EagerSToBOpKernelState() override = default;
+  explicit EagerSToBOpKernelCache(user_op::KernelCacheContext* ctx) { Init(ctx); }
+  ~EagerSToBOpKernelCache() override = default;
 
   const std::vector<std::pair<int64_t, std::shared_ptr<TensorSliceCopier>>>&
   sorted_elem_cnt2in_tensor_slice_copier_pair() const {
@@ -137,13 +137,13 @@ class EagerSToBKernel final : public user_op::OpKernel {
 
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
                          std::shared_ptr<user_op::OpKernelCache>* cache) const override {
-    if (*cache == nullptr) { *cache = std::make_shared<EagerSToBOpKernelState>(ctx); }
+    if (*cache == nullptr) { *cache = std::make_shared<EagerSToBOpKernelCache>(ctx); }
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    auto* kernel_cache = dynamic_cast<const EagerSToBOpKernelState*>(cache);
+    auto* kernel_cache = dynamic_cast<const EagerSToBOpKernelCache*>(cache);
     CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);

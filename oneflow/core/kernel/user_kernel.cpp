@@ -766,10 +766,9 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   } else {
     new_opkernel_state = kernel_->CreateOpKernelState(&init_and_cache_ctx);
   }
-  std::shared_ptr<user_op::OpKernelCache> cache = nullptr;
   kernel_->InitOpKernelCache(
       &init_and_cache_ctx,
-      user_op::OpKernelCache::AttrMayChanged | user_op::OpKernelCache::ShapeMayChanged, &cache);
+      user_op::OpKernelCache::AttrMayChanged | user_op::OpKernelCache::ShapeMayChanged, &cache_);
 
   if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob)
       && !kernel_->AlwaysComputeWhenAllOutputsEmpty()) {
@@ -779,7 +778,7 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   // TODO(lixinqi): refactor to a lightweight KernelComputeContext
   UserKernelComputeContext compute_ctx(device_ctx->stream(), kernel_conf());
   compute_ctx.UpdateTensorWithCorrBlob(BnInOp2Blob);
-  kernel_->Compute(&compute_ctx, new_opkernel_state.get(), cache.get());
+  kernel_->Compute(&compute_ctx, new_opkernel_state.get(), cache_.get());
   return new_opkernel_state;
 }
 

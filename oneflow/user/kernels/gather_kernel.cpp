@@ -93,10 +93,10 @@ class GatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
 
     int64_t offset = 0;
     if (cache != nullptr) {
-      auto* gather_state = dynamic_cast<const GatherOpKernelCache*>(cache);
-      CHECK_NOTNULL(gather_state);
-      CHECK_EQ(in->shape().At(axis), gather_state->upper() - gather_state->lower());
-      offset = gather_state->lower();
+      auto* gather_cache = dynamic_cast<const GatherOpKernelCache*>(cache);
+      CHECK_NOTNULL(gather_cache);
+      CHECK_EQ(in->shape().At(axis), gather_cache->upper() - gather_cache->lower());
+      offset = gather_cache->lower();
     }
 
     GatherKernelUtilImpl<device_type, T, K>::Forward(ctx->stream(), indices->dptr<K>(), num_indices,

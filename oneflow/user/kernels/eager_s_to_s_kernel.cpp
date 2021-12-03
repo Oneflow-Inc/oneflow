@@ -43,10 +43,10 @@ Maybe<Symbol<cfg::NdSbp>> GetAllSplitNdSbp(int64_t axis, int64_t ndim) {
 
 auto* CachedGetAllSplitNdSbp = DECORATE(&GetAllSplitNdSbp, ThreadLocal);
 
-class EagerNaiveSToSOpKernelState final : public user_op::OpKernelCache {
+class EagerNaiveSToSOpKernelCache final : public user_op::OpKernelCache {
  public:
-  explicit EagerNaiveSToSOpKernelState(user_op::KernelCacheContext* ctx) { Init(ctx); }
-  ~EagerNaiveSToSOpKernelState() override = default;
+  explicit EagerNaiveSToSOpKernelCache(user_op::KernelCacheContext* ctx) { Init(ctx); }
+  ~EagerNaiveSToSOpKernelCache() override = default;
 
   const std::vector<std::pair<int64_t, std::shared_ptr<TensorSliceCopier>>>&
   sorted_elem_cnt2in_tensor_slice_copier_pair() const {
@@ -142,13 +142,13 @@ class EagerNaiveSToSKernel final : public user_op::OpKernel {
 
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
                          std::shared_ptr<user_op::OpKernelCache>* cache) const override {
-    if (*cache == nullptr) { *cache = std::make_shared<EagerNaiveSToSOpKernelState>(ctx); }
+    if (*cache == nullptr) { *cache = std::make_shared<EagerNaiveSToSOpKernelCache>(ctx); }
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    auto* kernel_cache = dynamic_cast<const EagerNaiveSToSOpKernelState*>(cache);
+    auto* kernel_cache = dynamic_cast<const EagerNaiveSToSOpKernelCache*>(cache);
     CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);

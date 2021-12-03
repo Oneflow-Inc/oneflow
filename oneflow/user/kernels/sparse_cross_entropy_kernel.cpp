@@ -23,10 +23,10 @@ namespace user_op {
 
 namespace {
 
-class SparseCrossEntropyOpKernelState final : public user_op::OpKernelCache {
+class SparseCrossEntropyOpKernelCache final : public user_op::OpKernelCache {
  public:
-  SparseCrossEntropyOpKernelState(int64_t lower, int64_t upper) : lower_(lower), upper_(upper) {}
-  ~SparseCrossEntropyOpKernelState() override = default;
+  SparseCrossEntropyOpKernelCache(int64_t lower, int64_t upper) : lower_(lower), upper_(upper) {}
+  ~SparseCrossEntropyOpKernelCache() override = default;
 
   int64_t lower() const { return lower_; }
   int64_t upper() const { return upper_; }
@@ -77,7 +77,7 @@ class SparseCrossEntropyMsKernel final : public user_op::OpKernel {
       const int64_t class_axis = prediction_logical_desc->shape().NumAxes() - 1;
       TensorSliceView view = GetTensorSliceView4ParallelId(
           hierarchy, nd_sbp, prediction_logical_desc->shape(), ctx->parallel_ctx().parallel_id());
-      return std::make_shared<SparseCrossEntropyOpKernelState>(view.At(class_axis).begin(),
+      return std::make_shared<SparseCrossEntropyOpKernelCache>(view.At(class_axis).begin(),
                                                                view.At(class_axis).end());
     } else {
       return nullptr;
@@ -96,10 +96,10 @@ class SparseCrossEntropyMsKernel final : public user_op::OpKernel {
     const int64_t depth = ctx->Attr<int64_t>("depth");
     int64_t lower_bound = 0;
     if (cache != nullptr) {
-      auto* kernel_state = dynamic_cast<const SparseCrossEntropyOpKernelState*>(cache);
-      CHECK_NOTNULL(kernel_state);
-      CHECK_EQ(num_classes, kernel_state->upper() - kernel_state->lower());
-      lower_bound = kernel_state->lower();
+      auto* kernel_cache = dynamic_cast<const SparseCrossEntropyOpKernelCache*>(cache);
+      CHECK_NOTNULL(kernel_cache);
+      CHECK_EQ(num_classes, kernel_cache->upper() - kernel_cache->lower());
+      lower_bound = kernel_cache->lower();
     }
     Memset<device_type>(ctx->stream(), out->mut_dptr(), 0,
                         out->shape().elem_cnt() * GetSizeOfDataType(out->data_type()));
@@ -182,7 +182,7 @@ class SparseCrossEntropyMsGradKernel final : public user_op::OpKernel {
       const int64_t class_axis = prediction_logical_desc->shape().NumAxes() - 1;
       TensorSliceView view = GetTensorSliceView4ParallelId(
           hierarchy, nd_sbp, prediction_logical_desc->shape(), ctx->parallel_ctx().parallel_id());
-      return std::make_shared<SparseCrossEntropyOpKernelState>(view.At(class_axis).begin(),
+      return std::make_shared<SparseCrossEntropyOpKernelCache>(view.At(class_axis).begin(),
                                                                view.At(class_axis).end());
     } else {
       return nullptr;
@@ -202,10 +202,10 @@ class SparseCrossEntropyMsGradKernel final : public user_op::OpKernel {
     const int64_t depth = ctx->Attr<int64_t>("depth");
     int64_t lower_bound = 0;
     if (cache != nullptr) {
-      auto* kernel_state = dynamic_cast<const SparseCrossEntropyOpKernelState*>(cache);
-      CHECK_NOTNULL(kernel_state);
-      CHECK_EQ(num_classes, kernel_state->upper() - kernel_state->lower());
-      lower_bound = kernel_state->lower();
+      auto* kernel_cache = dynamic_cast<const SparseCrossEntropyOpKernelCache*>(cache);
+      CHECK_NOTNULL(kernel_cache);
+      CHECK_EQ(num_classes, kernel_cache->upper() - kernel_cache->lower());
+      lower_bound = kernel_cache->lower();
     }
     size_t prediction_diff_bytes_size =
         prediction_diff->shape().elem_cnt() * GetSizeOfDataType(prediction_diff->data_type());

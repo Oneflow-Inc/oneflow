@@ -91,7 +91,7 @@ class IndexedSlicesUpdateOpKernelCache final : public user_op::OpKernelCache {
   const int64_t upper_;
 };
 
-std::shared_ptr<user_op::OpKernelCache> CreateIndexedSlicesUpdateOpKernelState(
+std::shared_ptr<user_op::OpKernelCache> CreateIndexedSlicesUpdateOpKernelCache(
     user_op::KernelCacheContext* ctx) {
   const cfg::SbpParallel& model_sbp = ctx->SbpParallel4ArgNameAndIndex("model", 0);
   const user_op::TensorDesc* model_logical_desc =
@@ -186,13 +186,13 @@ class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return CreateIndexedSlicesUpdateOpKernelState(ctx);
+    return CreateIndexedSlicesUpdateOpKernelCache(ctx);
   }
 
  private:
   using ReduceSumUtilT = IndexedSlicesReduceSumKernelUtil<device_type, K, T, int32_t>;
   using MdUpdateUtilT = IndexedSlicesSGDUpdateKernelUtil<device_type, T, K, int32_t>;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const user_op::Tensor* model_diff_indices =
@@ -209,9 +209,9 @@ class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
     CHECK_NE(num_values, 0);
     CHECK_EQ(num_values % num_indices, 0);
     const int64_t feature_size = num_values / num_indices;
-    auto* kernel_state = dynamic_cast<const IndexedSlicesUpdateOpKernelCache*>(state);
-    CHECK_NOTNULL(kernel_state);
-    CHECK_EQ(model->shape().At(0), kernel_state->upper() - kernel_state->lower());
+    auto* kernel_cache = dynamic_cast<const IndexedSlicesUpdateOpKernelCache*>(cache);
+    CHECK_NOTNULL(kernel_cache);
+    CHECK_EQ(model->shape().At(0), kernel_cache->upper() - kernel_cache->lower());
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     TmpBufferManager<device_type, T, K> buffer_manager(tmp_buffer->mut_dptr(), num_indices,
                                                        num_values);
@@ -222,7 +222,7 @@ class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
         buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
         buffer_manager.UniqueWorkspacePtr(), buffer_manager.UniqueWorkspaceBytes());
     MdUpdateUtilT::Update(ctx->stream(), weight_decay, num_indices, feature_size,
-                          kernel_state->lower(), kernel_state->upper(),
+                          kernel_cache->lower(), kernel_cache->upper(),
                           buffer_manager.NumUniqueDiffIndicesPtr(), learning_rate->dptr<float>(),
                           buffer_manager.UniqueDiffIndicesPtr(),
                           buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>());
@@ -314,13 +314,13 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return CreateIndexedSlicesUpdateOpKernelState(ctx);
+    return CreateIndexedSlicesUpdateOpKernelCache(ctx);
   }
 
  private:
   using ReduceSumUtilT = IndexedSlicesReduceSumKernelUtil<device_type, K, T, int32_t>;
   using MdUpdateUtilT = IndexedSlicesMomentumMdUpdateKernelUtil<device_type, T, K, int32_t>;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const user_op::Tensor* model_diff_indices =
@@ -340,9 +340,9 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
     CHECK_EQ(num_values % num_indices, 0);
     const int64_t feature_size = num_values / num_indices;
     CHECK_EQ(feature_size, model_diff_values->shape().Count(model_diff_indices->shape().NumAxes()));
-    auto* kernel_state = dynamic_cast<const IndexedSlicesUpdateOpKernelCache*>(state);
-    CHECK_NOTNULL(kernel_state);
-    CHECK_EQ(model->shape().At(0), kernel_state->upper() - kernel_state->lower());
+    auto* kernel_cache = dynamic_cast<const IndexedSlicesUpdateOpKernelCache*>(cache);
+    CHECK_NOTNULL(kernel_cache);
+    CHECK_EQ(model->shape().At(0), kernel_cache->upper() - kernel_cache->lower());
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     TmpBufferManager<device_type, T, K> buffer_manager(tmp_buffer->mut_dptr(), num_indices,
                                                        num_values);
@@ -353,8 +353,8 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
         buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
         buffer_manager.UniqueWorkspacePtr(), buffer_manager.UniqueWorkspaceBytes());
     MdUpdateUtilT::Update(
-        ctx->stream(), beta, weight_decay, num_indices, feature_size, kernel_state->lower(),
-        kernel_state->upper(), buffer_manager.NumUniqueDiffIndicesPtr(),
+        ctx->stream(), beta, weight_decay, num_indices, feature_size, kernel_cache->lower(),
+        kernel_cache->upper(), buffer_manager.NumUniqueDiffIndicesPtr(),
         learning_rate->dptr<float>(), buffer_manager.UniqueDiffIndicesPtr(),
         buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>(), momentum->mut_dptr<T>());
   }
@@ -538,7 +538,7 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
   ~IndexedSlicesAdamUpdateKernel() override = default;
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return CreateIndexedSlicesUpdateOpKernelState(ctx);
+    return CreateIndexedSlicesUpdateOpKernelCache(ctx);
   }
 
  private:
@@ -582,9 +582,9 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
     const bool amsgrad = ctx->Attr<bool>("amsgrad");
     const bool do_bias_correction = ctx->Attr<bool>("do_bias_correction");
 
-    auto* kernel_state = dynamic_cast<const IndexedSlicesUpdateOpKernelCache*>(cache);
-    CHECK_NOTNULL(kernel_state);
-    CHECK_EQ(model->shape().At(0), kernel_state->upper() - kernel_state->lower());
+    auto* kernel_cache = dynamic_cast<const IndexedSlicesUpdateOpKernelCache*>(cache);
+    CHECK_NOTNULL(kernel_cache);
+    CHECK_EQ(model->shape().At(0), kernel_cache->upper() - kernel_cache->lower());
     const int64_t num_indices = model_diff_indices->shape().elem_cnt();
     const int64_t num_values = model_diff_values->shape().elem_cnt();
     if (num_indices == 0) {
@@ -608,7 +608,7 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
 
     MdUpdateUtilT::Update(
         ctx->stream(), beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
-        learning_rate_val, num_indices, feature_size, kernel_state->lower(), kernel_state->upper(),
+        learning_rate_val, num_indices, feature_size, kernel_cache->lower(), kernel_cache->upper(),
         buffer_manager.NumUniqueDiffIndicesPtr(), learning_rate_ptr, bias_correction1_ptr,
         bias_correction2_ptr, buffer_manager.UniqueDiffIndicesPtr(),
         buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>(), m->mut_dptr<T>(),

@@ -40,10 +40,10 @@ void CheckNdSbp(const Shape& hierarchy, int64_t sum_axis, const cfg::NdSbp& segm
   }
 }
 
-class UnsortedSegmentSumOpKernelState final : public user_op::OpKernelCache {
+class UnsortedSegmentSumOpKernelCache final : public user_op::OpKernelCache {
  public:
-  UnsortedSegmentSumOpKernelState(int64_t lower, int64_t upper) : lower_(lower), upper_(upper) {}
-  ~UnsortedSegmentSumOpKernelState() override = default;
+  UnsortedSegmentSumOpKernelCache(int64_t lower, int64_t upper) : lower_(lower), upper_(upper) {}
+  ~UnsortedSegmentSumOpKernelCache() override = default;
 
   int64_t lower() const { return lower_; }
   int64_t upper() const { return upper_; }
@@ -53,7 +53,7 @@ class UnsortedSegmentSumOpKernelState final : public user_op::OpKernelCache {
   const int64_t upper_;
 };
 
-std::shared_ptr<user_op::OpKernelCache> CreateUnsortedSegmentSumOpKernelState(
+std::shared_ptr<user_op::OpKernelCache> CreateUnsortedSegmentSumOpKernelCache(
     user_op::KernelCacheContext* ctx) {
   if (ctx->parallel_ctx().parallel_num() > 1) {
     const auto axis = ctx->Attr<int64_t>("axis");
@@ -64,7 +64,7 @@ std::shared_ptr<user_op::OpKernelCache> CreateUnsortedSegmentSumOpKernelState(
     const TensorDesc* out_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("out", 0);
     TensorSliceView view = GetTensorSliceView4ParallelId(
         hierarchy, out_nd_sbp, out_logical_desc->shape(), ctx->parallel_ctx().parallel_id());
-    return std::make_shared<UnsortedSegmentSumOpKernelState>(view.At(axis).begin(),
+    return std::make_shared<UnsortedSegmentSumOpKernelCache>(view.At(axis).begin(),
                                                              view.At(axis).end());
   } else {
     return nullptr;
@@ -81,7 +81,7 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel, public user_op:
 
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return CreateUnsortedSegmentSumOpKernelState(ctx);
+    return CreateUnsortedSegmentSumOpKernelCache(ctx);
   }
 
  private:
@@ -99,7 +99,7 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel, public user_op:
 
     int64_t offset = 0;
     if (cache != nullptr) {
-      auto* sum_cache = dynamic_cast<const UnsortedSegmentSumOpKernelState*>(cache);
+      auto* sum_cache = dynamic_cast<const UnsortedSegmentSumOpKernelCache*>(cache);
       CHECK_NOTNULL(sum_cache);
       CHECK_EQ(out->shape().At(axis), sum_cache->upper() - sum_cache->lower());
       offset = sum_cache->lower();
@@ -146,7 +146,7 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return CreateUnsortedSegmentSumOpKernelState(ctx);
+    return CreateUnsortedSegmentSumOpKernelCache(ctx);
   }
 
  private:
@@ -165,7 +165,7 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
                               out->shape().elem_cnt() * sizeof(float));
     int64_t offset = 0;
     if (cache != nullptr) {
-      auto* sum_cache = dynamic_cast<const UnsortedSegmentSumOpKernelState*>(cache);
+      auto* sum_cache = dynamic_cast<const UnsortedSegmentSumOpKernelCache*>(cache);
       CHECK_NOTNULL(sum_cache);
       CHECK_EQ(out->shape().At(axis), sum_cache->upper() - sum_cache->lower());
       offset = sum_cache->lower();

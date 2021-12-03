@@ -49,12 +49,12 @@ Maybe<Symbol<cfg::NdSbp>> GetAllPartialSumNdSbp(int64_t ndim) {
 
 auto* CachedGetAllPartialSumNdSbp = DECORATE(&GetAllPartialSumNdSbp, ThreadLocal);
 
-class EagerPToSOpKernelState final : public user_op::OpKernelCache {
+class EagerPToSOpKernelCache final : public user_op::OpKernelCache {
  public:
-  explicit EagerPToSOpKernelState(user_op::KernelCacheContext* ctx) : elem_cnt_per_chunk_(0) {
+  explicit EagerPToSOpKernelCache(user_op::KernelCacheContext* ctx) : elem_cnt_per_chunk_(0) {
     Init(ctx);
   }
-  ~EagerPToSOpKernelState() override = default;
+  ~EagerPToSOpKernelCache() override = default;
 
   int64_t elem_cnt_per_chunk() const { return elem_cnt_per_chunk_; }
 
@@ -130,13 +130,13 @@ class EagerPToSKernel final : public user_op::OpKernel {
 
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
                          std::shared_ptr<user_op::OpKernelCache>* cache) const override {
-    if (*cache == nullptr) { *cache = std::make_shared<EagerPToSOpKernelState>(ctx); }
+    if (*cache == nullptr) { *cache = std::make_shared<EagerPToSOpKernelCache>(ctx); }
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    auto* kernel_cache = dynamic_cast<const EagerPToSOpKernelState*>(cache);
+    auto* kernel_cache = dynamic_cast<const EagerPToSOpKernelCache*>(cache);
     CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);

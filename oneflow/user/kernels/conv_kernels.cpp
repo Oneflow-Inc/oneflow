@@ -294,7 +294,7 @@ struct ConvKernelUtil final {
 };
 
 template<typename T>
-struct ConvOpKernelState final : public user_op::OpKernelState {
+struct ConvOpKernelCache final : public user_op::OpKernelState {
   Im2ColFunc<T> im2col_func_;
   Col2ImFunc<T> col2im_func_;
   GemmFunc<T> forward_func_;
@@ -328,13 +328,13 @@ struct ConvOpKernelState final : public user_op::OpKernelState {
 };
 
 template<typename T>
-std::shared_ptr<ConvOpKernelState<T>> CreateConvOpKernelState(user_op::KernelComputeContext* ctx,
+std::shared_ptr<ConvOpKernelCache<T>> CreateConvOpKernelCache(user_op::KernelCacheContext* ctx,
                                                               const std::string& in_name,
                                                               const std::string& out_name,
                                                               const std::string& weight_name) {
   const auto& data_format = ctx->Attr<std::string>("data_format");
 
-  std::shared_ptr<ConvOpKernelState<T>> state(new ConvOpKernelState<T>());
+  std::shared_ptr<ConvOpKernelCache<T>> state(new ConvOpKernelCache<T>());
   if (data_format == "channels_first") {
     state->im2col_func_ = ConvKernelUtil<T>::NCDHWIm2Col;
     state->col2im_func_ = ConvKernelUtil<T>::NCDHWCol2Im;
@@ -397,9 +397,14 @@ class ConvCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto& conv_state = CreateConvOpKernelState<T>(ctx, "in", "out", "weight");
-    CHECK_NOTNULL(conv_state.get());
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateConvOpKernelCache<T>(ctx, "in", "out", "weight");
+  }
+
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+    const auto* conv_cache = dynamic_cast<const ConvOpKernelCache<T>*>(cache);
+    CHECK_NOTNULL(conv_cache);
 
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
@@ -410,20 +415,20 @@ class ConvCpuKernel final : public user_op::OpKernel {
 
     bool is_bias_mul_inited = false;
     for (int64_t i = 0; i < in->shape().At(0); ++i) {
-      conv_state->im2col_func_(GetImgDptr<T>(in, i), ShapeView(conv_state->in_5d_shape_),
-                               ShapeView(conv_state->weight_5d_shape_),
-                               ShapeView(conv_state->out_5d_shape_), conv_state->strides_3d_.data(),
-                               conv_state->dilation_rate_3d_.data(),
-                               conv_state->padding_before_3d_.data(), col_buf_dptr);
+      conv_cache->im2col_func_(GetImgDptr<T>(in, i), ShapeView(conv_cache->in_5d_shape_),
+                               ShapeView(conv_cache->weight_5d_shape_),
+                               ShapeView(conv_cache->out_5d_shape_), conv_cache->strides_3d_.data(),
+                               conv_cache->dilation_rate_3d_.data(),
+                               conv_cache->padding_before_3d_.data(), col_buf_dptr);
 
       // channels first: out = weight * col_buf
       // channels last:  out = (weight * col_buf)(T)
-      int32_t idx_offset = conv_state->idx_offset_;
-      conv_state->forward_func_(
+      int32_t idx_offset = conv_cache->idx_offset_;
+      conv_cache->forward_func_(
           ctx->stream(), CblasNoTrans, CblasNoTrans,
-          conv_state->weight_5d_shape_.At(0),                           // filter
-          conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3),  // od * oh * ow
-          conv_state->weight_5d_shape_.Count(1),                        // ci * kd * kh * kw
+          conv_cache->weight_5d_shape_.At(0),                           // filter
+          conv_cache->out_5d_shape_.Count(idx_offset, idx_offset + 3),  // od * oh * ow
+          conv_cache->weight_5d_shape_.Count(1),                        // ci * kd * kh * kw
           static_cast<T>(1), weight->dptr<T>(), col_buf_dptr, static_cast<T>(0),
           GetImgMutDptr<T>(out, i));
 
@@ -441,10 +446,10 @@ class ConvCpuKernel final : public user_op::OpKernel {
 
         // channels first:  out += bias * bias_mul
         // channels last:   out += (bias * bias_mul)(T)
-        conv_state->forward_func_(
+        conv_cache->forward_func_(
             ctx->stream(), CblasNoTrans, CblasNoTrans,
-            conv_state->weight_5d_shape_.At(0),                           // filter
-            conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3),  // od * oh * ow
+            conv_cache->weight_5d_shape_.At(0),                           // filter
+            conv_cache->out_5d_shape_.Count(idx_offset, idx_offset + 3),  // od * oh * ow
             1,                                                            // 1
             static_cast<T>(1), bias->dptr<T>(), bias_mul_dptr, static_cast<T>(1),
             GetImgMutDptr<T>(out, i));
@@ -493,9 +498,14 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto& conv_state = CreateConvOpKernelState<T>(ctx, "dx", "dy", "filter");
-    CHECK_NOTNULL(conv_state.get());
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateConvOpKernelCache<T>(ctx, "in", "out", "weight");
+  }
+
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+    const auto* conv_cache = dynamic_cast<const ConvOpKernelCache<T>*>(cache);
+    CHECK_NOTNULL(conv_cache);
 
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* filter = ctx->Tensor4ArgNameAndIndex("filter", 0);
@@ -505,24 +515,24 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
     Memset<DeviceType::kCPU>(ctx->stream(), dx->mut_dptr<T>(), 0,
                              dx->shape().elem_cnt() * sizeof(T));
 
-    int32_t idx_offset = conv_state->idx_offset_;
+    int32_t idx_offset = conv_cache->idx_offset_;
     FOR_RANGE(int64_t, i, 0, dy->shape().At(0)) {
       // channels first:  col_buf' = weight(T) * out[i]'
       // channels last :  col_buf' = weight(T) * out[i]'(T)
       NewKernelUtil<DeviceType::kCPU>::OFGemm(
-          ctx->stream(), CblasTrans, conv_state->is_out_diff_need_trans_,
-          conv_state->weight_5d_shape_.Count(1),                        //  ci * kd * kh * kw
-          conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3),  //  od * oh * ow
-          conv_state->weight_5d_shape_.At(0),                           //  filter
+          ctx->stream(), CblasTrans, conv_cache->is_out_diff_need_trans_,
+          conv_cache->weight_5d_shape_.Count(1),                        //  ci * kd * kh * kw
+          conv_cache->out_5d_shape_.Count(idx_offset, idx_offset + 3),  //  od * oh * ow
+          conv_cache->weight_5d_shape_.At(0),                           //  filter
           static_cast<T>(1), filter->dptr<T>(), GetImgDptr<T>(dy, i), static_cast<T>(0),
           col_buf->mut_dptr<T>());
 
       // in' = col2im(col_buf')
-      conv_state->col2im_func_(col_buf->dptr<T>(), ShapeView(conv_state->in_5d_shape_),
-                               ShapeView(conv_state->weight_5d_shape_),
-                               ShapeView(conv_state->out_5d_shape_), conv_state->strides_3d_.data(),
-                               conv_state->dilation_rate_3d_.data(),
-                               conv_state->padding_before_3d_.data(), GetImgMutDptr<T>(dx, i));
+      conv_cache->col2im_func_(col_buf->dptr<T>(), ShapeView(conv_cache->in_5d_shape_),
+                               ShapeView(conv_cache->weight_5d_shape_),
+                               ShapeView(conv_cache->out_5d_shape_), conv_cache->strides_3d_.data(),
+                               conv_cache->dilation_rate_3d_.data(),
+                               conv_cache->padding_before_3d_.data(), GetImgMutDptr<T>(dx, i));
     }
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
@@ -568,9 +578,14 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto& conv_state = CreateConvOpKernelState<T>(ctx, "x", "dy", "filter_diff");
-    CHECK_NOTNULL(conv_state.get());
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateConvOpKernelCache<T>(ctx, "in", "out", "weight");
+  }
+
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+    const auto* conv_cache = dynamic_cast<const ConvOpKernelCache<T>*>(cache);
+    CHECK_NOTNULL(conv_cache);
 
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
@@ -579,21 +594,21 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
 
     Memset<DeviceType::kCPU>(ctx->stream(), filter_diff->mut_dptr<T>(), 0,
                              filter_diff->shape().elem_cnt() * sizeof(T));
-    int32_t idx_offset = conv_state->idx_offset_;
+    int32_t idx_offset = conv_cache->idx_offset_;
     FOR_RANGE(int64_t, i, 0, dy->shape().At(0)) {
-      conv_state->im2col_func_(GetImgDptr<T>(x, i), ShapeView(conv_state->in_5d_shape_),
-                               ShapeView(conv_state->weight_5d_shape_),
-                               ShapeView(conv_state->out_5d_shape_), conv_state->strides_3d_.data(),
-                               conv_state->dilation_rate_3d_.data(),
-                               conv_state->padding_before_3d_.data(), col_buf->mut_dptr<T>());
+      conv_cache->im2col_func_(GetImgDptr<T>(x, i), ShapeView(conv_cache->in_5d_shape_),
+                               ShapeView(conv_cache->weight_5d_shape_),
+                               ShapeView(conv_cache->out_5d_shape_), conv_cache->strides_3d_.data(),
+                               conv_cache->dilation_rate_3d_.data(),
+                               conv_cache->padding_before_3d_.data(), col_buf->mut_dptr<T>());
 
       // channels first:  weight' += out[i]' * col_buf(T)
       // channels last :  weight' += out[i]'(T) * col_buf(T)
       NewKernelUtil<DeviceType::kCPU>::OFGemm(
-          ctx->stream(), conv_state->is_out_diff_need_trans_, CblasTrans,
-          conv_state->weight_5d_shape_.At(0),                           //  filter
-          conv_state->weight_5d_shape_.Count(1),                        //  ci * kd * kh * kw
-          conv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3),  //  od * oh * ow
+          ctx->stream(), conv_cache->is_out_diff_need_trans_, CblasTrans,
+          conv_cache->weight_5d_shape_.At(0),                           //  filter
+          conv_cache->weight_5d_shape_.Count(1),                        //  ci * kd * kh * kw
+          conv_cache->out_5d_shape_.Count(idx_offset, idx_offset + 3),  //  od * oh * ow
           static_cast<T>(1), GetImgDptr<T>(dy, i), col_buf->dptr<T>(), static_cast<T>(1),
           filter_diff->mut_dptr<T>());
     }

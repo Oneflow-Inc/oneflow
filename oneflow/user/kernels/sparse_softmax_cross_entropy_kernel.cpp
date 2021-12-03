@@ -39,11 +39,11 @@ auto LogSoftmaxPrimitiveExists() {
   });
 }
 
-class SparseSoftmaxCrossEntropyOpKernelState final : public user_op::OpKernelCache {
+class SparseSoftmaxCrossEntropyOpKernelCache final : public user_op::OpKernelCache {
  public:
-  SparseSoftmaxCrossEntropyOpKernelState(int64_t lower, int64_t upper)
+  SparseSoftmaxCrossEntropyOpKernelCache(int64_t lower, int64_t upper)
       : lower_(lower), upper_(upper) {}
-  ~SparseSoftmaxCrossEntropyOpKernelState() override = default;
+  ~SparseSoftmaxCrossEntropyOpKernelCache() override = default;
 
   int64_t lower() const { return lower_; }
   int64_t upper() const { return upper_; }
@@ -173,7 +173,7 @@ class SparseSoftmaxCrossEntropyMsGradKernel final : public user_op::OpKernel {
       const int64_t class_axis = prob_logical_desc->shape().NumAxes() - 1;
       TensorSliceView view = GetTensorSliceView4ParallelId(
           hierarchy, nd_sbp, prob_logical_desc->shape(), ctx->parallel_ctx().parallel_id());
-      return std::make_shared<SparseSoftmaxCrossEntropyOpKernelState>(view.At(class_axis).begin(),
+      return std::make_shared<SparseSoftmaxCrossEntropyOpKernelCache>(view.At(class_axis).begin(),
                                                                       view.At(class_axis).end());
     } else {
       return nullptr;
@@ -193,7 +193,7 @@ class SparseSoftmaxCrossEntropyMsGradKernel final : public user_op::OpKernel {
     const int64_t depth = ctx->Attr<int64_t>("depth");
     int64_t lower_bound = 0;
     if (cache != nullptr) {
-      auto* kernel_cache = dynamic_cast<const SparseSoftmaxCrossEntropyOpKernelState*>(cache);
+      auto* kernel_cache = dynamic_cast<const SparseSoftmaxCrossEntropyOpKernelCache*>(cache);
       CHECK_NOTNULL(kernel_cache);
       CHECK_EQ(num_classes, kernel_cache->upper() - kernel_cache->lower());
       lower_bound = kernel_cache->lower();

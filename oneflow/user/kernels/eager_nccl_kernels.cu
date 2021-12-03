@@ -28,16 +28,16 @@ namespace oneflow {
 
 namespace {
 
-class EagerNcclOpKernelState final : public user_op::OpKernelState {
+class EagerNcclOpKernelCache final : public user_op::OpKernelCache {
  public:
-  explicit EagerNcclOpKernelState(user_op::KernelInitContext* ctx) { Init(ctx); }
-  ~EagerNcclOpKernelState() override = default;
+  explicit EagerNcclOpKernelCache(user_op::KernelCacheContext* ctx) { Init(ctx); }
+  ~EagerNcclOpKernelCache() override = default;
 
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
   ncclComm_t comm() const { return comm_; }
 
  private:
-  void Init(user_op::KernelInitContext* ctx) {
+  void Init(user_op::KernelCacheContext* ctx) {
     const std::string& parallel_conf_txt = ctx->Attr<std::string>("parallel_conf");
     ParallelConf parallel_conf;
     std::set<std::pair<int64_t, int64_t>> device_set;
@@ -64,6 +64,11 @@ size_t InferEagerNcclS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
   return tensor_byte_size * 2;
 }
 
+void InitEagerNcclOpKernelCache(
+    user_op::KernelCacheContext* ctx, std::shared_ptr<user_op::OpKernelCache>* cache) {
+  if (*cache == nullptr) {
+    *cache = std::make_shared<EagerNcclOpKernelCache>(ctx);
+  }
 }  // namespace
 
 class EagerNcclAllReduceKernel final : public user_op::OpKernel {
@@ -71,16 +76,16 @@ class EagerNcclAllReduceKernel final : public user_op::OpKernel {
   EagerNcclAllReduceKernel() = default;
   ~EagerNcclAllReduceKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EagerNcclOpKernelState>(ctx);
+ private:
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                                 std::shared_ptr<user_op::OpKernelCache>* cache) const override {
+    InitEagerNcclOpKernelCache(ctx, cache);
   }
 
- private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
+    auto* kernel_state = dynamic_cast<EagerNcclOpKernelCache*>(state);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -102,16 +107,16 @@ class EagerNcclBroadcastKernel final : public user_op::OpKernel {
   EagerNcclBroadcastKernel() = default;
   ~EagerNcclBroadcastKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EagerNcclOpKernelState>(ctx);
+ private:
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                                 std::shared_ptr<user_op::OpKernelCache>* cache) const override {
+    InitEagerNcclOpKernelCache(ctx, cache);
   }
 
- private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
+    auto* kernel_state = dynamic_cast<EagerNcclOpKernelCache*>(state);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -141,16 +146,16 @@ class EagerNcclReduceKernel final : public user_op::OpKernel {
   EagerNcclReduceKernel() = default;
   ~EagerNcclReduceKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EagerNcclOpKernelState>(ctx);
+ private:
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                                 std::shared_ptr<user_op::OpKernelCache>* cache) const override {
+    InitEagerNcclOpKernelCache(ctx, cache);
   }
 
- private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
+    auto* kernel_state = dynamic_cast<EagerNcclOpKernelCache*>(state);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -177,16 +182,16 @@ class EagerNcclReduceScatterKernel final : public user_op::OpKernel {
   EagerNcclReduceScatterKernel() = default;
   ~EagerNcclReduceScatterKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EagerNcclOpKernelState>(ctx);
+ private:
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                                 std::shared_ptr<user_op::OpKernelCache>* cache) const override {
+    InitEagerNcclOpKernelCache(ctx, cache);
   }
 
- private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
+    auto* kernel_state = dynamic_cast<EagerNcclOpKernelCache*>(state);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -214,16 +219,16 @@ class EagerNcclAllGatherKernel final : public user_op::OpKernel {
   EagerNcclAllGatherKernel() = default;
   ~EagerNcclAllGatherKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EagerNcclOpKernelState>(ctx);
+ private:
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                                 std::shared_ptr<user_op::OpKernelCache>* cache) const override {
+    InitEagerNcclOpKernelCache(ctx, cache);
   }
 
- private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
+    auto* kernel_state = dynamic_cast<EagerNcclOpKernelCache*>(state);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -245,16 +250,16 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
   EagerNcclS2SKernel() = default;
   ~EagerNcclS2SKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EagerNcclOpKernelState>(ctx);
+ private:
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                                 std::shared_ptr<user_op::OpKernelCache>* cache) const override {
+    InitEagerNcclOpKernelCache(ctx, cache);
   }
 
- private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
+    auto* kernel_state = dynamic_cast<EagerNcclOpKernelCache*>(state);
     CHECK(kernel_state != nullptr);
     // NOTE(hanbinbin): Compute logic copy from _nccl_logical_s2s
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);

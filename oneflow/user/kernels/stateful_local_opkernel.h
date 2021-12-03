@@ -464,6 +464,7 @@ class StatefulLocalOpKernel final {
              DataType_MAX>
       dtype2cached_kernels_;
   HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelState>> op_kernel_state_map_;
+  HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelCache>> op_kernel_cache_map_;
   HashMap<const user_op::OpKernel*, const user_op::InferTmpSizeFn*> infer_tmp_size_fn_map_;
   std::unique_ptr<vm::EagerBlobObject> tmp_blob_object_;
   std::vector<int64_t> input_tuple_indexes4const_ibns_;
