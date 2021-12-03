@@ -22,6 +22,7 @@ import numpy as np
 import oneflow
 import oneflow as flow
 import oneflow.unittest
+import oneflow.sysconfig
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -29,6 +30,8 @@ class TestGraphNeqDeviceProcessNum(flow.unittest.TestCase):
     def test_graph_process_num_greater_than_device(test_case):
         # NOTE(chengcheng): this test case is ONLY for 1n8d in 4d env.
         if not (flow.env.get_node_size() == 1 and flow.env.get_world_size() == 8):
+            return
+        if not oneflow.sysconfig.has_rpc_backend_grpc():
             return
 
         BATCH_SIZE = 64
