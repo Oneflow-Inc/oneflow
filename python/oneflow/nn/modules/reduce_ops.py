@@ -249,12 +249,9 @@ def all_op(input, dim=None, keepdim=False):
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
+        >>> input = flow.arange(0, 3)
         >>> flow.all(input)
-        tensor(1, dtype=oneflow.int8)
-        >>> values = flow.all(input, dim=1)
-        >>> values
-        tensor([1, 1], dtype=oneflow.int8)
+        tensor(False, dtype=oneflow.bool)
 
     """
 
@@ -281,12 +278,9 @@ def any_op(input, dim=None, keepdim=False):
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
+        >>> input = flow.arange(0, 3)
         >>> flow.any(input)
-        tensor(1, dtype=oneflow.int8)
-        >>> values = flow.any(input, dim=1)
-        >>> values
-        tensor([1, 1], dtype=oneflow.int8)
+        tensor(True, dtype=oneflow.bool)
 
     """
 
