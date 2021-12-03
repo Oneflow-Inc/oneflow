@@ -82,7 +82,7 @@ add_docstr(
     The formula is:
 
     .. math::
-        out = \\frac{input}{other}
+        out = \frac{input}{other}
     
     Args:
         input (Union[int, float, oneflow.Tensor]): input.
@@ -126,7 +126,7 @@ add_docstr(
     The formula is:
 
     .. math::
-        out = input \\times other
+        \text{out}_i = \text{input}_i \times \text{other}_i
     
     For example:
 
@@ -224,7 +224,7 @@ add_docstr(
     Returns a new tensor with the arcsine of the elements of :attr:`input`.
 
     .. math::
-        \\text{out}_{i} = \\sin^{-1}(\\text{input}_{i})
+        \text{out}_{i} = \sin^{-1}(\text{input}_{i})
 
     Args:
         input (Tensor): the input tensor.
@@ -257,7 +257,7 @@ add_docstr(
     Returns a new tensor with the inverse hyperbolic sine of the elements of :attr:`input`.
 
     .. math::
-        \\text{out}_{i} = \\sinh^{-1}(\\text{input}_{i})
+        \text{out}_{i} = \sinh^{-1}(\text{input}_{i})
 
     Args:
         input (Tensor): the input tensor.
@@ -292,7 +292,7 @@ add_docstr(
     Returns a new tensor with the arctangent of the elements of :attr:`input`.
 
     .. math::
-        \\text{out}_{i} = \\tan^{-1}(\\text{input}_{i})
+        \text{out}_{i} = \tan^{-1}(\text{input}_{i})
 
     Args:
         input (Tensor): the input tensor.
@@ -319,7 +319,7 @@ add_docstr(
     The equation is: 
 
     .. math::
-        \\text{out}_{i} = \\left\\lceil \\text{input}_{i} \\right\\rceil = \\left\\lfloor \\text{input}_{i} \\right\\rfloor + 1
+        \text{out}_{i} = \left\lceil \text{input}_{i} \right\rceil = \left\lfloor \text{input}_{i} \right\rfloor + 1
 
     Args:
         input (oneflow.Tensor): A Tensor.
@@ -393,7 +393,7 @@ add_docstr(
     r"""Returns a new tensor with the natural logarithm of (1 + input).
 
     .. math::
-        \\text{out}_{i}=\\log_e(1+\\text{input}_{i})
+        \text{out}_{i}=\log_e(1+\text{input}_{i})
 
     For example:
 
@@ -448,7 +448,7 @@ add_docstr(
     Returns a new tensor with the inverse cosine of the elements of :attr:`input`.
 
     .. math::
-        \\text{out}_{i} = \\arccos(\\text{input}_{i})
+        \text{out}_{i} = \arccos(\text{input}_{i})
 
     Args:
         input (Tensor): the input tensor.
@@ -475,7 +475,7 @@ add_docstr(
 
     .. math::
 
-        \\text{out}_{i} = \\cosh^{-1}(\\text{input}_{i})
+        \text{out}_{i} = \cosh^{-1}(\text{input}_{i})
 
     Args:
         input (Tensor): the input tensor.
@@ -502,7 +502,7 @@ add_docstr(
     r"""Returns a new tensor with the inverse hyperbolic tangent of the elements of :attr:`input`.
 
     .. math::
-        \\text{out}_{i} = \\tanh^{-1}(\\text{input}_{i})
+        \text{out}_{i} = \tanh^{-1}(\text{input}_{i})
 
     Args:
         input (Tensor): the input tensor.
@@ -528,7 +528,7 @@ add_docstr(
 
     .. math::
 
-        \\text{out}_{i}  = \\text{sgn}(\\text{input}_{i})
+        \text{out}_{i}  = \text{sgn}(\text{input}_{i})
 
     Args:
         input (Tensor): the input tensor.
@@ -594,7 +594,7 @@ add_docstr(
     r"""Returns a new tensor with the hyperbolic sine of the elements of :attr:`input`.
 
     .. math::
-        \\text{out}_{i} = \\sinh(\\text{input}_{i})
+        \text{out}_{i} = \sinh(\text{input}_{i})
 
     Args:
         input (Tensor): the input tensor.
@@ -625,7 +625,7 @@ add_docstr(
     r"""Returns  the tan value of the elements of :attr:`input`.
 
     .. math::
-        \\text{out}_{i} = \\tan(\\text{input}_{i})
+        \text{out}_{i} = \tan(\text{input}_{i})
 
     Args:
         input (Tensor): the input tensor.
@@ -652,10 +652,10 @@ add_docstr(
     a resulting tensor:
 
     .. math::
-        y_i = \\begin{cases}
-            \\text{min} & \\text{if } x_i < \\text{min} \\\\
-            x_i & \\text{if } \\text{min} \\leq x_i \\leq \\text{max} \\\\
-            \\text{max} & \\text{if } x_i > \\text{max}
+        y_i = \begin{cases}
+            \text{min} & \text{if } x_i < \text{min} \\
+            x_i & \text{if } \text{min} \leq x_i \leq \text{max} \\
+            \text{max} & \text{if } x_i > \text{max}
         \\end{cases}
 
     If :attr:`input` is of type `FloatTensor` or `DoubleTensor`, args :attr:`min`
@@ -701,7 +701,7 @@ add_docstr(
     Returns a new tensor with the cosine  of the elements of :attr:`input`.
     
     .. math::
-        \\text{out}_{i} = \\cos(\\text{input}_{i})
+        \text{out}_{i} = \cos(\text{input}_{i})
 
     Args:
         input (Tensor): the input tensor.
@@ -725,7 +725,7 @@ add_docstr(
     Returns a new tensor with the hyperbolic cosine of the elements of :attr:`input`.
 
     .. math::
-        \\text{out}_{i} = \\cosh(\\text{input}_{i})
+        \text{out}_{i} = \cosh(\text{input}_{i})
 
     Args:
         input (Tensor): the input tensor.
@@ -751,7 +751,7 @@ add_docstr(
     r"""Computes the error function of each element. The error function is defined as follows:
 
     .. math::
-            \\operatorname{erf}(x)=\\frac{2}{\\sqrt{\\pi}} \\int_{0}^{x} e^{-t^{2}} d t
+            \operatorname{erf}(x)=\frac{2}{\sqrt{\pi}} \int_{0}^{x} e^{-t^{2}} d t
 
     Args:
         x (oneflow.Tensor): A Tensor
@@ -799,7 +799,7 @@ add_docstr(
     function is defined as follows:
 
     .. math::
-            \\operatorname{erfc}(x)=1-\\frac{2}{\\sqrt{\\pi}} \\int_{0}^{x} e^{-t^{2}} d t
+            \operatorname{erfc}(x)=1-\frac{2}{\sqrt{\pi}} \int_{0}^{x} e^{-t^{2}} d t
 
     Args:
         x (oneflow.Tensor): A Tensor
@@ -912,7 +912,7 @@ add_docstr(
     Returns a new tensor with the natural logarithm of the elements of :attr:`input`.
     
     .. math::
-        y_{i} = \\log_{e} (x_{i})
+        y_{i} = \log_{e} (x_{i})
 
     Args:
         input (Tensor): the input tensor.
@@ -1024,7 +1024,7 @@ add_docstr(
         the elements of :attr:`input`.
 
         .. math::
-            \\text{out}_{i} = \\frac{1}{\\sqrt{\\text{input}_{i}}}
+            \text{out}_{i} = \frac{1}{\sqrt{\text{input}_{i}}}
 
         Args:
             input (Tensor): the input tensor.
@@ -1048,7 +1048,7 @@ add_docstr(
     r"""Returns a new tensor with the square-root of the elements of :attr:`input`.
 
         .. math::
-            \\text{out}_{i} = \\sqrt{\\text{input}_{i}}
+            \text{out}_{i} = \sqrt{\text{input}_{i}}
 
         Args:
             input (Tensor): the input tensor.
@@ -1074,7 +1074,7 @@ add_docstr(
     r"""Returns a new tensor with the square of the elements of :attr:`input`.
 
         .. math::
-            \\text{out}_{i} = \\sqrt{\\text{input}_{i}}
+            \text{out}_{i} = \sqrt{\text{input}_{i}}
 
         Args:
             input (Tensor): the input tensor.
@@ -1238,5 +1238,38 @@ add_docstr(
         >>> out
         tensor([0, 1, 0], dtype=oneflow.int8)
         
+    """,
+)
+
+add_docstr(
+    oneflow.movedim,
+    r"""
+    Moves the dimension(s) of input at the position(s) in source to the position(s) in destination.
+    Other dimensions of input that are not explicitly moved remain in their original order and appear at the positions not specified in destination.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.movedim.html#torch.movedim.
+
+    Args:
+        input (Tensor): the input tensor.
+        source  (int or a list): Original positions of the dims to move. These must be unique. 
+        destination (int or a list): Destination positions for each of the original dims. These must also be unique.
+    
+    Returns:
+        oneflow.Tensor: the output Tensor.
+
+    For example:
+
+    .. code-block:: python
+        
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> input = flow.tensor(np.random.randn(2, 3, 4, 5), dtype=flow.float32)
+        >>> output = flow.movedim(input, 1, 0)
+        >>> output.shape
+        oneflow.Size([3, 2, 4, 5])
+        >>> output = flow.movedim(input, (1, 2), (0, 1))
+        >>> output.shape
+        oneflow.Size([3, 4, 2, 5])
     """,
 )

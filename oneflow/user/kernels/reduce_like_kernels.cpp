@@ -114,7 +114,7 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     if (axis.empty()) {
       CHECK_EQ(tensor_x->shape(), tensor_y->shape());
-      Memcpy<DeviceType::kGPU>(
+      Memcpy<DeviceType::kCUDA>(
           ctx->stream(), tensor_y->mut_dptr(), tensor_x->dptr(),
           tensor_x->shape().elem_cnt() * GetSizeOfDataType(tensor_x->data_type()));
     } else {
@@ -135,10 +135,10 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::
                                                                     DataType::kFloat16);
         CHECK(fill);
         fill->Launch(ctx->stream(), tmp_buffer->mut_dptr(), 1.0, reduce_size);
-        NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->stream(), trans_a, trans_b, m, n, k,
-                                                GetOneVal<float16>(), tensor_x->dptr<float16>(),
-                                                tmp_buffer->dptr<float16>(), GetZeroVal<float16>(),
-                                                tensor_y->mut_dptr<float16>());
+        NewKernelUtil<DeviceType::kCUDA>::OFGemm(ctx->stream(), trans_a, trans_b, m, n, k,
+                                                 GetOneVal<float16>(), tensor_x->dptr<float16>(),
+                                                 tmp_buffer->dptr<float16>(), GetZeroVal<float16>(),
+                                                 tensor_y->mut_dptr<float16>());
       } else {
         const Shape& reduced_shape = CreateReducedShape(in_shape, {axis.begin(), axis.end()});
         float* in_tmp_buffer = tmp_buffer->mut_dptr<float>();
@@ -161,7 +161,7 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::
         CHECK(f2h);
         h2f->Launch(ctx->stream(), tensor_x->dptr<float16>(), in_tmp_buffer, in_shape.elem_cnt());
 
-        NdarrayReduce<DeviceType::kGPU, float, BinaryFuncSum>::Reduce(
+        NdarrayReduce<DeviceType::kCUDA, float, BinaryFuncSum>::Reduce(
             ctx->stream(), XpuVarNdarray<float>(reduced_shape, out_tmp_buffer),
             XpuVarNdarray<const float>(in_shape, in_tmp_buffer),
             XpuVarNdarray<float>(in_shape, reduce_tmp_buffer));
@@ -176,7 +176,7 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::
 
 REGISTER_USER_KERNEL("reduce_sum_like")
     .SetCreateFn<ReduceSumLikeHalfKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
                      && (user_op::HobDataType("y", 0) == GetDataType<float16>::value))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
       const Shape& in_shape = ctx->InputTensorDesc("x", 0).shape();

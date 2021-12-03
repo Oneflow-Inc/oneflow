@@ -56,9 +56,9 @@ add_docstr(
     the other elements of the result tensor out are set to 0.
     
     .. note::
-        if diagonal = 0, the diagonal of the returned tensor will be the main diagonal,
-        if diagonal > 0, the diagonal of the returned tensor will be above the main diagonal, 
-        if diagonal < 0, the diagonal of the returned tensor will be below the main diagonal.
+        - if diagonal = 0, the diagonal of the returned tensor will be the main diagonal,
+        - if diagonal > 0, the diagonal of the returned tensor will be above the main diagonal, 
+        - if diagonal < 0, the diagonal of the returned tensor will be below the main diagonal.
 
     Args:
         input (Tensor): the input tensor. 

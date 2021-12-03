@@ -146,7 +146,7 @@ __launch_bounds__(256) __global__ void CUDAGridSampler5DBackwardKernel(
 }
 
 template<typename data_type, typename index_type>
-struct GridSampleKernelUtil<DeviceType::kGPU, data_type, index_type> final {
+struct GridSampleKernelUtil<DeviceType::kCUDA, data_type, index_type> final {
   static void Forward4D(user_op::KernelComputeContext* ctx, const user_op::Tensor* input,
                         const user_op::Tensor* grid, user_op::Tensor* output,
                         GridSamplerInterpolation interpolation, GridSamplerPadding padding,
@@ -216,7 +216,7 @@ struct GridSampleKernelUtil<DeviceType::kGPU, data_type, index_type> final {
   }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_GRID_SAMPLE_KERNEL_UTIL, (DeviceType::kGPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_GRID_SAMPLE_KERNEL_UTIL, (DeviceType::kCUDA),
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

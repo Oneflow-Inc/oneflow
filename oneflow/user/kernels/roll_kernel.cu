@@ -279,7 +279,7 @@ class GpuRollKernel final : public user_op::OpKernel {
 
 #define REGISTER_ROLL_KERNEL(dtype)                                                 \
   REGISTER_USER_KERNEL("roll").SetCreateFn<GpuRollKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kGPU)                                \
+      (user_op::HobDeviceType() == DeviceType::kCUDA)                               \
       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
 
 REGISTER_ROLL_KERNEL(float);

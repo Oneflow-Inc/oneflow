@@ -194,8 +194,8 @@ class EagerSToBKernel final : public user_op::OpKernel {
       .SetInferTmpSizeFn(InferEagerSToBKernelTmpBufferSize);
 
 REGISTER_EAGER_S_TO_B_KERNEL(DeviceType::kCPU)
-#if defined(WITH_CUDA) && HAS_GPU_SEND_RECV
-REGISTER_EAGER_S_TO_B_KERNEL(DeviceType::kGPU)
+#if defined(WITH_CUDA) && HAS_NCCL_SEND_RECV
+REGISTER_EAGER_S_TO_B_KERNEL(DeviceType::kCUDA)
 #endif
 
 }  // namespace oneflow

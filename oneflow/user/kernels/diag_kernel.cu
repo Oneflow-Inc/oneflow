@@ -34,7 +34,7 @@ __global__ void matrix_diagonal_kernel(T* out_buf, const T* in_buf, int32_t size
 }
 
 template<typename T>
-struct DiagFunctor<DeviceType::kGPU, T> final {
+struct DiagFunctor<DeviceType::kCUDA, T> final {
   void operator()(ep::Stream* stream, T* out_buf, const T* in_buf, int32_t size, int32_t stride,
                   int32_t in_dim) {
     if (in_dim == 1) {
@@ -50,7 +50,7 @@ struct DiagFunctor<DeviceType::kGPU, T> final {
 };
 
 template<typename T>
-struct DiagGradFunctor<DeviceType::kGPU, T> final {
+struct DiagGradFunctor<DeviceType::kCUDA, T> final {
   void operator()(ep::Stream* stream, T* dx_buf, const T* dy_buf, int32_t dx_cnt, int32_t dy_cnt,
                   int32_t stride, int32_t in_dim) {
     if (in_dim == 1) {
@@ -67,12 +67,12 @@ struct DiagGradFunctor<DeviceType::kGPU, T> final {
 
 }  // namespace
 
-REGISTER_DIAG_KERNELS(DeviceType::kGPU, half);
-REGISTER_DIAG_KERNELS(DeviceType::kGPU, float);
-REGISTER_DIAG_KERNELS(DeviceType::kGPU, double);
-REGISTER_DIAG_KERNELS(DeviceType::kGPU, uint8_t);
-REGISTER_DIAG_KERNELS(DeviceType::kGPU, int8_t);
-REGISTER_DIAG_KERNELS(DeviceType::kGPU, int32_t);
-REGISTER_DIAG_KERNELS(DeviceType::kGPU, int64_t);
+REGISTER_DIAG_KERNELS(DeviceType::kCUDA, half);
+REGISTER_DIAG_KERNELS(DeviceType::kCUDA, float);
+REGISTER_DIAG_KERNELS(DeviceType::kCUDA, double);
+REGISTER_DIAG_KERNELS(DeviceType::kCUDA, uint8_t);
+REGISTER_DIAG_KERNELS(DeviceType::kCUDA, int8_t);
+REGISTER_DIAG_KERNELS(DeviceType::kCUDA, int32_t);
+REGISTER_DIAG_KERNELS(DeviceType::kCUDA, int64_t);
 
 }  // namespace oneflow

@@ -134,7 +134,7 @@ class BroadcastFunctor {
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
     std::string device_type_str = JUST(x->device())->type();
     CHECK_OR_RETURN(device_type_str == "cuda" || device_type_str == "cpu");
-    DeviceType device_type = device_type_str == "cuda" ? DeviceType::kGPU : DeviceType::kCPU;
+    DeviceType device_type = device_type_str == "cuda" ? DeviceType::kCUDA : DeviceType::kCPU;
     const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
     return one::Broadcast(x, src_rank, parallel_desc, inplace);
   }
@@ -167,7 +167,7 @@ class LocalAllReduceFunctor {
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
     const std::string& device_type_str = device->type();
     CHECK_OR_RETURN(device_type_str == "cuda" || device_type_str == "cpu");
-    DeviceType device_type = device_type_str == "cuda" ? DeviceType::kGPU : DeviceType::kCPU;
+    DeviceType device_type = device_type_str == "cuda" ? DeviceType::kCUDA : DeviceType::kCPU;
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedRankGroupAndDeviceType2AllReduceOpExpr(rank_group, device_type));
     if (const auto& static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(x)) {
@@ -202,7 +202,7 @@ class ConsistentReduceScatterFunctor {
       CHECK_OR_RETURN(x->is_consistent());
       if (op_type == "max") {
         CHECK_OR_RETURN(IsAllBroadcastNdSbp(JUST(x->nd_sbp())));
-        CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
+        CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kCUDA);
       } else if (op_type == "sum") {
         CHECK_OR_RETURN(IsAllPartialSumNdSbp(JUST(x->nd_sbp())));
       } else {

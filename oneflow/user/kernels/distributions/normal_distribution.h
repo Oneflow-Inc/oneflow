@@ -17,7 +17,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_DISTRIBUTIONS_NORMAL_DISTRIBUTION_H_
 #define ONEFLOW_USER_KERNELS_DISTRIBUTIONS_NORMAL_DISTRIBUTION_H_
 
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/framework/random_generator.h"
 #ifdef WITH_CUDA
 #include <curand.h>
@@ -46,7 +46,7 @@ class NormalDistribution<DeviceType::kCPU, T> final {
 
 #ifdef WITH_CUDA
 template<typename T>
-class NormalDistribution<DeviceType::kGPU, T> final {
+class NormalDistribution<DeviceType::kCUDA, T> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NormalDistribution);
   NormalDistribution(T mean, T std) : mean_(mean), std_(std) {}

@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_ARG_WHERE_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_ARG_WHERE_KERNEL_UTIL_H_
 
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {

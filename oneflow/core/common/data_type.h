@@ -205,7 +205,7 @@ struct DevDType {
 
 #if defined(WITH_CUDA)
 template<>
-struct DevDType<DeviceType::kGPU, float16> {
+struct DevDType<DeviceType::kCUDA, float16> {
   static_assert(sizeof(float16) == sizeof(half), "sizeof(float16) != sizeof(half)");
   typedef half type;
 };
@@ -217,6 +217,7 @@ bool IsIntegralDataType(DataType data_type);
 bool IsFloatingDataType(DataType data_type);
 bool IsSupportRequireGradDataType(DataType data_type);
 bool IsPODDataType(DataType data_type);
+bool IsPODAndHalfDataType(DataType data_type);
 bool IsIndexDataType(DataType data_type);
 size_t GetSizeOfDataType(DataType data_type);
 

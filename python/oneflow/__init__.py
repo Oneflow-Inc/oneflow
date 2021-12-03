@@ -66,6 +66,7 @@ def is_deprecated(func_or_class):
 from oneflow._C import abs
 from oneflow._C import exp
 from oneflow._C import acos
+from oneflow._C import acos as arccos
 from oneflow._C import acosh
 from oneflow._C import acosh as arccosh
 from oneflow._C import atanh
@@ -149,6 +150,7 @@ from oneflow._C import permute
 from oneflow._C import concat
 from oneflow._C import concat as cat
 from oneflow._C import to
+from oneflow._C import roi_align
 
 
 from . import sbp
@@ -281,6 +283,7 @@ from oneflow.nn.modules.constant import zeros_op as zeros
 from oneflow.nn.modules.constant import full_op as full
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
+from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flatten import _flow_flatten as flatten
