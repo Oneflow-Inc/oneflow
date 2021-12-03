@@ -468,7 +468,7 @@ void StatefulLocalOpKernel::TryInitOpKernelStateAndCache(
     const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx, EagerBlobObjectListRawPtr inputs,
     EagerBlobObjectListRawPtr outputs,
     ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
-    user_op::OpKernelState** state, std::shared_ptr<user_op::OpKernelCache>* cache) {
+    user_op::OpKernelState** state, user_op::OpKernelCache** cache) {
   LocalUserKernelInitAndCacheContext init_and_cache_ctx(
       device_ctx, op_conf_->device_tag(), user_op_conf_.get(), input_arg_tuple_, output_arg_tuple_,
       inputs, outputs, consistent_tensor_infer_result, composed_attrs_for_scheduler_thread());
@@ -487,7 +487,7 @@ void StatefulLocalOpKernel::TryInitOpKernelStateAndCache(
     auto& cache_in_map = op_kernel_cache_map_[op_kernel];
     op_kernel->InitOpKernelCache(&init_and_cache_ctx, user_op::OpKernelCache::kAllMayChanged,
                                  &cache_in_map);
-    *cache = cache_in_map;
+    *cache = cache_in_map.get();
   }
 }
 

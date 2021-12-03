@@ -455,9 +455,9 @@ struct LocalCallOpKernelUtil final {
       JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
     }
     user_op::OpKernelState* state = nullptr;
-    std::shared_ptr<user_op::OpKernelCache> cache = nullptr;
+    user_op::OpKernelCache* cache = nullptr;
     TryInitOpKernelStateAndCache(operand, device_ctx, &state, &cache);
-    OpKernelCompute(operand, device_ctx, state, cache.get());
+    OpKernelCompute(operand, device_ctx, state, cache);
     if (unlikely(operand->need_temp_storage())) {
       JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
     }
@@ -492,7 +492,7 @@ struct LocalCallOpKernelUtil final {
   static inline void TryInitOpKernelStateAndCache(LocalCallOpKernelPhyInstrOperand* operand,
                                                   DeviceCtx* device_ctx,
                                                   user_op::OpKernelState** state,
-                                                  std::shared_ptr<user_op::OpKernelCache>* cache) {
+                                                  user_op::OpKernelCache** cache) {
     if (likely(operand->op_interp_ctx().state)) {
       *state = operand->op_interp_ctx().state.get();
       // set state to nullptr so that state initialization in TryInitOpKernelStateAndCache will be
