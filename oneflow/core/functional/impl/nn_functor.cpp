@@ -1450,14 +1450,14 @@ class DropoutFunctor {
     MutableAttrMap dropout_attrs;
     JUST(dropout_attrs.SetAttr<float>("rate", p));
     if (addend) {
-      if (!training) {
+      if ((!training) || p == 0.0) {
         return OpInterpUtil::Dispatch<Tensor>(*add_op_, {x, JUST(addend)});
       } else {
         return OpInterpUtil::Dispatch<Tensor>(*dropout_addend_op_, {x, JUST(addend)},
                                               OpExprInterpContext(dropout_attrs, dropout_state));
       }
     } else {
-      if (!training) {
+      if (!training || p == 0.0) {
         return x;
       } else {
         return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {x},

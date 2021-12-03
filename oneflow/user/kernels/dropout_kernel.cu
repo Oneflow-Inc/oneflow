@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
-
+#include "oneflow/core/profiler/profiler.h"
 namespace oneflow {
 
 namespace {
@@ -340,11 +340,13 @@ __global__ RETURN_VOID_IF_DOUBLE FusedDropoutAddGpu(
 
 template<int pack_size>
 unsigned int ComputeGridSize(const int32_t block_size, const int64_t elem_cnt) {
-  cudaDeviceProp prop;
-  cudaGetDeviceProperties(&prop, 0);
-  unsigned int blocks_per_sm = prop.maxThreadsPerMultiProcessor / block_size;
+  int32_t max_threads_multi_process = 0;
+  int32_t multi_processor_count = 0;
+  cudaDeviceGetAttribute(&max_threads_multi_process, cudaDevAttrMaxThreadsPerMultiProcessor, 0);
+  cudaDeviceGetAttribute(&multi_processor_count, cudaDevAttrMultiProcessorCount, 0);
+  unsigned int blocks_per_sm = max_threads_multi_process / block_size;
   unsigned int grid_size = ((elem_cnt + block_size - 1) / block_size);
-  grid_size = std::min((unsigned int)prop.multiProcessorCount * blocks_per_sm, grid_size);
+  grid_size = std::min((unsigned int)multi_processor_count * blocks_per_sm, grid_size);
   return grid_size;
 }
 
@@ -412,6 +414,7 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    OF_PROFILER_RANGE_PUSH("ProfileDropout");
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
@@ -440,6 +443,7 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
                              reinterpret_cast<int8_t*>(mask->mut_dptr()), nullptr,
                              reinterpret_cast<T*>(out->mut_dptr()));
     }
+    OF_PROFILER_RANGE_POP();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
