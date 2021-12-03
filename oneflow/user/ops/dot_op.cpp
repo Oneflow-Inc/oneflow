@@ -47,7 +47,7 @@ REGISTER_USER_OP("dot")
       *ctx->OutputDType("out", 0) = ctx->InputDType("x", 0);
       return Maybe<void>::Ok();
     });
-    
+
 REGISTER_USER_OP_GRAD("dot").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                        user_op::AddOpFn AddOp) -> Maybe<void> {
   if (op.NeedGenGradTensor4OpInput("x", 0)) {

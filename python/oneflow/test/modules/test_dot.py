@@ -29,5 +29,6 @@ class TestDot(flow.unittest.TestCase):
         z = torch.dot(x, y)
         return z
 
+
 if __name__ == "__main__":
     unittest.main()
