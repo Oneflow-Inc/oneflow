@@ -47,6 +47,7 @@ note_pytorch_kwargs = []
 vis_tensor = []
 vis_parameters = {}
 call_tensor_id = []
+extra_input_tensor = set()
 flow_res_id_eager2_graph = dict()
 
 
@@ -230,6 +231,7 @@ def GetDualObject(name, pytorch, oneflow):
 
                         try:
                             pytorch_res = pytorch(*pytorch_args, **pytorch_kwargs)
+
                             if isinstance(pytorch_res, torch_original.Tensor):
                                 if (
                                     hasattr(pytorch, "__name__")
@@ -246,6 +248,14 @@ def GetDualObject(name, pytorch, oneflow):
                                     )
                                 ):
                                     pass
+                                elif (
+                                    len(pytorch_args) > 0
+                                    and isinstance(
+                                        pytorch_args[0], torch_original.Tensor
+                                    )
+                                    and id(pytorch_args[0]) == id(pytorch_res)
+                                ):
+                                    extra_input_tensor.add(pytorch_res)
                                 else:
                                     call_tensor_id.append(id(pytorch_res))
 
@@ -392,19 +402,32 @@ def print_note_fake_program():
             if id(vis_tensor[i]) == id(vis_tensor[j]) and flag_vis_tensor[j] == False:
                 flag_vis_tensor[j] = True
 
-    print(f"\033[32mThis program has {len(unique_vis_tensor)} input tensor: \033[0m")
-    for input_tensor in unique_vis_tensor:
-        print(f"\033[32mShape{get_tensor_shape(input_tensor)}\033[0m")
-        print(f"\033[32m{input_tensor}\033[0m")
+    if len(unique_vis_tensor) == 0:
         print(
-            f"\033[32m-----------------------------------------------------------\033[0m"
+            f"\033[32mThis program has {len(extra_input_tensor)} input tensor: \033[0m"
         )
-    if vis_parameters:
+        for input_tensor in iter(extra_input_tensor):
+            print(f"\033[32mShape{get_tensor_shape(input_tensor)}\033[0m")
+            print(f"\033[32m{input_tensor}\033[0m")
+            print(
+                f"\033[32m-----------------------------------------------------------\033[0m"
+            )
+    else:
         print(
-            f"\033[32m-------------------nn.Module Parameters---------------------\033[0m"
+            f"\033[32mThis program has {len(unique_vis_tensor)} input tensor: \033[0m"
         )
-        for name, param in vis_parameters.items():
-            print(f"\033[32m{name}: {param}\033[0m")
+        for input_tensor in unique_vis_tensor:
+            print(f"\033[32mShape{get_tensor_shape(input_tensor)}\033[0m")
+            print(f"\033[32m{input_tensor}\033[0m")
+            print(
+                f"\033[32m-----------------------------------------------------------\033[0m"
+            )
+        if vis_parameters:
+            print(
+                f"\033[32m-------------------nn.Module Parameters---------------------\033[0m"
+            )
+            for name, param in vis_parameters.items():
+                print(f"\033[32m{name}: {param}\033[0m")
 
 
 def clear_note_fake_program():
@@ -415,6 +438,7 @@ def clear_note_fake_program():
     vis_tensor.clear()
     flow_res_id_eager2_graph.clear()
     vis_parameters.clear()
+    extra_input_tensor.clear()
 
 
 class DualObject:
