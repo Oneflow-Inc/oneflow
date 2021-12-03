@@ -100,20 +100,6 @@ __global__ void BroadcastPReluSingleAlphaBackwardGpu<half>(const int32_t elem_cn
   }
 }
 
-// template<typename T>
-// __global__ void BroadcastPReluMultiAlphaNaiveForwardGpu(const int32_t elem_cnt, const int32_t
-// alpha_size,
-//                                                    const int32_t inner_size, const T* x,
-//                                                    const T* alpha, T* y) {
-//   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-//     const T x_i = x[i];
-//     int32_t i_div_inner_size = i / inner_size;
-//     int32_t idx_sub_alpha = i_div_inner_size / alpha_size * alpha_size;
-//     int32_t alpha_i = i_div_inner_size - idx_sub_alpha;
-//     y[i] = x_i > 0 ? x_i : x_i * alpha[alpha_i];
-//   }
-// }
-
 template<typename T>
 __global__ void BroadcastPReluMultiAlphaNaiveForwardGpu(const int32_t elem_cnt,
                                                         const int32_t alpha_size,
@@ -121,9 +107,6 @@ __global__ void BroadcastPReluMultiAlphaNaiveForwardGpu(const int32_t elem_cnt,
                                                         const T* alpha, T* y) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T x_i = x[i];
-    // int32_t i_div_inner_size = i / inner_size;
-    // int32_t idx_sub_alpha = i_div_inner_size / alpha_size * alpha_size;
-    // int32_t alpha_i = i_div_inner_size - idx_sub_alpha;
     int32_t alpha_idx = (i / inner_size) % alpha_size;
     y[i] = x_i > 0 ? x_i : x_i * alpha[alpha_idx];
   }
@@ -281,25 +264,18 @@ void DispatchPreluForwardPackSize(ep::Stream* stream, const int64_t elem_cnt,
   const int64_t alpha_inner_size = alpha_size * inner_size;
 
   if (pack_size >= 8 && inner_size % 8 == 0) {
-    printf("Here use packsize is 8\n");
     PReluForwardMultiAlphaGpu<T, IndexType, 8>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, alpha_size, inner_size, alpha_inner_size, x, alpha, y);
   } else if (pack_size >= 4 && inner_size % 4 == 0) {
-    printf("Here use packsize is 4\n");
-
     PReluForwardMultiAlphaGpu<T, IndexType, 4>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, alpha_size, inner_size, alpha_inner_size, x, alpha, y);
   } else if (pack_size >= 2 && inner_size % 2 == 0) {
-    printf("Here use packsize is 2\n");
-
     PReluForwardMultiAlphaGpu<T, IndexType, 2>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, alpha_size, inner_size, alpha_inner_size, x, alpha, y);
   } else {
-    printf("Here use Naive prelu alpha Kernel!\n");
-
     BroadcastPReluMultiAlphaNaiveForwardGpu<T>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, alpha_size, inner_size, x, alpha, y);
@@ -330,32 +306,24 @@ void DispatchPreluBackwardPackSize(ep::Stream* stream, const int64_t elem_cnt,
   const int64_t alpha_inner_size = alpha_size * inner_size;
 
   if (pack_size >= 8 && inner_size % 8 == 0) {
-    printf("Here use packsize is 8\n");
     PReluBackwardMultiAlphaGpu<T, IndexType, 8>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, alpha_size, inner_size, x, alpha, dy, dx, alpha_diff);
   } else if (pack_size >= 4 && inner_size % 4 == 0) {
-    printf("Here use packsize is 4\n");
     PReluBackwardMultiAlphaGpu<T, IndexType, 4>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, alpha_size, inner_size, x, alpha, dy, dx, alpha_diff);
   } else if (pack_size >= 2 && inner_size % 2 == 0) {
-    printf("Here use packsize is 2\n");
     PReluBackwardMultiAlphaGpu<T, IndexType, 2>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, alpha_size, inner_size, x, alpha, dy, dx, alpha_diff);
   } else {
-    printf("Here use Naive Backward prelu alpha Kernel!\n");
     BroadcastPReluMultiAlphaNaiveBackwardGpu<T>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, alpha_size, inner_size, x, alpha, dy, dx, alpha_diff);
   }
 }
 
-/*
-void DispatchPreluBackwardPackSize(ep::Stream* stream, const int64_t elem_cnt, const int64_t
-alpha_size, const int64_t inner_size, const T* x, const T* alpha, const T* dy, T* dx, T* alpha_diff)
-*/
 template<typename T>
 void DispatchPreluBackwardIndex(ep::Stream* stream, const int64_t elem_cnt,
                                 const int64_t alpha_size, const int64_t inner_size, const T* x,
@@ -396,11 +364,6 @@ class GpuPReluKernel final : public user_op::OpKernel {
              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
               elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), y->mut_dptr<T>());
     } else {
-      // BroadcastPReluMultiAlphaNaiveForwardGpu<T>
-      //     <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-      //        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-      //         elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(),
-      //         y->mut_dptr<T>());
       DispatchPreluForwardIndex<T>(
           ctx->stream(), elem_cnt, alpha_size, inner_size, reinterpret_cast<const T*>(x->dptr()),
           reinterpret_cast<const T*>(alpha->dptr()), reinterpret_cast<T*>(y->mut_dptr()));
@@ -451,11 +414,6 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
               elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), dy->dptr<T>(),
               dx->mut_dptr<T>(), broadcasted_alpha_diff);
     } else {
-      // BroadcastPReluMultiAlphaNaiveBackwardGpu<T>
-      //     <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-      //        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-      //         elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), dy->dptr<T>(),
-      //         dx->mut_dptr<T>(), broadcasted_alpha_diff);
       DispatchPreluBackwardIndex<T>(ctx->stream(), elem_cnt, alpha_size, inner_size, x->dptr<T>(),
                                     alpha->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>(),
                                     broadcasted_alpha_diff);
