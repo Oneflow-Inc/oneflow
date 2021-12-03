@@ -40,7 +40,7 @@ void CudaDevice::SetAsActiveDevice() { OF_CUDA_CHECK(cudaSetDevice(device_index_
 
 Stream* CudaDevice::CreateStream() {
   CudaCurrentDeviceGuard guard(device_index_);
-  return new CudaStream(device_index_);
+  return new CudaStream(this);
 }
 
 void CudaDevice::DestroyStream(Stream* stream) {

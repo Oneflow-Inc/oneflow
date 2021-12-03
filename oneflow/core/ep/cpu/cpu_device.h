@@ -30,6 +30,9 @@ class CpuDevice : public Device {
 
   void SetAsActiveDevice() override;
 
+  DeviceType device_type() const override { return DeviceType::kCPU; }
+  size_t device_index() const override { return 0; }
+
   Stream* CreateStream() override;
   void DestroyStream(Stream* stream) override;
 
