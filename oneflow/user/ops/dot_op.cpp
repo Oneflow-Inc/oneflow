@@ -28,7 +28,7 @@ REGISTER_USER_OP("dot")
       const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
       CHECK_OR_RETURN(x.shape() == y.shape()) << "Input tensor shape is different";
       CHECK_OR_RETURN(x.shape().NumAxes() == 1) << "Input tensor is not 1D";
-      *ctx->OutputShape("out", 0) = Shape({1});
+      *ctx->OutputShape("out", 0) = Shape({});
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
