@@ -21,7 +21,7 @@ namespace oneflow {
 namespace ep {
 
 ActiveDeviceGuard::ActiveDeviceGuard(Device* device) {
-  device_manager_ =
+  device_manager_ =                                                                       // NOLINT
       Global<ep::DeviceManagerRegistry>::Get()->GetDeviceManager(device->device_type());  // NOLINT
   CHECK_NOTNULL(device_manager_);
   saved_active_device_ = device_manager_->GetActiveDeviceIndex();

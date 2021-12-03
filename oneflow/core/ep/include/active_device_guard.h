@@ -28,7 +28,7 @@ class DeviceManager;
 class ActiveDeviceGuard {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActiveDeviceGuard);
-  ActiveDeviceGuard(Device* device);
+  explicit ActiveDeviceGuard(Device* device);
   ~ActiveDeviceGuard();
 
  private:
