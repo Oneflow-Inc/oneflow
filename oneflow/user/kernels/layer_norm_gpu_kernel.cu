@@ -253,11 +253,11 @@ void LayerNormBackwardGpu(ep::Stream* stream, const int64_t num_instances, const
                           const T* add_to_output_ptr, T* dx_ptr) {
   using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
   cuda::layer_norm::DirectLoad<T, ComputeType> load_x(x_ptr, norm_size);
-  ScaleLoad<T, ComputeType, do_scale> load_dy(dy_ptr, gamma_ptr, norm_size);
+  ScaleLoad<T, ComputeType, do_scale> load_scaled_dy(dy_ptr, gamma_ptr, norm_size);
   AddStore<ComputeType, T, do_add> store(add_to_output_ptr, dx_ptr, norm_size);
-  OF_CUDA_CHECK((cuda::layer_norm::DispatchLayerNormGrad<decltype(load_x), decltype(load_dy),
+  OF_CUDA_CHECK((cuda::layer_norm::DispatchLayerNormGrad<decltype(load_x), decltype(load_scaled_dy),
                                                          decltype(store), ComputeType>(
-      stream->As<ep::CudaStream>()->cuda_stream(), load_x, load_dy, store,
+      stream->As<ep::CudaStream>()->cuda_stream(), load_x, load_scaled_dy, store,
       mean->dptr<ComputeType>(), inv_variance->dptr<ComputeType>(), num_instances, norm_size)));
 }
 
