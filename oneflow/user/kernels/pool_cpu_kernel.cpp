@@ -24,11 +24,11 @@ namespace {
 
 struct PoolOpKernelCache final : public user_op::OpKernelCache {
   Params3D params_3d;
-  PoolOpKernelCache(Params3D params_3d) : params_3d(params_3d) {}
+  explicit PoolOpKernelCache(const Params3D& params_3d) : params_3d(params_3d) {}
   const Params3D& GetParams3D() const { return params_3d; }
 };
 
-std::shared_ptr<PoolOpKernelCache> DoCreatePoolOpKernelState(user_op::KernelCacheContext* ctx,
+std::shared_ptr<PoolOpKernelCache> InitPoolOpKernelCache(user_op::KernelCacheContext* ctx,
                                                              const int32_t& dim) {
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
   const std::string& data_format = ctx->Attr<std::string>("data_format");
@@ -364,7 +364,7 @@ class AvgPool1DCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return DoCreatePoolOpKernelState(ctx, 1);
+    return InitPoolOpKernelCache(ctx, 1);
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
@@ -383,7 +383,7 @@ class AvgPool1DGradCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return DoCreatePoolOpKernelState(ctx, 1);
+    return InitPoolOpKernelCache(ctx, 1);
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
@@ -402,7 +402,7 @@ class AvgPool2DCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return DoCreatePoolOpKernelState(ctx, 2);
+    return InitPoolOpKernelCache(ctx, 2);
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
@@ -421,7 +421,7 @@ class AvgPool2DGradCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return DoCreatePoolOpKernelState(ctx, 2);
+    return InitPoolOpKernelCache(ctx, 2);
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
@@ -440,7 +440,7 @@ class AvgPool3DCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return DoCreatePoolOpKernelState(ctx, 3);
+    return InitPoolOpKernelCache(ctx, 3);
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
@@ -459,7 +459,7 @@ class AvgPool3DGradCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return DoCreatePoolOpKernelState(ctx, 3);
+    return InitPoolOpKernelCache(ctx, 3);
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
@@ -478,7 +478,7 @@ class MaxPool1DCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return DoCreatePoolOpKernelState(ctx, 1);
+    return InitPoolOpKernelCache(ctx, 1);
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
@@ -497,7 +497,7 @@ class MaxPool1DGradCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return DoCreatePoolOpKernelState(ctx, 1);
+    return InitPoolOpKernelCache(ctx, 1);
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
@@ -516,7 +516,7 @@ class MaxPool2DCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return DoCreatePoolOpKernelState(ctx, 2);
+    return InitPoolOpKernelCache(ctx, 2);
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
@@ -535,7 +535,7 @@ class MaxPool2DGradCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return DoCreatePoolOpKernelState(ctx, 2);
+    return InitPoolOpKernelCache(ctx, 2);
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
@@ -554,7 +554,7 @@ class MaxPool3DCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return DoCreatePoolOpKernelState(ctx, 3);
+    return InitPoolOpKernelCache(ctx, 3);
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
@@ -573,7 +573,7 @@ class MaxPool3DGradCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return DoCreatePoolOpKernelState(ctx, 3);
+    return InitPoolOpKernelCache(ctx, 3);
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,

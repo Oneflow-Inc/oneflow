@@ -295,9 +295,9 @@ struct ConvKernelUtil final {
 
 template<typename T>
 struct ConvOpKernelCache final : public user_op::OpKernelCache {
-  Im2ColFunc<T> im2col_func_;
-  Col2ImFunc<T> col2im_func_;
-  GemmFunc<T> forward_func_;
+  Im2ColFunc<T> im2col_func_ = nullptr;
+  Col2ImFunc<T> col2im_func_ = nullptr;
+  GemmFunc<T> forward_func_ = nullptr;
 
   Shape in_5d_shape_;
   Shape out_5d_shape_;
@@ -307,9 +307,9 @@ struct ConvOpKernelCache final : public user_op::OpKernelCache {
   std::vector<int32_t> dilation_rate_3d_;
   std::vector<int32_t> padding_before_3d_;
 
-  enum CBLAS_TRANSPOSE is_out_diff_need_trans_;
-  int32_t idx_offset_;
-  bool is_dynamic_;
+  enum CBLAS_TRANSPOSE is_out_diff_need_trans_ = CblasNoTrans;
+  int32_t idx_offset_{};
+  bool is_dynamic_{};
 };
 
 template<typename T>

@@ -19,7 +19,7 @@ namespace oneflow {
 
 struct AvgPoolingOpKernelCache final : public user_op::OpKernelCache {
   AvgPoolingParams3D params_3d;
-  AvgPoolingOpKernelCache(AvgPoolingParams3D params_3d) : params_3d(params_3d) {}
+  explicit AvgPoolingOpKernelCache(const AvgPoolingParams3D& params_3d) : params_3d(params_3d) {}
   const AvgPoolingParams3D& GetParams3D() const { return params_3d; }
 };
 
