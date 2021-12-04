@@ -14,17 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 # RUN: python3 %s
-import oneflow as torch
+import oneflow as flow
 
 
-class MyModule(torch.nn.Module):
+class MyModule(flow.nn.Module):
     def __init__(self, N, M):
         super(MyModule, self).__init__()
         # This parameter will be copied to the new ScriptModule
-        self.weight = torch.nn.Parameter(torch.rand(N, M))
+        self.weight = flow.nn.Parameter(flow.rand(N, M))
 
         # When this submodule is used, it will be compiled
-        self.linear = torch.nn.Linear(N, M)
+        self.linear = flow.nn.Linear(N, M)
 
     def forward(self, input):
         output = self.linear(input)
@@ -32,6 +32,6 @@ class MyModule(torch.nn.Module):
         return output
 
 
-linear = torch.jit.trace(MyModule(2, 3))
+linear = flow.jit.trace(MyModule(2, 3))
 for i in range(100):
-    print(linear(torch.randn(2, 2)))
+    print(linear(flow.randn(2, 2)))
