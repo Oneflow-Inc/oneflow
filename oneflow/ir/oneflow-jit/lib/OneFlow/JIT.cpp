@@ -16,6 +16,7 @@ limitations under the License.
 #include "OneFlow/JIT.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/Dialect/JIT/IR/OneFlowJITDialect.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
 #include "OneFlow/jit_op_interpreter.h"
@@ -177,6 +178,7 @@ using namespace mlir;
 
 OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context) {
   context->loadDialect<mlir::oneflow::OneFlowDialect>();
+  context->loadDialect<mlir::oneflow::jit::OneFlowJITDialect>();
   context->loadDialect<StandardOpsDialect>();
   context->loadDialect<LLVM::LLVMDialect>();
   OwningOpRef<ModuleOp> module(

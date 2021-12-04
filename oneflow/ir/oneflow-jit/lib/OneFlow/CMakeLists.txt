@@ -1,15 +1,16 @@
-add_llvm_library(MLIROneFlowJIT
+add_subdirectory(Dialect)
+
+add_mlir_library(MLIROneFlowJIT
   JIT.cpp
   jit_op_interpreter.cpp
-  OneFlowJITDialect.cpp
-  OneFlowJITOps.cpp
+  EXCLUDE_FROM_LIBMLIR
   ADDITIONAL_HEADER_DIRS
   ${PROJECT_SOURCE_DIR}/oneflow-translate/include
   ${PROJECT_SOURCE_DIR}/oneflow-jit/include
   DEPENDS oneflow_deps
 	LINK_LIBS PUBLIC
 	MLIRIR
-  BUILDTREE_ONLY
+  MLIROneFlowJITDialect
 )
 
 llvm_update_compile_flags(MLIROneFlowJIT)
