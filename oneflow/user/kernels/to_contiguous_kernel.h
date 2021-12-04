@@ -60,7 +60,7 @@ class ToContiguousUtilBase : public ToContiguousUtilParam {
       if (block_size == in_stride[i]) {
         block_size *= in_shape.At(i);
       } else {
-        break;
+        continue;
       }
     }
   }
