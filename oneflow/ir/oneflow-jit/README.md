@@ -70,7 +70,7 @@ There will be two modes of JIT in OneFlow:
 
 There are mainly three components in the JIT system:
 
-- JIT interpreter: a special interpreter works on eager inputs and lazy intermediate tensors.
+- JIT Interpreter: a special interpreter works on eager inputs and lazy intermediate tensors.
 - Importer: convert OneFlow's representation to MLIR and and vice versa.
 - Executor: three types of executor under development or consideration
   - Re-dispatch: convert every MLIR op to one User Op and have eager interpreter dispatch them. 10% performance boost over pure eager mode is expected. This will be used for `oneflow.jit.trace` mainly.
@@ -82,7 +82,7 @@ There are mainly three components in the JIT system:
 - Avoid binding a OneFlow tensor with a MLIR Tensor Value. The side effect on OneFlow Tensor should be modeled with MLIR Op.
 - Should not introduce any scope API in Python/Pybind11.
   - Should allow Python to abort the trace. Introducing scope will prevent this.
-  - JITInterpreter will check if it is in the right state when certain API is called.
+  - JIT Interpreter will check if it is in the right state when certain API is called.
 
 ### ~~Sequence of operations~~
 
