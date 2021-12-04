@@ -20,10 +20,10 @@ namespace oneflow {
 namespace one {
 
 struct DotCaptureState : public AutoGradCaptureState {
-  bool x_requires_grad;
-  bool y_requires_grad;
-  size_t x_offset;
-  size_t y_offset;
+  bool x_requires_grad = false;;
+  bool y_requires_grad = false;;
+  size_t x_offset = 0;
+  size_t y_offset = 0;
 };
 
 class DotGrad : public OpExprGradFunction<DotCaptureState> {
