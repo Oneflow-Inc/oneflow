@@ -95,7 +95,8 @@ def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpI
 }
 
 class OneFlow_ConcreteSystemOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_BaseOp<mnemonic, !listconcat(traits, [OneFlow_IsImportCompatible, 
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [OneFlow_IsOpConfCompatible, 
+        OneFlow_IsImportCompatible, 
         DeclareOpInterfaceMethods<ControlEdgeCompatibleInterface>])> {
   let input = (ins);
   let output = (ins);
@@ -193,7 +194,7 @@ def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
   let dependentDialects = ["tosa::TosaDialect", "memref::MemRefDialect", "StandardOpsDialect"];
 }
 
-def MapSCFToGPUPass : Pass<"gpu-greedy-parallel-loop-mapping", "FuncOp"> {
+def MapSCFToGPUPass : Pass<"gpu-greedy-parallel-loop-mapping", "ModuleOp"> {
   let summary = "Greedily maps all parallel loops to gpu hardware ids";
   let constructor = "mlir::oneflow::createMapSCFToGPUPass()";
   let dependentDialects = ["scf::SCFDialect"];
@@ -210,7 +211,7 @@ def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
   let constructor = "mlir::oneflow::createOutlineJitFunctionPass()";
 }
 
-def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "FuncOp"> {
+def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createFuseIntoExistingOpPass()";
 }

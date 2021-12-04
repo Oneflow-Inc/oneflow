@@ -24,6 +24,7 @@ limitations under the License.
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/UseDefLists.h"
 #include "mlir/IR/Value.h"
+#include "mlir/IR/Visitors.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -91,11 +92,11 @@ class JobImporter : Importer {
   LogicalResult ProcessOutputOp(const ::oneflow::OperatorConf& op_conf);
 
   LogicalResult TryToUpdateJob();
-  LogicalResult AddUserOp(Operation* op, ::oneflow::Job& job);
-  LogicalResult AddSystemOp(Operation* op, ::oneflow::Job& job);
-  LogicalResult AddVariableOp(Operation* op, ::oneflow::Job& job);
-  LogicalResult AddInputOp(Operation* op, ::oneflow::Job& job);
-  LogicalResult AddOutputOp(Operation* op, ::oneflow::Job& job);
+  LogicalResult ConvertUserOp(Operation* op, ::oneflow::Job& job);
+  LogicalResult ConvertSystemOp(Operation* op, ::oneflow::Job& job);
+  LogicalResult ConvertVariableOp(Operation* op, ::oneflow::Job& job);
+  LogicalResult ConvertInputOp(Operation* op, ::oneflow::Job& job);
+  LogicalResult ConvertOutputOp(Operation* op, ::oneflow::Job& job);
 
   Type GetTensorTypeOfLbn(const std::string& lbn) override;
   Type GetInterfaceBlobConfType(const ::oneflow::InterfaceBlobConf& blob_conf);
@@ -578,15 +579,12 @@ LogicalResult JobImporter::ProcessJob() {
   is_succeeded = true;
   size_t input_count = 0;
   job_wrapper_.TopoForEachOpConf([&](const ::oneflow::OperatorConf* op_conf) {
-    std::cout << "TopoForEachOpConf, op_name: " << op_conf->name()
-              << ", op_type_case: " << op_conf->op_type_case() << std::endl;
     if (is_succeeded == false) { return; }
     if (op_conf->has_user_conf()) {
       is_succeeded = succeeded(ProcessUserOp(*op_conf));
     } else if (op_conf->has_input_conf()) {
       is_succeeded = succeeded(ProcessInputOp(*op_conf, entryBlock, input_count));
     } else if (op_conf->has_output_conf()) {
-      std::cout << "meet output op: " << op_conf->name() << std::endl;
       is_succeeded = succeeded(ProcessOutputOp(*op_conf));
       if (is_succeeded) {
         auto result = entryBlock->back().getResult(0);
@@ -634,29 +632,57 @@ LogicalResult JobImporter::TryToUpdateJob() {
 
   Operation* job_op = nullptr;
   llvm::SmallVector<Value, 4> outputs;
-  auto AddOp = [&](Operation* op) -> WalkResult {
-    if (llvm::dyn_cast<oneflow::UserOp>(op)) {
-      if (failed(AddUserOp(op, new_job))) { return WalkResult::interrupt(); }
-    } else if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
-      if (failed(AddSystemOp(op, new_job))) { return WalkResult::interrupt(); }
-    } else if (llvm::dyn_cast<oneflow::VariableOp>(op)) {
-      if (failed(AddVariableOp(op, new_job))) { return WalkResult::interrupt(); }
-    } else if (auto return_op = llvm::dyn_cast<ReturnOp>(op)) {
-      for (auto operand : return_op->getOperands()) { outputs.emplace_back(operand); }
-    } else if (auto job = llvm::dyn_cast<oneflow::Job>(op)) {
-      job_op = op;
-      new_job.mutable_job_conf()->set_job_name(job.sym_name().str());
-    } else {
-      if (!llvm::dyn_cast<oneflow::Job>(op) && llvm::dyn_cast<ModuleOp>(op->getParentOp())) {
-        return WalkResult::skip();
+
+  auto find_first_job = [&](oneflow::Job job) -> WalkResult {
+    job_op = job.getOperation();
+    new_job.mutable_job_conf()->set_job_name(job.sym_name().str());
+    return WalkResult::interrupt();
+  };
+
+  GetModule().getOperation()->walk(find_first_job);
+  if (!job_op) {
+    GetModule()->emitError("job not found. module op: ") << *GetModule();
+    return failure();
+  }
+
+  auto ConvertOp = [&](Operation* op) -> WalkResult {
+    if (op->hasTrait<OpTrait::IsOpConfCompatible>()) {
+      if (llvm::dyn_cast<oneflow::UserOp>(op)) {
+        op->emitError("excepted concrete UserOp, but got generic UserOp: ") << *op;
+        return WalkResult::interrupt();
+      } else if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
+        if (failed(ConvertSystemOp(op, new_job))) {
+          op->emitError("failed to process SystemOp: ") << *op;
+          return WalkResult::interrupt();
+        }
+      } else if (llvm::dyn_cast<oneflow::VariableOp>(op)) {
+        if (failed(ConvertVariableOp(op, new_job))) {
+          op->emitError("failed to process VariableOp: ") << *op;
+          return WalkResult::interrupt();
+        }
+      } else if (llvm::dyn_cast<oneflow::InputOp>(op) || llvm::dyn_cast<oneflow::OutputOp>(op)) {
+        // do nothing and advance
+      } else {
+        if (!dyn_cast<UserOpCompatible>(op)) {
+          op->emitError("op is not UserOpCompatible ") << *op;
+          return WalkResult::interrupt();
+        }
+        if (failed(ConvertUserOp(op, new_job))) {
+          op->emitError("failed to process UserOp: ") << *op;
+          return WalkResult::interrupt();
+        }
       }
+    } else if (llvm::dyn_cast<mlir::oneflow::Job>(op)) {
+      // do nothing and advance
+    } else if (auto return_op = llvm::dyn_cast<mlir::oneflow::ReturnOp>(op)) {
+      for (auto operand : return_op->getOperands()) { outputs.emplace_back(operand); }
+    } else {
+      op->emitError("unexcepted op: ") << *op;
+      return WalkResult::interrupt();
     }
     return WalkResult::advance();
   };
-
-  if (GetModule().getOperation()->walk(AddOp).wasInterrupted()) { return failure(); }
-
-  if (!job_op) { return failure(); }
+  if (job_op->walk(ConvertOp).wasInterrupted()) { return failure(); }
 
   // add input op
   auto arguments = llvm::dyn_cast<oneflow::Job>(job_op).body().front().getArguments();
@@ -664,26 +690,26 @@ LogicalResult JobImporter::TryToUpdateJob() {
     for (auto& use : argument.getUses()) {
       Operation* owner = use.getOwner();
       if (!dyn_cast<oneflow::InputOp>(owner)) { return failure(); }
-      if (failed(AddInputOp(owner, new_job))) { return failure(); }
+      if (failed(ConvertInputOp(owner, new_job))) { return failure(); }
     }
   }
   // add output op
   for (auto output : outputs) {
     Operation* owner = output.getDefiningOp();
     if (!dyn_cast<oneflow::OutputOp>(owner)) { return failure(); }
-    if (failed(AddOutputOp(owner, new_job))) { return failure(); }
+    if (failed(ConvertOutputOp(owner, new_job))) { return failure(); }
   }
 
   job_wrapper_.UpdateJob(&new_job);
   return success();
 }
 
-LogicalResult JobImporter::AddUserOp(Operation* op, ::oneflow::Job& job) {
+LogicalResult JobImporter::ConvertUserOp(Operation* op, ::oneflow::Job& job) {
+  // TODO: concrete user op should not use generic UserOpAdaptor
   oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
   UpdatePlacement(op, user_op_adaptor, job);
 
   auto* op_conf = job.mutable_net()->add_op();
-  ;
   auto* user_conf = op_conf->mutable_user_conf();
   if (!succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))) { return failure(); }
   if (!succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))) { return failure(); }
@@ -692,7 +718,7 @@ LogicalResult JobImporter::AddUserOp(Operation* op, ::oneflow::Job& job) {
   return success();
 }
 
-LogicalResult JobImporter::AddSystemOp(Operation* op, ::oneflow::Job& job) {
+LogicalResult JobImporter::ConvertSystemOp(Operation* op, ::oneflow::Job& job) {
   oneflow::SystemOpAdaptor system_op_adaptor(op->getOperands(), op->getAttrDictionary());
   UpdatePlacement(op, system_op_adaptor, job);
   auto op_name = system_op_adaptor.op_name().getValue().str();
@@ -708,21 +734,21 @@ LogicalResult JobImporter::AddSystemOp(Operation* op, ::oneflow::Job& job) {
   return success();
 }
 
-LogicalResult JobImporter::AddVariableOp(Operation* op, ::oneflow::Job& job) {
+LogicalResult JobImporter::ConvertVariableOp(Operation* op, ::oneflow::Job& job) {
   oneflow::VariableOpAdaptor op_adaptor(op->getOperands(), op->getAttrDictionary());
   UpdatePlacement(op, op_adaptor, job);
   auto* op_conf = job.mutable_net()->add_op();
   return ConvertVariableOpConf(op, op_adaptor, op_conf);
 }
 
-LogicalResult JobImporter::AddInputOp(Operation* op, ::oneflow::Job& job) {
+LogicalResult JobImporter::ConvertInputOp(Operation* op, ::oneflow::Job& job) {
   oneflow::InputOpAdaptor op_adaptor(op->getOperands(), op->getAttrDictionary());
   UpdatePlacement(op, op_adaptor, job);
   auto* op_conf = job.mutable_net()->add_op();
   return ConvertInputOpConf(op, op_adaptor, op_conf);
 }
 
-LogicalResult JobImporter::AddOutputOp(Operation* op, ::oneflow::Job& job) {
+LogicalResult JobImporter::ConvertOutputOp(Operation* op, ::oneflow::Job& job) {
   oneflow::OutputOpAdaptor op_adaptor(op->getOperands(), op->getAttrDictionary());
   UpdatePlacement(op, op_adaptor, job);
   auto* op_conf = job.mutable_net()->add_op();
@@ -773,13 +799,13 @@ Type JobImporter::GetDataTypeType(::oneflow::DataType dt) {
 LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wrapper,
                                      MLIRContext* context, OwningModuleRef& module) {
   mlir::PassManager pm(context);
-  pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
+  pm.addPass(createCanonicalizerPass());
   std::string graphviz;
   if (job_wrapper.IsLastIRPass() && std::getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS") != nullptr) {
     pm.addPass(oneflow::createOutlineJitFunctionPass());
   }
-  pm.addNestedPass<mlir::FuncOp>(oneflow::createFuseIntoExistingOpPass());
-  pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
+  pm.addPass(oneflow::createFuseIntoExistingOpPass());
+  pm.addPass(createCanonicalizerPass());
   llvm::raw_string_ostream os_graphviz(graphviz);
   pm.addPass(createPrintOpGraphPass(os_graphviz));
   if (mlir::failed(pm.run(*module))) {
@@ -845,7 +871,7 @@ void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::st
   JobImporter imp(job_wrapper, &context, module.get());
   if (succeeded(imp.ProcessJob())) {
     mlir::PassManager pm(&context);
-    pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
+    pm.addPass(createCanonicalizerPass());
     if (mlir::failed(pm.run(*module))) {
       module->emitError("Failed to run canonicalizer pass");
       exit(EXIT_FAILURE);
