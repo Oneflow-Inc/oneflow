@@ -1,5 +1,6 @@
 #include "OneFlow/Dialect/JIT/IR/OneFlowJITDialect.h"
 #include "OneFlow/Dialect/JIT/IR/OneFlowJITOps.h"
+#include "OneFlow/Dialect/JIT/IR/OneFlowJITOpsDialect.cpp.inc"
 namespace mlir {
 namespace oneflow {
 namespace jit {
