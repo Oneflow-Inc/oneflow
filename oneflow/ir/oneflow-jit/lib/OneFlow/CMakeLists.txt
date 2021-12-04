@@ -1,6 +1,8 @@
 add_llvm_library(MLIROneFlowJIT
   JIT.cpp
   jit_op_interpreter.cpp
+  OneFlowJITDialect.cpp
+  OneFlowJITOps.cpp
   ADDITIONAL_HEADER_DIRS
   ${PROJECT_SOURCE_DIR}/oneflow-translate/include
   ${PROJECT_SOURCE_DIR}/oneflow-jit/include
