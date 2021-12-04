@@ -346,6 +346,8 @@ std::string GetConvOpClassName(const std::string& op_name) {
 }
 
 std::string GetBaseOp(const std::string& op_name) {
+  const bool skip_base_op = ParseBooleanFromEnv("ONEFLOW_MLIR_GEN_SKIP_BASE_OP", false);
+  if (skip_base_op) return "OneFlow_BaseOp";
   if (IsInvolutionOp(op_name)) {
     return "OneFlow_InvolutionBaseOp";
   } else if (IsIdempotentOp(op_name)) {
