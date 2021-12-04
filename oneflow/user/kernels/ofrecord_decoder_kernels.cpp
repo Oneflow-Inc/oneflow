@@ -191,18 +191,17 @@ int JpegPartialDecode(const unsigned char* data, size_t length,
   if (random_crop_gen) {
     CropWindow crop;
     random_crop_gen->GenerateCropWindow({height, width}, &crop);
-    u_crop_x = crop.anchor.At(0);
-    u_crop_y = crop.anchor.At(1);
+    u_crop_y = crop.anchor.At(0);
+    u_crop_x = crop.anchor.At(1);
     u_crop_h = crop.shape.At(0);
     u_crop_w = crop.shape.At(1);
     tmp_w = u_crop_w;
   } else {
-    u_crop_x = 0;
     u_crop_y = 0;
+    u_crop_x = 0;
     u_crop_h = height;
     u_crop_w = width;
-  }
-
+  
   jpeg_crop_scanline(&cinfo, &u_crop_x, &tmp_w);
   int row_stride = tmp_w * pixel_size;
   if (jpeg_skip_scanlines(&cinfo, u_crop_y) != u_crop_y) { return -2; }
@@ -244,7 +243,6 @@ int JpegPartialDecode(const unsigned char* data, size_t length,
   CHECK_EQ(image_shape.elem_cnt(), buffer->nbytes());
   CHECK_EQ(image_shape.elem_cnt(), cropped.total() * cropped.elemSize());
   memcpy(buffer->mut_data<uint8_t>(), cropped.ptr(), image_shape.elem_cnt());
-
   return 0;
 }
 
