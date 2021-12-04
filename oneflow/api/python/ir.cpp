@@ -367,6 +367,8 @@ bool ShouldSkipOperandAndResultsAndAttrs(const std::string& op_name) {
 }
 
 bool ShouldGenEmptyBody(const std::string& op_name) {
+  const bool skip_base_op = ParseBooleanFromEnv("ONEFLOW_MLIR_GEN_SKIP_BASE_OP", false);
+  if (skip_base_op) return false;
   return IsPoolOp(op_name) || IsConvOp(op_name);
 }
 
