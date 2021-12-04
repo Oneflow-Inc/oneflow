@@ -1546,6 +1546,19 @@ class VarianceFunctor {
   }
 };
 
+class DotFunctor {
+ public:
+  DotFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("dot").Input("x").Input("y").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& other) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, other});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
 class MovedimVecFunctor {
  public:
   MovedimVecFunctor() = default;
@@ -1678,6 +1691,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarLogicalXorFunctor, ScalarLogicalXor2Functor>("ScalarLogicalXor");
   m.add_functor<StandardDeviationFunctor>("StandardDeviation");
   m.add_functor<VarianceFunctor>("Variance");
+  m.add_functor<DotFunctor>("Dot");
   m.add_functor<MovedimVecFunctor>("MovedimVec");
   m.add_functor<MovedimIntFunctor>("MovedimInt");
 };

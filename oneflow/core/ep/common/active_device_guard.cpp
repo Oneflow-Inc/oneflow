@@ -13,19 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/ep/cpu/cpu_stream.h"
+#include "oneflow/core/ep/include/active_device_guard.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
 namespace ep {
 
-DeviceType CpuStream::device_type() const { return DeviceType::kCPU; }
+ActiveDeviceGuard::ActiveDeviceGuard(Device* device) {
+  device_manager_ =                                                                       // NOLINT
+      Global<ep::DeviceManagerRegistry>::Get()->GetDeviceManager(device->device_type());  // NOLINT
+  CHECK_NOTNULL(device_manager_);
+  saved_active_device_ = device_manager_->GetActiveDeviceIndex();
+  device->SetAsActiveDevice();
+}
 
-Device* CpuStream::device() const { return device_; }
-
-Maybe<void> CpuStream::Sync() { return Maybe<void>::Ok(); }
-
-void CpuStream::RecordEvent(Event* /*event*/) {}
+ActiveDeviceGuard::~ActiveDeviceGuard() {
+  device_manager_->SetActiveDeviceByIndex(saved_active_device_);
+}
 
 }  // namespace ep
 

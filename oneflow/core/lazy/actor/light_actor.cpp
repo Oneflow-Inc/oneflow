@@ -28,7 +28,6 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/kernel/user_kernel.h"
 #include "oneflow/core/stream/include/stream_context.h"
-#include "oneflow/core/device/device_context_adapter.h"
 
 #ifdef WITH_CUDA
 
@@ -210,7 +209,6 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       : thread_(nullptr),
         actor_ctx_(actor_ctx),
         stream_ctx_(actor_ctx->stream_ctx()),
-        device_ctx_(NewDeviceCtxAdapter(actor_ctx->stream_ctx()->stream())),
         stream_kernel_observer_(nullptr) {
     auto* kernel_observer_provider = dynamic_cast<KernelObserverProvider*>(stream_ctx_);
     if (kernel_observer_provider != nullptr) {
@@ -499,8 +497,6 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
 
   ActorContext* GetActorContext() const override { return actor_ctx_; }
 
-  DeviceCtx* device_ctx() const override { return device_ctx_.get(); }
-
   Blob* BnInOp2Blob(const std::string& bn) const override {
     if (exec_kernel) {
       auto it = kernel_info_[0]->bn_in_op2blob.find(bn);
@@ -587,7 +583,6 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
 #endif
   ActorContext* actor_ctx_;
   StreamContext* stream_ctx_;
-  std::unique_ptr<DeviceCtx> device_ctx_;
   std::vector<ActorMsg> sync_post_act_msgs_;
   std::vector<ActorMsg> async_post_act_msgs_;
   KernelObserver* stream_kernel_observer_;
