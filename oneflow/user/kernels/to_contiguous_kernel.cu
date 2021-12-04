@@ -23,36 +23,36 @@ namespace oneflow {
 
 namespace {
 
-template<size_t n>
+template<size_t ndims>
 struct StrideParam {
   int64_t stride[SHAPE_MAX_AXIS_SIZE];
 
   // NOLINTNEXTLINE
-  StrideParam(const int64_t* input) {
-    for (int i = 0; i < n; ++i) { stride[i] = input[i]; }
+  StrideParam(const int64_t* stride_vec) {
+    for (int i = 0; i < ndims; ++i) { stride[i] = stride_vec[i]; }
   }
 
-  __device__ int64_t compute_offset(int64_t offset, const StrideParam& other) const {
-    int64_t v = 0;
+  __device__ int64_t compute_index(int64_t output_idx, const StrideParam& input_params) const {
+    int64_t input_idx = 0;
 
-#pragma unroll
-    for (int i = 0; i < n; ++i) {
-      int64_t idx = offset / stride[i];
-      v += idx * other.stride[i];
-      offset -= idx * stride[i];
+    #pragma unroll
+    for (int i = 0; i < ndims; ++i) {
+      int64_t idx = output_idx / stride[i];
+      output_idx -= idx * stride[i];
+      input_idx += idx * input_params.stride[i];
     }
 
-    return v;
+    return input_idx;
   }
 };
 
 template<typename T, size_t ndim>
 __global__ void to_contiguous(int64_t count, StrideParam<ndim> in_stride,
                               StrideParam<ndim> out_stride, const T* in_dptr, T* out_dptr) {
-  CUDA_1D_KERNEL_LOOP_T(int64_t, out_offset, count) {
-    int64_t in_offset = out_stride.compute_offset(out_offset, in_stride);
+  CUDA_1D_KERNEL_LOOP_T(int64_t, out_idx, count) {
+    int64_t in_idx = out_stride.compute_index(out_idx, in_stride);
 
-    out_dptr[out_offset] = in_dptr[in_offset];
+    out_dptr[out_idx] = in_dptr[in_idx];
   }
 }
 
@@ -100,13 +100,12 @@ struct ToContiguousUtil<DeviceType::kCUDA, T> : ToContiguousUtilBase {
   static to_contiguous_fn_map_t<T> to_contiguous_fn_map;
   void operator()() {
     if (contiguous_dim == -1) {
-      OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr, in_dptr, element_count * dsize,
+      OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr, in_dptr, block_size * dsize,
                                     cudaMemcpyDeviceToDevice,
                                     stream->As<ep::CudaStream>()->cuda_stream()));
     } else {
-      const int64_t count = init_out_stride();
       const int ndim = in_shape.NumAxes();
-      to_contiguous_fn_map.call(ndim)(stream, count, in_stride, out_stride, in_dptr, out_dptr);
+      to_contiguous_fn_map.call(ndim)(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
     }
   }
 };

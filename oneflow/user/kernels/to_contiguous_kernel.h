@@ -47,15 +47,18 @@ class ToContiguousUtilBase : public ToContiguousUtilParam {
   ToContiguousUtilBase(ep::Stream* stream, const ShapeView& in_shape,
                        const std::vector<int64_t>& in_stride, const char* in_dptr, char* out_dptr)
       : ToContiguousUtilParam(stream, in_shape, in_stride, in_dptr, out_dptr),
-        element_count(1),
+        block_size(1),
         contiguous_dim(in_shape.NumAxes() - 1),
         out_stride(in_shape.NumAxes()),
         index(contiguous_dim + 1),
         in_offset(0),
-        out_offset(0) {
-    for (; contiguous_dim != -1; --contiguous_dim) {
-      if (element_count == in_stride[contiguous_dim]) {
-        element_count *= in_shape.At(contiguous_dim);
+        out_offset(0),
+        element_count(1) {
+    for (int64_t i = contiguous_dim; i!= -1; --i) {
+      out_stride[i] = element_count;
+      element_count *= in_shape.At(i);
+      if (block_size == in_stride[i]) {
+        block_size *= in_shape.At(i);
       } else {
         break;
       }
@@ -63,18 +66,7 @@ class ToContiguousUtilBase : public ToContiguousUtilParam {
   }
 
  protected:
-  int64_t init_out_stride() {
-    int64_t sum = 1;
-    for (int64_t i = out_stride.size() - 1; i != -1; --i) {
-      out_stride[i] = sum;
-      sum *= in_shape.At(i);
-    }
-    return sum;
-  }
-
-  void init_index() { std::fill(index.begin(), index.end(), 0); }
-
-  bool next_index() {
+  bool finish_stride() {
     int64_t i = contiguous_dim;
     for (; i != -1; --i) {
       if (index[i] == in_shape.At(i) - 1) {
@@ -91,6 +83,7 @@ class ToContiguousUtilBase : public ToContiguousUtilParam {
     return i == -1;
   }
 
+  int64_t block_size;
   int64_t element_count;
   int64_t contiguous_dim;
 

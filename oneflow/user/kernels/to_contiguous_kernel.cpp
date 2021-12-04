@@ -28,16 +28,15 @@ struct ToContiguousUtil<DeviceType::kCPU, T> : ToContiguousUtilBase {
 
   void operator()() {
     if (contiguous_dim == -1) {
-      std::memcpy(out_dptr, in_dptr, element_count * dsize);
+      // 0-dim tensor
+      std::memcpy(out_dptr, in_dptr, block_size * dsize);
     } else {
-      init_index();
-      init_out_stride();
-
+      std::fill(index.begin(), index.end(), 0);
       while (true) {
         std::memcpy(out_dptr + out_offset * dsize, in_dptr + in_offset * dsize,
-                    element_count * dsize);
+                    block_size * dsize);
 
-        if (next_index()) break;
+        if (finish_stride()) break;
       }
     }
   }
