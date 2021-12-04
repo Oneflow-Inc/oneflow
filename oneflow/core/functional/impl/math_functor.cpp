@@ -331,6 +331,54 @@ class ReduceSumFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ReduceAllFunctor {
+ public:
+  ReduceAllFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("reduce_all").Input("input_tensor").Output("output_tensor").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
+                           const bool& keepdims) const {
+    MutableAttrMap attrs;
+    if (axis.empty()) {
+      std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+      std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
+    } else {
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+    }
+    JUST(attrs.SetAttr<bool>("keepdims", keepdims));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ReduceAnyFunctor {
+ public:
+  ReduceAnyFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("reduce_any").Input("input_tensor").Output("output_tensor").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
+                           const bool& keepdims) const {
+    MutableAttrMap attrs;
+    if (axis.empty()) {
+      std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+      std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
+    } else {
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+    }
+    JUST(attrs.SetAttr<bool>("keepdims", keepdims));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 template<class T>
 class ReduceDeviceStageBaseFunctor {
  public:
@@ -1649,6 +1697,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceMeanFunctor>("ReduceMean");
   m.add_functor<ReduceMinFunctor>("ReduceMin");
   m.add_functor<ReduceSumFunctor>("ReduceSum");
+  m.add_functor<ReduceAllFunctor>("ReduceAll");
+  m.add_functor<ReduceAnyFunctor>("ReduceAny");
   m.add_functor<ReduceProdFunctor>("ReduceProd");
   m.add_functor<ReduceMinDeviceStageFunctor>("ReduceMinDeviceStage");
   m.add_functor<ReduceMaxDeviceStageFunctor>("ReduceMaxDeviceStage");

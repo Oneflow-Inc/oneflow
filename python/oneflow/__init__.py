@@ -26,6 +26,7 @@ Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
 locals()["dtype"] = oneflow._oneflow_internal.dtype
+locals()["bool"] = oneflow._oneflow_internal.bool
 locals()["char"] = oneflow._oneflow_internal.char
 locals()["float16"] = oneflow._oneflow_internal.float16
 locals()["half"] = oneflow._oneflow_internal.float16
@@ -320,6 +321,8 @@ from oneflow.nn.modules.reduce_ops import min_op as min
 from oneflow.nn.modules.reduce_ops import sum_op as sum
 from oneflow.nn.modules.reduce_ops import mean_op as mean
 from oneflow.nn.modules.reduce_ops import prod_op as prod
+from oneflow.nn.modules.reduce_ops import all_op as all
+from oneflow.nn.modules.reduce_ops import any_op as any
 from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
