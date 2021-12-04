@@ -105,19 +105,19 @@ def test_cross_entropy_loss(dim=int):
 
 @flow.unittest.skip_unless_1n1d()
 class TestCrossEntropyLossModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_cross_entropy_loss_with_random_data_dim_2(test_case):
         return test_cross_entropy_loss(2)
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_cross_entropy_loss_with_random_data_dim_3(test_case):
         return test_cross_entropy_loss(3)
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_cross_entropy_loss_with_random_data_dim_4(test_case):
         return test_cross_entropy_loss(4)
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_cross_entropy_loss_with_random_data_dim_5(test_case):
         return test_cross_entropy_loss(5)
 
@@ -144,19 +144,19 @@ def test_nll_loss(dim=int):
 
 @flow.unittest.skip_unless_1n1d()
 class TestNLLLossModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_nll_loss_with_random_data_dim_2(test_case):
         return test_nll_loss(2)
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_nll_loss_with_random_data_dim_3(test_case):
         return test_nll_loss(3)
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_nll_loss_with_random_data_dim_4(test_case):
         return test_nll_loss(4)
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_nll_loss_with_random_data_dim_5(test_case):
         return test_nll_loss(5)
 
@@ -183,38 +183,38 @@ def test_bce_loss(dim=int, with_logits: bool = False):
 
 @flow.unittest.skip_unless_1n1d()
 class TestBCELossModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_bce_loss_with_random_data_dim_2(test_case):
         return test_bce_loss(2)
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_bce_loss_with_random_data_dim_3(test_case):
         return test_bce_loss(3)
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_bce_loss_with_random_data_dim_4(test_case):
         return test_bce_loss(4)
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_bce_loss_with_random_data_dim_5(test_case):
         return test_bce_loss(5)
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestBCEWithLogitsLossModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_bce_with_logits_loss_with_random_data_dim_2(test_case):
         return test_bce_loss(2, True)
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_bce_with_logits_loss_with_random_data_dim_3(test_case):
         return test_bce_loss(3, True)
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_bce_with_logits_loss_with_random_data_dim_4(test_case):
         return test_bce_loss(4, True)
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_bce_with_logits_loss_with_random_data_dim_5(test_case):
         return test_bce_loss(5, True)
 

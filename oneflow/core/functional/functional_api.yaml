@@ -24,9 +24,9 @@
   signature:
     [
       "Tensor (TensorTuple inputs, *, Bool inplace=False) => Add",
-      "Tensor (Tensor input, Tensor other, *, Bool inplace=False) => Add",
-      "Tensor (Tensor input, Scalar other, *, Bool inplace=False) => ScalarAdd",
-      "Tensor (Scalar input, Tensor other) => ScalarAdd",
+      "Tensor (Tensor input, Tensor other, *, Scalar alpha=1, Bool inplace=False) => Add",
+      "Tensor (Tensor input, Scalar other, *, Scalar alpha=1, Bool inplace=False) => ScalarAdd",
+      "Tensor (Scalar input, Tensor other, *, Scalar alpha=1) => ScalarAdd",
     ]
   bind_python: true
 
@@ -45,6 +45,14 @@
       "Tensor (Tensor input, Tensor other) => Mul",
       "Tensor (Tensor input, Scalar other, *, Bool inplace=False) => ScalarMul",
       "Tensor (Scalar input, Tensor other) => ScalarMul",
+    ]
+  bind_python: true
+
+- name: "mul_"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => InplaceMul",
+      "Tensor (Tensor input, Scalar other) => InplaceScalarMul",
     ]
   bind_python: true
 
@@ -226,6 +234,14 @@
 
 - name: "reduce_mean"
   signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceMean"
+  bind_python: True
+
+- name: "reduce_all"
+  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceAll"
+  bind_python: True
+
+- name: "reduce_any"
+  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceAny"
   bind_python: True
 
 - name: "reduce_prod"
@@ -769,7 +785,7 @@
   bind_python: True
 
 - name: "kl_div_loss_grad"
-  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Bool log_target, String reduction) => KLDivLossGrad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Bool log_target) => KLDivLossGrad"
   bind_python: False
 
 - name: "nll_loss"
@@ -777,7 +793,7 @@
   bind_python: True
 
 - name: "nll_loss_grad"
-  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor total_target, Int64 ignore_index, String reduction) => NllLossGrad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor total_target, Int64 ignore_index) => NllLossGrad"
   bind_python: False
 
 - name: "binary_cross_entropy_loss"
@@ -785,7 +801,7 @@
   bind_python: True
 
 - name: "binary_cross_entropy_loss_grad"
-  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, String reduction) => BinaryCrossEntropyLossGrad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None) => BinaryCrossEntropyLossGrad"
   bind_python: False
 
 - name: "binary_cross_entropy_with_logits_loss"
@@ -793,7 +809,7 @@
   bind_python: True
 
 - name: "binary_cross_entropy_with_logits_loss_grad"
-  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None, String reduction) => BinaryCrossEntropyWithLogitsLossGrad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None) => BinaryCrossEntropyWithLogitsLossGrad"
   bind_python: True
 
 - name: "sparse_cross_entropy"
@@ -837,7 +853,7 @@
   bind_python: True
 
 - name: "smooth_l1_loss_grad"
-  signature: "Tensor (Tensor loss_grad, Tensor prediction, Tensor label, Float beta, String reduction) => SmoothL1LossGrad"
+  signature: "Tensor (Tensor loss_grad, Tensor prediction, Tensor label, Float beta) => SmoothL1LossGrad"
   bind_python: False
 
 - name: "combined_margin_loss"
@@ -890,6 +906,13 @@
 - name: "masked_fill"
   signature: "Tensor (Tensor x, Tensor mask, Scalar value) => MaskedFill"
   bind_python: true
+
+- name: "movedim"
+  signature: [
+    "Tensor (Tensor input, Int32 source, Int32 destination) => MovedimInt",
+    "Tensor (Tensor input, Int32List source, Int32List destination) => MovedimVec",
+  ]
+  bind_python: True
 
 - name: "negative"
   signature: "Tensor (Tensor x) => Negative"
@@ -1378,7 +1401,7 @@
   bind_python: True
 
 - name: "dropout"
-  signature: "Tensor (Tensor x, Float p=0.5, Bool training=True, Generator generator=None) => Dropout"
+  signature: "Tensor (Tensor x, Tensor addend=None, Float p=0.5, Bool training=True, Generator generator=None) => Dropout"
   bind_python: True
 
 - name: "dropout_grad"
@@ -1701,6 +1724,22 @@
   signature: "Tensor (Tensor a, Tensor b, *, Float p=0.5, Int32 axis, Generator generator=None) => FusedBiasAddDropout"
   bind_python: True
 
+- name: "fused_scale_mask_softmax"
+  signature: "Tensor (Tensor x, Tensor mask, *, Float fill_value=0.0, Float scale=1.0) => FusedScaleMaskSoftmax"
+  bind_python: True
+
+- name: "fused_scale_mask_softmax_grad"
+  signature: "Tensor (Tensor y, Tensor dy, Tensor mask, Float scale=1.0) => FusedScaleMaskSoftmaxGrad"
+  bind_python: False
+
+- name: "fused_scale_mask_softmax_dropout"
+  signature: "TensorTuple (Tensor x, Tensor mask, *, Float fill_value=0.0, Float scale=1.0, Float p=0.5, Bool training=True, Generator generator=None) => FusedScaleMaskSoftmaxDropout"
+  bind_python: True
+
+- name: "fused_scale_mask_softmax_dropout_grad"
+  signature: "Tensor (Tensor softmax_y, Tensor dy, Tensor mask, Tensor dropout_mask, Float scale=1.0, Float dropout_scale=1.0) => FusedScaleMaskSoftmaxDropoutGrad"
+  bind_python: False
+
 - name: "fused_scale_tril_softmax_mask_scale"
   signature: "TensorTuple (Tensor a, *, Float p=0.5, Int64 diagonal, Float tril_scale_value, Generator generator=None) => FusedScaleTrilSoftmaxMaskScale"
   bind_python: True
@@ -1749,6 +1788,21 @@
     "Tensor (Tensor x, Float iou_threshold, Int32 keep_n=-1) => Nms"
   bind_python: True
 
+- name: "roi_align"
+  signature:
+    "Tensor (Tensor x, Tensor rois, Float spatial_scale, Int32 pooled_h, Int32 pooled_w, Int32 sampling_ratio, Bool aligned) => RoiAlign"
+  bind_python: True
+
+- name: "roi_align_grad"
+  signature:
+    "Tensor (Tensor dy, Tensor x_like, Tensor rois, Float spatial_scale, Int32 pooled_h, Int32 pooled_w, Int32 sampling_ratio, Bool aligned) => RoiAlignGrad"
+  bind_python: False
+
 - name: "meshgrid"
   signature: "TensorTuple (TensorTuple tensors) => Meshgrid"
   bind_python: True
+
+- name: "dot"
+  signature: "Tensor (Tensor input, Tensor other) => Dot"
+  bind_python: True
+

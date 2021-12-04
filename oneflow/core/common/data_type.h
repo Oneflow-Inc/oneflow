@@ -73,7 +73,8 @@ struct GetDataType<void> : std::integral_constant<DataType, DataType::kChar> {};
   template<>                                                                      \
   struct GetDataType<type_cpp> : std::integral_constant<DataType, type_proto> {}; \
   inline type_cpp GetTypeByDataType(std::integral_constant<DataType, type_proto>) { return {}; }
-OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE, ALL_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE,
+                     ALL_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ);
 #undef SPECIALIZE_GET_DATA_TYPE
 
 template<typename T>
@@ -122,7 +123,8 @@ OF_DEVICE_FUNC T GetMaxVal();
   APPLE_MAX_VAL_SEQ                          \
   OF_PP_MAKE_TUPLE_SEQ(uint64_t, UINT64_MAX) \
   OF_PP_MAKE_TUPLE_SEQ(float, FLT_MAX)       \
-  OF_PP_MAKE_TUPLE_SEQ(double, DBL_MAX)
+  OF_PP_MAKE_TUPLE_SEQ(double, DBL_MAX)      \
+  OF_PP_MAKE_TUPLE_SEQ(bool, true)
 
 #ifdef __APPLE__
 #define APPLE_MIN_VAL_SEQ OF_PP_MAKE_TUPLE_SEQ(unsigned long, 0)
@@ -141,7 +143,8 @@ OF_DEVICE_FUNC T GetMaxVal();
   APPLE_MIN_VAL_SEQ                        \
   OF_PP_MAKE_TUPLE_SEQ(uint64_t, 0)        \
   OF_PP_MAKE_TUPLE_SEQ(float, -FLT_MAX)    \
-  OF_PP_MAKE_TUPLE_SEQ(double, -DBL_MAX)
+  OF_PP_MAKE_TUPLE_SEQ(double, -DBL_MAX)   \
+  OF_PP_MAKE_TUPLE_SEQ(bool, false)
 
 #define SPECIALIZE_MAX_VAL(T, limit_value) \
   template<>                               \
@@ -202,7 +205,7 @@ struct DevDType {
 
 #if defined(WITH_CUDA)
 template<>
-struct DevDType<DeviceType::kGPU, float16> {
+struct DevDType<DeviceType::kCUDA, float16> {
   static_assert(sizeof(float16) == sizeof(half), "sizeof(float16) != sizeof(half)");
   typedef half type;
 };
@@ -214,6 +217,7 @@ bool IsIntegralDataType(DataType data_type);
 bool IsFloatingDataType(DataType data_type);
 bool IsSupportRequireGradDataType(DataType data_type);
 bool IsPODDataType(DataType data_type);
+bool IsPODAndHalfDataType(DataType data_type);
 bool IsIndexDataType(DataType data_type);
 size_t GetSizeOfDataType(DataType data_type);
 

@@ -63,18 +63,6 @@ class DeviceCtx {
  private:
 };
 
-class DeviceCtxProvider {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(DeviceCtxProvider);
-  DeviceCtxProvider() = default;
-  virtual ~DeviceCtxProvider() = default;
-
-  virtual std::shared_ptr<DeviceCtx> GetDeviceCtx() = 0;
-};
-
-#define REGISTER_DEVICE_CONTEXT(device, creator) \
-  REGISTER_CLASS_CREATOR(int, device, DeviceCtx, creator, const ThreadCtx&)
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_H_

@@ -44,6 +44,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instruction_replay.h"
+#include "oneflow/core/vm/tensor_view_operand.h"
 
 namespace oneflow {
 
@@ -333,12 +334,13 @@ Maybe<void> InstructionsBuilder::SoftSyncNNGraphBuffers(
     const std::shared_ptr<NNGraphIf>& nn_graph) {
   const auto& op_device = JUST(GetCriticalSectionDevice());
   for (const auto& eager_blob_object : *eager_blob_objects) {
-    const auto& blob_last_used_device = JUST(eager_blob_object->last_used_device());
+    const auto& blob_last_used_device =
+        JUST(JUST(eager_blob_object->compute_local_dep_object())->last_used_device());
     if (blob_last_used_device != op_device) {
       auto* dep_object = JUST(eager_blob_object->compute_local_dep_object());
       JUST(SoftSyncStream(dep_object, "mut", blob_last_used_device));
     }
-    eager_blob_object->set_last_used_device(op_device);
+    JUST(eager_blob_object->compute_local_dep_object())->set_last_used_device(op_device);
   }
   return Maybe<void>::Ok();
 }
@@ -520,6 +522,7 @@ InstructionsBuilder::GetPhysicalOpArgBlobAttrs(
   std::shared_ptr<cfg::SbpParallel> sbp_parallel =
       logical_blob_object->op_arg_parallel_attr()->sbp_parallel();
   std::vector<std::shared_ptr<compatible_py::OpArgBlobAttribute>> pyh_op_arg_blob_attrs;
+  pyh_op_arg_blob_attrs.reserve(parallel_num);
   if (sbp_parallel->has_split_parallel()) {
     int64_t split_axis = sbp_parallel->split_parallel().axis();
     for (int64_t i = 0; i < parallel_num; ++i) {
@@ -551,6 +554,7 @@ InstructionsBuilder::UnpackLogicalBlobToPhysicalBlobs(
     return pyhsical_blob_object;
   };
   std::vector<std::shared_ptr<compatible_py::BlobObject>> physical_blob_objects;
+  physical_blob_objects.reserve(phy_parallel_desc_symbols.size());
   for (int64_t i = 0; i < phy_parallel_desc_symbols.size(); ++i) {
     physical_blob_objects.emplace_back(JUST(GetPhysicalBlob(
         JUST(VectorAt(phy_parallel_desc_symbols, i)), JUST(VectorAt(*phy_op_arg_blob_attrs, i)))));
@@ -712,7 +716,9 @@ Maybe<void> InstructionsBuilder::Build121AssignInstruction(
   int64_t parallel_num = ref_blob_object->parallel_desc_symbol()->parallel_num();
   CHECK_EQ_OR_RETURN(parallel_num, value_blob_object->parallel_desc_symbol()->parallel_num());
   std::vector<uint64_t> token_id_0;
+  token_id_0.reserve(parallel_num);
   std::vector<uint64_t> token_id_1;
+  token_id_1.reserve(parallel_num);
   for (int64_t i = 0; i < parallel_num; ++i) { token_id_0.emplace_back(NewTokenId()); }
   for (int64_t i = 0; i < parallel_num; ++i) { token_id_1.emplace_back(NewTokenId()); }
   std::tuple<std::vector<uint64_t>, std::vector<uint64_t>> token_ids =
@@ -775,12 +781,13 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const one::OpExprInterpContext& ctx, Symbol<Device> op_device) {
   const auto& parallel_desc_sym = JUST(Placement4Device(op_device)).shared_from_symbol();
   for (const auto& input : *input_eager_blob_objects) {
-    const auto& blob_last_used_device = JUST(input->last_used_device());
+    const auto& blob_last_used_device =
+        JUST(JUST(input->compute_local_dep_object())->last_used_device());
     if (blob_last_used_device != op_device) {
       auto* dep_object = JUST(input->compute_local_dep_object());
       JUST(SoftSyncStream(dep_object, "mut", blob_last_used_device));
     }
-    input->set_last_used_device(op_device);
+    JUST(input->compute_local_dep_object())->set_last_used_device(op_device);
   }
   auto phy_instr_operand = JUST(vm::LocalCallOpKernelPhyInstrOperand::New(
       opkernel, input_eager_blob_objects, output_eager_blob_objects, consistent_tensor_infer_result,
@@ -790,10 +797,10 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
       parallel_desc_sym, phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   for (const auto& output : *output_eager_blob_objects) {
-    if (!output->producer_op_device().has_value()) {
-      JUST(output->init_producer_op_device(op_device));
+    if (!JUST(output->compute_local_dep_object())->producer_op_device().has_value()) {
+      JUST(JUST(output->compute_local_dep_object())->set_producer_op_device(op_device));
     }
-    output->set_last_used_device(op_device);
+    JUST(output->compute_local_dep_object())->set_last_used_device(op_device);
   }
   return Maybe<void>::Ok();
 }
@@ -1010,10 +1017,11 @@ Maybe<void> InstructionsBuilder::FeedBlob(
 Maybe<void> InstructionsBuilder::ReleaseTensor(
     const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
-  if (eager_blob_object->last_used_device().has_value()) {
-    const auto& last_used_device = JUST(eager_blob_object->last_used_device());
-    const auto& producer_op_device = JUST(eager_blob_object->producer_op_device());
-
+  if (JUST(eager_blob_object->compute_local_dep_object())->last_used_device().has_value()) {
+    const auto& last_used_device =
+        JUST(JUST(eager_blob_object->compute_local_dep_object())->last_used_device());
+    const auto& producer_op_device =
+        JUST(JUST(eager_blob_object->compute_local_dep_object())->producer_op_device());
     if (last_used_device != producer_op_device) {
       JUST(SoftSyncStream(JUST(eager_blob_object->compute_local_dep_object()), "mut",
                           last_used_device));
@@ -1070,6 +1078,37 @@ const std::shared_ptr<const ParallelDesc>& GetParallelDesc(
 }
 
 }  // namespace
+
+template<typename T>
+Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_tensor) {
+  /**
+   * TensorView instruction assign the data pointer of input tensor to output view tensor,
+   * so they can share memory.
+   */
+  const auto& parallel_desc = GetParallelDesc(input_tensor);
+  LocalDepObject* local_dep_object = JUST(input_tensor->compute_local_dep_object());
+  const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object =
+      JUST(input_tensor->eager_blob_object());
+  const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object =
+      JUST(view_tensor->eager_blob_object());
+  // init view blob (with empty data pointer)
+  JUST(view_eager_blob_object->TryInitBlob());
+  view_eager_blob_object->set_is_shape_synced(true);
+  // prepare instruction operand
+  const auto& phy_instr_operand = std::make_shared<vm::TensorViewOperand>(
+      eager_blob_object, view_eager_blob_object, local_dep_object);
+  // prepare instruction
+  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+      Global<VirtualMachine>::Get()->mut_vm(), parallel_desc->device_tag() + ".TensorView",
+      parallel_desc, phy_instr_operand);
+  // assign the data pointer to output view blob
+  instruction_list_->EmplaceBack(std::move(instruction));
+  return Maybe<void>::Ok();
+}
+
+template Maybe<void> InstructionsBuilder::TensorView(
+    const std::shared_ptr<one::MirroredTensor> input_tensor,
+    const std::shared_ptr<one::MirroredTensor> view_tensor);
 
 template<typename T>
 Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
@@ -1666,6 +1705,7 @@ InstructionsBuilder::GetMut1OperandBlobObjects(
   const auto OutputBns = [&op_attribute]() -> std::vector<std::string> {
     const auto& obn2modifier = op_attribute->arg_modifier_signature().obn2output_blob_modifier();
     std::vector<std::string> output_bns;
+    output_bns.reserve(op_attribute->output_bns().size() + op_attribute->tmp_bns().size());
     for (const auto& obn : op_attribute->output_bns()) {
       if (obn2modifier.at(obn).header_infered_before_compute()) { output_bns.emplace_back(obn); }
     }

@@ -163,7 +163,7 @@ class CommGroup final {
     global_rank_count_ = device_set.device_size();
     std::vector<int32_t> local_ranks;
     for (int32_t i = 0; i < global_rank_count_; ++i) {
-      if (device_set.device(i).machine_id() == this_machine_id) { local_ranks.push_back(i); }
+      if (device_set.device(i).machine_id() == this_machine_id) { local_ranks.emplace_back(i); }
     }
     const int32_t local_rank_count = local_ranks.size();
     CHECK_GT(local_rank_count, 0);
@@ -559,7 +559,7 @@ struct NcclExecutorBackend::Impl {
               group_size = 0;
             }
           }
-          group.push_back(request_id);
+          group.emplace_back(request_id);
           group_size += size;
         });
     if (!group.empty()) {

@@ -43,17 +43,14 @@ void ComputeNllOut(int64_t num_instances, K num_classes, K ignore_index, const T
 }
 template<typename T, typename K>
 void ComputeNllGradOut(int64_t num_instances, K num_classes, K ignore_index, const K* target,
-                       const T* dy, T* dx, const T* weight, const T* total_weight,
-                       const ReductionType reduction_type) {
+                       const T* dy, T* dx, const T* weight, const T* total_weight) {
   FOR_RANGE(int64_t, i, 0, num_instances) {
     K label = target[i];
     if (label == ignore_index) { continue; }
     CHECK_GE(label, 0);
     CHECK_LT(label, num_classes);
     T cur_weight = weight == nullptr ? -1 : -weight[label];
-    dx[i * num_classes + label] =
-        (reduction_type == ReductionType::kNone ? dy[i] : (*dy)) * cur_weight;
-    if (reduction_type == ReductionType::kMean) { dx[i * num_classes + label] /= *total_weight; }
+    dx[i * num_classes + label] = dy[i] * cur_weight;
   }
 }
 template<typename T, typename K>
@@ -68,32 +65,22 @@ class NllKernel final : public user_op::OpKernel {
     const auto* input_blob = ctx->Tensor4ArgNameAndIndex("input", 0);
     const auto* target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
     auto* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    auto* tmp_buffer_blob = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     auto* total_weight_blob = ctx->Tensor4ArgNameAndIndex("total_weight", 0);
 
     const int64_t num_instances = target_blob->shape().elem_cnt();
     CHECK_EQ(input_blob->shape().elem_cnt() % num_instances, 0);
     const K num_classes = static_cast<K>(input_blob->shape().elem_cnt() / num_instances);
     const K ignore_index = static_cast<K>(ctx->Attr<int64_t>("ignore_index"));
-    const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
 
     const T* input = input_blob->dptr<T>();
     const K* target = target_blob->dptr<K>();
     T* out = out_blob->mut_dptr<T>();
     T* total_weight = total_weight_blob->mut_dptr<T>();
-    T* tmp_out = reduction == ReductionType::kNone ? nullptr : tmp_buffer_blob->mut_dptr<T>();
     const T* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
 
-    ComputeNllOut(num_instances, num_classes, ignore_index, input, target,
-                  reduction == ReductionType::kNone ? out : tmp_out, weight, total_weight);
-    if (reduction == ReductionType::kNone) return;
-
-    *out = 0;
-    FOR_RANGE(int64_t, i, 0, num_instances) { *out += tmp_out[i]; }
-    if (reduction == ReductionType::kSum) return;
-
-    *out /= *total_weight;
+    ComputeNllOut(num_instances, num_classes, ignore_index, input, target, out, weight,
+                  total_weight);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -118,7 +105,6 @@ class NllGradKernel final : public user_op::OpKernel {
     CHECK_EQ(input_elem_cnt % num_instances, 0);
     const K num_classes = static_cast<K>(input_elem_cnt / num_instances);
     const K ignore_index = static_cast<K>(ctx->Attr<int64_t>("ignore_index"));
-    const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
 
     const T* dy = dy_blob->dptr<T>();
     const K* target = target_blob->dptr<K>();
@@ -128,7 +114,7 @@ class NllGradKernel final : public user_op::OpKernel {
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
     Memset<DeviceType::kCPU>(ctx->stream(), dx, 0, GetCudaAlignedSize(input_elem_cnt * sizeof(T)));
     ComputeNllGradOut(num_instances, num_classes, ignore_index, target, dy, dx, weight,
-                      total_weight, reduction);
+                      total_weight);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -139,8 +125,7 @@ class NllGradKernel final : public user_op::OpKernel {
       .SetCreateFn<NllKernel<OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(ltype_pair)>>()    \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                          \
                        && (user_op::HobDataType("target", 0) == OF_PP_PAIR_SECOND(ltype_pair)) \
-                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))   \
-      .SetInferTmpSizeFn(loss::GenDefaultInferTmpSizeFn<OF_PP_PAIR_FIRST(dtype_pair)>());
+                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
 #define REGISTER_NLL_GRAD_KERNEL(dtype_pair, ltype_pair)                                        \
   REGISTER_USER_KERNEL("nll_grad")                                                              \

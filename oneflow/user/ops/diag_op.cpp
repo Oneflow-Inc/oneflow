@@ -33,7 +33,7 @@ REGISTER_USER_OP("diag")
       if (in_dim == 1) {
         int32_t out_tensor_size = in_shape.At(0) + std::abs(diagonal);
         out_dim_vec[0] = out_tensor_size;
-        out_dim_vec.push_back(out_tensor_size);
+        out_dim_vec.emplace_back(out_tensor_size);
       } else {
         if (diagonal >= 0) {
           out_dim_vec[0] = std::min(in_shape.At(0), in_shape.At(1) - diagonal);
