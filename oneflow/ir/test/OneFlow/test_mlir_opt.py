@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+#  RUN: python3 %s | FileCheck %s
 import unittest
 import numpy as np
 import oneflow.compatible.single_client as flow
@@ -74,3 +75,15 @@ class TestMLIROptimizations(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+# CHECK: [[RESULT_1:%.*]] = "oneflow.input"(%arg0)
+# CHECK: %0 = "oneflow.relu"([[RESULT_1:%.*]])
+# CHECK: %1 = "oneflow.relu"([[RESULT_1:%.*]])
+# CHECK: "oneflow.system"(%1)
+# CHECK: "oneflow.system"(%0)
+# CHECK: oneflow.return
+
+# CHECK: [[RESULT_1:%.*]] = "oneflow.input"(%arg0)
+# CHECK: "oneflow.system"([[RESULT_1:%.*]])
+# CHECK: "oneflow.system"([[RESULT_1:%.*]])
+# CHECK: oneflow.return
