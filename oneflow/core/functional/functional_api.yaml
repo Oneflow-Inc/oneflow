@@ -1801,3 +1801,8 @@
 - name: "meshgrid"
   signature: "TensorTuple (TensorTuple tensors) => Meshgrid"
   bind_python: True
+
+- name: "dot"
+  signature: "Tensor (Tensor input, Tensor other) => Dot"
+  bind_python: True
+

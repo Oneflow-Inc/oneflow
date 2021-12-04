@@ -1277,6 +1277,35 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.dot,
+    r"""This operator computes the dot product of tensor input and other.
+    
+    The equation is:
+    
+	$$		
+	​   \\sum_{i=1}^{n}(x[i] * y[i])
+	$$
+    
+    Args:
+        input (Tensor):  first tensor in the dot product.
+        other (Tensor):  second tensor in the dot product.
+
+    Shape:
+        - input: Input must be 1D.
+        - other: Other must be 1D.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> flow.dot(flow.Tensor([2, 3]), flow.Tensor([2, 1]))
+        tensor(7., dtype=oneflow.float32)
+        
+    """,
+)
+
+add_docstr(
     oneflow.movedim,
     r"""
     Moves the dimension(s) of input at the position(s) in source to the position(s) in destination.
