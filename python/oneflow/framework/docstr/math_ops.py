@@ -1298,9 +1298,9 @@ add_docstr(
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> flow.dot(flow.Tensor([2, 3]), flow.Tensor([2, 1]))
-        tensor(7)
+        tensor(7., dtype=oneflow.float32)
         
     """,
 )
