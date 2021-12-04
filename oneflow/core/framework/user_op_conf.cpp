@@ -25,13 +25,25 @@ namespace oneflow {
 
 namespace user_op {
 
+namespace {
+
+Maybe<OpInterpCtx> BuildOpInterpCtx(const UserOpConf& user_conf) {
+  const std::string op_name = "user." + user_conf.op_type_name();
+  auto interp_ctx = JUST(OpInterpCtx::New(op_name));
+  for (const auto& kv : user_conf.attr()) {
+    const auto& cpp_attr_value = JUST(user_op::AttrValueUtil::ToCppAttrValue(kv.second));
+    JUST(interp_ctx->SetAttr(kv.first, *cpp_attr_value));
+  }
+  return interp_ctx;
+}
+
+}  // namespace
+
 UserOpConfWrapper::UserOpConfWrapper(std::shared_ptr<const OperatorConf> op_conf)
     : op_conf_(op_conf) {
   CHECK(op_conf_);
   CHECK(op_conf_->has_user_conf());
-  const std::string op_name = "user." + op_conf_->user_conf().op_type_name();
-  // TODO(hjchen2): Fill attributes
-  op_interp_ctx_ = CHECK_JUST(OpInterpCtx::New(op_name));
+  op_interp_ctx_ = CHECK_JUST(BuildOpInterpCtx(op_conf_->user_conf()));
 }
 
 UserOpConfWrapper::UserOpConfWrapper(const OperatorConf& op_conf)

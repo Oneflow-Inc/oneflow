@@ -169,8 +169,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
 
   Maybe<user_op::AttrVal> Attr4Name(const std::string& attr_name) const override {
-    // return user_op_conf().Attr4Name(attr_name);
-    OF_UNIMPLEMENTED();
+    return user_op_conf().Attr4Name(attr_name);
   }
 
   user_op::UserOpConfWrapper user_op_conf_;
@@ -326,8 +325,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
   Maybe<user_op::AttrVal> Attr4Name(const std::string& attr_name) const override {
-    // return user_op_conf().Attr4Name(attr_name);
-    OF_UNIMPLEMENTED();
+    return user_op_conf().Attr4Name(attr_name);
   }
 
   user_op::UserOpConfWrapper user_op_conf_;
@@ -421,8 +419,7 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
   Maybe<user_op::AttrVal> Attr4Name(const std::string& attr_name) const override {
-    // return user_op_conf().Attr4Name(attr_name);
-    OF_UNIMPLEMENTED();
+    return user_op_conf().Attr4Name(attr_name);
   }
 
   user_op::UserOpConfWrapper user_op_conf_;
@@ -525,8 +522,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
 
  private:
   Maybe<user_op::AttrVal> Attr4Name(const std::string& attr_name) const override {
-    // return user_op_conf().Attr4Name(attr_name);
-    OF_UNIMPLEMENTED();
+    return user_op_conf().Attr4Name(attr_name);
   }
 
   const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
@@ -557,8 +553,7 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
   const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
 
   Maybe<user_op::AttrVal> Attr4Name(const std::string& attr_name) const override {
-    // return user_op_conf().Attr4Name(attr_name);
-    OF_UNIMPLEMENTED();
+    return user_op_conf().Attr4Name(attr_name);
   }
 
  private:

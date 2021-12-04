@@ -45,18 +45,14 @@ class OpInterpCtx {
   virtual ~OpInterpCtx() = default;
 
   template<typename T>
-  Maybe<const T&> GetAttr(const std::string& attr_name) const {
-    return AttrValueCast<T>(*JUST(GetAttr(attr_name)));
-  }
+  Maybe<const T&> GetAttr(const std::string& attr_name) const;
   virtual Maybe<AttrVal> GetAttr(const std::string& attr_name) const = 0;
 
-  OpAttrs GetAttrs() const { return OpAttrs(this); }
+  OpAttrs GetAttrs() const;
 
   template<typename T>
-  Maybe<void> SetAttr(const std::string& attr_name, const T& attr_val) {
-    *const_cast<T*>(&JUST(GetAttr<T>(attr_name))) = attr_val;
-    return Maybe<void>::Ok();
-  }
+  Maybe<void> SetAttr(const std::string& attr_name, const T& attr_val);
+  Maybe<void> SetAttr(const std::string& attr_name, const AttrVal& attr_val);
 
   virtual const HashSet<std::string>& AttrNamesSet() const {
     static HashSet<std::string> attr_names;
