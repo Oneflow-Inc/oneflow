@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/user/kernels/random_seed_util.h"
 
 #include <opencv2/opencv.hpp>
+#include <jpeglib.h>
 
 namespace oneflow {
 
@@ -163,6 +164,90 @@ REGISTER_USER_KERNEL("ofrecord_bytes_decoder")
 
 namespace {
 
+int JpegPartialDecode(const unsigned char* data, size_t length,
+                      RandomCropGenerator* random_crop_gen, const std::string& color_space,
+                      TensorBuffer* buffer) {
+  struct jpeg_decompress_struct cinfo = {};
+  struct jpeg_error_mgr jerr = {};
+  int rc = 0;
+  unsigned char* crop_buf = nullptr;
+
+  cinfo.err = jpeg_std_error(&jerr);
+  jpeg_create_decompress(&cinfo);
+  jpeg_mem_src(&cinfo, data, length);
+
+  rc = jpeg_read_header(&cinfo, TRUE);
+  if (rc != 1) { return -1; }
+
+  jpeg_start_decompress(&cinfo);
+  int width = cinfo.output_width;
+  int height = cinfo.output_height;
+  int pixel_size = cinfo.output_components;
+
+  std::vector<unsigned char> tmp_buf(width * height * pixel_size);
+  crop_buf = tmp_buf.data();
+
+  unsigned int u_crop_x = 0, u_crop_y = 0, tmp_w = 0, u_crop_w = 0, u_crop_h = 0;
+  if (random_crop_gen) {
+    CropWindow crop;
+    random_crop_gen->GenerateCropWindow({height, width}, &crop);
+    u_crop_x = crop.anchor.At(0);
+    u_crop_y = crop.anchor.At(1);
+    u_crop_h = crop.shape.At(0);
+    u_crop_w = crop.shape.At(1);
+    tmp_w = u_crop_w;
+  } else {
+    u_crop_x = 0;
+    u_crop_y = 0;
+    u_crop_h = height;
+    u_crop_w = width;
+  }
+
+  jpeg_crop_scanline(&cinfo, &u_crop_x, &tmp_w);
+  int row_stride = tmp_w * pixel_size;
+  if (jpeg_skip_scanlines(&cinfo, u_crop_y) != u_crop_y) { return -2; }
+
+  while (cinfo.output_scanline < u_crop_y + u_crop_h) {
+    unsigned char* buffer_array[1];
+    buffer_array[0] = crop_buf + (cinfo.output_scanline - u_crop_y) * row_stride;
+    jpeg_read_scanlines(&cinfo, buffer_array, 1);
+  }
+
+  jpeg_skip_scanlines(&cinfo, cinfo.output_height - u_crop_y - u_crop_h);
+  jpeg_finish_decompress(&cinfo);
+  jpeg_destroy_decompress(&cinfo);
+
+  cv::Mat image(u_crop_h, tmp_w, CV_8UC3, crop_buf, cv::Mat::AUTO_STEP);
+
+  cv::Rect roi;
+  cv::Mat cropped;
+
+  if (u_crop_w != tmp_w) {
+    roi.x = tmp_w - u_crop_w;
+    roi.y = 0;
+    roi.width = u_crop_w;
+    roi.height = u_crop_h;
+    image(roi).copyTo(cropped);
+  } else {
+    cropped = image;
+  }
+
+  // convert color space
+  if (ImageUtil::IsColor(color_space) && color_space != "RGB") {
+    ImageUtil::ConvertColor("RGB", cropped, color_space, cropped);
+  }
+
+  const int c = ImageUtil::IsColor(color_space) ? 3 : 1;
+  CHECK_EQ(c, cropped.channels());
+  Shape image_shape({u_crop_h, u_crop_w, c});
+  buffer->Resize(image_shape, DataType::kUInt8);
+  CHECK_EQ(image_shape.elem_cnt(), buffer->nbytes());
+  CHECK_EQ(image_shape.elem_cnt(), cropped.total() * cropped.elemSize());
+  memcpy(buffer->mut_data<uint8_t>(), cropped.ptr(), image_shape.elem_cnt());
+
+  return 0;
+}
+
 void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* buffer,
                                         const std::string& name, const std::string& color_space,
                                         RandomCropGenerator* random_crop_gen) {
@@ -171,6 +256,12 @@ void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* bu
   CHECK(feature.has_bytes_list());
   CHECK(feature.bytes_list().value_size() == 1);
   const std::string& src_data = feature.bytes_list().value(0);
+
+  if (JpegPartialDecode((const unsigned char*)(src_data.data()), src_data.size(), random_crop_gen,
+                        color_space, buffer)
+      == 0) {
+    return;
+  }
 
   // cv::_InputArray image_data(src_data.data(), src_data.size());
   // cv::Mat image = cv::imdecode(image_data, cv::IMREAD_ANYCOLOR);
