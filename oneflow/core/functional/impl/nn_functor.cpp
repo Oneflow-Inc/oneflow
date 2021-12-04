@@ -503,7 +503,17 @@ class KLDivLossFunctor : public LossFunctorBase {
                            const std::string& reduction) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("log_target", log_target));
-    return apply_reduction(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs), reduction);
+    if (reduction == "batchmean") {
+      auto reduced = JUST(
+          apply_reduction(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs), "sum"));
+      if (input->ndim() != 0) {
+        reduced = JUST(functional::ScalarDiv(reduced, Scalar(input->dim(0))));
+      }
+      return reduced;
+    } else {
+      return apply_reduction(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs),
+                             reduction);
+    }
   }
 
  private:

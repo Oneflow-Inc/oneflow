@@ -24,7 +24,7 @@ from oneflow.nn.modules.constant import _ConstantBase
 class _Loss(Module):
     def __init__(self, reduction: str = "mean") -> None:
         super(_Loss, self).__init__()
-        assert reduction in ["none", "mean", "sum"]
+        assert reduction in ["none", "mean", "sum", "batchmean"]
         self.reduction = reduction
 
 
