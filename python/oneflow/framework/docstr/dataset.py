@@ -39,7 +39,7 @@ add_docstr(
 
         import oneflow as flow
         files = ['file01.onerec', 'file02.onerec']
-        readdata = flow._C.read_one_rec(files, 10, True, "batch")
+        readdata = flow.read_onerec(files, 10, True, "batch")
       
         # decode readdata ... 
     """,
@@ -69,11 +69,11 @@ add_docstr(
         import oneflow as flow
         files = ['file01.onerec', 'file02.onerec']
         # read onerec dataset form files
-        readdata = flow._C.read_one_rec(files, 10, True, "batch")
+        readdata = flow.read_onerec(files, 10, True, "batch")
       
         # decode
-        labels = flow._C.decode_one_rec(readdata, key="labels", dtype=flow.int32, shape=(1,))
-        dense_fields = flow._C.decode_one_rec(readdata, key="dense_fields", dtype=flow.float, shape=(13,))
+        labels = flow.decode_onerec(readdata, key="labels", dtype=flow.int32, shape=(1,))
+        dense_fields = flow.decode_onerec(readdata, key="dense_fields", dtype=flow.float, shape=(13,))
 
     """,
 )
