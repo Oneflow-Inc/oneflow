@@ -44,5 +44,17 @@ def exec(f):
     return wrapper
 
 
+class JitModule(object):
+    def __init__(self, py_module):
+        self.py_module = py_module
+        self.jit_module = oneflow._oneflow_internal.ir.JitModule(py_module)
+
+    def __call__(self, *args, **kwargs):
+        return self.jit_module.__call__(*args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self.py_module, name)
+
+
 def trace(py_module):
-    return oneflow._oneflow_internal.ir.JitModule(py_module)
+    return JitModule(py_module)

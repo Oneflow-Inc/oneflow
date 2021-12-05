@@ -63,6 +63,8 @@ struct Module {
         auto returned_obj = py_module_.attr("forward")(*args, **kwargs);
         if (auto tensor = returned_obj.cast<std::shared_ptr<one::Tensor>>()) {
           importer_.FinalizeProcessFunction(tensor);
+        } else {
+          LOG(FATAL) << "return type not supported: " << returned_obj.get_type();
         }
       });
     }
@@ -111,7 +113,6 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
   py::class_<jit::Module, std::shared_ptr<jit::Module>>(m, "JitModule")
       .def(py::init<py::object>())
       .def("__call__", &jit::Module::forward);
-  ;
 }
 
 }  // namespace oneflow
