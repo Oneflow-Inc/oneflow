@@ -28,7 +28,7 @@ namespace ep {
 class CpuStream : public Stream {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuStream);
-  CpuStream() {
+  explicit CpuStream(Device* device) : device_(device) {
 #ifdef WITH_ONEDNN
     onednn_engine_.reset(new dnnl::engine(dnnl::engine::kind::cpu, 0));
     onednn_stream_.reset(new dnnl::stream(*onednn_engine_));
@@ -38,6 +38,7 @@ class CpuStream : public Stream {
   ~CpuStream() override = default;
 
   DeviceType device_type() const override;
+  Device* device() const override;
   Maybe<void> Sync() override;
   void RecordEvent(Event* event) override;
 
@@ -49,6 +50,7 @@ class CpuStream : public Stream {
   std::unique_ptr<dnnl::engine> onednn_engine_;
   std::unique_ptr<dnnl::stream> onednn_stream_;
 #endif
+  Device* device_;
 };
 
 }  // namespace ep

@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/device/device_context.h"
-#include "oneflow/core/device/cuda_event_record.h"
+#include "oneflow/core/device/ep_based_event_record.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/container_util.h"
 
@@ -83,10 +83,8 @@ void InputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_bl
   if (blob->dptr() == nullptr) {
     end_event_record->Init(std::make_shared<NaiveEventRecord>());
   } else {
-    AutoMemcpy(of_blob->mut_device_ctx()->stream(), of_blob->mut_blob(), blob);
-    auto* event_record_provider =
-        CHECK_NOTNULL(dynamic_cast<EventRecordProvider*>(of_blob->mut_device_ctx()));
-    end_event_record->Init(event_record_provider->MakeEventRecord());
+    AutoMemcpy(of_blob->stream(), of_blob->mut_blob(), blob);
+    end_event_record->Init(EpBasedEventRecord::MakeEventRecord(of_blob->stream()));
   }
 }
 
@@ -103,10 +101,8 @@ void OutputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_b
   if (mut_blob->dptr() == nullptr) {
     end_event_record->Init(std::make_shared<NaiveEventRecord>());
   } else {
-    AutoMemcpy(of_blob->mut_device_ctx()->stream(), mut_blob, &of_blob->blob());
-    auto* event_record_provider =
-        CHECK_NOTNULL(dynamic_cast<EventRecordProvider*>(of_blob->mut_device_ctx()));
-    end_event_record->Init(event_record_provider->MakeEventRecord());
+    AutoMemcpy(of_blob->stream(), mut_blob, &of_blob->blob());
+    end_event_record->Init(EpBasedEventRecord::MakeEventRecord(of_blob->stream()));
   }
 }
 
