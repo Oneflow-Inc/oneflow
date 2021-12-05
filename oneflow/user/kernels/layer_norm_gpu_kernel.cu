@@ -90,7 +90,7 @@ struct ScaleLoad {
           *reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(gamma + col);
     } else {
 #pragma unroll
-      for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = 1; }
+      for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = static_cast<SRC>(1); }
     }
 #pragma unroll
     for (int i = 0; i < N; ++i) {

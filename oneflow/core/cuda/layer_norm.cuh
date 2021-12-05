@@ -548,8 +548,6 @@ typename std::enable_if<pack_size == 4, cudaError_t>::type DispatchLayerNormWarp
   DEFINE_ONE_ELIF(24)
   DEFINE_ONE_ELIF(28)
   DEFINE_ONE_ELIF(32)
-  DEFINE_ONE_ELIF(64)
-  DEFINE_ONE_ELIF(128)
 #undef DEFINE_ONE_ELIF
   else {
     return cudaErrorInvalidValue;
