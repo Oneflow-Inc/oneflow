@@ -40,7 +40,7 @@ void CudaDevice::SetAsActiveDevice() { OF_CUDA_CHECK(cudaSetDevice(device_index_
 
 Stream* CudaDevice::CreateStream() {
   CudaCurrentDeviceGuard guard(device_index_);
-  return new CudaStream(device_index_);
+  return new CudaStream(this);
 }
 
 void CudaDevice::DestroyStream(Stream* stream) {
@@ -66,6 +66,37 @@ void CudaDevice::CreateEvents(Event** events, size_t count) {
 void CudaDevice::DestroyEvents(Event** events, size_t count) {
   std::lock_guard<std::mutex> lock(events_mutex_);
   events_.insert(events_.end(), events, events + count);
+}
+
+Maybe<void> CudaDevice::Alloc(const AllocationOptions& options, void** ptr, size_t size) {
+  CudaCurrentDeviceGuard guard(device_index_);
+  CHECK(!options.HasPinnedDevice());
+  cudaError_t err = cudaMalloc(ptr, size);
+  if (err != cudaSuccess) {
+    return Error::RuntimeError() << cudaGetErrorString(err);
+  } else {
+    return Maybe<void>::Ok();
+  }
+}
+
+void CudaDevice::Free(const AllocationOptions& attr, void* ptr) {
+  CudaCurrentDeviceGuard guard(device_index_);
+  OF_CUDA_CHECK(cudaFree(ptr));
+}
+
+Maybe<void> CudaDevice::AllocPinned(const AllocationOptions& options, void** ptr, size_t size) {
+  CudaCurrentDeviceGuard guard(device_index_);
+  cudaError_t err = NumaAwareCudaMallocHost(device_index_, ptr, size);
+  if (err != cudaSuccess) {
+    return Error::RuntimeError() << cudaGetErrorString(err);
+  } else {
+    return Maybe<void>::Ok();
+  }
+}
+
+void CudaDevice::FreePinned(const AllocationOptions& options, void* ptr) {
+  CudaCurrentDeviceGuard guard(device_index_);
+  OF_CUDA_CHECK(cudaFreeHost(ptr));
 }
 
 }  // namespace ep
