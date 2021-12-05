@@ -293,6 +293,28 @@ class TestModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case)
 
+    @autotest()
+    def autotest_dropout_p0(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=random(), dim0=random(1, 8)).to(device)
+        m = torch.nn.Dropout(p=0)
+        return m(x)
+
+    @autotest()
+    def autotest_dropout_p1(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=random(), dim0=random(1, 8)).to(device)
+        m = torch.nn.Dropout(p=1.0)
+        return m(x)
+
+    @autotest()
+    def autotest_dropout_eval(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=random(), dim0=random(1, 8)).to(device)
+        m = torch.nn.Dropout(p=1.0)
+        m.eval()
+        return m(x)
+
 
 if __name__ == "__main__":
     unittest.main()
