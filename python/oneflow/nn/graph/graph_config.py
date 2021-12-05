@@ -44,7 +44,9 @@ class GraphConfig(object):
     def _train(self, mode: bool = True):
         if mode:
             if os.environ.get("ONEFLOW_ENABLE_INDEXED_SLICES") == "1":
-                self.proto.mutable_indexed_slices_optimizer_conf().CopyFrom(make_indexed_slices_optimizer_conf())
+                self.proto.mutable_indexed_slices_optimizer_conf().CopyFrom(
+                    make_indexed_slices_optimizer_conf()
+                )
             self.proto.mutable_train_conf()
         else:
             self.proto.mutable_predict_conf()
