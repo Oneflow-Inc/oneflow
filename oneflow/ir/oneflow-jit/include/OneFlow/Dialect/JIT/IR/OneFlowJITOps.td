@@ -4,6 +4,12 @@
 include "OneFlowJITBase.td"
 include "OneFlowJITInterfaces.td"
 
+class OneFlowJIT_Type<string name, string typeMnemonic,
+                 string baseCppClass = "::mlir::Type">
+    : TypeDef<OneFlowJIT_Dialect, name, [], baseCppClass> {
+  let mnemonic = typeMnemonic;
+}
+
 def OneFlow_EagerMaterializeOp : Op<OneFlowJIT_Dialect, "eager_materialize", [DeclareOpInterfaceMethods<EagerMaterializeInterface>]> {
   let arguments = (ins
     AnyType:$lazy_tensor,

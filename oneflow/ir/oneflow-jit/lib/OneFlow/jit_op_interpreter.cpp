@@ -88,71 +88,63 @@ void InsertLbnSegmentIntoVec(Operation* op, std::vector<std::string>& indexed_bn
   }
 }
 
-void JitInterpreter::DispatchFunc(FuncOp func_op,
-                                  const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors) {
+std::shared_ptr<one::Tensor> JitInterpreter::DispatchFunc(
+    FuncOp func_op, const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors) {
   llvm::DenseMap<Value, std::shared_ptr<Tensor>> mapping;
   // TODO: handle the case if there are more than one function in the module.
-  llvm::DenseSet<Value> values_to_materialize{};
-  const bool was_interrupted =
-      func_op
-          ->walk([&](mlir::Operation* op) {
-            if (llvm::dyn_cast<mlir::oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
-              if (auto expr = GetExpr(op)) {
-                TensorTuple inputs(op->getOperands().size());
-                for (const auto& indexed_operand : llvm::enumerate(op->getOperands())) {
-                  auto index = indexed_operand.index();
-                  auto operand = indexed_operand.value();
-                  if (auto arg = operand.dyn_cast<mlir::BlockArgument>()) {
-                    inputs[index] = arg_tensors[arg.getArgNumber()];
-                  } else {
-                    auto found = mapping.find(operand);
-                    if (found->first) {
-                      inputs[index] = found->second;
-                    } else {
-                      operand.dump();
-                      LOG(FATAL) << "tensor not found";
-                    }
-                  }
-                }
-                // TODO: release the tensor if:
-                // 1. it is the last use of the operand
-                // 2. the tensor shared ptr has zero ref,
-                // 3. it is not returned by the return op
-                auto outputs =
-                    CHECK_JUST(OpInterpUtil::Dispatch<TensorTuple>(*expr.getValue(), inputs));
-                if (outputs->size() != op->getResults().size()) {
-                  op->dump();
-                  LOG(FATAL) << "The number of outputs of the op "
-                             << " is not equal to the number of results.";
-                }
-                for (auto output_pair : llvm::zip(*outputs, op->getResults())) {
-                  auto output_tensor = std::get<0>(output_pair);
-                  Value output_result = std::get<1>(output_pair);
-                  CHECK(mapping.insert({output_result, output_tensor}).second);
-                }
-                return WalkResult::advance();
-              } else {
-                return WalkResult::interrupt();
-              }
-            }
-            // TODO: collect values from TensorMaterializeOp and add to values_to_materialize
-            else if (llvm::dyn_cast<ReturnOp>(op)) {
-              return WalkResult::advance();
+  std::shared_ptr<one::Tensor> ret_tensor;
+  for (auto& op : func_op.getBody().getOps()) {
+    if (dyn_cast<UserOpCompatible>(op)) {
+      if (auto expr = GetExpr(&op)) {
+        TensorTuple inputs(op.getOperands().size());
+        for (const auto& indexed_operand : llvm::enumerate(op.getOperands())) {
+          auto index = indexed_operand.index();
+          auto operand = indexed_operand.value();
+          if (auto arg = operand.dyn_cast<mlir::BlockArgument>()) {
+            inputs[index] = arg_tensors[arg.getArgNumber()];
+          } else {
+            auto found = mapping.find(operand);
+            if (found->first) {
+              inputs[index] = found->second;
             } else {
-              return WalkResult::advance();
+              operand.dump();
+              LOG(FATAL) << "tensor not found";
             }
-          })
-          .wasInterrupted();
-  CHECK(!was_interrupted) << "JIT dispatch failure";
+          }
+        }
+        // TODO: release the tensor if:
+        // 1. it is the last use of the operand
+        // 2. the tensor shared ptr has zero ref,
+        // 3. it is not returned by the return op
+        auto outputs = CHECK_JUST(OpInterpUtil::Dispatch<TensorTuple>(*expr.getValue(), inputs));
+        if (outputs->size() != op.getResults().size()) {
+          LOG(FATAL) << "The number of outputs of the op "
+                     << " is not equal to the number of results.";
+        }
+        for (auto output_pair : llvm::zip(*outputs, op.getResults())) {
+          auto output_tensor = std::get<0>(output_pair);
+          Value output_result = std::get<1>(output_pair);
+          CHECK(mapping.insert({output_result, output_tensor}).second);
+        }
+      } else {
+        LOG(FATAL) << "The op " << op.getName().getStringRef().str() << " has not been supported.";
+      }
+    } else if (auto return_op = llvm::dyn_cast<ReturnOp>(op)) {
+      ret_tensor = mapping.lookup(return_op.getOperands().front());
+      CHECK(ret_tensor) << "The return tensor is not found.";
+    }
+  }
+  return ret_tensor;
 }
 
 void JitInterpreter::Interrupt() {
-  FuncOp func_op = GetImporter().FinalizeProcessFunction();
-  if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module_->print(llvm::outs()); }
-  MlirTraceEnd();
-  std::vector<std::shared_ptr<one::Tensor>> ret{};
-  for (const auto& kv : GetImporter().GetIntermediateTensorsMapping()) { ret.push_back(kv.second); }
-  DispatchFunc(func_op, importer_.GetJitForwardArgs());
+  UNIMPLEMENTED();
+  // FuncOp func_op = GetImporter().FinalizeProcessFunction();
+  // if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module_->print(llvm::outs()); }
+  // MlirTraceEnd();
+  // std::vector<std::shared_ptr<one::Tensor>> ret{};
+  // for (const auto& kv : GetImporter().GetIntermediateTensorsMapping()) {
+  // ret.push_back(kv.second); } DispatchFunc(func_op, importer_.GetJitForwardArgs());
 }
 
 Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
@@ -175,7 +167,6 @@ Maybe<void> JitInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTup
   GetImporter().CreateOperandMapping(*op_conf, parallel_desc, op_expr.input_arg_tuple(), inputs,
                                      outputs);
   CHECK_OR_RETURN(GetImporter().ProcessUserOp(*op_conf).succeeded());
-  GetImporter().GetModule()->dump();
   return Maybe<void>::Ok();
 }
 
@@ -191,31 +182,29 @@ llvm::Optional<std::shared_ptr<one::UserOpExpr>> JitInterpreter::GetExpr(Operati
   const std::string op_name = user_op_adaptor.op_name().getValue().str();
   ::oneflow::OperatorConf op_conf;
   auto user_conf = op_conf.mutable_user_conf();
-  if (succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))
-      && succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))
-      && succeeded(GetImporter().ConvertUserOpAttributes(op, user_op_adaptor, op_conf))) {
-    std::vector<std::string> indexed_ibns{};
-    std::vector<std::string> indexed_obns{};
-    InsertLbnSegmentIntoVec<OpTrait::AttrSizedOperandSegments>(op, indexed_ibns);
-    InsertLbnSegmentIntoVec<OpTrait::AttrSizedResultSegments>(op, indexed_obns);
-    auto expr = CHECK_JUST(UserOpExpr::New(user_op_adaptor.op_name().getValue().str(),
-                                           std::move(*user_conf), indexed_ibns, indexed_obns));
-    cached_user_op_exprs_.insert({hash, expr});
-    return expr;
-  }
-  return None;
+  CHECK(succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf)));
+  CHECK(succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf)));
+  CHECK(succeeded(GetImporter().ConvertUserOpAttributes(op, user_op_adaptor, op_conf)));
+  std::vector<std::string> indexed_ibns{};
+  std::vector<std::string> indexed_obns{};
+  InsertLbnSegmentIntoVec<OpTrait::AttrSizedOperandSegments>(op, indexed_ibns);
+  InsertLbnSegmentIntoVec<OpTrait::AttrSizedResultSegments>(op, indexed_obns);
+  auto expr = CHECK_JUST(UserOpExpr::New(user_op_adaptor.op_name().getValue().str(),
+                                         std::move(*user_conf), indexed_ibns, indexed_obns));
+  cached_user_op_exprs_.insert({hash, expr});
+  return expr;
 }
 
-FuncOp JitInterpreter::Trace(
-    ir::JitImporter& importer, const std::string& func_name,
-    const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
-    const std::function<std::vector<std::shared_ptr<one::Tensor>>(void)>& forward_func) {
-  Start();
+FuncOp JitInterpreter::Trace(ir::JitImporter& importer, const std::string& func_name,
+                             const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
+                             const std::function<void()>& forward_func) {
   current_importer_ = &importer;  // TODO: extract function
   LOG(ERROR) << "importer reset";
-  importer.StartProcessFunc(func_name, arg_tensors);
-  auto return_tensors = forward_func();
-  return importer.FinalizeProcessFunction();
+  FuncOp func_op = importer.StartProcessFunc(func_name, arg_tensors);
+  *one::MutJitEnabled() = true;
+  forward_func();
+  *one::MutJitEnabled() = false;
+  return func_op;
 }
 
 std::shared_ptr<JitInterpreter> JitInterpreter::Get() {

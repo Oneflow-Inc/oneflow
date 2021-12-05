@@ -596,6 +596,11 @@ LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op
         auto input_s_ptr = (*user_conf->mutable_input())[input_key].mutable_s()->Add();
         *(input_s_ptr) = GetOutputLbn(result).getValue();
         input_idx += 1;
+      } else if (auto arg = op->getOperand(input_idx).dyn_cast<mlir::BlockArgument>()) {
+        // TODO: add optiona to allow generate from arg
+        auto input_s_ptr = (*user_conf->mutable_input())[input_key].mutable_s()->Add();
+        *(input_s_ptr) = "block_arg/" + std::to_string(arg.getArgNumber());
+        input_idx += 1;
       } else {
         op->emitError() << "fail to convert MLIR result to protobuf, name: " + op_name;
         op->dump();

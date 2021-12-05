@@ -278,8 +278,8 @@ LogicalResult JitImporter::InsertOpResults(const ::oneflow::OperatorConf& op_con
   return success();
 }
 
-void JitImporter::StartProcessFunc(llvm::StringRef func_name,
-                                   const std::vector<std::shared_ptr<one::Tensor>>& args) {
+FuncOp JitImporter::StartProcessFunc(llvm::StringRef func_name,
+                                     const std::vector<std::shared_ptr<one::Tensor>>& args) {
   process_func_context_ = ProcessFuncContext(func_name, args);
   auto result_types = llvm::SmallVector<Type, 8>();
   SymbolTable symbol_table(GetModule());
@@ -305,7 +305,7 @@ void JitImporter::StartProcessFunc(llvm::StringRef func_name,
   }
   GetBuilder().setInsertionPointToStart(entryBlock);
   GetModule().push_back(function);
-  LOG(ERROR) << "arg_tensors size: " << arg_tensors.size();
+  return function;
 }
 
 llvm::Optional<TensorType> JitImporter::GetMlirTensorTypeFromBlobDesc(const BlobDesc& blob_desc) {
@@ -377,13 +377,24 @@ llvm::Optional<mlir::Value> JitImporter::GetResultByBnAndIndex(const std::string
   }
 }
 
-FuncOp JitImporter::FinalizeProcessFunction() {
+FuncOp JitImporter::FinalizeProcessFunction(std::shared_ptr<one::Tensor> returned_tensor) {
   llvm::SmallVector<Value, 8> return_values{};
-  llvm::SmallVector<Type, 8> out_types{};
+  auto v = GetValueMapping().lookup(UnWrapTensorRefOrReturnSelf(returned_tensor).get());
+  CHECK(v) << "returned tensor not found";
+  return_values.push_back(v);
   SymbolTable symbol_table(GetModule());
   auto func_name = GetJitFuncName();
   auto function = symbol_table.lookup<FuncOp>(func_name);
   if (!function) { LOG(FATAL) << "function not found: " << func_name; }
+
+  auto return_op = GetBuilder().create<ReturnOp>(GetModule()->getLoc(), return_values);
+  CHECK(return_op);
+
+  llvm::SmallVector<Type, 8> out_types{};
+  for (auto v : return_values) { out_types.push_back(v.getType()); }
+  auto new_func_type = GetBuilder().getFunctionType(function.getType().getInputs(), out_types);
+  function.setType(new_func_type);
+
   llvm::hash_code function_hash{};
   auto it = func_hash_symbol_mapping_.find(function_hash);
   if (it != func_hash_symbol_mapping_.end()) {
@@ -391,20 +402,19 @@ FuncOp JitImporter::FinalizeProcessFunction() {
     llvm::errs() << "cache hit: " << func_name << " -> " << it->second << "\n";
     return it->second;
   }
-  func_hash_symbol_mapping_.insert({function_hash, function});
-  auto return_op = GetBuilder().create<ReturnOp>(GetModule()->getLoc(), return_values);
-  CHECK(return_op);
   llvm::errs() << function.sym_name() << ", "
                << "hash: " << function_hash << "\n";
-  auto new_func_type = GetBuilder().getFunctionType(function.getType().getInputs(), out_types);
-  function.setType(new_func_type);
+
   mlir::PassManager pm(GetMLIRContext(), /*operationName=*/"builtin.func");
   pm.addPass(::mlir::createCanonicalizerPass());
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createReturnAllLeaveResultPass());
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createCreateComputeCtxPass());
   pm.addPass(::mlir::oneflow::createFuseIntoExistingOpPass());
-  // function->dump();
+  llvm::errs() << "debugging: ";
+  function->dump();
   CHECK(pm.run(function).succeeded());
+
+  func_hash_symbol_mapping_.insert({function_hash, function});
   return function;
 }
 

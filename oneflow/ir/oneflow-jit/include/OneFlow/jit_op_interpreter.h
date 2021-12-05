@@ -65,8 +65,9 @@ class JitInterpreter : public OpExprInterpreter {
   }
   FuncOp Trace(ir::JitImporter& importer, const std::string& func_name,
                const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
-               const std::function<std::vector<std::shared_ptr<one::Tensor>>(void)>& forward_func);
-  void DispatchFunc(FuncOp func, const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors);
+               const std::function<void()>& forward_func);
+  std::shared_ptr<one::Tensor> DispatchFunc(
+      FuncOp func, const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors);
 
  private:
   DECLARE_NORMAL_APPLY_FUNC(UserOp);  // note(BBuf) jit deal with user op only, now.

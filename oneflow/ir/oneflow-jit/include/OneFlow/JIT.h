@@ -231,7 +231,7 @@ class JitImporter : public Importer {
   void SetParallelDesc(const std::shared_ptr<const ParallelDesc>& parallel_desc) {
     GetProcessOpContext().SetParallelDesc(parallel_desc);
   }
-  FuncOp FinalizeProcessFunction();
+  FuncOp FinalizeProcessFunction(std::shared_ptr<one::Tensor>);
   ProcessOpContext& GetProcessOpContext() { return process_op_context_; }
   const llvm::DenseMap<Value, std::shared_ptr<TensorRef>>& GetIntermediateTensorsMapping() {
     CHECK(process_func_context_.hasValue());
@@ -254,8 +254,8 @@ class JitImporter : public Importer {
     return process_func_context_->GetArgs();
   }
   const std::string& GetJitFuncName() { return process_func_context_.getValue().GetFuncName(); }
-  void StartProcessFunc(llvm::StringRef name,
-                        const std::vector<std::shared_ptr<one::Tensor>>& args);
+  FuncOp StartProcessFunc(llvm::StringRef name,
+                          const std::vector<std::shared_ptr<one::Tensor>>& args);
 
  private:
   // reset every func

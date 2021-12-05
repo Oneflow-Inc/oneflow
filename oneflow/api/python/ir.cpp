@@ -41,7 +41,7 @@ struct Module {
         context_(new MLIRContext()),
         module_(CreateJitModule(context_)),
         importer_(context_, *module_) {}
-  py::object forward(const py::args& args, const py::kwargs& kwargs) {
+  std::shared_ptr<one::Tensor> forward(const py::args& args, const py::kwargs& kwargs) {
     auto jit_interpreter =
         std::dynamic_pointer_cast<one::JitInterpreter>(one::JitInterpreter::Get());
     CHECK(jit_interpreter != nullptr) << "JIT interpreter is not initialized";
@@ -56,21 +56,18 @@ struct Module {
     std::vector<std::shared_ptr<one::Tensor>> arg_tensors{};
     arg_tensors.insert(arg_tensors.end(), inputs.begin(), inputs.end());
     arg_tensors.insert(arg_tensors.end(), parameters.begin(), parameters.end());
-    py::object ret;
     std::vector<std::shared_ptr<one::Tensor>> tensors_to_materialize{};
+    jit_interpreter->Start();
     if (!func_op_) {
-      *one::MutJitEnabled() = true;
       func_op_ = jit_interpreter->Trace(importer_, func_name, arg_tensors, [&]() {
-        ret = py_module_.attr("forward")(*args, **kwargs);
-        if (auto tensor = ret.cast<std::shared_ptr<one::Tensor>>()) {
-          tensors_to_materialize.push_back(tensor);
+        auto returned_obj = py_module_.attr("forward")(*args, **kwargs);
+        if (auto tensor = returned_obj.cast<std::shared_ptr<one::Tensor>>()) {
+          importer_.FinalizeProcessFunction(tensor);
         }
-        return tensors_to_materialize;
       });
-      jit_interpreter->MlirTraceEnd();
-      *one::MutJitEnabled() = false;
     }
-    jit_interpreter->DispatchFunc(func_op_.getValue(), arg_tensors);
+    jit_interpreter->MlirTraceEnd();
+    auto ret = jit_interpreter->DispatchFunc(func_op_.getValue(), arg_tensors);
     jit_interpreter->End();
     LOG(ERROR) << "JIT trace overhead: " << jit_interpreter->TraceOverhead();
     return ret;
