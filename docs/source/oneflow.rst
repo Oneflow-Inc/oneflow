@@ -44,6 +44,7 @@ oneflow
             diag, 
             movedim,
             div, 
+            dot, 
             eq, 
             equal, 
             expand, 
