@@ -751,22 +751,18 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
   } else {
     grad_mode = "identity";
   }
-  std::shared_ptr<UserOpExpr> parallel_cast_op_expr =
-      JUST(OpBuilder("hierarchical_parallel_cast", "trivial_op_name")
-               .Input("in")
-               .Output("out")
-               // TODO(hjchen2)
-               // .Attr<std::vector<std::string>>("nd_sbp", *sbp_list_ptr)
-               // .Attr<std::string>("grad_mode", grad_mode)
-               // .Attr<std::vector<std::string>>("grad_nd_sbp", grad_sbp_str_list)
-               .Build());
-
+  std::shared_ptr<UserOpExpr> parallel_cast_op_expr = JUST(
+      OpBuilder("hierarchical_parallel_cast", "trivial_op_name").Input("in").Output("out").Build());
+  auto cast_ctx = std::make_shared<HierarchicalParallelCastOpInterpCtx>();
+  cast_ctx->nd_sbp = *sbp_list_ptr;
+  cast_ctx->grad_mode = grad_mode;
+  cast_ctx->grad_nd_sbp = grad_sbp_str_list;
   if (input_proxy) {
     (*outputs)[0] =
-        JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_cast_op_expr, {input_proxy}));
+        JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_cast_op_expr, {input_proxy}, cast_ctx));
   } else {
     (*outputs)[0] =
-        JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_cast_op_expr, {input_tensor}));
+        JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_cast_op_expr, {input_tensor}, cast_ctx));
   }
 
   return Maybe<void>::Ok();

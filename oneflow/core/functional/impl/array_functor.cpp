@@ -140,6 +140,7 @@ class ConsistentConstantFunctor {
       ctx->is_floating_value = true;
       ctx->floating_value = JUST(value.As<double>());
     }
+    ctx->nd_sbp = *JUST(GetNdSbpStrList(sbp_tuple));
     ctx->sbp = JUST(GetNdSbp(sbp_tuple));
     ctx->parallel_desc = placement;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
@@ -197,6 +198,7 @@ class ConsistentEmptyFunctor {
     auto ctx = std::make_shared<EmptyOpInterpCtx>();
     ctx->shape = shape;
     ctx->dtype = dtype->data_type();
+    ctx->nd_sbp = *JUST(GetNdSbpStrList(sbp_tuple));
     ctx->parallel_desc = placement;
     ctx->sbp = JUST(GetNdSbp(sbp_tuple));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
