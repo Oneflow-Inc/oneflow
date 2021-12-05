@@ -71,9 +71,7 @@ class ConvBaseFunctor {
     MutableAttrMap conv_attrs;
     std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
     int32_t kernel_idx_offset = 2;
-    if (channel_pos == "channels_last") {
-      kernel_idx_offset = 1;
-    }
+    if (channel_pos == "channels_last") { kernel_idx_offset = 1; }
 
     for (int i = 0; i < num_spatial_dims_; i++) {
       kernel_size_vec.at(i) = ((weight->shape())->At(i + kernel_idx_offset));

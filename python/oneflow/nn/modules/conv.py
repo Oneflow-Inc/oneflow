@@ -442,7 +442,9 @@ class Conv2d(Module):
         else:
             in_channel_axis = 3
         if x.shape[in_channel_axis] != self.in_channels:
-            raise ValueError(f"The input channels {x.shape[in_channel_axis]} should be equal to self.in_channels {self.in_channels}.")
+            raise ValueError(
+                f"The input channels {x.shape[in_channel_axis]} should be equal to self.in_channels {self.in_channels}."
+            )
         # TODO(zwx): Use `tensor.device_type()` method to help checking if x is on cpu.
         # Using `if x.device == flow.device("cpu"):` will fail as consistent tensor has
         # no device, however using `x.is_cuda` is not a good choice.

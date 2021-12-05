@@ -121,11 +121,13 @@ class MaxPool1d(Module):
             self.kernel_size, self.stride, self.padding
         )
 
+
 def get_dhw_offset(channel_pos):
     if channel_pos == "channels_first":
         return 2
     else:
         return 1
+
 
 def get_ndim_pads_list(padding, dhw_offset, ndims):
     pads_list = []
@@ -143,6 +145,7 @@ def get_ndim_pads_list(padding, dhw_offset, ndims):
         else:
             assert pad == [0, 0]
     return pads_list
+
 
 def calc_pool_padding(padding, dhw_offset, ndims):
     if isinstance(padding, str):
@@ -208,19 +211,22 @@ class LegacyMaxPool2d(Module):
         >>> x = flow.Tensor(np.random.rand(6, 4, 7, 9))
         >>> y = m(x)
     """
+
     def __init__(
         self,
         kernel_size: _size_2_t,
         stride: Optional[_size_2_t] = None,
         padding: _size_2_t = 0,
         ceil_mode: bool = False,
-        data_format: Optional[str] = "NCHW"
+        data_format: Optional[str] = "NCHW",
     ):
         super().__init__()
         self.ceil_mode = ceil_mode
         self.kernel_size = _pair(kernel_size)
         self.strides = _pair(stride) if (stride is not None) else kernel_size
-        self.channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
+        self.channel_pos = (
+            "channels_last" if data_format == "NHWC" else "channels_first"
+        )
 
         padding = _pair(padding)
         if len(padding) == 2:
@@ -230,7 +236,7 @@ class LegacyMaxPool2d(Module):
                 padding = (0, padding[0], padding[1], 0)
             else:
                 raise ValueError("error padding param!")
-        
+
         self.padding_type, pads_list = calc_pool_padding(
             padding, get_dhw_offset(self.channel_pos), 2
         )
@@ -246,7 +252,7 @@ class LegacyMaxPool2d(Module):
             padding_before=self.padding_before,
             padding_after=self.padding_after,
             data_format=self.channel_pos,
-            ceil_mode=self.ceil_mode
+            ceil_mode=self.ceil_mode,
         )
 
 
@@ -312,7 +318,9 @@ class LegacyAvgPool2d(Module):
         assert count_include_pad is None, "count_include_pad not supported yet"
         assert divisor_override is None, "divisor_override not supported yet"
 
-        self.channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
+        self.channel_pos = (
+            "channels_last" if data_format == "NHWC" else "channels_first"
+        )
         # TODO(yaochi): align with pytorch when padding is asymmetric
         self._padding_type, _pads_list = calc_pool_padding(
             padding, get_dhw_offset(self.channel_pos), 2
