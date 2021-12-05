@@ -109,7 +109,7 @@ void ControlStreamType::DeleteInstructionStatus(const Stream& stream,
   ptr->~NaiveInstrStatusQuerier();
 }
 
-bool ControlStreamType::QueryInstructionStatusDone(
+bool ControlStreamType::QueryInstructionStatusLaunched(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
   return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }

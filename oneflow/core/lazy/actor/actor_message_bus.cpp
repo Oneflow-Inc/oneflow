@@ -18,11 +18,14 @@ limitations under the License.
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/comm_network/comm_network.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 
 void ActorMsgBus::SendMsg(const ActorMsg& msg) {
   int64_t dst_machine_id = MachineId4ActorId(msg.dst_actor_id());
+  OF_PROFILER_RANGE_GUARD("src_actor_id(" + std::to_string(msg.src_actor_id())
+                          + ") -> dst_actor_id(" + std::to_string(msg.dst_actor_id()) + ")");
   if (dst_machine_id == GlobalProcessCtx::Rank()) {
     SendMsgWithoutCommNet(msg);
   } else {

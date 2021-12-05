@@ -40,8 +40,10 @@ class CudaStreamType final : public StreamType {
                              InstructionStatusBuffer* status_buffer) const override;
   void DeleteInstructionStatus(const Stream& stream,
                                InstructionStatusBuffer* status_buffer) const override;
-  bool QueryInstructionStatusDone(const Stream& stream,
-                                  const InstructionStatusBuffer& status_buffer) const override;
+  bool QueryInstructionStatusLaunched(const Stream& stream,
+                                      const InstructionStatusBuffer& status_buffer) const override;
+  bool QueryInstructionStatusDoneAfterLaunched(
+      const Stream& stream, const InstructionStatusBuffer& status_buffer) const override;
   void Compute(Instruction* instruction) const override;
   intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
                                                    int64_t this_machine_id) const override;
