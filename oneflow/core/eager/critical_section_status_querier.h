@@ -27,7 +27,8 @@ class CriticalSectionStatusQuerier final {
  public:
   ~CriticalSectionStatusQuerier() = default;
 
-  bool QueryDone() const { return launched_ && event_record_->QueryDone(); }
+  bool QueryLaunched() const { return launched_; }
+  bool QueryDoneAfterLaunched() const { return event_record_->QueryDone(); }
 
   void SetLaunched(const std::shared_ptr<EventRecord>& event_record) {
     // No lock needed. This function will be called only one time.

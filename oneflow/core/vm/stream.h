@@ -41,6 +41,9 @@ class Stream final : public intrusive::Base {
   const DispatchedInstructionList& zombie_instruction_list() const {
     return zombie_instruction_list_;
   }
+  const DispatchedInstructionList& launching_instruction_list() const {
+    return launching_instruction_list_;
+  }
   const DispatchedInstructionList& running_instruction_list() const {
     return running_instruction_list_;
   }
@@ -54,6 +57,9 @@ class Stream final : public intrusive::Base {
   std::unique_ptr<DeviceCtx>* mut_device_ctx() { return &device_ctx_; }
   DispatchedInstructionList* mut_free_instruction_list() { return &free_instruction_list_; }
   DispatchedInstructionList* mut_zombie_instruction_list() { return &zombie_instruction_list_; }
+  DispatchedInstructionList* mut_launching_instruction_list() {
+    return &launching_instruction_list_;
+  }
   DispatchedInstructionList* mut_running_instruction_list() { return &running_instruction_list_; }
   StreamId* mut_stream_id() { return stream_id_.mut_key(); }
 
@@ -84,6 +90,7 @@ class Stream final : public intrusive::Base {
         max_device_num_per_machine_(),
         free_instruction_list_(),
         zombie_instruction_list_(),
+        launching_instruction_list_(),
         running_instruction_list_(),
         stream_id_(),
         active_stream_hook_(),
@@ -96,6 +103,7 @@ class Stream final : public intrusive::Base {
   // lists
   DispatchedInstructionList free_instruction_list_;
   DispatchedInstructionList zombie_instruction_list_;
+  DispatchedInstructionList launching_instruction_list_;
   DispatchedInstructionList running_instruction_list_;
 
  public:

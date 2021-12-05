@@ -40,7 +40,7 @@ void CriticalSectionEndPhyInstrOperand::ForEachMirroredObject(
 namespace {
 
 Maybe<LocalDepObject*> RawCriticalSectionLocalDepObject() {
-  return JUST(Device::New("critical_section"))->mut_schedule_local_dep_object();
+  return JUST(Device::New("critical_section", 0))->mut_schedule_local_dep_object();
 }
 
 constexpr auto* CriticalSectionLocalDepObject =
@@ -104,11 +104,6 @@ void OutputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_b
     AutoMemcpy(of_blob->stream(), mut_blob, &of_blob->blob());
     end_event_record->Init(EpBasedEventRecord::MakeEventRecord(of_blob->stream()));
   }
-}
-
-void CriticalSectionEndPhyInstrOperand::ForEachMutMirroredObject(
-    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-  DoEach(CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object());
 }
 
 }  // namespace vm

@@ -15,8 +15,20 @@ limitations under the License.
 """
 from collections import OrderedDict
 
+import os
 from oneflow.nn.graph.optimizer import OptDict
 import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
+import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
+
+
+def make_indexed_slices_optimizer_conf():
+    op_name_set = placement_cfg.OpNameSet()
+    op_name_set.add_op_name("module.wide_embedding.weight")
+    op_name_set.add_op_name("module.deep_embedding.weight")
+    indexed_slices_optimizer_conf = job_conf_cfg.IndexedSlicesOptimizerConf()
+    indexed_slices_optimizer_conf.set_enable(True)
+    indexed_slices_optimizer_conf.mutable_include_op_names().CopyFrom(op_name_set)
+    return indexed_slices_optimizer_conf
 
 
 class GraphConfig(object):
@@ -31,6 +43,10 @@ class GraphConfig(object):
 
     def _train(self, mode: bool = True):
         if mode:
+            if os.environ.get("ONEFLOW_ENABLE_INDEXED_SLICES") == "1":
+                self.proto.mutable_indexed_slices_optimizer_conf().CopyFrom(
+                    make_indexed_slices_optimizer_conf()
+                )
             self.proto.mutable_train_conf()
         else:
             self.proto.mutable_predict_conf()

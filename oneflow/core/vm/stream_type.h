@@ -52,8 +52,10 @@ class StreamType {
                                      InstructionStatusBuffer* status_buffer) const = 0;
   virtual void DeleteInstructionStatus(const Stream& stream,
                                        InstructionStatusBuffer* status_buffer) const = 0;
-  virtual bool QueryInstructionStatusDone(const Stream& stream,
-                                          const InstructionStatusBuffer& status_buffer) const = 0;
+  virtual bool QueryInstructionStatusLaunched(
+      const Stream& stream, const InstructionStatusBuffer& status_buffer) const = 0;
+  virtual bool QueryInstructionStatusDoneAfterLaunched(
+      const Stream& stream, const InstructionStatusBuffer& status_buffer) const = 0;
   virtual void Compute(Instruction* instruction) const = 0;
   virtual void Infer(Instruction* instruction) const { LOG(FATAL) << "UNIMPLEMENTED"; }
 

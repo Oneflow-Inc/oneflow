@@ -632,7 +632,7 @@
 - name: "conv2d"
   signature:
     "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List stride,
-    Int32List padding, Int32List dilation, Int32 groups=1) => Conv2d"
+    Int32List padding, Int32List dilation, Int32 groups=1, String channel_pos) => Conv2d"
   bind_python: True
 
 - name: "fake_quantization"

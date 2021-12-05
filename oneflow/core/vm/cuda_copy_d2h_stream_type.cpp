@@ -45,10 +45,15 @@ void CudaCopyD2HStreamType::DeleteInstructionStatus(const Stream& stream,
   ptr->~CudaOptionalEventRecordStatusQuerier();
 }
 
-// Returns true if the instruction launched and the cuda event completed.
-bool CudaCopyD2HStreamType::QueryInstructionStatusDone(
+bool CudaCopyD2HStreamType::QueryInstructionStatusLaunched(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
-  return CudaOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer().data())->done();
+  return CudaOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer().data())->QueryLaunched();
+}
+
+bool CudaCopyD2HStreamType::QueryInstructionStatusDoneAfterLaunched(
+    const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
+  return CudaOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer().data())
+      ->QueryDoneAfterLaunched();
 }
 
 // Launches a cuda kernel

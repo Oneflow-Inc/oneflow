@@ -109,7 +109,10 @@ class Linear(Module):
     def forward(self, x):
         res = flow._C.matmul(x, self.weight, transpose_a=False, transpose_b=True)
         if self.bias is not None:
-            res += self.bias
+            if flow._oneflow_internal.lazy_mode.is_enabled:
+                res = flow._C.bias_add(res, self.bias)
+            else:
+                res += self.bias
         return res
 
     def extra_repr(self) -> str:
