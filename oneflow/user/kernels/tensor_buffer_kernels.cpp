@@ -50,8 +50,8 @@ class TensorBufferToTensorKernel final : public user_op::OpKernel {
       CHECK_EQ(tensor_buffer->nbytes(), instance_size);
       CHECK_EQ(tensor_buffer->data_type(), data_type);
       CHECK(tensor_buffer->shape() == instance_shape);
-      Memcpy<DeviceType::kCPU>(ctx->device_ctx(), out_ptr + i * instance_size,
-                               tensor_buffer->data(), instance_size);
+      Memcpy<DeviceType::kCPU>(ctx->stream(), out_ptr + i * instance_size, tensor_buffer->data(),
+                               instance_size);
     });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -80,7 +80,7 @@ class TensorToTensorBufferKernel final : public user_op::OpKernel {
     }
     DimVector instance_dim_vec;
     FOR_RANGE(int64_t, i, in_shape.NumAxes() - instance_dims, in_shape.NumAxes()) {
-      instance_dim_vec.push_back(in_shape.At(i));
+      instance_dim_vec.emplace_back(in_shape.At(i));
     }
     const Shape instance_shape(instance_dim_vec);
     const auto data_type = in->data_type();
@@ -92,8 +92,8 @@ class TensorToTensorBufferKernel final : public user_op::OpKernel {
       TensorBuffer* tensor_buffer = out_ptr + i;
       tensor_buffer->Resize(instance_shape, data_type);
       CHECK_EQ(tensor_buffer->nbytes(), instance_size);
-      Memcpy<DeviceType::kCPU>(ctx->device_ctx(), tensor_buffer->mut_data(),
-                               in_ptr + i * instance_size, instance_size);
+      Memcpy<DeviceType::kCPU>(ctx->stream(), tensor_buffer->mut_data(), in_ptr + i * instance_size,
+                               instance_size);
     });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -166,7 +166,7 @@ class TensorBufferToListOfTensors final : public user_op::OpKernel {
       } else {
         CHECK_EQ(tensor_buffer->shape().elem_cnt(), out_i->shape().elem_cnt());
       }
-      Memcpy<DeviceType::kCPU>(ctx->device_ctx(), out_i->mut_dptr<void>(), tensor_buffer->data(),
+      Memcpy<DeviceType::kCPU>(ctx->stream(), out_i->mut_dptr<void>(), tensor_buffer->data(),
                                tensor_buffer->nbytes());
     });
   }
@@ -202,7 +202,7 @@ class TensorBufferToListOfTensorsV2 final : public user_op::OpKernel {
       } else {
         CHECK_EQ(tensor_buffer->shape().elem_cnt(), out_i->shape().elem_cnt());
       }
-      Memcpy<DeviceType::kCPU>(ctx->device_ctx(), out_i->mut_dptr<void>(), tensor_buffer->data(),
+      Memcpy<DeviceType::kCPU>(ctx->stream(), out_i->mut_dptr<void>(), tensor_buffer->data(),
                                tensor_buffer->nbytes());
     });
   }

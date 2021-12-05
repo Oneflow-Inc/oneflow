@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/fixed_vector.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -179,9 +180,9 @@ class CropMirrorNormalizeGpuKernel final : public user_op::OpKernel {
       const NdIndexOffsetHelper<int32_t, 4> out_helper(N, C, out_H, out_W);
       CropMirrorNormalizeGpuImpl<TensorLayout::kNCHW>
           <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-             ctx->device_ctx()->cuda_stream()>>>(elem_cnt, in_dptr, out_dptr, mirror_dptr, out_W,
-                                                 in_helper, out_helper, H_offset, W_offset, mean,
-                                                 inv_std);
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+              elem_cnt, in_dptr, out_dptr, mirror_dptr, out_W, in_helper, out_helper, H_offset,
+              W_offset, mean, inv_std);
     } else if (output_layout == "NHWC") {
       CHECK_EQ(N, out_shape.At(0));
       int32_t out_H = out_shape.At(1);
@@ -194,9 +195,9 @@ class CropMirrorNormalizeGpuKernel final : public user_op::OpKernel {
       const NdIndexOffsetHelper<int32_t, 4> out_helper(N, out_H, out_W, C);
       CropMirrorNormalizeGpuImpl<TensorLayout::kNHWC>
           <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-             ctx->device_ctx()->cuda_stream()>>>(elem_cnt, in_dptr, out_dptr, mirror_dptr, out_W,
-                                                 in_helper, out_helper, H_offset, W_offset, mean,
-                                                 inv_std);
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+              elem_cnt, in_dptr, out_dptr, mirror_dptr, out_W, in_helper, out_helper, H_offset,
+              W_offset, mean, inv_std);
     } else {
       UNIMPLEMENTED();
     }
@@ -206,7 +207,7 @@ class CropMirrorNormalizeGpuKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("crop_mirror_normalize_from_uint8")
     .SetCreateFn<CropMirrorNormalizeGpuKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
                      && (user_op::HobDataType("in", 0) == DataType::kUInt8)
                      && (user_op::HobDataType("out", 0) == DataType::kFloat));
 

@@ -124,16 +124,12 @@ inline int32_t SMBlocksNum4ThreadsNum(const int32_t n) {
                   GetSMCudaMaxBlocksNum());
 }
 
-class DeviceCtx;
-
 namespace ep {
 
 class Stream;
 class CudaStream;
 
 }  // namespace ep
-
-cudaStream_t RunCudaKernelGetStream(DeviceCtx* ctx);
 
 cudaStream_t RunCudaKernelGetStream(ep::Stream* stream);
 
@@ -143,7 +139,7 @@ cudaStream_t RunCudaKernelGetStream(ep::Stream* stream);
 
 size_t GetAvailableGpuMemSize(int dev_id);
 
-void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size);
+cudaError_t NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size);
 
 class CudaCurrentDeviceGuard final {
  public:

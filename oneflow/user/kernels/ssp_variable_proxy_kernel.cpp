@@ -36,7 +36,7 @@ class SspVariableProxyKernel final : public user_op::OpKernel {
     CHECK_EQ(value->shape(), in_shape);
     const DataType in_data_type = ref->data_type();
     CHECK_EQ(value->data_type(), in_data_type);
-    Memcpy<device_type>(ctx->device_ctx(), value->mut_dptr<void>(), ref->dptr<void>(),
+    Memcpy<device_type>(ctx->stream(), value->mut_dptr<void>(), ref->dptr<void>(),
                         in_shape.elem_cnt() * GetSizeOfDataType(in_data_type));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -54,7 +54,7 @@ class SspVariableProxyKernel final : public user_op::OpKernel {
 
 REGISTER_SSP_VARIABLE_PROXY_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_SSP_VARIABLE_PROXY_KERNEL(DeviceType::kGPU)
+REGISTER_SSP_VARIABLE_PROXY_KERNEL(DeviceType::kCUDA)
 #endif
 
 }  // namespace

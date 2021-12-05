@@ -20,9 +20,9 @@ namespace user_op {
 
 template<typename T, typename K>
 struct SparseSoftmaxCrossEntropyKernelUtil<DeviceType::kCPU, T, K> {
-  static void ComputeDiff(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
-                          const int64_t depth, const int64_t lower_bound, const T* prob,
-                          const K* labels, const T* dy, T* dx) {
+  static void ComputeDiff(ep::Stream* stream, const int64_t num_instances,
+                          const int64_t num_classes, const int64_t depth, const int64_t lower_bound,
+                          const T* prob, const K* labels, const T* dy, T* dx) {
     FOR_RANGE(int64_t, i, 0, num_instances) {
       const int32_t row_id = i / num_classes;
       const int32_t col_id = i - row_id * num_classes;

@@ -295,9 +295,9 @@ void JobBuilder::AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
   std::vector<OperatorConf> mut_ops;
   for (const auto& op_conf : op_confs) {
     if (op_name2op_conf_.find(op_conf.name()) == op_name2op_conf_.end()) {
-      add_ops.push_back(op_conf);
+      add_ops.emplace_back(op_conf);
     } else {
-      mut_ops.push_back(op_conf);
+      mut_ops.emplace_back(op_conf);
     }
   }
   AddOps(parallel_conf, add_ops);

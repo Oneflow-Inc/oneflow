@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/loss_kernel_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 namespace user_op {
@@ -60,10 +61,8 @@ __global__ void ComputeSmoothL1Out(int64_t elem_cnt, const half* input, const ha
 }
 
 template<typename T>
-__global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, float inv_elem_cnt, const T* input,
-                                       const T* target, const T* dy, T* dx,
-                                       const ReductionType reduction_type, const float beta,
-                                       const float inv_beta) {
+__global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, const T* input, const T* target,
+                                       const T* dy, T* dx, const float beta, const float inv_beta) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T diff = input[i] - target[i];
     const T abs_diff = abs(diff);
@@ -73,24 +72,21 @@ __global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, float inv_elem_cnt, con
     } else {
       dx_val = (diff > GetZeroVal<T>()) - (diff < GetZeroVal<T>());
     }
-    const T dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
+    const T dy_val = dy[i];
     dx_val = dx_val * dy_val;
-    if (reduction_type == ReductionType::kMean) { dx_val *= inv_elem_cnt; };
     dx[i] = dx_val;
   }
 }
 
 template<>
-__global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, float inv_elem_cnt, const half* input,
-                                       const half* target, const half* dy, half* dx,
-                                       const ReductionType reduction_type, const float beta,
+__global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, const half* input, const half* target,
+                                       const half* dy, half* dx, const float beta,
                                        const float inv_beta) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   const half half_zero = __float2half(0.0);
   const half half_one = __float2half(1.0);
   const half half_beta = __float2half(beta);
   const half half_inv_beta = __float2half(inv_beta);
-  const half half_inv_elem_cnt = __float2half(inv_elem_cnt);
 
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const half diff = __hsub(input[i], target[i]);
@@ -103,9 +99,8 @@ __global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, float inv_elem_cnt, con
       const half right = __hlt(diff, half_zero) ? half_one : half_zero;
       dx_val = __hsub(left, right);
     }
-    const half dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
+    const half dy_val = dy[i];
     dx_val = __hmul(dx_val, dy_val);
-    if (reduction_type == ReductionType::kMean) { dx_val = __hmul(dx_val, half_inv_elem_cnt); };
     dx[i] = dx_val;
   }
 #else
@@ -115,35 +110,34 @@ __global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, float inv_elem_cnt, con
 }
 
 template<typename T>
-class SmoothL1LossKernel : public SimpleLossKernel<DeviceType::kGPU, T, SmoothL1LossKernel<T>> {
+class SmoothL1LossKernel : public SimpleLossKernel<DeviceType::kCUDA, T, SmoothL1LossKernel<T>> {
  public:
   void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
                   const T* target, T* out) const {
     const float beta = ctx->Attr<float>("beta");
     ComputeSmoothL1Out<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                         ctx->device_ctx()->cuda_stream()>>>(elem_cnt, input, target, out, beta,
-                                                             static_cast<float>(1.0 / beta));
+                         ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+        elem_cnt, input, target, out, beta, static_cast<float>(1.0 / beta));
   }
 };
 
 template<typename T>
 class SmoothL1LossGradKernel
-    : public SimpleLossGradKernel<DeviceType::kGPU, T, SmoothL1LossGradKernel<T>> {
+    : public SimpleLossGradKernel<DeviceType::kCUDA, T, SmoothL1LossGradKernel<T>> {
  public:
   void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
-                  const T* target, const T* dy, T* dx, const ReductionType reduction) const {
+                  const T* target, const T* dy, T* dx) const {
     const float beta = ctx->Attr<float>("beta");
     ComputeSmoothL1GradOut<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                             ctx->device_ctx()->cuda_stream()>>>(
-        elem_cnt, static_cast<float>(1.0 / elem_cnt), input, target, dy, dx, reduction, beta,
-        static_cast<float>(1.0 / beta));
+                             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+        elem_cnt, input, target, dy, dx, beta, static_cast<float>(1.0 / beta));
   }
 };
 
 }  // namespace
 
-REGISTER_SIMPLE_LOSS_KERNEL_GPU("smooth_l1_loss", SmoothL1LossKernel)
-REGISTER_SIMPLE_LOSS_GRAD_KERNEL_GPU("smooth_l1_loss_grad", SmoothL1LossGradKernel)
+REGISTER_SIMPLE_LOSS_KERNEL_CUDA("smooth_l1_loss", SmoothL1LossKernel)
+REGISTER_SIMPLE_LOSS_GRAD_KERNEL_CUDA("smooth_l1_loss_grad", SmoothL1LossGradKernel)
 
 }  // namespace user_op
 }  // namespace oneflow
