@@ -100,7 +100,9 @@ using PyUses = List<bool> // size of py_uses is the sum of tensor_types' sizes
 
 For a typical "lazy tensor" implementation, there is usually a "sequence of operations" representation. At this point, we use Op Expr to form the sequence. Every time a new Op Expr is applied in JIT interpreter, we insert new element into the sequence and combine its hash with the existing sequence's. When an evaluation is triggered, we combine the hash of the collected sequence and `PyUses` to look up the cached MLIR.
 
-### Tracking Python reference of an Tensor
+### ~~Tracking Python reference of an Tensor~~
+
+(This has been removed. Will do more research to see if it is needed.)
 
 In exec mode, it is necessary to track if a lazy tensor is being referenced by Python and later it will be replaced with Eager Tensor.
 
