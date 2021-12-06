@@ -77,6 +77,41 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.floor,
+    """
+    Returns a new tensor with the arcsine of the elements of :attr:`input`.
+
+    .. math::
+        \\text{out}_{i} = \\lfloor \\text{input}_{i} \\rfloor
+
+    Args:
+        input (Tensor): the input tensor.
+        
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> input = flow.tensor(np.array([-0.5,  1.5, 0,  0.8]), dtype=flow.float32)
+        >>> output = flow.floor(input)
+        >>> output.shape
+        oneflow.Size([4])
+        >>> output.numpy()
+        array([-1.,  1.,  0.,  0.], dtype=float32)
+        
+        >>> input1 = flow.tensor(np.array([[0.8, 1.0], [-0.6, 2.5]]), dtype=flow.float32)
+        >>> output1 = input1.floor()
+        >>> output1.shape
+        oneflow.Size([2, 2])
+        >>> output1.numpy()
+        array([[ 0.,  1.],
+               [-1.,  2.]], dtype=float32)
+
+    """,
+)
+
+add_docstr(
     oneflow.div,
     r"""Computes the division of input by other for each element, scalar and broadcast promotation are supported.
     The formula is:
@@ -1237,6 +1272,35 @@ add_docstr(
         >>> out = flow.logical_not(input)
         >>> out
         tensor([0, 1, 0], dtype=oneflow.int8)
+        
+    """,
+)
+
+add_docstr(
+    oneflow.dot,
+    r"""This operator computes the dot product of tensor input and other.
+    
+    The equation is:
+    
+	$$		
+	​   \\sum_{i=1}^{n}(x[i] * y[i])
+	$$
+    
+    Args:
+        input (Tensor):  first tensor in the dot product.
+        other (Tensor):  second tensor in the dot product.
+
+    Shape:
+        - input: Input must be 1D.
+        - other: Other must be 1D.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> flow.dot(flow.Tensor([2, 3]), flow.Tensor([2, 1]))
+        tensor(7., dtype=oneflow.float32)
         
     """,
 )

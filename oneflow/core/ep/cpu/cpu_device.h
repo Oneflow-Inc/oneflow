@@ -30,11 +30,19 @@ class CpuDevice : public Device {
 
   void SetAsActiveDevice() override;
 
+  DeviceType device_type() const override { return DeviceType::kCPU; }
+  size_t device_index() const override { return 0; }
+
   Stream* CreateStream() override;
   void DestroyStream(Stream* stream) override;
 
   void CreateEvents(Event** events, size_t count) override;
   void DestroyEvents(Event** events, size_t count) override;
+
+  Maybe<void> Alloc(const AllocationOptions& options, void** ptr, size_t size) override;
+  void Free(const AllocationOptions& options, void* ptr) override;
+  Maybe<void> AllocPinned(const AllocationOptions& options, void** ptr, size_t size) override;
+  void FreePinned(const AllocationOptions& options, void* ptr) override;
 };
 
 }  // namespace ep
