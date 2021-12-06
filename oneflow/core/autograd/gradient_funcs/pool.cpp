@@ -70,7 +70,7 @@ Maybe<void> PoolNdGrad::Capture(PoolCaptureState* state, const TensorTuple& inpu
   state->input_index = state->SaveTensorForBackward(inputs.at(0));
   state->output_index = state->SaveTensorForBackward(outputs.at(0));
 
-  auto* interp_ctx = dynamic_cast<const LeakyReluOpInterpCtx*>(ctx);
+  auto* interp_ctx = dynamic_cast<const PLACEHOLDER*>(ctx);
   state->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
   state->padding = JUST(composed_attrs.GetAttr<std::string>("padding"));
   state->padding_before = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding_before"));

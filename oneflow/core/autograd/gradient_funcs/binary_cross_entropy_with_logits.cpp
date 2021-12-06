@@ -32,24 +32,18 @@ class BinaryCrossEntropyWithLogits
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const BinaryCrossEntropyWithLogitsCaptureState* state,
                     const TensorTuple& out_grads, TensorTuple* in_grads) const override;
-
- private:
-  AttrMap base_attrs_;
 };
 
 Maybe<void> BinaryCrossEntropyWithLogits::Init(const OpExpr& op) {
-  const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
 Maybe<void> BinaryCrossEntropyWithLogits::Capture(BinaryCrossEntropyWithLogitsCaptureState* state,
                                                   const TensorTuple& inputs,
                                                   const TensorTuple& outputs,
                                                   const OpInterpCtx* ctx) const {
-  ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  state->reduction = JUST(composed_attrs.GetAttr<std::string>("reduction"));
-  state->has_pos_weight = JUST(composed_attrs.GetAttr<bool>("has_pos_weight"));
+  auto* interp_ctx = dynamic_cast<const BinaryCrossEntropyWithLogitsOpInterpCtx*>(ctx);
+  state->reduction = interp_ctx->reduction;
+  state->has_pos_weight = interp_ctx->has_pos_weight;
   state->SaveTensorForBackward(inputs.at(0));  // input
   state->SaveTensorForBackward(inputs.at(1));  // target
   if (inputs.size() == 3) {

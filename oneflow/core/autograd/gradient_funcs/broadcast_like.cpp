@@ -34,13 +34,9 @@ class BroadCastLike : public OpExprGradFunction<BroadCastLikeCaptureState> {
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const BroadCastLikeCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
-
- private:
-  AttrMap base_attrs_;
 };
 
 Maybe<void> BroadCastLike::Init(const OpExpr& op) {
-
   return Maybe<void>::Ok();
 }
 
@@ -49,8 +45,8 @@ Maybe<void> BroadCastLike::Capture(BroadCastLikeCaptureState* state, const Tenso
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  state->broadcast_axes = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("broadcast_axes"));
+  auto* interp_ctx = dynamic_cast<const BroadcastLikeOpInterpCtx*>(ctx);
+  state->broadcast_axes = interp_ctx->broadcast_axes;
   state->input_index = state->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
 }

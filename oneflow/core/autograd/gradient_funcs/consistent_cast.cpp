@@ -113,9 +113,9 @@ class CastFromConsistent : public OpExprGradFunction<CastConsistentCaptureState>
   Maybe<void> Apply(const CastConsistentCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& dual_nd_sbp = JUST(GetDualNdSbp(ctx->nd_sbp));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("shape", *ctx->shape));
-    JUST(attrs.SetAttr<DataType>("dtype", ctx->dtype->data_type()));
+    // MutableAttrMap attrs;
+    // JUST(attrs.SetAttr<Shape>("shape", *ctx->shape));
+    // JUST(attrs.SetAttr<DataType>("dtype", ctx->dtype->data_type()));
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(
         *grad_op_, {out_grads.at(0)}, OpExprInterpContext(attrs, ctx->parallel_desc, dual_nd_sbp)));
     return Maybe<void>::Ok();

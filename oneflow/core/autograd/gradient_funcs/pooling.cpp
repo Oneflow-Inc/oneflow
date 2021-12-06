@@ -64,7 +64,7 @@ Maybe<void> PoolingNdGrad::Init(const OpExpr& op, const std::string& mode) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> PoolingNdGrad::Capture(PoolingCaptureState* state, const TensorTuple& inputs,
+Maybe<void> ::Capture(PoolingCaptureState* state, const TensorTuple& inputs,
                                    const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }

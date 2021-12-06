@@ -34,7 +34,7 @@ class SelectTopN : public OpExprGradFunction<SelectTopNCaptureState> {
 
   Maybe<void> Capture(SelectTopNCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
-    auto* interp_ctx = dynamic_cast<const LeakyReluOpInterpCtx*>(ctx);
+    auto* interp_ctx = dynamic_cast<const PLACEHOLDER*>(ctx);
     state->inputs = inputs;
     state->top_n = JUST(attrs.GetAttr<int32_t>("top_n"));
     state->requires_grad.resize(inputs.size());

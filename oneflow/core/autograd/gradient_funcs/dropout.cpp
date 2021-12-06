@@ -39,7 +39,7 @@ Maybe<void> Dropout::Init(const OpExpr& op) {
 
 Maybe<void> Dropout::Capture(DropoutCaptureState* state, const TensorTuple& inputs,
                              const TensorTuple& outputs, const OpInterpCtx* ctx) const {
-  auto* interp_ctx = dynamic_cast<const LeakyReluOpInterpCtx*>(ctx);
+  auto* interp_ctx = dynamic_cast<const DropoutOpInterpCtx*>(ctx);
   state->requires_grad = inputs.at(0)->requires_grad();
 
   if (!state->requires_grad) { return Maybe<void>::Ok(); }

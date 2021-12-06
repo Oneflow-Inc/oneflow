@@ -44,7 +44,7 @@ Maybe<void> Expand::Capture(ExpandCaptureState* state, const TensorTuple& inputs
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* interp_ctx = dynamic_cast<const LeakyReluOpInterpCtx*>(ctx);
+  auto* interp_ctx = dynamic_cast<const ExpandOpInterpCtx*>(ctx);
   state->logical_out_shape = interp_ctx->logical_in_shape;
   state->logical_expand_shape = interp_ctx->logical_expand_shape;
   return Maybe<void>::Ok();

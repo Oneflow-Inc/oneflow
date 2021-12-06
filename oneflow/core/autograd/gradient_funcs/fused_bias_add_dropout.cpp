@@ -48,7 +48,7 @@ Maybe<void> FusedBiasAddDropout::Capture(FusedBiasAddDropoutInterpState* state,
   state->bias_requires_grad = inputs.at(1)->requires_grad();   // bias
 
   if (!state->input_requires_grad && !state->bias_requires_grad) { return Maybe<void>::Ok(); }
-  auto* interp_ctx = dynamic_cast<const LeakyReluOpInterpCtx*>(ctx);
+  auto* interp_ctx = dynamic_cast<const PLACEHOLDER*>(ctx);
   state->scale = JUST(composed_attrs.GetAttr<float>("scale"));
   state->axis = JUST(composed_attrs.GetAttr<int32_t>("axis"));
 
