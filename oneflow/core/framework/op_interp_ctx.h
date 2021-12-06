@@ -24,11 +24,17 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/framework/attr_value.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_attrs.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 
 namespace oneflow {
+
+using user_op::AttrVal;
+template<typename T>
+using TypedAttrValRef = user_op::TypedAttrValRef<T>;
 
 namespace user_op {
 class OpKernelState;
@@ -38,23 +44,23 @@ class OpInterpCtx {
  public:
   virtual ~OpInterpCtx() = default;
 
-  bool HasAttr(const std::string& attr_name) const { return AttrNamesSet().count(attr_name); }
+  template<typename T>
+  Maybe<const T&> GetAttr(const std::string& attr_name) const;
+  virtual Maybe<AttrVal> GetAttr(const std::string& attr_name) const = 0;
+
+  OpAttrs GetAttrs() const;
 
   template<typename T>
-  Maybe<const T&> GetAttr(const std::string& attr_name) const {
-    return *reinterpret_cast<const T*>(JUST(GetAttr(attr_name)));
-  }
-  virtual Maybe<const void*> GetAttr(const std::string& attr_name) const = 0;
+  Maybe<void> SetAttr(const std::string& attr_name, const T& attr_val);
+  Maybe<void> SetAttr(const std::string& attr_name, const AttrVal& attr_val);
 
-  OpAttrs GetAttrs() const { return OpAttrs(this); }
-
-  template<typename T>
-  Maybe<void> SetAttr(const std::string& attr_name, const T& attr_value) {
-    return SetAttr(attr_name, (const void*)&attr_value);
+  virtual const HashSet<std::string>& AttrNamesSet() const {
+    static HashSet<std::string> attr_names;
+    return attr_names;
   }
-  virtual Maybe<void> SetAttr(const std::string& attr_name, const void* attr_value) {
-    // TODO(hjchen2)
-    return Maybe<void>::Ok();
+
+  bool HasAttr(const std::string& attr_name) const {  // NOLINT
+    return AttrNamesSet().count(attr_name);
   }
 
   size_t hash_value() const {
@@ -62,27 +68,27 @@ class OpInterpCtx {
     return 0;
   }
 
-  virtual const HashSet<std::string>& AttrNamesSet() const { return EmptyAttrNamesSet(); }
+  static Maybe<OpInterpCtx> New(const std::string& op_name);
 
  public:
   Optional<Symbol<Device>> device;               // for local op
   Optional<Symbol<ParallelDesc>> parallel_desc;  // for consistent op
-  Optional<Symbol<cfg::NdSbp>> nd_sbp;           // for consistent op
+  Optional<Symbol<cfg::NdSbp>> sbp;              // for consistent op
   Optional<user_op::OpKernelState> state;
 
  protected:
   OpInterpCtx() = default;
 
-  const HashSet<std::string>& EmptyAttrNamesSet() const {
-    static HashSet<std::string> attr_names;
-    return attr_names;
+  template<typename T>
+  Maybe<AttrVal> CastAttr(const T* attr_val) const {
+    return std::dynamic_pointer_cast<AttrVal>(std::make_shared<TypedAttrValRef<T>>(attr_val));
   }
 };
 
 class FakeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
-    return Error::RuntimeError() << "Should not access attribute for `FakeOpInterpCtx`.";
+  Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
+    return Error::RuntimeError() << "`FakeOpInterpCtx` has no attribute.";
   }
 };
 
@@ -94,11 +100,11 @@ class FakeOpInterpCtx : public OpInterpCtx {
 
 class CastToConsistentOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+  Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "shape") {
-      return (const void*)&shape;
+      return CastAttr(&shape);
     } else if (attr_name == "dtype") {
-      return (const void*)&dtype;
+      return CastAttr(&dtype);
     } else {
       return Error::RuntimeError() << "CastToConsistent op has no attribute named " << attr_name;
     }
@@ -116,9 +122,9 @@ class CastToConsistentOpInterpCtx : public OpInterpCtx {
 
 class SelectTopNOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+  Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "top_n") {
-      return (const void*)&top_n;
+      return CastAttr(&top_n);
     } else {
       return Error::RuntimeError() << "SelectTopN op has no attribute named " << attr_name;
     }
@@ -135,23 +141,23 @@ class SelectTopNOpInterpCtx : public OpInterpCtx {
 
 class FeedInputOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+  Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "FeedInput op has no attribute named " << attr_name;
   }
 };
 
 class FetchOutputOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+  Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     return Error::RuntimeError() << "FetchOutput op has no attribute named " << attr_name;
   }
 };
 
 class FeedVariableOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+  Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "_l2") {
-      return (const void*)&_l2;
+      return CastAttr(&_l2);
     } else {
       return Error::RuntimeError() << "FeedVariable op has no attribute named " << attr_name;
     }
@@ -168,29 +174,29 @@ class FeedVariableOpInterpCtx : public OpInterpCtx {
 
 class ImageDecoderRandomCropResizeOpInterpCtx : public OpInterpCtx {
  public:
-  Maybe<const void*> GetAttr(const std::string& attr_name) const override {
+  Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     if (attr_name == "target_width") {
-      return (const void*)&target_width;
+      return CastAttr(&target_width);
     } else if (attr_name == "target_height") {
-      return (const void*)&target_height;
+      return CastAttr(&target_height);
     } else if (attr_name == "num_workers") {
-      return (const void*)&num_workers;
+      return CastAttr(&num_workers);
     } else if (attr_name == "max_num_pixels") {
-      return (const void*)&max_num_pixels;
+      return CastAttr(&max_num_pixels);
     } else if (attr_name == "warmup_size") {
-      return (const void*)&warmup_size;
+      return CastAttr(&warmup_size);
     } else if (attr_name == "seed") {
-      return (const void*)&seed;
+      return CastAttr(&seed);
     } else if (attr_name == "num_attempts") {
-      return (const void*)&num_attempts;
+      return CastAttr(&num_attempts);
     } else if (attr_name == "random_area_min") {
-      return (const void*)&random_area_min;
+      return CastAttr(&random_area_min);
     } else if (attr_name == "random_area_max") {
-      return (const void*)&random_area_max;
+      return CastAttr(&random_area_max);
     } else if (attr_name == "random_aspect_ratio_min") {
-      return (const void*)&random_aspect_ratio_min;
+      return CastAttr(&random_aspect_ratio_min);
     } else if (attr_name == "random_aspect_ratio_max") {
-      return (const void*)&random_aspect_ratio_max;
+      return CastAttr(&random_aspect_ratio_max);
     } else {
       return Error::RuntimeError() << "FeedVariable op has no attribute named " << attr_name;
     }

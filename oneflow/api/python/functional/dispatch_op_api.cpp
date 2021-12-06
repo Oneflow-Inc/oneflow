@@ -85,8 +85,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         ctx->random_shuffle = random_shuffle;
         ctx->shuffle_after_epoch = shuffle_after_epoch;
         ctx->seed = seed;
+        ctx->nd_sbp = *JUST(GetNdSbpStrList(sbp_tuple));
         ctx->parallel_desc = placement;
-        ctx->nd_sbp = JUST(GetNdSbp(sbp_tuple));
+        ctx->sbp = JUST(GetNdSbp(sbp_tuple));
         return OpInterpUtil::Dispatch<Tensor>(*op, {}, ctx);
       });
   m.add_functor("DispatchOfrecordRawDecoder",
@@ -122,8 +123,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   ctx->batch_size = batch_size;
                   ctx->seed = seed;
                   ctx->has_seed = has_seed;
+                  ctx->nd_sbp = *JUST(GetNdSbpStrList(sbp_tuple));
                   ctx->parallel_desc = placement;
-                  ctx->nd_sbp = JUST(GetNdSbp(sbp_tuple));
+                  ctx->sbp = JUST(GetNdSbp(sbp_tuple));
                   return OpInterpUtil::Dispatch<Tensor>(*op, {}, ctx);
                 });
   m.add_functor(
@@ -289,8 +291,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   ctx->group_by_ratio = group_by_ratio;
                   ctx->remove_images_without_annotations = remove_images_without_annotations;
                   ctx->stride_partition = stride_partition;
+                  ctx->nd_sbp = *JUST(GetNdSbpStrList(sbp_tuple));
                   ctx->parallel_desc = placement;
-                  ctx->nd_sbp = JUST(GetNdSbp(sbp_tuple));
+                  ctx->sbp = JUST(GetNdSbp(sbp_tuple));
                   return OpInterpUtil::Dispatch<TensorTuple>(*op, {}, ctx);
                 });
   m.add_functor(
@@ -349,8 +352,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         ctx->split_index = split_index;
         ctx->shuffle = shuffle;
         ctx->random_seed = random_seed;
+        ctx->nd_sbp = *JUST(GetNdSbpStrList(sbp_tuple));
         ctx->parallel_desc = placement;
-        ctx->nd_sbp = JUST(GetNdSbp(sbp_tuple));
+        ctx->sbp = JUST(GetNdSbp(sbp_tuple));
         return OpInterpUtil::Dispatch<Tensor>(*op, {}, ctx);
       });
 }

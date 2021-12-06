@@ -110,7 +110,7 @@ class SrcOpConsistentTensorMetaInferArgs final {
   ~SrcOpConsistentTensorMetaInferArgs() = default;
 
   Symbol<ParallelDesc> parallel_desc() const { return CHECK_JUST(op_interp_ctx_->parallel_desc); }
-  Symbol<cfg::NdSbp> nd_sbp() const { return CHECK_JUST(op_interp_ctx_->nd_sbp); }
+  Symbol<cfg::NdSbp> nd_sbp() const { return CHECK_JUST(op_interp_ctx_->sbp); }
   const std::shared_ptr<const OpInterpCtx>& op_interp_ctx() const { return op_interp_ctx_; }
 
   size_t hash_value() const;

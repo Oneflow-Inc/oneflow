@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
@@ -62,7 +63,7 @@ class UserOpConfWrapper final {
 
   template<typename T>
   const T& attr(const std::string& attr_name) const {
-    return *(reinterpret_cast<const T*>(Attr4Name(attr_name)));
+    return AttrValueCast<T>(*CHECK_JUST(Attr4Name(attr_name)));
   }
 
   template<typename T>
@@ -73,7 +74,7 @@ class UserOpConfWrapper final {
 
   bool has_attr(const std::string& attr_name) const;
 
-  const void* Attr4Name(const std::string& attr_name) const;
+  Maybe<user_op::AttrVal> Attr4Name(const std::string& attr_name) const;
 
  private:
   UserOpConfWrapper() = default;

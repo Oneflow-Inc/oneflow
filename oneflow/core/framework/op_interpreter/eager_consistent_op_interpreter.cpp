@@ -171,9 +171,9 @@ Maybe<void> RawConsistentToConsistent(const ConsistentToConsistentOpExpr& op_exp
   const auto& input = inputs.at(0);
   CHECK_OR_RETURN(input->is_consistent());
   CHECK_OR_RETURN(ctx->parallel_desc.has_value());
-  CHECK_OR_RETURN(ctx->nd_sbp.has_value());
+  CHECK_OR_RETURN(ctx->sbp.has_value());
   const auto& in_parallel_desc = JUST(input->parallel_desc());
-  const auto& out_nd_sbp = JUST(ctx->nd_sbp);
+  const auto& out_nd_sbp = JUST(ctx->sbp);
   const auto& out_parallel_desc = JUST(ctx->parallel_desc);
   const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(in_parallel_desc));
   const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));

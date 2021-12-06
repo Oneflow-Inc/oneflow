@@ -19,7 +19,7 @@ namespace oneflow {
 
 template<typename T>
 const T& AttrValueCast(const user_op::AttrVal& attr_val) {
-  const auto* typed_attr = dynamic_cast<const user_op::TypedAttrVal<T>*>(&attr_val);
+  const auto* typed_attr = dynamic_cast<const user_op::TypedAttrValIf<T>*>(&attr_val);
   return CHECK_NOTNULL(typed_attr)->val();
 }
 

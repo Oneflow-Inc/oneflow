@@ -25,10 +25,25 @@ namespace oneflow {
 
 namespace user_op {
 
+namespace {
+
+Maybe<OpInterpCtx> BuildOpInterpCtx(const UserOpConf& user_conf) {
+  const std::string op_name = "user." + user_conf.op_type_name();
+  auto interp_ctx = JUST(OpInterpCtx::New(op_name));
+  for (const auto& kv : user_conf.attr()) {
+    const auto& cpp_attr_value = JUST(user_op::AttrValueUtil::ToCppAttrValue(kv.second));
+    JUST(interp_ctx->SetAttr(kv.first, *cpp_attr_value));
+  }
+  return interp_ctx;
+}
+
+}  // namespace
+
 UserOpConfWrapper::UserOpConfWrapper(std::shared_ptr<const OperatorConf> op_conf)
     : op_conf_(op_conf) {
   CHECK(op_conf_);
   CHECK(op_conf_->has_user_conf());
+  op_interp_ctx_ = CHECK_JUST(BuildOpInterpCtx(op_conf_->user_conf()));
 }
 
 UserOpConfWrapper::UserOpConfWrapper(const OperatorConf& op_conf)
@@ -84,8 +99,8 @@ int32_t UserOpConfWrapper::output_size(const std::string& arg_name) const {
   return it->second.s_size();
 }
 
-const void* UserOpConfWrapper::Attr4Name(const std::string& attr_name) const {
-  return CHECK_JUST(op_interp_ctx_->GetAttr(attr_name));
+Maybe<user_op::AttrVal> UserOpConfWrapper::Attr4Name(const std::string& attr_name) const {
+  return op_interp_ctx_->GetAttr(attr_name);
 }
 
 #define OP_WRAPPER_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                                    \

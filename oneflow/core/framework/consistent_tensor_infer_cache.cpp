@@ -56,7 +56,7 @@ void InputConsistentTensorMeta::assign(
 }
 
 size_t ConsistentTensorMetaInferArgs::hash_value() const {
-  size_t hash_value = op_interp_ctx_->hash_value();
+  size_t hash_value = std::hash<OpAttrs>()(op_interp_ctx_->GetAttrs());
   const auto& tensor_meta_hash_functor = std::hash<InputConsistentTensorMeta>();
   for (const auto& tensor_meta : input_consistent_tensor_metas_) {
     HashCombine(&hash_value, tensor_meta_hash_functor(tensor_meta));
@@ -65,22 +65,18 @@ size_t ConsistentTensorMetaInferArgs::hash_value() const {
 }
 
 size_t SrcOpConsistentTensorMetaInferArgs::hash_value() const {
-  return op_interp_ctx_->hash_value();
+  return std::hash<OpAttrs>()(op_interp_ctx_->GetAttrs());
 }
 
 bool ConsistentTensorMetaInferArgs::operator==(const ConsistentTensorMetaInferArgs& other) const {
-  // TODO(hjchen2)
-  // return *(this->op_interp_ctx_) == *(other.op_interp_ctx());
-  // && this->input_consistent_tensor_metas_ == other.input_consistent_tensor_metas_;
-  return false;
+  return this->op_interp_ctx_->GetAttrs() == other.op_interp_ctx_->GetAttrs()
+         && this->input_consistent_tensor_metas_ == other.input_consistent_tensor_metas_;
 }
 
 bool SrcOpConsistentTensorMetaInferArgs::operator==(
     const SrcOpConsistentTensorMetaInferArgs& other) const {
-  // return *(this->op_interp_ctx_) == *(other.op_interp_ctx_) && this->parallel_desc_ ==
-  // other.parallel_desc_
-  //        && this->nd_sbp_ == other.nd_sbp_;
-  return false;
+  return this->op_interp_ctx_->GetAttrs() == other.op_interp_ctx_->GetAttrs()
+         && this->parallel_desc() == other.parallel_desc() && this->nd_sbp() == other.nd_sbp();
 }
 
 Maybe<void> ConsistentTensorMetaInferArgs::MakeNdSbpConstraints(
@@ -222,8 +218,8 @@ class UserOpExprOpDeviceInferContext final : public user_op::DeviceInferContext 
   }
 
  private:
-  const void* Attr4Name(const std::string& attr_name) const override {
-    return CHECK_JUST(op_interp_ctx_->GetAttr(attr_name));
+  Maybe<user_op::AttrVal> Attr4Name(const std::string& attr_name) const override {
+    return op_interp_ctx_->GetAttr(attr_name);
   }
   const UserOpExpr* user_op_expr_;
   const std::shared_ptr<const OpInterpCtx> op_interp_ctx_;

@@ -121,7 +121,8 @@ class ConsistentRandFunctor {
     ctx->seed = gen->current_seed();
     ctx->state = distribution_state;
     ctx->parallel_desc = placement;
-    ctx->nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    ctx->sbp = JUST(GetNdSbp(sbp_tuple));
+    ctx->nd_sbp = *JUST(NdSbpToString(JUST(ctx->sbp)));
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;
@@ -188,7 +189,8 @@ class ConsistentRandNFunctor {
     ctx->seed = gen->current_seed();
     ctx->state = distribution_state;
     ctx->parallel_desc = placement;
-    ctx->nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    ctx->sbp = JUST(GetNdSbp(sbp_tuple));
+    ctx->nd_sbp = *JUST(NdSbpToString(JUST(ctx->sbp)));
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;
@@ -264,7 +266,8 @@ class ConsistentRandIntFunctor {
     ctx->seed = gen->current_seed();
     ctx->state = distribution_state;
     ctx->parallel_desc = placement;
-    ctx->nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    ctx->sbp = JUST(GetNdSbp(sbp_tuple));
+    ctx->nd_sbp = *JUST(NdSbpToString(JUST(ctx->sbp)));
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;
@@ -326,7 +329,8 @@ class ConsistentRandPermFunctor {
     ctx->seed = gen->current_seed();
     ctx->state = distribution_state;
     ctx->parallel_desc = placement;
-    ctx->nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    ctx->sbp = JUST(GetNdSbp(sbp_tuple));
+    ctx->nd_sbp = *JUST(NdSbpToString(JUST(ctx->sbp)));
 
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*randperm_op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));

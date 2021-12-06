@@ -192,8 +192,8 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
   const std::shared_ptr<const OpInterpCtx>* op_interp_ctx_;
   LocalUserKernelBaseContext base_ctx_;
 
-  const void* Attr4Name(const std::string& attr_name) const override {
-    return CHECK_JUST((*op_interp_ctx_)->GetAttr(attr_name));
+  Maybe<user_op::AttrVal> Attr4Name(const std::string& attr_name) const override {
+    return (*op_interp_ctx_)->GetAttr(attr_name);
   }
 };
 
@@ -250,8 +250,8 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
   }
 
  private:
-  const void* Attr4Name(const std::string& attr_name) const override {
-    return CHECK_JUST((*op_interp_ctx_)->GetAttr(attr_name));
+  Maybe<user_op::AttrVal> Attr4Name(const std::string& attr_name) const override {
+    return (*op_interp_ctx_)->GetAttr(attr_name);
   }
 
   const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
