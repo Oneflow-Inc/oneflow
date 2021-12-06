@@ -627,7 +627,7 @@ class DimGatherFunctor {
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), indices->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous(), index->contiguous()}, attrs);
   }
 
  private:

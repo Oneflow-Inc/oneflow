@@ -149,7 +149,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                                    const std::string& modifier);
 
   template<typename T>
-  Maybe<void> TensorView(const T input_tensor, const T view_tensor);
+  Maybe<void> TensorView(const T input_tensor, const T view_tensor, const int64_t offset);
 
   Maybe<void> ComputeRankFrontSeqCallback(const std::function<void()>& callback);
 

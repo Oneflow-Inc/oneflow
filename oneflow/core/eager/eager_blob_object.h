@@ -76,6 +76,7 @@ class EagerBlobObject final : public BlobObject {
 
   Maybe<void> TryInitBlob() override;
   Maybe<void> InitBlob();
+  Maybe<void> InitBlobWithOffset(const int64_t offset);
 
   Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
   Maybe<void> DeallocateBlobDataPtr() override {
