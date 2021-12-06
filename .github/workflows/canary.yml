@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-      # 11.2 only
   workflow_dispatch:
     inputs:
       python_version:
