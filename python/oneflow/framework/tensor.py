@@ -580,6 +580,14 @@ def _bmm(self, other):
     return flow.bmm(self, other)
 
 
+def _all(self, dim=None, keepdim=False):
+    return flow.all(self, dim, keepdim)
+
+
+def _any(self, dim=None, keepdim=False):
+    return flow.any(self, dim, keepdim)
+
+
 def _len(self):
     if self.dim() == 0:
         raise TypeError("len() of a 0-d tensor")
@@ -719,6 +727,10 @@ def _format(self, format_spec):
 
 def _to(self, *args, **kwargs):
     return flow._C.to(self, *args, **kwargs)
+
+
+def _gather(self, dim, index):
+    return flow._C.dim_gather(self, dim, index, False)
 
 
 def RegisterMethods():
@@ -863,6 +875,9 @@ def RegisterMethods():
     Tensor.unsqueeze = _unsqueeze
     Tensor.permute = _permute
     Tensor.to = _to
+    Tensor.gather = _gather
+    Tensor.all = _all
+    Tensor.any = _any
 
 
 def register_tensor_op(op_name):

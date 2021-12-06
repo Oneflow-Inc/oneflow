@@ -330,6 +330,12 @@ add_docstr(
     """,
 )
 
+add_docstr(
+    oneflow.Tensor.bmm,
+    """
+    See :func:`oneflow.bmm`
+    """,
+)
 
 add_docstr(
     oneflow.Tensor.cast,
@@ -663,6 +669,16 @@ add_docstr(
         >>> output = input.to(dtype=flow.float32)
         >>> np.array_equal(arr.astype(np.float32), output.numpy())
         True
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.gather,
+    """
+    oneflow.Tensor.gather(dim, index) -> Tensor
+
+    See :func:`oneflow.gather`
 
     """,
 )
