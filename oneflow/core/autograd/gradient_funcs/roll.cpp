@@ -28,8 +28,8 @@ struct RollCaptureState : public AutoGradCaptureState {
 
 class Roll : public OpExprGradFunction<RollCaptureState> {
  public:
-  Maybe<void> Capture(RollCaptureState* state, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const OpInterpCtx* ctx) const override;
+  Maybe<void> Capture(RollCaptureState* state, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const RollCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };

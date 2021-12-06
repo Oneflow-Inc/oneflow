@@ -38,10 +38,9 @@ class FusedScaleTrilSoftmaxMaskScale
                     const TensorTuple& out_grads, TensorTuple* in_grads) const override;
 };
 
-Maybe<void> FusedScaleTrilSoftmaxMaskScale::Capture(FusedScaleTrilSoftmaxMaskScaleInterpState* state,
-                                                    const TensorTuple& inputs,
-                                                    const TensorTuple& outputs,
-                                                    const OpInterpCtx* ctx) const {
+Maybe<void> FusedScaleTrilSoftmaxMaskScale::Capture(
+    FusedScaleTrilSoftmaxMaskScaleInterpState* state, const TensorTuple& inputs,
+    const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
   state->input_requires_grad = inputs.at(0)->requires_grad();  // input
 

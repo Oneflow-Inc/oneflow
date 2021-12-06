@@ -26,8 +26,8 @@ struct DiagCaptureState : public AutoGradCaptureState {
 
 class Diag : public OpExprGradFunction<DiagCaptureState> {
  public:
-  Maybe<void> Capture(DiagCaptureState* state, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const OpInterpCtx* ctx) const override;
+  Maybe<void> Capture(DiagCaptureState* state, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const DiagCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };

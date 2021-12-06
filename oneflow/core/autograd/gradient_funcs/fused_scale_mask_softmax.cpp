@@ -44,7 +44,7 @@ Maybe<void> FusedScaleMaskSoftmax::Capture(FusedScaleMaskSoftmaxInterState* stat
 
   if (!state->input_requires_grad) { return Maybe<void>::Ok(); }
   auto* interp_ctx = dynamic_cast<const FusedScaleMaskSoftmaxOpInterpCtx*>(ctx);
-  state->scale =interp_ctx->scale_value;
+  state->scale = interp_ctx->scale_value;
 
   state->SaveTensorForBackward(inputs.at(1));   // save mask
   state->SaveTensorForBackward(outputs.at(0));  // save y, ie. softmax result

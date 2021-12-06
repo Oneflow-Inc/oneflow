@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -44,6 +43,7 @@ struct PoolingCaptureState : public AutoGradCaptureState {
 template<typename T>
 class PoolingNdGrad : public OpExprGradFunction<PoolingCaptureState> {
  public:
+  explicit PoolingNdGrad(const std::string& mode) : mode_(mode) {}
   virtual ~PoolingNdGrad() = default;
 
   Maybe<void> Capture(PoolingCaptureState* state, const TensorTuple& inputs,
@@ -56,11 +56,8 @@ class PoolingNdGrad : public OpExprGradFunction<PoolingCaptureState> {
 };
 
 template<typename T>
-Maybe<void> PoolingNdGrad<T>(const std::string& mode): mode_{mode} {}
-
-template<typename T>
 Maybe<void> PoolingNdGrad<T>::Capture(PoolingCaptureState* state, const TensorTuple& inputs,
-                                   const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                                      const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -81,7 +78,7 @@ Maybe<void> PoolingNdGrad<T>::Capture(PoolingCaptureState* state, const TensorTu
 
 template<typename T>
 Maybe<void> PoolingNdGrad<T>::Apply(const PoolingCaptureState* state, const TensorTuple& out_grads,
-                                 TensorTuple* in_grads) const {
+                                    TensorTuple* in_grads) const {
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_LE_OR_RETURN(out_grads.size(), 2);
 
@@ -92,31 +89,31 @@ Maybe<void> PoolingNdGrad<T>::Apply(const PoolingCaptureState* state, const Tens
 
   in_grads->resize(1);
   in_grads->at(0) = JUST(functional::PoolingNdGrad(
-      input, output, indice, out_grads.at(0), this->mode_, ndims, state->data_format, state->padding,
-      state->kernel_size, state->stride, state->dilation, state->return_indices, state->ceil_mode));
+      input, output, indice, out_grads.at(0), this->mode_, ndims, state->data_format,
+      state->padding, state->kernel_size, state->stride, state->dilation, state->return_indices,
+      state->ceil_mode));
 
   return Maybe<void>::Ok();
 }
 
 }  // namespace
 
-
 class Maxpool1DGrad final : public PoolingNdGrad<Maxpool1DGrad> {
  public:
   using ContextT = MaxPool1DGradOpInterpCtx;
-  Maybe<void> Maxpool1DGrad() { return PoolingNdGrad("max"); }
+  Maxpool1DGrad() : PoolingNdGrad<Maxpool1DGrad>("max") {}
 };
 
 class Maxpool2DGrad final : public PoolingNdGrad<Maxpool2DGrad> {
  public:
   using ContextT = MaxPool2DGradOpInterpCtx;
-  Maybe<void> Maxpool2DGrad() { return PoolingNdGrad("max"); }
+  Maxpool2DGrad() : PoolingNdGrad<Maxpool2DGrad>("max") {}
 };
 
 class Maxpool3DGrad final : public PoolingNdGrad<Maxpool3DGrad> {
  public:
   using ContextT = MaxPool3DGradOpInterpCtx;
-  Maybe<void> Maxpool3DGrad() { return PoolingNdGrad("max"); }
+  Maxpool3DGrad() : PoolingNdGrad<Maxpool3DGrad>("max") {}
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("maxpool_1d", Maxpool1DGrad);

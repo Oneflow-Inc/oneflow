@@ -57,8 +57,8 @@ Maybe<void> L2Normalize::Apply(const L2NormalizeCaptureState* state, const Tenso
   CHECK_EQ_OR_RETURN(out_grads.size(), 2);
   const auto& y = state->SavedTensors().at(0);
   const auto& square_x_sum = state->SavedTensors().at(1);
-  in_grads->at(0) =
-      JUST(functional::L2NormalizeGrad(out_grads.at(0), y, square_x_sum, state->axis, state->epsilon));
+  in_grads->at(0) = JUST(
+      functional::L2NormalizeGrad(out_grads.at(0), y, square_x_sum, state->axis, state->epsilon));
   return Maybe<void>::Ok();
 }
 

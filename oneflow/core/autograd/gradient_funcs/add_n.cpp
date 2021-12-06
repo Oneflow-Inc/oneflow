@@ -27,8 +27,8 @@ class AddN : public OpExprGradFunction<AddNCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(AddNCaptureState* state, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const OpInterpCtx* ctx) const override {
+  Maybe<void> Capture(AddNCaptureState* state, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     state->input_num = inputs.size();
     state->requires_grad.resize(inputs.size());
     for (int i = 0; i < inputs.size(); ++i) {

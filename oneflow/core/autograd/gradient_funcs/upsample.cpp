@@ -58,9 +58,9 @@ Maybe<void> Upsample::Apply(const UpsampleCaptureState* state, const TensorTuple
 
   const std::shared_ptr<oneflow::one::Tensor>& x = state->SavedTensors().at(0);
   in_grads->resize(1);
-  in_grads->at(0) =
-      JUST(functional::UpsampleGrad(out_grads.at(0), x, state->height_scale, state->width_scale,
-                                    state->align_corners, state->data_format, state->interpolation));
+  in_grads->at(0) = JUST(functional::UpsampleGrad(out_grads.at(0), x, state->height_scale,
+                                                  state->width_scale, state->align_corners,
+                                                  state->data_format, state->interpolation));
   return Maybe<void>::Ok();
 }
 
@@ -95,8 +95,8 @@ class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DCaptureStat
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     const std::shared_ptr<oneflow::one::Tensor>& x = state->SavedTensors().at(0);
     in_grads->resize(1);
-    in_grads->at(0) = JUST(functional::UpsampleNearest2DGrad(out_grads.at(0), x, state->height_scale,
-                                                             state->width_scale, state->data_format));
+    in_grads->at(0) = JUST(functional::UpsampleNearest2DGrad(
+        out_grads.at(0), x, state->height_scale, state->width_scale, state->data_format));
 
     return Maybe<void>::Ok();
   }
@@ -135,9 +135,9 @@ class UpsampleBilinear2D : public OpExprGradFunction<UpsampleBilinear2DCaptureSt
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     const std::shared_ptr<oneflow::one::Tensor>& x = state->SavedTensors().at(0);
     in_grads->resize(1);
-    in_grads->at(0) = JUST(functional::UpsampleBilinear2DGrad(out_grads.at(0), x, state->height_scale,
-                                                              state->width_scale, state->align_corners,
-                                                              state->data_format));
+    in_grads->at(0) = JUST(functional::UpsampleBilinear2DGrad(
+        out_grads.at(0), x, state->height_scale, state->width_scale, state->align_corners,
+        state->data_format));
 
     return Maybe<void>::Ok();
   }
@@ -174,8 +174,8 @@ class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DCaptureState>
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     const std::shared_ptr<oneflow::one::Tensor>& x = state->SavedTensors().at(0);
     in_grads->resize(1);
-    in_grads->at(0) = JUST(functional::UpsampleLinear1DGrad(out_grads.at(0), x, state->scale_factor,
-                                                            state->align_corners, state->data_format));
+    in_grads->at(0) = JUST(functional::UpsampleLinear1DGrad(
+        out_grads.at(0), x, state->scale_factor, state->align_corners, state->data_format));
 
     return Maybe<void>::Ok();
   }
@@ -210,8 +210,8 @@ class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DCaptureStat
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     const std::shared_ptr<oneflow::one::Tensor>& x = state->SavedTensors().at(0);
     in_grads->resize(1);
-    in_grads->at(0) = JUST(
-        functional::UpsampleNearest1DGrad(out_grads.at(0), x, state->scale_factor, state->data_format));
+    in_grads->at(0) = JUST(functional::UpsampleNearest1DGrad(
+        out_grads.at(0), x, state->scale_factor, state->data_format));
 
     return Maybe<void>::Ok();
   }
@@ -250,9 +250,9 @@ class UpsampleBicubic2D : public OpExprGradFunction<UpsampleBicubic2DCaptureStat
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     const std::shared_ptr<oneflow::one::Tensor>& x = state->SavedTensors().at(0);
     in_grads->resize(1);
-    in_grads->at(0) = JUST(functional::UpsampleBicubic2DGrad(out_grads.at(0), x, state->height_scale,
-                                                             state->width_scale, state->align_corners,
-                                                             state->data_format));
+    in_grads->at(0) = JUST(functional::UpsampleBicubic2DGrad(
+        out_grads.at(0), x, state->height_scale, state->width_scale, state->align_corners,
+        state->data_format));
     return Maybe<void>::Ok();
   }
 };
@@ -290,9 +290,9 @@ class UpsampleNearest3D : public OpExprGradFunction<UpsampleNearest3DCaptureStat
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     const std::shared_ptr<oneflow::one::Tensor>& x = state->SavedTensors().at(0);
     in_grads->resize(1);
-    in_grads->at(0) = JUST(functional::UpsampleNearest3DGrad(out_grads.at(0), x, state->depth_scale,
-                                                             state->height_scale, state->width_scale,
-                                                             state->data_format));
+    in_grads->at(0) = JUST(functional::UpsampleNearest3DGrad(
+        out_grads.at(0), x, state->depth_scale, state->height_scale, state->width_scale,
+        state->data_format));
 
     return Maybe<void>::Ok();
   }

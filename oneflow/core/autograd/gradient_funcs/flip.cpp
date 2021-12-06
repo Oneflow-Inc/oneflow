@@ -27,8 +27,8 @@ struct FlipCaptureState : public AutoGradCaptureState {
 
 class Flip : public OpExprGradFunction<FlipCaptureState> {
  public:
-  Maybe<void> Capture(FlipCaptureState* state, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const OpInterpCtx* ctx) const override;
+  Maybe<void> Capture(FlipCaptureState* state, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const FlipCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };

@@ -108,8 +108,8 @@ class DimScatterUpdateScalar : public OpExprGradFunction<DimScatterCaptureState>
                     TensorTuple* in_grads) const override;
 };
 
-Maybe<void> DimScatterUpdateScalar::Capture(DimScatterCaptureState* state, const TensorTuple& inputs,
-                                            const TensorTuple& outputs,
+Maybe<void> DimScatterUpdateScalar::Capture(DimScatterCaptureState* state,
+                                            const TensorTuple& inputs, const TensorTuple& outputs,
                                             const OpInterpCtx* ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
   CHECK_EQ_OR_RETURN(outputs.size(), 1);

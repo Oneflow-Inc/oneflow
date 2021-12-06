@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/framework/op_interp_ctx.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/functional/functional.h"
@@ -46,18 +47,18 @@ class AvgPoolingNdGrad : public OpExprGradFunction<AvgPoolingCaptureState> {
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const AvgPoolingCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
-
 };
 
-Maybe<void> AvgPoolingNdGrad::Capture(AvgPoolingCaptureState* state, const TensorTuple& inputs,
-                                      const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+template<typename T>
+Maybe<void> AvgPoolingNdGrad<T>::Capture(AvgPoolingCaptureState* state, const TensorTuple& inputs,
+                                         const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
   state->input_index = state->SaveTensorForBackward(inputs.at(0));
   state->output_index = state->SaveTensorForBackward(outputs.at(0));
 
-  auto* interp_ctx = dynamic_cast<const T::ContextT*>(ctx);
+  auto* interp_ctx = dynamic_cast<const typename T::ContextT*>(ctx);
   state->data_format = interp_ctx->data_format;
   state->padding = interp_ctx->padding;
   state->kernel_size = interp_ctx->kernel_size;
@@ -69,8 +70,9 @@ Maybe<void> AvgPoolingNdGrad::Capture(AvgPoolingCaptureState* state, const Tenso
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AvgPoolingNdGrad::Apply(const AvgPoolingCaptureState* state, const TensorTuple& out_grads,
-                                    TensorTuple* in_grads) const {
+template<typename T>
+Maybe<void> AvgPoolingNdGrad<T>::Apply(const AvgPoolingCaptureState* state,
+                                       const TensorTuple& out_grads, TensorTuple* in_grads) const {
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 
@@ -86,16 +88,16 @@ Maybe<void> AvgPoolingNdGrad::Apply(const AvgPoolingCaptureState* state, const T
   return Maybe<void>::Ok();
 }
 
-class AvgPooling1DGrad : public AvgPoolingNdGrad<AvgPooling1DGrad> {
-  using ContextT = MaxPool1DGradOpInterpCtx;
+struct AvgPooling1DGrad : public AvgPoolingNdGrad<AvgPooling1DGrad> {
+  using ContextT = AvgPool1DGradOpInterpCtx;
 };
 
-class AvgPooling2DGrad : public AvgPoolingNdGrad<AvgPooling2DGrad> {
-  using ContextT = MaxPool2DGradOpInterpCtx;
+struct AvgPooling2DGrad : public AvgPoolingNdGrad<AvgPooling2DGrad> {
+  using ContextT = AvgPool2DGradOpInterpCtx;
 };
 
-class AvgPooling3DGrad : public AvgPoolingNdGrad<AvgPooling3DGrad> {
-  using ContextT = MaxPool3DGradOpInterpCtx;
+struct AvgPooling3DGrad : public AvgPoolingNdGrad<AvgPooling3DGrad> {
+  using ContextT = AvgPool3DGradOpInterpCtx;
 };
 
 }  // namespace

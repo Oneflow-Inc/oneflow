@@ -302,6 +302,8 @@ class BroadcastMinMax : public BroadcastBinaryGrad {
   }
 
  protected:
+  virtual ~BroadcastMinMax() = default;
+
   Maybe<void> SaveTensorForBackward(BroadcastBinaryCaptureState* state, const TensorTuple& inputs,
                                     const TensorTuple& outputs) const override {
     if (state->x_requires_grad || state->y_requires_grad) {
@@ -318,12 +320,12 @@ class BroadcastMinMax : public BroadcastBinaryGrad {
 
 class BroadcastMinimum : public BroadcastMinMax {
  public:
-  BroadcastMinimum(): BroadcastMinMax(), elementwise_grad_functor_{functional::ElementwiseMinGrad} {}
+  BroadcastMinimum() { elementwise_grad_functor_ = functional::ElementwiseMinGrad; }
 };
 
 class BroadcastMaximum : public BroadcastMinMax {
  public:
-  BroadcastMaximum(): BroadcastMinMax(), elementwise_grad_functor_{functional::ElementwiseMaxGrad} {}
+  BroadcastMaximum() { elementwise_grad_functor_ = functional::ElementwiseMaxGrad; }
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_minimum", BroadcastMinimum);

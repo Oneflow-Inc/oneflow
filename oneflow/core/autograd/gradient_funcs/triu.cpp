@@ -26,8 +26,8 @@ struct TriuCaptureState : public AutoGradCaptureState {
 
 class Triu : public OpExprGradFunction<TriuCaptureState> {
  public:
-  Maybe<void> Capture(TriuCaptureState* state, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const OpInterpCtx* ctx) const override;
+  Maybe<void> Capture(TriuCaptureState* state, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const TriuCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };

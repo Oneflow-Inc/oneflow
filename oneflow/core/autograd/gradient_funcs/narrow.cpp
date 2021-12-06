@@ -62,7 +62,8 @@ class Narrow : public OpExprGradFunction<NarrowCaptureState> {
         like = JUST(functional::Empty(state->shape, dy->dtype(), JUST(dy->device())));
       }
       in_grads->resize(1);
-      in_grads->at(0) = JUST(functional::NarrowGrad(dy, like, state->dim, state->start, state->length));
+      in_grads->at(0) =
+          JUST(functional::NarrowGrad(dy, like, state->dim, state->start, state->length));
     }
     return Maybe<void>::Ok();
   }

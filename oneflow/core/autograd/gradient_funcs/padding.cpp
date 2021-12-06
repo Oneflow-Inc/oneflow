@@ -26,8 +26,8 @@ struct Pad2dCaptureState : public AutoGradCaptureState {
 
 class Pad2d : public OpExprGradFunction<Pad2dCaptureState> {
  public:
-  Maybe<void> Capture(Pad2dCaptureState* state, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const OpInterpCtx* ctx) const override {
+  Maybe<void> Capture(Pad2dCaptureState* state, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
@@ -83,7 +83,7 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
     auto* interp_ctx = dynamic_cast<const PadOpInterpCtx*>(ctx);
     const auto& pad_before = interp_ctx->padding_before;
     const auto& pad_after = interp_ctx->padding_after;
-    
+
     if (pad_before.size() != pad_after.size()) {
       return Error::RuntimeError() << "padding_before and padding_after size mismatch";
     }
@@ -108,8 +108,8 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
     if (state->requires_grad) {
-      in_grads->at(0) =
-          JUST(functional::PadGrad(out_grads.at(0), state->paddings, "constant", state->padding_value));
+      in_grads->at(0) = JUST(
+          functional::PadGrad(out_grads.at(0), state->paddings, "constant", state->padding_value));
     }
     return Maybe<void>::Ok();
   }

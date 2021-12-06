@@ -39,7 +39,9 @@ class Concat : public OpExprGradFunction<ConcatCaptureState> {
 Maybe<void> Concat::Capture(ConcatCaptureState* state, const TensorTuple& inputs,
                             const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   state->requires_grad.resize(inputs.size());
-  for (int i = 0; i < inputs.size(); ++i) { state->requires_grad[i] = inputs.at(i)->requires_grad(); }
+  for (int i = 0; i < inputs.size(); ++i) {
+    state->requires_grad[i] = inputs.at(i)->requires_grad();
+  }
 
   auto* interp_ctx = dynamic_cast<const ConcatOpInterpCtx*>(ctx);
   state->axis = interp_ctx->axis;

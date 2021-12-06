@@ -132,12 +132,12 @@ Maybe<void> ReduceMaxOrMin::Apply(const ReduceMaxOrMinCaptureState* state,
                .then(std::bind(functional::CastLike, std::placeholders::_1, input))
                .call());
 
-  const auto& bcast_like_div =
-      JUST(functional::SequenceFunction<Maybe<Tensor>()>(
-               [&]() { return functional::ReduceSum(cast_like, state->axis, state->keepdims); })
-               .then(std::bind(functional::Div, dy, std::placeholders::_1))
-               .then(std::bind(functional::BroadcastLike, std::placeholders::_1, input, state->axis))
-               .call());
+  const auto& bcast_like_div = JUST(
+      functional::SequenceFunction<Maybe<Tensor>()>(
+          [&]() { return functional::ReduceSum(cast_like, state->axis, state->keepdims); })
+          .then(std::bind(functional::Div, dy, std::placeholders::_1))
+          .then(std::bind(functional::BroadcastLike, std::placeholders::_1, input, state->axis))
+          .call());
 
   in_grads->resize(1);
   in_grads->at(0) = JUST(functional::Mul(bcast_like_div, cast_like));

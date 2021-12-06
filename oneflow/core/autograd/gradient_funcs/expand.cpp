@@ -49,8 +49,8 @@ Maybe<void> Expand::Apply(const ExpandCaptureState* state, const TensorTuple& ou
                           TensorTuple* in_grads) const {
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-  in_grads->at(0) = JUST(
-      functional::ExpandGrad(out_grads.at(0), state->logical_out_shape, state->logical_expand_shape));
+  in_grads->at(0) = JUST(functional::ExpandGrad(out_grads.at(0), state->logical_out_shape,
+                                                state->logical_expand_shape));
   return Maybe<void>::Ok();
 }
 

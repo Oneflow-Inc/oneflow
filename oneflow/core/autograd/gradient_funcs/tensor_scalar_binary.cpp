@@ -34,8 +34,9 @@ class TensorScalarAddOrSub : public OpExprGradFunction<TensorScalarCaptureState>
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
 };
 
-Maybe<void> TensorScalarAddOrSub::Capture(TensorScalarCaptureState* state, const TensorTuple& inputs,
-                                          const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+Maybe<void> TensorScalarAddOrSub::Capture(TensorScalarCaptureState* state,
+                                          const TensorTuple& inputs, const TensorTuple& outputs,
+                                          const OpInterpCtx* ctx) const {
   state->x_requires_grad = inputs.at(0)->requires_grad();
   state->scalar_requires_grad = inputs.at(1)->requires_grad();
   return Maybe<void>::Ok();

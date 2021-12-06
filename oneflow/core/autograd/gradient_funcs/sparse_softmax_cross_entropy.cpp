@@ -29,8 +29,8 @@ class SparseSoftmaxCrossEntropy : public OpExprGradFunction<SparseSoftmaxCrossEn
  public:
   Maybe<void> Capture(SparseSoftmaxCrossEntropyCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
-  Maybe<void> Apply(const SparseSoftmaxCrossEntropyCaptureState* state, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override;
+  Maybe<void> Apply(const SparseSoftmaxCrossEntropyCaptureState* state,
+                    const TensorTuple& out_grads, TensorTuple* in_grads) const override;
 };
 
 Maybe<void> SparseSoftmaxCrossEntropy::Capture(SparseSoftmaxCrossEntropyCaptureState* state,

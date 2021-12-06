@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
 
@@ -56,8 +55,8 @@ class SparseCrossEntropy : public OpExprGradFunction<SparseCrossEntropyCaptureSt
       in_grads->at(0) = JUST(
           functional::SparseCrossEntropyMsGrad(prediction, label, out_grads.at(0), state->depth));
     } else {
-      in_grads->at(0) =
-          JUST(functional::SparseCrossEntropyGrad(prediction, label, out_grads.at(0), state->depth));
+      in_grads->at(0) = JUST(
+          functional::SparseCrossEntropyGrad(prediction, label, out_grads.at(0), state->depth));
     }
     return Maybe<void>::Ok();
   }

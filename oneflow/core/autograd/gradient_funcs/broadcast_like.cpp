@@ -46,8 +46,8 @@ Maybe<void> BroadCastLike::Capture(BroadCastLikeCaptureState* state, const Tenso
   return Maybe<void>::Ok();
 }
 
-Maybe<void> BroadCastLike::Apply(const BroadCastLikeCaptureState* state, const TensorTuple& out_grads,
-                                 TensorTuple* in_grads) const {
+Maybe<void> BroadCastLike::Apply(const BroadCastLikeCaptureState* state,
+                                 const TensorTuple& out_grads, TensorTuple* in_grads) const {
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 

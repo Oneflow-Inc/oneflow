@@ -61,8 +61,7 @@ class CastToConsistent : public OpExprGradFunction<CastConsistentCaptureState> {
   }
 
   Maybe<void> Capture(CastConsistentCaptureState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs,
-                      const OpInterpCtx* interp_ctx) const override {
+                      const TensorTuple& outputs, const OpInterpCtx* interp_ctx) const override {
     ctx->parallel_desc = JUST(interp_ctx->parallel_desc);
     ctx->nd_sbp = JUST(GetDualNdSbp(JUST(interp_ctx->sbp)));
     return Maybe<void>::Ok();
@@ -118,7 +117,8 @@ class CastFromConsistent : public OpExprGradFunction<CastConsistentCaptureState>
     interp_ctx->dtype = ctx->dtype->data_type();
     interp_ctx->parallel_desc = ctx->parallel_desc;
     interp_ctx->sbp = dual_nd_sbp;
-    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}, interp_ctx));
+    in_grads->at(0) =
+        JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}, interp_ctx));
     return Maybe<void>::Ok();
   }
 

@@ -27,10 +27,12 @@ struct LogSoftmaxCaptureState : public AutoGradCaptureState {
 
 class LogSoftmax : public OpExprGradFunction<LogSoftmaxCaptureState> {
  public:
+  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(LogSoftmaxCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const LogSoftmaxCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
+
  private:
   std::shared_ptr<OpExpr> grad_op_;
 };

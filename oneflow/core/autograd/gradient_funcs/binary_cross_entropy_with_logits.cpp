@@ -50,9 +50,9 @@ Maybe<void> BinaryCrossEntropyWithLogits::Capture(BinaryCrossEntropyWithLogitsCa
   }
   return Maybe<void>::Ok();
 }
-Maybe<void> BinaryCrossEntropyWithLogits::Apply(const BinaryCrossEntropyWithLogitsCaptureState* state,
-                                                const TensorTuple& out_grads,
-                                                TensorTuple* in_grads) const {
+Maybe<void> BinaryCrossEntropyWithLogits::Apply(
+    const BinaryCrossEntropyWithLogitsCaptureState* state, const TensorTuple& out_grads,
+    TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   const auto& dy = out_grads.at(0);
   const auto& input = state->SavedTensors().at(0);

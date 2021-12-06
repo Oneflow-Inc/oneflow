@@ -68,8 +68,8 @@ Maybe<void> Matmul::Apply(const MatmulCaptureState* state, const TensorTuple& ou
   if (state->requires_grad_a) {
     const auto& input_b = state->SavedTensors().at(state->b_index);
     if (state->transpose_a) {
-      in_grads->at(0) =
-          JUST(functional::MatMul(input_b, out_grads.at(0), state->transpose_b, true, state->alpha));
+      in_grads->at(0) = JUST(
+          functional::MatMul(input_b, out_grads.at(0), state->transpose_b, true, state->alpha));
     } else {
       in_grads->at(0) = JUST(
           functional::MatMul(out_grads.at(0), input_b, false, !(state->transpose_b), state->alpha));
@@ -79,8 +79,8 @@ Maybe<void> Matmul::Apply(const MatmulCaptureState* state, const TensorTuple& ou
   if (state->requires_grad_b) {
     const auto& input_a = state->SavedTensors().at(state->a_index);
     if (state->transpose_b) {
-      in_grads->at(1) =
-          JUST(functional::MatMul(out_grads.at(0), input_a, true, state->transpose_a, state->alpha));
+      in_grads->at(1) = JUST(
+          functional::MatMul(out_grads.at(0), input_a, true, state->transpose_a, state->alpha));
     } else {
       in_grads->at(1) = JUST(
           functional::MatMul(input_a, out_grads.at(0), !(state->transpose_a), false, state->alpha));
@@ -105,8 +105,8 @@ Maybe<void> BroadcastMatmul::Apply(const MatmulCaptureState* state, const Tensor
   if (state->requires_grad_a) {
     const auto& input_b = state->SavedTensors().at(state->b_index);
     if (state->transpose_a) {
-      in_grads->at(0) =
-          JUST(functional::MatMul(input_b, out_grads.at(0), state->transpose_b, true, state->alpha));
+      in_grads->at(0) = JUST(
+          functional::MatMul(input_b, out_grads.at(0), state->transpose_b, true, state->alpha));
     } else {
       in_grads->at(0) = JUST(
           functional::MatMul(out_grads.at(0), input_b, false, !(state->transpose_b), state->alpha));

@@ -32,8 +32,8 @@ struct WhereScalarCaptureState : public AutoGradCaptureState {
 
 class Where : public OpExprGradFunction<WhereCaptureState> {
  public:
-  Maybe<void> Capture(WhereCaptureState* state, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const OpInterpCtx* ctx) const override;
+  Maybe<void> Capture(WhereCaptureState* state, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const WhereCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };

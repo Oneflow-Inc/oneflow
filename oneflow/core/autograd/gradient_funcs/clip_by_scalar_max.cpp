@@ -50,7 +50,8 @@ class ClipByScalarMax : public OpExprGradFunction<ClipByScalarMaxCaptureState> {
     in_grads->resize(1);
     if (state->requires_grad) {
       const auto& x = state->SavedTensors().at(0);
-      in_grads->at(0) = JUST(functional::ClampGrad(out_grads.at(0), x, /*min=*/NullOpt, state->max));
+      in_grads->at(0) =
+          JUST(functional::ClampGrad(out_grads.at(0), x, /*min=*/NullOpt, state->max));
     }
     return Maybe<void>::Ok();
   }

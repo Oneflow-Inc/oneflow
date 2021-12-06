@@ -32,8 +32,8 @@ struct UnfoldInterpState : public AutoGradCaptureState {
 
 class Unfold : public OpExprGradFunction<UnfoldInterpState> {
  public:
-  Maybe<void> Capture(UnfoldInterpState* state, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const OpInterpCtx* ctx) const override;
+  Maybe<void> Capture(UnfoldInterpState* state, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const UnfoldInterpState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
@@ -61,9 +61,9 @@ Maybe<void> Unfold::Apply(const UnfoldInterpState* state, const TensorTuple& out
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(1);
-  in_grads->at(0) =
-      JUST(functional::Fold(out_grads.at(0), state->data_format, state->output_size, state->kernel_size,
-                            state->dilation_rate, state->padding, state->strides));
+  in_grads->at(0) = JUST(functional::Fold(out_grads.at(0), state->data_format, state->output_size,
+                                          state->kernel_size, state->dilation_rate, state->padding,
+                                          state->strides));
   return Maybe<void>::Ok();
 }
 

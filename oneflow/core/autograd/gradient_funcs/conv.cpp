@@ -47,7 +47,7 @@ class ConvolutionNd : public OpExprGradFunction<ConvolutionNdCaptureState> {
 
 template<typename T>
 Maybe<void> ConvolutionNd<T>::Capture(ConvolutionNdCaptureState* state, const TensorTuple& inputs,
-                                   const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                                      const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
   state->input_requires_grad = inputs.at(0)->requires_grad();
   state->weight_requires_grad = inputs.at(1)->requires_grad();
@@ -68,8 +68,8 @@ Maybe<void> ConvolutionNd<T>::Capture(ConvolutionNdCaptureState* state, const Te
 }
 
 template<typename T>
-Maybe<void> ConvolutionNd<T>::Apply(const ConvolutionNdCaptureState* state, const TensorTuple& out_grads,
-                                 TensorTuple* in_grads) const {
+Maybe<void> ConvolutionNd<T>::Apply(const ConvolutionNdCaptureState* state,
+                                    const TensorTuple& out_grads, TensorTuple* in_grads) const {
   in_grads->resize(2);
   size_t num_spatial_dims = state->kernel_size.size();
   if (state->input_requires_grad) {

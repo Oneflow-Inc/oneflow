@@ -44,7 +44,6 @@ struct LayerNormCaptureState : public AutoGradCaptureState {
 //              begin_params_axis=-1, epsilon=1e-5)
 class LayerNorm : public OpExprGradFunction<LayerNormCaptureState> {
  public:
-
   Maybe<void> Capture(LayerNormCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
 

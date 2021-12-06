@@ -53,8 +53,8 @@ Maybe<void> UnfoldTensor::Apply(const UnfoldTensorCaptureState* state, const Ten
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   const auto& in = state->SavedTensors().at(0);
-  in_grads->at(0) =
-      JUST(functional::UnfoldTensorGrad(out_grads.at(0), in, state->dimension, state->size, state->step));
+  in_grads->at(0) = JUST(functional::UnfoldTensorGrad(out_grads.at(0), in, state->dimension,
+                                                      state->size, state->step));
   return Maybe<void>::Ok();
 }
 

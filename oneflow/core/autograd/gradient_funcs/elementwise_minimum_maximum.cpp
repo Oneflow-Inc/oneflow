@@ -55,6 +55,7 @@ class ElementwiseXimumOp : public OpExprGradFunction<ElementwiseXimumCaptureStat
   }
 
  protected:
+  virtual ~ElementwiseXimumOp() = default;
   std::function<Maybe<TensorTuple>(const std::shared_ptr<Tensor>&, const std::shared_ptr<Tensor>&,
                                    const std::shared_ptr<Tensor>&)>
       grad_functor;
@@ -62,12 +63,12 @@ class ElementwiseXimumOp : public OpExprGradFunction<ElementwiseXimumCaptureStat
 
 class ElementwiseMinimum : public ElementwiseXimumOp {
  public:
-  ElementwiseMinimum() : ElementwiseXimumOp(), grad_functor{functional::ElementwiseMinGrad} {}
+  ElementwiseMinimum() { grad_functor = functional::ElementwiseMinGrad; }
 };
 
 class ElementwiseMaximum : public ElementwiseXimumOp {
  public:
-  ElementwiseMaximum() : ElementwiseXimumOp(), grad_functor{functional::ElementwiseMaxGrad} {}
+  ElementwiseMaximum() { grad_functor = functional::ElementwiseMaxGrad; }
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("elementwise_minimum", ElementwiseMinimum);

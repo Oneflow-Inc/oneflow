@@ -31,8 +31,8 @@ struct SliceCaptureState : public AutoGradCaptureState {
 
 class Slice : public OpExprGradFunction<SliceCaptureState> {
  public:
-  Maybe<void> Capture(SliceCaptureState* state, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const OpInterpCtx* ctx) const override {
+  Maybe<void> Capture(SliceCaptureState* state, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
@@ -91,11 +91,12 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateCaptureState> {
     if (state->requires_grad_x) {
       const auto& update = state->SavedTensors().at(0);
       const auto& temp = JUST(functional::ZerosLike(update));
-      in_grads->at(0) = JUST(functional::SliceUpdate(out_grads.at(0), temp, state->start, state->stop,
-                                                     state->step, /*inplace=*/false));
+      in_grads->at(0) = JUST(functional::SliceUpdate(out_grads.at(0), temp, state->start,
+                                                     state->stop, state->step, /*inplace=*/false));
     }
     if (state->requires_grad_update) {
-      in_grads->at(1) = JUST(functional::Slice(out_grads.at(0), state->start, state->stop, state->step));
+      in_grads->at(1) =
+          JUST(functional::Slice(out_grads.at(0), state->start, state->stop, state->step));
     }
     return Maybe<void>::Ok();
   }

@@ -30,8 +30,8 @@ struct CopyCaptureState : public AutoGradCaptureState {
 
 class Copy : public OpExprGradFunction<CopyCaptureState> {
  public:
-  Maybe<void> Capture(CopyCaptureState* state, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const OpInterpCtx* ctx) const override {
+  Maybe<void> Capture(CopyCaptureState* state, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     state->device_type = JUST(inputs.at(0)->device())->type();
     state->device_id = JUST(inputs.at(0)->device())->device_id();
     return Maybe<void>::Ok();
