@@ -32,20 +32,20 @@ REGISTER_USER_OP((std::string("") + "tanh" + "_grad"))
     .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)
     .SetDataTypeInferFn(user_op::TensorDescInferFnUtil::UnchangedDataType);
 
-REGISTER_USER_OP_GRAD("tanh").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                        user_op::AddOpFn AddOp) -> Maybe<void> {
-  if (op.NeedGenGradTensor4OpInput("x", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper unary_grad_op =
-        builder.Op((std::string("") + "tanh" + "_grad"))
-            .Input("x", op.input("x", 0))
-            .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-            .Output("dx")
-            .Build();
-    op.BindGradTensorWithOpInput(unary_grad_op.output("dx", 0), "x", 0);
-    AddOp(unary_grad_op);
-  }
-  return Maybe<void>::Ok();
-});
+REGISTER_USER_OP_GRAD("tanh").SetGenBackwardOpConfFn(
+    [](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {
+      if (op.NeedGenGradTensor4OpInput("x", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper unary_grad_op =
+            builder.Op((std::string("") + "tanh" + "_grad"))
+                .Input("x", op.input("x", 0))
+                .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
+                .Output("dx")
+                .Build();
+        op.BindGradTensorWithOpInput(unary_grad_op.output("dx", 0), "x", 0);
+        AddOp(unary_grad_op);
+      }
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace oneflow
