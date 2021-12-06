@@ -62,12 +62,12 @@ class ElementwiseXimumOp : public OpExprGradFunction<ElementwiseXimumCaptureStat
 
 class ElementwiseMinimum : public ElementwiseXimumOp {
  public:
-  Maybe<void> ElementwiseMinimum() : grad_functor{functional::ElementwiseMinGrad} {}
+  ElementwiseMinimum() : ElementwiseXimumOp(), grad_functor{functional::ElementwiseMinGrad} {}
 };
 
 class ElementwiseMaximum : public ElementwiseXimumOp {
  public:
-  Maybe<void> ElementwiseMaximum() : grad_functor{functional::ElementwiseMaxGrad} {}
+  ElementwiseMaximum() : ElementwiseXimumOp(), grad_functor{functional::ElementwiseMaxGrad} {}
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("elementwise_minimum", ElementwiseMinimum);

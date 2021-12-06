@@ -318,12 +318,12 @@ class BroadcastMinMax : public BroadcastBinaryGrad {
 
 class BroadcastMinimum : public BroadcastMinMax {
  public:
-  Maybe<void> BroadcastMinimum(): elementwise_grad_functor_{functional::ElementwiseMinGrad} {}
+  BroadcastMinimum(): BroadcastMinMax(), elementwise_grad_functor_{functional::ElementwiseMinGrad} {}
 };
 
 class BroadcastMaximum : public BroadcastMinMax {
  public:
-  Maybe<void> BroadcastMaximum(): elementwise_grad_functor_{functional::ElementwiseMaxGrad} {}
+  BroadcastMaximum(): BroadcastMinMax(), elementwise_grad_functor_{functional::ElementwiseMaxGrad} {}
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_minimum", BroadcastMinimum);
