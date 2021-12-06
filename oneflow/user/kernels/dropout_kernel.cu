@@ -340,8 +340,9 @@ __global__ RETURN_VOID_IF_DOUBLE FusedDropoutAddGpu(
 template<int pack_size>
 unsigned int ComputeGridSize(ep::Stream* stream, const int32_t block_size, const int64_t elem_cnt) {
   auto* cuda_stream = stream->As<ep::CudaStream>();
-  int32_t max_threads_multi_process = cuda_stream->device_properties().maxThreadsPerMultiProcessor;
-  int32_t multi_processor_count = cuda_stream->device_properties().multiProcessorCount;
+  const int32_t max_threads_multi_process =
+      cuda_stream->device_properties().maxThreadsPerMultiProcessor;
+  const int32_t multi_processor_count = cuda_stream->device_properties().multiProcessorCount;
   unsigned int blocks_per_sm = max_threads_multi_process / block_size;
   unsigned int grid_size = ((elem_cnt + block_size - 1) / block_size);
   grid_size = std::min((unsigned int)multi_processor_count * blocks_per_sm, grid_size);
