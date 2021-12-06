@@ -26,9 +26,11 @@ jobs:
       ONEFLOW_SRC: .
       MANYLINUX_CACHE_DIR: ~/manylinux-cache-dir/canary-cu112
       WHEELHOUSE_DIR: manylinux-wheelhouse
-      OSS_DIR: ${{ github.ref }}
       COMPUTE_PLATFORM: cu112
       CUDA_VERSION: "11.2"
+      OSS_BUCKET: oss://oneflow-staging
+      OSS_WHEEL_HOUSE_DIR: canary/commit/${{ github.sha }}
+      OSS_GITHUB_REF_DIR: canary/${{ github.ref }}
     steps:
       - name: Fix permissions
         run: |
@@ -70,7 +72,7 @@ jobs:
         uses: ./.github/actions/upload_oss
         with:
           src_path: ${{ env.WHEELHOUSE_DIR }}
-          oss_dst_path: oss://oneflow-staging/${{ env.OSS_DIR }}
+          oss_dst_path: ${{ env.OSS_BUCKET }}/${{ env.OSS_WHEEL_HOUSE_DIR }}/${{ env.COMPUTE_PLATFORM }}
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Update pip index
@@ -80,4 +82,7 @@ jobs:
         run: |
           python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           python3 -m pip install oss2 beautifulsoup4 --user
-          python3 tools/create_pip_index.py --dir_key ${{ env.OSS_DIR }} -b oneflow-staging --index_key=${oss_branch_dir}/index.html --index_key=${{ env.OSS_DIR }}/index.html --index_key=commit/${{ github.sha }}/${{ env.COMPUTE_PLATFORM }}/index.html
+          python3 tools/create_pip_index.py -b ${{ env.OSS_BUCKET }} \
+            --dir_key ${{ env.OSS_WHEEL_HOUSE_DIR }}/${{ env.COMPUTE_PLATFORM }} \
+            --index_key=${{ env.OSS_WHEEL_HOUSE_DIR }}/${{ env.COMPUTE_PLATFORM }}/index.html \
+            --index_key={{ env.OSS_GITHUB_REF_DIR}}/${{ env.COMPUTE_PLATFORM }}/index.html
