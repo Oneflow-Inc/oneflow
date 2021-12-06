@@ -16,30 +16,31 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/include/primitive/elementwise_unary.h"
+#include <cmath>
 
 namespace oneflow {
 
 template<typename Context>
-std::unique_ptr<ep::primitive::ElementwiseUnary> NewGeluPrimitive(Context* ctx) {
-  const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-  const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+std::unique_ptr<ep::primitive::ElementwiseUnary> NewTanhPrimitive(Context* ctx) {
+  const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("y", 0);
   return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
-      ctx->device_type(), ep::primitive::UnaryOp::kGelu, src->data_type(), dst->data_type());
+      ctx->device_type(), ep::primitive::UnaryOp::kTanh, src->data_type(), dst->data_type());
 }
 
-class GeluKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class TanhKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(GeluKernel);
-  GeluKernel() = default;
-  ~GeluKernel() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(TanhKernel);
+  TanhKernel() = default;
+  ~TanhKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    auto primitive = NewGeluPrimitive(ctx);
+    auto primitive = NewTanhPrimitive(ctx);
     CHECK(primitive);
 
-    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int64_t elem_cnt = x->shape().elem_cnt();
 
     if (elem_cnt != 0) {
@@ -52,20 +53,20 @@ class GeluKernel final : public user_op::OpKernel, public user_op::CudaGraphSupp
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-auto GeluPrimitiveExists() {
-  return hob::make_custom("GeluPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
-    return NewGeluPrimitive(&ctx).operator bool();
+auto TanhPrimitiveExists() {
+  return hob::make_custom("TanhPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewTanhPrimitive(&ctx).operator bool();
   });
 }
 
-REGISTER_USER_KERNEL("gelu").SetCreateFn<GeluKernel>().SetIsMatchedHob(GeluPrimitiveExists()
+REGISTER_USER_KERNEL("tanh").SetCreateFn<TanhKernel>().SetIsMatchedHob(TanhPrimitiveExists()
                                                                        == true);
 
 template<typename T>
-class CpuGeluGradKernel final : public user_op::OpKernel {
+class CpuTanhGradKernel final : public user_op::OpKernel {
  public:
-  CpuGeluGradKernel() = default;
-  ~CpuGeluGradKernel() = default;
+  CpuTanhGradKernel() = default;
+  ~CpuTanhGradKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -76,26 +77,22 @@ class CpuGeluGradKernel final : public user_op::OpKernel {
     const T* x_ptr = x->dptr<T>();
     const T* dy_ptr = dy->dptr<T>();
     T* dx_ptr = dx->mut_dptr<T>();
-    T inv_sqrt2 = std::sqrt(0.5);
-    T coef = std::sqrt(2.0 / std::acos(-1.0));
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
-      dx_ptr[i] = 0.5
-                  * (1.0 + std::erf(inv_sqrt2 * x_ptr[i])
-                     + x_ptr[i] * coef * std::exp(-0.5 * x_ptr[i] * x_ptr[i]))
-                  * dy_ptr[i];
+      T tanh_val = std::tanh(x_ptr[i]);
+      dx_ptr[i] = dy_ptr[i] * (static_cast<T>(1.0) - tanh_val * tanh_val);
     }
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_GELU_GRAD_KERNEL(dtype)                          \
-  REGISTER_USER_KERNEL("gelu_grad")                                   \
-      .SetCreateFn<CpuGeluGradKernel<dtype>>()                        \
+#define REGISTER_CPU_TANH_GRAD_KERNEL(dtype)                          \
+  REGISTER_USER_KERNEL((std::string("") + "tanh" + "_grad"))          \
+      .SetCreateFn<CpuTanhGradKernel<dtype>>()                        \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_CPU_GELU_GRAD_KERNEL(float)
-REGISTER_CPU_GELU_GRAD_KERNEL(double)
+REGISTER_CPU_TANH_GRAD_KERNEL(float)
+REGISTER_CPU_TANH_GRAD_KERNEL(double)
 
 }  // namespace oneflow
