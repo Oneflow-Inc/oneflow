@@ -30,10 +30,39 @@ limitations under the License.
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/ep/include/active_device_guard.h"
 
 namespace oneflow {
 
 namespace {
+
+class EpBasedEventRecord : public EventRecord {
+ public:
+  OF_DISALLOW_COPY(EpBasedEventRecord);
+  EpBasedEventRecord(ep::Event* event, ep::Device* device) : event_(event), device_(device) {}
+  ~EpBasedEventRecord() {
+    ep::ActiveDeviceGuard guard(device_);
+    device_->DestroyEvent(event_);
+  };
+
+  bool QueryDone() const override {
+    ep::ActiveDeviceGuard guard(device_);
+    bool done = CHECK_JUST(event_->QueryDone());
+    return done;
+  }
+
+ private:
+  ep::Event* event_;
+  ep::Device* device_;
+};
+
+std::shared_ptr<EventRecord> MakeEventRecord(ep::Stream* stream) {
+  ep::Device* device = stream->device();
+  ep::ActiveDeviceGuard guard(device);
+  ep::Event* event = device->CreateEvent();
+  stream->RecordEvent(event);
+  return std::make_shared<EpBasedEventRecord>(event, device);
+}
 
 class LazyJobInstance final : public JobInstance {
  public:
@@ -161,10 +190,8 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
           if (blob->dptr() == nullptr) {
             end_event_record->Init(std::make_shared<NaiveEventRecord>());
           } else {
-            AutoMemcpy(of_blob->mut_device_ctx()->stream(), of_blob->mut_blob(), blob);
-            auto* event_record_provider =
-                CHECK_NOTNULL(dynamic_cast<EventRecordProvider*>(of_blob->mut_device_ctx()));
-            end_event_record->Init(event_record_provider->MakeEventRecord());
+            AutoMemcpy(of_blob->stream(), of_blob->mut_blob(), blob);
+            end_event_record->Init(MakeEventRecord(of_blob->stream()));
           }
         };
         CHECK(push_cbs.emplace(input_op_name, PushCb).second);
@@ -188,10 +215,8 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
           if (mut_blob->dptr() == nullptr) {
             end_event_record->Init(std::make_shared<NaiveEventRecord>());
           } else {
-            AutoMemcpy(of_blob->mut_device_ctx()->stream(), mut_blob, &of_blob->blob());
-            auto* event_record_provider =
-                CHECK_NOTNULL(dynamic_cast<EventRecordProvider*>(of_blob->mut_device_ctx()));
-            end_event_record->Init(event_record_provider->MakeEventRecord());
+            AutoMemcpy(of_blob->stream(), mut_blob, &of_blob->blob());
+            end_event_record->Init(MakeEventRecord(of_blob->stream()));
           }
         };
         CHECK(pull_cbs.emplace(output_op_name, PullCb).second);

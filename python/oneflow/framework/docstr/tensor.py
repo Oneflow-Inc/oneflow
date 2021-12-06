@@ -75,6 +75,20 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.flatten,
+    """
+    See :func:`oneflow.flatten`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.floor,
+    """
+    See :func:`oneflow.floor`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.numel,
     """
     See :func:`oneflow.numel`
@@ -316,6 +330,12 @@ add_docstr(
     """,
 )
 
+add_docstr(
+    oneflow.Tensor.bmm,
+    """
+    See :func:`oneflow.bmm`
+    """,
+)
 
 add_docstr(
     oneflow.Tensor.cast,

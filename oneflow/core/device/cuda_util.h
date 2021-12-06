@@ -139,7 +139,7 @@ cudaStream_t RunCudaKernelGetStream(ep::Stream* stream);
 
 size_t GetAvailableGpuMemSize(int dev_id);
 
-void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size);
+cudaError_t NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size);
 
 class CudaCurrentDeviceGuard final {
  public:
