@@ -85,4 +85,4 @@ jobs:
           python3 tools/create_pip_index.py -b ${{ env.OSS_BUCKET }} \
             --dir_key ${{ env.OSS_WHEEL_HOUSE_DIR }}/${{ env.COMPUTE_PLATFORM }} \
             --index_key=${{ env.OSS_WHEEL_HOUSE_DIR }}/${{ env.COMPUTE_PLATFORM }}/index.html \
-            --index_key={{ env.OSS_GITHUB_REF_DIR}}/${{ env.COMPUTE_PLATFORM }}/index.html
+            --index_key=${{ env.OSS_GITHUB_REF_DIR}}/${{ env.COMPUTE_PLATFORM }}/index.html
