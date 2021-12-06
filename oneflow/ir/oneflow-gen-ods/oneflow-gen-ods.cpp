@@ -685,7 +685,14 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
 
 }  // namespace
 
-int main() {
+int main(int argc, char* argv[]) {
+    std::cout << "Gen OneFlow ODS File Begin." << std::endl;
+    std::streambuf* coutBuf = std::cout.rdbuf();
+    std::ofstream of(argv[0]);
+    std::streambuf* fileBuf = of.rdbuf();
+    std::cout.rdbuf(fileBuf);
+
+
     using K = std::string;
     using V = user_op::OpRegistryResult;
 
@@ -717,5 +724,10 @@ int main() {
         // std::cout << "#endif // " << group_def_name << "\n\n";
         std::cout << "#endif // " << get_group_by_name << "\n\n";
     }
+    of.flush();
+    of.close();
+
+    std::cout.rdbuf(coutBuf);
+    std::cout << "Gen OneFlow ODS File End." << std::endl;
     return 0;
 }
