@@ -31,72 +31,72 @@ Shape CreatePreluLeftExtendedShape(const ShapeView& shape) {
 }
 
 template<typename T>
-__global__ void BroadcastPReluSingleAlphaForwardGpu(const int32_t elem_cnt,
-                                                    const int32_t alpha_size,
-                                                    const int32_t inner_size, const T* x,
-                                                    const T* alpha, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    const T x_i = x[i];
-    y[i] = x_i > 0 ? x_i : x_i * alpha[0];
-  }
-}
+struct PreluForwardSingleAlphaFunctor {
+  OF_DEVICE_FUNC explicit PreluForwardSingleAlphaFunctor(const T alpha) : alpha(alpha) {}
+  __device__ T operator()(T x) const { return (x > static_cast<T>(0.0)) ? x : (alpha * x); }
+  const T alpha;
+};
 
 template<typename T>
-__global__ void BroadcastPReluSingleAlphaBackwardGpu(const int32_t elem_cnt,
-                                                     const int32_t alpha_size,
-                                                     const int32_t inner_size, const T* x,
-                                                     const T* alpha, const T* dy, T* dx,
-                                                     T* alpha_diff) {
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    const T x_i = x[i];
-    const T dy_i = dy[i];
-    T dx_i = 0;
+struct PreluForwardSingleAlphaPtrFunctor {
+  OF_DEVICE_FUNC explicit PreluForwardSingleAlphaPtrFunctor(const T* alpha_ptr)
+      : alpha_ptr(alpha_ptr) {}
+  __device__ PreluForwardSingleAlphaFunctor<T> operator()() const {
+    return PreluForwardSingleAlphaFunctor<T>(*alpha_ptr);
+  }
+  const T* alpha_ptr;
+};
+
+template<typename T, typename IndexType, int pack_size, bool tail>
+__global__ void PReluBackwardSingleAlphaGpu(const IndexType elem_cnt, const int64_t n_tail,
+                                            const T* x, const T* alpha, const T* dy, T* dx,
+                                            T* alpha_diff, const T* tail_x, const T* tail_dy,
+                                            T* tail_dx, T* tail_alpha_diff) {
+  int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
+
+  using LoadType = cuda::elementwise::PackType<T, pack_size>;
+  using LoadPack = cuda::elementwise::Pack<T, pack_size>;
+  T zero_val = static_cast<T>(0);
+  T alpha_val = alpha[0];
+
+  for (int64_t linear_index = global_thread_id * pack_size; linear_index < elem_cnt;
+       linear_index += gridDim.x * blockDim.x * pack_size) {
+    const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
+    LoadPack x_vec;
+    x_vec.storage = *x_load;
+
+    const LoadType* dy_load = reinterpret_cast<const LoadType*>(dy + linear_index);
+    LoadPack dy_vec;
+    dy_vec.storage = *dy_load;
+
+    LoadPack dx_vec;
+    LoadPack dalpha_vec;
+
+    T zero_val = static_cast<T>(0.0);
     T alpha_diff_i = 0;
-    if (x_i > 0) {
-      dx_i = dy_i;
-      alpha_diff_i = 0;
-    } else {
-      dx_i = dy_i * alpha[0];
-      alpha_diff_i = dy_i * x_i;
+#pragma unroll
+    for (int i = 0; i < pack_size; i++) {
+      if (x_vec.elem[i] > zero_val) {
+        dx_vec.elem[i] = dy_vec.elem[i];
+        dalpha_vec.elem[i] = zero_val;
+      } else {
+        dx_vec.elem[i] = dy_vec.elem[i] * alpha_val;
+        dalpha_vec.elem[i] = dy_vec.elem[i] * x_vec.elem[i];
+      }
     }
-    dx[i] = dx_i;
-    alpha_diff[i] = alpha_diff_i;
+    *(reinterpret_cast<LoadType*>(dx + linear_index)) = dx_vec.storage;
+    *(reinterpret_cast<LoadType*>(alpha_diff + linear_index)) = dalpha_vec.storage;
   }
-}
 
-template<>
-__global__ void BroadcastPReluSingleAlphaForwardGpu<half>(const int32_t elem_cnt,
-                                                          const int32_t alpha_size,
-                                                          const int32_t inner_size, const half* x,
-                                                          const half* alpha, half* y) {
-  half zero = static_cast<half>(0.0);
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    const half x_i = x[i];
-    y[i] = x_i > zero ? x_i : __hmul(x_i, alpha[0]);
-  }
-}
-
-template<>
-__global__ void BroadcastPReluSingleAlphaBackwardGpu<half>(const int32_t elem_cnt,
-                                                           const int32_t alpha_size,
-                                                           const int32_t inner_size, const half* x,
-                                                           const half* alpha, const half* dy,
-                                                           half* dx, half* alpha_diff) {
-  half zero = static_cast<half>(0.0);
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    const half x_i = x[i];
-    const half dy_i = dy[i];
-    half dx_i = 0;
-    half alpha_diff_i = 0;
-    if (x_i > zero) {
-      dx_i = dy_i;
-      alpha_diff_i = 0;
+  if (tail && global_thread_id < n_tail) {
+    const T tail_dy_val = tail_dy[global_thread_id];
+    if (tail_x[global_thread_id] > zero_val) {
+      tail_dx[global_thread_id] = tail_dy_val;
+      tail_alpha_diff[global_thread_id] = zero_val;
     } else {
-      dx_i = __hmul(dy_i, alpha[0]);
-      alpha_diff_i = __hmul(dy_i, x_i);
+      tail_dx[global_thread_id] = alpha_val * tail_dy_val;
+      tail_alpha_diff[global_thread_id] = tail_x[global_thread_id] * tail_dy_val;
     }
-    dx[i] = dx_i;
-    alpha_diff[i] = alpha_diff_i;
   }
 }
 
@@ -105,17 +105,18 @@ __global__ void BroadcastPReluMultiAlphaNaiveForwardGpu(const int32_t elem_cnt,
                                                         const int32_t alpha_size,
                                                         const int32_t inner_size, const T* x,
                                                         const T* alpha, T* y) {
+  const T zero_val = static_cast<T>(0.0);
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T x_i = x[i];
     int32_t alpha_idx = (i / inner_size) % alpha_size;
-    y[i] = x_i > 0 ? x_i : x_i * alpha[alpha_idx];
+    y[i] = x_i > zero_val ? x_i : x_i * alpha[alpha_idx];
   }
 }
 
 template<typename T, typename IndexType, int pack_size>
 __global__ void PReluForwardMultiAlphaGpu(const IndexType elem_cnt, const IndexType alpha_size,
-                                          const IndexType inner_size, const IndexType mul_size,
-                                          const T* x, const T* alpha, T* y) {
+                                          const IndexType inner_size, const T* x, const T* alpha,
+                                          T* y) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
 
   using LoadType = cuda::elementwise::PackType<T, pack_size>;
@@ -123,8 +124,7 @@ __global__ void PReluForwardMultiAlphaGpu(const IndexType elem_cnt, const IndexT
   T zero_val = static_cast<T>(0);
   for (int64_t linear_index = global_thread_id * pack_size; linear_index < elem_cnt;
        linear_index += gridDim.x * blockDim.x * pack_size) {
-    IndexType idx_sub_alpha = linear_index / mul_size * alpha_size;
-    IndexType alpha_idx = linear_index / inner_size - idx_sub_alpha;
+    IndexType alpha_idx = (linear_index / inner_size) % alpha_size;
 
     const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
     LoadPack x_vec;
@@ -147,64 +147,18 @@ __global__ void BroadcastPReluMultiAlphaNaiveBackwardGpu(const int32_t elem_cnt,
                                                          const int32_t inner_size, const T* x,
                                                          const T* alpha, const T* dy, T* dx,
                                                          T* alpha_diff) {
+  const T zero_val = static_cast<T>(0.0);
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T x_i = x[i];
     const T dy_i = dy[i];
-    int32_t i_div_inner_size = i / inner_size;
-    int32_t idx_sub_alpha = i_div_inner_size / alpha_size * alpha_size;
-    int32_t alpha_i = i_div_inner_size - idx_sub_alpha;
-    T dx_i = 0;
-    T alpha_diff_i = 0;
-    if (x_i > 0) {
-      dx_i = dy_i;
-      alpha_diff_i = 0;
+    int32_t alpha_i = (i / inner_size) % alpha_size;
+    if (x_i > zero_val) {
+      dx[i] = dy_i;
+      alpha_diff[i] = zero_val;
     } else {
-      dx_i = dy_i * alpha[alpha_i];
-      alpha_diff_i = dy_i * x_i;
+      dx[i] = dy_i * alpha[alpha_i];
+      alpha_diff[i] = dy_i * x_i;
     }
-    dx[i] = dx_i;
-    alpha_diff[i] = alpha_diff_i;
-  }
-}
-
-template<>
-__global__ void BroadcastPReluMultiAlphaNaiveForwardGpu<half>(const int32_t elem_cnt,
-                                                              const int32_t alpha_size,
-                                                              const int32_t inner_size,
-                                                              const half* x, const half* alpha,
-                                                              half* y) {
-  half zero = static_cast<half>(0.0);
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    const half x_i = x[i];
-    int32_t i_div_inner_size = i / inner_size;
-    int32_t idx_sub_alpha = i_div_inner_size / alpha_size * alpha_size;
-    int32_t alpha_i = i_div_inner_size - idx_sub_alpha;
-    y[i] = x_i > zero ? x_i : __hmul(x_i, alpha[alpha_i]);
-  }
-}
-
-template<>
-__global__ void BroadcastPReluMultiAlphaNaiveBackwardGpu<half>(
-    const int32_t elem_cnt, const int32_t alpha_size, const int32_t inner_size, const half* x,
-    const half* alpha, const half* dy, half* dx, half* alpha_diff) {
-  half zero = static_cast<half>(0.0);
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    const half x_i = x[i];
-    const half dy_i = dy[i];
-    int32_t i_div_inner_size = i / inner_size;
-    int32_t idx_sub_alpha = i_div_inner_size / alpha_size * alpha_size;
-    int32_t alpha_i = i_div_inner_size - idx_sub_alpha;
-    half dx_i = 0;
-    half alpha_diff_i = 0;
-    if (x_i > zero) {
-      dx_i = dy_i;
-      alpha_diff_i = 0;
-    } else {
-      dx_i = __hmul(dy_i, alpha[alpha_i]);
-      alpha_diff_i = __hmul(dy_i, x_i);
-    }
-    dx[i] = dx_i;
-    alpha_diff[i] = alpha_diff_i;
   }
 }
 
@@ -219,9 +173,7 @@ __global__ void PReluBackwardMultiAlphaGpu(const IndexType elem_cnt, const Index
   T zero_val = static_cast<T>(0);
   for (int64_t linear_index = global_thread_id * pack_size; linear_index < elem_cnt;
        linear_index += gridDim.x * blockDim.x * pack_size) {
-    IndexType i_div_inner_size = linear_index / inner_size;
-    IndexType idx_sub_alpha = i_div_inner_size / alpha_size * alpha_size;
-    IndexType alpha_idx = i_div_inner_size - idx_sub_alpha;
+    IndexType alpha_idx = (linear_index / inner_size) % alpha_size;
 
     const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
     LoadPack x_vec;
@@ -261,20 +213,19 @@ void DispatchPreluForwardPackSize(ep::Stream* stream, const int64_t elem_cnt,
   const int64_t pack_num = elem_cnt / pack_size;
   int grid_size;
   cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
-  const int64_t alpha_inner_size = alpha_size * inner_size;
 
   if (pack_size >= 8 && inner_size % 8 == 0) {
     PReluForwardMultiAlphaGpu<T, IndexType, 8>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            elem_cnt, alpha_size, inner_size, alpha_inner_size, x, alpha, y);
+            elem_cnt, alpha_size, inner_size, x, alpha, y);
   } else if (pack_size >= 4 && inner_size % 4 == 0) {
     PReluForwardMultiAlphaGpu<T, IndexType, 4>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            elem_cnt, alpha_size, inner_size, alpha_inner_size, x, alpha, y);
+            elem_cnt, alpha_size, inner_size, x, alpha, y);
   } else if (pack_size >= 2 && inner_size % 2 == 0) {
     PReluForwardMultiAlphaGpu<T, IndexType, 2>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            elem_cnt, alpha_size, inner_size, alpha_inner_size, x, alpha, y);
+            elem_cnt, alpha_size, inner_size, x, alpha, y);
   } else {
     BroadcastPReluMultiAlphaNaiveForwardGpu<T>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
@@ -303,7 +254,6 @@ void DispatchPreluBackwardPackSize(ep::Stream* stream, const int64_t elem_cnt,
   const int64_t pack_num = elem_cnt / pack_size;
   int grid_size;
   cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
-  const int64_t alpha_inner_size = alpha_size * inner_size;
 
   if (pack_size >= 8 && inner_size % 8 == 0) {
     PReluBackwardMultiAlphaGpu<T, IndexType, 8>
@@ -338,6 +288,40 @@ void DispatchPreluBackwardIndex(ep::Stream* stream, const int64_t elem_cnt,
   }
 }
 
+template<typename T, typename IndexType>
+void DispatchPreluBackwardSingleAlphaTail(ep::Stream* stream, const IndexType elem_cnt, const T* x,
+                                          const T* alpha, const T* dy, T* dx, T* alpha_diff) {
+  constexpr int pack_size = cuda::elementwise::PackSize<T>();
+  const int64_t pack_num = elem_cnt / pack_size;
+  int grid_size;
+  cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
+  const int64_t tail_offset = pack_num * pack_size;
+  const int64_t n_tail = elem_cnt - tail_offset;
+  const bool tail = n_tail > 0 ? true : false;
+  if (tail) {
+    PReluBackwardSingleAlphaGpu<T, IndexType, pack_size, true>
+        <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            elem_cnt, n_tail, x, alpha, dy, dx, alpha_diff, x + tail_offset, dy + tail_offset,
+            dx + tail_offset, alpha_diff + tail_offset);
+  } else {
+    PReluBackwardSingleAlphaGpu<T, IndexType, pack_size, false>
+        <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            elem_cnt, n_tail, x, alpha, dy, dx, alpha_diff, x + tail_offset, dy + tail_offset,
+            dx + tail_offset, alpha_diff + tail_offset);
+  }
+}
+
+template<typename T>
+void DispatchPreluBackwardSingleAlphaIndex(ep::Stream* stream, const int64_t elem_cnt, const T* x,
+                                           const T* alpha, const T* dy, T* dx, T* alpha_diff) {
+  if (elem_cnt < GetMaxVal<int32_t>()) {
+    DispatchPreluBackwardSingleAlphaTail<T, int32_t>(stream, elem_cnt, x, alpha, dy, dx,
+                                                     alpha_diff);
+  } else {
+    DispatchPreluBackwardSingleAlphaTail<T, int64_t>(stream, elem_cnt, x, alpha, dy, dx,
+                                                     alpha_diff);
+  }
+}
 }  // namespace
 
 template<typename T>
@@ -359,10 +343,10 @@ class GpuPReluKernel final : public user_op::OpKernel {
     const int32_t inner_size = elem_cnt / batch / channels;
 
     if (alpha_size == 1) {
-      BroadcastPReluSingleAlphaForwardGpu<T>
-          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-              elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), y->mut_dptr<T>());
+      OF_CUDA_CHECK((cuda::elementwise::UnaryWithFactory(
+          PreluForwardSingleAlphaPtrFunctor<T>(reinterpret_cast<const T*>(alpha->dptr())), elem_cnt,
+          reinterpret_cast<T*>(y->mut_dptr()), reinterpret_cast<const T*>(x->dptr()),
+          ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
     } else {
       DispatchPreluForwardIndex<T>(
           ctx->stream(), elem_cnt, alpha_size, inner_size, reinterpret_cast<const T*>(x->dptr()),
@@ -408,17 +392,14 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
     const int32_t alpha_size = alpha->shape().elem_cnt();
     const int32_t inner_size = elem_cnt / batch / channels;
     if (alpha_size == 1) {
-      BroadcastPReluSingleAlphaBackwardGpu<T>
-          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-              elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), dy->dptr<T>(),
-              dx->mut_dptr<T>(), broadcasted_alpha_diff);
+      DispatchPreluBackwardSingleAlphaIndex<T>(ctx->stream(), elem_cnt, x->dptr<T>(),
+                                               alpha->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>(),
+                                               broadcasted_alpha_diff);
     } else {
       DispatchPreluBackwardIndex<T>(ctx->stream(), elem_cnt, alpha_size, inner_size, x->dptr<T>(),
                                     alpha->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>(),
                                     broadcasted_alpha_diff);
     }
-
     NdarrayUtil<DeviceType::kCUDA, T>::ReduceSum(
         ctx->stream(), XpuVarNdarray<T>(left_extended_shape, alpha_diff->mut_dptr<T>()),
         XpuVarNdarray<const T>(x->shape(), broadcasted_alpha_diff),
