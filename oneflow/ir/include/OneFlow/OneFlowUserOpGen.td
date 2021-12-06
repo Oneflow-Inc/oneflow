@@ -186,8 +186,8 @@ class OneFlow_NormalizationAddReluBaseOp : OneFlow_BaseOp<"normalization_add_rel
 #endif // GET_ONEFLOW_BASE_OP_DEFINITIONS
 
 // Group: BINARY
-// bias_add, cast_like, celu_grad, diag_grad, dropout_grad, elementwise_maximum, elementwise_minimum, elu_grad, floordiv, gelu_grad, grid_sample, hardsigmoid_grad, hardswish_grad, l1_l2_regularize_gradient, leaky_relu_grad, masked_fill, mish_grad, multiply, narrow_grad, pow, prelu, relu_grad, selu_grad, sigmoid_grad, silu_grad, tf_prelu, unfold_tensor_grad, xdivy, xlogy
-// Total: 29
+// bias_add, cast_like, celu_grad, diag_grad, dot, dropout_grad, elementwise_maximum, elementwise_minimum, elu_grad, floordiv, gelu_grad, grid_sample, hardsigmoid_grad, hardswish_grad, l1_l2_regularize_gradient, leaky_relu_grad, masked_fill, mish_grad, multiply, narrow_grad, pow, prelu, relu_grad, selu_grad, sigmoid_grad, silu_grad, tf_prelu, unfold_tensor_grad, xdivy, xlogy
+// Total: 30
 
 #ifdef GET_ONEFLOW_BINARY_OP_DEFINITIONS
 
@@ -237,6 +237,16 @@ def OneFlow_DiagGradOp : OneFlow_BaseOp<"diag_grad", [NoSideEffect, DeclareOpInt
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$diagonal
+  );
+}
+
+def OneFlow_DotOp : OneFlow_BaseOp<"dot", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y
+  );
+  let output = (outs
+    AnyType:$out
   );
 }
 
@@ -904,9 +914,6 @@ def OneFlow_BinaryCrossEntropyOp : OneFlow_BaseOp<"binary_cross_entropy", [NoSid
   let output = (outs
     AnyType:$out
   );
-  let attrs = (ins
-    StrAttr:$reduction
-  );
 }
 
 def OneFlow_BinaryCrossEntropyGradOp : OneFlow_BaseOp<"binary_cross_entropy_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -918,9 +925,6 @@ def OneFlow_BinaryCrossEntropyGradOp : OneFlow_BaseOp<"binary_cross_entropy_grad
   );
   let output = (outs
     AnyType:$dx
-  );
-  let attrs = (ins
-    StrAttr:$reduction
   );
 }
 
@@ -935,8 +939,7 @@ def OneFlow_BinaryCrossEntropyWithLogitsOp : OneFlow_BaseOp<"binary_cross_entrop
     AnyType:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<BoolAttr, "false">:$has_pos_weight,
-    StrAttr:$reduction
+    DefaultValuedAttr<BoolAttr, "false">:$has_pos_weight
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
@@ -955,8 +958,7 @@ def OneFlow_BinaryCrossEntropyWithLogitsGradOp : OneFlow_BaseOp<"binary_cross_en
     AnyType:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<BoolAttr, "false">:$has_pos_weight,
-    StrAttr:$reduction
+    DefaultValuedAttr<BoolAttr, "false">:$has_pos_weight
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
@@ -1276,8 +1278,8 @@ def OneFlow_OnerecDecoderOp : OneFlow_BaseOp<"onerec_decoder", [NoSideEffect, De
 #endif // GET_ONEFLOW_DATASET_OP_DEFINITIONS
 
 // Group: DETECTION
-// in_top_k, nms, object_bbox_flip, object_bbox_scale, object_segmentation_polygon_flip, object_segmentation_polygon_scale, object_segmentation_polygon_to_mask, top_k
-// Total: 8
+// in_top_k, nms, object_bbox_flip, object_bbox_scale, object_segmentation_polygon_flip, object_segmentation_polygon_scale, object_segmentation_polygon_to_mask, roi_align, roi_align_grad, top_k
+// Total: 10
 
 #ifdef GET_ONEFLOW_DETECTION_OP_DEFINITIONS
 
@@ -1357,6 +1359,41 @@ def OneFlow_ObjectSegmentationPolygonToMaskOp : OneFlow_BaseOp<"object_segmentat
   );
   let output = (outs
     AnyType:$out
+  );
+}
+
+def OneFlow_RoiAlignOp : OneFlow_BaseOp<"roi_align", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$rois
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "0">:$pooled_h,
+    DefaultValuedAttr<SI32Attr, "0">:$pooled_w,
+    DefaultValuedAttr<F32Attr, "0.">:$spatial_scale,
+    DefaultValuedAttr<SI32Attr, "0">:$sampling_ratio,
+    DefaultValuedAttr<BoolAttr, "false">:$aligned
+  );
+}
+
+def OneFlow_RoiAlignGradOp : OneFlow_BaseOp<"roi_align_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$dy,
+    AnyType:$x_like,
+    AnyType:$rois
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "0">:$pooled_h,
+    DefaultValuedAttr<SI32Attr, "0">:$pooled_w,
+    DefaultValuedAttr<F32Attr, "0.">:$spatial_scale,
+    DefaultValuedAttr<SI32Attr, "0">:$sampling_ratio,
+    DefaultValuedAttr<BoolAttr, "false">:$aligned
   );
 }
 
@@ -2519,7 +2556,6 @@ def OneFlow_KlDivLossOp : OneFlow_BaseOp<"kl_div_loss", [NoSideEffect, DeclareOp
     AnyType:$out
   );
   let attrs = (ins
-    StrAttr:$reduction,
     DefaultValuedAttr<BoolAttr, "false">:$log_target
   );
 }
@@ -2534,7 +2570,6 @@ def OneFlow_KlDivLossGradOp : OneFlow_BaseOp<"kl_div_loss_grad", [NoSideEffect, 
     AnyType:$dx
   );
   let attrs = (ins
-    StrAttr:$reduction,
     DefaultValuedAttr<BoolAttr, "false">:$log_target
   );
 }
@@ -2548,7 +2583,6 @@ def OneFlow_SmoothL1LossOp : OneFlow_BaseOp<"smooth_l1_loss", [NoSideEffect, Dec
     AnyType:$out
   );
   let attrs = (ins
-    StrAttr:$reduction,
     DefaultValuedAttr<F32Attr, "0.">:$beta
   );
 }
@@ -2563,7 +2597,6 @@ def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", [NoSideEf
     AnyType:$dx
   );
   let attrs = (ins
-    StrAttr:$reduction,
     DefaultValuedAttr<F32Attr, "0.">:$beta
   );
 }
@@ -3177,14 +3210,14 @@ def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [NoSideEffect, DeclareOpInte
 def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$in,
-    AnyType:$mask,
     Optional<AnyType>:$_add_to_output
   );
   let output = (outs
-    AnyType:$out
+    AnyType:$out,
+    AnyType:$mask
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$scale
+    DefaultValuedAttr<F32Attr, "0.">:$rate
   );
 }
 
@@ -3232,12 +3265,6 @@ def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", [NoSideEffect, DeclareOpInterfaceM
 def OneFlow_EyeOp : OneFlow_BaseOp<"eye", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
-  );
-  let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "0">:$rows,
-    DefaultValuedAttr<SI64Attr, "0">:$cols,
-    StrAttr:$dtype,
-    StrArrayAttr:$nd_sbp
   );
 }
 
@@ -3287,8 +3314,7 @@ def OneFlow_NllOp : OneFlow_BaseOp<"nll", [NoSideEffect, DeclareOpInterfaceMetho
     AnyType:$total_weight
   );
   let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "0">:$ignore_index,
-    StrAttr:$reduction
+    DefaultValuedAttr<SI64Attr, "0">:$ignore_index
   );
 }
 
@@ -3304,8 +3330,7 @@ def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", [NoSideEffect, DeclareOpInter
     AnyType:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "0">:$ignore_index,
-    StrAttr:$reduction
+    DefaultValuedAttr<SI64Attr, "0">:$ignore_index
   );
 }
 
@@ -4320,17 +4345,80 @@ def OneFlow_ParallelCastOp : OneFlow_BaseOp<"parallel_cast", [NoSideEffect, Decl
 
 #ifdef GET_ONEFLOW_POOL_OP_DEFINITIONS
 
-def OneFlow_AdaptiveAvgPool1DOp : OneFlow_AdaptivePoolBaseOp<"adaptive_avg_pool1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AdaptiveAvgPool1DOp : OneFlow_AdaptivePoolBaseOp<"adaptive_avg_pool1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let attrs = (ins
+    SI64ArrayAttr:$output_size
+  );
+}
 
-def OneFlow_AdaptiveAvgPoolGrad1DOp : OneFlow_AdaptivePoolGradBaseOp<"adaptive_avg_pool1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AdaptiveAvgPool1DGradOp : OneFlow_AdaptivePoolGradBaseOp<"adaptive_avg_pool1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    SI64ArrayAttr:$output_size
+  );
+}
 
-def OneFlow_AdaptiveAvgPool2DOp : OneFlow_AdaptivePoolBaseOp<"adaptive_avg_pool2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AdaptiveAvgPool2DOp : OneFlow_AdaptivePoolBaseOp<"adaptive_avg_pool2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let attrs = (ins
+    SI64ArrayAttr:$output_size
+  );
+}
 
-def OneFlow_AdaptiveAvgPoolGrad2DOp : OneFlow_AdaptivePoolGradBaseOp<"adaptive_avg_pool2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AdaptiveAvgPool2DGradOp : OneFlow_AdaptivePoolGradBaseOp<"adaptive_avg_pool2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    SI64ArrayAttr:$output_size
+  );
+}
 
-def OneFlow_AdaptiveAvgPool3DOp : OneFlow_AdaptivePoolBaseOp<"adaptive_avg_pool3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AdaptiveAvgPool3DOp : OneFlow_AdaptivePoolBaseOp<"adaptive_avg_pool3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let attrs = (ins
+    SI64ArrayAttr:$output_size
+  );
+}
 
-def OneFlow_AdaptiveAvgPoolGrad3DOp : OneFlow_AdaptivePoolGradBaseOp<"adaptive_avg_pool3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AdaptiveAvgPool3DGradOp : OneFlow_AdaptivePoolGradBaseOp<"adaptive_avg_pool3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    SI64ArrayAttr:$output_size
+  );
+}
 
 def OneFlow_AvgPool1DOp : OneFlow_PoolBaseOp<"avgpool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
