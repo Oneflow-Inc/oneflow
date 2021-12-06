@@ -19,11 +19,13 @@ foreach (OP_GROUP_NAME IN LISTS ONEFLOW_OP_GROUPS_USED_IN_PATTERNS)
 endforeach()
 mlir_tablegen(OneFlowPatterns.cpp.inc -gen-rewriters)
 add_public_tablegen_target(MLIROneFlowPatternsIncGen)
+add_dependencies(MLIROneFlowPatternsIncGen GenUserOpODS)
 
 # NOTE: seperate conversion and opt with --name
 set(LLVM_TARGET_DEFINITIONS OneFlowOps.td)
 mlir_tablegen(OneFlowPasses.h.inc -gen-pass-decls)
 add_public_tablegen_target(MLIROneFlowPassIncGen)
+
 
 set(LLVM_TABLEGEN_FLAGS "")
 add_mlir_interface(OneFlowInterfaces)
