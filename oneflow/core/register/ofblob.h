@@ -117,7 +117,7 @@ template<typename T>
 void OfBlob::AutoMemCopyTo(T* ptr, int64_t storage_offset, int64_t len) const {
   CHECK_EQ(blob_->shape().elem_cnt(), len);
   CHECK(blob_->data_type() == GetDataType<T>::value);
-  SyncAutoMemcpy(device_ctx_->stream(), ptr, (char*)(blob_->dptr()) + storage_offset * sizeof(T),
+  SyncAutoMemcpy(stream_, ptr, (char*)(blob_->dptr()) + storage_offset * sizeof(T),
                  len * sizeof(T), mem_case_, blob_->mem_case());
 }
 
@@ -126,7 +126,7 @@ void OfBlob::AutoMemCopyFrom(const T* ptr, int64_t storage_offset, int64_t len) 
   blob_->blob_access_checker()->CheckBodyMutable();
   CHECK_EQ(blob_->shape().elem_cnt(), len);
   CHECK(blob_->data_type() == GetDataType<T>::value);
-  SyncAutoMemcpy(device_ctx_->stream(), (char*)(blob_->mut_dptr()) + storage_offset * sizeof(T),
+  SyncAutoMemcpy(stream_, (char*)(blob_->mut_dptr()) + storage_offset * sizeof(T),
                  ptr, len * sizeof(T), blob_->mem_case(), mem_case_);
 }
 
