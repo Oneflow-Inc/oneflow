@@ -733,7 +733,7 @@
   bind_python: True
 
 - name: "dim_gather"
-  signature: "Tensor (Tensor x, Tensor indices, Int32 dim) => DimGather"
+  signature: " Tensor (Tensor input, Int64 dim, Tensor index, Bool sparse_grad=False) => DimGather"
   bind_python: True
 
 - name: "arg_sort"
