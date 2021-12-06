@@ -24,6 +24,7 @@ limitations under the License.
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/UseDefLists.h"
 #include "mlir/IR/Value.h"
+#include "mlir/IR/Visitors.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -51,6 +52,7 @@ limitations under the License.
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/operator/interface_blob_conf.pb.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -81,13 +83,24 @@ class JobImporter : Importer {
   LogicalResult AddDeviceName(const ::oneflow::OperatorConf& op,
                               std::vector<NamedAttribute>& attr_vec) override;
   LogicalResult InsertOpResults(const ::oneflow::OperatorConf& op, Operation*) override;
+
+  LogicalResult ProcessJob();
   LogicalResult ProcessSystemOp(const ::oneflow::OperatorConf& op) override;
   LogicalResult ProcessVariableOp(const ::oneflow::OperatorConf& op);
-  LogicalResult ProcessInputOp(const ::oneflow::OperatorConf& op_conf);
+  LogicalResult ProcessInputOp(const ::oneflow::OperatorConf& op_conf, Block* entry_block,
+                               size_t& input_count);
   LogicalResult ProcessOutputOp(const ::oneflow::OperatorConf& op_conf);
-  LogicalResult ProcessJob();
+
   LogicalResult TryToUpdateJob();
+  LogicalResult ConvertUserOp(Operation* op, ::oneflow::Job& job);
+  LogicalResult ConvertSystemOp(Operation* op, ::oneflow::Job& job);
+  LogicalResult ConvertVariableOp(Operation* op, ::oneflow::Job& job);
+  LogicalResult ConvertInputOp(Operation* op, ::oneflow::Job& job);
+  LogicalResult ConvertOutputOp(Operation* op, ::oneflow::Job& job);
+
   Type GetTensorTypeOfLbn(const std::string& lbn) override;
+  Type GetInterfaceBlobConfType(const ::oneflow::InterfaceBlobConf& blob_conf);
+  Type GetDataTypeType(::oneflow::DataType dt);
 
  private:
   std::unordered_map<std::string, mlir::OpResult> lbn2result_;
@@ -184,8 +197,6 @@ LogicalResult JobImporter::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
     return failure();
   }
   if (op.has_variable_conf()) { return ProcessVariableOp(op); }
-  if (op.has_input_conf()) { return ProcessInputOp(op); }
-  if (op.has_output_conf()) { return ProcessOutputOp(op); }
 
   auto input_bns_lbns = job_wrapper_.InputBns4OpName(op.name());
   auto input_bns = input_bns_lbns.first;
@@ -336,7 +347,8 @@ LogicalResult JobImporter::ProcessVariableOp(const ::oneflow::OperatorConf& op_c
   return success();
 }
 
-LogicalResult JobImporter::ProcessInputOp(const ::oneflow::OperatorConf& op_conf) {
+LogicalResult JobImporter::ProcessInputOp(const ::oneflow::OperatorConf& op_conf,
+                                          Block* entry_block, size_t& input_count) {
   if (!op_conf.has_input_conf()) {
     GetModule().emitError("Not a input op. op name: " + op_conf.name());
     return failure();
@@ -402,14 +414,11 @@ LogicalResult JobImporter::ProcessInputOp(const ::oneflow::OperatorConf& op_conf
     attr_vec.emplace_back(
         GetBuilder().getNamedAttr("job_name", GetBuilder().getStringAttr(job_name)));
   }
-  // trait_attr operand_segment_sizes
-  // if (failed(AddOperandSegmentSizes(0, op_conf.ctrl_in_op_name_size(), attr_vec))) {
-  //   return failure();
-  // }
   // add attrs
   state.addAttributes(attr_vec);
   // operands
   std::vector<::mlir::Value> operand_vec;
+  operand_vec.emplace_back(entry_block->getArgument(input_count++));
   if (failed(AppendCtrlInOperand(op_conf, operand_vec))) { return failure(); }
   state.addOperands(operand_vec);
   // result types
@@ -544,27 +553,57 @@ LogicalResult JobImporter::ProcessOutputOp(const ::oneflow::OperatorConf& op_con
 }
 
 LogicalResult JobImporter::ProcessJob() {
-  auto func_type = GetBuilder().getFunctionType(llvm::None, llvm::None);
-  auto function = mlir::FuncOp::create(GetRootLocation(), job_->job_conf().job_name(), func_type);
-  auto& entryBlock = *function.addEntryBlock();
-  GetBuilder().setInsertionPointToStart(&entryBlock);
-
+  llvm::SmallVector<Type, 8> input_types;
+  llvm::SmallVector<Type, 4> result_types;
+  llvm::SmallVector<Value, 4> results;
   bool is_succeeded = true;
+
   job_wrapper_.TopoForEachOpConf([&](const ::oneflow::OperatorConf* op_conf) {
-    const auto op = *op_conf;
+    if (op_conf->has_input_conf()) {
+      auto type = GetInterfaceBlobConfType(op_conf->input_conf().blob_conf());
+      if (type) {
+        input_types.emplace_back(type);
+      } else {
+        is_succeeded = false;
+      }
+    }
+  });
+  if (!is_succeeded) { return failure(); }
+
+  auto func_type = GetBuilder().getFunctionType(input_types, llvm::None);
+  auto job_op =
+      GetBuilder().create<oneflow::Job>(GetRootLocation(), job_->job_conf().job_name(), func_type);
+  auto* entryBlock = job_op.addEntryBlock();
+  GetBuilder().setInsertionPointToStart(entryBlock);
+
+  is_succeeded = true;
+  size_t input_count = 0;
+  job_wrapper_.TopoForEachOpConf([&](const ::oneflow::OperatorConf* op_conf) {
     if (is_succeeded == false) { return; }
-    if (op.has_user_conf()) {
-      is_succeeded = succeeded(ProcessUserOp(op));
+    if (op_conf->has_user_conf()) {
+      is_succeeded = succeeded(ProcessUserOp(*op_conf));
+    } else if (op_conf->has_input_conf()) {
+      is_succeeded = succeeded(ProcessInputOp(*op_conf, entryBlock, input_count));
+    } else if (op_conf->has_output_conf()) {
+      is_succeeded = succeeded(ProcessOutputOp(*op_conf));
+      if (is_succeeded) {
+        auto result = entryBlock->back().getResult(0);
+        results.emplace_back(result);
+        result_types.emplace_back(result.getType());
+      }
     } else {
-      is_succeeded = succeeded(ProcessSystemOp(op));
+      is_succeeded = succeeded(ProcessSystemOp(*op_conf));
     }
   });
   if (is_succeeded == false) { return failure(); }
 
-  ReturnOp returnOp;
-  if (!entryBlock.empty()) { returnOp = dyn_cast<ReturnOp>(entryBlock.back()); }
-  if (!returnOp) { GetBuilder().create<ReturnOp>(GetRootLocation()); }
-  GetModule().push_back(function);
+  mlir::oneflow::ReturnOp return_op;
+  if (!entryBlock->empty()) { return_op = dyn_cast<mlir::oneflow::ReturnOp>(entryBlock->back()); }
+  if (!return_op) { GetBuilder().create<mlir::oneflow::ReturnOp>(GetRootLocation(), results); }
+
+  func_type = GetBuilder().getFunctionType(input_types, result_types);
+  job_op.getOperation()->setAttr(oneflow::Job::getTypeAttrName(), TypeAttr::get(func_type));
+  GetModule().push_back(job_op);
   return success();
 }
 
@@ -590,102 +629,183 @@ LogicalResult JobImporter::TryToUpdateJob() {
   new_job.CopyFrom(*job_);
   new_job.clear_net();
   new_job.mutable_placement()->clear_placement_group();
-  auto convertOps = [&](Operation* op) {
-    if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
-      oneflow::SystemOpAdaptor system_op_adaptor(op->getOperands(), op->getAttrDictionary());
-      UpdatePlacement(op, system_op_adaptor, new_job);
-      auto op_name = system_op_adaptor.op_name().getValue().str();
-      ::oneflow::OperatorConf op_conf = job_wrapper_.OpConf4OpName(op_name);
-      for (const auto& ibn : llvm::enumerate(op->getAttrOfType<ArrayAttr>("input_bns"))) {
-        auto result = GetDataInputOperands(op)[ibn.index()].dyn_cast<OpResult>();
-        std::string new_val = GetOutputLbn(result).getValue();
-        job_wrapper_.ReplaceInputLbnInOpCustomizedConf(
-            &op_conf, ibn.value().dyn_cast<StringAttr>().getValue().str(), new_val);
-      }
-      if (succeeded(ConvertCtrlInputs(op, op_conf))) {
-        *(new_job.mutable_net()->add_op()) = op_conf;
-      } else {
+
+  Operation* job_op = nullptr;
+  llvm::SmallVector<Value, 4> outputs;
+
+  auto find_first_job = [&](oneflow::Job job) -> WalkResult {
+    job_op = job.getOperation();
+    new_job.mutable_job_conf()->set_job_name(job.sym_name().str());
+    return WalkResult::interrupt();
+  };
+
+  GetModule().getOperation()->walk(find_first_job);
+  if (!job_op) {
+    GetModule()->emitError("job not found. module op: ") << *GetModule();
+    return failure();
+  }
+
+  auto ConvertOp = [&](Operation* op) -> WalkResult {
+    if (op->hasTrait<OpTrait::IsOpConfCompatible>()) {
+      if (llvm::dyn_cast<oneflow::UserOp>(op)) {
+        op->emitError("excepted concrete UserOp, but got generic UserOp: ") << *op;
         return WalkResult::interrupt();
-      }
-    } else if (llvm::dyn_cast<oneflow::VariableOp>(op)) {
-      oneflow::VariableOpAdaptor op_adaptor(op->getOperands(), op->getAttrDictionary());
-      UpdatePlacement(op, op_adaptor, new_job);
-      ::oneflow::OperatorConf op_conf;
-      if (succeeded(ConvertVariableOpConf(op, op_adaptor, &op_conf))) {
-        *(new_job.mutable_net()->add_op()) = op_conf;
+      } else if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
+        if (failed(ConvertSystemOp(op, new_job))) {
+          op->emitError("failed to process SystemOp: ") << *op;
+          return WalkResult::interrupt();
+        }
+      } else if (llvm::dyn_cast<oneflow::VariableOp>(op)) {
+        if (failed(ConvertVariableOp(op, new_job))) {
+          op->emitError("failed to process VariableOp: ") << *op;
+          return WalkResult::interrupt();
+        }
+      } else if (llvm::dyn_cast<oneflow::InputOp>(op) || llvm::dyn_cast<oneflow::OutputOp>(op)) {
+        // do nothing and advance
       } else {
-        return WalkResult::interrupt();
+        if (!dyn_cast<UserOpCompatible>(op)) {
+          op->emitError("op is not UserOpCompatible ") << *op;
+          return WalkResult::interrupt();
+        }
+        if (failed(ConvertUserOp(op, new_job))) {
+          op->emitError("failed to process UserOp: ") << *op;
+          return WalkResult::interrupt();
+        }
       }
-    } else if (llvm::dyn_cast<oneflow::InputOp>(op)) {
-      oneflow::InputOpAdaptor op_adaptor(op->getOperands(), op->getAttrDictionary());
-      UpdatePlacement(op, op_adaptor, new_job);
-      ::oneflow::OperatorConf op_conf;
-      if (succeeded(ConvertInputOpConf(op, op_adaptor, &op_conf))) {
-        *(new_job.mutable_net()->add_op()) = op_conf;
-      } else {
-        return WalkResult::interrupt();
-      }
-    } else if (llvm::dyn_cast<oneflow::OutputOp>(op)) {
-      oneflow::OutputOpAdaptor op_adaptor(op->getOperands(), op->getAttrDictionary());
-      UpdatePlacement(op, op_adaptor, new_job);
-      ::oneflow::OperatorConf op_conf;
-      if (succeeded(ConvertOutputOpConf(op, op_adaptor, &op_conf))) {
-        *(new_job.mutable_net()->add_op()) = op_conf;
-      } else {
-        return WalkResult::interrupt();
-      }
-    } else if (llvm::dyn_cast<ReturnOp>(op) || llvm::dyn_cast<FuncOp>(op)
-               || llvm::dyn_cast<ModuleOp>(op)) {
-      return WalkResult::advance();
+    } else if (llvm::dyn_cast<mlir::oneflow::Job>(op)) {
+      // do nothing and advance
+    } else if (auto return_op = llvm::dyn_cast<mlir::oneflow::ReturnOp>(op)) {
+      for (auto operand : return_op->getOperands()) { outputs.emplace_back(operand); }
     } else {
-      oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
-      UpdatePlacement(op, user_op_adaptor, new_job);
-      ::oneflow::OperatorConf op_conf;
-      const std::string op_name = user_op_adaptor.op_name().getValue().str();
-      auto user_conf = op_conf.mutable_user_conf();
-      if (succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))
-          && succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))
-          && succeeded(ConvertUserOpAttributes(op, user_op_adaptor, op_conf))
-          && succeeded(ConvertCtrlInputs(op, op_conf))) {
-        *(new_job.mutable_net()->add_op()) = op_conf;
-      } else {
-        return WalkResult::interrupt();
-      }
-    } /* convert op conf */
+      op->emitError("unexcepted op: ") << *op;
+      return WalkResult::interrupt();
+    }
     return WalkResult::advance();
   };
-  Operation* func_op = nullptr;
-  auto walk_result = GetModule().getOperation()->walk([&func_op](FuncOp op) {
-    if (func_op != nullptr) { return WalkResult::interrupt(); }
-    func_op = op.getOperation();
-    return WalkResult::advance();
-  });
-  if (walk_result.wasInterrupted()) {
-    GetModule()->emitError("find multiply func op");
-    return failure();
+  if (job_op->walk(ConvertOp).wasInterrupted()) { return failure(); }
+
+  // add input op
+  auto arguments = llvm::dyn_cast<oneflow::Job>(job_op).body().front().getArguments();
+  for (BlockArgument argument : arguments) {
+    for (auto& use : argument.getUses()) {
+      Operation* owner = use.getOwner();
+      if (!dyn_cast<oneflow::InputOp>(owner)) { return failure(); }
+      if (failed(ConvertInputOp(owner, new_job))) { return failure(); }
+    }
   }
-  if (!func_op) {
-    GetModule()->emitError("find no func op");
-    return failure();
+  // add output op
+  for (auto output : outputs) {
+    Operation* owner = output.getDefiningOp();
+    if (!dyn_cast<oneflow::OutputOp>(owner)) { return failure(); }
+    if (failed(ConvertOutputOp(owner, new_job))) { return failure(); }
   }
-  if (func_op->walk(convertOps).wasInterrupted()) {
-    return failure();
-  } else {
-    job_wrapper_.UpdateJob(&new_job);
-  }
+
+  job_wrapper_.UpdateJob(&new_job);
   return success();
+}
+
+LogicalResult JobImporter::ConvertUserOp(Operation* op, ::oneflow::Job& job) {
+  // TODO: concrete user op should not use generic UserOpAdaptor
+  oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
+  UpdatePlacement(op, user_op_adaptor, job);
+
+  auto* op_conf = job.mutable_net()->add_op();
+  auto* user_conf = op_conf->mutable_user_conf();
+  if (!succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))) { return failure(); }
+  if (!succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))) { return failure(); }
+  if (!succeeded(ConvertUserOpAttributes(op, user_op_adaptor, *op_conf))) { return failure(); }
+  if (!succeeded(ConvertCtrlInputs(op, *op_conf))) { return failure(); }
+  return success();
+}
+
+LogicalResult JobImporter::ConvertSystemOp(Operation* op, ::oneflow::Job& job) {
+  oneflow::SystemOpAdaptor system_op_adaptor(op->getOperands(), op->getAttrDictionary());
+  UpdatePlacement(op, system_op_adaptor, job);
+  auto op_name = system_op_adaptor.op_name().getValue().str();
+  ::oneflow::OperatorConf op_conf = job_wrapper_.OpConf4OpName(op_name);
+  for (const auto& ibn : llvm::enumerate(op->getAttrOfType<ArrayAttr>("input_bns"))) {
+    auto result = GetDataInputOperands(op)[ibn.index()].dyn_cast<OpResult>();
+    std::string new_val = GetOutputLbn(result).getValue();
+    job_wrapper_.ReplaceInputLbnInOpCustomizedConf(
+        &op_conf, ibn.value().dyn_cast<StringAttr>().getValue().str(), new_val);
+  }
+  if (failed(ConvertCtrlInputs(op, op_conf))) { return failure(); }
+  *(job.mutable_net()->add_op()) = op_conf;
+  return success();
+}
+
+LogicalResult JobImporter::ConvertVariableOp(Operation* op, ::oneflow::Job& job) {
+  oneflow::VariableOpAdaptor op_adaptor(op->getOperands(), op->getAttrDictionary());
+  UpdatePlacement(op, op_adaptor, job);
+  auto* op_conf = job.mutable_net()->add_op();
+  return ConvertVariableOpConf(op, op_adaptor, op_conf);
+}
+
+LogicalResult JobImporter::ConvertInputOp(Operation* op, ::oneflow::Job& job) {
+  oneflow::InputOpAdaptor op_adaptor(op->getOperands(), op->getAttrDictionary());
+  UpdatePlacement(op, op_adaptor, job);
+  auto* op_conf = job.mutable_net()->add_op();
+  return ConvertInputOpConf(op, op_adaptor, op_conf);
+}
+
+LogicalResult JobImporter::ConvertOutputOp(Operation* op, ::oneflow::Job& job) {
+  oneflow::OutputOpAdaptor op_adaptor(op->getOperands(), op->getAttrDictionary());
+  UpdatePlacement(op, op_adaptor, job);
+  auto* op_conf = job.mutable_net()->add_op();
+  return ConvertOutputOpConf(op, op_adaptor, op_conf);
+}
+
+Type JobImporter::GetInterfaceBlobConfType(const ::oneflow::InterfaceBlobConf& blob_conf) {
+  if (!blob_conf.has_data_type()) { return Type{}; }
+  if (!blob_conf.has_shape()) { return Type{}; }
+  auto data_type = GetDataTypeType(blob_conf.data_type());
+  if (!data_type) { return Type{}; }
+  return RankedTensorType::get({blob_conf.shape().dim().begin(), blob_conf.shape().dim().end()},
+                               data_type);
+}
+
+Type JobImporter::GetDataTypeType(::oneflow::DataType dt) {
+  switch (dt) {
+    case ::oneflow::DataType::kDouble: {
+      return GetBuilder().getF64Type();
+    }
+    case ::oneflow::DataType::kFloat: {
+      return GetBuilder().getF32Type();
+    }
+    case ::oneflow::DataType::kFloat16: {
+      return GetBuilder().getF16Type();
+    }
+    case ::oneflow::DataType::kBFloat16: {
+      return GetBuilder().getBF16Type();
+    }
+    case ::oneflow::DataType::kInt32: {
+      return GetBuilder().getI32Type();
+    }
+    case ::oneflow::DataType::kInt64: {
+      return GetBuilder().getI64Type();
+    }
+    case ::oneflow::DataType::kInt8: {
+      return GetBuilder().getI8Type();
+    }
+    case ::oneflow::DataType::kUInt8: {
+      return GetBuilder().getIntegerType(8, false);
+    }
+    default: {
+      return Type{};
+    }
+  }
 }
 
 LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wrapper,
                                      MLIRContext* context, OwningModuleRef& module) {
   mlir::PassManager pm(context);
-  pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
+  pm.addPass(createCanonicalizerPass());
   std::string graphviz;
   if (job_wrapper.IsLastIRPass() && std::getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS") != nullptr) {
     pm.addPass(oneflow::createOutlineJitFunctionPass());
   }
-  pm.addNestedPass<mlir::FuncOp>(oneflow::createFuseIntoExistingOpPass());
-  pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
+  pm.addPass(oneflow::createFuseIntoExistingOpPass());
+  pm.addPass(createCanonicalizerPass());
   llvm::raw_string_ostream os_graphviz(graphviz);
   pm.addPass(createPrintOpGraphPass(os_graphviz));
   if (mlir::failed(pm.run(*module))) {
@@ -751,7 +871,7 @@ void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::st
   JobImporter imp(job_wrapper, &context, module.get());
   if (succeeded(imp.ProcessJob())) {
     mlir::PassManager pm(&context);
-    pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
+    pm.addPass(createCanonicalizerPass());
     if (mlir::failed(pm.run(*module))) {
       module->emitError("Failed to run canonicalizer pass");
       exit(EXIT_FAILURE);

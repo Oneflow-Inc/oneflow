@@ -662,20 +662,6 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
     auto id = id_attr.first;
     // mlir only attrs
     // TODO: find a way to skip attrs like callee in a declarative way
-    {
-      std::vector<std::string> keys{};
-      std::vector<int32_t> sizes{};
-      assert(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(op, keys, sizes)
-                 .succeeded());
-      for (const auto& s : keys) { op_conf.mutable_user_conf()->add_input_order(s); }
-    }
-    {
-      std::vector<std::string> keys{};
-      std::vector<int32_t> sizes{};
-      assert(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys, sizes)
-                 .succeeded());
-      for (const auto& s : keys) { op_conf.mutable_user_conf()->add_output_order(s); }
-    }
     if (id.strref().equals("callee")
         || id.strref().equals(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr())
         || id.strref().equals(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr())
@@ -775,6 +761,20 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
       }
       (*user_conf->mutable_attr())[id.str()] = user_attr;
     }
+  }
+  {
+    std::vector<std::string> keys{};
+    std::vector<int32_t> sizes{};
+    assert(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(op, keys, sizes)
+               .succeeded());
+    for (const auto& s : keys) { op_conf.mutable_user_conf()->add_input_order(s); }
+  }
+  {
+    std::vector<std::string> keys{};
+    std::vector<int32_t> sizes{};
+    assert(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys, sizes)
+               .succeeded());
+    for (const auto& s : keys) { op_conf.mutable_user_conf()->add_output_order(s); }
   }
   return success();
 }
@@ -881,10 +881,10 @@ LogicalResult ConvertInputOpConf(Operation* op, oneflow::InputOpAdaptor& adaptor
 
   if (op->hasAttr("job_name")) { input_op_conf->set_job_name(adaptor.job_name().getValue().str()); }
 
-  // all operands are ctrl_inputs
-  for (const auto& operand : op->getOperands()) {
+  // operand 0 is block argument, others are ctrl_inputs
+  for (size_t i = 1; i < op->getNumOperands(); ++i) {
     op_conf->add_ctrl_in_op_name(
-        operand.getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
+        op->getOperand(i).getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
   }
 
   return success();

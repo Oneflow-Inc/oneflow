@@ -72,7 +72,7 @@ class GraphSaveTestCase(flow.unittest.TestCase):
         op_list_.sort(key=sort_by_op_name)
 
         for (op, op_) in zip(op_list, op_list_):
-            assert self.assertTrue(op == op_)
+            self.assertTrue(op == op_)
             # if op != op_:
             #     print(op)
             #     print("-" * 20)

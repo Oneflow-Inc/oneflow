@@ -56,8 +56,10 @@ using namespace mlir::oneflow;
 
 LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
   // TODO: now we only need one JIT engine
-  auto parent_func_op = op->getParentOfType<FuncOp>();
+  auto parent_func_op = op->getParentOfType<oneflow::Job>();
+  if (!parent_func_op) { return failure(); }
   auto parent_module_op = parent_func_op->getParentOfType<ModuleOp>();
+  if (!parent_module_op) { return failure(); }
   SymbolTable symbol_table(parent_module_op);
   std::string mlir;
   llvm::raw_string_ostream os_mlir(mlir);
@@ -78,8 +80,10 @@ FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, 
   for (auto result : results) { result_types.push_back(result.getType()); }
   auto func_type = rewriter.getFunctionType(argument_types, result_types);
   auto first_op = *ops.begin();
-  auto parent_func_op = first_op->getParentOfType<FuncOp>();
+  auto parent_func_op = first_op->getParentOfType<oneflow::Job>();
+  assert(parent_func_op);
   auto parent_module_op = parent_func_op->getParentOfType<ModuleOp>();
+  assert(parent_module_op);
   SymbolTable symbol_table(parent_module_op);
   OpBuilder::InsertionGuard guard(rewriter);
   Block::iterator insertPt(parent_func_op->getNextNode());
@@ -97,7 +101,7 @@ FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, 
   for (auto op : ops) { nb.clone(*op, mapping); }
   SmallVector<::mlir::Value, 4> mapped_results;
   for (auto result : results) { mapped_results.push_back(mapping.lookup(result)); }
-  rewriter.create<ReturnOp>(loc, mapped_results);
+  rewriter.create<mlir::ReturnOp>(loc, mapped_results);
   assert(!symbol_table.lookup(func_name));
   return function;
 }
