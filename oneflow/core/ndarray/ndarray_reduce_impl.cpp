@@ -23,10 +23,11 @@ namespace oneflow {
 #define SPECIALIZE_CPU_NDARRAY_REDUCE_IMPL(struct_name)                                        \
   template<typename T, template<typename> class binary_func>                                   \
   struct struct_name<DeviceType::kCPU, T, binary_func> final {                                 \
-    static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {          \
+    using RetT = typename BinaryFuncTrait<binary_func, T>::return_type;                        \
+    static bool Matched(const XpuVarNdarray<RetT>& y, const XpuVarNdarray<const T>& x) {       \
       return false;                                                                            \
     }                                                                                          \
-    static void Reduce(ep::Stream* stream, const XpuVarNdarray<T>& y,                          \
+    static void Reduce(ep::Stream* stream, const XpuVarNdarray<RetT>& y,                       \
                        const XpuVarNdarray<const T>& x, const XpuVarNdarray<T>& tmp_storage) { \
       UNIMPLEMENTED();                                                                         \
     }                                                                                          \

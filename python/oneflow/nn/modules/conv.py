@@ -527,6 +527,7 @@ class Conv3d(Module):
         super().__init__()
 
         assert padding_mode == "zeros"
+        self.padding_mode = padding_mode
         self.kernel_size = _triple(kernel_size)
         self.stride = _triple(stride)
         self.padding = _triple(padding)

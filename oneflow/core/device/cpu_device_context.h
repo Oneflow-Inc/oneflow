@@ -25,7 +25,7 @@ limitations under the License.
 
 namespace oneflow {
 
-class CpuDeviceCtx final : public DeviceCtx, public EventRecordProvider {
+class CpuDeviceCtx final : public DeviceCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDeviceCtx);
   CpuDeviceCtx() {
@@ -41,10 +41,6 @@ class CpuDeviceCtx final : public DeviceCtx, public EventRecordProvider {
   DeviceType device_type() const override { return DeviceType::kCPU; }
 
   ep::Stream* stream() override { return stream_; }
-
-  std::shared_ptr<EventRecord> MakeEventRecord() override {
-    return std::make_shared<NaiveEventRecord>();
-  }
 
  private:
   std::shared_ptr<ep::Device> device_;
