@@ -199,7 +199,6 @@ FuncOp JitInterpreter::Trace(ir::JitImporter& importer, const std::string& func_
                              const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
                              const std::function<void()>& forward_func) {
   current_importer_ = &importer;  // TODO: extract function
-  LOG(ERROR) << "importer reset";
   FuncOp func_op = importer.StartProcessFunc(func_name, arg_tensors);
   *one::MutJitEnabled() = true;
   forward_func();
