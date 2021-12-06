@@ -57,7 +57,7 @@ struct Module {
     arg_tensors.insert(arg_tensors.end(), inputs.begin(), inputs.end());
     arg_tensors.insert(arg_tensors.end(), parameters.begin(), parameters.end());
     std::vector<std::shared_ptr<one::Tensor>> tensors_to_materialize{};
-    jit_interpreter->Start();
+    jit_interpreter->MarkMlirTraceStart();
     if (!func_op_) {
       func_op_ = jit_interpreter->Trace(importer_, func_name, arg_tensors, [&]() {
         auto returned_obj = py_module_.attr("forward")(*args, **kwargs);
@@ -68,9 +68,9 @@ struct Module {
         }
       });
     }
-    jit_interpreter->MlirTraceEnd();
+    jit_interpreter->MarkMlirTraceEnd();
     auto ret = jit_interpreter->DispatchFunc(func_op_.getValue(), arg_tensors);
-    jit_interpreter->End();
+    jit_interpreter->MarkMlirDispatchEnd();
     LOG(ERROR) << "JIT trace overhead: " << jit_interpreter->TraceOverhead();
     return ret;
   }
@@ -94,11 +94,11 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
     auto jit_interpreter =
         std::dynamic_pointer_cast<one::JitInterpreter>(one::JitInterpreter::Get());
     CHECK(jit_interpreter != nullptr) << "JIT interpreter is not initialized";
-    if (one::IsJitEnabled() == true) { jit_interpreter->Start(); }
+    if (one::IsJitEnabled() == true) { jit_interpreter->MarkMlirTraceStart(); }
     // when true => false, start exec
     if (one::IsJitEnabled() == false) {
       jit_interpreter->Interrupt();
-      jit_interpreter->End();
+      jit_interpreter->MarkMlirTraceEnd();
       LOG(ERROR) << "JIT trace overhead: " << jit_interpreter->TraceOverhead();
     }
     return *one::MutJitEnabled();

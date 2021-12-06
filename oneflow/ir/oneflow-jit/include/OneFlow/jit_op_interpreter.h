@@ -51,9 +51,9 @@ class JitInterpreter : public OpExprInterpreter {
   ir::JitImporter& GetImporter() const { return *current_importer_; }
   void CacheExpr(Operation&, std::shared_ptr<one::UserOpExpr>);
   llvm::Optional<std::shared_ptr<one::UserOpExpr>> GetExpr(Operation*);
-  void Start() { trace_start_time_ = std::chrono::steady_clock::now(); }
-  void MlirTraceEnd() { trace_end_time_ = std::chrono::steady_clock::now(); }
-  void End() { dispatch_end_time_ = std::chrono::steady_clock::now(); }
+  void MarkMlirTraceStart() { trace_start_time_ = std::chrono::steady_clock::now(); }
+  void MarkMlirTraceEnd() { trace_end_time_ = std::chrono::steady_clock::now(); }
+  void MarkMlirDispatchEnd() { dispatch_end_time_ = std::chrono::steady_clock::now(); }
   float TraceOverhead() {
     const float mlir_trace_time =
         std::chrono::duration_cast<std::chrono::microseconds>(trace_end_time_ - trace_start_time_)
