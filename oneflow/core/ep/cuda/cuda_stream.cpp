@@ -154,6 +154,8 @@ cublasHandle_t CudaStream::cublas_handle() const { return cublas_handle_; }
 
 cudnnHandle_t CudaStream::cudnn_handle() const { return cudnn_handle_; }
 
+const cudaDeviceProp& CudaStream::device_properties() const { return device_->properties(); }
+
 #ifdef WITH_CUDA_GRAPHS
 
 void CudaStream::BeginGraphCapture() {
