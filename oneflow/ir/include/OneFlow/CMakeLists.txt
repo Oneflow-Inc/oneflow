@@ -1,5 +1,5 @@
 set(ONEFLOW_USER_OP_GEN_TD_PATH "${PROJECT_BINARY_DIR}/include/OneFlow")
-message(STATUS "Generating OneFlowUserOpGen.td to ${ONEFLOW_USER_OP_GEN_TD_PATH}")
+message(STATUS "Generating ${ONEFLOW_USER_OP_GEN_TD_PATH}/OneFlowUserOpGen.td")
 add_custom_target(GenUserOpODS
   DEPENDS oneflow-gen-ods
   COMMAND "$<TARGET_FILE:oneflow-gen-ods>"
