@@ -74,7 +74,7 @@ Maybe<void> VariableOp::InferOutBlobDescs(
 }
 
 Maybe<void> VariableOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const {
-  CHECK_EQ_OR_RETURN(JUST(GetOpParallelDesc())->hierarchy()->NumAxes(), 1);
+  // CHECK_EQ_OR_RETURN(JUST(GetOpParallelDesc())->hierarchy()->NumAxes(), 1);
   int64_t num_axes = op_conf().variable_conf().shape().dim_size();
   for (int i = 0; i < num_axes; ++i) {
     SbpSignatureBuilder()
