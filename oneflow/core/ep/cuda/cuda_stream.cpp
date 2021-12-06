@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/device/node_device_descriptor_manager.h"
 #include "oneflow/core/device/cuda_device_descriptor.h"
 #include "oneflow/core/ep/cuda/cuda_event.h"
+#include "oneflow/core/ep/cuda/cuda_device.h"
 
 #ifdef WITH_CUDA
 
@@ -79,7 +80,8 @@ void CudaGraphExecutable::Reset() {
 
 #endif  // WITH_CUDA_GRAPHS
 
-CudaStream::CudaStream(int device_index) : device_index_(device_index) {
+CudaStream::CudaStream(CudaDevice* device)
+    : device_index_(device->device_index()), device_(device) {
   CudaCurrentDeviceGuard guard(device_index_);
   // cuda_stream
   OF_CUDA_CHECK(cudaStreamCreate(&cuda_stream_));
@@ -129,6 +131,8 @@ Maybe<void> CudaStream::OnExecutionContextSetup() {
 Maybe<void> CudaStream::OnExecutionContextTeardown() { return Maybe<void>::Ok(); }
 
 DeviceType CudaStream::device_type() const { return DeviceType::kCUDA; }
+
+Device* CudaStream::device() const { return device_; }
 
 Maybe<void> CudaStream::Sync() {
   cudaError_t err = cudaStreamSynchronize(cuda_stream_);

@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
@@ -143,8 +144,11 @@ std::string GetTmpPartKey(const std::string& base, const ParallelContext& parall
 void HostSliceCopy(Blob* dst, const TensorSliceView& dst_slice, const Blob* src,
                    const TensorSliceView& src_slice) {
   TensorSliceCopier copier(dst_slice, src_slice, dst->data_type(), DeviceType::kCPU);
-  ep::CpuStream cpu_stream_;
-  copier.Copy(&cpu_stream_, dst, src);
+  auto device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCPU, 0);
+  CHECK(device);
+  auto* stream = device->CreateStream();
+  copier.Copy(stream, dst, src);
+  device->DestroyStream(stream);
 }
 
 template<DeviceType device_type>
