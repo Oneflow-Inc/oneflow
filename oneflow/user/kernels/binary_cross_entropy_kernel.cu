@@ -30,9 +30,7 @@ struct BinaryCrossEntropyFunctor {
   T one_;
   T negative_hundred_;
   BinaryCrossEntropyFunctor()
-      : zero_(GetZeroVal<T>()),
-        one_(GetOneVal<T>()),
-        negative_hundred_(static_cast<T>(-100 * GetOneVal<T>())) {}
+      : zero_(GetZeroVal<T>()), one_(GetOneVal<T>()), negative_hundred_(static_cast<T>(-100)) {}
   __device__ __forceinline__ T operator()(T input_val, T target_val) const {
     assert(input_val >= zero_);
     assert(input_val <= one_);
@@ -50,7 +48,7 @@ struct BinaryCrossEntropyFunctor<float> {
   float zero_;
   float one_;
   float negative_hundred_;
-  BinaryCrossEntropyFunctor() : zero_(0.f), one_(1.f), negative_hundred_(-100.f * 1.f) {}
+  BinaryCrossEntropyFunctor() : zero_(0.f), one_(1.f), negative_hundred_(-100.f) {}
   __device__ __forceinline__ float operator()(float input_val, float target_val) const {
     assert(input_val >= zero_);
     assert(input_val <= one_);
@@ -66,9 +64,9 @@ struct BinaryCrossEntropyFunctor<float> {
 
 template<>
 struct BinaryCrossEntropyFunctor<half> {
-  BinaryCrossEntropyFunctor<float> f;
+  BinaryCrossEntropyFunctor<float> float_functor;
   __device__ __forceinline__ half operator()(half input_val, half target_val) const {
-    return __float2half(f(__half2float(input_val), __half2float(target_val)));
+    return __float2half(float_functor(__half2float(input_val), __half2float(target_val)));
   }
 
   __device__ __forceinline__ half operator()(half input_val, half target_val,

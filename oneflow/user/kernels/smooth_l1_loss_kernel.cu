@@ -29,14 +29,16 @@ template<typename T>
 struct SmoothL1Functor {
   float beta_;
   float inv_beta_;
-  SmoothL1Functor(float beta) : beta_(beta), inv_beta_(static_cast<float>(1.0 / beta)) {}
+  T half_of_one_;
+  SmoothL1Functor(float beta)
+      : beta_(beta), inv_beta_(static_cast<float>(1.0 / beta)), half_of_one_(static_cast<T>(0.5)) {}
 
   __device__ __forceinline__ T operator()(T input_val, T target_val) const {
     const T abs_diff = abs(input_val - target_val);
     if (abs_diff < beta_) {
-      return 0.5 * abs_diff * abs_diff * inv_beta_;
+      return half_of_one_ * abs_diff * abs_diff * inv_beta_;
     } else {
-      return abs_diff - 0.5 * beta_;
+      return abs_diff - half_of_one_ * beta_;
     }
   }
 };
