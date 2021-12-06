@@ -27,7 +27,6 @@ limitations under the License.
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
-#include "oneflow/core/device/device_context_adapter.h"
 #include "OneFlow/Passes.h"
 
 namespace {
