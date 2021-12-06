@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
-
 namespace oneflow {
 
 namespace {
@@ -340,11 +339,13 @@ __global__ RETURN_VOID_IF_DOUBLE FusedDropoutAddGpu(
 
 template<int pack_size>
 unsigned int ComputeGridSize(const int32_t block_size, const int64_t elem_cnt) {
-  cudaDeviceProp prop;
-  cudaGetDeviceProperties(&prop, 0);
-  unsigned int blocks_per_sm = prop.maxThreadsPerMultiProcessor / block_size;
+  int32_t max_threads_multi_process = 0;
+  int32_t multi_processor_count = 0;
+  cudaDeviceGetAttribute(&max_threads_multi_process, cudaDevAttrMaxThreadsPerMultiProcessor, 0);
+  cudaDeviceGetAttribute(&multi_processor_count, cudaDevAttrMultiProcessorCount, 0);
+  unsigned int blocks_per_sm = max_threads_multi_process / block_size;
   unsigned int grid_size = ((elem_cnt + block_size - 1) / block_size);
-  grid_size = std::min((unsigned int)prop.multiProcessorCount * blocks_per_sm, grid_size);
+  grid_size = std::min((unsigned int)multi_processor_count * blocks_per_sm, grid_size);
   return grid_size;
 }
 
