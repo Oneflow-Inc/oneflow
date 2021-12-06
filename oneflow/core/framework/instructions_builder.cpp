@@ -798,7 +798,7 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     if (!output->producer_op_device().has_value()) {
       JUST(output->init_producer_op_device(op_device));
     }
-    Joutput->set_last_used_device(op_device);
+    output->set_last_used_device(op_device);
   }
   return Maybe<void>::Ok();
 }
@@ -1015,11 +1015,9 @@ Maybe<void> InstructionsBuilder::FeedBlob(
 Maybe<void> InstructionsBuilder::ReleaseTensor(
     const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
-  if (JUST(eager_blob_object->compute_local_dep_object())->last_used_device().has_value()) {
-    const auto& last_used_device =
-        JUST(JUST(eager_blob_object->compute_local_dep_object())->last_used_device());
-    const auto& producer_op_device =
-        JUST(JUST(eager_blob_object->compute_local_dep_object())->producer_op_device());
+  if (eager_blob_object->last_used_device().has_value()) {
+    const auto& last_used_device = JUST(eager_blob_object->last_used_device());
+    const auto& producer_op_device = JUST(eager_blob_object->producer_op_device());
     if (last_used_device != producer_op_device) {
       JUST(SoftSyncStream(JUST(eager_blob_object->compute_local_dep_object()), "mut",
                           last_used_device));
