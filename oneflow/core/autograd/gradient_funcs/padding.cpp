@@ -89,7 +89,18 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
     auto* interp_ctx = dynamic_cast<const PadOpInterpCtx*>(ctx);
-    // state->paddings = interp_ctx->padding;
+    const auto& pad_before = interp_ctx->padding_before;
+    const auto& pad_after = interp_ctx->padding_after;
+    
+    if (pad_before.size() != pad_after.size()) {
+      return Error::RuntimeError() << "padding_before and padding_after size mismatch";
+    }
+    int64_t size = pad_before.size();
+    state->paddings.resize(size * 2);
+    for (int64_t i = 0; i < size; ++i) {
+      state->paddings[2 * i] = pad_before[size - i - 1];
+      state->paddings[2 * i + 1] = pad_after[size - i - 1];
+    }
     if (IsFloatingDataType(inputs.at(0)->dtype()->data_type())) {
       state->padding_value = interp_ctx->floating_constant_value;
     } else if (IsIntegralDataType(inputs.at(0)->dtype()->data_type())) {
