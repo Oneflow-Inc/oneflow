@@ -242,7 +242,6 @@ class Instruction final : public intrusive::Base {
   }
   const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
   const InstructionStatusBuffer& status_buffer() const { return status_buffer_.Get(); }
-  const intrusive::ListHook& instruction_hook() const { return instruction_hook_; }
   const intrusive::ListHook& dispatched_instruction_hook() const {
     return dispatched_instruction_hook_;
   }
@@ -369,7 +368,6 @@ class Instruction final : public intrusive::Base {
         access_list_(),
         in_edges_(),
         out_edges_(),
-        instruction_hook_(),
         dispatched_instruction_hook_(),
         lively_instruction_hook_(),
         pending_instruction_hook_(),
@@ -388,14 +386,13 @@ class Instruction final : public intrusive::Base {
   OutEdgeList out_edges_;
 
  public:
-  // pending or waiting list hooks
-  intrusive::ListHook instruction_hook_;
   // dispatched to Stream
   intrusive::ListHook dispatched_instruction_hook_;
   // valid during vm processing
   intrusive::ListHook lively_instruction_hook_;
   // pending to ThreadCtx
   intrusive::ListHook pending_instruction_hook_;
+  // barrier instruction hook
   intrusive::ListHook barrier_instruction_hook_;
 };
 
