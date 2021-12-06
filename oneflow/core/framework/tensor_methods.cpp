@@ -29,7 +29,9 @@ namespace oneflow {
 namespace one {
 
 Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
-  // printf("\nIsContiguous >>> tensor->is_eager():%d", tensor->is_eager());
+  if(tensor->is_lazy() || tensor->is_consistent()){
+    return true;
+  }
   const Shape& shape = *tensor->shape();
   if(!shape.is_initialized() || shape.NumAxes()<1 || shape.elem_cnt() <= 1 ){
     return true;
