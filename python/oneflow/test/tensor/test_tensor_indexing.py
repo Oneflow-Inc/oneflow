@@ -137,6 +137,22 @@ def test_advanced_indexing(test_case, numpy_x):
     test_case.assertTrue(np.allclose(numpy_x[mask > 1], x[y > 1].numpy()))
 
 
+def test_advanced_indexing_array(test_case, numpy_x, dtype):
+    x = flow.tensor(numpy_x)
+
+    idx = np.array([0, 1], dtype=dtype)
+    test_case.assertTrue(np.allclose(numpy_x[idx], x[idx].numpy()))
+
+    idx1 = np.array([0, 1], dtype=dtype)
+    idx2 = np.array([1, 0], dtype=dtype)
+    test_case.assertTrue(np.allclose(numpy_x[idx1, idx2], x[idx1, idx2].numpy()))
+
+    idx = np.array([[0, 1], [0, 1], [1, 0]], dtype=dtype)
+    test_case.assertTrue(np.allclose(numpy_x[idx, :, :], x[idx, :, :].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[idx, idx, :], x[idx, idx, :].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[idx, idx, idx], x[idx, idx, idx].numpy()))
+
+
 def test_combining_indexing(test_case, numpy_x):
     x = flow.tensor(numpy_x)
 
@@ -198,6 +214,19 @@ class TestTensorIndexing(flow.unittest.TestCase):
 
         numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
         test_advanced_indexing(test_case, numpy_x)
+
+    def test_advanced_indexing_array(test_case):
+        numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
+        test_advanced_indexing_array(test_case, numpy_x, np.int32)
+        test_advanced_indexing_array(test_case, numpy_x, np.int64)
+
+        numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6]).astype(np.float32)
+        test_advanced_indexing_array(test_case, numpy_x, np.int32)
+        test_advanced_indexing_array(test_case, numpy_x, np.int64)
+
+        numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
+        test_advanced_indexing_array(test_case, numpy_x, np.int32)
+        test_advanced_indexing_array(test_case, numpy_x, np.int64)
 
     def test_combining_indexing(test_case):
         numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)

@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,18 +12,13 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#ifndef ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_ADAPTER_H_
-#define ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_ADAPTER_H_
+"""
+import argparse
+import oneflow
 
-#include "oneflow/core/device/device_context.h"
-#include "oneflow/core/stream/include/stream_context.h"
-#include "oneflow/core/ep/include/stream.h"
+parser = argparse.ArgumentParser()
+parser.add_argument("--gen_ods", default=False, action="store_true", required=False)
+args = parser.parse_args()
 
-namespace oneflow {
-
-DeviceCtx* NewDeviceCtxAdapter(ep::Stream* stream);
-
-}  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_ADAPTER_H_
+if __name__ == "__main__":
+    oneflow._oneflow_internal.ir.gen_ods()
