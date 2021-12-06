@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/xrt/graph_compiler.h"
 #include "oneflow/xrt/platform.h"
 #include "oneflow/xrt/utility/env.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 // General executable setup.
 DEFINE_int64(max_workspace_bytes, EnvToInt64(FLAGS_max_workspace_bytes, -1),
@@ -188,7 +189,7 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(KernelContext* ctx) const 
   bool block_until_done = true;
   if (device_type == DeviceType::kCUDA) {
 #ifdef WITH_CUDA
-    run_options.stream = ctx->device_ctx()->cuda_stream();
+    run_options.stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     run_options.device_memory_limit = FLAGS_max_workspace_bytes;
     block_until_done = false;
 #else

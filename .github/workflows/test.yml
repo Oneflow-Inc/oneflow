@@ -52,6 +52,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           repository: ${{github.event.pull_request.head.repo.full_name}}
+          ref: ${{ github.head_ref }}
       - name: Check license
         id: license_check
         run: |
@@ -100,6 +101,17 @@ jobs:
         with:
           name: license_and_format-${{ github.sha }}.patch
           path: license_and_format.patch
+      - name: Add comment
+        if: ${{ failure() }}
+        uses: actions/github-script@v4
+        with:
+          script: |
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'Code got formatted by CI. Please request CI again if you still want to have this PR merged. If the PR is from a forked repo, please download the patch files from the GitHub Actions web page and apply them locally.'
+            })
       - name: Please request CI again
         if: ${{ failure() }}
         run: |
@@ -700,7 +712,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: 'CI failed, removing label automerge'
+              body: 'CI failed when running job: ${{ matrix.entry }}. PR label automerge has been removed'
             })
       - name: Print stacks in all core files
         timeout-minutes: 45
@@ -807,5 +819,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: 'CI failed, removing label automerge'
+              body: 'Static analysis with clang failed. PR label automerge has been removed'
             })
