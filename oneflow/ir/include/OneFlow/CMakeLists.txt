@@ -1,3 +1,12 @@
+set(ONEFLOW_USER_OP_GEN_TD_PATH "${PROJECT_BINARY_DIR}/include/OneFlow")
+message(STATUS "Generating OneFlowUserOpGen.td to ${ONEFLOW_USER_OP_GEN_TD_PATH}")
+add_custom_target(GenUserOpODS
+  DEPENDS oneflow-gen-ods
+  COMMAND "$<TARGET_FILE:oneflow-gen-ods>"
+  BYPRODUCTS OneFlowUserOpGen.td
+  WORKING_DIRECTORY "${ONEFLOW_USER_OP_GEN_TD_PATH}"
+)
+
 set(LLVM_TARGET_DEFINITIONS OneFlowEnums.td)
 mlir_tablegen(OneFlowEnums.h.inc -gen-enum-decls)
 mlir_tablegen(OneFlowEnums.cpp.inc -gen-enum-defs)

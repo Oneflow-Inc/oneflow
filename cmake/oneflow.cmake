@@ -375,15 +375,6 @@ oneflow_add_executable(oneflow-gen-ods ${PROJECT_SOURCE_DIR}/oneflow/ir/oneflow-
 set_target_properties(oneflow-gen-ods PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 target_link_libraries(oneflow-gen-ods -Wl,--no-as-needed oneflow -Wl,--as-needed)
 
-set(ONEFLOW_USER_OP_GEN_TD_PATH "${PROJECT_BINARY_DIR}/oneflow/ir/include/OneFlow/OneFlowUserOpGen.td")
-message(STATUS "Generating OneFlowUserOpGen.td to ${ONEFLOW_USER_OP_GEN_TD_PATH}")
-
-add_custom_target(GenUserOpODS
-  DEPENDS oneflow-gen-ods
-  COMMAND "$<TARGET_FILE:oneflow-gen-ods>" > ${ONEFLOW_USER_OP_GEN_TD_PATH}
-  BYPRODUCTS "${ONEFLOW_USER_OP_GEN_TD_PATH}"
-)
-
 if (WITH_MLIR)
   set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/649d95371680cbf7f740c990c0357372c2bd4058.zip" CACHE STRING "" FORCE)
   use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})

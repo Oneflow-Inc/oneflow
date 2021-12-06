@@ -246,8 +246,9 @@ bool IsConvOp(const std::string& op_name) {
 bool IsLazyPoolOp(const std::string& op_name) {
   return op_name.find("_pool") != std::string::npos && op_name.find("tf_") != std::string::npos;
 }
-bool IsAdaptivePoolOp(const std::string& op_name){
-  return op_name.find("_pool") != std::string::npos && op_name.find("adaptive_") != std::string::npos;
+bool IsAdaptivePoolOp(const std::string& op_name) {
+  return op_name.find("_pool") != std::string::npos
+         && op_name.find("adaptive_") != std::string::npos;
 }
 bool IsNCCLOp(const std::string& op_name) { return op_name.find("nccl") != std::string::npos; }
 bool IsOptimizerOp(const std::string& op_name) {
@@ -357,11 +358,9 @@ std::string GetBaseOp(const std::string& op_name) {
   } else if (IsPoolOp(op_name)) {
     return "OneFlow_" + std::string(IsLazyPoolOp(op_name) ? "TF" : "") + "Pool"
            + std::string(IsGradOp(op_name) ? "Grad" : "") + "BaseOp";
-  } 
-  else if(IsAdaptivePoolOp(op_name)) {
+  } else if (IsAdaptivePoolOp(op_name)) {
     return "OneFlow_AdaptivePool" + std::string(IsGradOp(op_name) ? "Grad" : "") + "BaseOp";
-  }
-  else {
+  } else {
     return "OneFlow_BaseOp";
   }
 }
@@ -686,48 +685,47 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
 }  // namespace
 
 int main(int argc, char* argv[]) {
-    std::cout << "Gen OneFlow ODS File Begin." << std::endl;
-    std::streambuf* coutBuf = std::cout.rdbuf();
-    std::ofstream of(argv[0]);
-    std::streambuf* fileBuf = of.rdbuf();
-    std::cout.rdbuf(fileBuf);
+  std::cout << "Gen OneFlow ODS File Begin." << std::endl;
+  std::streambuf* coutBuf = std::cout.rdbuf();
+  std::ofstream of("OneFlowUserOpGen.td");
+  std::streambuf* fileBuf = of.rdbuf();
+  std::cout.rdbuf(fileBuf);
 
+  using K = std::string;
+  using V = user_op::OpRegistryResult;
 
-    using K = std::string;
-    using V = user_op::OpRegistryResult;
+  std::map<K, V> sorted{};
+  auto unordered = user_op::UserOpRegistryMgr::Get().GetAllOpRegistryResults();
+  std::transform(unordered.begin(), unordered.end(), std::inserter(sorted, sorted.end()),
+                 [](const std::pair<K, V>& p) { return p; });
+  std::map<std::string, std::map<K, V>> groups;
+  GroupOpRegistryResults(sorted, groups);
+  PrintGroupNames(groups);
+  PrintIncludes(groups);
+  // std::cout << "#ifndef ONEFLOW_USER_OP_GEN\n";
+  // std::cout << "#define ONEFLOW_USER_OP_GEN\n\n";
 
-    std::map<K, V> sorted{};
-    auto unordered = user_op::UserOpRegistryMgr::Get().GetAllOpRegistryResults();
-    std::transform(unordered.begin(), unordered.end(), std::inserter(sorted, sorted.end()),
-                    [](const std::pair<K, V>& p) { return p; });
-    std::map<std::string, std::map<K, V>> groups;
-    GroupOpRegistryResults(sorted, groups);
-    PrintGroupNames(groups);
-    PrintIncludes(groups);
-    // std::cout << "#ifndef ONEFLOW_USER_OP_GEN\n";
-    // std::cout << "#define ONEFLOW_USER_OP_GEN\n\n";
+  for (const auto& kv : groups) {
+    auto group_name = kv.first;
+    auto results = kv.second;
+    std::cout << "// Group: " << group_name << "\n";
+    PrintNamesInResults(results);
+    std::cout << "// "
+              << "Total: " << kv.second.size() << "\n\n";
+    CHECK(kv.second.size()) << group_name;
+    auto get_group_by_name = "GET_ONEFLOW_" + group_name + "_OP_DEFINITIONS";
+    auto group_def_name = "ONEFLOW_" + group_name + "_OPS";
+    std::cout << "#ifdef " << get_group_by_name << "\n\n";
+    // std::cout << "#ifndef " << group_def_name << "\n\n";
+    // std::cout << "#define " << group_def_name << "\n\n";
+    PrintODSFromOpRegistryResults(results);
+    // std::cout << "#endif // " << group_def_name << "\n\n";
+    std::cout << "#endif // " << get_group_by_name << "\n\n";
+  }
+  of.flush();
+  of.close();
 
-    for (const auto& kv : groups) {
-        auto group_name = kv.first;
-        auto results = kv.second;
-        std::cout << "// Group: " << group_name << "\n";
-        PrintNamesInResults(results);
-        std::cout << "// "
-                << "Total: " << kv.second.size() << "\n\n";
-        CHECK(kv.second.size()) << group_name;
-        auto get_group_by_name = "GET_ONEFLOW_" + group_name + "_OP_DEFINITIONS";
-        auto group_def_name = "ONEFLOW_" + group_name + "_OPS";
-        std::cout << "#ifdef " << get_group_by_name << "\n\n";
-        // std::cout << "#ifndef " << group_def_name << "\n\n";
-        // std::cout << "#define " << group_def_name << "\n\n";
-        PrintODSFromOpRegistryResults(results);
-        // std::cout << "#endif // " << group_def_name << "\n\n";
-        std::cout << "#endif // " << get_group_by_name << "\n\n";
-    }
-    of.flush();
-    of.close();
-
-    std::cout.rdbuf(coutBuf);
-    std::cout << "Gen OneFlow ODS File End." << std::endl;
-    return 0;
+  std::cout.rdbuf(coutBuf);
+  std::cout << "Gen OneFlow ODS File End." << std::endl;
+  return 0;
 }
