@@ -374,7 +374,7 @@ def _diag(self, diagonal=0):
 
 
 def _diagonal(self, offset=0, dim1=0, dim2=1):
-    return flow.diagonal(self, offset=offset, dim1=dim1, dim2=dim2)
+    return flow._C.diagonal(self, offset=offset, dim1=dim1, dim2=dim2)
 
 
 def _log1p(self):

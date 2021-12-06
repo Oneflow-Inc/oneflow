@@ -18,37 +18,116 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/user/kernels/diagonal_kernel.h"
+
 
 namespace oneflow {
 namespace {
 
 template<typename T>
-struct DiagonalFunctor<DeviceType::kCPU, T> final {
+struct CPU_DiagonalFunctor final {
   void operator()(DeviceCtx* ctx, T* out_buf, const T* in_buf, int32_t size, int32_t dim1,
                   int32_t dim2) {
+    int32_t tmp_index = (dim1 + 1) * dim2;
     FOR_RANGE(int32_t, index, 0, size * dim2) {
       int32_t i = index / dim2;
-      int32_t j = index % dim2;
-      out_buf[j * size + i] = in_buf[i * (dim1 + 1) * dim2 + j];
+      int32_t j = index - i * dim2;
+      out_buf[j * size + i] = in_buf[i * tmp_index + j];
     }
   }
 };
 
 template<typename T>
-struct DiagonalGradFunctor<DeviceType::kCPU, T> final {
+struct CPU_DiagonalGradFunctor final {
   void operator()(DeviceCtx* ctx, T* dx_buf, const T* dy_buf, int32_t size, int32_t dim1,
                   int32_t dim2) {
+    int32_t tmp_index = (dim1 + 1) * dim2;
     FOR_RANGE(int32_t, index, 0, size * dim2) {
       int32_t i = index / dim2;
-      int32_t j = index % dim2;
-      dx_buf[i * (dim1 + 1) * dim2 + j] = dy_buf[j * size + i];
+      int32_t j = index - i * dim2;
+      dx_buf[i * tmp_index + j] = dy_buf[j * size + i];
     }
   }
 };
 
 }  // namespace
 
+template<DeviceType device_type, typename T>
+class DiagonalKernel final : public user_op::OpKernel {
+ public:
+  DiagonalKernel() = default;
+  ~DiagonalKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const int32_t offset = ctx->Attr<int32_t>("offset");
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const ShapeView& out_shape = out->shape();
+    const ShapeView& in_shape = in->shape();
+    const T* in_buf = in->dptr<T>();
+    T* out_buf = out->mut_dptr<T>();
+
+    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0, out_shape.elem_cnt() * sizeof(T));
+    int32_t size = out_shape.At(out_shape.NumAxes() - 1);
+    int32_t dim1 = in_shape.At(1);
+    int32_t dim2 = 0;
+    if (in_shape.NumAxes() <= 2) {
+      dim2 = 1;
+    } else {
+      dim2 = in_shape.Count(2, in_shape.NumAxes());
+    }
+    int32_t offset_in_bufer = (offset >= 0 ? offset * dim2 : -offset * dim1 * dim2);
+    in_buf += offset_in_bufer;
+    CPU_DiagonalFunctor<T>()(ctx->device_ctx(), out_buf, in_buf, size, dim1, dim2);
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+template<DeviceType device_type, typename T>
+class DiagonalBackwardKernel final : public user_op::OpKernel {
+ public:
+  DiagonalBackwardKernel() = default;
+  ~DiagonalBackwardKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    int32_t offset = ctx->Attr<int32_t>("offset");
+    const ShapeView& dx_shape = dx->shape();
+    const ShapeView& dy_shape = dy->shape();
+    T* dx_buf = dx->mut_dptr<T>();
+    const T* dy_buf = dy->dptr<T>();
+
+    Memset<device_type>(ctx->device_ctx(), dx->mut_dptr<T>(), 0, dx_shape.elem_cnt() * sizeof(T));
+
+    int32_t dim1 = dx_shape.At(1);
+    int32_t dim2 = 0;
+    if (dx_shape.NumAxes() <= 2) {
+      dim2 = 1;
+    } else {
+      dim2 = dx_shape.Count(2, dx_shape.NumAxes());
+    }
+    int32_t size = dy_shape.At(dy_shape.NumAxes() - 1);
+    int32_t offset_in_bufer = (offset >= 0 ? offset * dim2 : -offset * dim1 * dim2);
+    dx_buf += offset_in_bufer;
+
+    CPU_DiagonalGradFunctor<T>()(ctx->device_ctx(), dx_buf, dy_buf, size, dim1, dim2);
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_DIAGONAL_KERNELS(device, dtype)                                        \
+  REGISTER_USER_KERNEL("diagonal")                                                      \
+      .SetCreateFn<DiagonalKernel<device, dtype>>()                                     \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
+                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("diagonal_grad")                                                 \
+      .SetCreateFn<DiagonalBackwardKernel<device, dtype>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
+                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
+
+REGISTER_DIAGONAL_KERNELS(DeviceType::kCPU, half);
 REGISTER_DIAGONAL_KERNELS(DeviceType::kCPU, float);
 REGISTER_DIAGONAL_KERNELS(DeviceType::kCPU, double);
 REGISTER_DIAGONAL_KERNELS(DeviceType::kCPU, int8_t);

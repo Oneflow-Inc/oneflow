@@ -109,6 +109,7 @@ from oneflow._C import clamp
 from oneflow._C import clamp as clip
 from oneflow._C import cos
 from oneflow._C import cosh
+from oneflow._C import diagonal
 from oneflow._C import erf
 from oneflow._C import erfc
 from oneflow._C import expm1
@@ -260,7 +261,6 @@ from oneflow.nn.modules.constant import zeros_op as zeros
 from oneflow.nn.modules.constant import full_op as full
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
-from oneflow._C import diagonal
 from oneflow.nn.modules.expand import expand_op as expand
 from oneflow.nn.modules.flatten import _flow_flatten as flatten
 from oneflow.nn.modules.flip import flip_op as flip

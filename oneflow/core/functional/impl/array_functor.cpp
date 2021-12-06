@@ -1355,7 +1355,7 @@ class DiagonalFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& offset,
                            const int32_t& dim1, const int32_t& dim2) const {
     int64_t ndims = x->shape()->NumAxes();
-    // CHECK_GE_OR_RETURN(ndims, 2);
+   
     CHECK_GE_OR_RETURN(dim1, -ndims)
         << ", Dimension out of range (expected to be in range of [" << -ndims << ", " << ndims - 1
         << "], but got " << dim1 << ");";
