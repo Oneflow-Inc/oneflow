@@ -113,6 +113,12 @@ include_directories(${PROJECT_BINARY_DIR}/include)
 link_directories(${LLVM_BUILD_LIBRARY_DIR})
 add_definitions(${LLVM_DEFINITIONS})
 
+set_property(GLOBAL PROPERTY ALL_ONEFLOW_LIBS
+  -Wl,--no-as-needed oneflow -Wl,--as-needed
+  -Wl,--no-as-needed ${oneflow_exe_third_party_libs} -Wl,--as-needed
+  -Wl,--no-as-needed ${oneflow_third_party_libs} -Wl,--as-needed
+)
+
 add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(test)

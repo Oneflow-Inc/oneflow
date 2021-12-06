@@ -70,8 +70,8 @@ struct CastOpLowering final : public OpConversionPattern<CastOp> {
   LogicalResult matchAndRewrite(CastOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
     rewriter.replaceOpWithNewOp<tosa::CastOp>(op,
-                                              /* output */ op.y().getType(),
-                                              /* input */ op.x());
+                                              /* output */ op.out().getType(),
+                                              /* input */ op.in());
     return success();
   }
 };

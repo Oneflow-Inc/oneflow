@@ -127,8 +127,8 @@ size_t GetAvailableGpuMemSize(int dev_id) {
 
 namespace {
 
-std::function<void(void**, size_t)> GetCudaMallocHostFn(int32_t dev) {
-  auto default_fn = [](void** ptr, size_t size) { cudaMallocHost(ptr, size); };
+std::function<cudaError_t(void**, size_t)> GetCudaMallocHostFn(int32_t dev) {
+  auto default_fn = [](void** ptr, size_t size) { return cudaMallocHost(ptr, size); };
   auto manager = Global<device::NodeDeviceDescriptorManager>::Get();
   if (manager == nullptr) { return default_fn; }
   auto node_desc = manager->GetLocalNodeDeviceDescriptor();
@@ -142,8 +142,9 @@ std::function<void(void**, size_t)> GetCudaMallocHostFn(int32_t dev) {
   if (!device_affinity) { return default_fn; }
   return [device_affinity, saved_affinity, node_desc, default_fn](void** ptr, size_t size) {
     node_desc->Topology()->SetMemoryAffinity(device_affinity);
-    default_fn(ptr, size);
+    cudaError_t err = default_fn(ptr, size);
     node_desc->Topology()->SetMemoryAffinity(saved_affinity);
+    return err;
   };
 }
 
@@ -153,9 +154,9 @@ cudaStream_t RunCudaKernelGetStream(ep::Stream* stream) {
   return stream->As<ep::CudaStream>()->cuda_stream();
 }
 
-void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
+cudaError_t NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
   auto fn = GetCudaMallocHostFn(dev);
-  fn(ptr, size);
+  return fn(ptr, size);
 }
 
 CudaCurrentDeviceGuard::CudaCurrentDeviceGuard(int32_t dev_id) {

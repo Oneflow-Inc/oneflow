@@ -19,6 +19,7 @@ def dtype_related_symbols():
     return [
         """import oneflow._oneflow_internal""",
         """locals()["dtype"] = oneflow._oneflow_internal.dtype""",
+        """locals()["bool"] = oneflow._oneflow_internal.bool""",
         """locals()["char"] = oneflow._oneflow_internal.char""",
         """locals()["float16"] = oneflow._oneflow_internal.float16""",
         """locals()["half"] = oneflow._oneflow_internal.float16""",
