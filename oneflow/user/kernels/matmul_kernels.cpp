@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/memcpy.h"
 #include "oneflow/core/ep/include/primitive/matmul.h"
 #include "oneflow/core/ep/include/primitive/batch_matmul.h"
+#include "oneflow/core/ep/include/primitive/broadcast_matmul.h"
 
 namespace oneflow {
 
@@ -96,6 +97,18 @@ std::unique_ptr<ep::primitive::BatchMatmul> NewBatchMatmulPrimitive(Context* ctx
       ctx->device_type(), data_type, trans_a, trans_b);
 }
 
+template<typename Context>
+std::unique_ptr<ep::primitive::BroadcastMatmul> NewBroadcastMatmulPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
+  const auto trans_a = GetBlasTransposeType(ctx, "transpose_a");
+  const auto trans_b = GetBlasTransposeType(ctx, "transpose_b");
+  const int64_t a_num_axes = ctx->TensorDesc4ArgNameAndIndex("a", 0)->shape().NumAxes(); 
+  const int64_t b_num_axes = ctx->TensorDesc4ArgNameAndIndex("b", 0)->shape().NumAxes(); 
+  const int64_t max_num_axes = std::max(a_num_axes, b_num_axes); 
+  return ep::primitive::NewPrimitive<ep::primitive::BroadcastMatmulFactory>(
+      ctx->device_type(), data_type, trans_a, trans_b, max_num_axes);
+}
+
 auto MemcpyPrimitiveExists() {
   return hob::make_custom("MemcpyPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
     return NewMemcpyPrimitive(&ctx).operator bool();
@@ -111,6 +124,12 @@ auto MatmulPrimitiveExists() {
 auto BatchMatmulPrimitiveExists() {
   return hob::make_custom("BatchMatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
     return NewBatchMatmulPrimitive(&ctx).operator bool();
+  });
+}
+
+auto BroadcastMatmulPrimitiveExists() {
+  return hob::make_custom("BroadcastMatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewBroadcastMatmulPrimitive(&ctx).operator bool();
   });
 }
 
@@ -228,7 +247,6 @@ REGISTER_USER_KERNEL("batch_matmul")
       return Maybe<void>::Ok();
     });
 
-// TODO(liujuncheng): fully support
 class BroadcastMatmulKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   BroadcastMatmulKernel() = default;
@@ -259,27 +277,32 @@ class BroadcastMatmulKernel final : public user_op::OpKernel, public user_op::Cu
       beta = 1.0;
     }
 
-    CHECK_EQ(b->shape().NumAxes(), 2);
-    CHECK_GT(a->shape().NumAxes(), b->shape().NumAxes());
-    int64_t m = a->shape().Count(0, a->shape().NumAxes() - 1);
-    int64_t k = a->shape().At(a->shape().NumAxes() - 1);
+    const int64_t a_num_axes = a->shape().NumAxes(); 
+    const int64_t b_num_axes = b->shape().NumAxes(); 
+    const int64_t out_num_axes = out->shape().NumAxes(); 
+    int64_t k = a->shape().At(a_num_axes - 1);
     int64_t n = -1;
     if (!transpose_b) {
-      n = b->shape().At(1);
-      CHECK_EQ(k, b->shape().At(0));
+      n = b->shape().At(b_num_axes-1);
+      CHECK_EQ(k, b->shape().At(b_num_axes-2));
     } else {
-      n = b->shape().At(0);
-      CHECK_EQ(k, b->shape().At(1));
+      n = b->shape().At(b_num_axes-2);
+      CHECK_EQ(k, b->shape().At(b_num_axes-1));
     }
-    auto matmul = NewMatmulPrimitive(ctx);
-    CHECK(matmul);
-    matmul->Launch(ctx->stream(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
+    auto broadcast_matmul = NewBroadcastMatmulPrimitive(ctx);
+    CHECK(broadcast_matmul);
+    broadcast_matmul->Launch(ctx->stream(), alpha, 
+                             a_num_axes, a->shape().ptr(), a->dptr(), 
+                             b_num_axes, b->shape().ptr(), b->dptr(), 
+                             beta, 
+                             out_num_axes, out->shape().ptr(), out->mut_dptr());
+
   }
 };
 
 REGISTER_USER_KERNEL("broadcast_matmul")
     .SetCreateFn<BroadcastMatmulKernel>()
-    .SetIsMatchedHob(MemcpyPrimitiveExists() && MatmulPrimitiveExists())
+    .SetIsMatchedHob(MemcpyPrimitiveExists() && BroadcastMatmulPrimitiveExists())
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.has_input("_add_to_output", 0)) {

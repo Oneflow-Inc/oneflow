@@ -259,8 +259,10 @@ REGISTER_USER_OP("broadcast_matmul")
 
       // NOTE: support broadcast b to a for now
       // TODO(zwx): support broadcast a to b
-      CHECK_GT_OR_RETURN(a.shape().NumAxes(), b.shape().NumAxes());
-      CHECK_EQ_OR_RETURN(b.shape().NumAxes(), 2);
+      
+      // CHECK_GT_OR_RETURN(a.shape().NumAxes(), b.shape().NumAxes());
+      // CHECK_EQ_OR_RETURN(b.shape().NumAxes(), 2);
+      
       // NOTE: don't support transpose_a for now
       CHECK_OR_RETURN(!transpose_a);
 

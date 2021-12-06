@@ -210,15 +210,27 @@ class MatMulFunctor {
     JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
     JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
     JUST(attrs.SetAttr<double>("alpha", alpha));
-    if (a_shape->NumAxes() != b_shape->NumAxes()) {
-      CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 2)
-          << "Not support number of dimensions of a being less than number of dimensions of b!";
-      return OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {a, b}, attrs);
+    const int64_t a_num_axes = a_shape->NumAxes();
+    const int64_t b_num_axes = b_shape->NumAxes();
+    if (a_num_axes == 2 && 
+        b_shape->NumAxes() == 2 && 
+        a_shape->At(0) == b_shape->At(1) && 
+        a_shape->At(1) == b_shape->At(0)) {
+      return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, attrs);
     }
-    if (a_shape->NumAxes() > 2) {
-      return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b}, attrs);
+    bool if_batch_matmul = true; 
+    if(a_num_axes == b_num_axes){
+      for (int i = 0; i < a_num_axes - 2; ++i) { 
+        if(a_shape->At(i) != b_shape->At(i)){
+          if_batch_matmul = false; 
+          break; 
+        }
+      }
+      if(if_batch_matmul){
+        return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b}, attrs);
+      }
     }
-    return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {a, b}, attrs);
   }
 
  private:
