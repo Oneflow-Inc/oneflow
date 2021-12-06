@@ -47,12 +47,12 @@ class ConvolutionNd : public OpExprGradFunction<ConvolutionNdCaptureState> {
 };
 
 template<typename T>
-Maybe<void> ConvolutionNd::Init(const OpExpr& op) {
+Maybe<void> ConvolutionNd<T>::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
 template<typename T>
-Maybe<void> ConvolutionNd::Capture(ConvolutionNdCaptureState* state, const TensorTuple& inputs,
+Maybe<void> ConvolutionNd<T>::Capture(ConvolutionNdCaptureState* state, const TensorTuple& inputs,
                                    const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
   state->input_requires_grad = inputs.at(0)->requires_grad();
@@ -63,7 +63,7 @@ Maybe<void> ConvolutionNd::Capture(ConvolutionNdCaptureState* state, const Tenso
   }
   state->input_index = state->SaveTensorForBackward(inputs.at(0));  // input
 
-  auto* interp_ctx = dynamic_cast<const T::ContextT*>(ctx);
+  auto* interp_ctx = dynamic_cast<const typename T::ContextT*>(ctx);
   state->data_format = interp_ctx->data_format;
   state->padding_before = interp_ctx->padding_before;
   state->kernel_size = interp_ctx->kernel_size;
@@ -74,7 +74,7 @@ Maybe<void> ConvolutionNd::Capture(ConvolutionNdCaptureState* state, const Tenso
 }
 
 template<typename T>
-Maybe<void> ConvolutionNd::Apply(const ConvolutionNdCaptureState* state, const TensorTuple& out_grads,
+Maybe<void> ConvolutionNd<T>::Apply(const ConvolutionNdCaptureState* state, const TensorTuple& out_grads,
                                  TensorTuple* in_grads) const {
   in_grads->resize(2);
   size_t num_spatial_dims = state->kernel_size.size();
@@ -95,14 +95,17 @@ Maybe<void> ConvolutionNd::Apply(const ConvolutionNdCaptureState* state, const T
 }
 
 class Convolution1D : public ConvolutionNd<Convolution1D> {
+ public:
   using ContextT = Conv1DOpInterpCtx;
 };
 
 class Convolution2D : public ConvolutionNd<Convolution2D> {
+ public:
   using ContextT = Conv2DOpInterpCtx;
 };
 
 class Convolution3D : public ConvolutionNd<Convolution3D> {
+ public:
   using ContextT = Conv3DOpInterpCtx;
 };
 

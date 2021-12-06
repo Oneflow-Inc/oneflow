@@ -57,13 +57,13 @@ class PoolNdGrad : public OpExprGradFunction<PoolCaptureState> {
 };
 
 template<typename T>
-Maybe<void> PoolNdGrad::Init(const OpExpr& op, const std::string& mode) {
-  mode_ = mode;
+Maybe<void> PoolNdGrad<T>::Init(const OpExpr& op, const std::string& mode) {
+  this->mode_ = mode;
   return Maybe<void>::Ok();
 }
 
 template<typename T>
-Maybe<void> PoolNdGrad::Capture(PoolCaptureState* state, const TensorTuple& inputs,
+Maybe<void> PoolNdGrad<T>::Capture(PoolCaptureState* state, const TensorTuple& inputs,
                                 const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
@@ -71,7 +71,7 @@ Maybe<void> PoolNdGrad::Capture(PoolCaptureState* state, const TensorTuple& inpu
   state->input_index = state->SaveTensorForBackward(inputs.at(0));
   state->output_index = state->SaveTensorForBackward(outputs.at(0));
 
-  auto* interp_ctx = dynamic_cast<const T::ContextT*>(ctx);
+  auto* interp_ctx = dynamic_cast<const typename T::ContextT*>(ctx);
   state->data_format = interp_ctx->data_format;
   state->padding = interp_ctx->padding;
   state->padding_before = interp_ctx->padding_before;
@@ -83,7 +83,7 @@ Maybe<void> PoolNdGrad::Capture(PoolCaptureState* state, const TensorTuple& inpu
 }
 
 template<typename T>
-Maybe<void> PoolNdGrad::Apply(const PoolCaptureState* state, const TensorTuple& out_grads,
+Maybe<void> PoolNdGrad<T>::Apply(const PoolCaptureState* state, const TensorTuple& out_grads,
                               TensorTuple* in_grads) const {
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
@@ -94,7 +94,7 @@ Maybe<void> PoolNdGrad::Apply(const PoolCaptureState* state, const TensorTuple& 
 
   in_grads->resize(1);
   in_grads->at(0) = JUST(functional::PoolNdGrad(
-      input, output, out_grads.at(0), mode_, ndims, state->data_format, state->padding,
+      input, output, out_grads.at(0), this->mode_, ndims, state->data_format, state->padding,
       state->padding_before, state->padding_after, state->pool_size, state->strides, state->ceil_mode));
 
   return Maybe<void>::Ok();

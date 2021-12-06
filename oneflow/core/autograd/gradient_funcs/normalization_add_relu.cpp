@@ -94,7 +94,7 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
 
     state->axis = interp_ctx->axis;
     state->epsilon = interp_ctx->epsilon;
-    state->is_training = interp_ctx->training;
+    // state->is_training = interp_ctx->training;
 
     state->SaveTensorForBackward(inputs.at(0));  // x 0
     state->SaveTensorForBackward(gamma);         // gamma 1

@@ -59,15 +59,15 @@ class PoolingNdGrad : public OpExprGradFunction<PoolingCaptureState> {
 };
 
 template<typename T>
-Maybe<void> PoolingNdGrad::Init(const OpExpr& op, const std::string& mode) {
+Maybe<void> PoolingNdGrad<T>::Init(const OpExpr& op, const std::string& mode) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  mode_ = mode;
+  this->mode_ = mode;
   return Maybe<void>::Ok();
 }
 
 template<typename T>
-Maybe<void> ::Capture(PoolingCaptureState* state, const TensorTuple& inputs,
+Maybe<void> PoolingNdGrad<T>::Capture(PoolingCaptureState* state, const TensorTuple& inputs,
                                    const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
@@ -76,7 +76,7 @@ Maybe<void> ::Capture(PoolingCaptureState* state, const TensorTuple& inputs,
   state->output_index = state->SaveTensorForBackward(outputs.at(0));
   state->indice_index = state->SaveTensorForBackward(outputs.at(1));
 
-  auto* interp_ctx = dynamic_cast<const T:ContextT*>(ctx);
+  auto* interp_ctx = dynamic_cast<const typename T::ContextT*>(ctx);
   state->data_format = interp_ctx->data_format;
   state->padding = interp_ctx->padding;
   state->kernel_size = interp_ctx->kernel_size;
@@ -88,7 +88,7 @@ Maybe<void> ::Capture(PoolingCaptureState* state, const TensorTuple& inputs,
 }
 
 template<typename T>
-Maybe<void> PoolingNdGrad::Apply(const PoolingCaptureState* state, const TensorTuple& out_grads,
+Maybe<void> PoolingNdGrad<T>::Apply(const PoolingCaptureState* state, const TensorTuple& out_grads,
                                  TensorTuple* in_grads) const {
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_LE_OR_RETURN(out_grads.size(), 2);
@@ -100,7 +100,7 @@ Maybe<void> PoolingNdGrad::Apply(const PoolingCaptureState* state, const TensorT
 
   in_grads->resize(1);
   in_grads->at(0) = JUST(functional::PoolingNdGrad(
-      input, output, indice, out_grads.at(0), mode_, ndims, state->data_format, state->padding,
+      input, output, indice, out_grads.at(0), this->mode_, ndims, state->data_format, state->padding,
       state->kernel_size, state->stride, state->dilation, state->return_indices, state->ceil_mode));
 
   return Maybe<void>::Ok();
@@ -127,14 +127,9 @@ class Maxpool3DGrad final : public PoolingNdGrad<Maxpool3DGrad> {
   Maybe<void> Init(const OpExpr& op) override { return PoolingNdGrad::Init(op, "max"); }
 };
 
-class MaxpoolNdGrad final : public PoolingNdGrad {
- public:
-  Maybe<void> Init(const OpExpr& op) override { return PoolingNdGrad::Init(op, "max"); }
-};
-
-REGISTER_OP_EXPR_GRAD_FUNCTION("maxpool_1d", MaxpoolNdGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("maxpool_2d", MaxpoolNdGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("maxpool_3d", MaxpoolNdGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("maxpool_1d", Maxpool1DGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("maxpool_2d", Maxpool2DGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("maxpool_3d", Maxpool3DGrad);
 
 }  // namespace one
 }  // namespace oneflow
