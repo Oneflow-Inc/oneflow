@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #ifdef WITH_MLIR
+
 #include <glog/logging.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
