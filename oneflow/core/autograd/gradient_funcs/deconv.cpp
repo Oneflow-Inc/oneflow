@@ -59,8 +59,8 @@ Maybe<void> DeConvolutionNd::Capture(DeConvolutionNdCaptureState* state, const T
 
   auto* interp_ctx = dynamic_cast<const Deconv3DOpInterpCtx*>(ctx);
   state->data_format = interp_ctx->data_format;
-  state->padding_before = interp_ctxpadding_before;
-  state->kernel_size = interp_ctxkernel_size;
+  state->padding_before = interp_ctx->padding_before;
+  state->kernel_size = interp_ctx->kernel_size;
   state->strides = interp_ctx->strides;
   state->dilation_rate = interp_ctx->dilation_rate;
   state->ndims = state->kernel_size.size();

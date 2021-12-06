@@ -36,6 +36,7 @@ struct ConvolutionNdCaptureState : public AutoGradCaptureState {
   int32_t groups;
 };
 
+template<typename T>
 class ConvolutionNd : public OpExprGradFunction<ConvolutionNdCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
@@ -45,10 +46,12 @@ class ConvolutionNd : public OpExprGradFunction<ConvolutionNdCaptureState> {
                     TensorTuple* in_grads) const override;
 };
 
+template<typename T>
 Maybe<void> ConvolutionNd::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
+template<typename T>
 Maybe<void> ConvolutionNd::Capture(ConvolutionNdCaptureState* state, const TensorTuple& inputs,
                                    const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
@@ -60,7 +63,7 @@ Maybe<void> ConvolutionNd::Capture(ConvolutionNdCaptureState* state, const Tenso
   }
   state->input_index = state->SaveTensorForBackward(inputs.at(0));  // input
 
-  auto* interp_ctx = dynamic_cast<const Conv3DOpInterpCtx*>(ctx);
+  auto* interp_ctx = dynamic_cast<const T::ContextT*>(ctx);
   state->data_format = interp_ctx->data_format;
   state->padding_before = interp_ctx->padding_before;
   state->kernel_size = interp_ctx->kernel_size;
@@ -70,6 +73,7 @@ Maybe<void> ConvolutionNd::Capture(ConvolutionNdCaptureState* state, const Tenso
   return Maybe<void>::Ok();
 }
 
+template<typename T>
 Maybe<void> ConvolutionNd::Apply(const ConvolutionNdCaptureState* state, const TensorTuple& out_grads,
                                  TensorTuple* in_grads) const {
   in_grads->resize(2);
@@ -90,9 +94,21 @@ Maybe<void> ConvolutionNd::Apply(const ConvolutionNdCaptureState* state, const T
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("conv1d", ConvolutionNd);
-REGISTER_OP_EXPR_GRAD_FUNCTION("conv2d", ConvolutionNd);
-REGISTER_OP_EXPR_GRAD_FUNCTION("conv3d", ConvolutionNd);
+class Convolution1D : public ConvolutionNd<Convolution1D> {
+  using ContextT = Conv1DOpInterpCtx;
+};
+
+class Convolution2D : public ConvolutionNd<Convolution2D> {
+  using ContextT = Conv2DOpInterpCtx;
+};
+
+class Convolution3D : public ConvolutionNd<Convolution3D> {
+  using ContextT = Conv3DOpInterpCtx;
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("conv1d", Convolution1D);
+REGISTER_OP_EXPR_GRAD_FUNCTION("conv2d", Convolution2D);
+REGISTER_OP_EXPR_GRAD_FUNCTION("conv3d", Convolution3D);
 
 }  // namespace one
 }  // namespace oneflow

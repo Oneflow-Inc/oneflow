@@ -31,8 +31,6 @@ struct ReshapeCaptureState : public AutoGradCaptureState {
 class ReshapeOpExprGrad : public OpExprGradFunction<ReshapeCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
-    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
     return Maybe<void>::Ok();
   }
 

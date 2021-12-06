@@ -35,14 +35,9 @@ class UnfoldTensor : public OpExprGradFunction<UnfoldTensorCaptureState> {
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const UnfoldTensorCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
-
- private:
-  std::shared_ptr<OpExpr> grad_op_;
 };
 
 Maybe<void> UnfoldTensor::Init(const OpExpr& op) {
-  const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   return Maybe<void>::Ok();
 }
 Maybe<void> UnfoldTensor::Capture(UnfoldTensorCaptureState* state, const TensorTuple& inputs,

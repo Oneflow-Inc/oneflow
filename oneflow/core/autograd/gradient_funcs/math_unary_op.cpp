@@ -47,9 +47,6 @@ class UnaryMathOp : public OpExprGradFunction<UnaryMathCaptureState> {
     in_grads->at(0) = JUST(BwFunc(x, out_grads.at(0)));
     return Maybe<void>::Ok();
   }
-
- protected:
-  std::shared_ptr<OpExpr> grad_op_;
 };
 
 #define INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS(op_type_name, op_cls)     \

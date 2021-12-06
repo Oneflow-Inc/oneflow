@@ -51,15 +51,9 @@ class LayerNorm : public OpExprGradFunction<LayerNormCaptureState> {
 
   Maybe<void> Apply(const LayerNormCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
-
- private:
-  std::string op_name_;
 };
 
 Maybe<void> LayerNorm::Init(const OpExpr& op) {
-  const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  op_name_ = fw_op_expr->op_name();
   return Maybe<void>::Ok();
 }
 

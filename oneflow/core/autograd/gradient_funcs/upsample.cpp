@@ -36,14 +36,9 @@ class Upsample : public OpExprGradFunction<UpsampleCaptureState> {
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const UpsampleCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
-
- private:
-  std::shared_ptr<OpExpr> grad_op_;
 };
 
 Maybe<void> Upsample::Init(const OpExpr& op) {
-  const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   return Maybe<void>::Ok();
 }
 
@@ -54,7 +49,7 @@ Maybe<void> Upsample::Capture(UpsampleCaptureState* state, const TensorTuple& in
   auto* interp_ctx = dynamic_cast<const UpsampleOpInterpCtx*>(ctx);
   state->height_scale = interp_ctx->height_scale;
   state->width_scale = interp_ctx->width_scale;
-  state->align_corners = interp_ctxalign_corners;
+  state->align_corners = interp_ctx->align_corners;
   state->data_format = interp_ctx->data_format;
   state->interpolation = interp_ctx->interpolation;
   state->SaveTensorForBackward(inputs.at(0));

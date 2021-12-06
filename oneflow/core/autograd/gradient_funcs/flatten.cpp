@@ -36,12 +36,6 @@ class Flatten : public OpExprGradFunction<FlattenCaptureState> {
                     TensorTuple* in_grads) const override;
 };
 
-Maybe<void> Flatten::Init(const OpExpr& op) {
-  const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> Flatten::Capture(FlattenCaptureState* state, const TensorTuple& inputs,
                              const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();

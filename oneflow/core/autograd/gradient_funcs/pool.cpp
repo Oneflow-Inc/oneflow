@@ -39,6 +39,7 @@ struct PoolCaptureState : public AutoGradCaptureState {
   bool ceil_mode;
 };
 
+template<typename T>
 class PoolNdGrad : public OpExprGradFunction<PoolCaptureState> {
  public:
   virtual ~PoolNdGrad() = default;
@@ -55,13 +56,13 @@ class PoolNdGrad : public OpExprGradFunction<PoolCaptureState> {
   std::string mode_;
 };
 
+template<typename T>
 Maybe<void> PoolNdGrad::Init(const OpExpr& op, const std::string& mode) {
-  const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   mode_ = mode;
   return Maybe<void>::Ok();
 }
 
+template<typename T>
 Maybe<void> PoolNdGrad::Capture(PoolCaptureState* state, const TensorTuple& inputs,
                                 const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
@@ -70,17 +71,18 @@ Maybe<void> PoolNdGrad::Capture(PoolCaptureState* state, const TensorTuple& inpu
   state->input_index = state->SaveTensorForBackward(inputs.at(0));
   state->output_index = state->SaveTensorForBackward(outputs.at(0));
 
-  auto* interp_ctx = dynamic_cast<const PLACEHOLDER*>(ctx);
-  state->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
-  state->padding = JUST(composed_attrs.GetAttr<std::string>("padding"));
-  state->padding_before = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding_before"));
-  state->padding_after = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding_after"));
-  state->pool_size = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("pool_size"));
-  state->strides = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("strides"));
-  state->ceil_mode = JUST(composed_attrs.GetAttr<bool>("ceil_mode"));
+  auto* interp_ctx = dynamic_cast<const T::ContextT*>(ctx);
+  state->data_format = interp_ctx->data_format;
+  state->padding = interp_ctx->padding;
+  state->padding_before = interp_ctx->padding_before;
+  state->padding_after = interp_ctx->padding_after;
+  state->pool_size = interp_ctx->pool_size;
+  state->strides = interp_ctx->strides;
+  state->ceil_mode = interp_ctx->ceil_mode;
   return Maybe<void>::Ok();
 }
 
+template<typename T>
 Maybe<void> PoolNdGrad::Apply(const PoolCaptureState* state, const TensorTuple& out_grads,
                               TensorTuple* in_grads) const {
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
@@ -100,23 +102,49 @@ Maybe<void> PoolNdGrad::Apply(const PoolCaptureState* state, const TensorTuple& 
 
 }  // namespace
 
-class MaxPoolNdGrad final : public PoolNdGrad {
+class MaxPool1DGrad : public PoolNdGrad<MaxPool1DGrad> {
  public:
+  using ContextT = TfMaxPool1DOpInterpCtx;
   Maybe<void> Init(const OpExpr& op) override { return PoolNdGrad::Init(op, "max"); }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("tf_max_pool_1d", MaxPoolNdGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("tf_max_pool_2d", MaxPoolNdGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("tf_max_pool_3d", MaxPoolNdGrad);
-
-class AvgPoolNdGrad final : public PoolNdGrad {
+class MaxPool2DGrad : public PoolNdGrad<MaxPool2DGrad> {
  public:
+  using ContextT = TfMaxPool2DOpInterpCtx;
+  Maybe<void> Init(const OpExpr& op) override { return PoolNdGrad::Init(op, "max"); }
+};
+
+class MaxPool3DGrad : public PoolNdGrad<MaxPool3DGrad> {
+ public:
+  using ContextT = TfMaxPool3DOpInterpCtx;
+  Maybe<void> Init(const OpExpr& op) override { return PoolNdGrad::Init(op, "max"); }
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("tf_max_pool_1d", MaxPool1DGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("tf_max_pool_2d", MaxPool2DGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("tf_max_pool_3d", MaxPool3DGrad);
+
+class AvgPool1DGrad : public PoolNdGrad<AvgPool1DGrad> {
+ public:
+  using ContextT = TfAvgPool1DOpInterpCtx;
   Maybe<void> Init(const OpExpr& op) override { return PoolNdGrad::Init(op, "avg"); }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("tf_avg_pool_1d", AvgPoolNdGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("tf_avg_pool_2d", AvgPoolNdGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("tf_avg_pool_3d", AvgPoolNdGrad);
+class AvgPool2DGrad : public PoolNdGrad<MaxPool2DGrad> {
+ public:
+  using ContextT = TfAvgPool2DOpInterpCtx;
+  Maybe<void> Init(const OpExpr& op) override { return PoolNdGrad::Init(op, "avg"); }
+};
+
+class AvgPool3DGrad : public PoolNdGrad<MaxPool3DGrad> {
+ public:
+  using ContextT = TfAvgPool3DOpInterpCtx;
+  Maybe<void> Init(const OpExpr& op) override { return PoolNdGrad::Init(op, "avg"); }
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("tf_avg_pool_1d", AvgPool1DGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("tf_avg_pool_2d", AvgPool2DGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("tf_avg_pool_3d", AvgPool3DGrad);
 
 }  // namespace one
 }  // namespace oneflow

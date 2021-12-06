@@ -32,9 +32,6 @@ class DimGather : public OpExprGradFunction<DimGatherCaptureState> {
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const DimGatherCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
-
- private:
-  std::shared_ptr<OpExpr> bw_dim_gather_op_;
 };
 
 Maybe<void> DimGather::Init(const OpExpr& op) {

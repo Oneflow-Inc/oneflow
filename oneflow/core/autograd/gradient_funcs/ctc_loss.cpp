@@ -36,9 +36,6 @@ class CTCLoss : public OpExprGradFunction<CTCLossCaptureState> {
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const CTCLossCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
-
- private:
-  std::shared_ptr<OpExpr> grad_op_;
 };
 
 Maybe<void> CTCLoss::Init(const OpExpr& op) {

@@ -58,12 +58,11 @@ class ScalarPow : public OpExprGradFunction<ScalarPowCaptureState> {
     }
     return Maybe<void>::Ok();
   }
-
- private:
-  std::shared_ptr<OpExpr> grad_op_;
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("scalar_pow", ScalarPow);
+
+
 
 }  // namespace one
 }  // namespace oneflow

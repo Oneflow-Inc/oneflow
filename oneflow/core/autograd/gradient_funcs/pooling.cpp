@@ -41,6 +41,7 @@ struct PoolingCaptureState : public AutoGradCaptureState {
   bool ceil_mode;
 };
 
+template<typename T>
 class PoolingNdGrad : public OpExprGradFunction<PoolingCaptureState> {
  public:
   virtual ~PoolingNdGrad() = default;
@@ -57,6 +58,7 @@ class PoolingNdGrad : public OpExprGradFunction<PoolingCaptureState> {
   std::string mode_;
 };
 
+template<typename T>
 Maybe<void> PoolingNdGrad::Init(const OpExpr& op, const std::string& mode) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
@@ -64,6 +66,7 @@ Maybe<void> PoolingNdGrad::Init(const OpExpr& op, const std::string& mode) {
   return Maybe<void>::Ok();
 }
 
+template<typename T>
 Maybe<void> ::Capture(PoolingCaptureState* state, const TensorTuple& inputs,
                                    const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
@@ -73,17 +76,18 @@ Maybe<void> ::Capture(PoolingCaptureState* state, const TensorTuple& inputs,
   state->output_index = state->SaveTensorForBackward(outputs.at(0));
   state->indice_index = state->SaveTensorForBackward(outputs.at(1));
 
-  ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  state->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
-  state->padding = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding"));
-  state->kernel_size = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("kernel_size"));
-  state->stride = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("stride"));
-  state->dilation = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("dilation"));
-  state->return_indices = JUST(composed_attrs.GetAttr<bool>("return_indices"));
-  state->ceil_mode = JUST(composed_attrs.GetAttr<bool>("ceil_mode"));
+  auto* interp_ctx = dynamic_cast<const T:ContextT*>(ctx);
+  state->data_format = interp_ctx->data_format;
+  state->padding = interp_ctx->padding;
+  state->kernel_size = interp_ctx->kernel_size;
+  state->stride = interp_ctx->stride;
+  state->dilation = interp_ctx->dilation;
+  state->return_indices = interp_ctx->return_indices;
+  state->ceil_mode = interp_ctx->ceil_mode;
   return Maybe<void>::Ok();
 }
 
+template<typename T>
 Maybe<void> PoolingNdGrad::Apply(const PoolingCaptureState* state, const TensorTuple& out_grads,
                                  TensorTuple* in_grads) const {
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
@@ -103,6 +107,25 @@ Maybe<void> PoolingNdGrad::Apply(const PoolingCaptureState* state, const TensorT
 }
 
 }  // namespace
+
+
+class Maxpool1DGrad final : public PoolingNdGrad<Maxpool1DGrad> {
+ public:
+  using ContextT = MaxPool1DGradOpInterpCtx;
+  Maybe<void> Init(const OpExpr& op) override { return PoolingNdGrad::Init(op, "max"); }
+};
+
+class Maxpool2DGrad final : public PoolingNdGrad<Maxpool2DGrad> {
+ public:
+  using ContextT = MaxPool2DGradOpInterpCtx;
+  Maybe<void> Init(const OpExpr& op) override { return PoolingNdGrad::Init(op, "max"); }
+};
+
+class Maxpool3DGrad final : public PoolingNdGrad<Maxpool3DGrad> {
+ public:
+  using ContextT = MaxPool3DGradOpInterpCtx;
+  Maybe<void> Init(const OpExpr& op) override { return PoolingNdGrad::Init(op, "max"); }
+};
 
 class MaxpoolNdGrad final : public PoolingNdGrad {
  public:

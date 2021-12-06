@@ -32,7 +32,6 @@ class LogSoftmax : public OpExprGradFunction<LogSoftmaxCaptureState> {
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const LogSoftmaxCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
-
  private:
   std::shared_ptr<OpExpr> grad_op_;
 };
@@ -41,7 +40,6 @@ Maybe<void> LogSoftmax::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   const std::string& op_name = fw_op_expr->op_name();
-  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   grad_op_ = JUST(one::OpBuilder("log_softmax_grad", GradientOpName(op_name))
                       .Input("prob")
                       .Input("dy")

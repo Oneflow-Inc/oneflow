@@ -41,7 +41,7 @@ class ConsistentToConsistentGradFunction : public OpExprGradFunction<ConsistentT
 
   Maybe<void> Capture(ConsistentToConsistentState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs,
-                      const OpExprInterpContext& interp_ctx) const override {
+                      const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     state->parallel_desc = JUST(inputs.at(0)->parallel_desc());
     state->nd_sbp = JUST(inputs.at(0)->nd_sbp());

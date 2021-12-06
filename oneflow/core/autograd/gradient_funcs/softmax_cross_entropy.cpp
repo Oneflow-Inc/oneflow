@@ -33,8 +33,6 @@ class SoftmaxCrossEntropy : public OpExprGradFunction<SoftmaxCrossEntropyGradSta
 };
 
 Maybe<void> SoftmaxCrossEntropy::Init(const OpExpr& op) {
-  const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   return Maybe<void>::Ok();
 }
 

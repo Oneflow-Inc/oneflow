@@ -36,8 +36,6 @@ class TensorScalarAddOrSub : public OpExprGradFunction<TensorScalarCaptureState>
 };
 
 Maybe<void> TensorScalarAddOrSub::Init(const OpExpr& op) {
-  const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   return Maybe<void>::Ok();
 }
 
@@ -95,8 +93,6 @@ class TensorScalarMul : public OpExprGradFunction<TensorScalarCaptureState> {
 };
 
 Maybe<void> TensorScalarMul::Init(const OpExpr& op) {
-  const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   return Maybe<void>::Ok();
 }
 
@@ -136,15 +132,9 @@ class TensorScalarDiv : public OpExprGradFunction<TensorScalarCaptureState> {
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const TensorScalarCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
-
- private:
-  std::shared_ptr<OpExpr> tensor_scalar_div_op_;
-  std::shared_ptr<OpExpr> broadcast_div_grad_op_;
 };
 
 Maybe<void> TensorScalarDiv::Init(const OpExpr& op) {
-  const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   return Maybe<void>::Ok();
 }
 

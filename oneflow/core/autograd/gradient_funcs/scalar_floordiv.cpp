@@ -37,9 +37,6 @@ class ScalarFloorDiv : public OpExprGradFunction<ScalarFloorDivCaptureState> {
     UNIMPLEMENTED_THEN_RETURN() << "RuntimeError: derivative for floor_divide is not implemented";
     return Maybe<void>::Ok();
   }
-
- private:
-  AttrMap base_attrs_;
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("scalar_floordiv", ScalarFloorDiv);

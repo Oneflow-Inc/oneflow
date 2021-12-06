@@ -52,7 +52,7 @@ Maybe<void> Unfold::Capture(UnfoldInterpState* state, const TensorTuple& inputs,
   const std::shared_ptr<Tensor>& x = inputs.at(0);
   state->data_format = interp_ctx->data_format;
   state->kernel_size = interp_ctx->kernel_size;
-  state->dilation_rate = interp_ctx-?dilation_rate;
+  state->dilation_rate = interp_ctx->dilation_rate;
   state->padding = interp_ctx->padding;
   state->strides = interp_ctx->strides;
   // Only support 4-d Tensor Input.

@@ -3422,6 +3422,7 @@ class FoldOpInterpCtx : public OpInterpCtx {
   std::vector<int32_t> strides;
   std::vector<int32_t> padding;
   std::vector<int32_t> dilation_rate;
+  std::string data_format;
 };
 class FusedBiasAddGeluOpInterpCtx : public OpInterpCtx {
  public:

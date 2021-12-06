@@ -58,8 +58,6 @@ Maybe<void> SparseSoftmaxCrossEntropy::Apply(const SparseSoftmaxCrossEntropyCapt
   const auto& dy = out_grads.at(1);
   const auto& prob = state->SavedTensors().at(0);
   const auto& label = state->SavedTensors().at(1);
-  // MutableAttrMap attrs;
-  // JUST(attrs.SetAttr<int64_t>("depth", state->depth));
   // SparseSoftmaxCrossEntropy has 2 inputs (prediction and label), and the second input does not
   // require gradient.
   in_grads->resize(2);

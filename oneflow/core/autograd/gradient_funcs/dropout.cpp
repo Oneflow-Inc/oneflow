@@ -43,7 +43,7 @@ Maybe<void> Dropout::Capture(DropoutCaptureState* state, const TensorTuple& inpu
   state->requires_grad = inputs.at(0)->requires_grad();
 
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
-  state->scale = DropoutOpInterpCtx->scale;
+  state->scale = interp_ctx->scale;
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
 
   state->SaveTensorForBackward(inputs.at(1));  // mask
