@@ -40,23 +40,6 @@ struct BlobNumpyCopyUtil {
   static Maybe<void> To(uint64_t of_blob_ptr, const NumPyArrayPtr& array) {
     return BlobBufferCopyUtil<T>::To(of_blob_ptr, (T*)array.data(), array.size());
   }
-
-  static Maybe<void> From(uint64_t of_blob_ptr, int64_t storage_offset,
-                          const NumPyArrayPtr& array) {
-    T* buf_ptr = (T*)array.data();
-    size_t size = array.size();
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    of_blob->AutoMemCopyFrom<T>(buf_ptr, storage_offset, size);
-    return Maybe<void>::Ok();
-  }
-
-  static Maybe<void> To(uint64_t of_blob_ptr, int64_t storage_offset, const NumPyArrayPtr& array) {
-    T* buf_ptr = (T*)array.data();
-    size_t size = array.size();
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    of_blob->AutoMemCopyTo<T>(buf_ptr, storage_offset, size);
-    return Maybe<void>::Ok();
-  }
 };
 
 }  // namespace oneflow
