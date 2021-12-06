@@ -122,7 +122,7 @@ class OneFlow_ConvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
 
 class OneFlow_TFPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
-    let summary = "OneFlow lazy pooling operation, align with TensorFlow";
+    let summary = "OneFlow pooling operation, align with TensorFlow";
     let input = (ins AnyType:$x);
     let output = (outs AnyType:$y);
     let attrs = (ins
@@ -138,7 +138,7 @@ class OneFlow_TFPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
 
 class OneFlow_TFPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
-  let summary = "OneFlow lazy pooling grad operation, align with TensorFlow";
+  let summary = "OneFlow pooling grad operation, align with TensorFlow";
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -159,7 +159,7 @@ class OneFlow_TFPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
 
 class OneFlow_PoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
-  let summary = "OneFlow eager pooling operation";
+  let summary = "OneFlow pooling operation";
   let input = (ins AnyType:$x);
   let output = (outs AnyType:$y);
   let attrs = (ins
@@ -175,7 +175,7 @@ class OneFlow_PoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
 
 class OneFlow_PoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
-  let summary = "OneFlow eager pooling grad operation";
+  let summary = "OneFlow pooling grad operation";
   let input = (ins
     AnyType:$x,
     AnyType:$y,
