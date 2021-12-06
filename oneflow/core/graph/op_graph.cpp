@@ -578,8 +578,8 @@ void OpGraph::PrintSBPGraphDebugInfo() const {
       const auto& ibn = op_input_bns[j];
       auto producer_node = op_node->MutSrcNode4Ibn(ibn);
       std::cout << "Pre Op:" << producer_node->op().op_name() << ": " << ibn;
-      const auto& this_sbp_parallel = op_node->SbpParallel4BnInOp(ibn);
-      std::cout << ", " << SbpParallelToString(this_sbp_parallel);
+      const auto& this_sbp_parallel = op_node->NdSbp4BnInOp(ibn);
+      std::cout << ", " << NdSbpParallelToString(this_sbp_parallel);
       const auto input_blob_modifier_ = op_node->op().InputBlobModifier4Ibn(ibn);
       bool is_same_sbp = input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable();
       if (is_same_sbp) std::cout << ", same SBP";
@@ -594,8 +594,8 @@ void OpGraph::PrintSBPGraphDebugInfo() const {
     for (int32_t j : str_order) {
       const auto& obn = op_output_bns[j];
       std::cout << "Out Op:" << obn;
-      const auto& this_sbp_parallel = op_node->SbpParallel4BnInOp(obn);
-      std::cout << ", " << SbpParallelToString(this_sbp_parallel);
+      const auto& this_sbp_parallel = op_node->NdSbp4BnInOp(obn);
+      std::cout << ", " << NdSbpParallelToString(this_sbp_parallel);
       std::cout << ", "
                 << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(obn)).shape().elem_cnt();
       std::cout << std::endl;
