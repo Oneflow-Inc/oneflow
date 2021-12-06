@@ -16,21 +16,10 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
-#include "oneflow/core/cuda/elementwise.cuh"
 
 namespace oneflow {
 
 namespace {
-
-template<typename T>
-struct ScalarPreluFunctor {
-  OF_DEVICE_FUNC T operator()(T x, T alpha) const { return x > 0 ? x : x * alpha; }
-};
-
-template<typename T>
-struct ScalarPreluGradFunctor {
-  OF_DEVICE_FUNC T operator()(T x, T dy, T alpha) const { return x > 0 ? dy : dy * alpha; }
-};
 
 template<typename T>
 __global__ void PReluForwardGpu(const int32_t elem_cnt, const int32_t alpha_size,
@@ -71,18 +60,12 @@ class GpuPReluKernel final : public user_op::OpKernel {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int32_t elem_cnt = x->shape().elem_cnt();
     const int32_t alpha_size = alpha->shape().elem_cnt();
-    if (alpha_size == 1) {
-      OF_CUDA_CHECK(cuda::elementwise::Binary(ScalarPreluFunctor<T>(), elem_cnt, y->mut_dptr<T>(),
-                                              x->dptr<T>(), alpha->dptr<T>(),
-                                              ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-    } else {
-      const int batch = x->shape().At(0);
-      const int channels = x->shape().At(1);
-      const int32_t inner_size = elem_cnt / batch / channels;
-      PReluForwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-          elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), y->mut_dptr<T>());
-    }
+    const int batch = x->shape().At(0);
+    const int channels = x->shape().At(1);
+    const int32_t inner_size = elem_cnt / batch / channels;
+    PReluForwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                         ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+        elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -119,23 +102,10 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
     Memset<DeviceType::kCUDA>(ctx->stream(), alpha_diff->mut_dptr<T>(), 0,
                               alpha_diff->shape().elem_cnt() * sizeof(T));
 
-    const int32_t elem_cnt = x->shape().elem_cnt();
-    const int32_t alpha_size = alpha->shape().elem_cnt();
-
-    if (alpha_size == 1) {
-      OF_CUDA_CHECK(cuda::elementwise::Ternary(
-          ScalarPreluGradFunctor<T>(), elem_cnt, dx->mut_dptr<T>(), x->dptr<T>(), dy->dptr<T>(),
-          alpha->dptr<T>(), ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-    } else {
-      const int batch = x->shape().At(0);
-      const int channels = x->shape().At(1);
-      const int32_t inner_size = elem_cnt / batch / channels;
-
-      PReluBackwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-          elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), dy->dptr<T>(),
-          dx->mut_dptr<T>(), alpha_diff->mut_dptr<T>());
-    }
+    PReluBackwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+        elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), dy->dptr<T>(),
+        dx->mut_dptr<T>(), alpha_diff->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
