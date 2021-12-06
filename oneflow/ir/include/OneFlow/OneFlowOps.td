@@ -1,13 +1,13 @@
 #ifndef ONEFLOW_OPS
 #define ONEFLOW_OPS
 
-include "OneFlowDialect.td"
-include "OneFlowEnums.td"
-include "OneFlowInterfaces.td"
+include "OneFlow/OneFlowDialect.td"
+include "OneFlow/OneFlowEnums.td"
+include "OneFlow/OneFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Pass/PassBase.td"
 include "mlir/Interfaces/CallInterfaces.td"
-include "OneFlowBase.td"
+include "OneFlow/OneFlowBase.td"
 
 def OneFlow_UserOp : OneFlow_UserBaseWithCtrlOp<"user", [OneFlow_IsImportCompatible]> {
   let summary = "";
