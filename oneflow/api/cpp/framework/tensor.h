@@ -49,7 +49,7 @@ class Tensor final {
   const std::shared_ptr<oneflow::one::Tensor>& __internal_tensor() const;
 
   template<typename T>
-  void copy_to(T* buffer);
+  void copy_to(T* buffer) const;
 
   static Tensor from_buffer(const void* buffer, const Shape& shape, const Device& device,
                             const DType& dtype);

@@ -69,13 +69,6 @@ namespace {
 class CompileScope {
  public:
   CompileScope(const of::JobConfigProto& job_config, const std::shared_ptr<of::NNGraph>& graph_) {
-    of::Global<of::MultiClientSessionContext>::New();
-    of::ConfigProto config_proto;
-    config_proto.mutable_resource()->set_cpu_device_num(1);
-    config_proto.set_session_id(of::NewSessionId());
-    of::Global<of::MultiClientSessionContext>::Get()->TryInit(config_proto).GetOrThrow();
-    of::Global<of::MultiClientSessionContext>::Get()->AddCGraph(graph_).GetOrThrow();
-
     std::shared_ptr<of::Scope> scope = of::MakeInitialScope(job_config).GetOrThrow();
     of::ThreadLocalScopeStackPush(scope).GetOrThrow();
     of::JobBuildAndInferCtx_Open(job_config.job_name()).GetOrThrow();
@@ -113,6 +106,7 @@ Graph::Graph(const std::string& model_path, const Device& device) : device_(devi
   input.close();
 
   graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name());
+  of::Global<of::MultiClientSessionContext>::Get()->AddCGraph(graph_).GetOrThrow();
 }
 
 Graph::Graph(const std::string& model_path) : Graph(model_path, Device("cpu")) {}
