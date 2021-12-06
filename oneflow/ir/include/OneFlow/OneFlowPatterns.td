@@ -2,7 +2,7 @@
 #ifndef ONEFLOW_PATTERNS
 #define ONEFLOW_PATTERNS
 
-include "OneFlowOps.td"
+include "OneFlow/OneFlowOps.td"
 
 def IsNotNestedInJit: Constraint<CPred<"(!$0.getDefiningOp()->getParentOfType<FuncOp>()->hasAttr(\"llvm.emit_c_interface\"))">, "">;
 def OutlineMulCast : NativeCodeCall<"OutlineMulCast($_builder, $0, $1)">;
