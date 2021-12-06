@@ -16,12 +16,12 @@ limitations under the License.
 
 #ifdef __linux__
 
-#include "oneflow/core/device/net_socket_device_descriptor.h"
+#include "oneflow/core/hardware/net_socket_device_descriptor.h"
 #include <json.hpp>
 
 namespace oneflow {
 
-namespace device {
+namespace hardware {
 
 namespace {
 
@@ -93,7 +93,7 @@ std::shared_ptr<const NetSocketDeviceDescriptor> NetSocketDeviceDescriptor::Dese
   return std::shared_ptr<const NetSocketDeviceDescriptor>(desc);
 }
 
-}  // namespace device
+}  // namespace hardware
 
 }  // namespace oneflow
 

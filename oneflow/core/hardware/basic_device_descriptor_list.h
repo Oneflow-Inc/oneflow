@@ -13,20 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_DEVICE_BASIC_DEVICE_DESCRIPTOR_LIST_H_
-#define ONEFLOW_CORE_DEVICE_BASIC_DEVICE_DESCRIPTOR_LIST_H_
+#ifndef ONEFLOW_CORE_HARDWARE_BASIC_DEVICE_DESCRIPTOR_LIST_H_
+#define ONEFLOW_CORE_HARDWARE_BASIC_DEVICE_DESCRIPTOR_LIST_H_
 
-#include "oneflow/core/device/device_descriptor_list.h"
+#include "oneflow/core/hardware/device_descriptor_list.h"
+#include "oneflow/core/common/util.h"
 #include <cstdint>
 #include <memory>
 #include <vector>
 
 namespace oneflow {
 
-namespace device {
+namespace hardware {
 
 class BasicDeviceDescriptorList : public DeviceDescriptorList {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(BasicDeviceDescriptorList);
   explicit BasicDeviceDescriptorList(
       std::vector<std::shared_ptr<const DeviceDescriptor>> device_descriptor_list);
   BasicDeviceDescriptorList();
@@ -39,8 +41,8 @@ class BasicDeviceDescriptorList : public DeviceDescriptorList {
   std::vector<std::shared_ptr<const DeviceDescriptor>> device_descriptor_list_;
 };
 
-}  // namespace device
+}  // namespace hardware
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_DEVICE_BASIC_DEVICE_DESCRIPTOR_LIST_H_
+#endif  // ONEFLOW_CORE_HARDWARE_BASIC_DEVICE_DESCRIPTOR_LIST_H_
