@@ -240,7 +240,10 @@ class BatchMatMulFunctor {
     const auto& b_shape = b->shape();
     CHECK_GE_OR_RETURN(a_shape->NumAxes(), 3) << "Tensor a's dim should >= 3";
     CHECK_GE_OR_RETURN(b_shape->NumAxes(), 3) << "Tensor b's dim should >= 3";
-
+    CHECK_GE_OR_RETURN(a_shape->At(0), b_shape->At(0))
+        << "batch dim not match, please check input!";
+    CHECK_GE_OR_RETURN(a_shape->At(2), b_shape->At(1))
+        << "matmul dim not match, please check input!";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
     JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
@@ -1450,14 +1453,14 @@ class DropoutFunctor {
     MutableAttrMap dropout_attrs;
     JUST(dropout_attrs.SetAttr<float>("rate", p));
     if (addend) {
-      if (!training) {
+      if ((!training) || p == 0.0) {
         return OpInterpUtil::Dispatch<Tensor>(*add_op_, {x->contiguous(), JUST(addend)->contiguous()});
       } else {
         return OpInterpUtil::Dispatch<Tensor>(*dropout_addend_op_, {x->contiguous(), JUST(addend)->contiguous()},
                                               OpExprInterpContext(dropout_attrs, dropout_state));
       }
     } else {
-      if (!training) {
+      if (!training || p == 0.0) {
         return x;
       } else {
         return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {x->contiguous()},

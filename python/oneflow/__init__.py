@@ -26,6 +26,7 @@ Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
 locals()["dtype"] = oneflow._oneflow_internal.dtype
+locals()["bool"] = oneflow._oneflow_internal.bool
 locals()["char"] = oneflow._oneflow_internal.char
 locals()["float16"] = oneflow._oneflow_internal.float16
 locals()["half"] = oneflow._oneflow_internal.float16
@@ -70,6 +71,7 @@ from oneflow._C import acosh
 from oneflow._C import acosh as arccosh
 from oneflow._C import atanh
 from oneflow._C import atanh as arctanh
+from oneflow._C import batch_matmul as bmm
 from oneflow._C import sign
 from oneflow._C import sinh
 from oneflow._C import tan
@@ -95,6 +97,7 @@ from oneflow._C import diag
 from oneflow._C import log1p
 from oneflow._C import add
 from oneflow._C import div
+from oneflow._C import floor
 from oneflow._C import floor_divide
 from oneflow._C import mul
 from oneflow._C import negative
@@ -118,6 +121,7 @@ from oneflow._C import erf
 from oneflow._C import erfc
 from oneflow._C import expm1
 from oneflow._C import fmod
+from oneflow._C import flatten
 from oneflow._C import log
 from oneflow._C import minimum
 from oneflow._C import maximum
@@ -150,6 +154,7 @@ from oneflow._C import concat
 from oneflow._C import concat as cat
 from oneflow._C import to
 from oneflow._C import roi_align
+from oneflow._C import dot
 from oneflow._C import contiguous
 
 
@@ -275,7 +280,6 @@ from oneflow.nn.modules.pooling import (
 from oneflow.nn.modules.arange import arange_op as arange
 from oneflow.nn.modules.argsort import argsort_op as argsort
 from oneflow.nn.modules.argwhere import argwhere_op as argwhere
-from oneflow.nn.modules.bmm import bmm_op as bmm
 from oneflow.nn.modules.broadcast_like import broadcast_like_op as broadcast_like
 from oneflow.nn.modules.chunk import chunk_op as chunk
 from oneflow.nn.modules.constant import ones_op as ones
@@ -286,9 +290,7 @@ from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand
 from oneflow.nn.modules.roll import roll_op as roll
-from oneflow.nn.modules.flatten import _flow_flatten as flatten
 from oneflow.nn.modules.flip import flip_op as flip
-from oneflow.nn.modules.floor import floor_op as floor
 from oneflow.nn.modules.gather import gather_op as gather
 from oneflow.nn.modules.gather import gather_nd_op as gather_nd
 from oneflow.nn.modules.comparison import eq_op as eq
@@ -320,6 +322,8 @@ from oneflow.nn.modules.reduce_ops import min_op as min
 from oneflow.nn.modules.reduce_ops import sum_op as sum
 from oneflow.nn.modules.reduce_ops import mean_op as mean
 from oneflow.nn.modules.reduce_ops import prod_op as prod
+from oneflow.nn.modules.reduce_ops import all_op as all
+from oneflow.nn.modules.reduce_ops import any_op as any
 from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view

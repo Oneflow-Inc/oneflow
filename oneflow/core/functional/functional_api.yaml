@@ -236,6 +236,14 @@
   signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceMean"
   bind_python: True
 
+- name: "reduce_all"
+  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceAll"
+  bind_python: True
+
+- name: "reduce_any"
+  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceAny"
+  bind_python: True
+
 - name: "reduce_prod"
   signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceProd"
   bind_python: True
@@ -1801,3 +1809,8 @@
 - name: "meshgrid"
   signature: "TensorTuple (TensorTuple tensors) => Meshgrid"
   bind_python: True
+
+- name: "dot"
+  signature: "Tensor (Tensor input, Tensor other) => Dot"
+  bind_python: True
+

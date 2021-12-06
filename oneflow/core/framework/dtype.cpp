@@ -32,8 +32,9 @@ std::size_t GetDataTypeBytes() {
 }
 
 #define MAKE_DATA_TYPE_BYTES_SWITCH_ENTRY(func_name, T) func_name<T>
-DEFINE_STATIC_SWITCH_FUNC(std::size_t, GetDataTypeBytes, MAKE_DATA_TYPE_BYTES_SWITCH_ENTRY,
-                          MAKE_DATA_TYPE_CTRV_SEQ(POD_AND_HALF_DATA_TYPE_SEQ));
+DEFINE_STATIC_SWITCH_FUNC(
+    std::size_t, GetDataTypeBytes, MAKE_DATA_TYPE_BYTES_SWITCH_ENTRY,
+    MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ));
 
 class DTypeMeta final {
  public:
@@ -72,6 +73,7 @@ Maybe<const DTypeMeta&> DTypeMeta4DataType(DataType data_type) {
       {DataType::kOFRecord, DTypeMeta("oneflow.of_record", false, false, false)},
       {DataType::kTensorBuffer, DTypeMeta("oneflow.tensor_buffer", false, false, false)},
       {DataType::kBFloat16, DTypeMeta("oneflow.bfloat16", true, true, false)},
+      {DataType::kBool, DTypeMeta("oneflow.bool", false, false, false)},
   };
   return MapAt(data_type2dtype_meta, data_type);
 };
