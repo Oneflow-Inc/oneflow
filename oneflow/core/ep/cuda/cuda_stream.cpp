@@ -176,6 +176,8 @@ void CudaStream::LaunchGraph(const CudaGraphExecutable* executable) {
   executable->Launch(cuda_stream_);
 }
 
+const cudaDeviceProp& CudaStream::device_properties() const { return device_->properties(); }
+
 #endif  // WITH_CUDA_GRAPHS
 
 }  // namespace ep
