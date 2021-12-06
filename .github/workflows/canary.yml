@@ -5,27 +5,7 @@ on:
     branches:
       - master
   workflow_dispatch:
-    inputs:
-      python_version:
-        description: "python_version"
-        default: "3.6,3.7,3.8,3.9"
-        required: false
-      compute_platforms:
-        description: ""
-        default: "cpu,cu100,cu101,cu102,cu110,cu111,cu112,cu100_xla,cu101_xla,cu102_xla,cu110_xla"
-        required: false
-      package_name:
-        description: ""
-        default: "oneflow"
-        required: false
-      release_version:
-        description: ""
-        default: ""
-        required: false
-      build_profile:
-        description: ""
-        default: "OFF"
-        required: false
+
 
 jobs:
   staging_release:
