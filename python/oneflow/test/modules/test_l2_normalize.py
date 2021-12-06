@@ -32,12 +32,18 @@ def _count(shape, begin_axis, end_axis):
 
 
 def _l2_norm_numpy(x, dim, epsilon=1e-12):
-    square_x_sum_shape = list(x.shape)
-    square_x_sum_shape[dim] = 1
+    axes = [k for k in range(len(list(x.shape)))]
+    axes[0], axes[dim] = axes[dim], axes[0]
+    axes_tuple = tuple(axes)
 
-    c = x.shape[dim]
+    x = np.transpose(x, axes_tuple)
+
+    square_x_sum_shape = list(x.shape)
+    square_x_sum_shape[0] = 1
+
+    c = x.shape[0]
     n = int(x.size / c)
-    d = _count(x.shape, dim + 1, len(x.shape))
+    d = _count(x.shape, 1, len(x.shape))
 
     square_x_sum = np.zeros(square_x_sum_shape)
 
@@ -58,13 +64,21 @@ def _l2_norm_numpy(x, dim, epsilon=1e-12):
 
     square_x_sum = square_x_sum_flatten.reshape(square_x_sum.shape)
     out = out.reshape(x.shape)
-    return out, square_x_sum
+    return np.transpose(out, axes_tuple), np.transpose(square_x_sum, axes_tuple)
 
 
 def _l2_norm_backward_np(dy, y, square_x_sum, dim, epsilon=1e-12):
-    c = dy.shape[dim]
+    axes = [k for k in range(len(list(y.shape)))]
+    axes[0], axes[dim] = axes[dim], axes[0]
+    axes_tuple = tuple(axes)
+
+    dy = np.transpose(dy, axes_tuple)
+    y = np.transpose(y, axes_tuple)
+    square_x_sum = np.transpose(square_x_sum, axes_tuple)
+
+    c = dy.shape[0]
     n = int(dy.size / c)
-    d = _count(dy.shape, dim + 1, len(y.shape))
+    d = _count(dy.shape, 1, len(y.shape))
 
     dx = np.zeros(dy.shape).reshape(-1)
     dy_flatten = dy.reshape(-1)
@@ -89,7 +103,7 @@ def _l2_norm_backward_np(dy, y, square_x_sum, dim, epsilon=1e-12):
                 index = offset + j * d
                 dx[index] = (1 / norm) * dy_flatten[index]
 
-    return dx.reshape(y.shape)
+    return np.transpose(dx.reshape(y.shape), axes_tuple)
 
 
 def _test_l2_normalize(test_case, device, dim, shape):

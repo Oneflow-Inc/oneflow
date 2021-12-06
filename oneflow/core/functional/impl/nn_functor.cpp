@@ -1668,8 +1668,20 @@ class L2NormalizeFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& axis,
                                 const float& epsilon) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    JUST(attrs.SetAttr<int32_t>("axis", 0));
     JUST(attrs.SetAttr<float>("epsilon", epsilon));
+
+    if (axis != 0) {
+      std::vector<int> input_perm(input->shape()->dim_vec().size(), 0);
+      for (size_t i = 0; i < input_perm.size(); ++i) { input_perm[i] = static_cast<int>(i); }
+      std::swap(input_perm[0], input_perm[static_cast<size_t>(axis)]);
+
+      const auto result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+          *op_, {JUST(functional::Transpose(input, input_perm))}, attrs));
+      return TensorTuple({JUST(functional::Transpose(result->at(0), input_perm)),
+                          JUST(functional::Transpose(result->at(1), input_perm))});
+    }
+
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {input}, attrs);
   }
 
