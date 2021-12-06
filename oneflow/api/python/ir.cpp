@@ -99,7 +99,9 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
     if (one::IsJitEnabled() == false) {
       jit_interpreter->Interrupt();
       jit_interpreter->MarkMlirTraceEnd();
-      LOG(ERROR) << "JIT trace overhead: " << jit_interpreter->TraceOverhead();
+      if (ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_TRACE_PROFILING", false)) {
+        LOG(ERROR) << "JIT trace overhead: " << jit_interpreter->TraceOverhead();
+      }
     }
     return *one::MutJitEnabled();
   });

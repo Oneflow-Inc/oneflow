@@ -118,6 +118,7 @@ llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
 llvm_config.with_environment("ONEFLOW_MLIR_STDOUT", "1")
 llvm_config.with_environment("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS", "1")
 llvm_config.with_environment("ONEFLOW_MLIR_ENABLE_ROUND_TRIP", "1")
+llvm_config.with_environment("ONEFLOW_MLIR_ENABLE_TRACE_PROFILING", "1")
 
 
 gpu_index = get_visible_gpu_with_max_free_memory()

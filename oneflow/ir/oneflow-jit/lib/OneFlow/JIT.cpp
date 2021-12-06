@@ -407,8 +407,6 @@ FuncOp JitImporter::FinalizeProcessFunction(std::shared_ptr<one::Tensor> returne
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createReturnAllLeaveResultPass());
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createCreateComputeCtxPass());
   pm.addPass(::mlir::oneflow::createFuseIntoExistingOpPass());
-  llvm::errs() << "debugging: ";
-  function->dump();
   CHECK(pm.run(function).succeeded());
 
   func_hash_symbol_mapping_.insert({function_hash, function});
