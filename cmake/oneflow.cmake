@@ -375,9 +375,13 @@ oneflow_add_executable(oneflow-gen-ods ${PROJECT_SOURCE_DIR}/oneflow/ir/oneflow-
 set_target_properties(oneflow-gen-ods PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 target_link_libraries(oneflow-gen-ods -Wl,--no-as-needed oneflow -Wl,--as-needed)
 
-add_custom_target(TARGET oneflow-gen-ods POST_BUILD
-  COMMAND "$<TARGET_FILE:oneflow-gen-ods>" > ${PROJECT_SOURCE_DIR}/oneflow/ir/include/OneFlow/OneFlowUserOpGen.td
-  BYPRODUCTS "${PROJECT_SOURCE_DIR}/oneflow/ir/include/OneFlow/OneFlowUserOpGen.td"
+set(ONEFLOW_USER_OP_GEN_TD_PATH "${PROJECT_BINARY_DIR}/oneflow/ir/include/OneFlow/OneFlowUserOpGen.td")
+message(STATUS "Generating OneFlowUserOpGen.td to ${ONEFLOW_USER_OP_GEN_TD_PATH}")
+
+add_custom_target(GenUserOpODS
+  DEPENDS oneflow-gen-ods
+  COMMAND "$<TARGET_FILE:oneflow-gen-ods>" > ${ONEFLOW_USER_OP_GEN_TD_PATH}
+  BYPRODUCTS "${ONEFLOW_USER_OP_GEN_TD_PATH}"
 )
 
 if (WITH_MLIR)

@@ -29,13 +29,15 @@ foreach (OP_GROUP_NAME IN LISTS ONEFLOW_OP_GROUPS)
     set(LLVM_TABLEGEN_FLAGS "${ONE_LLVM_TABLEGEN_FLAGS}")
     string(TOLOWER "${OP_GROUP_NAME}" OP_GROUP_NAME_LOWER)
     set(CPP_INC_FILE "OneFlow.${OP_GROUP_NAME_LOWER}_ops.cpp.inc")
-    mlir_tablegen(${CPP_INC_FILE} -gen-op-defs)
+    mlir_tablegen(${CPP_INC_FILE} -gen-op-defs -I${PROJECT_BINARY_DIR}/include/OneFlow)
 endforeach()
 add_public_tablegen_target(MLIROneFlowOpGroupDefsIncGen)
+add_dependencies(MLIROneFlowOpGroupDefsIncGen GenUserOpODS)
 
 set(LLVM_TABLEGEN_FLAGS "${FULL_LLVM_TABLEGEN_FLAGS}")
 mlir_tablegen(OneFlow.Ops.h.inc -gen-op-decls)
 add_public_tablegen_target(MLIROneFlowOpGroupDeclsIncGen)
+add_dependencies(MLIROneFlowOpGroupDeclsIncGen GenUserOpODS)
 
 set(LLVM_TABLEGEN_FLAGS "")
 add_mlir_dialect(
