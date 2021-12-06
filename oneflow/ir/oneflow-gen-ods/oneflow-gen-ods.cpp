@@ -699,6 +699,7 @@ int main() {
     PrintIncludes(groups);
     // std::cout << "#ifndef ONEFLOW_USER_OP_GEN\n";
     // std::cout << "#define ONEFLOW_USER_OP_GEN\n\n";
+    std::cout << groups.size() << std::endl;
     for (const auto& kv : groups) {
         auto group_name = kv.first;
         auto results = kv.second;
@@ -715,7 +716,6 @@ int main() {
         PrintODSFromOpRegistryResults(results);
         // std::cout << "#endif // " << group_def_name << "\n\n";
         std::cout << "#endif // " << get_group_by_name << "\n\n";
-        return 0;
     }
     return 0;
 }
