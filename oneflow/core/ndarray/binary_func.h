@@ -38,8 +38,14 @@ namespace oneflow {
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, LOGICAL_BINARY_FUNC_NAME_SEQ)
 
 #define REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)(Any)(All)
+#define ARITHMETIC_REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)
+#define LOGICAL_REDUCE_BINARY_FUNC_NAME_SEQ (Any)(All)
 #define REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, REDUCE_BINARY_FUNC_NAME_SEQ)
+#define ARITHMETIC_REDUCE_BINARY_FUNC_SEQ \
+  OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, ARITHMETIC_REDUCE_BINARY_FUNC_NAME_SEQ)
+#define LOGICAL_REDUCE_BINARY_FUNC_SEQ \
+  OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, LOGICAL_REDUCE_BINARY_FUNC_NAME_SEQ)
 
 #define NO_HALF_UTIL_FOUND         \
   printf("cuda arch must >= 530"); \
@@ -242,9 +248,7 @@ struct BinaryFuncAND final {
 };
 template<typename T>
 struct BinaryFuncAll final {
-  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) {
-    return BinaryFuncAND<T>::Invoke(x, y);
-  }
+  static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return BinaryFuncAND<T>::Invoke(x, y); }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncAND);
 
@@ -254,9 +258,7 @@ struct BinaryFuncOR final {
 };
 template<typename T>
 struct BinaryFuncAny final {
-  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) {
-    return BinaryFuncOR<T>::Invoke(x, y);
-  }
+  static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return BinaryFuncOR<T>::Invoke(x, y); }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncOR);
 

@@ -13,27 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from .math_ops import *
-from .random import *
-from .conv import *
-from .pooling import *
-from .activation import *
-from .dropout import *
-from .vision import *
-from .norm import *
-from .loss import *
-from .onehot import *
-from .comparison import *
-from .cast import *
-from .constant import *
-from .array_ops import *
-from .tensor import *
-from .comm import *
-from .ctc_decode import *
-from .placement import *
-from .sbp import *
-from .trigonometric_ops import *
-from .tensor_ops import *
-from .meshgrid import *
-from .bmm import *
-from .flatten import *
+import unittest
+import numpy as np
+import oneflow as flow
+import oneflow.unittest
+from oneflow.test_utils.automated_test_util import *
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestDot(flow.unittest.TestCase):
+    @autotest(check_graph=False)
+    def test_dot(test_case):
+        device = random_device()
+        k = random(1000, 10000)
+        x = random_pytorch_tensor(ndim=1, dim0=k).to(device)
+        y = random_pytorch_tensor(ndim=1, dim0=k).to(device)
+        z = torch.dot(x, y)
+        return z
+
+
+if __name__ == "__main__":
+    unittest.main()
