@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - add-canary-release
   workflow_dispatch:
     inputs:
       clean-ccache:
