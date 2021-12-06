@@ -13,28 +13,35 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_DEVICE_TOPOLOGY_DESCRIPTOR_H_
-#define ONEFLOW_CORE_DEVICE_TOPOLOGY_DESCRIPTOR_H_
+#ifndef ONEFLOW_CORE_HARDWARE_TOPOLOGY_DESCRIPTOR_H_
+#define ONEFLOW_CORE_HARDWARE_TOPOLOGY_DESCRIPTOR_H_
 
 #include <string>
 #include <memory>
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
-namespace device {
+namespace hardware {
 
 class TopologyCPUAffinityDescriptor {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(TopologyCPUAffinityDescriptor);
+  TopologyCPUAffinityDescriptor() = default;
   virtual ~TopologyCPUAffinityDescriptor() = default;
 };
 
 class TopologyMemoryAffinityDescriptor {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(TopologyMemoryAffinityDescriptor);
+  TopologyMemoryAffinityDescriptor() = default;
   virtual ~TopologyMemoryAffinityDescriptor() = default;
 };
 
 class TopologyDescriptor {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(TopologyDescriptor);
+  TopologyDescriptor() = default;
   virtual ~TopologyDescriptor() = default;
 
   virtual std::shared_ptr<const TopologyCPUAffinityDescriptor> GetCPUAffinity() const = 0;
@@ -51,8 +58,8 @@ class TopologyDescriptor {
   virtual void SetMemoryAffinityByPCIBusID(const std::string& bus_id) const;
 };
 
-}  // namespace device
+}  // namespace hardware
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_DEVICE_TOPOLOGY_DESCRIPTOR_H_
+#endif  // ONEFLOW_CORE_HARDWARE_TOPOLOGY_DESCRIPTOR_H_
