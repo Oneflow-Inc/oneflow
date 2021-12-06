@@ -17,8 +17,8 @@ on:
         required: true
 
 jobs:
-  staging_release:
-    name: Staging Release
+  canary_release:
+    name: Canary Release
     timeout-minutes: 1200
     runs-on: [self-hosted, linux, release]
     if: github.repository == 'Oneflow-Inc/oneflow'
