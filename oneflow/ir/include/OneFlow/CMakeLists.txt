@@ -26,7 +26,6 @@ set(LLVM_TARGET_DEFINITIONS OneFlowOps.td)
 mlir_tablegen(OneFlowPasses.h.inc -gen-pass-decls)
 add_public_tablegen_target(MLIROneFlowPassIncGen)
 
-
 set(LLVM_TABLEGEN_FLAGS "")
 add_mlir_interface(OneFlowInterfaces)
 
