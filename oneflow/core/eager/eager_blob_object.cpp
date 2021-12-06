@@ -224,8 +224,10 @@ Maybe<double> DTREagerBlobObject::approx_neighbor_cost() const {
     if (auto tmp = inputs[i].lock()) {
       auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-      double p_cost = Global<one::DTRTensorPool>::Get()->find_father(dtr_blob_object->node)->compute_time();
-      cost += p_cost;
+      if (!dtr_blob_object->is_in_memory()) {
+        double p_cost = Global<one::DTRTensorPool>::Get()->find_father(dtr_blob_object->node)->compute_time();
+        cost += p_cost;
+      }
     }
   }
 
@@ -234,8 +236,10 @@ Maybe<double> DTREagerBlobObject::approx_neighbor_cost() const {
     if (auto tmp = outputs[i].lock()) {
       auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-      double c_cost = Global<one::DTRTensorPool>::Get()->find_father(dtr_blob_object->node)->compute_time();
-      cost += c_cost;
+      if (!dtr_blob_object->is_in_memory()) {
+        double c_cost = Global<one::DTRTensorPool>::Get()->find_father(dtr_blob_object->node)->compute_time();
+        cost += c_cost;
+      }
     }
   }
 
