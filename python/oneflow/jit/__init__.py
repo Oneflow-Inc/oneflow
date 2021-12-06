@@ -21,22 +21,28 @@ import os
 
 def exec(f):
     def wrapper(*args, **kwargs):
-        m = args[0]
-        assert isinstance(m, oneflow.nn.Module)
-        for arg in args[1::]:
-            isinstance(arg, oneflow._oneflow_internal.Tensor)
+        if os.getenv("ONEFLOW_DISABLE_JIT"):
+            return f(*args, **kwargs)
+        if len(args):
+            m = args[0]
+            if isinstance(m, oneflow.nn.Module):
+                for arg in args[1::]:
+                    assert isinstance(arg, oneflow._oneflow_internal.Tensor)
+                    oneflow._oneflow_internal.ir.set_jit_forward_args(
+                        args[1::], list(m.parameters())
+                    )
+            else:
+                for arg in args:
+                    assert isinstance(arg, oneflow._oneflow_internal.Tensor)
+                oneflow._oneflow_internal.ir.set_jit_forward_args(list(args), [])
+
         func_name = str(uuid.uuid4()).replace("-", "")
         func_name = f"jit{func_name}"
+        assert oneflow._oneflow_internal.ir.toggle_jit(func_name)
         start = timer()
-        if not os.getenv("ONEFLOW_DISABLE_JIT"):
-            assert oneflow._oneflow_internal.ir.toggle_jit(func_name)
-            oneflow._oneflow_internal.ir.set_jit_forward_args(
-                args[1::], list(m.parameters())
-            )
         # NOTE: forbid calling __repr__ in the forward function
         result = f(*args, **kwargs)
-        if not os.getenv("ONEFLOW_DISABLE_JIT"):
-            assert not oneflow._oneflow_internal.ir.toggle_jit(func_name)
+        assert not oneflow._oneflow_internal.ir.toggle_jit(func_name)
         end = timer()
         print("JIT optimizations and dispatch ends in", end - start)
         return result

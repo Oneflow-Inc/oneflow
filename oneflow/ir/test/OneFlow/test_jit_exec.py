@@ -33,6 +33,12 @@ class MyModule(flow.nn.Module):
         return output
 
 
+@flow.jit.exec
+def add_two(a, b):
+    return a + b
+
+
+add_two(flow.randn(2, 2), flow.randn(2, 2))
 linear = MyModule(2, 3)
 for i in range(100):
     print(linear(flow.randn(2, 2)))
