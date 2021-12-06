@@ -201,7 +201,10 @@ int JpegPartialDecode(const unsigned char* data, size_t length,
     u_crop_x = 0;
     u_crop_h = height;
     u_crop_w = width;
+    tmp_w = u_crop_w;
   }
+
+  printf("||c_x = %d, c_w = %d,  diff=%d,--  \n", u_crop_x, u_crop_w, width- (u_crop_w+u_crop_x));
   jpeg_crop_scanline(&cinfo, &u_crop_x, &tmp_w);
   int row_stride = tmp_w * pixel_size;
   if (jpeg_skip_scanlines(&cinfo, u_crop_y) != u_crop_y) { return -2; }
