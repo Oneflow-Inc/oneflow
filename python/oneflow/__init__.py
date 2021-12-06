@@ -26,6 +26,7 @@ Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
 locals()["dtype"] = oneflow._oneflow_internal.dtype
+locals()["bool"] = oneflow._oneflow_internal.bool
 locals()["char"] = oneflow._oneflow_internal.char
 locals()["float16"] = oneflow._oneflow_internal.float16
 locals()["half"] = oneflow._oneflow_internal.float16
@@ -152,7 +153,12 @@ from oneflow._C import permute
 from oneflow._C import concat
 from oneflow._C import concat as cat
 from oneflow._C import to
+from oneflow._C import dim_gather as gather
+from oneflow._C import gather_nd
 from oneflow._C import roi_align
+from oneflow._C import read_onerec
+from oneflow._C import decode_onerec
+from oneflow._C import dot
 
 
 from . import sbp
@@ -288,8 +294,6 @@ from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flip import flip_op as flip
-from oneflow.nn.modules.gather import gather_op as gather
-from oneflow.nn.modules.gather import gather_nd_op as gather_nd
 from oneflow.nn.modules.comparison import eq_op as eq
 from oneflow.nn.modules.comparison import eq_op as equal
 from oneflow.nn.modules.logical_ops import logical_and_op as logical_and
@@ -319,6 +323,8 @@ from oneflow.nn.modules.reduce_ops import min_op as min
 from oneflow.nn.modules.reduce_ops import sum_op as sum
 from oneflow.nn.modules.reduce_ops import mean_op as mean
 from oneflow.nn.modules.reduce_ops import prod_op as prod
+from oneflow.nn.modules.reduce_ops import all_op as all
+from oneflow.nn.modules.reduce_ops import any_op as any
 from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
