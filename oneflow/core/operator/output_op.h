@@ -42,6 +42,10 @@ class OutputOp final : public Operator {
       const ParallelDesc& parallel_desc) const override;
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
   Maybe<void> GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const override;
+  Maybe<void> GetNdSbpSignatureList(
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const ParallelDesc& parallel_desc,
+      std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const override;
   Maybe<void> InferNdSbpSignature(cfg::NdSbpSignature* nd_sbp_signature,
                                   const cfg::NdSbpSignature& nd_sbp_constraints,
                                   const ParallelDesc& parallel_desc,

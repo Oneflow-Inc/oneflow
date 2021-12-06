@@ -469,7 +469,7 @@ Maybe<void> Operator::GetSbpSignaturesIf(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Operator::GetValidNdSbpSignatureList(
+Maybe<void> Operator::GetNdSbpSignatureList(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const {
   // Get 1D sbp signature list
@@ -485,9 +485,17 @@ Maybe<void> Operator::GetValidNdSbpSignatureList(
   // ND sbp signature list would be direct product of 1D sbp signatures
   nd_sbp_sig_list.clear();
   DFS_SetNdSbpSignature(nd_sbp_sig, 0, sbp_dimension, nd_sbp_sig_list, &sbp_sig_list);
+
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> Operator::GetValidNdSbpSignatureList(
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const {
+  JUST(GetNdSbpSignatureList(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list));
   // Leave those valid Nd SBPs
   FilterNdSbpSignatureListByLogicalShape(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list);
-
+  CHECK(nd_sbp_sig_list.size() > 0) << "Empty sbp signature after filtering for " << op_name();
   return Maybe<void>::Ok();
 }
 
