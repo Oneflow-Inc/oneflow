@@ -82,10 +82,21 @@ class OpAttrs {
   const_iterator begin() const;
   const_iterator end() const;
 
+  bool operator==(const OpAttrs& other) const;
+
  private:
   const OpInterpCtx* ctx_;
 };
 
 }  // namespace oneflow
+
+namespace std {
+
+template<>
+struct hash<oneflow::OpAttrs> {
+  size_t operator()(const oneflow::OpAttrs& attrs) const;
+};
+
+}  // namespace std
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_OP_ATTRS_H_

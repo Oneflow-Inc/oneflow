@@ -43,13 +43,6 @@ Maybe<one::UserOpExpr> EagerSToB(Symbol<ParallelDesc> in_parallel_desc,
   return one::OpBuilder("eager_s_to_b", *JUST(UniqueStr("eager_s_to_b")))
       .Input("in")
       .Output("out")
-      // TODO(hjchen2)
-      // .Attr<int64_t>("in_split_axis", src_sbp->split_parallel().axis())
-      // .Attr<std::string>("in_parallel_conf",
-      // PbMessage2TxtString(in_parallel_desc->parallel_conf()))
-      // .Attr<std::string>("out_parallel_conf",
-      //                    PbMessage2TxtString(out_parallel_desc->parallel_conf()))
-      // .Attr<Shape>("shape", shape)
       .Build();
 }
 
@@ -60,12 +53,6 @@ Maybe<one::UserOpExpr> EagerPToB(Symbol<ParallelDesc> in_parallel_desc,
   return one::OpBuilder("eager_p_to_b", *JUST(UniqueStr("eager_p_to_b")))
       .Input("in")
       .Output("out")
-      // TODO(hjchen2)
-      // .Attr<std::string>("in_parallel_conf",
-      // PbMessage2TxtString(in_parallel_desc->parallel_conf()))
-      // .Attr<std::string>("out_parallel_conf",
-      //                    PbMessage2TxtString(out_parallel_desc->parallel_conf()))
-      // .Attr<Shape>("shape", shape)
       .Build();
 }
 
@@ -78,14 +65,6 @@ Maybe<one::UserOpExpr> EagerNaiveSToS(Symbol<ParallelDesc> in_parallel_desc,
   return one::OpBuilder("eager_naive_s_to_s", *JUST(UniqueStr("eager_naive_s_to_s")))
       .Input("in")
       .Output("out")
-      // TODO(hjchen2)
-      // .Attr<int64_t>("in_split_axis", src_sbp->split_parallel().axis())
-      // .Attr<int64_t>("out_split_axis", dst_sbp->split_parallel().axis())
-      // .Attr<std::string>("in_parallel_conf",
-      // PbMessage2TxtString(in_parallel_desc->parallel_conf()))
-      // .Attr<std::string>("out_parallel_conf",
-      //                    PbMessage2TxtString(out_parallel_desc->parallel_conf()))
-      // .Attr<Shape>("shape", shape)
       .Build();
 }
 
@@ -97,13 +76,6 @@ Maybe<one::UserOpExpr> EagerBToS(Symbol<ParallelDesc> in_parallel_desc,
   return one::OpBuilder("eager_b_to_s", *JUST(UniqueStr("eager_b_to_s")))
       .Input("in")
       .Output("out")
-      // TODO(hjchen2)
-      // .Attr<int64_t>("out_split_axis", dst_sbp->split_parallel().axis())
-      // .Attr<std::string>("in_parallel_conf",
-      // PbMessage2TxtString(in_parallel_desc->parallel_conf()))
-      // .Attr<std::string>("out_parallel_conf",
-      //                    PbMessage2TxtString(out_parallel_desc->parallel_conf()))
-      // .Attr<Shape>("shape", shape)
       .Build();
 }
 
@@ -115,13 +87,6 @@ Maybe<one::UserOpExpr> EagerPToS(Symbol<ParallelDesc> in_parallel_desc,
   return one::OpBuilder("eager_p_to_s", *JUST(UniqueStr("eager_p_to_s")))
       .Input("in")
       .Output("out")
-      // TODO(hjchen2)
-      // .Attr<int64_t>("out_split_axis", dst_sbp->split_parallel().axis())
-      // .Attr<std::string>("in_parallel_conf",
-      // PbMessage2TxtString(in_parallel_desc->parallel_conf()))
-      // .Attr<std::string>("out_parallel_conf",
-      //                    PbMessage2TxtString(out_parallel_desc->parallel_conf()))
-      // .Attr<Shape>("shape", shape)
       .Build();
 }
 
@@ -146,7 +111,12 @@ class EagerSToBFunctor {
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerSToBpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(in_nd_sbp->sbp_parallel(0)), shape));
-    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+    auto ctx = std::make_shared<EagerSToBOpInterpCtx>();
+    ctx->in_parallel_conf = PbMessage2TxtString(in_parallel_desc->parallel_conf());
+    ctx->out_parallel_conf = PbMessage2TxtString(out_parallel_desc->parallel_conf());
+    ctx->in_split_axis = in_nd_sbp->sbp_parallel(0).split_parallel().axis();
+    ctx->shape = shape;
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, ctx));
   }
 };
 
@@ -162,7 +132,11 @@ class EagerPToBFunctor {
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerPToBpExpr(in_parallel_desc, out_parallel_desc, shape));
-    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+    auto ctx = std::make_shared<EagerPToBOpInterpCtx>();
+    ctx->in_parallel_conf = PbMessage2TxtString(in_parallel_desc->parallel_conf());
+    ctx->out_parallel_conf = PbMessage2TxtString(out_parallel_desc->parallel_conf());
+    ctx->shape = shape;
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, ctx));
   }
 };
 
@@ -188,7 +162,13 @@ class EagerNaiveSToSFunctor {
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerNaiveSToSOpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(in_nd_sbp->sbp_parallel(0)),
         SymbolOf(out_nd_sbp->sbp_parallel(0)), shape));
-    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+    auto ctx = std::make_shared<EagerNaiveSToSOpInterpCtx>();
+    ctx->in_split_axis = in_nd_sbp->sbp_parallel(0).split_parallel().axis();
+    ctx->out_split_axis = out_nd_sbp->sbp_parallel(0).split_parallel().axis();
+    ctx->in_parallel_conf = PbMessage2TxtString(in_parallel_desc->parallel_conf());
+    ctx->out_parallel_conf = PbMessage2TxtString(out_parallel_desc->parallel_conf());
+    ctx->shape = shape;
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, ctx));
   }
 };
 
@@ -209,6 +189,11 @@ class EagerBToSFunctor {
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerBToSpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(out_nd_sbp->sbp_parallel(0)), shape));
+    auto ctx = std::make_shared<EagerBToSOpInterpCtx>();
+    ctx->out_split_axis = out_nd_sbp->sbp_parallel(0).split_parallel().axis();
+    ctx->in_parallel_conf = PbMessage2TxtString(in_parallel_desc->parallel_conf());
+    ctx->out_parallel_conf = PbMessage2TxtString(out_parallel_desc->parallel_conf());
+    ctx->shape = shape;
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
   }
 };
@@ -230,6 +215,11 @@ class EagerPToSFunctor {
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerPToSpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(out_nd_sbp->sbp_parallel(0)), shape));
+    auto ctx = std::make_shared<EagerPToSOpInterpCtx>();
+    ctx->out_split_axis = out_nd_sbp->sbp_parallel(0).split_parallel().axis();
+    ctx->in_parallel_conf = PbMessage2TxtString(in_parallel_desc->parallel_conf());
+    ctx->out_parallel_conf = PbMessage2TxtString(out_parallel_desc->parallel_conf());
+    ctx->shape = shape;
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
   }
 };

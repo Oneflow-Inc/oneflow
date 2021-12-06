@@ -36,4 +36,22 @@ OpAttrs::const_iterator OpAttrs::end() const {
   return const_iterator(attrs.cend(), attrs.cend(), this);
 }
 
+bool OpAttrs::operator==(const OpAttrs& other) const {
+  // TODO(hjchen2): Compare each attribute
+  return ctx_ == other.ctx_;
+}
+
 }  // namespace oneflow
+
+namespace std {
+
+size_t hash<oneflow::OpAttrs>::operator()(const oneflow::OpAttrs& attrs) const {
+  size_t hash_val = 0;
+  for (const auto& it : attrs) {
+    hash_val = std::hash<std::string>()(it.first);
+    hash_val = it.second->hash_value();
+  }
+  return hash_val;
+}
+
+}  // namespace std

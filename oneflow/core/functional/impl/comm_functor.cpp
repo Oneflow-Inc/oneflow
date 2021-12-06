@@ -70,8 +70,6 @@ Maybe<one::UserOpExpr> EagerNcclAllReduce(Symbol<ParallelDesc> parallel_desc) {
   return one::OpBuilder("eager_nccl_all_reduce", *JUST(UniqueStr("eager_nccl_all_reduce")))
       .Input("in")
       .Output("out")
-      // TODO(hjchen2)
-      // .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
       .Build();
 }
 
@@ -82,9 +80,6 @@ Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc
   return one::OpBuilder("eager_nccl_reduce_scatter", *JUST(UniqueStr("eager_nccl_reduce_scatter")))
       .Input("in")
       .Output("out")
-      // TODO(hjchen2)
-      // .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      // .Attr<std::string>("op_type", op_type)
       .Build();
 }
 static constexpr auto* CachedNcclReduceScatterOpExpr =
@@ -94,8 +89,6 @@ Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc) {
   return one::OpBuilder("eager_nccl_all_gather", *JUST(UniqueStr("eager_nccl_all_gather")))
       .Input("in")
       .Output("out")
-      // TODO(hjchen2)
-      // .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
       .Build();
 }
 
@@ -107,10 +100,6 @@ Maybe<one::UserOpExpr> EagerNcclS2S(Symbol<ParallelDesc> parallel_desc,
   return one::OpBuilder("eager_nccl_s2s", *JUST(UniqueStr("eager_nccl_s2s")))
       .Input("in")
       .Output("out")
-      // TODO(hjchen2)
-      // .Attr<int64_t>("in_split_axis", src_sbp->split_parallel().axis())
-      // .Attr<int64_t>("out_split_axis", dst_sbp->split_parallel().axis())
-      // .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
       .Build();
 }
 
@@ -120,9 +109,6 @@ Maybe<one::UserOpExpr> EagerNcclReduce(Symbol<ParallelDesc> parallel_desc, int64
   return one::OpBuilder("eager_nccl_reduce", *JUST(UniqueStr("eager_nccl_reduce")))
       .Input("in")
       .Output("out")
-      // TODO(hjchen2)
-      // .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      // .Attr<int64_t>("root", root)
       .Build();
 }
 
@@ -194,7 +180,10 @@ class ConsistentAllReduceFunctor {
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllReduceOpExpr(JUST(x->parallel_desc())));
-    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+    auto ctx = std::make_shared<EagerNcclAllReduceOpInterpCtx>();
+    ctx->parallel_conf = PbMessage2TxtString(JUST(x->parallel_desc())->parallel_conf());
+    ctx->async_launch = false;
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, ctx));
   }
 };
 
@@ -216,7 +205,10 @@ class ConsistentReduceScatterFunctor {
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedNcclReduceScatterOpExpr(JUST(x->parallel_desc()), op_type));
-    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+    auto ctx = std::make_shared<EagerNcclReduceScatterOpInterpCtx>();
+    ctx->parallel_conf = PbMessage2TxtString(JUST(x->parallel_desc())->parallel_conf());
+    ctx->op_type = op_type;
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, ctx));
   }
 };
 
@@ -230,7 +222,9 @@ class ConsistentAllGatherFunctor {
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllGatherOpExpr(JUST(x->parallel_desc())));
-    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+    auto ctx = std::make_shared<EagerNcclAllGatherOpInterpCtx>();
+    ctx->parallel_conf = PbMessage2TxtString(JUST(x->parallel_desc())->parallel_conf());
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, ctx));
   }
 };
 
@@ -253,7 +247,11 @@ class ConsistentS2SFunctor {
     std::shared_ptr<OpExpr> op_expr = JUST(
         CachedEagerNcclS2SOpExpr(JUST(x->parallel_desc()), SymbolOf(in_nd_sbp->sbp_parallel(0)),
                                  SymbolOf(out_nd_sbp->sbp_parallel(0))));
-    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+    auto ctx = std::make_shared<EagerNcclS2sOpInterpCtx>();
+    ctx->in_split_axis = in_nd_sbp->sbp_parallel(0).split_parallel().axis();
+    ctx->out_split_axis = out_nd_sbp->sbp_parallel(0).split_parallel().axis();
+    ctx->parallel_conf = PbMessage2TxtString(JUST(x->parallel_desc())->parallel_conf());
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, ctx));
   }
 };
 
@@ -362,12 +360,15 @@ class LocalReduceFunctor {
       parallel_desc = iter->second;
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerNcclReduceOpExpr(parallel_desc, dst));
+    auto ctx = std::make_shared<EagerNcclReduceOpInterpCtx>();
+    ctx->parallel_conf = PbMessage2TxtString(JUST(x->parallel_desc())->parallel_conf());
+    ctx->root = dst;
     if (inplace) {
       TensorTuple outputs{x};
-      JUST(OpInterpUtil::Dispatch(*op_expr, {x}, &outputs));
+      JUST(OpInterpUtil::Dispatch(*op_expr, {x}, &outputs, ctx));
       return x;
     } else {
-      return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+      return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, ctx));
     }
   }
 };
