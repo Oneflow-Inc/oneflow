@@ -217,39 +217,39 @@ def compare_with_numpy_rmsprop_clip_grad(
 
 # @flow.unittest.skip_unless_1n1d()
 # class TestRMSProp(flow.unittest.TestCase):
-    # def test_rmsprop(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device"] = ["cpu", "cuda"]
-    #     arg_dict["x_shape"] = [(10,)]
-    #     arg_dict["learning_rate"] = [1]
-    #     arg_dict["momentum"] = [0.0]
-    #     arg_dict["train_iters"] = [10]
-    #     arg_dict["alpha"] = [0.9, 0.99]
-    #     arg_dict["eps"] = [1e-08, 1e-05]
-    #     arg_dict["weight_decay"] = [0.1, 0.99]
-    #     arg_dict["centered"] = [False, True]
-    #     arg_dict["reload_state_step"] = [5]  # save and load optim state
-    #     arg_dict["save_load_by_pickle"] = [False, True]
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_numpy_rmsprop(test_case, *arg)
+# def test_rmsprop(test_case):
+#     arg_dict = OrderedDict()
+#     arg_dict["device"] = ["cpu", "cuda"]
+#     arg_dict["x_shape"] = [(10,)]
+#     arg_dict["learning_rate"] = [1]
+#     arg_dict["momentum"] = [0.0]
+#     arg_dict["train_iters"] = [10]
+#     arg_dict["alpha"] = [0.9, 0.99]
+#     arg_dict["eps"] = [1e-08, 1e-05]
+#     arg_dict["weight_decay"] = [0.1, 0.99]
+#     arg_dict["centered"] = [False, True]
+#     arg_dict["reload_state_step"] = [5]  # save and load optim state
+#     arg_dict["save_load_by_pickle"] = [False, True]
+#     for arg in GenArgList(arg_dict):
+#         compare_with_numpy_rmsprop(test_case, *arg)
 
-    # def test_rmsprop_clip_grad(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device"] = ["cpu", "cuda"]
-    #     arg_dict["x_shape"] = [(10,)]
-    #     arg_dict["learning_rate"] = [1]
-    #     arg_dict["momentum"] = [0.0]
-    #     arg_dict["train_iters"] = [10]
-    #     arg_dict["alpha"] = [0.9, 0.99]
-    #     arg_dict["eps"] = [1e-08, 1e-05]
-    #     arg_dict["weight_decay"] = [0.1, 0.99]
-    #     arg_dict["centered"] = [False, True]
-    #     arg_dict["clip_grad_max_norm"] = [0, 0.5, 1.0]
-    #     arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
-    #     arg_dict["reload_state_step"] = [5]  # save and load optim state
-    #     arg_dict["save_load_by_pickle"] = [False, True]
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_numpy_rmsprop_clip_grad(test_case, *arg)
+# def test_rmsprop_clip_grad(test_case):
+#     arg_dict = OrderedDict()
+#     arg_dict["device"] = ["cpu", "cuda"]
+#     arg_dict["x_shape"] = [(10,)]
+#     arg_dict["learning_rate"] = [1]
+#     arg_dict["momentum"] = [0.0]
+#     arg_dict["train_iters"] = [10]
+#     arg_dict["alpha"] = [0.9, 0.99]
+#     arg_dict["eps"] = [1e-08, 1e-05]
+#     arg_dict["weight_decay"] = [0.1, 0.99]
+#     arg_dict["centered"] = [False, True]
+#     arg_dict["clip_grad_max_norm"] = [0, 0.5, 1.0]
+#     arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
+#     arg_dict["reload_state_step"] = [5]  # save and load optim state
+#     arg_dict["save_load_by_pickle"] = [False, True]
+#     for arg in GenArgList(arg_dict):
+#         compare_with_numpy_rmsprop_clip_grad(test_case, *arg)
 
 
 if __name__ == "__main__":
