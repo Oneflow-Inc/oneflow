@@ -48,7 +48,19 @@ Maybe<void> EagerBlobObject::InitBlob() {
     int64_t header_byte_size = blob_desc_.AlignedByteSizeOfBlobHeader();
     header_buffer_ = std::make_unique<char[]>(header_byte_size);
   }
-  blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer_.get(), nullptr));
+  blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer_.get(), nullptr, 0));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> EagerBlobObject::InitBlobWithOffset(const int64_t offset) {
+  CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
+  if (!blob_desc_.shape().is_initialized()) { blob_desc_.set_shape(Shape(DimVector{})); }
+  {
+    header_buffer_.reset();
+    int64_t header_byte_size = blob_desc_.AlignedByteSizeOfBlobHeader();
+    header_buffer_ = std::make_unique<char[]>(header_byte_size);
+  }
+  blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer_.get(), nullptr, offset));
   return Maybe<void>::Ok();
 }
 
