@@ -30,14 +30,9 @@ class TensorScalarAddOrSub : public OpExprGradFunction<TensorScalarCaptureState>
   TensorScalarAddOrSub() = default;
   virtual ~TensorScalarAddOrSub() = default;
 
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(TensorScalarCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
 };
-
-Maybe<void> TensorScalarAddOrSub::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> TensorScalarAddOrSub::Capture(TensorScalarCaptureState* state, const TensorTuple& inputs,
                                           const TensorTuple& outputs, const OpInterpCtx* ctx) const {
@@ -85,16 +80,11 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("scalar_sub_by_tensor", TensorScalarSub);
 
 class TensorScalarMul : public OpExprGradFunction<TensorScalarCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(TensorScalarCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const TensorScalarCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> TensorScalarMul::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> TensorScalarMul::Capture(TensorScalarCaptureState* state, const TensorTuple& inputs,
                                      const TensorTuple& outputs, const OpInterpCtx* ctx) const {
@@ -127,16 +117,11 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("scalar_mul_by_tensor", TensorScalarMul);
 
 class TensorScalarDiv : public OpExprGradFunction<TensorScalarCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(TensorScalarCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const TensorScalarCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> TensorScalarDiv::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> TensorScalarDiv::Capture(TensorScalarCaptureState* state, const TensorTuple& inputs,
                                      const TensorTuple& outputs, const OpInterpCtx* ctx) const {

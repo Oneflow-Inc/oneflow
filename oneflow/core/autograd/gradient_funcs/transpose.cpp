@@ -29,16 +29,11 @@ struct TransposeCaptureState : public AutoGradCaptureState {
 
 class Transpose : public OpExprGradFunction<TransposeCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(TransposeCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const TransposeCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> Transpose::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> Transpose::Capture(TransposeCaptureState* state, const TensorTuple& inputs,
                                const TensorTuple& outputs, const OpInterpCtx* ctx) const {

@@ -34,10 +34,6 @@ struct ReduceDeviceCaptureState : public AutoGradCaptureState {
 template<ReduceMode mode>
 class ReduceDevice : public OpExprGradFunction<ReduceDeviceCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> Capture(ReduceDeviceCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
@@ -84,10 +80,6 @@ struct ReduceGlobalCaptureState : public AutoGradCaptureState {
 template<ReduceMode mode>
 class ReduceGlobal : public OpExprGradFunction<ReduceGlobalCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> Capture(ReduceGlobalCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);

@@ -39,17 +39,11 @@ struct ConvolutionNdCaptureState : public AutoGradCaptureState {
 template<typename T>
 class ConvolutionNd : public OpExprGradFunction<ConvolutionNdCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(ConvolutionNdCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const ConvolutionNdCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-template<typename T>
-Maybe<void> ConvolutionNd<T>::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 template<typename T>
 Maybe<void> ConvolutionNd<T>::Capture(ConvolutionNdCaptureState* state, const TensorTuple& inputs,

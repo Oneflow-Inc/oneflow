@@ -27,7 +27,6 @@ struct MaskedFillCaptureState : public AutoGradCaptureState {
 
 class MaskedFill : public OpExprGradFunction<MaskedFillCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
   Maybe<void> Capture(MaskedFillCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     state->requires_grad = inputs.at(0)->requires_grad();

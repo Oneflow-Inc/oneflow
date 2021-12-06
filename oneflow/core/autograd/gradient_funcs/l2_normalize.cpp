@@ -30,16 +30,11 @@ struct L2NormalizeCaptureState : public AutoGradCaptureState {
 
 class L2Normalize : public OpExprGradFunction<L2NormalizeCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(L2NormalizeCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const L2NormalizeCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> L2Normalize::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> L2Normalize::Capture(L2NormalizeCaptureState* state, const TensorTuple& inputs,
                                  const TensorTuple& outputs, const OpInterpCtx* ctx) const {

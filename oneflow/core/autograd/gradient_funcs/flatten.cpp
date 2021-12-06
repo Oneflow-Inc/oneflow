@@ -29,7 +29,6 @@ struct FlattenCaptureState : public AutoGradCaptureState {
 
 class Flatten : public OpExprGradFunction<FlattenCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(FlattenCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const FlattenCaptureState* state, const TensorTuple& out_grads,

@@ -26,8 +26,6 @@ struct ScalarFModGradCaptureState : public AutoGradCaptureState {
 
 class ScalarFModGrad : public OpExprGradFunction<ScalarFModGradCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
-
   Maybe<void> Capture(ScalarFModGradCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);

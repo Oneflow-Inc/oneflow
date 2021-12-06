@@ -44,10 +44,6 @@ struct NormalizationAddReluGradCaptureState : public AutoGradCaptureState {
 
 class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluGradCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> Capture(NormalizationAddReluGradCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     // input_size may be 3/4/5/6, as inputs may be

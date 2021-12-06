@@ -30,16 +30,11 @@ struct FoldInterpState : public AutoGradCaptureState {
 
 class Fold : public OpExprGradFunction<FoldInterpState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(FoldInterpState* state, const TensorTuple& inputs, const TensorTuple& outputs,
                       const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const FoldInterpState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> Fold::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> Fold::Capture(FoldInterpState* state, const TensorTuple& inputs,
                           const TensorTuple& outputs, const OpInterpCtx* ctx) const {

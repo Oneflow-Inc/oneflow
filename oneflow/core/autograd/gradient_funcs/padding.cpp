@@ -26,10 +26,6 @@ struct Pad2dCaptureState : public AutoGradCaptureState {
 
 class Pad2d : public OpExprGradFunction<Pad2dCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> Capture(Pad2dCaptureState* state, const TensorTuple& inputs, const TensorTuple& outputs,
                       const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
@@ -77,10 +73,6 @@ struct ConstantPadNdCaptureState : public AutoGradCaptureState {
 
 class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> Capture(ConstantPadNdCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);

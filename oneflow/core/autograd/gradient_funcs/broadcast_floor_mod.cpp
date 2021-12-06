@@ -24,8 +24,6 @@ struct BroadcastFModCaptureState : public AutoGradCaptureState {
 
 class BroadcastFMod : public OpExprGradFunction<BroadcastFModCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
-
   Maybe<void> Capture(BroadcastFModCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);

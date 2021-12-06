@@ -32,10 +32,6 @@ struct NarrowCaptureState : public AutoGradCaptureState {
 
 class Narrow : public OpExprGradFunction<NarrowCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> Capture(NarrowCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);

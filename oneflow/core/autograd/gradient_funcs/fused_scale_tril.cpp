@@ -30,16 +30,11 @@ struct FusedScaleTrilState : public AutoGradCaptureState {
 
 class FusedScaleTril : public OpExprGradFunction<FusedScaleTrilState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(FusedScaleTrilState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const FusedScaleTrilState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> FusedScaleTril::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> FusedScaleTril::Capture(FusedScaleTrilState* state, const TensorTuple& inputs,
                                     const TensorTuple& outputs, const OpInterpCtx* ctx) const {

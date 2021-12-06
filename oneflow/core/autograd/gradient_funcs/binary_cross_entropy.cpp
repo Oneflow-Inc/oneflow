@@ -25,16 +25,12 @@ struct BinaryCrossEntropyCaptureState : public AutoGradCaptureState {
 
 class BinaryCrossEntropy : public OpExprGradFunction<BinaryCrossEntropyCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(BinaryCrossEntropyCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const BinaryCrossEntropyCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
-Maybe<void> BinaryCrossEntropy::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 Maybe<void> BinaryCrossEntropy::Capture(BinaryCrossEntropyCaptureState* state,
                                         const TensorTuple& inputs, const TensorTuple& outputs,
                                         const OpInterpCtx* ctx) const {

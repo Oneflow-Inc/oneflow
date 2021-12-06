@@ -27,10 +27,6 @@ struct FusedBiasAddGeluInterpState : public AutoGradCaptureState {
 
 class FusedBiasAddGelu : public OpExprGradFunction<FusedBiasAddGeluInterpState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> Capture(FusedBiasAddGeluInterpState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);

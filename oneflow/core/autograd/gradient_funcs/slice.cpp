@@ -31,10 +31,6 @@ struct SliceCaptureState : public AutoGradCaptureState {
 
 class Slice : public OpExprGradFunction<SliceCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> Capture(SliceCaptureState* state, const TensorTuple& inputs, const TensorTuple& outputs,
                       const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
@@ -71,10 +67,6 @@ struct SliceUpdateCaptureState : public AutoGradCaptureState {
 
 class SliceUpdate : public OpExprGradFunction<SliceUpdateCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> Capture(SliceUpdateCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);

@@ -31,16 +31,11 @@ struct UpsampleCaptureState : public AutoGradCaptureState {
 
 class Upsample : public OpExprGradFunction<UpsampleCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(UpsampleCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const UpsampleCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> Upsample::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> Upsample::Capture(UpsampleCaptureState* state, const TensorTuple& inputs,
                               const TensorTuple& outputs, const OpInterpCtx* ctx) const {
@@ -80,8 +75,6 @@ struct UpsampleNearest2DCaptureState : public AutoGradCaptureState {
 
 class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
-
   Maybe<void> Capture(UpsampleNearest2DCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
@@ -121,8 +114,6 @@ struct UpsampleBilinear2DCaptureState : public AutoGradCaptureState {
 
 class UpsampleBilinear2D : public OpExprGradFunction<UpsampleBilinear2DCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
-
   Maybe<void> Capture(UpsampleBilinear2DCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
@@ -163,8 +154,6 @@ struct UpsampleLinear1DCaptureState : public AutoGradCaptureState {
 
 class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
-
   Maybe<void> Capture(UpsampleLinear1DCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
@@ -202,8 +191,6 @@ struct UpsampleNearest1DCaptureState : public AutoGradCaptureState {
 
 class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
-
   Maybe<void> Capture(UpsampleNearest1DCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
@@ -242,8 +229,6 @@ struct UpsampleBicubic2DCaptureState : public AutoGradCaptureState {
 
 class UpsampleBicubic2D : public OpExprGradFunction<UpsampleBicubic2DCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
-
   Maybe<void> Capture(UpsampleBicubic2DCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
@@ -284,8 +269,6 @@ struct UpsampleNearest3DCaptureState : public AutoGradCaptureState {
 
 class UpsampleNearest3D : public OpExprGradFunction<UpsampleNearest3DCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
-
   Maybe<void> Capture(UpsampleNearest3DCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
@@ -328,8 +311,6 @@ struct UpsampleTrilinear3DCaptureState : public AutoGradCaptureState {
 
 class UpsampleTrilinear3D : public OpExprGradFunction<UpsampleTrilinear3DCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
-
   Maybe<void> Capture(UpsampleTrilinear3DCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);

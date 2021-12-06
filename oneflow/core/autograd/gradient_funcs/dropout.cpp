@@ -26,16 +26,11 @@ struct DropoutCaptureState : public AutoGradCaptureState {
 
 class Dropout : public OpExprGradFunction<DropoutCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(DropoutCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const DropoutCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> Dropout::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> Dropout::Capture(DropoutCaptureState* state, const TensorTuple& inputs,
                              const TensorTuple& outputs, const OpInterpCtx* ctx) const {

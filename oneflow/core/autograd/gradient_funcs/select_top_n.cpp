@@ -30,8 +30,6 @@ struct SelectTopNCaptureState : public AutoGradCaptureState {
 
 class SelectTopN : public OpExprGradFunction<SelectTopNCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
-
   Maybe<void> Capture(SelectTopNCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     auto* interp_ctx = dynamic_cast<const SelectTopNOpInterpCtx*>(ctx);

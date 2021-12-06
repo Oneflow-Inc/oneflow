@@ -36,8 +36,6 @@ class BroadcastBinaryGrad : public OpExprGradFunction<BroadcastBinaryCaptureStat
   BroadcastBinaryGrad() = default;
   virtual ~BroadcastBinaryGrad() = default;
 
-  virtual Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
-
   Maybe<void> Capture(BroadcastBinaryCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
@@ -320,20 +318,12 @@ class BroadcastMinMax : public BroadcastBinaryGrad {
 
 class BroadcastMinimum : public BroadcastMinMax {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    JUST(BroadcastMinMax::Init(op));
-    elementwise_grad_functor_ = functional::ElementwiseMinGrad;
-    return Maybe<void>::Ok();
-  }
+  Maybe<void> BroadcastMinimum(): elementwise_grad_functor_{functional::ElementwiseMinGrad} {}
 };
 
 class BroadcastMaximum : public BroadcastMinMax {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    JUST(BroadcastMinMax::Init(op));
-    elementwise_grad_functor_ = functional::ElementwiseMaxGrad;
-    return Maybe<void>::Ok();
-  }
+  Maybe<void> BroadcastMaximum(): elementwise_grad_functor_{functional::ElementwiseMaxGrad} {}
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_minimum", BroadcastMinimum);

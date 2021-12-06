@@ -30,16 +30,11 @@ struct FusedScaleMaskSoftmaxInterState : public AutoGradCaptureState {
 
 class FusedScaleMaskSoftmax : public OpExprGradFunction<FusedScaleMaskSoftmaxInterState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(FusedScaleMaskSoftmaxInterState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const FusedScaleMaskSoftmaxInterState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> FusedScaleMaskSoftmax::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> FusedScaleMaskSoftmax::Capture(FusedScaleMaskSoftmaxInterState* state,
                                            const TensorTuple& inputs, const TensorTuple& outputs,

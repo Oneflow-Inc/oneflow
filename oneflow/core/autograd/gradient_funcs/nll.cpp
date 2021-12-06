@@ -25,15 +25,11 @@ struct NllCaptureState : public AutoGradCaptureState {
 
 class Nll : public OpExprGradFunction<NllCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(NllCaptureState* state, const TensorTuple& inputs, const TensorTuple& outputs,
                       const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const NllCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-Maybe<void> Nll::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 Maybe<void> Nll::Capture(NllCaptureState* state, const TensorTuple& inputs,
                          const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   auto* interp_ctx = dynamic_cast<const NllOpInterpCtx*>(ctx);

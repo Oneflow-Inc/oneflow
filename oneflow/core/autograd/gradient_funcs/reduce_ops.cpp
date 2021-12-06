@@ -29,16 +29,11 @@ struct ReduceSumCaptureState : public AutoGradCaptureState {
 
 class ReduceSum : public OpExprGradFunction<ReduceSumCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(ReduceSumCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const ReduceSumCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> ReduceSum::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> ReduceSum::Capture(ReduceSumCaptureState* state, const TensorTuple& inputs,
                                const TensorTuple& outputs, const OpInterpCtx* ctx) const {
@@ -66,16 +61,11 @@ struct ReduceProdOpInterpState : public AutoGradCaptureState {
 
 class ReduceProdOp : public OpExprGradFunction<ReduceProdOpInterpState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(ReduceProdOpInterpState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const ReduceProdOpInterpState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> ReduceProdOp::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> ReduceProdOp::Capture(ReduceProdOpInterpState* state, const TensorTuple& inputs,
                                   const TensorTuple& outputs, const OpInterpCtx* ctx) const {
@@ -113,16 +103,11 @@ struct ReduceMaxOrMinCaptureState : public AutoGradCaptureState {
 
 class ReduceMaxOrMin : public OpExprGradFunction<ReduceMaxOrMinCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(ReduceMaxOrMinCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const ReduceMaxOrMinCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> ReduceMaxOrMin::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> ReduceMaxOrMin::Capture(ReduceMaxOrMinCaptureState* state, const TensorTuple& inputs,
                                     const TensorTuple& outputs, const OpInterpCtx* ctx) const {

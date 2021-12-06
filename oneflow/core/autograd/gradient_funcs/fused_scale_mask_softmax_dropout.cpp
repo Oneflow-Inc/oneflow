@@ -32,16 +32,11 @@ struct FusedScaleMaskSoftmaxDropoutInterState : public AutoGradCaptureState {
 class FusedScaleMaskSoftmaxDropout
     : public OpExprGradFunction<FusedScaleMaskSoftmaxDropoutInterState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(FusedScaleMaskSoftmaxDropoutInterState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const FusedScaleMaskSoftmaxDropoutInterState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> FusedScaleMaskSoftmaxDropout::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> FusedScaleMaskSoftmaxDropout::Capture(FusedScaleMaskSoftmaxDropoutInterState* state,
                                                   const TensorTuple& inputs,

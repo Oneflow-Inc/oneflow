@@ -24,8 +24,6 @@ struct IdentityCaptureState : public AutoGradCaptureState {
 
 class Identity : public OpExprGradFunction<IdentityCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
-
   Maybe<void> Capture(IdentityCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);

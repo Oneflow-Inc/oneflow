@@ -31,16 +31,11 @@ struct CTCLossCaptureState : public AutoGradCaptureState {
 
 class CTCLoss : public OpExprGradFunction<CTCLossCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(CTCLossCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const CTCLossCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> CTCLoss::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> CTCLoss::Capture(CTCLossCaptureState* state, const TensorTuple& inputs,
                              const TensorTuple& outputs, const OpInterpCtx* ctx) const {

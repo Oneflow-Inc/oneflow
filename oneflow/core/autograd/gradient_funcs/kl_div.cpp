@@ -26,16 +26,12 @@ struct KLDivLossCaptureState : public AutoGradCaptureState {
 
 class KLDivLoss : public OpExprGradFunction<KLDivLossCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(KLDivLossCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const KLDivLossCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
-Maybe<void> KLDivLoss::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 Maybe<void> KLDivLoss::Capture(KLDivLossCaptureState* state, const TensorTuple& inputs,
                                const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   auto* interp_ctx = dynamic_cast<const KlDivLossOpInterpCtx*>(ctx);

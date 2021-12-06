@@ -26,16 +26,11 @@ struct TrilCaptureState : public AutoGradCaptureState {
 
 class Tril : public OpExprGradFunction<TrilCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(TrilCaptureState* state, const TensorTuple& inputs, const TensorTuple& outputs,
                       const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const TrilCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> Tril::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> Tril::Capture(TrilCaptureState* state, const TensorTuple& inputs,
                           const TensorTuple& outputs, const OpInterpCtx* ctx) const {

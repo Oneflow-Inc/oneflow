@@ -29,16 +29,11 @@ struct FusedBiasAddDropoutInterpState : public AutoGradCaptureState {
 
 class FusedBiasAddDropout : public OpExprGradFunction<FusedBiasAddDropoutInterpState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(FusedBiasAddDropoutInterpState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const FusedBiasAddDropoutInterpState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> FusedBiasAddDropout::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> FusedBiasAddDropout::Capture(FusedBiasAddDropoutInterpState* state,
                                          const TensorTuple& inputs, const TensorTuple& outputs,

@@ -27,16 +27,11 @@ struct DimGatherCaptureState : public AutoGradCaptureState {
 
 class DimGather : public OpExprGradFunction<DimGatherCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(DimGatherCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const DimGatherCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> DimGather::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> DimGather::Capture(DimGatherCaptureState* state, const TensorTuple& inputs,
                                const TensorTuple& outputs, const OpInterpCtx* ctx) const {

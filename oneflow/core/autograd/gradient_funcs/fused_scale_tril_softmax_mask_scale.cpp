@@ -32,16 +32,11 @@ struct FusedScaleTrilSoftmaxMaskScaleInterpState : public AutoGradCaptureState {
 class FusedScaleTrilSoftmaxMaskScale
     : public OpExprGradFunction<FusedScaleTrilSoftmaxMaskScaleInterpState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(FusedScaleTrilSoftmaxMaskScaleInterpState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const FusedScaleTrilSoftmaxMaskScaleInterpState* state,
                     const TensorTuple& out_grads, TensorTuple* in_grads) const override;
 };
-
-Maybe<void> FusedScaleTrilSoftmaxMaskScale::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> FusedScaleTrilSoftmaxMaskScale::Capture(FusedScaleTrilSoftmaxMaskScaleInterpState* state,
                                                     const TensorTuple& inputs,

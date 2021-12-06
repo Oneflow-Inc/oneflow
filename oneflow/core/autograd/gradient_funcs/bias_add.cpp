@@ -31,10 +31,6 @@ struct BiasAddCaptureState : public AutoGradCaptureState {
 
 class BiasAdd : public OpExprGradFunction<BiasAddCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> Capture(BiasAddCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);

@@ -32,14 +32,11 @@ struct WhereScalarCaptureState : public AutoGradCaptureState {
 
 class Where : public OpExprGradFunction<WhereCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(WhereCaptureState* state, const TensorTuple& inputs, const TensorTuple& outputs,
                       const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const WhereCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> Where::Init(const OpExpr& op) { return Maybe<void>::Ok(); }
 
 Maybe<void> Where::Capture(WhereCaptureState* state, const TensorTuple& inputs,
                            const TensorTuple& outputs, const OpInterpCtx* ctx) const {
@@ -76,7 +73,6 @@ Maybe<void> Where::Apply(const WhereCaptureState* state, const TensorTuple& out_
 
 class WhereScalar : public OpExprGradFunction<WhereScalarCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
   Maybe<void> Capture(WhereScalarCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     state->requires_grad = inputs.at(1)->requires_grad();

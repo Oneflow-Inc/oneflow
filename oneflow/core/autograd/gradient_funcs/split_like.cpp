@@ -29,16 +29,11 @@ struct SplitLikeCaptureState : public AutoGradCaptureState {
 
 class SplitLike : public OpExprGradFunction<SplitLikeCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(SplitLikeCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const SplitLikeCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> SplitLike::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> SplitLike::Capture(SplitLikeCaptureState* state, const TensorTuple& inputs,
                                const TensorTuple& outputs, const OpInterpCtx* ctx) const {

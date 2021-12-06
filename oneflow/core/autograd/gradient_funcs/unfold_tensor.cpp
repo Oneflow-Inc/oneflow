@@ -30,16 +30,11 @@ struct UnfoldTensorCaptureState : public AutoGradCaptureState {
 
 class UnfoldTensor : public OpExprGradFunction<UnfoldTensorCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(UnfoldTensorCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const UnfoldTensorCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> UnfoldTensor::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 Maybe<void> UnfoldTensor::Capture(UnfoldTensorCaptureState* state, const TensorTuple& inputs,
                                   const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();

@@ -27,16 +27,11 @@ struct BatchGatherCaptureState : public AutoGradCaptureState {
 
 class BatchGather : public OpExprGradFunction<BatchGatherCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(BatchGatherCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const BatchGatherCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> BatchGather::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> BatchGather::Capture(BatchGatherCaptureState* state, const TensorTuple& inputs,
                                  const TensorTuple& outputs, const OpInterpCtx* ctx) const {

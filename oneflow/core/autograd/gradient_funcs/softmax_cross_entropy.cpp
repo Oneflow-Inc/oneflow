@@ -25,16 +25,11 @@ struct SoftmaxCrossEntropyGradState : public AutoGradCaptureState {
 
 class SoftmaxCrossEntropy : public OpExprGradFunction<SoftmaxCrossEntropyGradState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(SoftmaxCrossEntropyGradState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const SoftmaxCrossEntropyGradState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> SoftmaxCrossEntropy::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> SoftmaxCrossEntropy::Capture(SoftmaxCrossEntropyGradState* state,
                                          const TensorTuple& inputs, const TensorTuple& outputs,

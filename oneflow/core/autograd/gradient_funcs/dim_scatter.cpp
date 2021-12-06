@@ -32,7 +32,6 @@ enum SCATTER_TYPE { SCATTER_UPDATE, SCATTER_ADD };
 template<SCATTER_TYPE T>
 class DimScatter : public OpExprGradFunction<DimScatterCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(DimScatterCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const DimScatterCaptureState* state, const TensorTuple& out_grads,
@@ -40,11 +39,6 @@ class DimScatter : public OpExprGradFunction<DimScatterCaptureState> {
   Maybe<void> ApplyCommon(const DimScatterCaptureState* state, const TensorTuple& out_grads,
                           TensorTuple* in_grads) const;
 };
-
-template<SCATTER_TYPE T>
-Maybe<void> DimScatter<T>::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 template<SCATTER_TYPE T>
 Maybe<void> DimScatter<T>::Capture(DimScatterCaptureState* state, const TensorTuple& inputs,
@@ -108,16 +102,11 @@ Maybe<void> DimScatter<SCATTER_TYPE::SCATTER_ADD>::Apply(const DimScatterCapture
 
 class DimScatterUpdateScalar : public OpExprGradFunction<DimScatterCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(DimScatterCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const DimScatterCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> DimScatterUpdateScalar::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> DimScatterUpdateScalar::Capture(DimScatterCaptureState* state, const TensorTuple& inputs,
                                             const TensorTuple& outputs,

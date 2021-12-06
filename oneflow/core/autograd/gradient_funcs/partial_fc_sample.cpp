@@ -28,16 +28,11 @@ struct PartialFCSampleState : public AutoGradCaptureState {
 
 class PartialFCSample : public OpExprGradFunction<PartialFCSampleState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(PartialFCSampleState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const PartialFCSampleState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> PartialFCSample::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> PartialFCSample::Capture(PartialFCSampleState* state, const TensorTuple& inputs,
                                      const TensorTuple& outputs, const OpInterpCtx* ctx) const {

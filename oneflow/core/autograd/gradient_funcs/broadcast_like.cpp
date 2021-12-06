@@ -29,16 +29,11 @@ struct BroadCastLikeCaptureState : public AutoGradCaptureState {
 
 class BroadCastLike : public OpExprGradFunction<BroadCastLikeCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(BroadCastLikeCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const BroadCastLikeCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> BroadCastLike::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> BroadCastLike::Capture(BroadCastLikeCaptureState* state, const TensorTuple& inputs,
                                    const TensorTuple& outputs, const OpInterpCtx* ctx) const {

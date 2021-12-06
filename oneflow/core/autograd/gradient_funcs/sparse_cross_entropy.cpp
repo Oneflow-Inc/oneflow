@@ -31,10 +31,6 @@ struct SparseCrossEntropyCaptureState : public AutoGradCaptureState {
 template<bool is_distributed>
 class SparseCrossEntropy : public OpExprGradFunction<SparseCrossEntropyCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> Capture(SparseCrossEntropyCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);

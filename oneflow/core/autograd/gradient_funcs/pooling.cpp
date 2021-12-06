@@ -46,9 +46,6 @@ class PoolingNdGrad : public OpExprGradFunction<PoolingCaptureState> {
  public:
   virtual ~PoolingNdGrad() = default;
 
-  using OpExprGradFunction<PoolingCaptureState>::Init;
-
-  Maybe<void> Init(const OpExpr& op, const std::string& mode);
   Maybe<void> Capture(PoolingCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const PoolingCaptureState* state, const TensorTuple& out_grads,
@@ -59,12 +56,7 @@ class PoolingNdGrad : public OpExprGradFunction<PoolingCaptureState> {
 };
 
 template<typename T>
-Maybe<void> PoolingNdGrad<T>::Init(const OpExpr& op, const std::string& mode) {
-  const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  this->mode_ = mode;
-  return Maybe<void>::Ok();
-}
+Maybe<void> PoolingNdGrad<T>(const std::string& mode): mode_{mode} {}
 
 template<typename T>
 Maybe<void> PoolingNdGrad<T>::Capture(PoolingCaptureState* state, const TensorTuple& inputs,
@@ -112,19 +104,19 @@ Maybe<void> PoolingNdGrad<T>::Apply(const PoolingCaptureState* state, const Tens
 class Maxpool1DGrad final : public PoolingNdGrad<Maxpool1DGrad> {
  public:
   using ContextT = MaxPool1DGradOpInterpCtx;
-  Maybe<void> Init(const OpExpr& op) override { return PoolingNdGrad::Init(op, "max"); }
+  Maybe<void> Maxpool1DGrad() { return PoolingNdGrad("max"); }
 };
 
 class Maxpool2DGrad final : public PoolingNdGrad<Maxpool2DGrad> {
  public:
   using ContextT = MaxPool2DGradOpInterpCtx;
-  Maybe<void> Init(const OpExpr& op) override { return PoolingNdGrad::Init(op, "max"); }
+  Maybe<void> Maxpool2DGrad() { return PoolingNdGrad("max"); }
 };
 
 class Maxpool3DGrad final : public PoolingNdGrad<Maxpool3DGrad> {
  public:
   using ContextT = MaxPool3DGradOpInterpCtx;
-  Maybe<void> Init(const OpExpr& op) override { return PoolingNdGrad::Init(op, "max"); }
+  Maybe<void> Maxpool3DGrad() { return PoolingNdGrad("max"); }
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("maxpool_1d", Maxpool1DGrad);

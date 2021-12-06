@@ -30,10 +30,6 @@ struct CastCaptureState : public AutoGradCaptureState {
 
 class Cast : public OpExprGradFunction<CastCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> Capture(CastCaptureState* state, const TensorTuple& inputs, const TensorTuple& outputs,
                       const OpInterpCtx* ctx) const override {
     state->dtype = inputs.at(0)->dtype();

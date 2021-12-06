@@ -41,10 +41,6 @@ struct NormalizationGradCaptureState : public AutoGradCaptureState {
 // momentum=0.9)
 class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> Capture(NormalizationGradCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     // input_size may be 3 or 5, as inputs may be

@@ -28,9 +28,6 @@ struct AdaptivePoolCaptureState : public AutoGradCaptureState {
 
 class AdaptivePoolNdGrad : public OpExprGradFunction<AdaptivePoolCaptureState> {
  public:
-  using OpExprGradFunction<AdaptivePoolCaptureState>::Init;
-
-  Maybe<void> Init(const OpExpr& op, std::string mode, const int& ndims);
   Maybe<void> Capture(AdaptivePoolCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const AdaptivePoolCaptureState* state, const TensorTuple& out_grads,
@@ -41,13 +38,7 @@ class AdaptivePoolNdGrad : public OpExprGradFunction<AdaptivePoolCaptureState> {
   int32_t ndims_;
 };
 
-Maybe<void> AdaptivePoolNdGrad::Init(const OpExpr& op, std::string mode, const int& ndims) {
-  const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  mode_ = mode;
-  ndims_ = ndims;
-  return Maybe<void>::Ok();
-}
+AdaptivePoolNdGrad(const std::string& mode, const int& ndims) : mode_(mode), ndims_(ndims) {}
 
 Maybe<void> AdaptivePoolNdGrad::Capture(AdaptivePoolCaptureState* state, const TensorTuple& inputs,
                                         const TensorTuple& outputs, const OpInterpCtx* ctx) const {
@@ -71,17 +62,17 @@ Maybe<void> AdaptivePoolNdGrad::Apply(const AdaptivePoolCaptureState* state,
 
 class AdaptiveAvgPool1dGrad final : public AdaptivePoolNdGrad {
  public:
-  Maybe<void> Init(const OpExpr& op) override { return AdaptivePoolNdGrad::Init(op, "avg", 1); }
+  Maybe<void> AdaptiveAvgPool1dGrad() { return AdaptivePoolNdGrad("avg", 1); }
 };
 
 class AdaptiveAvgPool2dGrad final : public AdaptivePoolNdGrad {
  public:
-  Maybe<void> Init(const OpExpr& op) override { return AdaptivePoolNdGrad::Init(op, "avg", 2); }
+  Maybe<void> AdaptiveAvgPool2dGrad() { return AdaptivePoolNdGrad("avg", 2); }
 };
 
 class AdaptiveAvgPool3dGrad final : public AdaptivePoolNdGrad {
  public:
-  Maybe<void> Init(const OpExpr& op) override { return AdaptivePoolNdGrad::Init(op, "avg", 3); }
+  Maybe<void> AdaptiveAvgPool3dGrad() { return AdaptivePoolNdGrad("avg", 3); }
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("adaptive_avg_pool1d", AdaptiveAvgPool1dGrad);

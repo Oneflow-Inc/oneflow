@@ -28,16 +28,11 @@ struct SqueezeCaptureState : public AutoGradCaptureState {
 
 class Squeeze : public OpExprGradFunction<SqueezeCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(SqueezeCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const SqueezeCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
-
-Maybe<void> Squeeze::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> Squeeze::Capture(SqueezeCaptureState* state, const TensorTuple& inputs,
                              const TensorTuple& outputs, const OpInterpCtx* ctx) const {

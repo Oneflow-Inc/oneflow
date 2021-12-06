@@ -42,17 +42,12 @@ template<typename T>
 class AvgPoolingNdGrad : public OpExprGradFunction<AvgPoolingCaptureState> {
  public:
   virtual ~AvgPoolingNdGrad() = default;
-  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(AvgPoolingCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
   Maybe<void> Apply(const AvgPoolingCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
 };
-
-Maybe<void> AvgPoolingNdGrad::Init(const OpExpr& op) {
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> AvgPoolingNdGrad::Capture(AvgPoolingCaptureState* state, const TensorTuple& inputs,
                                       const TensorTuple& outputs, const OpInterpCtx* ctx) const {
