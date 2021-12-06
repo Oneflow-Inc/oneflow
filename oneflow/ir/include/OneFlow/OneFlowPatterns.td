@@ -131,40 +131,6 @@ def FusedScaleTrilPattern2 : Pat<
   ]
 >;
 
-// def FusedBiasAddDropoutPattern : Pat<
-//   (
-//     OneFlow_DropoutOp
-//     (
-//       OneFlow_BiasAddOp
-//         $a,
-//         $b,
-//         $bias_add_op_name,
-//         $bias_add_device_tag,
-//         $bias_add_device_name,
-//         $bias_add_scope_symbol_id,
-//         $bias_add_hierarchy,
-//         $axis
-//     ),
-//     $_add_to_output,
-//     $dropout_op_name,
-//     $dropout_device_tag,
-//     $dropout_device_name,
-//     $dropout_scope_symbol_id,
-//     $dropout_hierarchy,
-//     $rate
-//   ),
-//   (OneFlow_FusedBiasAddMaskScaleOp $a, $b, $mask, (GetFirstValue $_add_to_output),
-//     $dropout_op_name,
-//     $dropout_device_tag,
-//     $dropout_device_name,
-//     $dropout_scope_symbol_id,
-//     $dropout_hierarchy,
-//     $axis,
-//     $scale
-//   ),
-//   []
-// >;
-
 def FusedBiasAddGeluPattern : Pat<
   (
     OneFlow_GeluOp : $gelu_op
