@@ -240,7 +240,7 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 - [GPT](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/LanguageModeling/GPT)
 - [ResNet-50](https://github.com/Oneflow-Inc/models/tree/main/Vision/classification/image/resnet50)
 - [Wide&Deep](https://github.com/Oneflow-Inc/models/tree/main/RecommenderSystems/wide_and_deep)
-- [BERT](https://github.com/Oneflow-Inc/models/tree/main/NLP/bert-oneflow)
+- [BERT](https://github.com/Oneflow-Inc/models/tree/main/NLP/BERT)
 
 ## Communication
 
