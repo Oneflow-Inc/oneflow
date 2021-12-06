@@ -252,18 +252,15 @@ std::shared_ptr<Tensor> JitImporter::MakeIntermediateTensor(
   auto shape_from_mlir = new Shape({tensor_type.getShape().begin(), tensor_type.getShape().end()});
   auto shape = std::make_shared<Shape>();
   shape.reset(shape_from_mlir);
-  auto tensor =
+  auto lazy_tensor =
       CHECK_JUST(MirroredTensor::MakeTensor(shape, dtype, device, /* is_lazy */ true,
                                             /* requires_grad= */ false, /* is_leaf= */ true));
-  // | ref | ref | tensor     |
-  // | py  | jit | lazy/eager |
   // tensor_ref holds an lazy or eager tensor
-  auto tensor_ref = std::make_shared<TensorRef>(tensor);
-  // tensor_ref_ref is for tracking the ref count of Python
-  auto tensor_ref_ref = std::make_shared<TensorRef>(tensor_ref);
+  auto tensor_ref = std::make_shared<TensorRef>(lazy_tensor);
   SaveIntermediate(result, tensor_ref);
+  TrackTensorAndValue(lazy_tensor.get(), result);
   TrackTensorAndValue(tensor_ref.get(), result);
-  return tensor_ref_ref;
+  return tensor_ref;
 }
 LogicalResult JitImporter::InsertOpResults(const ::oneflow::OperatorConf& op_conf,
                                            Operation* created_op) {
