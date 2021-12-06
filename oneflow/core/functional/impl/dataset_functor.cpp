@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
 namespace one {
@@ -91,7 +92,9 @@ class ReadOneRecFunctor {
   Maybe<Tensor> operator()(const std::vector<std::string>& files, const int32_t batch_size,
                            const bool random_shuffle, const std::string& shuffle_mode,
                            const int32_t shuffle_buffer_size, const bool shuffle_after_epoch,
-                           const bool verify_example) const {
+                           const bool verify_example,
+                           const Optional<Symbol<ParallelDesc>>& placement,
+                           const Optional<std::vector<Symbol<cfg::SbpParallel>>>& sbp) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<std::string>>("files", files));
     JUST(attrs.SetAttr<int32_t>("batch_size", batch_size));
@@ -101,7 +104,14 @@ class ReadOneRecFunctor {
     JUST(attrs.SetAttr<bool>("shuffle_after_epoch", shuffle_after_epoch));
     JUST(attrs.SetAttr<bool>("verify_example", verify_example));
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    if (placement.has_value()) {
+      CHECK_OR_RETURN(sbp.has_value());
+      const auto& nd_sbp = JUST(GetNdSbp(*JUST(sbp)));
+      return OpInterpUtil::Dispatch<Tensor>(
+          *op_, {}, one::OpExprInterpContext(attrs, JUST(placement), nd_sbp));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    }
   }
 
  private:
