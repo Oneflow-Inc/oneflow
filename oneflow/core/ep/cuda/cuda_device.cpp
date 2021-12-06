@@ -23,8 +23,10 @@ namespace oneflow {
 
 namespace ep {
 
-CudaDevice::CudaDevice(int device_index) : device_index_(device_index), event_flags_{} {
+CudaDevice::CudaDevice(int device_index)
+    : device_index_(device_index), event_flags_{}, properties_{} {
   CudaCurrentDeviceGuard guard(device_index_);
+  OF_CUDA_CHECK(cudaGetDeviceProperties(&properties_, device_index_));
   event_flags_ = cudaEventDisableTiming;
   if (ParseBooleanFromEnv("ONEFLOW_STREAM_CUDA_EVENT_FLAG_BLOCKING_SYNC", false)) {
     event_flags_ |= cudaEventBlockingSync;
@@ -98,6 +100,8 @@ void CudaDevice::FreePinned(const AllocationOptions& options, void* ptr) {
   CudaCurrentDeviceGuard guard(device_index_);
   OF_CUDA_CHECK(cudaFreeHost(ptr));
 }
+
+const cudaDeviceProp& CudaDevice::properties() const { return properties_; }
 
 }  // namespace ep
 
