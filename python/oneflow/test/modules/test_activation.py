@@ -24,7 +24,6 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-import pdb
 
 
 @flow.unittest.skip_unless_1n1d()
