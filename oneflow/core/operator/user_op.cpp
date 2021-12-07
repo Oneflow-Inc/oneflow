@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/sbp_context.h"
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/framework/infer_output_blob_time_shape_fn_context.h"
 #include "oneflow/core/framework/infer_nd_sbp_fn_context.h"
@@ -854,6 +855,22 @@ Maybe<void> UserOp::InferNdSbpSignature(
         sbp_list->Add()->mutable_broadcast_parallel();
       }
     }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> UserOp::GetNdSbpSignatureList(
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const {
+  if (val_->get_nd_sbp_list_fn) {
+    auto logical_blob_desc4bn = [&](const std::string& bn) -> const BlobDesc& {
+      return CHECK_JUST(LogicalBlobDesc4Ibn(bn));
+    };
+    cfg::NdSbpSignature empty_sbp_signature;
+    UserOpComputeComplexityFnContext user_op_compute_complexity_fn_context(
+        op_conf(), parallel_desc, &empty_sbp_signature, logical_blob_desc4bn);
+    return val_->get_nd_sbp_list_fn(&user_op_compute_complexity_fn_context, nd_sbp_sig_list);
+  } else {
   }
   return Maybe<void>::Ok();
 }

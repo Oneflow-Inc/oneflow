@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/operator/op_attribute.pb.h"
 
 namespace oneflow {
@@ -58,6 +59,9 @@ using OutputArgModifyFn =
 using OutputBlobTimeShapeInferFn = std::function<Maybe<void>(InferOutputBlobTimeShapeFnContext*)>;
 using NdSbpInferFn = std::function<Maybe<void>(InferNdSbpFnContext*)>;
 using ComputeComplexityFn = std::function<Maybe<double>(ComputeComplexityFnContext*)>;
+// TODO: set up another context
+using GetNdSbpSignatureListFn =
+    std::function<Maybe<void>(ComputeComplexityFnContext*, std::vector<cfg::NdSbpSignature>&)>;
 
 struct OpRegistryResult {
   OpRegistryResult()
@@ -84,6 +88,7 @@ struct OpRegistryResult {
   OutputBlobTimeShapeInferFn output_blob_time_shape_infer_fn;
   NdSbpInferFn nd_sbp_infer_fn;
   ComputeComplexityFn compute_complexity_fn;
+  GetNdSbpSignatureListFn get_nd_sbp_list_fn;
 };
 
 class OpRegistry final {
@@ -131,6 +136,7 @@ class OpRegistry final {
   OpRegistry& SetDataTypeInferFn(DataTypeInferFn fn);
   OpRegistry& SetDeviceInferFn(DeviceInferFn fn);
   OpRegistry& SetComputeComplexityFn(ComputeComplexityFn fn);
+  OpRegistry& SetGetNdSbpSignatureListFn(GetNdSbpSignatureListFn fn);
 
   Maybe<OpRegistry&> Finish();
   OpRegistryResult GetResult() { return result_; }
