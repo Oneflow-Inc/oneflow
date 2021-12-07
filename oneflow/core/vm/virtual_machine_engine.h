@@ -135,8 +135,8 @@ class VirtualMachineEngine final : public intrusive::Base {
   void ForEachNewInstruction(InstructionMsg* instr_msg, Stream* stream,
                              const std::shared_ptr<const ParallelDesc>& pd);
   template<void (VirtualMachineEngine::*DoEachInstruction)(Instruction*)>
-  void MakeInstructions(InstructionMsg*);
-  void RunInstructionsInAdvance(InstructionMsg* instr_msg);
+  void ForEachNewInstruction(InstructionMsg*);
+  void RunInstructionInAdvance(InstructionMsg* instr_msg);
   template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
   void ForEachMirroredObject(Id2LogicalObject* id2logical_object, const Operand& operand,
                              int64_t global_device_id, const DoEachT& DoEach);
@@ -184,7 +184,7 @@ class VirtualMachineEngine final : public intrusive::Base {
 
   // deprecated single-client functions
   template<void (VirtualMachineEngine::*DoEachInstruction)(Instruction*)>
-  void SingleClientMakeInstructions(InstructionMsg*);
+  void SingleClientForEachNewInstruction(InstructionMsg*);
   void SingleClientConsumeAndTryDispatch(Instruction* instruction);
   void SingleClientConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                                           Instruction* instruction);

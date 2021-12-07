@@ -83,7 +83,6 @@ void VirtualMachineEngine::ConsumeAndTryDispatch(Instruction* instruction) {
   if (likely(Dispatchable(instruction))) { DispatchInstruction(instruction); }
 }
 
-// Handle pending instructions, and try schedule them to ready list.
 void VirtualMachineEngine::HandlePending() {
   OF_PROFILER_RANGE_PUSH("HandlePending");
   InstructionMsgList tmp_pending_msg_list;
@@ -91,11 +90,11 @@ void VirtualMachineEngine::HandlePending() {
   mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(instr_msg, &tmp_pending_msg_list) {
     if (likely(instr_msg->phy_instr_operand())) {
-      MakeInstructions<&VirtualMachineEngine::ConsumeAndTryDispatch>(instr_msg);
+      ForEachNewInstruction<&VirtualMachineEngine::ConsumeAndTryDispatch>(instr_msg);
     } else if (instr_msg->instr_type_id().instruction_type().ResettingIdToObjectMap()) {
-      RunInstructionsInAdvance(instr_msg);
+      RunInstructionInAdvance(instr_msg);
     } else {
-      SingleClientMakeInstructions<&VirtualMachineEngine::SingleClientConsumeAndTryDispatch>(
+      SingleClientForEachNewInstruction<&VirtualMachineEngine::SingleClientConsumeAndTryDispatch>(
           instr_msg);
     }
   }
@@ -118,7 +117,7 @@ void VirtualMachineEngine::ReleaseFinishedInstructions() {
   }
 }
 
-void VirtualMachineEngine::RunInstructionsInAdvance(InstructionMsg* instr_msg) {
+void VirtualMachineEngine::RunInstructionInAdvance(InstructionMsg* instr_msg) {
   const auto& instr_type_id = instr_msg->instr_type_id();
   const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
   CHECK(stream_type.IsControlStreamType());
@@ -161,7 +160,7 @@ void VirtualMachineEngine::ForEachNewInstruction(InstructionMsg* instr_msg, Stre
 }
 
 template<void (VirtualMachineEngine::*DoEachInstruction)(Instruction*)>
-void VirtualMachineEngine::MakeInstructions(InstructionMsg* instr_msg) {
+void VirtualMachineEngine::ForEachNewInstruction(InstructionMsg* instr_msg) {
   ForEachNewInstruction<DoEachInstruction>(instr_msg, CHECK_NOTNULL(instr_msg->phy_instr_stream()),
                                            instr_msg->phy_instr_parallel_desc());
 }
@@ -635,7 +634,7 @@ void VirtualMachineEngine::SingleClientConsumeAndTryDispatch(Instruction* instru
 }
 
 template<void (VirtualMachineEngine::*DoEachInstruction)(Instruction*)>
-void VirtualMachineEngine::SingleClientMakeInstructions(InstructionMsg* instr_msg) {
+void VirtualMachineEngine::SingleClientForEachNewInstruction(InstructionMsg* instr_msg) {
   const auto& instruction_type = instr_msg->instr_type_id().instruction_type();
   const StreamTypeId& stream_type_id = instr_msg->instr_type_id().stream_type_id();
   auto* stream_rt_desc = mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);
