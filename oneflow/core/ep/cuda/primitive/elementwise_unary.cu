@@ -65,12 +65,17 @@ class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
     static const std::map<std::tuple<UnaryOp, DataType, DataType>,
                           std::function<std::unique_ptr<ElementwiseUnary>()>>
         new_elementwise_unary_handle{
+            // For All Type OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY,
                                              UNARY_MATH_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ)
-
-                OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY,
-                                                 UNARY_LOGICAL_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ,
-                                                 CUDA_PRIMITIVE_INT8_TYPE_SEQ)};
+            // For Float Type OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY,
+                                             UNARY_FLOATING_MATH_OP_SEQ,
+                                             CUDA_PRIMITIVE_FLOATING_TYPE_SEQ)
+            // For Logical OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY,
+                                             UNARY_LOGICAL_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ,
+                                             CUDA_PRIMITIVE_INT8_TYPE_SEQ)};
 
 #undef MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY
 

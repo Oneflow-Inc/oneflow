@@ -170,14 +170,16 @@ llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op) {
   return llvm::None;
 }
 
-LogicalResult StringifyDataType(::oneflow::DataType value, std::string& stringified) {
-  switch (value) {
+llvm::Optional<mlir::oneflow::DataTypeAttr> GetDataTypeAttr(MLIRContext* context,
+                                                            ::oneflow::DataType oneflow_value) {
+  // stringified = stringifyEnum(oneflow::DataType::DT_##datatype).str();
+  switch (oneflow_value) {
     case ::oneflow::DataType::kInvalidDataType:
-      stringified = stringifyEnum(oneflow::DataType::DT_InvalidDataType).str();
+      return oneflow::DataTypeAttr::get(context, mlir::oneflow::DataType::DT_InvalidDataType);
       break;
-#define DEFINE_ONE_ELIF(datatype)                                        \
-  case ::oneflow::DataType::k##datatype:                                 \
-    stringified = stringifyEnum(oneflow::DataType::DT_##datatype).str(); \
+#define DEFINE_ONE_ELIF(datatype)                                                       \
+  case ::oneflow::DataType::k##datatype:                                                \
+    return oneflow::DataTypeAttr::get(context, mlir::oneflow::DataType::DT_##datatype); \
     break;
       DEFINE_ONE_ELIF(Char)
       DEFINE_ONE_ELIF(Float)
@@ -189,10 +191,11 @@ LogicalResult StringifyDataType(::oneflow::DataType value, std::string& stringif
       DEFINE_ONE_ELIF(OFRecord)
       DEFINE_ONE_ELIF(Float16)
       DEFINE_ONE_ELIF(TensorBuffer)
+      DEFINE_ONE_ELIF(BFloat16)
+      DEFINE_ONE_ELIF(Bool)
 #undef DEFINE_ONE_ELIF
-    default: return failure();
+    default: return llvm::None;
   }
-  return success();
 }
 
 DenseIntElementsAttr Importer::DenseIntElementsAttrFromShape(const ::oneflow::ShapeProto& shape) {
@@ -261,26 +264,24 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
       attr_vec.emplace_back(kv);
     }
     else if (value.has_at_data_type()) {
-      std::string stringified = "";
-      if (failed(StringifyDataType(value.at_data_type(), stringified))) {
+      if (auto dt_attr = GetDataTypeAttr(GetMLIRContext(), value.at_data_type())) {
+        std::pair<mlir::Identifier, mlir::Attribute> kv =
+            GetBuilder().getNamedAttr(name, dt_attr.getValue());
+        attr_vec.emplace_back(kv);
+      } else {
         GetModule().emitError("fail to convert op attr, key: " + name);
         return failure();
       }
-      std::pair<mlir::Identifier, mlir::Attribute> kv =
-          GetBuilder().getNamedAttr(name, GetBuilder().getStringAttr(stringified));
-      attr_vec.emplace_back(kv);
     }
     else if (value.has_at_list_data_type()) {
-      auto stringified_list = llvm::map_range(value.at_list_data_type().val(), [&](int32_t t) {
-        std::string stringified = "";
-        assert(succeeded(StringifyDataType(static_cast<::oneflow::DataType>(t), stringified)));
-        return stringified;
-      });
-      std::vector<std::string> stringified_vector = {stringified_list.begin(),
-                                                     stringified_list.end()};
+      auto dt_attr_list =
+          llvm::map_range(value.at_list_data_type().val(), [&](auto t) -> mlir::Attribute {
+            auto dt = GetDataTypeAttr(GetMLIRContext(), static_cast<DataType>(t));
+            CHECK(dt) << "fail to convert op attr, key: " + name;
+            return dt.getValue();
+          });
       attr_vec.emplace_back(GetBuilder().getNamedAttr(
-          name, GetBuilder().getStrArrayAttr(std::vector<StringRef>(
-                    {stringified_vector.begin(), stringified_vector.end()}))));
+          name, GetBuilder().getArrayAttr(llvm::to_vector<8>(dt_attr_list))));
     }
     else if (value.has_at_list_shape()) {
       auto dense_attr_list = llvm::map_range(
@@ -627,9 +628,8 @@ LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_o
 }
 
 LogicalResult ConvertDT(Attribute attr, ::oneflow::DataType& data_type) {
-  Optional<mlir::oneflow::DataType> dt =
-      oneflow::symbolizeEnum<oneflow::DataType>(attr.dyn_cast<StringAttr>().getValue().trim());
-  assert(dt.hasValue());
+  auto dt = attr.dyn_cast<mlir::oneflow::DataTypeAttr>();
+  if (!dt) { return failure(); }
   switch (dt.getValue()) {
     case oneflow::DataType::DT_InvalidDataType:
       data_type = ::oneflow::DataType::kInvalidDataType;
