@@ -80,7 +80,7 @@ class TestMLIROptimizations(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(loss, x * scale))
 
 
-# CHECK: %0 = oneflow.mlir_jit
+# CHECK: %0 = oneflow_foundation.mlir_jit
 
 if __name__ == "__main__":
     unittest.main()
