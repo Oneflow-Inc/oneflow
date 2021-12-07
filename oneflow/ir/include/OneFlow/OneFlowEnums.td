@@ -14,6 +14,9 @@ def OneFlow_UInt8 : I32EnumAttrCase<"DT_UInt8", 7>;
 def OneFlow_OFRecord : I32EnumAttrCase<"DT_OFRecord", 8>;
 def OneFlow_Float16 : I32EnumAttrCase<"DT_Float16", 9>;
 def OneFlow_TensorBuffer: I32EnumAttrCase<"DT_TensorBuffer", 10>;
+def OneFlow_BFloat16: I32EnumAttrCase<"DT_BFloat1", 11>;
+def OneFlow_Bool: I32EnumAttrCase<"DT_Bool", 12>;
+def OneFlow_MaxDataType: I32EnumAttrCase<"DT_MaxDataType", 13>;
 
 def OneFlow_DataType: I32EnumAttr<"DataType", "OneFlow Data Type enum",
   [
@@ -28,6 +31,9 @@ def OneFlow_DataType: I32EnumAttr<"DataType", "OneFlow Data Type enum",
     OneFlow_OFRecord,
     OneFlow_Float16,
     OneFlow_TensorBuffer,
+    OneFlow_BFloat16,
+    OneFlow_Bool,
+    OneFlow_MaxDataType
   ]
 > {
   let cppNamespace = "::mlir::oneflow";
