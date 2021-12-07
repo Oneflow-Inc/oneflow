@@ -31,7 +31,7 @@ limitations under the License.
 #include <string>
 #include <vector>
 
-#include "external/inja.hpp"
+#include "inja.hpp"
 
 #define DEBUG_TYPE "op-schema-emitter"
 
