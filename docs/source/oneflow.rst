@@ -34,7 +34,7 @@ oneflow
             atan_, 
             atan2, 
             atanh, 
-            atanh, 
+            atanh_, 
             bernoulli,
             broadcast_like, 
             batch_gather,
@@ -116,14 +116,12 @@ oneflow
             randint,
             randperm,
             reciprocal,
-<<<<<<< HEAD
             reciprocal_,
             round, 
             round_, 
-=======
             roll,
-            round, 
->>>>>>> 203ef5ec9be4d74a4db422f3f4ebc2fb92373fa1
+            rsqrt,
+            rsqrt_,
             save, 
             scatter,
             scatter_add,
@@ -144,6 +142,7 @@ oneflow
             softplus, 
             softplus_, 
             sigmoid, 
+            sigmoid_, 
             softmax, 
             squeeze, 
             split, 
