@@ -228,9 +228,9 @@ void SbpCollector::ProxySbpCandidate(
 
   // A set of binary set with broadcast only
   std::unordered_set<BinarySet, BinarySetHasher> ParallelCandidatesInitializer;
-  BinarySet one_broadcast(SbpParallelUniverse.size());
-  one_broadcast.AddEntry(0);
-  ParallelCandidatesInitializer.insert(std::move(one_broadcast));
+  // BinarySet one_broadcast(SbpParallelUniverse.size());
+  // one_broadcast.AddEntry(0);
+  // ParallelCandidatesInitializer.insert(std::move(one_broadcast));
 
   // Decide if we should insert a proxy for each logical blob
   for (auto& lbi7groups : producer_lbi2consumer_bn2sbp_set) {
