@@ -42,7 +42,7 @@ class InputKernel final : public Kernel {
       BufferStatus buffer_status = buffer->TryReceive(&job_instance);
       CHECK_NE(buffer_status, kBufferStatusEmpty);
       if (buffer_status == kBufferStatusSuccess) {
-        OfBlob ofblob(ctx->device_ctx(), ctx->BnInOp2Blob("out"));
+        OfBlob ofblob(ctx->stream(), ctx->BnInOp2Blob("out"));
         job_instance->PushBlobByOpName(reinterpret_cast<uint64_t>(&ofblob), op_name);
       }
     }
