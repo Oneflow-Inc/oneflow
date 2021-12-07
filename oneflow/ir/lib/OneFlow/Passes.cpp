@@ -108,38 +108,17 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
   oneflow::UserOpAdaptor op_to_replace_adaptor(op_to_replace->getOperands(),
                                                op_to_replace->getAttrDictionary());
   NamedAttrList attributes;
-  attributes.set("op_type_name", rewriter.getStringAttr("mlir_jit"));
-  attributes.set("device_tag", op_to_replace_adaptor.device_tag());
-  attributes.set("device_name", op_to_replace_adaptor.device_name());
-  attributes.set("hierarchy", op_to_replace_adaptor.hierarchy());
-  using LBNVec = SmallVector<StringRef, 8>;
-  using LBNSegVec = SmallVector<int32_t, 8>;
-
-  LBNVec input_lbn_segment_keys;
-  LBNSegVec input_lbn_segment_sizes;
-  input_lbn_segment_keys.push_back("in");
-  input_lbn_segment_sizes.push_back(input_size);
-
-  attributes.set("input_lbn_segment_keys", rewriter.getStrArrayAttr(input_lbn_segment_keys));
-  attributes.set("input_lbn_segment_sizes", rewriter.getI32ArrayAttr(input_lbn_segment_sizes));
-
-  attributes.set("op_name", rewriter.getStringAttr(op_name));
-
-  LBNVec output_lbns;
-  LBNVec output_lbn_segment_keys;
-  LBNSegVec output_lbn_segment_sizes;
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
+                 op_to_replace_adaptor.device_tag());
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
+                 op_to_replace_adaptor.device_name());
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(),
+                 op_to_replace_adaptor.hierarchy());
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
+                 rewriter.getStringAttr(op_name));
   // TODO: use functions in oneflow to genearated bn
-  SmallString<64> output_lbn_storage;
-  for (size_t i = 0; i < output_size; i++) {
-    output_lbns.push_back(
-        (op_name + "/" + "out_" + std::to_string(i)).toStringRef(output_lbn_storage));
-    output_lbn_segment_keys.push_back("out");
-    output_lbn_segment_sizes.push_back(output_size);
-  }
-  attributes.set("output_lbns", rewriter.getStrArrayAttr(output_lbns));
-  attributes.set("output_lbn_segment_keys", rewriter.getStrArrayAttr(output_lbn_segment_keys));
-  attributes.set("output_lbn_segment_sizes", rewriter.getI32ArrayAttr(output_lbn_segment_sizes));
-  attributes.set("scope_symbol_id", op_to_replace_adaptor.scope_symbol_id());
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
+                 op_to_replace_adaptor.scope_symbol_id());
   return attributes;
 }
 
@@ -153,7 +132,7 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
       auto op_name =
           (cast_op.op_name() + "__FUSE__" + mul_op.op_name()).toStringRef(op_name_storage);
       SmallVector<::mlir::Value, 2> operands;
-      operands.push_back(cast_op.x());
+      operands.push_back(cast_op.in());
       operands.push_back(mul_op.scalar());
       SmallVector<::mlir::Value, 1> results;
       results.push_back(mul_op.y());
@@ -235,7 +214,6 @@ void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
 
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedBiasAddGeluPattern>(patterns.getContext());
-  patterns.add<FusedBiasAddDropoutPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern2>(patterns.getContext());
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());

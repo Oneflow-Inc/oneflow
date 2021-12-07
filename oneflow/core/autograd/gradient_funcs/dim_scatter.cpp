@@ -77,7 +77,7 @@ Maybe<void> DimScatter<T>::ApplyCommon(const DimScatterCaptureState* ctx,
   in_grads->resize(3);
 
   if (ctx->src_requires_grad) {
-    in_grads->at(2) = JUST(functional::DimGather(out_grads.at(0), index, ctx->dim));
+    in_grads->at(2) = JUST(functional::DimGather(out_grads.at(0), ctx->dim, index, false));
   }
   return Maybe<void>::Ok();
 }
