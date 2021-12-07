@@ -1,7 +1,8 @@
 set -ex
-export PATH=/usr/lib64/ccache:$PATH
-export CC=/usr/lib/llvm-13/bin/clang
-export CXX=/usr/lib/llvm-13/bin/clang++
+export ONEFLOW_CI_LLVM_DIR=/usr/lib/llvm-13
+export PATH=$ONEFLOW_CI_LLVM_DIR/bin:/usr/lib64/ccache:$PATH
+export CC=$ONEFLOW_CI_LLVM_DIR/bin/clang
+export CXX=$ONEFLOW_CI_LLVM_DIR/bin/clang++
 
 # clean python dir
 cd ${ONEFLOW_CI_SRC_DIR}
