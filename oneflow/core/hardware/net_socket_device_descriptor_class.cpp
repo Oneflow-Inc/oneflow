@@ -16,9 +16,9 @@ limitations under the License.
 
 #ifdef __linux__
 
-#include "oneflow/core/device/device_descriptor_class.h"
-#include "oneflow/core/device/net_socket_device_descriptor.h"
-#include "oneflow/core/device/basic_device_descriptor_list.h"
+#include "oneflow/core/hardware/device_descriptor_class.h"
+#include "oneflow/core/hardware/net_socket_device_descriptor.h"
+#include "oneflow/core/hardware/basic_device_descriptor_list.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/common/str_util.h"
@@ -30,7 +30,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace device {
+namespace hardware {
 
 namespace {
 
@@ -45,11 +45,11 @@ class NetSocketDeviceDescriptorClass : public DeviceDescriptorClass {
 
   std::shared_ptr<const DeviceDescriptorList> QueryDeviceDescriptorList() const override {
     std::vector<std::shared_ptr<const NetSocketDeviceDescriptor>> devices;
-    ifaddrs* interfaces;
+    ifaddrs* interfaces = nullptr;
     if (getifaddrs(&interfaces) != 0) {
       return std::make_shared<const BasicDeviceDescriptorList>();
     }
-    ifaddrs* ifa;
+    ifaddrs* ifa = nullptr;
     for (ifa = interfaces; ifa != nullptr; ifa = ifa->ifa_next) {
       if (ifa->ifa_addr == nullptr) { continue; }
       const std::string name(ifa->ifa_name);
@@ -124,7 +124,7 @@ class NetSocketDeviceDescriptorClass : public DeviceDescriptorClass {
 
 COMMAND(DeviceDescriptorClass::RegisterClass(std::make_shared<NetSocketDeviceDescriptorClass>()));
 
-}  // namespace device
+}  // namespace hardware
 
 }  // namespace oneflow
 

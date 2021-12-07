@@ -1,7 +1,7 @@
-include "mlir/IR/OpBase.td"
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWENUMS_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWENUMS_H_
 
-#ifndef ONEFLOW_ENUMS
-#define ONEFLOW_ENUMS
+include "mlir/IR/OpBase.td"
 
 def OneFlow_InvalidDataType : I32EnumAttrCase<"DT_InvalidDataType", 0>;
 def OneFlow_Char : I32EnumAttrCase<"DT_Char", 1>;
@@ -35,4 +35,4 @@ def OneFlow_DataType: I32EnumAttr<"DataType", "OneFlow Data Type enum",
   let symbolToStringFnName = "ConvertToString";
 }
 
-#endif // ONEFLOW_ENUMS
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWENUMS_H_
