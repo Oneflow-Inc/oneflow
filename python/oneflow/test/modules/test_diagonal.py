@@ -25,8 +25,8 @@ class TestDiagonal(flow.unittest.TestCase):
     def test_flow_diagonal_with_random_data(test_case):
         device = random_device()
         offset = random(-2, 2).to(int)
-        dim1 = random(0,1).to(int)
-        dim2 = random(2,3).to(int)
+        dim1 = random(-4,4).to(int)
+        dim2 = random(-4,4).to(int)
         x = random_pytorch_tensor(
             ndim=4,
             dim1=random(4, 6),

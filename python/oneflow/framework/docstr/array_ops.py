@@ -41,18 +41,6 @@ add_docstr(
         >>> output = flow.diagonal(input,offset=1,dim1=1,dim2=0)
         >>> output.shape
         oneflow.Size([4, 1])
-
-        >>> arr = np.array(
-        ...     [
-        ...        [1.0, 2.0, 3.0],
-        ...        [4.0, 5.0, 6.0],
-        ...        [7.0, 8.0, 9.0],
-        ...     ]
-        ... )
-        >>> input = flow.Tensor(arr)
-        >>> flow.diagonal(input,offset=1,dim1=1,dim2=0)
-        tensor([4., 8.], dtype=oneflow.float32)
-
     """,
 )
 

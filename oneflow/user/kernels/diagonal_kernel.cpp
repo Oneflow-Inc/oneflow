@@ -24,7 +24,7 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-struct CPU_DiagonalFunctor final {
+struct DiagonalFunctor final {
   void operator()(DeviceCtx* ctx, T* out_buf, const T* in_buf, int32_t size, int32_t dim1,
                   int32_t dim2) {
     int32_t tmp_index = (dim1 + 1) * dim2;
@@ -37,7 +37,7 @@ struct CPU_DiagonalFunctor final {
 };
 
 template<typename T>
-struct CPU_DiagonalGradFunctor final {
+struct DiagonalGradFunctor final {
   void operator()(DeviceCtx* ctx, T* dx_buf, const T* dy_buf, int32_t size, int32_t dim1,
                   int32_t dim2) {
     int32_t tmp_index = (dim1 + 1) * dim2;
@@ -78,7 +78,7 @@ class DiagonalKernel final : public user_op::OpKernel {
     }
     int32_t offset_in_bufer = (offset >= 0 ? offset * dim2 : -offset * dim1 * dim2);
     in_buf += offset_in_bufer;
-    CPU_DiagonalFunctor<T>()(ctx->device_ctx(), out_buf, in_buf, size, dim1, dim2);
+    DiagonalFunctor<T>()(ctx->device_ctx(), out_buf, in_buf, size, dim1, dim2);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -112,7 +112,7 @@ class DiagonalBackwardKernel final : public user_op::OpKernel {
     int32_t offset_in_bufer = (offset >= 0 ? offset * dim2 : -offset * dim1 * dim2);
     dx_buf += offset_in_bufer;
 
-    CPU_DiagonalGradFunctor<T>()(ctx->device_ctx(), dx_buf, dy_buf, size, dim1, dim2);
+    DiagonalGradFunctor<T>()(ctx->device_ctx(), dx_buf, dy_buf, size, dim1, dim2);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
