@@ -182,7 +182,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@only-run-speed-test-on-oneflow-machine
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@canary-release
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -228,7 +228,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@only-run-speed-test-on-oneflow-machine
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@canary-release
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -242,7 +242,7 @@ jobs:
         run: |
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
-      - uses: Oneflow-Inc/get-oneflow@only-run-speed-test-on-oneflow-machine
+      - uses: Oneflow-Inc/get-oneflow@canary-release
         name: Build manylinux cpu only
         id: build-cpu
         if: ${{ matrix.entry =='cpu' && !matrix.cache-hit }}
@@ -263,7 +263,7 @@ jobs:
           python-versions: |
             3.6
             3.7
-      - uses: Oneflow-Inc/get-oneflow@only-run-speed-test-on-oneflow-machine
+      - uses: Oneflow-Inc/get-oneflow@canary-release
         name: Build manylinux cu102
         id: build-cuda
         if: ${{ matrix.entry =='cu102' && !matrix.cache-hit }}
@@ -284,7 +284,7 @@ jobs:
           python-versions: |
             3.6
             3.7
-      - uses: Oneflow-Inc/get-oneflow@only-run-speed-test-on-oneflow-machine
+      - uses: Oneflow-Inc/get-oneflow@canary-release
         name: Build manylinux cu101_xla
         id: build-xla
         if: ${{ matrix.entry =='cu101_xla' && !matrix.cache-hit && needs.changed_files.outputs.should_run_single_client_tests == '1' }}
@@ -306,7 +306,7 @@ jobs:
             3.6
       - name: Upload bin
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@only-run-speed-test-on-oneflow-machine
+        uses: Oneflow-Inc/get-oneflow/digest/upload@canary-release
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -317,7 +317,7 @@ jobs:
           dst-dir: bin
       - name: Upload whl
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@only-run-speed-test-on-oneflow-machine
+        uses: Oneflow-Inc/get-oneflow/digest/upload@canary-release
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -338,7 +338,7 @@ jobs:
           docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@only-run-speed-test-on-oneflow-machine
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@canary-release
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -354,7 +354,7 @@ jobs:
           repository: Oneflow-Inc/conda-env
           ref: 30a7f00eb48ee9009d85a848e720823e5054c66b
           path: conda-env
-      - uses: Oneflow-Inc/get-oneflow@only-run-speed-test-on-oneflow-machine
+      - uses: Oneflow-Inc/get-oneflow@canary-release
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         name: Build with clang10
         with:
@@ -382,7 +382,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@only-run-speed-test-on-oneflow-machine
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@canary-release
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -424,7 +424,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@only-run-speed-test-on-oneflow-machine
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@canary-release
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -440,7 +440,7 @@ jobs:
           exit 1
       - name: Download wheel and binary
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (!fromJson(matrix.is-xla) || (fromJson(matrix.is-xla) && needs.changed_files.outputs.should_run_single_client_tests == '1')) }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@only-run-speed-test-on-oneflow-machine
+        uses: Oneflow-Inc/get-oneflow/digest/download@canary-release
         id: download-digest
         timeout-minutes: 10
         with:
@@ -743,7 +743,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@only-run-speed-test-on-oneflow-machine
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@canary-release
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
