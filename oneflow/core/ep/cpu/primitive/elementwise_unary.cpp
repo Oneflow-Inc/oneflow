@@ -32,8 +32,7 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
   ElementwiseUnaryImpl() = default;
   ~ElementwiseUnaryImpl() override = default;
 
-  void Launch(Stream* stream, const void* src_ptr, void* dst_ptr, size_t count, float alpha,
-              float beta) override {
+  void Launch(Stream* stream, const void* src_ptr, void* dst_ptr, size_t count) override {
     Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
     const Src* src = reinterpret_cast<const Src*>(src_ptr);
     for (size_t i = 0; i < count; ++i) {
@@ -47,11 +46,10 @@ class ElementwiseUnaryneDnnImpl : public ElementwiseUnary {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ElementwiseUnaryneDnnImpl);
   ElementwiseUnaryneDnnImpl(dnnl::algorithm algorithm, dnnl::memory::data_type type)
-      : type_onednn_(type), algorithm_(algorithm){};
+      : type_onednn_(type), algorithm_(algorithm) {};
   ~ElementwiseUnaryneDnnImpl() override = default;
 
-  void Launch(Stream* stream, const void* src_ptr, void* dst_ptr, size_t count, float alpha,
-              float beta) override {
+  void Launch(Stream* stream, const void* src_ptr, void* dst_ptr, size_t count) override {
     dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
     dnnl::stream* onednn_stream = stream->As<CpuStream>()->onednn_stream();
 
@@ -64,7 +62,7 @@ class ElementwiseUnaryneDnnImpl : public ElementwiseUnary {
     auto dst_mem = dnnl::memory(dst_md, *onednn_engine, dst_ptr);
 
     auto eltwise_d = dnnl::eltwise_forward::desc(dnnl::prop_kind::forward_inference, algorithm_,
-                                                 src_md, alpha, beta);
+                                                 src_md, 1.0, 0.0);
     auto eltwise_pd = dnnl::eltwise_forward::primitive_desc(eltwise_d, *onednn_engine);
     auto eltwise_prim = dnnl::eltwise_forward(eltwise_pd);
 
@@ -94,12 +92,6 @@ class ElementwiseUnaryneDnnImpl : public ElementwiseUnary {
   CPU_PRIMITIVE_INT64_TYPE_SEQ
 
 #define ELTWISE_ONEDNN_ABS_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAbs, dnnl::algorithm::eltwise_abs)
-#define ELTWISE_ONEDNN_BOUNDED_RELU_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kBoundedRelu, dnnl::algorithm::eltwise_bounded_relu)
-#define ELTWISE_ONEDNN_CLIP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kClip, dnnl::algorithm::eltwise_clip)
-#define ELTWISE_ONEDNN_CLIPV2_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kClipV2, dnnl::algorithm::eltwise_clip_v2)
-#define ELTWISE_ONEDNN_ELU_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kElu, dnnl::algorithm::eltwise_elu)
 #define ELTWISE_ONEDNN_EXP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kExp, dnnl::algorithm::eltwise_exp)
 #define ELTWISE_ONEDNN_GELU_ERF_SEQ \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kGeluErf, dnnl::algorithm::eltwise_gelu_erf)
@@ -107,15 +99,12 @@ class ElementwiseUnaryneDnnImpl : public ElementwiseUnary {
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kGeluTanh, dnnl::algorithm::eltwise_gelu_tanh)
 #define ELTWISE_ONEDNN_HARDSWISH_SEQ \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kHardSwish, dnnl::algorithm::eltwise_hardswish)
-#define ELTWISE_ONEDNN_LINEAR_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLinear, dnnl::algorithm::eltwise_linear)
 #define ELTWISE_ONEDNN_LOG_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLog, dnnl::algorithm::eltwise_log)
 #define ELTWISE_ONEDNN_LOGISTIC_SEQ \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLogistic, dnnl::algorithm::eltwise_logistic)
 #define ELTWISE_ONEDNN_LOGSIGMOD_SEQ \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLogsigmoid, dnnl::algorithm::eltwise_logsigmoid)
 #define ELTWISE_ONEDNN_MISH_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kMish, dnnl::algorithm::eltwise_mish)
-#define ELTWISE_ONEDNN_POW_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kPow, dnnl::algorithm::eltwise_pow)
 #define ELTWISE_ONEDNN_RELU_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRelu, dnnl::algorithm::eltwise_relu)
 #define ELTWISE_ONEDNN_ROUND_SEQ \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRound, dnnl::algorithm::eltwise_round)
@@ -124,32 +113,23 @@ class ElementwiseUnaryneDnnImpl : public ElementwiseUnary {
 #define ELTWISE_ONEDNN_SQRT_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSqrt, dnnl::algorithm::eltwise_sqrt)
 #define ELTWISE_ONEDNN_SQUARE_SEQ \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSquare, dnnl::algorithm::eltwise_square)
-#define ELTWISE_ONEDNN_SWISH_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSwish, dnnl::algorithm::eltwise_swish)
 #define ELTWISE_ONEDNN_TANH_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kTanh, dnnl::algorithm::eltwise_tanh)
 
 #define ELTWISE_ONEDNN_SEQ        \
   ELTWISE_ONEDNN_ABS_SEQ          \
-  ELTWISE_ONEDNN_BOUNDED_RELU_SEQ \
-  ELTWISE_ONEDNN_CLIP_SEQ         \
-  ELTWISE_ONEDNN_CLIPV2_SEQ       \
-  ELTWISE_ONEDNN_ELU_SEQ          \
   ELTWISE_ONEDNN_EXP_SEQ          \
   ELTWISE_ONEDNN_GELU_ERF_SEQ     \
   ELTWISE_ONEDNN_GELU_TANH_SEQ    \
   ELTWISE_ONEDNN_HARDSWISH_SEQ    \
-  ELTWISE_ONEDNN_LINEAR_SEQ       \
   ELTWISE_ONEDNN_LOG_SEQ          \
   ELTWISE_ONEDNN_LOGISTIC_SEQ     \
   ELTWISE_ONEDNN_LOGSIGMOD_SEQ    \
   ELTWISE_ONEDNN_MISH_SEQ         \
-  ELTWISE_ONEDNN_POW_SEQ          \
   ELTWISE_ONEDNN_RELU_SEQ         \
   ELTWISE_ONEDNN_ROUND_SEQ        \
   ELTWISE_ONEDNN_SOFT_RELU_SEQ    \
   ELTWISE_ONEDNN_SQRT_SEQ         \
   ELTWISE_ONEDNN_SQUARE_SEQ       \
-  ELTWISE_ONEDNN_SWISH_SEQ        \
   ELTWISE_ONEDNN_TANH_SEQ
 
 template<dnnl::algorithm algorithm, dnnl::memory::data_type type_onednn>

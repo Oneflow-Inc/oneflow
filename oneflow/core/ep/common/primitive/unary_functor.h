@@ -27,6 +27,45 @@ namespace primitive {
 template<DeviceType device, UnaryOp unary_op, typename Dst, typename Src>
 struct UnaryFunctor;
 
+  // kExp,
+  // kGeluErf,
+  // kGeluTanh,
+  // kHardSwish,
+  // kLog,
+  // kLogicalNot,
+  // kLogistic,
+  // kLogsigmoid,
+  // kRelu,
+  // kRound,
+  // kSoftRelu,
+  // kSqrt,
+  // kSquare,
+  // kTanh,
+
+template<DeviceType device, typename Dst, typename Src>
+struct UnaryFunctor<device, UnaryOp::kAbs, Dst, Src> {
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    const Src zero_val = static_cast<Src>(0.0);
+    if (src == zero_val) {
+      return static_cast<Dst>(src);
+    } else {
+      return static_cast<Dst>(src < zero_val ? -src: src);
+    }
+  }
+};
+
+template<DeviceType device, typename Dst, typename Src>
+struct UnaryFunctor<device, UnaryOp::kExp, Dst, Src> {
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    const Src zero_val = static_cast<Src>(0.0);
+    if (src == zero_val) {
+      return static_cast<Dst>(src);
+    } else {
+      return static_cast<Dst>(src < zero_val ? -src: src);
+    }
+  }
+};
+
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kRelu, Dst, Src> {
   OF_DEVICE_FUNC Dst operator()(Src src) const {
