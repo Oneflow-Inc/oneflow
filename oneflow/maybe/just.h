@@ -123,63 +123,63 @@ auto JustGetValue(T&& v)
 
 // macros begin
 
+#define JUST_STACK_CHECK_I(...) __VA_ARGS__
+
+#define JUST_TO_STR_I(...) #__VA_ARGS__
+
 #if defined(__GNUC__) || defined(__CUDACC__) || defined(__clang__)
-
-#define JUST_STACK_CHECK(...) __VA_ARGS__
-
-#define JUST_TO_STR(...) #__VA_ARGS__
 
 #define JUST(...)                                                                       \
   ::oneflow::maybe::details::JustGetValue(::oneflow::maybe::details::RemoveRValConst(({ \
-    auto&& _just_value_to_check_ = JUST_STACK_CHECK(__VA_ARGS__);                       \
+    auto&& _just_value_to_check_ = JUST_STACK_CHECK_I(__VA_ARGS__);                     \
     if (!_just_value_to_check_) {                                                       \
       return ::oneflow::maybe::details::JustPushStackAndReturn(                         \
           ::oneflow::maybe::details::JustPrivateScope::StackedError(                    \
               std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_)),    \
-          __FILE__, __LINE__, __PRETTY_FUNCTION__, JUST_TO_STR(__VA_ARGS__));           \
+          __FILE__, __LINE__, __PRETTY_FUNCTION__, JUST_TO_STR_I(__VA_ARGS__));         \
     }                                                                                   \
     std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_);               \
   })))
 
 #define CHECK_JUST(...)                                                              \
   ::oneflow::maybe::details::JustGetValue([&](const auto& _just_function_name_) {    \
-    auto&& _just_value_to_check_ = JUST_STACK_CHECK(__VA_ARGS__);                    \
+    auto&& _just_value_to_check_ = JUST_STACK_CHECK_I(__VA_ARGS__);                  \
     if (!_just_value_to_check_) {                                                    \
       ::oneflow::maybe::details::JustPushStackAndAbort(                              \
           ::oneflow::maybe::details::JustPrivateScope::StackedError(                 \
               std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_)), \
-          __FILE__, __LINE__, _just_function_name_, JUST_TO_STR(__VA_ARGS__));       \
+          __FILE__, __LINE__, _just_function_name_, JUST_TO_STR_I(__VA_ARGS__));     \
     }                                                                                \
     return std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_);     \
   }(__PRETTY_FUNCTION__))
 
-#define JUST_MSG(_just_expr_, ...)                                                         \
-  ::oneflow::maybe::details::JustGetValue(::oneflow::maybe::details::RemoveRValConst(({    \
-    auto&& _just_value_to_check_ = (_just_expr_);                                          \
-    if (!_just_value_to_check_) {                                                          \
-      return ::oneflow::maybe::details::JustPushStackAndReturn(                            \
-          ::oneflow::maybe::details::JustPrivateScope::StackedError(                       \
-              std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_)),       \
-          __FILE__, __LINE__, __PRETTY_FUNCTION__, JUST_TO_STR(_just_expr_), __VA_ARGS__); \
-    }                                                                                      \
-    std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_);                  \
+#define JUST_MSG(_just_expr_, ...)                                                           \
+  ::oneflow::maybe::details::JustGetValue(::oneflow::maybe::details::RemoveRValConst(({      \
+    auto&& _just_value_to_check_ = (_just_expr_);                                            \
+    if (!_just_value_to_check_) {                                                            \
+      return ::oneflow::maybe::details::JustPushStackAndReturn(                              \
+          ::oneflow::maybe::details::JustPrivateScope::StackedError(                         \
+              std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_)),         \
+          __FILE__, __LINE__, __PRETTY_FUNCTION__, JUST_TO_STR_I(_just_expr_), __VA_ARGS__); \
+    }                                                                                        \
+    std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_);                    \
   })))
 
-#define CHECK_JUST_MSG(_just_expr_, ...)                                                    \
-  ::oneflow::maybe::details::JustGetValue([&](const auto& _just_function_name_) {           \
-    auto&& _just_value_to_check_ = (_just_expr_);                                           \
-    if (!_just_value_to_check_) {                                                           \
-      ::oneflow::maybe::details::JustPushStackAndAbort(                                     \
-          ::oneflow::maybe::details::JustPrivateScope::StackedError(                        \
-              std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_)),        \
-          __FILE__, __LINE__, _just_function_name_, JUST_TO_STR(_just_expr_), __VA_ARGS__); \
-    }                                                                                       \
-    return std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_);            \
+#define CHECK_JUST_MSG(_just_expr_, ...)                                                      \
+  ::oneflow::maybe::details::JustGetValue([&](const auto& _just_function_name_) {             \
+    auto&& _just_value_to_check_ = (_just_expr_);                                             \
+    if (!_just_value_to_check_) {                                                             \
+      ::oneflow::maybe::details::JustPushStackAndAbort(                                       \
+          ::oneflow::maybe::details::JustPrivateScope::StackedError(                          \
+              std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_)),          \
+          __FILE__, __LINE__, _just_function_name_, JUST_TO_STR_I(_just_expr_), __VA_ARGS__); \
+    }                                                                                         \
+    return std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_);              \
   }(__PRETTY_FUNCTION__))
 
 #define JUST_OPT(...)                                                                   \
   ::oneflow::maybe::details::JustGetValue(::oneflow::maybe::details::RemoveRValConst(({ \
-    auto&& _just_value_to_check_ = JUST_STACK_CHECK(__VA_ARGS__);                       \
+    auto&& _just_value_to_check_ = JUST_STACK_CHECK_I(__VA_ARGS__);                     \
     if (!_just_value_to_check_) { return NullOpt; }                                     \
     std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_);               \
   })))
