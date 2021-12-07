@@ -91,45 +91,17 @@ class ElementwiseUnaryneDnnImpl : public ElementwiseUnary {
   CPU_PRIMITIVE_DOUBLE_TYPE_SEQ            \
   CPU_PRIMITIVE_INT64_TYPE_SEQ
 
-#define ELTWISE_ONEDNN_ABS_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAbs, dnnl::algorithm::eltwise_abs)
-#define ELTWISE_ONEDNN_EXP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kExp, dnnl::algorithm::eltwise_exp)
 #define ELTWISE_ONEDNN_GELU_ERF_SEQ \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kGeluErf, dnnl::algorithm::eltwise_gelu_erf)
 #define ELTWISE_ONEDNN_GELU_TANH_SEQ \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kGeluTanh, dnnl::algorithm::eltwise_gelu_tanh)
-#define ELTWISE_ONEDNN_HARDSWISH_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kHardSwish, dnnl::algorithm::eltwise_hardswish)
-#define ELTWISE_ONEDNN_LOG_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLog, dnnl::algorithm::eltwise_log)
-#define ELTWISE_ONEDNN_LOGISTIC_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLogistic, dnnl::algorithm::eltwise_logistic)
-#define ELTWISE_ONEDNN_LOGSIGMOD_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLogsigmoid, dnnl::algorithm::eltwise_logsigmoid)
-#define ELTWISE_ONEDNN_MISH_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kMish, dnnl::algorithm::eltwise_mish)
 #define ELTWISE_ONEDNN_RELU_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRelu, dnnl::algorithm::eltwise_relu)
-#define ELTWISE_ONEDNN_ROUND_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRound, dnnl::algorithm::eltwise_round)
-#define ELTWISE_ONEDNN_SOFT_RELU_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSoftRelu, dnnl::algorithm::eltwise_soft_relu)
-#define ELTWISE_ONEDNN_SQRT_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSqrt, dnnl::algorithm::eltwise_sqrt)
-#define ELTWISE_ONEDNN_SQUARE_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSquare, dnnl::algorithm::eltwise_square)
 #define ELTWISE_ONEDNN_TANH_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kTanh, dnnl::algorithm::eltwise_tanh)
 
 #define ELTWISE_ONEDNN_SEQ        \
-  ELTWISE_ONEDNN_ABS_SEQ          \
-  ELTWISE_ONEDNN_EXP_SEQ          \
   ELTWISE_ONEDNN_GELU_ERF_SEQ     \
   ELTWISE_ONEDNN_GELU_TANH_SEQ    \
-  ELTWISE_ONEDNN_HARDSWISH_SEQ    \
-  ELTWISE_ONEDNN_LOG_SEQ          \
-  ELTWISE_ONEDNN_LOGISTIC_SEQ     \
-  ELTWISE_ONEDNN_LOGSIGMOD_SEQ    \
-  ELTWISE_ONEDNN_MISH_SEQ         \
   ELTWISE_ONEDNN_RELU_SEQ         \
-  ELTWISE_ONEDNN_ROUND_SEQ        \
-  ELTWISE_ONEDNN_SOFT_RELU_SEQ    \
-  ELTWISE_ONEDNN_SQRT_SEQ         \
-  ELTWISE_ONEDNN_SQUARE_SEQ       \
   ELTWISE_ONEDNN_TANH_SEQ
 
 template<dnnl::algorithm algorithm, dnnl::memory::data_type type_onednn>
