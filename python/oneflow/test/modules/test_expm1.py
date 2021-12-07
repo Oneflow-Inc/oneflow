@@ -51,7 +51,7 @@ class TestExpm1Module(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_expm1_flow_with_random_data(test_case):
         device = random_device()
         input = random_pytorch_tensor().to(device)
@@ -65,7 +65,7 @@ class TestExpm1Module(flow.unittest.TestCase):
         y = input.expm1()
         return y
 
-    @autotest(auto_backward=False)
+    @autotest(auto_backward=False, check_graph=False)
     def test_expm1_with_0shape_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)

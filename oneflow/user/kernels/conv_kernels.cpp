@@ -532,7 +532,7 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
           ep::primitive::NewPrimitive<ep::primitive::AddFactory>(DeviceType::kCPU,
                                                                  add_to_output->data_type());
       CHECK(primitive);
-      primitive->Launch(ctx->stream(), add_to_output->dptr<T>(), dx->dptr<T>(), dx->mut_dptr<T>(),
+      primitive->Launch(ctx->stream(), dx->dptr<T>(), add_to_output->dptr<T>(), dx->mut_dptr<T>(),
                         add_to_output->shape().elem_cnt());
     }
   }

@@ -246,6 +246,10 @@ def _mul(self, other):
     return flow.mul(self, other)
 
 
+def _mul_(self, other):
+    return flow._C.mul_(self, other)
+
+
 def _rmul(self, other):
     return self.mul(other)
 
@@ -284,6 +288,10 @@ def _rtruediv(self, other):
 
 def _floor_divide(self, other):
     return flow.floor_divide(self, other)
+
+
+def _floor(self):
+    return flow._C.floor(self)
 
 
 def _neg(self):
@@ -574,6 +582,10 @@ def _floor_(self, other):
     return flow.floor_(self)
 
 
+def _flatten(self, start_dim: int = 0, end_dim: int = -1):
+    return flow._C.flatten(self, start_dim=start_dim, end_dim=end_dim)
+
+
 def _log(self):
     return flow.log(self)
 
@@ -724,6 +736,14 @@ def _bmm(self, other):
     return flow.bmm(self, other)
 
 
+def _all(self, dim=None, keepdim=False):
+    return flow.all(self, dim, keepdim)
+
+
+def _any(self, dim=None, keepdim=False):
+    return flow.any(self, dim, keepdim)
+
+
 def _len(self):
     if self.dim() == 0:
         raise TypeError("len() of a 0-d tensor")
@@ -865,6 +885,10 @@ def _to(self, *args, **kwargs):
     return flow._C.to(self, *args, **kwargs)
 
 
+def _gather(self, dim, index):
+    return flow._C.dim_gather(self, dim, index, False)
+
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)
@@ -926,6 +950,7 @@ def RegisterMethods():
     Tensor.exp = _exp
     Tensor.exp_ = _exp_
     Tensor.floor_divide = _floor_divide
+    Tensor.floor = _floor
     Tensor.argmax = _argmax
     Tensor.argmin = _argmin
     Tensor.argsort = _argsort
@@ -973,6 +998,7 @@ def RegisterMethods():
     Tensor.add_ = _add_inplace
     Tensor.div = _truediv
     Tensor.mul = _mul
+    Tensor.mul_ = _mul_
     Tensor.reciprocal = _reciprocal
     Tensor.reciprocal_ = _reciprocal_
     Tensor.sub = _sub
@@ -1006,6 +1032,7 @@ def RegisterMethods():
     Tensor.fmod = _fmod
     Tensor.floor = _floor
     Tensor.floor_ = _floor_
+    Tensor.flatten = _flatten
     Tensor.log = _log
     Tensor.minimum = _minimum
     Tensor.maximum = _maximum
@@ -1042,6 +1069,9 @@ def RegisterMethods():
     Tensor.unsqueeze = _unsqueeze
     Tensor.permute = _permute
     Tensor.to = _to
+    Tensor.gather = _gather
+    Tensor.all = _all
+    Tensor.any = _any
 
 
 def register_tensor_op(op_name):

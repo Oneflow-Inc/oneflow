@@ -77,6 +77,41 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.floor,
+    """
+    Returns a new tensor with the arcsine of the elements of :attr:`input`.
+
+    .. math::
+        \\text{out}_{i} = \\lfloor \\text{input}_{i} \\rfloor
+
+    Args:
+        input (Tensor): the input tensor.
+        
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> input = flow.tensor(np.array([-0.5,  1.5, 0,  0.8]), dtype=flow.float32)
+        >>> output = flow.floor(input)
+        >>> output.shape
+        oneflow.Size([4])
+        >>> output.numpy()
+        array([-1.,  1.,  0.,  0.], dtype=float32)
+        
+        >>> input1 = flow.tensor(np.array([[0.8, 1.0], [-0.6, 2.5]]), dtype=flow.float32)
+        >>> output1 = input1.floor()
+        >>> output1.shape
+        oneflow.Size([2, 2])
+        >>> output1.numpy()
+        array([[ 0.,  1.],
+               [-1.,  2.]], dtype=float32)
+
+    """,
+)
+
+add_docstr(
     oneflow.div,
     r"""Computes the division of input by other for each element, scalar and broadcast promotation are supported.
     The formula is:
@@ -1245,6 +1280,69 @@ add_docstr(
         >>> out
         tensor([0, 1, 0], dtype=oneflow.int8)
         
+    """,
+)
+
+
+add_docstr(
+    oneflow.dot,
+    r"""This operator computes the dot product of tensor input and other.
+    
+    The equation is:
+    
+	$$		
+	​   \\sum_{i=1}^{n}(x[i] * y[i])
+	$$
+    
+    Args:
+        input (Tensor):  first tensor in the dot product.
+        other (Tensor):  second tensor in the dot product.
+
+    Shape:
+        - input: Input must be 1D.
+        - other: Other must be 1D.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> flow.dot(flow.Tensor([2, 3]), flow.Tensor([2, 1]))
+        tensor(7., dtype=oneflow.float32)
+        
+    """,
+)
+
+add_docstr(
+    oneflow.movedim,
+    r"""
+    Moves the dimension(s) of input at the position(s) in source to the position(s) in destination.
+    Other dimensions of input that are not explicitly moved remain in their original order and appear at the positions not specified in destination.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.movedim.html#torch.movedim.
+
+    Args:
+        input (Tensor): the input tensor.
+        source  (int or a list): Original positions of the dims to move. These must be unique. 
+        destination (int or a list): Destination positions for each of the original dims. These must also be unique.
+    
+    Returns:
+        oneflow.Tensor: the output Tensor.
+
+    For example:
+
+    .. code-block:: python
+        
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> input = flow.tensor(np.random.randn(2, 3, 4, 5), dtype=flow.float32)
+        >>> output = flow.movedim(input, 1, 0)
+        >>> output.shape
+        oneflow.Size([3, 2, 4, 5])
+        >>> output = flow.movedim(input, (1, 2), (0, 1))
+        >>> output.shape
+        oneflow.Size([3, 4, 2, 5])
     """,
 )
 
