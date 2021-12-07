@@ -58,7 +58,9 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("onerec_decoder")
                              const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("out", 0);
       CHECK_OR_RETURN(out_modifier != nullptr);
-      out_modifier->set_header_infered_before_compute(false);
+      // NOTE(yaochi): refer to OFRecordReader
+      // In order to support consistent tensor, infered shape before computing is required
+      // out_modifier->set_header_infered_before_compute(false);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
