@@ -99,7 +99,13 @@ class ScalarMathBaseFunctor {
       JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
-      lowest_dtype = x->dtype();
+      // Only promote type to Int64 when tensor is Bool type but scalar is int type.
+      if (DType::priority_order[x->dtype()->data_type()]
+          == DType::priority_order[DType::Bool()->data_type()]) {
+        lowest_dtype = DType::Int64();
+      } else {
+        lowest_dtype = x->dtype();
+      }
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
                                   << " should be float or int.";

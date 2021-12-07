@@ -73,7 +73,7 @@ struct DtypeAllReduce<T, kSum> {
     T* out = reinterpret_cast<T*>(void_out);
     int64_t parallel_num = parallel_desc->parallel_num();
     BalancedSplitter bs(elem_cnt, parallel_num);
-    std::vector<T> recv_buffer(bs.At(0).size());
+    auto recv_buffer = std::make_unique<T[]>(bs.At(0).size());
     Optional<int64_t> parallel_id;
     JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
     const auto& rank_group = JUST(RankGroup::New(parallel_desc));
@@ -90,7 +90,7 @@ struct DtypeAllReduce<T, kSum> {
       }
       size_t send_size = bs.At(send_part_id).size();
       int64_t recv_part_id = RingDecrease(part_id, parallel_num);
-      T* recv_ptr = recv_buffer.data();
+      T* recv_ptr = recv_buffer.get();
       size_t recv_size = bs.At(recv_part_id).size();
       NaiveAsyncTransportCtx ctx(
           transport_token,
@@ -181,7 +181,7 @@ struct DtypeReduceScatter<T, kSum> {
     CHECK_OR_RETURN(opt_parallel_id->has_value());
     int64_t parallel_id = JUST(*opt_parallel_id);
 
-    std::vector<T> recv_buffer(bs.At(0).size());
+    auto recv_buffer = std::make_unique<T[]>(bs.At(0).size());
     const auto& rank_group = JUST(RankGroup::New(parallel_desc));
 
     TransportToken transport_token =
@@ -197,7 +197,7 @@ struct DtypeReduceScatter<T, kSum> {
       }
       size_t send_size = bs.At(send_part_id).size();
       int64_t recv_part_id = RingDecrease(part_id, parallel_num);
-      T* recv_ptr = recv_buffer.data();
+      T* recv_ptr = recv_buffer.get();
       size_t recv_size = bs.At(recv_part_id).size();
       NaiveAsyncTransportCtx ctx(
           transport_token,
@@ -345,16 +345,16 @@ struct DtypeReduce<T, kSum> {
     size_t size = root == GlobalProcessCtx::Rank() && void_in != void_out ? 0 : bs.At(0).size();
     T* tmp_out = nullptr;
     // void_out is only used on rank root and ignored for other ranks.
-    std::vector<T> tmp_out_buffer(size);
+    auto tmp_out_buffer = std::make_unique<T[]>(size);
     int64_t parallel_id_of_root =
         JUST(parallel_desc->ParallelId4MachineDeviceId(root, GlobalProcessCtx::LocalRank(root)));
     if (root == GlobalProcessCtx::Rank() && void_in != void_out) {
       tmp_out = &reinterpret_cast<T*>(void_out)[bs.At(parallel_id_of_root).begin()];
     } else {
-      tmp_out = tmp_out_buffer.data();
+      tmp_out = tmp_out_buffer.get();
     }
 
-    std::vector<T> recv_buffer(bs.At(0).size());
+    auto recv_buffer = std::make_unique<T[]>(bs.At(0).size());
     Optional<int64_t> parallel_id;
     JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
     const auto& rank_group = JUST(RankGroup::New(parallel_desc));
@@ -371,7 +371,7 @@ struct DtypeReduce<T, kSum> {
       }
       size_t send_size = bs.At(send_part_id).size();
       int64_t recv_part_id = RingDecrease(part_id, parallel_num);
-      T* recv_ptr = recv_buffer.data();
+      T* recv_ptr = recv_buffer.get();
       size_t recv_size = bs.At(recv_part_id).size();
       NaiveAsyncTransportCtx ctx(
           transport_token,

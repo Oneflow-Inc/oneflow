@@ -27,6 +27,7 @@ limitations under the License.
 #include <cuda_bf16.h>
 #endif  // CUDA_VERSION >= 11000
 
+#define CUDA_PRIMITIVE_BOOL_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(bool, DataType::kBool)
 #define CUDA_PRIMITIVE_CHAR_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(char, DataType::kChar)
 #define CUDA_PRIMITIVE_INT8_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(int8_t, DataType::kInt8)
 #define CUDA_PRIMITIVE_UINT8_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(uint8_t, DataType::kUInt8)
@@ -43,6 +44,7 @@ limitations under the License.
 #endif  // CUDA_VERSION >= 11000
 
 #define CUDA_PRIMITIVE_ALL_TYPE_SEQ \
+  CUDA_PRIMITIVE_BOOL_TYPE_SEQ      \
   CUDA_PRIMITIVE_CHAR_TYPE_SEQ      \
   CUDA_PRIMITIVE_INT8_TYPE_SEQ      \
   CUDA_PRIMITIVE_UINT8_TYPE_SEQ     \
