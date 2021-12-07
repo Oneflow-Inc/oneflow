@@ -132,20 +132,6 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.Tensor.negative,
-    """
-    See :func:`oneflow.negative`
-    """,
-)
-
-add_docstr(
-    oneflow.Tensor.negative_,
-    """
-    In-place version of :func:`oneflow.Tensor.negative`
-    """,
-)
-
-add_docstr(
     oneflow.Tensor.unfold,
     """
     The interface is consistent with PyTorch.
@@ -232,6 +218,21 @@ add_docstr(
     """,
 )
 
+
+add_docstr(
+    oneflow.Tensor.sin,
+    """
+    See :func:`oneflow.sin`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sin_,
+    """
+    In-place version of :func:`oneflow.Tensor.sin`
+    """,
+)
+
 add_docstr(
     oneflow.Tensor.asin,
     """
@@ -256,7 +257,63 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.arcsin_,
     """
-    In-place version of :func:`oneflow.Tensor.arcsin_`
+    In-place version of :func:`oneflow.Tensor.arcsin`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.asinh,
+    """
+    See :func:`oneflow.asinh`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.asinh_,
+    """
+    In-place version of :func:`oneflow.Tensor.asinh_`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.arcsinh,
+    """
+    See :func:`oneflow.arcsinh`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.arcsinh_,
+    """
+    In-place version of :func:`oneflow.Tensor.arcsinh_`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.cos,
+    """
+    See :func:`oneflow.cos`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.cos_,
+    """
+    In-place version of :func:`oneflow.Tensor.cos`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.cosh,
+    """
+    See :func:`oneflow.cosh`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.cosh_,
+    """
+    In-place version of :func:`oneflow.Tensor.cosh`
     """,
 )
 
@@ -317,9 +374,58 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.atan,
+    """
+    See :func:`oneflow.atan`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.atan_,
+    """
+    In-place version of :func:`oneflow.Tensor.atan`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.arctan,
+    """
+    See :func:`oneflow.Tensor.atan`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.arctan_,
+    """
+    In-place version of :func:`oneflow.Tensor.arctan`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.atanh,
+    """
+    See :func:`oneflow.atanh`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.atanh_,
+    """
+    In-place version of :func:`oneflow.atanh`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.arctanh,
     """
-    See :func:`oneflow.arctanh`
+    See :func:`oneflow.Tensor.atanh`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.arctanh_,
+    """
+    In-place version of :func:`oneflow.Tensor.arctanh`
     """,
 )
 
@@ -421,6 +527,19 @@ add_docstr(
     """,
 )
 
+add_docstr(
+    oneflow.Tensor.ceil,
+    """
+    See :func:`oneflow.ceil`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.ceil_,
+    """
+    In-place version of :func:`oneflow.ceil`
+    """,
+)
 
 add_docstr(
     oneflow.Tensor.diag,
@@ -449,9 +568,58 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.erf,
+    """
+    See :func:`oneflow.erf`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.erf_,
+    """
+    In-place version of :func:`oneflow.Tensor.erf`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.erfc,
+    """
+    See :func:`oneflow.erfc`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.erfc_,
+    """
+    In-place version of :func:`oneflow.Tensor.erfc`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.exp,
     """
     See :func:`oneflow.exp`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.exp_,
+    """
+    In-place version of :func:`oneflow.Tensor.exp`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.expm1,
+    """
+    See :func:`oneflow.expm1`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.expm1_,
+    """
+    In-place version of :func:`oneflow.Tensor.expm1`
     """,
 )
 
@@ -511,9 +679,30 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.log,
+    """
+    See :func:`oneflow.log`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.log_,
+    """
+    In-place version of :func:`oneflow.Tensor.log`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.log1p,
     """
     See :func:`oneflow.log1p`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.log1p_,
+    """
+    In-place version of :func:`oneflow.Tensor.log1p`
     """,
 )
 
@@ -542,6 +731,13 @@ add_docstr(
     oneflow.Tensor.negative,
     """
     See :func:`oneflow.negative`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.negative_,
+    """
+    In-place version of :func:`oneflow.Tensor.negative`
     """,
 )
 
@@ -579,6 +775,21 @@ add_docstr(
     """,
 )
 
+
+add_docstr(
+    oneflow.Tensor.reciprocal,
+    """
+    See :func:`oneflow.reciprocal`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.reciprocal_,
+    """
+    In-place version of :func:`oneflow.Tensor.reciprocal`
+    """,
+)
+
 add_docstr(
     oneflow.Tensor.relu,
     """
@@ -597,6 +808,27 @@ add_docstr(
     oneflow.Tensor.round,
     """
     See :func:`oneflow.round`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.round_,
+    """
+    In-place version of :func:`oneflow.Tensor.round`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.rsqrt,
+    """
+    See :func:`oneflow.rsqrt`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.rsqrt_,
+    """
+    In-place version of :func:`oneflow.Tensor.rsqrt`
     """,
 )
 
@@ -622,6 +854,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.sign_,
+    """
+    In-place version of :func:`oneflow.Tensor.sign`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.silu,
     """
     See :func:`oneflow.silu`
@@ -632,6 +871,13 @@ add_docstr(
     oneflow.Tensor.sinh,
     """
     See :func:`oneflow.sinh`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sinh_,
+    """
+    In-place version of :func:`oneflow.Tensor.sinh`
     """,
 )
 
@@ -671,9 +917,44 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.square,
+    """
+    See :func:`oneflow.square`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.square_,
+    """
+    In-place version of :func:`oneflow.Tensor.square`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sqrt,
+    """
+    See :func:`oneflow.sqrt`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sqrt_,
+    """
+    In-place version of :func:`oneflow.Tensor.sqrt`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.tan,
     """
     See :func:`oneflow.tan`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.tan_,
+    """
+    In-place version of :func:`oneflow.Tensor.tan`
     """,
 )
 

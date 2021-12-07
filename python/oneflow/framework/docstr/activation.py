@@ -144,6 +144,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.softplus_,
+    r"""
+    In-place version of :func:`oneflow.softplus`
+    """,
+)
+
+add_docstr(
     oneflow.tanh,
     r"""
     tanh(x: Tensor) -> Tensor 
