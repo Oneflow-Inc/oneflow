@@ -38,7 +38,7 @@ Maybe<SubTskGphBuilderStatus> FallbackToCpuSliceBoxingSubTskGphBuilder::Build(
         in_node, lbi, GetNodeCPUMemZoneId(in_node->MemZoneId121().rank()));
     cpu_in_tasks.push_back(proxy_on_src_host);
   }
-  status.push_back(SubTskGphBuilderStatus("MoveToCpu", "-"));
+  status.emplace_back("MoveToCpu", "-");
 
   ParallelConf cpu_in_parallel_conf = in_parallel_desc.parallel_conf();
   cpu_in_parallel_conf.set_device_tag("cpu");
@@ -59,7 +59,7 @@ Maybe<SubTskGphBuilderStatus> FallbackToCpuSliceBoxingSubTskGphBuilder::Build(
         ctx->task_graph()->GetProxyNode(cpu_out_tasks.at(out_id), lbi, out_parallel_desc, out_id);
     sorted_out_tasks->push_back(out_node);
   }
-  status.push_back(SubTskGphBuilderStatus("MoveBackToDevice", "-"));
+  status.emplace_back("MoveBackToDevice", "-");
   if (!cpu_ctrl_tasks.empty()) {
     CHECK_EQ(cpu_ctrl_tasks.size(), sorted_out_tasks->size());
     FOR_RANGE(size_t, i, 0, sorted_out_tasks->size()) {
