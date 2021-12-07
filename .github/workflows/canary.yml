@@ -7,10 +7,6 @@ on:
       - add-canary-release
   workflow_dispatch:
     inputs:
-      clean-ccache:
-        description: ""
-        default: "false"
-        required: false
       oneflow-ref:
         description: ""
         default: "master"
@@ -63,7 +59,7 @@ jobs:
           docker-run-use-system-http-proxy: false
           docker-run-use-lld: true
           retry-failed-build: true
-          clean-ccache: ${{ github.event.inputs.clean-ccache }}
+          clean-ccache: true
           python-versions: |
             3.6
             3.7
