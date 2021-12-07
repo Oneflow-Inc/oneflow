@@ -1,15 +1,12 @@
 #ifndef ONEFLOW_OPS
 #define ONEFLOW_OPS
 
-include "OneFlowDialect.td"
-include "OneFlowEnums.td"
-include "OneFlowInterfaces.td"
-include "OneFlowBase.td"
-
+include "OneFlow/OneFlowDialect.td"
+include "OneFlow/OneFlowEnums.td"
+include "OneFlow/OneFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
-include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/Pass/PassBase.td"
+include "OneFlow/OneFlowBase.td"
 
 def OneFlow_UserOp : OneFlow_UserBaseWithCtrlOp<"user", [OneFlow_IsImportCompatible]> {
   let summary = "";
@@ -95,8 +92,8 @@ def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpI
 }
 
 class OneFlow_ConcreteSystemOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_BaseOp<mnemonic, !listconcat(traits, [OneFlow_IsOpConfCompatible, 
-        OneFlow_IsImportCompatible, 
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [OneFlow_IsOpConfCompatible,
+        OneFlow_IsImportCompatible,
         DeclareOpInterfaceMethods<ControlEdgeCompatibleInterface>])> {
   let input = (ins);
   let output = (ins);

@@ -153,7 +153,11 @@ from oneflow._C import permute
 from oneflow._C import concat
 from oneflow._C import concat as cat
 from oneflow._C import to
+from oneflow._C import dim_gather as gather
+from oneflow._C import gather_nd
 from oneflow._C import roi_align
+from oneflow._C import read_onerec
+from oneflow._C import decode_onerec
 from oneflow._C import dot
 
 
@@ -290,8 +294,6 @@ from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flip import flip_op as flip
-from oneflow.nn.modules.gather import gather_op as gather
-from oneflow.nn.modules.gather import gather_nd_op as gather_nd
 from oneflow.nn.modules.comparison import eq_op as eq
 from oneflow.nn.modules.comparison import eq_op as equal
 from oneflow.nn.modules.logical_ops import logical_and_op as logical_and

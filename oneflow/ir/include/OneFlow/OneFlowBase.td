@@ -1,8 +1,8 @@
-#ifndef ONEFLOW_BASE
-#define ONEFLOW_BASE
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWBASE_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWBASE_H_
 
-include "OneFlowDialect.td"
-include "OneFlowInterfaces.td"
+include "OneFlow/OneFlowDialect.td"
+include "OneFlow/OneFlowInterfaces.td"
 
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -128,7 +128,7 @@ class OneFlow_ConvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
 
 class OneFlow_TFPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
-    let summary = "OneFlow Lazy Pooling operation";
+    let summary = "OneFlow pooling operation, align with TensorFlow";
     let input = (ins AnyType:$x);
     let output = (outs AnyType:$y);
     let attrs = (ins
@@ -144,7 +144,7 @@ class OneFlow_TFPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
 
 class OneFlow_TFPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
-  let summary = "OneFlow Lazy Pooling Grad operation";
+  let summary = "OneFlow pooling grad operation, align with TensorFlow";
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -249,6 +249,31 @@ class OneFlow_AvgPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
   );
 }
 
+class OneFlow_AdaptivePoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
+       OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
+  let summary = "OneFlow adaptive pool operation";
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs AnyType:$y);
+  let attrs = (ins
+    SI64ArrayAttr:$output_size
+  );
+}
+
+class OneFlow_AdaptivePoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
+       OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
+  let summary = "OneFlow adaptive pool operation";
+  let input = (ins
+    AnyType:$x,
+    AnyType:$dy
+  );
+  let output = (outs AnyType:$dx);
+  let attrs = (ins
+    SI64ArrayAttr:$output_size
+  );
+}
+
 class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType, NoSideEffect])> {
   let summary = "";
@@ -272,7 +297,7 @@ class OneFlow_JobOp<string mnemonic, list<OpTrait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, !listconcat(traits, [FunctionLike, Symbol])> {
   let regions = (region AnyRegion:$body);
 
-  let arguments = (ins 
+  let arguments = (ins
     SymbolNameAttr:$sym_name,
     TypeAttr:$type,
     OptionalAttr<StrAttr>:$sym_visibility
@@ -287,7 +312,7 @@ class OneFlow_JobOp<string mnemonic, list<OpTrait> traits = []> :
     // FuncOp clone();
 
     // void cloneInto(FuncOp dest, BlockAndValueMapping &mapper);
-  
+
     // ::mlir::Region *getCallableRegion() { return isExternal() ? nullptr : &getBody(); }
 
     // ArrayRef<Type> getCallableResults() { return getType().getResults(); }
@@ -312,6 +337,6 @@ class OneFlow_JobOp<string mnemonic, list<OpTrait> traits = []> :
 }
 
 #define GET_ONEFLOW_BASE_OP_DEFINITIONS
-include "OneFlowUserOpGen.td"
+include "OneFlow/OneFlowUserOpGen.td"
 
-#endif // ONEFLOW_BASE
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWBASE_H_
