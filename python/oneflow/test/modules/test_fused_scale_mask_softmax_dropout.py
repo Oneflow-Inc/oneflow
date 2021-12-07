@@ -85,7 +85,7 @@ class TestFusedScaleMaskSoftmaxDropout(flow.unittest.TestCase):
         args_dict["fill_value"] = [-10000.0]
         args_dict["scale_value"] = [1.0, 2.0, 4.0]
         args_dict["p"] = [0.0, 1.0]
-        arg_dict["check_allclose"] = [False]
+        args_dict["check_allclose"] = [False]
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
