@@ -48,7 +48,10 @@ Maybe<void> AutoParallelPass::Apply(const OpGraph& op_graph, Job* job) const {
   auto time_begin = std::chrono::high_resolution_clock::now();
 
   auto_parallel::SbpConstructor sbp_constructor(op_graph, job);
+  std::cout << "Rank: " << GlobalProcessCtx::Rank() << ", Start FindBestSbpSignature" << std::endl;
   JUST(sbp_constructor.FindBestSbpSignature());
+  std::cout << "Rank: " << GlobalProcessCtx::Rank() << ", Start DumpNdSbpSignatureForJob"
+            << std::endl;
   JUST(sbp_constructor.DumpNdSbpSignatureForJob(op_graph, job));
   auto time_end = std::chrono::high_resolution_clock::now();
   std::cout << "Auto parallel took "
