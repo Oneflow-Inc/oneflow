@@ -146,7 +146,7 @@ class OpSchemaEmitter {
 
       auto OpName = R->getName();
       if (!OpName.startswith("OneFlow_")) {
-        PrintFatalError("op name is not start with `OneFlow_`: " + (std::string)OpName);
+        PrintFatalError(R, "op name is not start with `OneFlow_`: " + (std::string)OpName);
       }
       Ops[(std::string)OpName.substr(nonstd::string_view("OneFlow_").length())] = Op;
     }
