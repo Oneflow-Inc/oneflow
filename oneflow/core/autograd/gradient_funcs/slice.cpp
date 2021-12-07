@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -39,9 +40,9 @@ class Slice : public OpExprGradFunction<SliceCaptureState> {
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
     auto* interp_ctx = dynamic_cast<const SliceOpInterpCtx*>(ctx);
-    state->start = interp_ctx->start;
-    state->stop = interp_ctx->stop;
-    state->step = interp_ctx->step;
+    state->start = interp_ctx->start();
+    state->stop = interp_ctx->stop();
+    state->step = interp_ctx->step();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -76,9 +77,9 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateCaptureState> {
     if (!state->requires_grad_x && !state->requires_grad_update) { return Maybe<void>::Ok(); }
 
     auto* interp_ctx = dynamic_cast<const SliceUpdateOpInterpCtx*>(ctx);
-    state->start = interp_ctx->start;
-    state->stop = interp_ctx->stop;
-    state->step = interp_ctx->step;
+    state->start = interp_ctx->start();
+    state->stop = interp_ctx->stop();
+    state->step = interp_ctx->step();
 
     if (state->requires_grad_x) { state->SaveTensorForBackward(inputs.at(1)); }
     return Maybe<void>::Ok();

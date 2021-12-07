@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -35,9 +36,9 @@ class ClipByScalarMin : public OpExprGradFunction<ClipByScalarMinCaptureState> {
 
     auto* interp_ctx = dynamic_cast<const ClipByScalarMinOpInterpCtx*>(ctx);
     if (IsFloatingDataType(inputs.at(0)->dtype()->data_type())) {
-      state->min = interp_ctx->floating_min;
+      state->min = interp_ctx->floating_min();
     } else if (IsIntegralDataType(inputs.at(0)->dtype()->data_type())) {
-      state->min = interp_ctx->integral_min;
+      state->min = interp_ctx->integral_min();
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Data type is not floating or integral type.";
     }

@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/sequence_function.h"
 
@@ -38,7 +39,7 @@ class ReduceSum : public OpExprGradFunction<ReduceSumCaptureState> {
 Maybe<void> ReduceSum::Capture(ReduceSumCaptureState* state, const TensorTuple& inputs,
                                const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   auto* interp_ctx = dynamic_cast<const ReduceSumOpInterpCtx*>(ctx);
-  state->axis = interp_ctx->axis;
+  state->axis = interp_ctx->axis();
   state->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
 }
@@ -70,7 +71,7 @@ class ReduceProdOp : public OpExprGradFunction<ReduceProdOpInterpState> {
 Maybe<void> ReduceProdOp::Capture(ReduceProdOpInterpState* state, const TensorTuple& inputs,
                                   const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   auto* interp_ctx = dynamic_cast<const ReduceProdOpInterpCtx*>(ctx);
-  state->axis = interp_ctx->axis;
+  state->axis = interp_ctx->axis();
   state->requires_grad = inputs.at(0)->requires_grad();
   state->SaveTensorForBackward(inputs.at(0));
   state->SaveTensorForBackward(outputs.at(0));
@@ -112,8 +113,8 @@ class ReduceMaxOrMin : public OpExprGradFunction<ReduceMaxOrMinCaptureState> {
 Maybe<void> ReduceMaxOrMin::Capture(ReduceMaxOrMinCaptureState* state, const TensorTuple& inputs,
                                     const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   auto* interp_ctx = dynamic_cast<const ReduceMaxOpInterpCtx*>(ctx);
-  state->axis = interp_ctx->axis;
-  state->keepdims = interp_ctx->keepdims;
+  state->axis = interp_ctx->axis();
+  state->keepdims = interp_ctx->keepdims();
   state->SaveTensorForBackward(inputs.at(0));
   state->SaveTensorForBackward(outputs.at(0));
   return Maybe<void>::Ok();

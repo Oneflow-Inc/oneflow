@@ -16,12 +16,13 @@ limitations under the License.
 #define REGISTER_OP_INTERP_CTX(op_type, ctx) \
   REGISTER_CLASS_CREATOR(std::string, op_type, OpInterpCtx, ([]() { return new ctx; }))
 
+#include "oneflow/core/framework/op_interp_ctx.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/attr_value.h"
 
 #define NEED_REGISTER_OP_INTERP_CTX
-#include "oneflow/core/framework/op_interp_ctx.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #undef NEED_REGISTER_OP_INTERP_CTX
 
 #undef REGISTER_OP_INTERP_CTX

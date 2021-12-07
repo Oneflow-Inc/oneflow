@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -40,8 +41,8 @@ Maybe<void> Roll::Capture(RollCaptureState* state, const TensorTuple& inputs,
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
   auto* interp_ctx = dynamic_cast<const RollOpInterpCtx*>(ctx);
-  state->shifts = interp_ctx->shifts;
-  state->dims = interp_ctx->dims;
+  state->shifts = interp_ctx->shifts();
+  state->dims = interp_ctx->dims();
   return Maybe<void>::Ok();
 }
 

@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -130,17 +131,17 @@ class ConsistentConstantFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
-    auto ctx = std::make_shared<ConstantOpInterpCtx>();
-    ctx->shape = shape;
-    ctx->dtype = dtype->data_type();
+    auto ctx = std::make_shared<ConstantOpInterpCtxImpl<schema::ConstantOp>>();
+    ctx->set_shape(shape);
+    ctx->set_dtype(dtype->data_type());
     if (IsIntegralDataType(dtype->data_type())) {
-      ctx->is_floating_value = false;
-      ctx->integer_value = JUST(value.As<int64_t>());
+      ctx->set_is_floating_value(false);
+      ctx->set_integer_value(JUST(value.As<int64_t>()));
     } else {
-      ctx->is_floating_value = true;
-      ctx->floating_value = JUST(value.As<double>());
+      ctx->set_is_floating_value(true);
+      ctx->set_floating_value(JUST(value.As<double>()));
     }
-    ctx->nd_sbp = *JUST(GetNdSbpStrList(sbp_tuple));
+    ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
     ctx->sbp = JUST(GetNdSbp(sbp_tuple));
     ctx->parallel_desc = placement;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
@@ -155,15 +156,15 @@ class ConstantFunctor {
   ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
-    auto ctx = std::make_shared<ConstantOpInterpCtx>();
-    ctx->shape = shape;
-    ctx->dtype = dtype->data_type();
+    auto ctx = std::make_shared<ConstantOpInterpCtxImpl<schema::ConstantOp>>();
+    ctx->set_shape(shape);
+    ctx->set_dtype(dtype->data_type());
     if (IsIntegralDataType(dtype->data_type())) {
-      ctx->is_floating_value = false;
-      ctx->integer_value = JUST(value.As<int64_t>());
+      ctx->set_is_floating_value(false);
+      ctx->set_integer_value(JUST(value.As<int64_t>()));
     } else {
-      ctx->is_floating_value = true;
-      ctx->floating_value = JUST(value.As<double>());
+      ctx->set_is_floating_value(true);
+      ctx->set_floating_value(JUST(value.As<double>()));
     }
     ctx->device = device;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
@@ -178,9 +179,9 @@ class EmptyFunctor {
   EmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
-    auto ctx = std::make_shared<EmptyOpInterpCtx>();
-    ctx->shape = shape;
-    ctx->dtype = dtype->data_type();
+    auto ctx = std::make_shared<EmptyOpInterpCtxImpl<schema::EmptyOp>>();
+    ctx->set_shape(shape);
+    ctx->set_dtype(dtype->data_type());
     ctx->device = device;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }
@@ -195,10 +196,10 @@ class ConsistentEmptyFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
-    auto ctx = std::make_shared<EmptyOpInterpCtx>();
-    ctx->shape = shape;
-    ctx->dtype = dtype->data_type();
-    ctx->nd_sbp = *JUST(GetNdSbpStrList(sbp_tuple));
+    auto ctx = std::make_shared<EmptyOpInterpCtxImpl<schema::EmptyOp>>();
+    ctx->set_shape(shape);
+    ctx->set_dtype(dtype->data_type());
+    ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
     ctx->parallel_desc = placement;
     ctx->sbp = JUST(GetNdSbp(sbp_tuple));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
@@ -229,9 +230,9 @@ class FlattenFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& start_dim,
                            const int32_t& end_dim) const {
-    auto ctx = std::make_shared<FlattenOpInterpCtx>();
-    ctx->start_dim = start_dim;
-    ctx->end_dim = end_dim;
+    auto ctx = std::make_shared<FlattenOpInterpCtxImpl<schema::FlattenOp>>();
+    ctx->set_start_dim(start_dim);
+    ctx->set_end_dim(end_dim);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -263,15 +264,15 @@ class WhereScalarXFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition, const Scalar& scalar,
                            const std::shared_ptr<one::Tensor>& y) const {
-    auto ctx = std::make_shared<WhereScalarXOpInterpCtx>();
+    auto ctx = std::make_shared<WhereScalarXOpInterpCtxImpl<schema::WhereScalarXOp>>();
     if (scalar.IsFloatingPoint()) {
-      ctx->float_operand = JUST(scalar.As<double>());
-      ctx->has_float_operand = true;
-      ctx->has_int_operand = false;
+      ctx->set_float_operand(JUST(scalar.As<double>()));
+      ctx->set_has_float_operand(true);
+      ctx->set_has_int_operand(false);
     } else if (scalar.IsIntegral()) {
-      ctx->int_operand = JUST(scalar.As<int64_t>());
-      ctx->has_float_operand = false;
-      ctx->has_int_operand = true;
+      ctx->set_int_operand(JUST(scalar.As<int64_t>()));
+      ctx->set_has_float_operand(false);
+      ctx->set_has_int_operand(true);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be float or int.";
     }
@@ -290,15 +291,15 @@ class WhereScalarYFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition,
                            const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
-    auto ctx = std::make_shared<WhereScalarYOpInterpCtx>();
+    auto ctx = std::make_shared<WhereScalarYOpInterpCtxImpl<schema::WhereScalarYOp>>();
     if (scalar.IsFloatingPoint()) {
-      ctx->float_operand = JUST(scalar.As<double>());
-      ctx->has_float_operand = true;
-      ctx->has_int_operand = false;
+      ctx->set_float_operand(JUST(scalar.As<double>()));
+      ctx->set_has_float_operand(true);
+      ctx->set_has_int_operand(false);
     } else if (scalar.IsIntegral()) {
-      ctx->int_operand = JUST(scalar.As<int64_t>());
-      ctx->has_float_operand = false;
-      ctx->has_int_operand = true;
+      ctx->set_int_operand(JUST(scalar.As<int64_t>()));
+      ctx->set_has_float_operand(false);
+      ctx->set_has_int_operand(true);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be float or int.";
     }
@@ -316,21 +317,21 @@ class WhereScalarXYFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition, const Scalar& x_scalar,
                            const Scalar& y_scalar) const {
-    auto ctx = std::make_shared<WhereScalarXyOpInterpCtx>();
+    auto ctx = std::make_shared<WhereScalarXyOpInterpCtxImpl<schema::WhereScalarXyOp>>();
     if (x_scalar.IsFloatingPoint() && y_scalar.IsFloatingPoint()) {
-      ctx->x_float_operand = JUST(x_scalar.As<double>());
-      ctx->y_float_operand = JUST(y_scalar.As<double>());
-      ctx->has_x_float_operand = true;
-      ctx->has_y_float_operand = true;
-      ctx->has_x_int_operand = false;
-      ctx->has_y_int_operand = false;
+      ctx->set_x_float_operand(JUST(x_scalar.As<double>()));
+      ctx->set_y_float_operand(JUST(y_scalar.As<double>()));
+      ctx->set_has_x_float_operand(true);
+      ctx->set_has_y_float_operand(true);
+      ctx->set_has_x_int_operand(false);
+      ctx->set_has_y_int_operand(false);
     } else if (x_scalar.IsIntegral() && y_scalar.IsIntegral()) {
-      ctx->x_float_operand = JUST(x_scalar.As<int64_t>());
-      ctx->y_float_operand = JUST(y_scalar.As<int64_t>());
-      ctx->has_x_float_operand = false;
-      ctx->has_y_float_operand = false;
-      ctx->has_x_int_operand = true;
-      ctx->has_y_int_operand = true;
+      ctx->set_x_float_operand(JUST(x_scalar.As<int64_t>()));
+      ctx->set_y_float_operand(JUST(y_scalar.As<int64_t>()));
+      ctx->set_has_x_float_operand(false);
+      ctx->set_has_y_float_operand(false);
+      ctx->set_has_x_int_operand(true);
+      ctx->set_has_y_int_operand(true);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be float or int.";
     }
@@ -349,8 +350,8 @@ class ArgWhereFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
                                 const Symbol<DType>& dtype) const {
-    auto ctx = std::make_shared<ArgwhereOpInterpCtx>();
-    ctx->dtype = dtype->data_type();
+    auto ctx = std::make_shared<ArgwhereOpInterpCtxImpl<schema::ArgwhereOp>>();
+    ctx->set_dtype(dtype->data_type());
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, ctx);
   }
 
@@ -366,8 +367,8 @@ class BroadcastLikeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& like,
                            const std::vector<int32_t>& broadcast_axes) const {
-    auto ctx = std::make_shared<BroadcastLikeOpInterpCtx>();
-    ctx->broadcast_axes = broadcast_axes;
+    auto ctx = std::make_shared<BroadcastLikeOpInterpCtxImpl<schema::BroadcastLikeOp>>();
+    ctx->set_broadcast_axes(broadcast_axes);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like}, ctx);
   }
 
@@ -409,9 +410,9 @@ class ConcatFunctor {
       }
     }
 
-    auto ctx = std::make_shared<ConcatOpInterpCtx>();
-    ctx->axis = axis;
-    ctx->max_dim_size = max_dim_size;
+    auto ctx = std::make_shared<ConcatOpInterpCtxImpl<schema::ConcatOp>>();
+    ctx->set_axis(axis);
+    ctx->set_max_dim_size(max_dim_size);
     TensorTuple outputs;
     for (int i = 0; i < inputs.size(); i += kMaxInputCount) {
       size_t size = (i + kMaxInputCount) < inputs.size() ? kMaxInputCount : inputs.size() - i;
@@ -478,9 +479,9 @@ class ExpandFunctor {
     std::vector<int32_t> expand_shape(shape.NumAxes());
     for (int i = 0; i < shape.NumAxes(); ++i) { expand_shape[i] = shape.dim_vec().at(i); }
 
-    auto ctx = std::make_shared<ExpandOpInterpCtx>();
-    ctx->logical_in_shape = in_shape;
-    ctx->logical_expand_shape = expand_shape;
+    auto ctx = std::make_shared<ExpandOpInterpCtxImpl<schema::ExpandOp>>();
+    ctx->set_logical_in_shape(in_shape);
+    ctx->set_logical_expand_shape(expand_shape);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -496,9 +497,9 @@ class ExpandGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::vector<int32_t>& logical_in_shape,
                            const std::vector<int32_t>& logical_expand_shape) const {
-    auto ctx = std::make_shared<ExpandGradOpInterpCtx>();
-    ctx->logical_out_shape = logical_in_shape;
-    ctx->logical_expand_shape = logical_expand_shape;
+    auto ctx = std::make_shared<ExpandGradOpInterpCtxImpl<schema::ExpandGradOp>>();
+    ctx->set_logical_out_shape(logical_in_shape);
+    ctx->set_logical_expand_shape(logical_expand_shape);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, ctx);
   }
 
@@ -518,8 +519,8 @@ class ExpandDimsFunctor {
         << " Dimension out of range, expected to be in range of [" << -(ndim + 1) << ", " << ndim
         << "], but got: " << dim;
     if (dim < 0) { expand_dim = dim + ndim + 1; }
-    auto ctx = std::make_shared<ExpandDimsOpInterpCtx>();
-    ctx->axis = expand_dim;
+    auto ctx = std::make_shared<ExpandDimsOpInterpCtxImpl<schema::ExpandDimsOp>>();
+    ctx->set_axis(expand_dim);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, ctx);
   }
 
@@ -533,8 +534,8 @@ class RollFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int32_t>& shifts,
                            const Optional<std::vector<int32_t>>& dims) const {
-    auto ctx = std::make_shared<RollOpInterpCtx>();
-    ctx->shifts = shifts;
+    auto ctx = std::make_shared<RollOpInterpCtxImpl<schema::RollOp>>();
+    ctx->set_shifts(shifts);
     std::vector<int32_t> actual_dims;
     if (dims.has_value()) {
       actual_dims = *JUST(dims);
@@ -543,7 +544,7 @@ class RollFunctor {
     }
     CHECK_GE_OR_RETURN(shifts.size(), actual_dims.size())
         << "The `shifts` and `dims` parameters should have the same size.";
-    ctx->dims = actual_dims;
+    ctx->set_dims(actual_dims);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -558,8 +559,8 @@ class GatherFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& indices, const int64_t& axis) const {
-    auto ctx = std::make_shared<GatherOpInterpCtx>();
-    ctx->axis = axis;
+    auto ctx = std::make_shared<GatherOpInterpCtxImpl<schema::GatherOp>>();
+    ctx->set_axis(axis);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, indices}, ctx);
   }
 
@@ -575,8 +576,8 @@ class DimGatherFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& indices, const int32_t& dim) const {
-    auto ctx = std::make_shared<DimGatherOpInterpCtx>();
-    ctx->dim = dim;
+    auto ctx = std::make_shared<DimGatherOpInterpCtxImpl<schema::DimGatherOp>>();
+    ctx->set_dim(dim);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, indices}, ctx);
   }
 
@@ -597,8 +598,8 @@ class DimScatterFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
                            const std::shared_ptr<one::Tensor>& src) const {
-    auto ctx = std::make_shared<DimScatterUpdateOpInterpCtx>();
-    ctx->dim = dim;
+    auto ctx = std::make_shared<DimScatterUpdateOpInterpCtxImpl<schema::DimScatterUpdateOp>>();
+    ctx->set_dim(dim);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, ctx);
   }
 
@@ -619,8 +620,8 @@ class DimScatterAddFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
                            const std::shared_ptr<one::Tensor>& src) const {
-    auto ctx = std::make_shared<DimScatterAddOpInterpCtx>();
-    ctx->dim = dim;
+    auto ctx = std::make_shared<DimScatterAddOpInterpCtxImpl<schema::DimScatterAddOp>>();
+    ctx->set_dim(dim);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, ctx);
   }
 
@@ -641,8 +642,8 @@ class DimScatterAddLikeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& like, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
                            const std::shared_ptr<one::Tensor>& src) const {
-    auto ctx = std::make_shared<DimScatterAddLikeOpInterpCtx>();
-    ctx->dim = dim;
+    auto ctx = std::make_shared<DimScatterAddLikeOpInterpCtxImpl<schema::DimScatterAddLikeOp>>();
+    ctx->set_dim(dim);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {like, index, src}, ctx);
   }
 
@@ -663,8 +664,8 @@ class DimScatterMulFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
                            const std::shared_ptr<one::Tensor>& src) const {
-    auto ctx = std::make_shared<DimScatterMulOpInterpCtx>();
-    ctx->dim = dim;
+    auto ctx = std::make_shared<DimScatterMulOpInterpCtxImpl<schema::DimScatterMulOp>>();
+    ctx->set_dim(dim);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, ctx);
   }
 
@@ -683,9 +684,10 @@ class DimScatterUpdateScalarFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
-    auto ctx = std::make_shared<DimScatterUpdateScalarOpInterpCtx>();
-    ctx->dim = dim;
-    ctx->src_scalar = JUST(src.As<float>());
+    auto ctx =
+        std::make_shared<DimScatterUpdateScalarOpInterpCtxImpl<schema::DimScatterUpdateScalarOp>>();
+    ctx->set_dim(dim);
+    ctx->set_src_scalar(JUST(src.As<float>()));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, ctx);
   }
 
@@ -704,9 +706,10 @@ class DimScatterAddScalarFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
-    auto ctx = std::make_shared<DimScatterAddScalarOpInterpCtx>();
-    ctx->dim = dim;
-    ctx->src_scalar = JUST(src.As<float>());
+    auto ctx =
+        std::make_shared<DimScatterAddScalarOpInterpCtxImpl<schema::DimScatterAddScalarOp>>();
+    ctx->set_dim(dim);
+    ctx->set_src_scalar(JUST(src.As<float>()));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, ctx);
   }
 
@@ -725,9 +728,10 @@ class DimScatterMulScalarFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
-    auto ctx = std::make_shared<DimScatterMulScalarOpInterpCtx>();
-    ctx->dim = dim;
-    ctx->src_scalar = JUST(src.As<float>());
+    auto ctx =
+        std::make_shared<DimScatterMulScalarOpInterpCtxImpl<schema::DimScatterMulScalarOp>>();
+    ctx->set_dim(dim);
+    ctx->set_src_scalar(JUST(src.As<float>()));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, ctx);
   }
 
@@ -742,8 +746,8 @@ class ArgSortFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
                            const std::string direction) const {
-    auto ctx = std::make_shared<ArgSortOpInterpCtx>();
-    ctx->direction = direction;
+    auto ctx = std::make_shared<ArgSortOpInterpCtxImpl<schema::ArgSortOp>>();
+    ctx->set_direction(direction);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, ctx);
   }
 
@@ -774,8 +778,8 @@ class ScatterNdFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& indices,
                            const std::shared_ptr<one::Tensor>& updates, const Shape& shape) const {
-    auto ctx = std::make_shared<ScatterNdOpInterpCtx>();
-    ctx->shape = shape;
+    auto ctx = std::make_shared<ScatterNdOpInterpCtxImpl<schema::ScatterNdOp>>();
+    ctx->set_shape(shape);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {indices, updates}, ctx);
   }
 
@@ -854,19 +858,19 @@ class ReshapeFunctor {
       }
     }
     size_t x_count = x->shape()->Count(0);
-    auto ctx = std::make_shared<ReshapeOpInterpCtx>();
+    auto ctx = std::make_shared<ReshapeOpInterpCtxImpl<schema::ReshapeOp>>();
     if (need_infer_axis == -1) {
       CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
           << "\n Shape " << shape.ToString() << " is invalid for input shape "
           << x->shape()->ToString();
-      ctx->shape = shape;
+      ctx->set_shape(shape);
     } else {
       Shape infered_shape = shape;
       infered_shape.Set(need_infer_axis, x_count / count);
       CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
           << "\n Shape " << shape.ToString() << " is invalid for input shape "
           << x->shape()->ToString();
-      ctx->shape = infered_shape;
+      ctx->set_shape(infered_shape);
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
@@ -882,10 +886,10 @@ class SliceBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
                            const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
-    auto ctx = std::make_shared<SliceOpInterpCtx>();
-    ctx->start = start;
-    ctx->stop = stop;
-    ctx->step = step;
+    auto ctx = std::make_shared<SliceOpInterpCtxImpl<schema::SliceOp>>();
+    ctx->set_start(start);
+    ctx->set_stop(stop);
+    ctx->set_step(step);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -901,10 +905,10 @@ class SliceGradBaseFunctor {
                            const std::shared_ptr<one::Tensor>& like,
                            const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
-    auto ctx = std::make_shared<SliceGradOpInterpCtx>();
-    ctx->start = start;
-    ctx->stop = stop;
-    ctx->step = step;
+    auto ctx = std::make_shared<SliceGradOpInterpCtxImpl<schema::SliceGradOp>>();
+    ctx->set_start(start);
+    ctx->set_stop(stop);
+    ctx->set_step(step);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, like}, ctx);
   }
 
@@ -935,10 +939,10 @@ class NarrowFunctor {
         << " (Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
         << "], but got:" << dim << ")";
     if (narrow_dim < 0) { narrow_dim += ndim; }
-    auto ctx = std::make_shared<NarrowOpInterpCtx>();
-    ctx->dim = narrow_dim;
-    ctx->start = start;
-    ctx->length = length;
+    auto ctx = std::make_shared<NarrowOpInterpCtxImpl<schema::NarrowOp>>();
+    ctx->set_dim(narrow_dim);
+    ctx->set_start(start);
+    ctx->set_length(length);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, ctx);
   }
 
@@ -954,10 +958,10 @@ class NarrowGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& like, const int64_t& dim,
                            const int64_t& start, const int64_t& length) const {
-    auto ctx = std::make_shared<NarrowGradOpInterpCtx>();
-    ctx->dim = dim;
-    ctx->start = start;
-    ctx->length = length;
+    auto ctx = std::make_shared<NarrowGradOpInterpCtxImpl<schema::NarrowGradOp>>();
+    ctx->set_dim(dim);
+    ctx->set_start(start);
+    ctx->set_length(length);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, like}, ctx);
   }
 
@@ -981,10 +985,10 @@ class LogicalSliceAssignFunctor {
                          const std::shared_ptr<one::Tensor>& value,
                          const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
                          const std::vector<int64_t>& step) const {
-    auto ctx = std::make_shared<LogicalSliceAssignOpInterpCtx>();
-    ctx->start = start;
-    ctx->stop = stop;
-    ctx->step = step;
+    auto ctx = std::make_shared<LogicalSliceAssignOpInterpCtxImpl<schema::LogicalSliceAssignOp>>();
+    ctx->set_start(start);
+    ctx->set_stop(stop);
+    ctx->set_step(step);
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, value}, ctx));
     return Maybe<void>::Ok();
   }
@@ -1002,10 +1006,10 @@ class SliceUpdateFunctor {
                            const std::shared_ptr<one::Tensor>& update,
                            const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step, bool inplace) const {
-    auto ctx = std::make_shared<SliceUpdateOpInterpCtx>();
-    ctx->start = start;
-    ctx->stop = stop;
-    ctx->step = step;
+    auto ctx = std::make_shared<SliceUpdateOpInterpCtxImpl<schema::SliceUpdateOp>>();
+    ctx->set_start(start);
+    ctx->set_stop(stop);
+    ctx->set_step(step);
     if (inplace) {
       JUST(CheckInplaceValid(x));
       auto outputs = std::make_shared<TensorTuple>(1);
@@ -1045,8 +1049,8 @@ class SqueezeFunctor {
       }
     }
 
-    auto ctx = std::make_shared<SqueezeOpInterpCtx>();
-    ctx->axes = squeeze_dims;
+    auto ctx = std::make_shared<SqueezeOpInterpCtxImpl<schema::SqueezeOp>>();
+    ctx->set_axes(squeeze_dims);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -1063,12 +1067,12 @@ class UpsampleGradFunctor {
                            const std::shared_ptr<one::Tensor>& x, const float& height_scale,
                            const float& width_scale, const bool& align_corners,
                            const std::string& data_format, const std::string& interpolation) const {
-    auto ctx = std::make_shared<UpsampleGradOpInterpCtx>();
-    ctx->height_scale = height_scale;
-    ctx->width_scale = width_scale;
-    ctx->align_corners = align_corners;
-    ctx->interpolation = interpolation;
-    ctx->data_format = data_format;
+    auto ctx = std::make_shared<UpsampleGradOpInterpCtxImpl<schema::UpsampleGradOp>>();
+    ctx->set_height_scale(height_scale);
+    ctx->set_width_scale(width_scale);
+    ctx->set_align_corners(align_corners);
+    ctx->set_interpolation(interpolation);
+    ctx->set_data_format(data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, ctx);
   }
 
@@ -1081,9 +1085,9 @@ class CopyFunctor {
   CopyFunctor() { op_ = CHECK_JUST(one::OpBuilder("copy").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& device_type,
                            const int64_t& device_id) const {
-    auto ctx = std::make_shared<CopyOpInterpCtx>();
-    ctx->device_type = device_type;
-    ctx->device_id = device_id;
+    auto ctx = std::make_shared<CopyOpInterpCtxImpl<schema::CopyOp>>();
+    ctx->set_device_type(device_type);
+    ctx->set_device_id(device_id);
 #ifdef WITH_CUDA
     if (device_type == "cuda") { InitCudaContextOnce(device_id); }
 #endif
@@ -1099,8 +1103,8 @@ class FlipFunctor {
   FlipFunctor() { op_ = CHECK_JUST(one::OpBuilder("flip").Input("x").Output("y").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int32_t>& dims) const {
-    auto ctx = std::make_shared<FlipOpInterpCtx>();
-    ctx->dims = dims;
+    auto ctx = std::make_shared<FlipOpInterpCtxImpl<schema::FlipOp>>();
+    ctx->set_dims(dims);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -1115,8 +1119,8 @@ class FlipGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::vector<int32_t>& dims) const {
-    auto ctx = std::make_shared<FlipGradOpInterpCtx>();
-    ctx->dims = dims;
+    auto ctx = std::make_shared<FlipGradOpInterpCtxImpl<schema::FlipGradOp>>();
+    ctx->set_dims(dims);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, ctx);
   }
 
@@ -1131,10 +1135,10 @@ class UnfoldTensorFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& dimension,
                            const int32_t& size, const int32_t& step) const {
-    auto ctx = std::make_shared<UnfoldTensorOpInterpCtx>();
-    ctx->dimension = dimension;
-    ctx->size = size;
-    ctx->step = step;
+    auto ctx = std::make_shared<UnfoldTensorOpInterpCtxImpl<schema::UnfoldTensorOp>>();
+    ctx->set_dimension(dimension);
+    ctx->set_size(size);
+    ctx->set_step(step);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -1151,10 +1155,10 @@ class UnfoldTensorGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const int32_t& dimension,
                            const int32_t& size, const int32_t& step) const {
-    auto ctx = std::make_shared<UnfoldTensorGradOpInterpCtx>();
-    ctx->dimension = dimension;
-    ctx->size = size;
-    ctx->step = step;
+    auto ctx = std::make_shared<UnfoldTensorGradOpInterpCtxImpl<schema::UnfoldTensorGradOp>>();
+    ctx->set_dimension(dimension);
+    ctx->set_size(size);
+    ctx->set_step(step);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, ctx);
   }
 
@@ -1168,12 +1172,12 @@ class UpsampleFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& height_scale,
                            const float& width_scale, const bool& align_corners,
                            const std::string& interpolation, const std::string& data_format) const {
-    auto ctx = std::make_shared<UpsampleOpInterpCtx>();
-    ctx->height_scale = height_scale;
-    ctx->width_scale = width_scale;
-    ctx->align_corners = align_corners;
-    ctx->interpolation = interpolation;
-    ctx->data_format = data_format;
+    auto ctx = std::make_shared<UpsampleOpInterpCtxImpl<schema::UpsampleOp>>();
+    ctx->set_height_scale(height_scale);
+    ctx->set_width_scale(width_scale);
+    ctx->set_align_corners(align_corners);
+    ctx->set_interpolation(interpolation);
+    ctx->set_data_format(data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -1188,10 +1192,10 @@ class UpsampleLinear1DFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& scale_factor,
                            const bool& align_corners, const std::string& data_format) const {
-    auto ctx = std::make_shared<UpsampleLinear1DOpInterpCtx>();
-    ctx->scale_factor = scale_factor;
-    ctx->align_corners = align_corners;
-    ctx->data_format = data_format;
+    auto ctx = std::make_shared<UpsampleLinear1DOpInterpCtxImpl<schema::UpsampleLinear1DOp>>();
+    ctx->set_scale_factor(scale_factor);
+    ctx->set_align_corners(align_corners);
+    ctx->set_data_format(data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -1208,10 +1212,11 @@ class UpsampleLinear1DGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const float& scale_factor,
                            const bool& align_corners, const std::string& data_format) const {
-    auto ctx = std::make_shared<UpsampleLinear1DGradOpInterpCtx>();
-    ctx->scale_factor = scale_factor;
-    ctx->align_corners = align_corners;
-    ctx->data_format = data_format;
+    auto ctx =
+        std::make_shared<UpsampleLinear1DGradOpInterpCtxImpl<schema::UpsampleLinear1DGradOp>>();
+    ctx->set_scale_factor(scale_factor);
+    ctx->set_align_corners(align_corners);
+    ctx->set_data_format(data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, ctx);
   }
 
@@ -1226,9 +1231,9 @@ class UpsampleNearest1DFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& scale_factor,
                            const std::string& data_format) const {
-    auto ctx = std::make_shared<UpsampleNearest1DOpInterpCtx>();
-    ctx->scale_factor = scale_factor;
-    ctx->data_format = data_format;
+    auto ctx = std::make_shared<UpsampleNearest1DOpInterpCtxImpl<schema::UpsampleNearest1DOp>>();
+    ctx->set_scale_factor(scale_factor);
+    ctx->set_data_format(data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -1245,9 +1250,10 @@ class UpsampleNearest1DGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const float& scale_factor,
                            const std::string& data_format) const {
-    auto ctx = std::make_shared<UpsampleNearest1DGradOpInterpCtx>();
-    ctx->scale_factor = scale_factor;
-    ctx->data_format = data_format;
+    auto ctx =
+        std::make_shared<UpsampleNearest1DGradOpInterpCtxImpl<schema::UpsampleNearest1DGradOp>>();
+    ctx->set_scale_factor(scale_factor);
+    ctx->set_data_format(data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, ctx);
   }
 
@@ -1262,10 +1268,10 @@ class UpsampleNearest2DFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& height_scale,
                            const float& width_scale, const std::string& data_format) const {
-    auto ctx = std::make_shared<UpsampleNearest2DOpInterpCtx>();
-    ctx->height_scale = height_scale;
-    ctx->width_scale = width_scale;
-    ctx->data_format = data_format;
+    auto ctx = std::make_shared<UpsampleNearest2DOpInterpCtxImpl<schema::UpsampleNearest2DOp>>();
+    ctx->set_height_scale(height_scale);
+    ctx->set_width_scale(width_scale);
+    ctx->set_data_format(data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -1282,10 +1288,11 @@ class UpsampleNearest2DGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const float& height_scale,
                            const float& width_scale, const std::string& data_format) const {
-    auto ctx = std::make_shared<UpsampleNearest2DGradOpInterpCtx>();
-    ctx->height_scale = height_scale;
-    ctx->width_scale = width_scale;
-    ctx->data_format = data_format;
+    auto ctx =
+        std::make_shared<UpsampleNearest2DGradOpInterpCtxImpl<schema::UpsampleNearest2DGradOp>>();
+    ctx->set_height_scale(height_scale);
+    ctx->set_width_scale(width_scale);
+    ctx->set_data_format(data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, ctx);
   }
 
@@ -1301,11 +1308,11 @@ class UpsampleBilinear2DFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& height_scale,
                            const float& width_scale, const bool& align_corners,
                            const std::string& data_format) const {
-    auto ctx = std::make_shared<UpsampleBilinear2DOpInterpCtx>();
-    ctx->height_scale = height_scale;
-    ctx->width_scale = width_scale;
-    ctx->align_corners = align_corners;
-    ctx->data_format = data_format;
+    auto ctx = std::make_shared<UpsampleBilinear2DOpInterpCtxImpl<schema::UpsampleBilinear2DOp>>();
+    ctx->set_height_scale(height_scale);
+    ctx->set_width_scale(width_scale);
+    ctx->set_align_corners(align_corners);
+    ctx->set_data_format(data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -1323,11 +1330,12 @@ class UpsampleBilinear2DGradFunctor {
                            const std::shared_ptr<one::Tensor>& x, const float& height_scale,
                            const float& width_scale, const bool& align_corners,
                            const std::string& data_format) const {
-    auto ctx = std::make_shared<UpsampleBilinear2DGradOpInterpCtx>();
-    ctx->height_scale = height_scale;
-    ctx->width_scale = width_scale;
-    ctx->align_corners = align_corners;
-    ctx->data_format = data_format;
+    auto ctx =
+        std::make_shared<UpsampleBilinear2DGradOpInterpCtxImpl<schema::UpsampleBilinear2DGradOp>>();
+    ctx->set_height_scale(height_scale);
+    ctx->set_width_scale(width_scale);
+    ctx->set_align_corners(align_corners);
+    ctx->set_data_format(data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, ctx);
   }
 
@@ -1343,11 +1351,11 @@ class UpsampleBicubic2DFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& height_scale,
                            const float& width_scale, const bool& align_corners,
                            const std::string& data_format) const {
-    auto ctx = std::make_shared<UpsampleBicubic2DOpInterpCtx>();
-    ctx->height_scale = height_scale;
-    ctx->width_scale = width_scale;
-    ctx->align_corners = align_corners;
-    ctx->data_format = data_format;
+    auto ctx = std::make_shared<UpsampleBicubic2DOpInterpCtxImpl<schema::UpsampleBicubic2DOp>>();
+    ctx->set_height_scale(height_scale);
+    ctx->set_width_scale(width_scale);
+    ctx->set_align_corners(align_corners);
+    ctx->set_data_format(data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -1365,11 +1373,12 @@ class UpsampleBicubic2DGradFunctor {
                            const std::shared_ptr<one::Tensor>& x, const float& height_scale,
                            const float& width_scale, const bool& align_corners,
                            const std::string& data_format) const {
-    auto ctx = std::make_shared<UpsampleBicubic2DGradOpInterpCtx>();
-    ctx->height_scale = height_scale;
-    ctx->width_scale = width_scale;
-    ctx->align_corners = align_corners;
-    ctx->data_format = data_format;
+    auto ctx =
+        std::make_shared<UpsampleBicubic2DGradOpInterpCtxImpl<schema::UpsampleBicubic2DGradOp>>();
+    ctx->set_height_scale(height_scale);
+    ctx->set_width_scale(width_scale);
+    ctx->set_align_corners(align_corners);
+    ctx->set_data_format(data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, ctx);
   }
 
@@ -1385,11 +1394,11 @@ class UpsampleNearest3DFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& depth_scale,
                            const float& height_scale, const float& width_scale,
                            const std::string& data_format) const {
-    auto ctx = std::make_shared<UpsampleNearest3DOpInterpCtx>();
-    ctx->depth_scale = depth_scale;
-    ctx->height_scale = height_scale;
-    ctx->width_scale = width_scale;
-    ctx->data_format = data_format;
+    auto ctx = std::make_shared<UpsampleNearest3DOpInterpCtxImpl<schema::UpsampleNearest3DOp>>();
+    ctx->set_depth_scale(depth_scale);
+    ctx->set_height_scale(height_scale);
+    ctx->set_width_scale(width_scale);
+    ctx->set_data_format(data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -1407,11 +1416,12 @@ class UpsampleNearest3DGradFunctor {
                            const std::shared_ptr<one::Tensor>& x, const float& depth_scale,
                            const float& height_scale, const float& width_scale,
                            const std::string& data_format) const {
-    auto ctx = std::make_shared<UpsampleNearest3DGradOpInterpCtx>();
-    ctx->depth_scale = depth_scale;
-    ctx->height_scale = height_scale;
-    ctx->width_scale = width_scale;
-    ctx->data_format = data_format;
+    auto ctx =
+        std::make_shared<UpsampleNearest3DGradOpInterpCtxImpl<schema::UpsampleNearest3DGradOp>>();
+    ctx->set_depth_scale(depth_scale);
+    ctx->set_height_scale(height_scale);
+    ctx->set_width_scale(width_scale);
+    ctx->set_data_format(data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, ctx);
   }
 
@@ -1427,12 +1437,13 @@ class UpsampleTrilinear3DFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& depth_scale,
                            const float& height_scale, const float& width_scale,
                            const bool& align_corners, const std::string& data_format) const {
-    auto ctx = std::make_shared<UpsampleTrilinear3DOpInterpCtx>();
-    ctx->depth_scale = depth_scale;
-    ctx->height_scale = height_scale;
-    ctx->width_scale = width_scale;
-    ctx->align_corners = align_corners;
-    ctx->data_format = data_format;
+    auto ctx =
+        std::make_shared<UpsampleTrilinear3DOpInterpCtxImpl<schema::UpsampleTrilinear3DOp>>();
+    ctx->set_depth_scale(depth_scale);
+    ctx->set_height_scale(height_scale);
+    ctx->set_width_scale(width_scale);
+    ctx->set_align_corners(align_corners);
+    ctx->set_data_format(data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -1450,12 +1461,13 @@ class UpsampleTrilinear3DGradFunctor {
                            const std::shared_ptr<one::Tensor>& x, const float& depth_scale,
                            const float& height_scale, const float& width_scale,
                            const bool& align_corners, const std::string& data_format) const {
-    auto ctx = std::make_shared<UpsampleTrilinear3DGradOpInterpCtx>();
-    ctx->depth_scale = depth_scale;
-    ctx->height_scale = height_scale;
-    ctx->width_scale = width_scale;
-    ctx->align_corners = align_corners;
-    ctx->data_format = data_format;
+    auto ctx = std::make_shared<
+        UpsampleTrilinear3DGradOpInterpCtxImpl<schema::UpsampleTrilinear3DGradOp>>();
+    ctx->set_depth_scale(depth_scale);
+    ctx->set_height_scale(height_scale);
+    ctx->set_width_scale(width_scale);
+    ctx->set_align_corners(align_corners);
+    ctx->set_data_format(data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, ctx);
   }
 
@@ -1476,8 +1488,9 @@ class UnsortedSegmentSumLikeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& segment_ids,
                            const std::shared_ptr<one::Tensor>& like, const int64_t& axis) const {
-    auto ctx = std::make_shared<UnsortedSegmentSumLikeOpInterpCtx>();
-    ctx->axis = axis;
+    auto ctx =
+        std::make_shared<UnsortedSegmentSumLikeOpInterpCtxImpl<schema::UnsortedSegmentSumLikeOp>>();
+    ctx->set_axis(axis);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, segment_ids, like}, ctx);
   }
 
@@ -1489,8 +1502,8 @@ class TrilFunctor {
  public:
   TrilFunctor() { op_ = CHECK_JUST(one::OpBuilder("tril").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& diagonal) const {
-    auto ctx = std::make_shared<TrilOpInterpCtx>();
-    ctx->diagonal = diagonal;
+    auto ctx = std::make_shared<TrilOpInterpCtxImpl<schema::TrilOp>>();
+    ctx->set_diagonal(diagonal);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -1502,8 +1515,8 @@ class TriuFunctor {
  public:
   TriuFunctor() { op_ = CHECK_JUST(one::OpBuilder("triu").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& diagonal) const {
-    auto ctx = std::make_shared<TriuOpInterpCtx>();
-    ctx->diagonal = diagonal;
+    auto ctx = std::make_shared<TriuOpInterpCtxImpl<schema::TriuOp>>();
+    ctx->set_diagonal(diagonal);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -1515,8 +1528,8 @@ class DiagFunctor {
  public:
   DiagFunctor() { op_ = CHECK_JUST(one::OpBuilder("diag").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& diagonal) const {
-    auto ctx = std::make_shared<DiagOpInterpCtx>();
-    ctx->diagonal = diagonal;
+    auto ctx = std::make_shared<DiagOpInterpCtxImpl<schema::DiagOp>>();
+    ctx->set_diagonal(diagonal);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -1531,8 +1544,8 @@ class DiagGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const int32_t& diagonal) const {
-    auto ctx = std::make_shared<DiagGradOpInterpCtx>();
-    ctx->diagonal = diagonal;
+    auto ctx = std::make_shared<DiagGradOpInterpCtxImpl<schema::DiagGradOp>>();
+    ctx->set_diagonal(diagonal);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, ctx);
   }
 
@@ -1833,8 +1846,8 @@ class ReduceSumLikeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& like,
                            const std::vector<int32_t>& axis) const {
-    auto ctx = std::make_shared<ReduceSumLikeOpInterpCtx>();
-    ctx->axis = axis;
+    auto ctx = std::make_shared<ReduceSumLikeOpInterpCtxImpl<schema::ReduceSumLikeOp>>();
+    ctx->set_axis(axis);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like}, ctx);
   }
 
@@ -1904,8 +1917,8 @@ class SplitLikeFunctor {
                                 const int64_t& axis) const {
     CHECK_GE_OR_RETURN(like.size(), 2);
     CHECK_LE_OR_RETURN(like.size(), kMaxInputCount);
-    auto ctx = std::make_shared<SplitLikeOpInterpCtx>();
-    ctx->axis = axis;
+    auto ctx = std::make_shared<SplitLikeOpInterpCtxImpl<schema::SplitLikeOp>>();
+    ctx->set_axis(axis);
     TensorTuple inputs(like.size() + 1);
     inputs[0] = x;
     for (int i = 0; i < like.size(); ++i) { inputs[i + 1] = like[i]; }
@@ -1972,8 +1985,9 @@ class UnsortedBatchSegmentSumFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& data,
                            const std::shared_ptr<one::Tensor>& segment_ids,
                            const int64_t& num_segments) const {
-    auto ctx = std::make_shared<UnsortedBatchSegmentSumOpInterpCtx>();
-    ctx->num_segments = num_segments;
+    auto ctx = std::make_shared<
+        UnsortedBatchSegmentSumOpInterpCtxImpl<schema::UnsortedBatchSegmentSumOp>>();
+    ctx->set_num_segments(num_segments);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {data, segment_ids}, ctx);
   }
 
@@ -1988,15 +2002,15 @@ class MaskedFillFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& mask, const Scalar& value) const {
-    auto ctx = std::make_shared<MaskedFillOpInterpCtx>();
+    auto ctx = std::make_shared<MaskedFillOpInterpCtxImpl<schema::MaskedFillOp>>();
     if (IsFloatingDataType(x->dtype()->data_type())) {
-      ctx->float_operand = JUST(value.As<double>());
-      ctx->has_float_operand = true;
-      ctx->has_int_operand = false;
+      ctx->set_float_operand(JUST(value.As<double>()));
+      ctx->set_has_float_operand(true);
+      ctx->set_has_int_operand(false);
     } else if (IsIntegralDataType(x->dtype()->data_type())) {
-      ctx->int_operand = JUST(value.As<int64_t>());
-      ctx->has_float_operand = false;
-      ctx->has_int_operand = true;
+      ctx->set_int_operand(JUST(value.As<int64_t>()));
+      ctx->set_has_float_operand(false);
+      ctx->set_has_int_operand(true);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
     }

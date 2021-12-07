@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -64,13 +65,13 @@ Maybe<void> PoolNdGrad<T>::Capture(PoolCaptureState* state, const TensorTuple& i
   state->output_index = state->SaveTensorForBackward(outputs.at(0));
 
   auto* interp_ctx = dynamic_cast<const typename T::ContextT*>(ctx);
-  state->data_format = interp_ctx->data_format;
-  state->padding = interp_ctx->padding;
-  state->padding_before = interp_ctx->padding_before;
-  state->padding_after = interp_ctx->padding_after;
-  state->pool_size = interp_ctx->pool_size;
-  state->strides = interp_ctx->strides;
-  state->ceil_mode = interp_ctx->ceil_mode;
+  state->data_format = interp_ctx->data_format();
+  state->padding = interp_ctx->padding();
+  state->padding_before = interp_ctx->padding_before();
+  state->padding_after = interp_ctx->padding_after();
+  state->pool_size = interp_ctx->pool_size();
+  state->strides = interp_ctx->strides();
+  state->ceil_mode = interp_ctx->ceil_mode();
   return Maybe<void>::Ok();
 }
 

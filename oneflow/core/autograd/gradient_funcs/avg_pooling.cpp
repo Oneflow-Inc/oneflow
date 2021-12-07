@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_interp_ctx.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/functional/functional.h"
@@ -59,13 +59,13 @@ Maybe<void> AvgPoolingNdGrad<T>::Capture(AvgPoolingCaptureState* state, const Te
   state->output_index = state->SaveTensorForBackward(outputs.at(0));
 
   auto* interp_ctx = dynamic_cast<const typename T::ContextT*>(ctx);
-  state->data_format = interp_ctx->data_format;
-  state->padding = interp_ctx->padding;
-  state->kernel_size = interp_ctx->kernel_size;
-  state->stride = interp_ctx->stride;
-  state->ceil_mode = interp_ctx->ceil_mode;
-  state->count_include_pad = interp_ctx->count_include_pad;
-  state->divisor_override = interp_ctx->divisor_override;
+  state->data_format = interp_ctx->data_format();
+  state->padding = interp_ctx->padding();
+  state->kernel_size = interp_ctx->kernel_size();
+  state->stride = interp_ctx->stride();
+  state->ceil_mode = interp_ctx->ceil_mode();
+  state->count_include_pad = interp_ctx->count_include_pad();
+  state->divisor_override = interp_ctx->divisor_override();
 
   return Maybe<void>::Ok();
 }

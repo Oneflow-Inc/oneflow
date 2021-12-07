@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -44,7 +45,7 @@ Maybe<void> Concat::Capture(ConcatCaptureState* state, const TensorTuple& inputs
   }
 
   auto* interp_ctx = dynamic_cast<const ConcatOpInterpCtx*>(ctx);
-  state->axis = interp_ctx->axis;
+  state->axis = interp_ctx->axis();
   for (const auto& input : inputs) { state->SaveTensorForBackward(input); }
   state->input_num = inputs.size();
   return Maybe<void>::Ok();

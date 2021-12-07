@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -34,7 +35,7 @@ class Pad2d : public OpExprGradFunction<Pad2dCaptureState> {
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
     auto* interp_ctx = dynamic_cast<const ReflectionPad2DOpInterpCtx*>(ctx);
-    state->paddings = interp_ctx->padding;
+    state->paddings = interp_ctx->padding();
     return Maybe<void>::Ok();
   }
 };
@@ -81,8 +82,8 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
     auto* interp_ctx = dynamic_cast<const PadOpInterpCtx*>(ctx);
-    const auto& pad_before = interp_ctx->padding_before;
-    const auto& pad_after = interp_ctx->padding_after;
+    const auto& pad_before = interp_ctx->padding_before();
+    const auto& pad_after = interp_ctx->padding_after();
 
     if (pad_before.size() != pad_after.size()) {
       return Error::RuntimeError() << "padding_before and padding_after size mismatch";
@@ -94,9 +95,9 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
       state->paddings[2 * i + 1] = pad_after[size - i - 1];
     }
     if (IsFloatingDataType(inputs.at(0)->dtype()->data_type())) {
-      state->padding_value = interp_ctx->floating_constant_value;
+      state->padding_value = interp_ctx->floating_constant_value();
     } else if (IsIntegralDataType(inputs.at(0)->dtype()->data_type())) {
-      state->padding_value = interp_ctx->integral_constant_value;
+      state->padding_value = interp_ctx->integral_constant_value();
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
     }

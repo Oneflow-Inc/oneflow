@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
@@ -111,11 +112,11 @@ class EagerSToBFunctor {
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerSToBpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(in_nd_sbp->sbp_parallel(0)), shape));
-    auto ctx = std::make_shared<EagerSToBOpInterpCtx>();
-    ctx->in_parallel_conf = PbMessage2TxtString(in_parallel_desc->parallel_conf());
-    ctx->out_parallel_conf = PbMessage2TxtString(out_parallel_desc->parallel_conf());
-    ctx->in_split_axis = in_nd_sbp->sbp_parallel(0).split_parallel().axis();
-    ctx->shape = shape;
+    auto ctx = std::make_shared<EagerSToBOpInterpCtxImpl<schema::EagerSToBOp>>();
+    ctx->set_in_parallel_conf(PbMessage2TxtString(in_parallel_desc->parallel_conf()));
+    ctx->set_out_parallel_conf(PbMessage2TxtString(out_parallel_desc->parallel_conf()));
+    ctx->set_in_split_axis(in_nd_sbp->sbp_parallel(0).split_parallel().axis());
+    ctx->set_shape(shape);
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, ctx));
   }
 };
@@ -132,10 +133,10 @@ class EagerPToBFunctor {
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerPToBpExpr(in_parallel_desc, out_parallel_desc, shape));
-    auto ctx = std::make_shared<EagerPToBOpInterpCtx>();
-    ctx->in_parallel_conf = PbMessage2TxtString(in_parallel_desc->parallel_conf());
-    ctx->out_parallel_conf = PbMessage2TxtString(out_parallel_desc->parallel_conf());
-    ctx->shape = shape;
+    auto ctx = std::make_shared<EagerPToBOpInterpCtxImpl<schema::EagerPToBOp>>();
+    ctx->set_in_parallel_conf(PbMessage2TxtString(in_parallel_desc->parallel_conf()));
+    ctx->set_out_parallel_conf(PbMessage2TxtString(out_parallel_desc->parallel_conf()));
+    ctx->set_shape(shape);
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, ctx));
   }
 };
@@ -162,12 +163,12 @@ class EagerNaiveSToSFunctor {
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerNaiveSToSOpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(in_nd_sbp->sbp_parallel(0)),
         SymbolOf(out_nd_sbp->sbp_parallel(0)), shape));
-    auto ctx = std::make_shared<EagerNaiveSToSOpInterpCtx>();
-    ctx->in_split_axis = in_nd_sbp->sbp_parallel(0).split_parallel().axis();
-    ctx->out_split_axis = out_nd_sbp->sbp_parallel(0).split_parallel().axis();
-    ctx->in_parallel_conf = PbMessage2TxtString(in_parallel_desc->parallel_conf());
-    ctx->out_parallel_conf = PbMessage2TxtString(out_parallel_desc->parallel_conf());
-    ctx->shape = shape;
+    auto ctx = std::make_shared<EagerNaiveSToSOpInterpCtxImpl<schema::EagerNaiveSToSOp>>();
+    ctx->set_in_split_axis(in_nd_sbp->sbp_parallel(0).split_parallel().axis());
+    ctx->set_out_split_axis(out_nd_sbp->sbp_parallel(0).split_parallel().axis());
+    ctx->set_in_parallel_conf(PbMessage2TxtString(in_parallel_desc->parallel_conf()));
+    ctx->set_out_parallel_conf(PbMessage2TxtString(out_parallel_desc->parallel_conf()));
+    ctx->set_shape(shape);
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, ctx));
   }
 };
@@ -189,11 +190,11 @@ class EagerBToSFunctor {
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerBToSpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(out_nd_sbp->sbp_parallel(0)), shape));
-    auto ctx = std::make_shared<EagerBToSOpInterpCtx>();
-    ctx->out_split_axis = out_nd_sbp->sbp_parallel(0).split_parallel().axis();
-    ctx->in_parallel_conf = PbMessage2TxtString(in_parallel_desc->parallel_conf());
-    ctx->out_parallel_conf = PbMessage2TxtString(out_parallel_desc->parallel_conf());
-    ctx->shape = shape;
+    auto ctx = std::make_shared<EagerBToSOpInterpCtxImpl<schema::EagerBToSOp>>();
+    ctx->set_out_split_axis(out_nd_sbp->sbp_parallel(0).split_parallel().axis());
+    ctx->set_in_parallel_conf(PbMessage2TxtString(in_parallel_desc->parallel_conf()));
+    ctx->set_out_parallel_conf(PbMessage2TxtString(out_parallel_desc->parallel_conf()));
+    ctx->set_shape(shape);
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
   }
 };
@@ -215,11 +216,11 @@ class EagerPToSFunctor {
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerPToSpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(out_nd_sbp->sbp_parallel(0)), shape));
-    auto ctx = std::make_shared<EagerPToSOpInterpCtx>();
-    ctx->out_split_axis = out_nd_sbp->sbp_parallel(0).split_parallel().axis();
-    ctx->in_parallel_conf = PbMessage2TxtString(in_parallel_desc->parallel_conf());
-    ctx->out_parallel_conf = PbMessage2TxtString(out_parallel_desc->parallel_conf());
-    ctx->shape = shape;
+    auto ctx = std::make_shared<EagerPToSOpInterpCtxImpl<schema::EagerPToSOp>>();
+    ctx->set_out_split_axis(out_nd_sbp->sbp_parallel(0).split_parallel().axis());
+    ctx->set_in_parallel_conf(PbMessage2TxtString(in_parallel_desc->parallel_conf()));
+    ctx->set_out_parallel_conf(PbMessage2TxtString(out_parallel_desc->parallel_conf()));
+    ctx->set_shape(shape);
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
   }
 };

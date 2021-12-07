@@ -54,18 +54,13 @@ class OpInterpCtx {
   Maybe<void> SetAttr(const std::string& attr_name, const T& attr_val);
   Maybe<void> SetAttr(const std::string& attr_name, const AttrVal& attr_val);
 
-  virtual const HashSet<std::string>& AttrNamesSet() const {
+  virtual const HashSet<std::string>& AttrNames() const {
     static HashSet<std::string> attr_names;
     return attr_names;
   }
 
   bool HasAttr(const std::string& attr_name) const {  // NOLINT
-    return AttrNamesSet().count(attr_name);
-  }
-
-  size_t hash_value() const {
-    // TODO(hjchen2)
-    return 0;
+    return AttrNames().count(attr_name);
   }
 
   static Maybe<OpInterpCtx> New(const std::string& op_name);
@@ -78,12 +73,12 @@ class OpInterpCtx {
 
  protected:
   OpInterpCtx() = default;
-
-  template<typename T>
-  Maybe<AttrVal> CastAttr(const T* attr_val) const {
-    return std::dynamic_pointer_cast<AttrVal>(std::make_shared<TypedAttrValRef<T>>(attr_val));
-  }
 };
+
+template<typename T>
+inline Maybe<AttrVal> CastAttr(const T* attr_val) {
+  return std::static_pointer_cast<AttrVal>(std::make_shared<TypedAttrValRef<T>>(attr_val));
+}
 
 class FakeOpInterpCtx : public OpInterpCtx {
  public:
@@ -91,12 +86,6 @@ class FakeOpInterpCtx : public OpInterpCtx {
     return Error::RuntimeError() << "`FakeOpInterpCtx` has no attribute.";
   }
 };
-
-#ifndef DEFINE_OP_INTERP_CTX_CLASS
-#define DEFINE_OP_INTERP_CTX_CLASS
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
-#endif  // DEFINE_OP_INTERP_CTX_CLASS
-#undef DEFINE_OP_INTERP_CTX_CLASS
 
 class CastToConsistentOpInterpCtx : public OpInterpCtx {
  public:
@@ -110,7 +99,7 @@ class CastToConsistentOpInterpCtx : public OpInterpCtx {
     }
   }
 
-  const HashSet<std::string>& AttrNamesSet() const override {
+  const HashSet<std::string>& AttrNames() const override {
     static HashSet<std::string> attr_names{"shape", "dtype"};
     return attr_names;
   }
@@ -130,7 +119,7 @@ class SelectTopNOpInterpCtx : public OpInterpCtx {
     }
   }
 
-  const HashSet<std::string>& AttrNamesSet() const override {
+  const HashSet<std::string>& AttrNames() const override {
     static HashSet<std::string> attr_names{"top_n"};
     return attr_names;
   }
@@ -163,7 +152,7 @@ class FeedVariableOpInterpCtx : public OpInterpCtx {
     }
   }
 
-  const HashSet<std::string>& AttrNamesSet() const override {
+  const HashSet<std::string>& AttrNames() const override {
     static HashSet<std::string> attr_names{"_l2"};
     return attr_names;
   }
@@ -202,7 +191,7 @@ class ImageDecoderRandomCropResizeOpInterpCtx : public OpInterpCtx {
     }
   }
 
-  const HashSet<std::string>& AttrNamesSet() const override {
+  const HashSet<std::string>& AttrNames() const override {
     static HashSet<std::string> attr_names{"target_width",
                                            "target_height",
                                            "num_workers",

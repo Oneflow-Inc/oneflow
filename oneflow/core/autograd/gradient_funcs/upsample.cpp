@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 
 namespace oneflow {
 namespace one {
@@ -42,11 +43,11 @@ Maybe<void> Upsample::Capture(UpsampleCaptureState* state, const TensorTuple& in
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
   auto* interp_ctx = dynamic_cast<const UpsampleOpInterpCtx*>(ctx);
-  state->height_scale = interp_ctx->height_scale;
-  state->width_scale = interp_ctx->width_scale;
-  state->align_corners = interp_ctx->align_corners;
-  state->data_format = interp_ctx->data_format;
-  state->interpolation = interp_ctx->interpolation;
+  state->height_scale = interp_ctx->height_scale();
+  state->width_scale = interp_ctx->width_scale();
+  state->align_corners = interp_ctx->align_corners();
+  state->data_format = interp_ctx->data_format();
+  state->interpolation = interp_ctx->interpolation();
   state->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
 }
@@ -82,9 +83,9 @@ class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DCaptureStat
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
     auto* interp_ctx = dynamic_cast<const UpsampleNearest2DOpInterpCtx*>(ctx);
-    state->height_scale = interp_ctx->height_scale;
-    state->width_scale = interp_ctx->width_scale;
-    state->data_format = interp_ctx->data_format;
+    state->height_scale = interp_ctx->height_scale();
+    state->width_scale = interp_ctx->width_scale();
+    state->data_format = interp_ctx->data_format();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -121,10 +122,10 @@ class UpsampleBilinear2D : public OpExprGradFunction<UpsampleBilinear2DCaptureSt
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
     auto* interp_ctx = dynamic_cast<const UpsampleBilinear2DOpInterpCtx*>(ctx);
-    state->height_scale = interp_ctx->height_scale;
-    state->width_scale = interp_ctx->width_scale;
-    state->align_corners = interp_ctx->align_corners;
-    state->data_format = interp_ctx->data_format;
+    state->height_scale = interp_ctx->height_scale();
+    state->width_scale = interp_ctx->width_scale();
+    state->align_corners = interp_ctx->align_corners();
+    state->data_format = interp_ctx->data_format();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -161,9 +162,9 @@ class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DCaptureState>
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
     auto* interp_ctx = dynamic_cast<const UpsampleLinear1DOpInterpCtx*>(ctx);
-    state->scale_factor = interp_ctx->scale_factor;
-    state->align_corners = interp_ctx->align_corners;
-    state->data_format = interp_ctx->data_format;
+    state->scale_factor = interp_ctx->scale_factor();
+    state->align_corners = interp_ctx->align_corners();
+    state->data_format = interp_ctx->data_format();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -198,8 +199,8 @@ class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DCaptureStat
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
     auto* interp_ctx = dynamic_cast<const UpsampleNearest1DOpInterpCtx*>(ctx);
-    state->scale_factor = interp_ctx->scale_factor;
-    state->data_format = interp_ctx->data_format;
+    state->scale_factor = interp_ctx->scale_factor();
+    state->data_format = interp_ctx->data_format();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -236,10 +237,10 @@ class UpsampleBicubic2D : public OpExprGradFunction<UpsampleBicubic2DCaptureStat
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
     auto* interp_ctx = dynamic_cast<const UpsampleBicubic2DOpInterpCtx*>(ctx);
-    state->height_scale = interp_ctx->height_scale;
-    state->width_scale = interp_ctx->width_scale;
-    state->align_corners = interp_ctx->align_corners;
-    state->data_format = interp_ctx->data_format;
+    state->height_scale = interp_ctx->height_scale();
+    state->width_scale = interp_ctx->width_scale();
+    state->align_corners = interp_ctx->align_corners();
+    state->data_format = interp_ctx->data_format();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -276,10 +277,10 @@ class UpsampleNearest3D : public OpExprGradFunction<UpsampleNearest3DCaptureStat
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
     auto* interp_ctx = dynamic_cast<const UpsampleNearest3DOpInterpCtx*>(ctx);
-    state->depth_scale = interp_ctx->depth_scale;
-    state->height_scale = interp_ctx->height_scale;
-    state->width_scale = interp_ctx->width_scale;
-    state->data_format = interp_ctx->data_format;
+    state->depth_scale = interp_ctx->depth_scale();
+    state->height_scale = interp_ctx->height_scale();
+    state->width_scale = interp_ctx->width_scale();
+    state->data_format = interp_ctx->data_format();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -318,11 +319,11 @@ class UpsampleTrilinear3D : public OpExprGradFunction<UpsampleTrilinear3DCapture
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
     auto* interp_ctx = dynamic_cast<const UpsampleTrilinear3DOpInterpCtx*>(ctx);
-    state->depth_scale = interp_ctx->depth_scale;
-    state->height_scale = interp_ctx->height_scale;
-    state->width_scale = interp_ctx->width_scale;
-    state->align_corners = interp_ctx->align_corners;
-    state->data_format = interp_ctx->data_format;
+    state->depth_scale = interp_ctx->depth_scale();
+    state->height_scale = interp_ctx->height_scale();
+    state->width_scale = interp_ctx->width_scale();
+    state->align_corners = interp_ctx->align_corners();
+    state->data_format = interp_ctx->data_format();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }

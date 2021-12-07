@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 size_t OpAttrs::count(const std::string& attr_name) const {
-  return ctx_->AttrNamesSet().count(attr_name);
+  return ctx_->AttrNames().count(attr_name);
 }
 
 Maybe<AttrVal> OpAttrs::at(const std::string& attr_name) const { return ctx_->GetAttr(attr_name); }
@@ -28,11 +28,11 @@ Maybe<AttrVal> OpAttrs::operator[](const std::string& attr_name) const {
 }
 
 OpAttrs::const_iterator OpAttrs::begin() const {
-  const auto& attrs = ctx_->AttrNamesSet();
+  const auto& attrs = ctx_->AttrNames();
   return const_iterator(attrs.cbegin(), attrs.cend(), this);
 }
 OpAttrs::const_iterator OpAttrs::end() const {
-  const auto& attrs = ctx_->AttrNamesSet();
+  const auto& attrs = ctx_->AttrNames();
   return const_iterator(attrs.cend(), attrs.cend(), this);
 }
 

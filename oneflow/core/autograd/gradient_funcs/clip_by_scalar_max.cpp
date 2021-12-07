@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -35,9 +36,9 @@ class ClipByScalarMax : public OpExprGradFunction<ClipByScalarMaxCaptureState> {
 
     auto* interp_ctx = dynamic_cast<const ClipByScalarMaxOpInterpCtx*>(ctx);
     if (IsFloatingDataType(inputs.at(0)->dtype()->data_type())) {
-      state->max = interp_ctx->floating_max;
+      state->max = interp_ctx->floating_max();
     } else if (IsIntegralDataType(inputs.at(0)->dtype()->data_type())) {
-      state->max = interp_ctx->integral_max;
+      state->max = interp_ctx->integral_max();
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Data type is not floating or integral type.";
     }

@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/function_library.h"
@@ -37,9 +38,9 @@ class ConvBiasGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy, const int32_t& num_spatial_dims,
                            const std::string& data_format) const {
-    auto ctx = std::make_shared<ConvBiasGradOpInterpCtx>();
-    ctx->num_spatial_dims = num_spatial_dims;
-    ctx->data_format = data_format;
+    auto ctx = std::make_shared<ConvBiasGradOpInterpCtxImpl<schema::ConvBiasGradOp>>();
+    ctx->set_num_spatial_dims(num_spatial_dims);
+    ctx->set_data_format(data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, ctx);
   }
 
@@ -60,14 +61,14 @@ class ConvFilterGradFunctor {
                            const std::vector<int32_t>& padding_before,
                            const std::vector<int32_t>& dilation_rate, const int32_t& groups,
                            const std::string& data_format) const {
-    auto ctx = std::make_shared<ConvFilterGradOpInterpCtx>();
-    ctx->num_spatial_dims = num_spatial_dims;
-    ctx->kernel_size = kernel_size;
-    ctx->strides = strides;
-    ctx->padding_before = padding_before;
-    ctx->dilation_rate = dilation_rate;
-    ctx->groups = groups;
-    ctx->data_format = data_format;
+    auto ctx = std::make_shared<ConvFilterGradOpInterpCtxImpl<schema::ConvFilterGradOp>>();
+    ctx->set_num_spatial_dims(num_spatial_dims);
+    ctx->set_kernel_size(kernel_size);
+    ctx->set_strides(strides);
+    ctx->set_padding_before(padding_before);
+    ctx->set_dilation_rate(dilation_rate);
+    ctx->set_groups(groups);
+    ctx->set_data_format(data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, ctx);
   }
 
@@ -93,14 +94,14 @@ class ConvDataGradFunctor {
                            const std::vector<int32_t>& padding_before,
                            const std::vector<int32_t>& dilation_rate, const int32_t& groups,
                            const std::string& data_format) const {
-    auto ctx = std::make_shared<ConvDataGradOpInterpCtx>();
-    ctx->num_spatial_dims = num_spatial_dims;
-    ctx->kernel_size = kernel_size;
-    ctx->strides = strides;
-    ctx->padding_before = padding_before;
-    ctx->dilation_rate = dilation_rate;
-    ctx->groups = groups;
-    ctx->data_format = data_format;
+    auto ctx = std::make_shared<ConvDataGradOpInterpCtxImpl<schema::ConvDataGradOp>>();
+    ctx->set_num_spatial_dims(num_spatial_dims);
+    ctx->set_kernel_size(kernel_size);
+    ctx->set_strides(strides);
+    ctx->set_padding_before(padding_before);
+    ctx->set_dilation_rate(dilation_rate);
+    ctx->set_groups(groups);
+    ctx->set_data_format(data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, weight, x}, ctx);
   }
 
@@ -130,13 +131,13 @@ class MaxPoolingNdGradFunctorImpl {
                            const std::vector<int32_t>& stride, const std::vector<int32_t>& dilation,
                            const bool& return_indices, const bool& ceil_mode) const {
     auto ctx = std::make_shared<ContextT>();
-    ctx->data_format = data_format;
-    ctx->padding = padding;
-    ctx->kernel_size = kernel_size;
-    ctx->stride = stride;
-    ctx->dilation = dilation;
-    ctx->return_indices = return_indices;
-    ctx->ceil_mode = ceil_mode;
+    ctx->set_data_format(data_format);
+    ctx->set_padding(padding);
+    ctx->set_kernel_size(kernel_size);
+    ctx->set_stride(stride);
+    ctx->set_dilation(dilation);
+    ctx->set_return_indices(return_indices);
+    ctx->set_ceil_mode(ceil_mode);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, y, indice, dy}, ctx);
   }
 
@@ -176,9 +177,12 @@ class MaxPoolingNdGradFunctor {
   }
 
  protected:
-  MaxPoolingNdGradFunctorImpl<1, MaxPool1DGradOpInterpCtx> pool1d_func_;
-  MaxPoolingNdGradFunctorImpl<2, MaxPool2DGradOpInterpCtx> pool2d_func_;
-  MaxPoolingNdGradFunctorImpl<3, MaxPool3DGradOpInterpCtx> pool3d_func_;
+  MaxPoolingNdGradFunctorImpl<1, MaxPool1DGradOpInterpCtxImpl<schema::MaxPool1DGradOp>>
+      pool1d_func_;
+  MaxPoolingNdGradFunctorImpl<2, MaxPool2DGradOpInterpCtxImpl<schema::MaxPool2DGradOp>>
+      pool2d_func_;
+  MaxPoolingNdGradFunctorImpl<3, MaxPool3DGradOpInterpCtxImpl<schema::MaxPool3DGradOp>>
+      pool3d_func_;
 };
 
 template<int Ndims, typename ContextT>
@@ -201,13 +205,13 @@ class AvgPoolingNdGradFunctorImpl {
                            const std::vector<int32_t>& stride, const bool& ceil_mode,
                            const bool& count_include_pad, const int64_t& divisor_override) const {
     auto ctx = std::make_shared<ContextT>();
-    ctx->data_format = data_format;
-    ctx->padding = padding;
-    ctx->kernel_size = kernel_size;
-    ctx->stride = stride;
-    ctx->ceil_mode = ceil_mode;
-    ctx->count_include_pad = count_include_pad;
-    ctx->divisor_override = divisor_override;
+    ctx->set_data_format(data_format);
+    ctx->set_padding(padding);
+    ctx->set_kernel_size(kernel_size);
+    ctx->set_stride(stride);
+    ctx->set_ceil_mode(ceil_mode);
+    ctx->set_count_include_pad(count_include_pad);
+    ctx->set_divisor_override(divisor_override);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, y, dy}, ctx);
   }
 
@@ -241,9 +245,9 @@ class AvgPoolingNdGradFunctor {
   }
 
  protected:
-  AvgPoolingNdGradFunctorImpl<1, AvgPool1DOpInterpCtx> pool1d_func_;
-  AvgPoolingNdGradFunctorImpl<2, AvgPool2DOpInterpCtx> pool2d_func_;
-  AvgPoolingNdGradFunctorImpl<3, AvgPool3DOpInterpCtx> pool3d_func_;
+  AvgPoolingNdGradFunctorImpl<1, AvgPool1DOpInterpCtxImpl<schema::AvgPool1DOp>> pool1d_func_;
+  AvgPoolingNdGradFunctorImpl<2, AvgPool2DOpInterpCtxImpl<schema::AvgPool2DOp>> pool2d_func_;
+  AvgPoolingNdGradFunctorImpl<3, AvgPool3DOpInterpCtxImpl<schema::AvgPool3DOp>> pool3d_func_;
 };
 
 class PoolNdGradFunctorImplBase {
@@ -276,13 +280,13 @@ class PoolNdGradFunctorImpl : public PoolNdGradFunctorImplBase {
                            const std::vector<int32_t>& pool_size,
                            const std::vector<int32_t>& strides, const bool& ceil_mode) const {
     auto ctx = std::make_shared<ContextT>();
-    ctx->data_format = data_format;
-    ctx->padding = padding;
-    ctx->padding_before = padding_before;
-    ctx->padding_after = padding_after;
-    ctx->pool_size = pool_size;
-    ctx->strides = strides;
-    ctx->ceil_mode = ceil_mode;
+    ctx->set_data_format(data_format);
+    ctx->set_padding(padding);
+    ctx->set_padding_before(padding_before);
+    ctx->set_padding_after(padding_after);
+    ctx->set_pool_size(pool_size);
+    ctx->set_strides(strides);
+    ctx->set_ceil_mode(ceil_mode);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, y, dy}, ctx);
   }
 
@@ -293,12 +297,24 @@ class PoolNdGradFunctorImpl : public PoolNdGradFunctorImplBase {
 class PoolNdGradFunctor {
  public:
   PoolNdGradFunctor() {
-    maxpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<1, TfMaxPool1DGradOpInterpCtx>("max"));
-    maxpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<2, TfMaxPool2DGradOpInterpCtx>("max"));
-    maxpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<3, TfMaxPool3DGradOpInterpCtx>("max"));
-    avgpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<1, TfAvgPool1DGradOpInterpCtx>("avg"));
-    avgpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<2, TfAvgPool2DGradOpInterpCtx>("avg"));
-    avgpool_funcs_.emplace_back(new PoolNdGradFunctorImpl<3, TfAvgPool3DGradOpInterpCtx>("avg"));
+    maxpool_funcs_.emplace_back(
+        new PoolNdGradFunctorImpl<1, TfMaxPool1DGradOpInterpCtxImpl<schema::TfMaxPool1DGradOp>>(
+            "max"));
+    maxpool_funcs_.emplace_back(
+        new PoolNdGradFunctorImpl<2, TfMaxPool2DGradOpInterpCtxImpl<schema::TfMaxPool2DGradOp>>(
+            "max"));
+    maxpool_funcs_.emplace_back(
+        new PoolNdGradFunctorImpl<3, TfMaxPool3DGradOpInterpCtxImpl<schema::TfMaxPool3DGradOp>>(
+            "max"));
+    avgpool_funcs_.emplace_back(
+        new PoolNdGradFunctorImpl<1, TfAvgPool1DGradOpInterpCtxImpl<schema::TfAvgPool1DGradOp>>(
+            "avg"));
+    avgpool_funcs_.emplace_back(
+        new PoolNdGradFunctorImpl<2, TfAvgPool2DGradOpInterpCtxImpl<schema::TfAvgPool2DGradOp>>(
+            "avg"));
+    avgpool_funcs_.emplace_back(
+        new PoolNdGradFunctorImpl<3, TfAvgPool3DGradOpInterpCtxImpl<schema::TfAvgPool3DGradOp>>(
+            "avg"));
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y,
@@ -371,9 +387,12 @@ class AdaptivePoolNdGradFunctor {
   }
 
  protected:
-  AdaptiveAvgPoolNdGradFunctorImpl<1, AdaptiveAvgPool1DOpInterpCtx> pool1d_func_;
-  AdaptiveAvgPoolNdGradFunctorImpl<2, AdaptiveAvgPool2DOpInterpCtx> pool2d_func_;
-  AdaptiveAvgPoolNdGradFunctorImpl<3, AdaptiveAvgPool3DOpInterpCtx> pool3d_func_;
+  AdaptiveAvgPoolNdGradFunctorImpl<1, AdaptiveAvgPool1DOpInterpCtxImpl<schema::AdaptiveAvgPool1DOp>>
+      pool1d_func_;
+  AdaptiveAvgPoolNdGradFunctorImpl<2, AdaptiveAvgPool2DOpInterpCtxImpl<schema::AdaptiveAvgPool2DOp>>
+      pool2d_func_;
+  AdaptiveAvgPoolNdGradFunctorImpl<3, AdaptiveAvgPool3DOpInterpCtxImpl<schema::AdaptiveAvgPool3DOp>>
+      pool3d_func_;
 };
 
 class SparseCrossEntropyGradFunctor {
@@ -389,8 +408,9 @@ class SparseCrossEntropyGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& prediction,
                            const std::shared_ptr<one::Tensor>& label,
                            const std::shared_ptr<one::Tensor>& dy, const int64_t& depth) const {
-    auto ctx = std::make_shared<SparseCrossEntropyGradOpInterpCtx>();
-    ctx->depth = depth;
+    auto ctx =
+        std::make_shared<SparseCrossEntropyGradOpInterpCtxImpl<schema::SparseCrossEntropyGradOp>>();
+    ctx->set_depth(depth);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {prediction, label, dy}, ctx);
   }
 
@@ -411,8 +431,9 @@ class SparseCrossEntropyMsGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& prediction,
                            const std::shared_ptr<one::Tensor>& label,
                            const std::shared_ptr<one::Tensor>& dy, const int64_t& depth) const {
-    auto ctx = std::make_shared<SparseCrossEntropyMsGradOpInterpCtx>();
-    ctx->depth = depth;
+    auto ctx = std::make_shared<
+        SparseCrossEntropyMsGradOpInterpCtxImpl<schema::SparseCrossEntropyMsGradOp>>();
+    ctx->set_depth(depth);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {prediction, label, dy}, ctx);
   }
 
@@ -434,8 +455,9 @@ class SparseSoftmaxCrossEntropyGrad {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& prob,
                            const std::shared_ptr<one::Tensor>& label, const int64_t& depth) const {
-    auto ctx = std::make_shared<SparseSoftmaxCrossEntropyGradOpInterpCtx>();
-    ctx->depth = depth;
+    auto ctx = std::make_shared<
+        SparseSoftmaxCrossEntropyGradOpInterpCtxImpl<schema::SparseSoftmaxCrossEntropyGradOp>>();
+    ctx->set_depth(depth);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {prob, label, dy}, ctx);
   }
 
@@ -457,9 +479,9 @@ class SmoothL1LossGradFunctor {
                            const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target, const float& beta,
                            const std::string& reduction) const {
-    auto ctx = std::make_shared<SmoothL1LossGradOpInterpCtx>();
-    ctx->beta = beta;
-    ctx->reduction = reduction;
+    auto ctx = std::make_shared<SmoothL1LossGradOpInterpCtxImpl<schema::SmoothL1LossGradOp>>();
+    ctx->set_beta(beta);
+    ctx->set_reduction(reduction);
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, input, target}, ctx);
   }
 
@@ -481,9 +503,9 @@ class KLDivLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target, const bool log_target,
                            const std::string& reduction) const {
-    auto ctx = std::make_shared<KlDivLossGradOpInterpCtx>();
-    ctx->log_target = log_target;
-    ctx->reduction = reduction;
+    auto ctx = std::make_shared<KlDivLossGradOpInterpCtxImpl<schema::KlDivLossGradOp>>();
+    ctx->set_log_target(log_target);
+    ctx->set_reduction(reduction);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, target, dy}, ctx);
   }
 
@@ -516,9 +538,9 @@ class NllLossGradFunctor {
                            const Optional<one::Tensor>& weight,
                            const std::shared_ptr<one::Tensor>& total_weight,
                            const int64_t ignore_index, const std::string& reduction) const {
-    auto ctx = std::make_shared<NllGradOpInterpCtx>();
-    ctx->ignore_index = ignore_index;
-    ctx->reduction = reduction;
+    auto ctx = std::make_shared<NllGradOpInterpCtxImpl<schema::NllGradOp>>();
+    ctx->set_ignore_index(ignore_index);
+    ctx->set_reduction(reduction);
     if (weight) {
       return OpInterpUtil::Dispatch<one::Tensor>(
           *op_weight_, {input, target, total_weight, JUST(weight), dy}, ctx);
@@ -554,8 +576,9 @@ class BinaryCrossEntropyLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight,
                            const std::string& reduction) const {
-    auto ctx = std::make_shared<BinaryCrossEntropyGradOpInterpCtx>();
-    ctx->reduction = reduction;
+    auto ctx =
+        std::make_shared<BinaryCrossEntropyGradOpInterpCtxImpl<schema::BinaryCrossEntropyGradOp>>();
+    ctx->set_reduction(reduction);
     if (weight) {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_weight_, {input, target, JUST(weight), dy},
                                                  ctx);
@@ -607,9 +630,10 @@ class BinaryCrossEntropyWithLogitsLossGradFunctor {
                            const Optional<one::Tensor>& weight,
                            const Optional<one::Tensor>& pos_weight,
                            const std::string& reduction) const {
-    auto ctx = std::make_shared<BinaryCrossEntropyWithLogitsGradOpInterpCtx>();
-    ctx->reduction = reduction;
-    ctx->has_pos_weight = pos_weight.has_value();
+    auto ctx = std::make_shared<BinaryCrossEntropyWithLogitsGradOpInterpCtxImpl<
+        schema::BinaryCrossEntropyWithLogitsGradOp>>();
+    ctx->set_reduction(reduction);
+    ctx->set_has_pos_weight(pos_weight.has_value());
     if (weight) {
       if (pos_weight) {
         return OpInterpUtil::Dispatch<one::Tensor>(
@@ -649,11 +673,12 @@ class CombinedMarginLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& label,
                            const std::shared_ptr<one::Tensor>& theta, const float& m1,
                            const float& m2, const float& m3, const int64_t& depth) const {
-    auto ctx = std::make_shared<CombinedMarginLossGradOpInterpCtx>();
-    ctx->m1 = m1;
-    ctx->m2 = m2;
-    ctx->m3 = m3;
-    ctx->depth = depth;
+    auto ctx =
+        std::make_shared<CombinedMarginLossGradOpInterpCtxImpl<schema::CombinedMarginLossGradOp>>();
+    ctx->set_m1(m1);
+    ctx->set_m2(m2);
+    ctx->set_m3(m3);
+    ctx->set_depth(depth);
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, label, theta}, ctx);
   }
 
@@ -668,9 +693,9 @@ class AffineGridGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dgrid, const Shape& size,
                            const bool& align_corners) const {
-    auto ctx = std::make_shared<AffineGridGradOpInterpCtx>();
-    ctx->size = size;
-    ctx->align_corners = align_corners;
+    auto ctx = std::make_shared<AffineGridGradOpInterpCtxImpl<schema::AffineGridGradOp>>();
+    ctx->set_size(size);
+    ctx->set_align_corners(align_corners);
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dgrid}, ctx);
   }
 
@@ -694,10 +719,10 @@ class GridSampleGradFunctor {
                                 const std::shared_ptr<one::Tensor>& grid,
                                 const std::string& interpolation_mode,
                                 const std::string& padding_mode, const bool& align_corners) const {
-    auto ctx = std::make_shared<GridSampleGradOpInterpCtx>();
-    ctx->interpolation_mode = interpolation_mode;
-    ctx->padding_mode = padding_mode;
-    ctx->align_corners = align_corners;
+    auto ctx = std::make_shared<GridSampleGradOpInterpCtxImpl<schema::GridSampleGradOp>>();
+    ctx->set_interpolation_mode(interpolation_mode);
+    ctx->set_padding_mode(padding_mode);
+    ctx->set_align_corners(align_corners);
     return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {doutput, input, grid}, ctx);
   }
 
@@ -727,10 +752,10 @@ class CtcLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& loss,
                            const std::shared_ptr<one::Tensor>& alpha, const int32_t& blank,
                            const bool& zero_infinity, const int64_t& max_target_length) const {
-    auto ctx = std::make_shared<CtcLossGradOpInterpCtx>();
-    ctx->blank = blank;
-    ctx->zero_infinity = zero_infinity;
-    ctx->max_target_length = max_target_length;
+    auto ctx = std::make_shared<CtcLossGradOpInterpCtxImpl<schema::CtcLossGradOp>>();
+    ctx->set_blank(blank);
+    ctx->set_zero_infinity(zero_infinity);
+    ctx->set_max_target_length(max_target_length);
     return OpInterpUtil::Dispatch<one::Tensor>(
         *op_, {grad_out, log_probs, targets, input_lengths, target_lengths, loss, alpha}, ctx);
   }
@@ -756,7 +781,7 @@ class PadGradFunctor {
         << "Pad size should less than or equal to input axes * 2.";
 
     if (mode == "constant") {
-      auto ctx = std::make_shared<PadGradOpInterpCtx>();
+      auto ctx = std::make_shared<PadGradOpInterpCtxImpl<schema::PadGradOp>>();
       std::vector<int64_t> pad_before(ndim, 0);
       std::vector<int64_t> pad_after(ndim, 0);
       const int64_t pad_pair = pad.size() / 2;
@@ -764,24 +789,26 @@ class PadGradFunctor {
         pad_before[ndim - i - 1] = pad[2 * i];
         pad_after[ndim - i - 1] = pad[2 * i + 1];
       }
-      ctx->padding_before = pad_before;
-      ctx->padding_after = pad_after;
+      ctx->set_padding_before(pad_before);
+      ctx->set_padding_after(pad_after);
 
       if (IsFloatingDataType(dy->dtype()->data_type())) {
-        ctx->floating_constant_value = JUST(value.As<double>());
-        ctx->integral_constant_value = 0;
+        ctx->set_floating_constant_value(JUST(value.As<double>()));
+        ctx->set_integral_constant_value(0);
       } else if (IsIntegralDataType(dy->dtype()->data_type())) {
-        ctx->floating_constant_value = 0;
-        ctx->integral_constant_value = JUST(value.As<int64_t>());
+        ctx->set_floating_constant_value(0);
+        ctx->set_integral_constant_value(JUST(value.As<int64_t>()));
       }
       return OpInterpUtil::Dispatch<Tensor>(*pad_grad_, {dy}, ctx);
     } else if (mode == "reflect") {
-      auto ctx = std::make_shared<ReflectionPad2DGradOpInterpCtx>();
-      ctx->padding = pad;
+      auto ctx =
+          std::make_shared<ReflectionPad2DGradOpInterpCtxImpl<schema::ReflectionPad2DGradOp>>();
+      ctx->set_padding(pad);
       return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_grad_, {dy}, ctx);
     } else if (mode == "replicate") {
-      auto ctx = std::make_shared<ReplicationPad2DGradOpInterpCtx>();
-      ctx->padding = pad;
+      auto ctx =
+          std::make_shared<ReplicationPad2DGradOpInterpCtxImpl<schema::ReplicationPad2DGradOp>>();
+      ctx->set_padding(pad);
       return OpInterpUtil::Dispatch<Tensor>(*replicate_pad_grad_, {dy}, ctx);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode
@@ -815,9 +842,9 @@ class NormalizationGradFunctor {
                                 const std::shared_ptr<one::Tensor>& inv_variance,
                                 const std::shared_ptr<one::Tensor>& gamma, const float& epsilon,
                                 const int32_t& axis) const {
-    auto ctx = std::make_shared<NormalizationGradOpInterpCtx>();
-    ctx->epsilon = epsilon;
-    ctx->axis = axis;
+    auto ctx = std::make_shared<NormalizationGradOpInterpCtxImpl<schema::NormalizationGradOp>>();
+    ctx->set_epsilon(epsilon);
+    ctx->set_axis(axis);
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {grad, x, mean, inv_variance, gamma}, ctx);
   }
 
@@ -849,9 +876,10 @@ class NormalizationAddReluGradFunctor {
       const std::shared_ptr<one::Tensor>& gamma, const std::shared_ptr<one::Tensor>& beta,
       const std::shared_ptr<one::Tensor>& reserve_space, const std::shared_ptr<one::Tensor>& y,
       const int32_t& axis, const float& epsilon) const {
-    auto ctx = std::make_shared<NormalizationAddReluGradOpInterpCtx>();
-    ctx->axis = axis;
-    ctx->epsilon = epsilon;
+    auto ctx = std::make_shared<
+        NormalizationAddReluGradOpInterpCtxImpl<schema::NormalizationAddReluGradOp>>();
+    ctx->set_axis(axis);
+    ctx->set_epsilon(epsilon);
     return OpInterpUtil::Dispatch<TensorTuple>(
         *addend_op_, {x, grad, mean, inv_variance, gamma, beta, reserve_space, y}, ctx);
   }
@@ -876,9 +904,9 @@ class LayerNormGradFunctor {
                            const std::shared_ptr<one::Tensor>& inv_variance,
                            const std::shared_ptr<one::Tensor>& dy, const int64_t& begin_norm_axis,
                            const double& epsilon) const {
-    auto ctx = std::make_shared<LayerNormGradOpInterpCtx>();
-    ctx->begin_norm_axis = begin_norm_axis;
-    ctx->epsilon = epsilon;
+    auto ctx = std::make_shared<LayerNormGradOpInterpCtxImpl<schema::LayerNormGradOp>>();
+    ctx->set_begin_norm_axis(begin_norm_axis);
+    ctx->set_epsilon(epsilon);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mean, inv_variance, dy}, ctx);
   }
 
@@ -894,8 +922,8 @@ class LayerNormParamGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy, const int64_t& begin_params_axis,
                            const double& epsilon) const {
-    auto ctx = std::make_shared<LayerNormParamGradOpInterpCtx>();
-    ctx->begin_params_axis = begin_params_axis;
+    auto ctx = std::make_shared<LayerNormParamGradOpInterpCtxImpl<schema::LayerNormParamGradOp>>();
+    ctx->set_begin_params_axis(begin_params_axis);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, ctx);
   }
 
@@ -920,8 +948,8 @@ class LayerNormAffineParamGradFunctor {
                                 const std::shared_ptr<one::Tensor>& gamma,
                                 const std::shared_ptr<one::Tensor>& normalized,
                                 const int64_t& begin_params_axis, const double& epsilon) const {
-    auto ctx = std::make_shared<LayerNormParamGradOpInterpCtx>();
-    ctx->begin_params_axis = begin_params_axis;
+    auto ctx = std::make_shared<LayerNormParamGradOpInterpCtxImpl<schema::LayerNormParamGradOp>>();
+    ctx->set_begin_params_axis(begin_params_axis);
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, gamma, normalized}, ctx);
   }
 
@@ -937,8 +965,9 @@ class BroadcastMatmulGradBFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b, double alpha) const {
-    auto ctx = std::make_shared<BroadcastMatmulGradBOpInterpCtx>();
-    ctx->alpha = alpha;
+    auto ctx =
+        std::make_shared<BroadcastMatmulGradBOpInterpCtxImpl<schema::BroadcastMatmulGradBOp>>();
+    ctx->set_alpha(alpha);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {a, b}, ctx);
   }
 
@@ -960,10 +989,11 @@ class FusedScaleTrilSoftmaxMaskScaleGradFunctor {
                            const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& mask, const int64_t diagonal,
                            const float tril_scale_value, const float mask_scale_value) const {
-    auto ctx = std::make_shared<FusedTrilScaleSoftmaxMaskScaleGradOpInterpCtx>();
-    ctx->diagonal = diagonal;
-    ctx->tril_scale_value = tril_scale_value;
-    ctx->mask_scale_value = mask_scale_value;
+    auto ctx = std::make_shared<FusedTrilScaleSoftmaxMaskScaleGradOpInterpCtxImpl<
+        schema::FusedTrilScaleSoftmaxMaskScaleGradOp>>();
+    ctx->set_diagonal(diagonal);
+    ctx->set_tril_scale_value(tril_scale_value);
+    ctx->set_mask_scale_value(mask_scale_value);
     return OpInterpUtil::Dispatch<Tensor>(*fused_op_, {softmax_y, dy, mask}, ctx);
   }
 
@@ -984,8 +1014,9 @@ class FusedScaleMaskSoftmaxGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& mask, const float& scale) const {
-    auto ctx = std::make_shared<FusedScaleMaskSoftmaxGradOpInterpCtx>();
-    ctx->scale_value = scale;
+    auto ctx = std::make_shared<
+        FusedScaleMaskSoftmaxGradOpInterpCtxImpl<schema::FusedScaleMaskSoftmaxGradOp>>();
+    ctx->set_scale_value(scale);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {y, dy, mask}, ctx);
   }
 
@@ -1009,9 +1040,10 @@ class FusedScaleMaskSoftmaxDropoutGradFunctor {
                            const std::shared_ptr<one::Tensor>& mask,
                            const std::shared_ptr<one::Tensor>& dropout_mask, const float& scale,
                            const float& dropout_scale) const {
-    auto ctx = std::make_shared<FusedScaleMaskSoftmaxDropoutGradOpInterpCtx>();
-    ctx->scale_value = scale;
-    ctx->dropout_scale_value = dropout_scale;
+    auto ctx = std::make_shared<FusedScaleMaskSoftmaxDropoutGradOpInterpCtxImpl<
+        schema::FusedScaleMaskSoftmaxDropoutGradOp>>();
+    ctx->set_scale_value(scale);
+    ctx->set_dropout_scale_value(dropout_scale);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {softmax_y, dy, mask, dropout_mask}, ctx);
   }
 

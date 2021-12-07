@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -176,7 +177,7 @@ class LeakyRelu : public OpExprGradFunction<LeakyReluCaptureState> {
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
     auto* interp_ctx = dynamic_cast<const LeakyReluOpInterpCtx*>(ctx);
-    state->alpha = interp_ctx->alpha;
+    state->alpha = interp_ctx->alpha();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -208,8 +209,8 @@ class HardTanh : public OpExprGradFunction<HardTanhCaptureState> {
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
     auto* interp_ctx = dynamic_cast<const HardtanhOpInterpCtx*>(ctx);
-    state->min_val = interp_ctx->min_val;
-    state->max_val = interp_ctx->max_val;
+    state->min_val = interp_ctx->min_val();
+    state->max_val = interp_ctx->max_val();
     state->SaveTensorForBackward(outputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -241,7 +242,7 @@ class Elu : public OpExprGradFunction<EluCaptureState> {
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
     auto* interp_ctx = dynamic_cast<const EluOpInterpCtx*>(ctx);
-    state->alpha = interp_ctx->alpha;
+    state->alpha = interp_ctx->alpha();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -272,7 +273,7 @@ class Celu : public OpExprGradFunction<CeluCaptureState> {
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
     auto* interp_ctx = dynamic_cast<const CeluOpInterpCtx*>(ctx);
-    state->alpha = interp_ctx->alpha;
+    state->alpha = interp_ctx->alpha();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }

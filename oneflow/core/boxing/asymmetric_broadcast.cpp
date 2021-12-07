@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
@@ -107,9 +108,10 @@ Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tenso
       int64_t root = JUST(CachedGetBroadcastRoot(in_placement, broadcast_placement_cur_rank));
       std::shared_ptr<one::UserOpExpr> op_expr =
           JUST(CachedEagerNcclBroadcast(broadcast_placement_cur_rank, root));
-      auto ctx = std::make_shared<EagerNcclBroadcastOpInterpCtx>();
-      ctx->root = root;
-      ctx->parallel_conf = PbMessage2TxtString(broadcast_placement_cur_rank->parallel_conf());
+      auto ctx =
+          std::make_shared<EagerNcclBroadcastOpInterpCtxImpl<schema::EagerNcclBroadcastOp>>();
+      ctx->set_root(root);
+      ctx->set_parallel_conf(PbMessage2TxtString(broadcast_placement_cur_rank->parallel_conf()));
       local_tensor = JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {local_tensor}, ctx));
     }
   }

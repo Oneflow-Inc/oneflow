@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/op_expr_grad_function.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -45,11 +46,11 @@ Maybe<void> Unfold::Capture(UnfoldInterpState* state, const TensorTuple& inputs,
   auto* interp_ctx = dynamic_cast<const UnfoldOpInterpCtx*>(ctx);
   std::vector<int32_t> out_shape(2);
   const std::shared_ptr<Tensor>& x = inputs.at(0);
-  state->data_format = interp_ctx->data_format;
-  state->kernel_size = interp_ctx->kernel_size;
-  state->dilation_rate = interp_ctx->dilation_rate;
-  state->padding = interp_ctx->padding;
-  state->strides = interp_ctx->strides;
+  state->data_format = interp_ctx->data_format();
+  state->kernel_size = interp_ctx->kernel_size();
+  state->dilation_rate = interp_ctx->dilation_rate();
+  state->padding = interp_ctx->padding();
+  state->strides = interp_ctx->strides();
   // Only support 4-d Tensor Input.
   for (int i = 0; i < 2; i++) { out_shape.at(i) = (x->shape()->At(i + 2)); }
   state->output_size = out_shape;

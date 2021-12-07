@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/op_expr_grad_function.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -33,7 +34,7 @@ class FusedSelfAttention : public OpExprGradFunction<FusedSelfAttentionInterpSta
     state->input_requires_grad = inputs.at(0)->requires_grad();
     if (!state->input_requires_grad) { return Maybe<void>::Ok(); }
     auto* interp_ctx = dynamic_cast<const FusedSelfAttentionQueryMulKeyAndValueOpInterpCtx*>(ctx);
-    state->alpha = interp_ctx->alpha;
+    state->alpha = interp_ctx->alpha();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }

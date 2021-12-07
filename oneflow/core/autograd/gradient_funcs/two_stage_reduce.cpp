@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -41,7 +42,7 @@ class ReduceDevice : public OpExprGradFunction<ReduceDeviceCaptureState> {
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
     auto* interp_ctx = dynamic_cast<const ReduceMaxDeviceStageOpInterpCtx*>(ctx);
-    state->axis = interp_ctx->axis;
+    state->axis = interp_ctx->axis();
     state->mask_index = state->SaveTensorForBackward(outputs.at(1));   // mask
     state->count_index = state->SaveTensorForBackward(outputs.at(2));  // count
     return Maybe<void>::Ok();
@@ -88,8 +89,8 @@ class ReduceGlobal : public OpExprGradFunction<ReduceGlobalCaptureState> {
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
     auto* interp_ctx = dynamic_cast<const ReduceMaxGlobalStageOpInterpCtx*>(ctx);
-    state->axis = interp_ctx->axis;
-    state->keepdims = interp_ctx->keepdims;
+    state->axis = interp_ctx->axis();
+    state->keepdims = interp_ctx->keepdims();
     state->mask_index = state->SaveTensorForBackward(outputs.at(1));         // mask
     state->device_count_index = state->SaveTensorForBackward(inputs.at(1));  // device_count
     return Maybe<void>::Ok();

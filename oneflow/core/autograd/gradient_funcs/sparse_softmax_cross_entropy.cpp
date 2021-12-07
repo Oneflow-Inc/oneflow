@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -38,7 +39,7 @@ Maybe<void> SparseSoftmaxCrossEntropy::Capture(SparseSoftmaxCrossEntropyCaptureS
                                                const TensorTuple& outputs,
                                                const OpInterpCtx* ctx) const {
   auto* interp_ctx = dynamic_cast<const SparseSoftmaxCrossEntropyOpInterpCtx*>(ctx);
-  state->depth = interp_ctx->depth;
+  state->depth = interp_ctx->depth();
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
   CHECK_EQ_OR_RETURN(outputs.size(), 2);
   state->SaveTensorForBackward(outputs.at(0));  // prob

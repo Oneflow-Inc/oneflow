@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -88,8 +89,8 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
     state->beta_requires_grad = beta->requires_grad();
     auto* interp_ctx = dynamic_cast<const NormalizationAddReluGradOpInterpCtx*>(ctx);
 
-    state->axis = interp_ctx->axis;
-    state->epsilon = interp_ctx->epsilon;
+    state->axis = interp_ctx->axis();
+    state->epsilon = interp_ctx->epsilon();
 
     state->SaveTensorForBackward(inputs.at(0));  // x 0
     state->SaveTensorForBackward(gamma);         // gamma 1

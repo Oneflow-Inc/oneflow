@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
@@ -70,7 +71,7 @@ class AddNFunctor {
   std::vector<std::shared_ptr<OpExpr>> op_;
 };
 
-template<typename ContextT>
+template<typename T>
 class ScalarMathBaseFunctor {
  public:
   explicit ScalarMathBaseFunctor(std::string op_name) {
@@ -82,13 +83,13 @@ class ScalarMathBaseFunctor {
     if (std::dynamic_pointer_cast<StaticZerosTensor>(x) && op_->op_type_name() == "scalar_mul") {
       return x;
     }
-    auto ctx = std::make_shared<ContextT>();
+    auto ctx = std::make_shared<typename T::ContextT>();
     TensorProcessor tensor_processor;
     Symbol<DType> lowest_dtype;
     if (scalar.IsFloatingPoint()) {
-      ctx->float_operand = JUST(scalar.As<double>());
-      ctx->has_float_operand = true;
-      ctx->has_int_operand = false;
+      ctx->set_float_operand(JUST(scalar.As<double>()));
+      ctx->set_has_float_operand(true);
+      ctx->set_has_int_operand(false);
       // Only promote type to Float32 when tensor is Int type but scalar is float type.
       if (DType::priority_order[x->dtype()->data_type()]
           < DType::priority_order[DType::Float16()->data_type()]) {
@@ -97,9 +98,9 @@ class ScalarMathBaseFunctor {
         lowest_dtype = x->dtype();
       }
     } else if (scalar.IsIntegral()) {
-      ctx->int_operand = JUST(scalar.As<int64_t>());
-      ctx->has_float_operand = false;
-      ctx->has_int_operand = true;
+      ctx->set_int_operand(JUST(scalar.As<int64_t>()));
+      ctx->set_has_float_operand(false);
+      ctx->set_has_int_operand(true);
       lowest_dtype = x->dtype();
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
@@ -123,9 +124,10 @@ class ScalarMathBaseFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ScalarAddFunctor : public ScalarMathBaseFunctor<ScalarAddOpInterpCtx> {
+class ScalarAddFunctor : public ScalarMathBaseFunctor<ScalarAddFunctor> {
  public:
-  ScalarAddFunctor() : ScalarMathBaseFunctor<ScalarAddOpInterpCtx>(/*op_name=*/"scalar_add") {}
+  using ContextT = ScalarAddOpInterpCtxImpl<schema::ScalarAddOp>;
+  ScalarAddFunctor() : ScalarMathBaseFunctor<ScalarAddFunctor>(/*op_name=*/"scalar_add") {}
 };
 
 class ScalarAdd2Functor {
@@ -150,9 +152,10 @@ class ScalarSub2Functor {
   }
 };
 
-class ScalarMulFunctor : public ScalarMathBaseFunctor<ScalarMulOpInterpCtx> {
+class ScalarMulFunctor : public ScalarMathBaseFunctor<ScalarMulFunctor> {
  public:
-  ScalarMulFunctor() : ScalarMathBaseFunctor<ScalarMulOpInterpCtx>(/*op_name=*/"scalar_mul") {}
+  using ContextT = ScalarMulOpInterpCtxImpl<schema::ScalarMulOp>;
+  ScalarMulFunctor() : ScalarMathBaseFunctor<ScalarMulFunctor>(/*op_name=*/"scalar_mul") {}
 };
 
 class ScalarMul2Functor {
@@ -176,9 +179,10 @@ class ScalarDiv2Functor {
   }
 };
 
-class ScalarPowFunctor : public ScalarMathBaseFunctor<ScalarPowOpInterpCtx> {
+class ScalarPowFunctor : public ScalarMathBaseFunctor<ScalarPowFunctor> {
  public:
-  ScalarPowFunctor() : ScalarMathBaseFunctor<ScalarPowOpInterpCtx>(/*op_name=*/"scalar_pow") {}
+  using ContextT = ScalarPowOpInterpCtxImpl<schema::ScalarPowOp>;
+  ScalarPowFunctor() : ScalarMathBaseFunctor<ScalarPowFunctor>(/*op_name=*/"scalar_pow") {}
 };
 
 class ScalarPowGradFunctor {
@@ -188,15 +192,15 @@ class ScalarPowGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& dy, const Scalar& scalar) const {
-    auto ctx = std::make_shared<ScalarPowGradOpInterpCtx>();
+    auto ctx = std::make_shared<ScalarPowGradOpInterpCtxImpl<schema::ScalarPowGradOp>>();
     if (scalar.IsFloatingPoint()) {
-      ctx->has_float_operand = true;
-      ctx->has_int_operand = false;
-      ctx->float_operand = JUST(scalar.As<double>());
+      ctx->set_has_float_operand(true);
+      ctx->set_has_int_operand(false);
+      ctx->set_float_operand(JUST(scalar.As<double>()));
     } else if (scalar.IsIntegral()) {
-      ctx->has_float_operand = false;
-      ctx->has_int_operand = true;
-      ctx->int_operand = JUST(scalar.As<int64_t>());
+      ctx->set_has_float_operand(false);
+      ctx->set_has_int_operand(true);
+      ctx->set_int_operand(JUST(scalar.As<int64_t>()));
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarPowGrad should be float or int.";
     }
@@ -207,15 +211,17 @@ class ScalarPowGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ScalarFloorDivFunctor : public ScalarMathBaseFunctor<ScalarFloordivOpInterpCtx> {
+class ScalarFloorDivFunctor : public ScalarMathBaseFunctor<ScalarFloorDivFunctor> {
  public:
+  using ContextT = ScalarFloordivOpInterpCtxImpl<schema::ScalarFloordivOp>;
   ScalarFloorDivFunctor()
-      : ScalarMathBaseFunctor<ScalarFloordivOpInterpCtx>(/*op_name=*/"scalar_floordiv") {}
+      : ScalarMathBaseFunctor<ScalarFloorDivFunctor>(/*op_name=*/"scalar_floordiv") {}
 };
 
-class ScalarFModFunctor : public ScalarMathBaseFunctor<ScalarFmodOpInterpCtx> {
+class ScalarFModFunctor : public ScalarMathBaseFunctor<ScalarFModFunctor> {
  public:
-  ScalarFModFunctor() : ScalarMathBaseFunctor<ScalarFmodOpInterpCtx>(/*op_name=*/"scalar_fmod") {}
+  using ContextT = ScalarFmodOpInterpCtxImpl<schema::ScalarFmodOp>;
+  ScalarFModFunctor() : ScalarMathBaseFunctor<ScalarFModFunctor>(/*op_name=*/"scalar_fmod") {}
 };
 
 class ReduceMaxFunctor {
@@ -226,15 +232,15 @@ class ReduceMaxFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
-    auto ctx = std::make_shared<ReduceMaxOpInterpCtx>();
+    auto ctx = std::make_shared<ReduceMaxOpInterpCtxImpl<schema::ReduceMaxOp>>();
     if (axis.empty()) {
       std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-      ctx->axis = reduce_axis;
+      ctx->set_axis(reduce_axis);
     } else {
-      ctx->axis = axis;
+      ctx->set_axis(axis);
     }
-    ctx->keepdims = keepdims;
+    ctx->set_keepdims(keepdims);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -250,15 +256,15 @@ class ReduceMinFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
-    auto ctx = std::make_shared<ReduceMinOpInterpCtx>();
+    auto ctx = std::make_shared<ReduceMinOpInterpCtxImpl<schema::ReduceMinOp>>();
     if (axis.empty()) {
       std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-      ctx->axis = reduce_axis;
+      ctx->set_axis(reduce_axis);
     } else {
-      ctx->axis = axis;
+      ctx->set_axis(axis);
     }
-    ctx->keepdims = keepdims;
+    ctx->set_keepdims(keepdims);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -274,15 +280,15 @@ class ReduceSumFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
-    auto ctx = std::make_shared<ReduceSumOpInterpCtx>();
+    auto ctx = std::make_shared<ReduceSumOpInterpCtxImpl<schema::ReduceSumOp>>();
     if (axis.empty()) {
       std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-      ctx->axis = reduce_axis;
+      ctx->set_axis(reduce_axis);
     } else {
-      ctx->axis = axis;
+      ctx->set_axis(axis);
     }
-    ctx->keepdims = keepdims;
+    ctx->set_keepdims(keepdims);
     TensorProcessor tensor_processor;
     JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
@@ -306,7 +312,7 @@ class ReduceDeviceStageBaseFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in,
                                 const std::vector<int32_t>& axis) const {
     auto ctx = std::make_shared<typename T::ContextT>();
-    ctx->axis = axis;
+    ctx->set_axis(axis);
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in}, ctx);
   }
   virtual ~ReduceDeviceStageBaseFunctor() = default;
@@ -330,7 +336,7 @@ class ReduceDeviceStageGradBaseFunctor {
                            const std::shared_ptr<one::Tensor>& count,
                            const std::vector<int32_t>& axis) const {
     auto ctx = std::make_shared<typename T::ContextT>();
-    ctx->axis = axis;
+    ctx->set_axis(axis);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, count}, ctx);
   }
   virtual ~ReduceDeviceStageGradBaseFunctor() = default;
@@ -342,28 +348,28 @@ class ReduceDeviceStageGradBaseFunctor {
 class ReduceMinDeviceStageFunctor
     : public ReduceDeviceStageBaseFunctor<ReduceMinDeviceStageFunctor> {
  public:
-  using ContextT = ReduceMinDeviceStageOpInterpCtx;
+  using ContextT = ReduceMinDeviceStageOpInterpCtxImpl<schema::ReduceMinDeviceStageOp>;
   static std::string GetOpName() { return "reduce_min_device_stage"; }
 };
 
 class ReduceMaxDeviceStageFunctor
     : public ReduceDeviceStageBaseFunctor<ReduceMaxDeviceStageFunctor> {
  public:
-  using ContextT = ReduceMaxDeviceStageOpInterpCtx;
+  using ContextT = ReduceMaxDeviceStageOpInterpCtxImpl<schema::ReduceMaxDeviceStageOp>;
   static std::string GetOpName() { return "reduce_max_device_stage"; }
 };
 
 class ReduceMinDeviceStageGradFunctor
     : public ReduceDeviceStageGradBaseFunctor<ReduceMinDeviceStageGradFunctor> {
  public:
-  using ContextT = ReduceMinDeviceStageGradOpInterpCtx;
+  using ContextT = ReduceMinDeviceStageGradOpInterpCtxImpl<schema::ReduceMinDeviceStageGradOp>;
   static std::string GetOpName() { return "reduce_min_device_stage_grad"; }
 };
 
 class ReduceMaxDeviceStageGradFunctor
     : public ReduceDeviceStageGradBaseFunctor<ReduceMaxDeviceStageGradFunctor> {
  public:
-  using ContextT = ReduceMaxDeviceStageGradOpInterpCtx;
+  using ContextT = ReduceMaxDeviceStageGradOpInterpCtxImpl<schema::ReduceMaxDeviceStageGradOp>;
   static std::string GetOpName() { return "reduce_max_device_stage_grad"; }
 };
 
@@ -381,8 +387,8 @@ class ReduceGlobalStageBaseFunctor {
                                 const std::shared_ptr<one::Tensor>& device_count,
                                 const std::vector<int32_t>& axis, const bool& keepdims) const {
     auto ctx = std::make_shared<typename T::ContextT>();
-    ctx->axis = axis;
-    ctx->keepdims = keepdims;
+    ctx->set_axis(axis);
+    ctx->set_keepdims(keepdims);
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in, device_count}, ctx);
   }
   virtual ~ReduceGlobalStageBaseFunctor() = default;
@@ -406,8 +412,8 @@ class ReduceGlobalStageGradBaseFunctor {
                            const std::shared_ptr<one::Tensor>& device_count,
                            const std::vector<int32_t>& axis, const bool& keepdims) const {
     auto ctx = std::make_shared<typename T::ContextT>();
-    ctx->axis = axis;
-    ctx->keepdims = keepdims;
+    ctx->set_axis(axis);
+    ctx->set_keepdims(keepdims);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, device_count}, ctx);
   }
   virtual ~ReduceGlobalStageGradBaseFunctor() = default;
@@ -419,28 +425,28 @@ class ReduceGlobalStageGradBaseFunctor {
 class ReduceMinGlobalStageFunctor
     : public ReduceGlobalStageBaseFunctor<ReduceMinGlobalStageFunctor> {
  public:
-  using ContextT = ReduceMinGlobalStageOpInterpCtx;
+  using ContextT = ReduceMinGlobalStageOpInterpCtxImpl<schema::ReduceMinGlobalStageOp>;
   static std::string GetOpName() { return "reduce_min_global_stage"; }
 };
 
 class ReduceMinGlobalStageGradFunctor
     : public ReduceGlobalStageGradBaseFunctor<ReduceMinGlobalStageGradFunctor> {
  public:
-  using ContextT = ReduceMinGlobalStageGradOpInterpCtx;
+  using ContextT = ReduceMinGlobalStageGradOpInterpCtxImpl<schema::ReduceMinGlobalStageGradOp>;
   static std::string GetOpName() { return "reduce_min_global_stage_grad"; }
 };
 
 class ReduceMaxGlobalStageFunctor
     : public ReduceGlobalStageBaseFunctor<ReduceMaxGlobalStageFunctor> {
  public:
-  using ContextT = ReduceMaxGlobalStageOpInterpCtx;
+  using ContextT = ReduceMaxGlobalStageOpInterpCtxImpl<schema::ReduceMaxGlobalStageOp>;
   static std::string GetOpName() { return "reduce_max_global_stage"; }
 };
 
 class ReduceMaxGlobalStageGradFunctor
     : public ReduceGlobalStageGradBaseFunctor<ReduceMaxGlobalStageGradFunctor> {
  public:
-  using ContextT = ReduceMaxGlobalStageGradOpInterpCtx;
+  using ContextT = ReduceMaxGlobalStageGradOpInterpCtxImpl<schema::ReduceMaxGlobalStageGradOp>;
   static std::string GetOpName() { return "reduce_max_global_stage_grad"; }
 };
 
@@ -473,15 +479,15 @@ class ReduceProdFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
-    auto ctx = std::make_shared<ReduceProdOpInterpCtx>();
+    auto ctx = std::make_shared<ReduceProdOpInterpCtxImpl<schema::ReduceProdOp>>();
     if (axis.empty()) {
       std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-      ctx->axis = reduce_axis;
+      ctx->set_axis(reduce_axis);
     } else {
-      ctx->axis = axis;
+      ctx->set_axis(axis);
     }
-    ctx->keepdims = keepdims;
+    ctx->set_keepdims(keepdims);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -508,8 +514,8 @@ class TransposeFunctor {
           << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
           << ndims << " ] but got " << ndims;
     }
-    auto ctx = std::make_shared<TransposeOpInterpCtx>();
-    ctx->perm = permute;
+    auto ctx = std::make_shared<TransposeOpInterpCtxImpl<schema::TransposeOp>>();
+    ctx->set_perm(permute);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, ctx);
   }
 
@@ -523,10 +529,10 @@ class EyeFunctor {
   Maybe<Tensor> operator()(const Scalar& n, const Optional<Scalar>& m,
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device) const {
-    auto ctx = std::make_shared<EyeOpInterpCtx>();
-    ctx->rows = JUST(n.As<int64_t>());
-    ctx->cols = JUST(m.value_or(n).As<int64_t>());
-    ctx->dtype = dtype ? JUST(dtype)->data_type() : DataType::kFloat;
+    auto ctx = std::make_shared<EyeOpInterpCtxImpl<schema::EyeOp>>();
+    ctx->set_rows(JUST(n.As<int64_t>()));
+    ctx->set_cols(JUST(m.value_or(n).As<int64_t>()));
+    ctx->set_dtype(dtype ? JUST(dtype)->data_type() : DataType::kFloat);
     ctx->device = device;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }
@@ -542,11 +548,11 @@ class ConsistentEyeFunctor {
                            const Optional<Symbol<DType>>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
-    auto ctx = std::make_shared<EyeOpInterpCtx>();
-    ctx->rows = JUST(n.As<int64_t>());
-    ctx->cols = JUST(m.value_or(n).As<int64_t>());
-    ctx->dtype = dtype ? JUST(dtype)->data_type() : DataType::kFloat;
-    ctx->nd_sbp = *JUST(GetNdSbpStrList(sbp_tuple));
+    auto ctx = std::make_shared<EyeOpInterpCtxImpl<schema::EyeOp>>();
+    ctx->set_rows(JUST(n.As<int64_t>()));
+    ctx->set_cols(JUST(m.value_or(n).As<int64_t>()));
+    ctx->set_dtype(dtype ? JUST(dtype)->data_type() : DataType::kFloat);
+    ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
     ctx->parallel_desc = placement;
     ctx->sbp = JUST(GetNdSbp(sbp_tuple));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
@@ -578,8 +584,8 @@ class Transpose2dimFunctor {
     for (int32_t i = 0; i < ndim; ++i) { permute.push_back(i); }
     std::swap(permute[dim_0], permute[dim_1]);
 
-    auto ctx = std::make_shared<TransposeOpInterpCtx>();
-    ctx->perm = permute;
+    auto ctx = std::make_shared<TransposeOpInterpCtxImpl<schema::TransposeOp>>();
+    ctx->set_perm(permute);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -593,17 +599,17 @@ class ArangeFunctor {
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
-    auto ctx = std::make_shared<ArangeOpInterpCtx>();
+    auto ctx = std::make_shared<ArangeOpInterpCtxImpl<schema::ArangeOp>>();
     const DataType range_dtype = dtype->data_type();
-    ctx->dtype = range_dtype;
+    ctx->set_dtype(range_dtype);
     if (IsIntegralDataType(range_dtype)) {
-      ctx->integer_start = JUST(start.As<int64_t>());
-      ctx->integer_limit = JUST(limit.As<int64_t>());
-      ctx->integer_delta = JUST(delta.As<int64_t>());
+      ctx->set_integer_start(JUST(start.As<int64_t>()));
+      ctx->set_integer_limit(JUST(limit.As<int64_t>()));
+      ctx->set_integer_delta(JUST(delta.As<int64_t>()));
     } else {
-      ctx->float_start = JUST(start.As<double>());
-      ctx->float_limit = JUST(limit.As<double>());
-      ctx->float_delta = JUST(delta.As<double>());
+      ctx->set_float_start(JUST(start.As<double>()));
+      ctx->set_float_limit(JUST(limit.As<double>()));
+      ctx->set_float_delta(JUST(delta.As<double>()));
     }
     ctx->device = device;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
@@ -627,19 +633,19 @@ class ConsistentArangeFunctor {
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Symbol<DType>& dtype, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
-    auto ctx = std::make_shared<ArangeOpInterpCtx>();
+    auto ctx = std::make_shared<ArangeOpInterpCtxImpl<schema::ArangeOp>>();
     const DataType range_dtype = dtype->data_type();
-    ctx->dtype = range_dtype;
+    ctx->set_dtype(range_dtype);
     if (IsIntegralDataType(range_dtype)) {
-      ctx->integer_start = JUST(start.As<int64_t>());
-      ctx->integer_limit = JUST(limit.As<int64_t>());
-      ctx->integer_delta = JUST(delta.As<int64_t>());
+      ctx->set_integer_start(JUST(start.As<int64_t>()));
+      ctx->set_integer_limit(JUST(limit.As<int64_t>()));
+      ctx->set_integer_delta(JUST(delta.As<int64_t>()));
     } else {
-      ctx->float_start = JUST(start.As<double>());
-      ctx->float_limit = JUST(limit.As<double>());
-      ctx->float_delta = JUST(delta.As<double>());
+      ctx->set_float_start(JUST(start.As<double>()));
+      ctx->set_float_limit(JUST(limit.As<double>()));
+      ctx->set_float_delta(JUST(delta.As<double>()));
     }
-    ctx->nd_sbp = *JUST(GetNdSbpStrList(sbp_tuple));
+    ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
     ctx->parallel_desc = placement;
     ctx->sbp = JUST(GetNdSbp(sbp_tuple));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
@@ -665,8 +671,8 @@ class CastFunctor {
                            const Symbol<DType>& dtype) const {
     if (x->dtype() == dtype) { return x; }
 
-    auto ctx = std::make_shared<CastOpInterpCtx>();
-    ctx->dtype = dtype->data_type();
+    auto ctx = std::make_shared<CastOpInterpCtxImpl<schema::CastOp>>();
+    ctx->set_dtype(dtype->data_type());
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
   }
 
@@ -692,39 +698,39 @@ class ClampFunctor {
     if (min.has_value() && max.has_value()) {
       const auto& min_val = JUST(min);
       const auto& max_val = JUST(max);
-      auto ctx = std::make_shared<ClipByScalarOpInterpCtx>();
+      auto ctx = std::make_shared<ClipByScalarOpInterpCtxImpl<schema::ClipByScalarOp>>();
       if (is_floating) {
-        ctx->floating_min = JUST(min_val->As<double>());
-        ctx->integral_min = 0;
-        ctx->floating_max = JUST(max_val->As<double>());
-        ctx->integral_max = 0;
+        ctx->set_floating_min(JUST(min_val->As<double>()));
+        ctx->set_integral_min(0);
+        ctx->set_floating_max(JUST(max_val->As<double>()));
+        ctx->set_integral_max(0);
       } else {
-        ctx->floating_min = 0;
-        ctx->integral_min = JUST(min_val->As<int64_t>());
-        ctx->floating_max = 0;
-        ctx->integral_max = JUST(max_val->As<int64_t>());
+        ctx->set_floating_min(0);
+        ctx->set_integral_min(JUST(min_val->As<int64_t>()));
+        ctx->set_floating_max(0);
+        ctx->set_integral_max(JUST(max_val->As<int64_t>()));
       }
       return OpInterpUtil::Dispatch<Tensor>(*clip_op_, {x}, ctx);
     } else if (min.has_value()) {
       const auto& min_val = JUST(min);
-      auto ctx = std::make_shared<ClipByScalarMinOpInterpCtx>();
+      auto ctx = std::make_shared<ClipByScalarMinOpInterpCtxImpl<schema::ClipByScalarMinOp>>();
       if (is_floating) {
-        ctx->floating_min = JUST(min_val->As<double>());
-        ctx->integral_min = 0;
+        ctx->set_floating_min(JUST(min_val->As<double>()));
+        ctx->set_integral_min(0);
       } else {
-        ctx->floating_min = 0;
-        ctx->integral_min = JUST(min_val->As<int64_t>());
+        ctx->set_floating_min(0);
+        ctx->set_integral_min(JUST(min_val->As<int64_t>()));
       }
       return OpInterpUtil::Dispatch<Tensor>(*clip_min_op_, {x}, ctx);
     } else {
       const auto& max_val = JUST(max);
-      auto ctx = std::make_shared<ClipByScalarMaxOpInterpCtx>();
+      auto ctx = std::make_shared<ClipByScalarMaxOpInterpCtxImpl<schema::ClipByScalarMaxOp>>();
       if (is_floating) {
-        ctx->floating_max = JUST(max_val->As<double>());
-        ctx->integral_max = 0;
+        ctx->set_floating_max(JUST(max_val->As<double>()));
+        ctx->set_integral_max(0);
       } else {
-        ctx->floating_max = 0;
-        ctx->integral_max = JUST(max_val->As<int64_t>());
+        ctx->set_floating_max(0);
+        ctx->set_integral_max(JUST(max_val->As<int64_t>()));
       }
       return OpInterpUtil::Dispatch<Tensor>(*clip_max_op_, {x}, ctx);
     }
@@ -1129,39 +1135,39 @@ class ClampGradFunctor {
     if (min.has_value() && max.has_value()) {
       const auto& min_val = JUST(min);
       const auto& max_val = JUST(max);
-      auto ctx = std::make_shared<ClipByScalarOpInterpCtx>();
+      auto ctx = std::make_shared<ClipByScalarOpInterpCtxImpl<schema::ClipByScalarOp>>();
       if (is_floating) {
-        ctx->floating_min = JUST(min_val->As<double>());
-        ctx->integral_min = 0;
-        ctx->floating_max = JUST(max_val->As<double>());
-        ctx->integral_max = 0;
+        ctx->set_floating_min(JUST(min_val->As<double>()));
+        ctx->set_integral_min(0);
+        ctx->set_floating_max(JUST(max_val->As<double>()));
+        ctx->set_integral_max(0);
       } else {
-        ctx->floating_min = 0;
-        ctx->integral_min = JUST(min_val->As<int64_t>());
-        ctx->floating_max = 0;
-        ctx->integral_max = JUST(max_val->As<int64_t>());
+        ctx->set_floating_min(0);
+        ctx->set_integral_min(JUST(min_val->As<int64_t>()));
+        ctx->set_floating_max(0);
+        ctx->set_integral_max(JUST(max_val->As<int64_t>()));
       }
       return OpInterpUtil::Dispatch<Tensor>(*clip_op_, {dy, x}, ctx);
     } else if (min.has_value()) {
       const auto& min_val = JUST(min);
-      auto ctx = std::make_shared<ClipByScalarMinOpInterpCtx>();
+      auto ctx = std::make_shared<ClipByScalarMinOpInterpCtxImpl<schema::ClipByScalarMinOp>>();
       if (is_floating) {
-        ctx->floating_min = JUST(min_val->As<double>());
-        ctx->integral_min = 0;
+        ctx->set_floating_min(JUST(min_val->As<double>()));
+        ctx->set_integral_min(0);
       } else {
-        ctx->floating_min = 0;
-        ctx->integral_min = JUST(min_val->As<int64_t>());
+        ctx->set_floating_min(0);
+        ctx->set_integral_min(JUST(min_val->As<int64_t>()));
       }
       return OpInterpUtil::Dispatch<Tensor>(*clip_min_op_, {dy, x}, ctx);
     } else {
       const auto& max_val = JUST(max);
-      auto ctx = std::make_shared<ClipByScalarMaxOpInterpCtx>();
+      auto ctx = std::make_shared<ClipByScalarMaxOpInterpCtxImpl<schema::ClipByScalarMaxOp>>();
       if (is_floating) {
-        ctx->floating_max = JUST(max_val->As<double>());
-        ctx->integral_max = 0;
+        ctx->set_floating_max(JUST(max_val->As<double>()));
+        ctx->set_integral_max(0);
       } else {
-        ctx->floating_max = 0;
-        ctx->integral_max = JUST(max_val->As<int64_t>());
+        ctx->set_floating_max(0);
+        ctx->set_integral_max(JUST(max_val->As<int64_t>()));
       }
       return OpInterpUtil::Dispatch<Tensor>(*clip_max_op_, {dy, x}, ctx);
     }
@@ -1256,13 +1262,13 @@ class ScalarLogicalBaseFunctor {
     auto ctx = std::make_shared<typename T::ContextT>();
 
     if (IsFloatingDataType(dtype)) {
-      ctx->float_operand = JUST(scalar.As<double>());
-      ctx->has_float_operand = true;
-      ctx->has_int_operand = false;
+      ctx->set_float_operand(JUST(scalar.As<double>()));
+      ctx->set_has_float_operand(true);
+      ctx->set_has_int_operand(false);
     } else if (IsIntegralDataType(dtype) || dtype == DataType::kUInt8) {
-      ctx->int_operand = JUST(scalar.As<int64_t>());
-      ctx->has_float_operand = false;
-      ctx->has_int_operand = true;
+      ctx->set_int_operand(JUST(scalar.As<int64_t>()));
+      ctx->set_has_float_operand(false);
+      ctx->set_has_int_operand(true);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
                                   << " should be float or int.";
@@ -1276,7 +1282,7 @@ class ScalarLogicalBaseFunctor {
 
 class ScalarLogicalEqualFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalEqualFunctor> {
  public:
-  using ContextT = ScalarLogicalEqualOpInterpCtx;
+  using ContextT = ScalarLogicalEqualOpInterpCtxImpl<schema::ScalarLogicalEqualOp>;
   static constexpr const char* op_type_name_ = "scalar_logical_equal";
 };
 
@@ -1290,7 +1296,7 @@ class ScalarLogicalEqual2Functor {
 
 class ScalarLogicalNotEqualFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalNotEqualFunctor> {
  public:
-  using ContextT = ScalarLogicalNotEqualOpInterpCtx;
+  using ContextT = ScalarLogicalNotEqualOpInterpCtxImpl<schema::ScalarLogicalNotEqualOp>;
   static constexpr const char* op_type_name_ = "scalar_logical_not_equal";
 };
 
@@ -1304,7 +1310,7 @@ class ScalarLogicalNotEqual2Functor {
 
 class ScalarLogicalGreaterFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalGreaterFunctor> {
  public:
-  using ContextT = ScalarLogicalGreaterOpInterpCtx;
+  using ContextT = ScalarLogicalGreaterOpInterpCtxImpl<schema::ScalarLogicalGreaterOp>;
   static constexpr const char* op_type_name_ = "scalar_logical_greater";
 };
 
@@ -1319,7 +1325,7 @@ class ScalarLogicalGreater2Functor {
 class ScalarLogicalGreaterEqualFunctor
     : public ScalarLogicalBaseFunctor<ScalarLogicalGreaterEqualFunctor> {
  public:
-  using ContextT = ScalarLogicalGreaterEqualOpInterpCtx;
+  using ContextT = ScalarLogicalGreaterEqualOpInterpCtxImpl<schema::ScalarLogicalGreaterEqualOp>;
   static constexpr const char* op_type_name_ = "scalar_logical_greater_equal";
 };
 
@@ -1333,7 +1339,7 @@ class ScalarLogicalGreaterEqual2Functor {
 
 class ScalarLogicalLessFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalLessFunctor> {
  public:
-  using ContextT = ScalarLogicalLessOpInterpCtx;
+  using ContextT = ScalarLogicalLessOpInterpCtxImpl<schema::ScalarLogicalLessOp>;
   static constexpr const char* op_type_name_ = "scalar_logical_less";
 };
 
@@ -1348,7 +1354,7 @@ class ScalarLogicalLess2Functor {
 class ScalarLogicalLessEqualFunctor
     : public ScalarLogicalBaseFunctor<ScalarLogicalLessEqualFunctor> {
  public:
-  using ContextT = ScalarLogicalLessEqualOpInterpCtx;
+  using ContextT = ScalarLogicalLessEqualOpInterpCtxImpl<schema::ScalarLogicalLessEqualOp>;
   static constexpr const char* op_type_name_ = "scalar_logical_less_equal";
 };
 
@@ -1362,7 +1368,7 @@ class ScalarLogicalLessEqual2Functor {
 
 class ScalarLogicalAndFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalAndFunctor> {
  public:
-  using ContextT = ScalarLogicalAndOpInterpCtx;
+  using ContextT = ScalarLogicalAndOpInterpCtxImpl<schema::ScalarLogicalAndOp>;
   static constexpr const char* op_type_name_ = "scalar_logical_and";
 };
 
@@ -1376,7 +1382,7 @@ class ScalarLogicalAnd2Functor {
 
 class ScalarLogicalOrFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalOrFunctor> {
  public:
-  using ContextT = ScalarLogicalOrOpInterpCtx;
+  using ContextT = ScalarLogicalOrOpInterpCtxImpl<schema::ScalarLogicalOrOp>;
   static constexpr const char* op_type_name_ = "scalar_logical_or";
 };
 
@@ -1390,7 +1396,7 @@ class ScalarLogicalOr2Functor {
 
 class ScalarLogicalXorFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalXorFunctor> {
  public:
-  using ContextT = ScalarLogicalXorOpInterpCtx;
+  using ContextT = ScalarLogicalXorOpInterpCtxImpl<schema::ScalarLogicalXorOp>;
   static constexpr const char* op_type_name_ = "scalar_logical_xor";
 };
 

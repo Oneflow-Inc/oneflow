@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/op_expr_grad_function.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -45,9 +46,9 @@ class GridSample : public OpExprGradFunction<GridSampleInterpState> {
     state->grid_index = state->SaveTensorForBackward(inputs.at(1));   // grid
 
     auto* interp_ctx = dynamic_cast<const GridSampleOpInterpCtx*>(ctx);
-    state->interpolation_mode = interp_ctx->interpolation_mode;
-    state->padding_mode = interp_ctx->padding_mode;
-    state->align_corners = interp_ctx->align_corners;
+    state->interpolation_mode = interp_ctx->interpolation_mode();
+    state->padding_mode = interp_ctx->padding_mode();
+    state->align_corners = interp_ctx->align_corners();
     return Maybe<void>::Ok();
   }
 

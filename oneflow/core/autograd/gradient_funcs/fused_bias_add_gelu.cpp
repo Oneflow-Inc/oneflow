@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -33,7 +34,7 @@ class FusedBiasAddGelu : public OpExprGradFunction<FusedBiasAddGeluInterpState> 
     state->input_requires_grad = inputs.at(0)->requires_grad();
     state->bias_requires_grad = inputs.at(1)->requires_grad();
     auto* interp_ctx = dynamic_cast<const FusedBiasAddGeluOpInterpCtx*>(ctx);
-    state->axis = interp_ctx->axis;
+    state->axis = interp_ctx->axis();
     if (state->input_requires_grad || state->bias_requires_grad) {
       state->SaveTensorForBackward(inputs.at(0));
       state->SaveTensorForBackward(inputs.at(1));

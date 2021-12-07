@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
+#include "oneflow/core/framework/op_interp_ctx.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/operator/op_conf.pb.h"

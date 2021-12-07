@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -47,8 +48,8 @@ Maybe<void> FusedScaleMaskSoftmaxDropout::Capture(FusedScaleMaskSoftmaxDropoutIn
 
   if (!state->input_requires_grad) { return Maybe<void>::Ok(); }
   auto* interp_ctx = dynamic_cast<const FusedScaleMaskSoftmaxDropoutOpInterpCtx*>(ctx);
-  state->scale = interp_ctx->scale_value;
-  state->dropout_scale = interp_ctx->dropout_scale_value;
+  state->scale = interp_ctx->scale_value();
+  state->dropout_scale = interp_ctx->dropout_scale_value();
 
   state->SaveTensorForBackward(inputs.at(1));   // mask
   state->SaveTensorForBackward(inputs.at(2));   // dropout_mask

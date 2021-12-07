@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/function_library.h"
@@ -43,11 +44,11 @@ class MinMaxObserverFunctor {
                                 const int32_t& quantization_bit,
                                 const std::string quantization_scheme,
                                 const bool per_layer_quantization) const {
-    auto ctx = std::make_shared<MinMaxObserverOpInterpCtx>();
-    ctx->quantization_formula = quantization_formula;
-    ctx->quantization_bit = quantization_bit;
-    ctx->quantization_scheme = quantization_scheme;
-    ctx->per_layer_quantization = per_layer_quantization;
+    auto ctx = std::make_shared<MinMaxObserverOpInterpCtxImpl<schema::MinMaxObserverOp>>();
+    ctx->set_quantization_formula(quantization_formula);
+    ctx->set_quantization_bit(quantization_bit);
+    ctx->set_quantization_scheme(quantization_scheme);
+    ctx->set_per_layer_quantization(per_layer_quantization);
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in}, ctx);
   }
 
@@ -75,13 +76,14 @@ class MovingAverageMinMaxObserverFunctor {
                                 const int64_t& stop_update_after_iters,
                                 const int32_t& quantization_bit,
                                 const std::string quantization_scheme, const float momentum) const {
-    auto ctx = std::make_shared<MovingAverageMinMaxObserverOpInterpCtx>();
-    ctx->training = training;
-    ctx->quantization_formula = quantization_formula;
-    ctx->stop_update_after_iters = stop_update_after_iters;
-    ctx->quantization_bit = quantization_bit;
-    ctx->quantization_scheme = quantization_scheme;
-    ctx->momentum = momentum;
+    auto ctx = std::make_shared<
+        MovingAverageMinMaxObserverOpInterpCtxImpl<schema::MovingAverageMinMaxObserverOp>>();
+    ctx->set_training(training);
+    ctx->set_quantization_formula(quantization_formula);
+    ctx->set_stop_update_after_iters(stop_update_after_iters);
+    ctx->set_quantization_bit(quantization_bit);
+    ctx->set_quantization_scheme(quantization_scheme);
+    ctx->set_momentum(momentum);
     return OpInterpUtil::Dispatch<TensorTuple>(
         *op_, {in, current_train_step, moving_max, moving_min}, ctx);
   }
@@ -105,10 +107,10 @@ class FakeQuantizationFunctor {
                            const std::shared_ptr<one::Tensor>& zero_point,
                            const std::string quantization_formula, const int32_t& quantization_bit,
                            const std::string quantization_scheme) const {
-    auto ctx = std::make_shared<FakeQuantizationOpInterpCtx>();
-    ctx->quantization_formula = quantization_formula;
-    ctx->quantization_bit = quantization_bit;
-    ctx->quantization_scheme = quantization_scheme;
+    auto ctx = std::make_shared<FakeQuantizationOpInterpCtxImpl<schema::FakeQuantizationOp>>();
+    ctx->set_quantization_formula(quantization_formula);
+    ctx->set_quantization_bit(quantization_bit);
+    ctx->set_quantization_scheme(quantization_scheme);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in, scale, zero_point}, ctx);
   }
 
@@ -131,10 +133,10 @@ class QuantizationFunctor {
                            const std::shared_ptr<one::Tensor>& zero_point,
                            const std::string quantization_formula, const int32_t& quantization_bit,
                            const std::string quantization_scheme) const {
-    auto ctx = std::make_shared<QuantizationOpInterpCtx>();
-    ctx->quantization_formula = quantization_formula;
-    ctx->quantization_bit = quantization_bit;
-    ctx->quantization_scheme = quantization_scheme;
+    auto ctx = std::make_shared<QuantizationOpInterpCtxImpl<schema::QuantizationOp>>();
+    ctx->set_quantization_formula(quantization_formula);
+    ctx->set_quantization_bit(quantization_bit);
+    ctx->set_quantization_scheme(quantization_scheme);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in, scale, zero_point}, ctx);
   }
 

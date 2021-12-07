@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -58,12 +59,12 @@ Maybe<void> ConvolutionNd<T>::Capture(ConvolutionNdCaptureState* state, const Te
   state->input_index = state->SaveTensorForBackward(inputs.at(0));  // input
 
   auto* interp_ctx = dynamic_cast<const typename T::ContextT*>(ctx);
-  state->data_format = interp_ctx->data_format;
-  state->padding_before = interp_ctx->padding_before;
-  state->kernel_size = interp_ctx->kernel_size;
-  state->strides = interp_ctx->strides;
-  state->dilation_rate = interp_ctx->dilation_rate;
-  state->groups = interp_ctx->groups;
+  state->data_format = interp_ctx->data_format();
+  state->padding_before = interp_ctx->padding_before();
+  state->kernel_size = interp_ctx->kernel_size();
+  state->strides = interp_ctx->strides();
+  state->dilation_rate = interp_ctx->dilation_rate();
+  state->groups = interp_ctx->groups();
   return Maybe<void>::Ok();
 }
 

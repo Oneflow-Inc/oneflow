@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -33,8 +34,8 @@ class Nll : public OpExprGradFunction<NllCaptureState> {
 Maybe<void> Nll::Capture(NllCaptureState* state, const TensorTuple& inputs,
                          const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   auto* interp_ctx = dynamic_cast<const NllOpInterpCtx*>(ctx);
-  state->ignore_index = interp_ctx->ignore_index;
-  state->reduction = interp_ctx->reduction;
+  state->ignore_index = interp_ctx->ignore_index();
+  state->reduction = interp_ctx->reduction();
   state->SaveTensorForBackward(inputs.at(0));   // input
   state->SaveTensorForBackward(inputs.at(1));   // target
   state->SaveTensorForBackward(outputs.at(1));  // total_weight

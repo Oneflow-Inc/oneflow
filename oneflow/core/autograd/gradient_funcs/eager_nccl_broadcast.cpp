@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 
 namespace oneflow {
 
@@ -57,17 +58,17 @@ class EagerNcclBroadcast : public OpExprGradFunction<EagerNcclBroadcastCaptureSt
   Maybe<void> Capture(EagerNcclBroadcastCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
     auto* interp_ctx = dynamic_cast<const EagerNcclBroadcastOpInterpCtx*>(ctx);
-    state->root = interp_ctx->root;
+    state->root = interp_ctx->root();
     state->parallel_desc = JUST(interp_ctx->parallel_desc);
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const EagerNcclBroadcastCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const EagerNcclBroadcastCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    const auto& grad_op = JUST(FindOrCreatEagerNcclReduceOpExpr(ctx->parallel_desc, ctx->root));
-    auto interp_ctx = std::make_shared<EagerNcclReduceOpInterpCtx>();
-    interp_ctx->parallel_conf = PbMessage2TxtString(ctx->parallel_desc->parallel_conf());
-    interp_ctx->root = ctx->root;
+    const auto& grad_op = JUST(FindOrCreatEagerNcclReduceOpExpr(state->parallel_desc, state->root));
+    auto interp_ctx = std::make_shared<EagerNcclReduceOpInterpCtxImpl<schema::EagerNcclReduceOp>>();
+    interp_ctx->set_parallel_conf(PbMessage2TxtString(state->parallel_desc->parallel_conf()));
+    interp_ctx->set_root(state->root);
     in_grads->resize(1);
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op, {out_grads.at(0)}));
     return Maybe<void>::Ok();

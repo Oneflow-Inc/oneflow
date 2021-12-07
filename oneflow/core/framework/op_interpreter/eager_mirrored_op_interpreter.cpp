@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/op_arg_util.h"
 #include "oneflow/core/framework/scope_util.h"
@@ -212,9 +213,6 @@ Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, in
   return one::OpBuilder("eager_nccl_broadcast", *JUST(UniqueStr("eager_nccl_broadcast")))
       .Input("in")
       .Output("out")
-      // TODO(hjchen2)
-      // .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      // .Attr<int64_t>("root", root)
       .Build();
 }
 
@@ -228,9 +226,9 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
   if (parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
   std::shared_ptr<UserOpExpr> op_expr =
       JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, src_rank));
-  auto ctx = std::make_shared<EagerNcclBroadcastOpInterpCtx>();
-  ctx->root = src_rank;
-  ctx->parallel_conf = PbMessage2TxtString(parallel_desc->parallel_conf());
+  auto ctx = std::make_shared<EagerNcclBroadcastOpInterpCtxImpl<schema::EagerNcclBroadcastOp>>();
+  ctx->set_root(src_rank);
+  ctx->set_parallel_conf(PbMessage2TxtString(parallel_desc->parallel_conf()));
   ctx->parallel_desc = parallel_desc;
   if (src_rank == GlobalProcessCtx::Rank() || inplace) {
     TensorTuple outputs{tensor};

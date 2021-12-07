@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/op_expr_grad_function.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -54,11 +55,11 @@ class LayerNorm : public OpExprGradFunction<LayerNormCaptureState> {
 Maybe<void> LayerNorm::Capture(LayerNormCaptureState* state, const TensorTuple& inputs,
                                const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   auto* interp_ctx = dynamic_cast<const LayerNormOpInterpCtx*>(ctx);
-  state->center = interp_ctx->center;
-  state->scale = interp_ctx->scale;
-  state->begin_norm_axis = interp_ctx->begin_norm_axis;
-  state->begin_params_axis = interp_ctx->begin_params_axis;
-  state->epsilon = interp_ctx->epsilon;
+  state->center = interp_ctx->center();
+  state->scale = interp_ctx->scale();
+  state->begin_norm_axis = interp_ctx->begin_norm_axis();
+  state->begin_params_axis = interp_ctx->begin_params_axis();
+  state->epsilon = interp_ctx->epsilon();
 
   CHECK_EQ_OR_RETURN(inputs.size(), state->center + state->scale + 1);
   CHECK_EQ_OR_RETURN(outputs.size(), state->scale + 3);

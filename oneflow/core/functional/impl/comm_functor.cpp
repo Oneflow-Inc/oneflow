@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
@@ -180,9 +181,9 @@ class ConsistentAllReduceFunctor {
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllReduceOpExpr(JUST(x->parallel_desc())));
-    auto ctx = std::make_shared<EagerNcclAllReduceOpInterpCtx>();
-    ctx->parallel_conf = PbMessage2TxtString(JUST(x->parallel_desc())->parallel_conf());
-    ctx->async_launch = false;
+    auto ctx = std::make_shared<EagerNcclAllReduceOpInterpCtxImpl<schema::EagerNcclAllReduceOp>>();
+    ctx->set_parallel_conf(PbMessage2TxtString(JUST(x->parallel_desc())->parallel_conf()));
+    ctx->set_async_launch(false);
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, ctx));
   }
 };
@@ -205,9 +206,10 @@ class ConsistentReduceScatterFunctor {
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedNcclReduceScatterOpExpr(JUST(x->parallel_desc()), op_type));
-    auto ctx = std::make_shared<EagerNcclReduceScatterOpInterpCtx>();
-    ctx->parallel_conf = PbMessage2TxtString(JUST(x->parallel_desc())->parallel_conf());
-    ctx->op_type = op_type;
+    auto ctx =
+        std::make_shared<EagerNcclReduceScatterOpInterpCtxImpl<schema::EagerNcclReduceScatterOp>>();
+    ctx->set_parallel_conf(PbMessage2TxtString(JUST(x->parallel_desc())->parallel_conf()));
+    ctx->set_op_type(op_type);
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, ctx));
   }
 };
@@ -222,8 +224,8 @@ class ConsistentAllGatherFunctor {
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllGatherOpExpr(JUST(x->parallel_desc())));
-    auto ctx = std::make_shared<EagerNcclAllGatherOpInterpCtx>();
-    ctx->parallel_conf = PbMessage2TxtString(JUST(x->parallel_desc())->parallel_conf());
+    auto ctx = std::make_shared<EagerNcclAllGatherOpInterpCtxImpl<schema::EagerNcclAllGatherOp>>();
+    ctx->set_parallel_conf(PbMessage2TxtString(JUST(x->parallel_desc())->parallel_conf()));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, ctx));
   }
 };
@@ -247,10 +249,10 @@ class ConsistentS2SFunctor {
     std::shared_ptr<OpExpr> op_expr = JUST(
         CachedEagerNcclS2SOpExpr(JUST(x->parallel_desc()), SymbolOf(in_nd_sbp->sbp_parallel(0)),
                                  SymbolOf(out_nd_sbp->sbp_parallel(0))));
-    auto ctx = std::make_shared<EagerNcclS2sOpInterpCtx>();
-    ctx->in_split_axis = in_nd_sbp->sbp_parallel(0).split_parallel().axis();
-    ctx->out_split_axis = out_nd_sbp->sbp_parallel(0).split_parallel().axis();
-    ctx->parallel_conf = PbMessage2TxtString(JUST(x->parallel_desc())->parallel_conf());
+    auto ctx = std::make_shared<EagerNcclS2sOpInterpCtxImpl<schema::EagerNcclS2sOp>>();
+    ctx->set_in_split_axis(in_nd_sbp->sbp_parallel(0).split_parallel().axis());
+    ctx->set_out_split_axis(out_nd_sbp->sbp_parallel(0).split_parallel().axis());
+    ctx->set_parallel_conf(PbMessage2TxtString(JUST(x->parallel_desc())->parallel_conf()));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, ctx));
   }
 };
@@ -259,8 +261,8 @@ class SendFunctor {
  public:
   SendFunctor() { op_expr_ = CHECK_JUST(one::OpBuilder("send").Input("in").Build()); }
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& x, int64_t dst, bool send_meta) const {
-    auto ctx = std::make_shared<SendOpInterpCtx>();
-    ctx->dst_process_id = dst;
+    auto ctx = std::make_shared<SendOpInterpCtxImpl<schema::SendOp>>();
+    ctx->set_dst_process_id(dst);
     if (send_meta) {
       std::shared_ptr<FlatShape> flat_shape = JUST(FlatShape::New(*x->shape()));
       JUST(ccl::Send<DeviceType::kCPU>(flat_shape.get(), sizeof(*flat_shape), DataType::kChar, dst,
@@ -288,8 +290,8 @@ class RecvFunctor {
                            const Optional<Symbol<DType>>& optional_dtype,
                            const Optional<Symbol<Device>>& optional_device,
                            const Optional<one::Tensor>& out) const {
-    auto ctx = std::make_shared<RecvOpInterpCtx>();
-    ctx->src_process_id = src;
+    auto ctx = std::make_shared<RecvOpInterpCtxImpl<schema::RecvOp>>();
+    ctx->set_src_process_id(src);
     Shape shape;
     DataType data_type = DataType::kInvalidDataType;
     Symbol<Device> device;
@@ -314,10 +316,10 @@ class RecvFunctor {
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "All or none of shape, dtype and device should have value.";
     }
-    ctx->shape = shape;
-    ctx->dtype = data_type;
-    ctx->device_type = device->type();
-    ctx->device_id = device->device_id();
+    ctx->set_shape(shape);
+    ctx->set_dtype(data_type);
+    ctx->set_device_type(device->type());
+    ctx->set_device_id(device->device_id());
     ctx->device = device;
     if (out.has_value()) {
       std::shared_ptr<one::Tensor> out_tensor = JUST(out);
@@ -360,9 +362,9 @@ class LocalReduceFunctor {
       parallel_desc = iter->second;
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerNcclReduceOpExpr(parallel_desc, dst));
-    auto ctx = std::make_shared<EagerNcclReduceOpInterpCtx>();
-    ctx->parallel_conf = PbMessage2TxtString(JUST(x->parallel_desc())->parallel_conf());
-    ctx->root = dst;
+    auto ctx = std::make_shared<EagerNcclReduceOpInterpCtxImpl<schema::EagerNcclReduceOp>>();
+    ctx->set_parallel_conf(PbMessage2TxtString(JUST(x->parallel_desc())->parallel_conf()));
+    ctx->set_root(dst);
     if (inplace) {
       TensorTuple outputs{x};
       JUST(OpInterpUtil::Dispatch(*op_expr, {x}, &outputs, ctx));
