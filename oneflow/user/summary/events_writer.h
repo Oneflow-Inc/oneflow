@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/persistence/posix/posix_file_system.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/user/summary/crc32c.h"
-#include "oneflow/core/summary/event.pb.h"
+#include "oneflow/user/summary/event.pb.h"
 
 #include <time.h>
 #include <mutex>

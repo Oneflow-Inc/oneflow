@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/summary/plan_to_physical_graph.h"
-#include "oneflow/core/summary/graph.pb.h"
+#include "oneflow/user/summary/graph.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/job/id_manager.h"

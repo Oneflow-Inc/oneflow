@@ -1,7 +1,7 @@
 syntax = "proto2";
 package oneflow.summary;
 
-import "oneflow/core/summary/summary.proto";
+import "oneflow/user/summary/summary.proto";
 
 message Event {
   required double wall_time = 1;

@@ -18,8 +18,8 @@ limitations under the License.
 #include "oneflow/user/summary/events_writer.h"
 #include "oneflow/user/summary/histogram.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/summary/summary.pb.h"
-#include "oneflow/core/summary/event.pb.h"
+#include "oneflow/user/summary/summary.pb.h"
+#include "oneflow/user/summary/event.pb.h"
 
 #include <png.h>
 #include <zlib.h>

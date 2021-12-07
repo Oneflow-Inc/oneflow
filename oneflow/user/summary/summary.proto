@@ -1,7 +1,7 @@
 syntax = "proto2";
 package oneflow.summary;
 
-import "oneflow/core/summary/tensor.proto";
+import "oneflow/user/summary/tensor.proto";
 
 message SummaryMetadata {
   message PluginData {

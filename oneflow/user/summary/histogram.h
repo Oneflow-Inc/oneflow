@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_USER_SUMMARY_HISTOGRAM_H_
 
 #include <vector>
-#include "oneflow/core/summary/summary.pb.h"
+#include "oneflow/user/summary/summary.pb.h"
 
 namespace oneflow {
 
