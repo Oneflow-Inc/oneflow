@@ -4,7 +4,7 @@
 include "mlir/IR/OpBase.td"
 
 def OneFlowFoundation_Dialect : Dialect {
-    let name = "oneflow_foundation";
+    let name = "oneflow";
     let summary = "OneFlow MLIR dialect.";
     let description = [{
         This dialect is the IR of OneFlow.

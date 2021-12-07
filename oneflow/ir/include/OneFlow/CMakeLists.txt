@@ -51,7 +51,7 @@ add_dependencies(MLIROneFlowOpGroupDeclsIncGen GenUserOpODS)
 
 set(LLVM_TABLEGEN_FLAGS "")
 add_mlir_dialect(
-    OneFlowOps oneflow_foundation DEPENDS
+    OneFlowOps oneflow DEPENDS
         MLIROneFlowEnumsIncGen
         MLIROneFlowPatternsIncGen
         MLIROneFlowPassIncGen
