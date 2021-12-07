@@ -25,22 +25,22 @@ namespace {
 template<typename T>
 __global__ void forward_diagonal_kernel(T* out_buf, const T* in_buf, int32_t size, int32_t dim1,
                                         int32_t dim2) {
-  int32_t tmp_index = (dim1 + 1) * dim2;                                
+  int32_t offset_index = (dim1 + 1) * dim2;                                
   CUDA_1D_KERNEL_LOOP(index, size * dim2) {
     int32_t i = index / dim2;
     int32_t j = index - i * dim2;
-    out_buf[j * size + i] = in_buf[i * tmp_index + j];
+    out_buf[j * size + i] = in_buf[i * offset_index + j];
   }
 }
 
 template<typename T>
 __global__ void backward_diagonal_kernel(T* dx_buf, const T* dy_buf, int32_t size, int32_t dim1,
                                          int32_t dim2) {
-  int32_t tmp_index = (dim1 + 1) * dim2;
+  int32_t offset_index = (dim1 + 1) * dim2;
   CUDA_1D_KERNEL_LOOP(index, size * dim2) {
     int32_t i = index / dim2;
     int32_t j = index - i * dim2;
-    dx_buf[i * tmp_index + j] = dy_buf[j * size + i];
+    dx_buf[i * offset_index + j] = dy_buf[j * size + i];
   }
 }
 
