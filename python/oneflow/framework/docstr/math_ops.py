@@ -38,6 +38,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.abs_,
+    r"""
+    In-place version of :func:`oneflow.abs`
+    """,
+)
+
+add_docstr(
     oneflow.add,
     r"""Computes the addition of `input` by `other` for each element, scalar and broadcast promotation are supported.
     The formula is:
@@ -287,6 +294,27 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.asin_,
+    r"""
+    In-place version of :func:`oneflow.asin`
+    """,
+)
+
+add_docstr(
+    oneflow.arcsin,
+    r"""
+    See :func:`oneflow.asin`
+    """,
+)
+
+add_docstr(
+    oneflow.arcsin_,
+    r"""
+    In-place version of :func:`oneflow.arcsin`
+    """,
+)
+
+add_docstr(
     oneflow.asinh,
     r"""
     Returns a new tensor with the inverse hyperbolic sine of the elements of :attr:`input`.
@@ -511,6 +539,27 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.arccos,
+    r"""
+    See :func:`oneflow.acos`
+    """,
+)
+
+add_docstr(
+    oneflow.acos_,
+    r"""
+    In-place version of :func:`oneflow.acos`
+    """,
+)
+
+add_docstr(
+    oneflow.arccos_,
+    r"""
+    See :func:`oneflow.acos_`
+    """,
+)
+
+add_docstr(
     oneflow.acosh,
     r"""
     Returns a new tensor with the inverse hyperbolic cosine of the elements of :attr:`input`.
@@ -536,6 +585,27 @@ add_docstr(
         >>> out2 = flow.acosh(x2)
         >>> out2
         tensor([0.9624, 1.6094, 1.9827], device='cuda:0', dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
+    oneflow.acosh_,
+    r"""
+    In-place version of :func:`oneflow.acosh`
+    """,
+)
+
+add_docstr(
+    oneflow.arccosh,
+    r"""
+    See :func:`oneflow.acosh`
+    """,
+)
+
+add_docstr(
+    oneflow.arccosh_,
+    r"""
+    In-place version of :func:`oneflow.arccosh_`
     """,
 )
 

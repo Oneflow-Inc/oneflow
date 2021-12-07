@@ -179,65 +179,6 @@ def _add_inplace(x, y):
     return flow._C.add(x, y, inplace=True)
 
 
-def asin_op(input):
-    """
-    Returns a new tensor with the arcsine of the elements of :attr:`input`.
-
-    .. math::
-        \\text{out}_{i} = \\sin^{-1}(\\text{input}_{i})
-
-    Args:
-        input (Tensor): the input tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> input = flow.tensor(np.array([-0.5,  0.8, 1.0,  -0.8]), dtype=flow.float32)
-        >>> output = flow.asin(input)
-        >>> output.shape
-        oneflow.Size([4])
-        >>> output
-        tensor([-0.5236,  0.9273,  1.5708, -0.9273], dtype=oneflow.float32)
-        >>> input1 = flow.tensor(np.array([[0.8, 1.0], [-0.6, -1.0]]), dtype=flow.float32)
-        >>> output1 = input1.asin()
-        >>> output1.shape
-        oneflow.Size([2, 2])
-        >>> output1
-        tensor([[ 0.9273,  1.5708],
-                [-0.6435, -1.5708]], dtype=oneflow.float32)
-    """
-    return flow._C.asin(input)
-
-
-@register_tensor_op("asin")
-def asin_op_tensor(input):
-    """
-
-    See :func:`oneflow.asin`
-    """
-    return flow._C.asin(input)
-
-
-def arcsin_op(input):
-    """
-  
-    Alias for :func:`oneflow.asin`
-    """
-    return flow._C.asin(input)
-
-
-@register_tensor_op("arcsin")
-def arcsin_op_tensor(input):
-    """
-
-    See :func:`oneflow.asin`
-    """
-    return flow._C.asin(input)
-
-
 def asinh_op(input):
     """
     Returns a new tensor with the inverse hyperbolic sine of the elements of :attr:`input`.
