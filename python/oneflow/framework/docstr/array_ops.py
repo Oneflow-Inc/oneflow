@@ -21,6 +21,7 @@ add_docstr(
     """
     Returns a partial view of input with the its diagonal elements with respect to dim1 and dim2 
     appended as a dimension at the end of the shape.
+    
     Args:
         input (Tensor): the input tensor.Must be at least 2-dimensional.
         offset (Optional[int], 0): which diagonal to consider. Default: 0 (main diagonal)
