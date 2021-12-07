@@ -13,18 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_DEVICE_NODE_DEVICE_DESCRIPTOR_H_
-#define ONEFLOW_CORE_DEVICE_NODE_DEVICE_DESCRIPTOR_H_
+#ifndef ONEFLOW_CORE_HARDWARE_NODE_DEVICE_DESCRIPTOR_H_
+#define ONEFLOW_CORE_HARDWARE_NODE_DEVICE_DESCRIPTOR_H_
 
-#include "oneflow/core/device/device_descriptor_list.h"
-#include "oneflow/core/device/topology_descriptor.h"
+#include "oneflow/core/hardware/device_descriptor_list.h"
+#include "oneflow/core/hardware/topology_descriptor.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
-namespace device {
+namespace hardware {
 
 class NodeDeviceDescriptor {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(NodeDeviceDescriptor);
   ~NodeDeviceDescriptor();
 
   bool HasDeviceClass(const std::string& class_name) const;
@@ -47,8 +49,8 @@ class NodeDeviceDescriptor {
   std::unique_ptr<Impl> impl_;
 };
 
-}  // namespace device
+}  // namespace hardware
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_DEVICE_NODE_DEVICE_DESCRIPTOR_H_
+#endif  // ONEFLOW_CORE_HARDWARE_NODE_DEVICE_DESCRIPTOR_H_
