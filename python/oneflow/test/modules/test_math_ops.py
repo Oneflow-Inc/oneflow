@@ -548,6 +548,43 @@ class TestTan(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n1d()
+class TestTanh(flow.uniitest.TestCase):
+    @autotest
+    def test_flow_tanh_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.tanh(x)
+        return y
+
+    @autotest
+    def test_tensor_tanh_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.tanh(x)
+        return y
+
+    @autotest()
+    def test_flow_inplace_tan_with_random_data(test_case):
+        device = random_device()
+        x_0 = random_pytorch_tensor().to(device)
+        x = x_0 + 1
+        id_x = id(x)
+        torch.tan_(x)
+        test_case.assertTrue(id_x == id(x))
+        return x
+
+    @autotest()
+    def test_tensor_inplace_tan_with_random_data(test_case):
+        device = random_device()
+        x_0 = random_pytorch_tensor().to(device)
+        x = x_0 + 1
+        id_x = id(x)
+        x.tan_()
+        test_case.assertTrue(id_x == id(x))
+        return x
+
+
+@flow.unittest.skip_unless_1n1d()
 class TestAtan(flow.unittest.TestCase):
     @autotest()
     def test_flow_atan_with_random_data(test_case):

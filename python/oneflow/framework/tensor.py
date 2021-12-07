@@ -306,6 +306,10 @@ def _exp(self):
     return flow.exp(self)
 
 
+def _exp_(self):
+    return flow.exp_(self)
+
+
 def _expand_as(input, other):
     return flow.expand(input, *other.size())
 
@@ -366,6 +370,18 @@ def _sign(self):
     return flow.sign(self)
 
 
+def _sign_(self):
+    return flow._C.sign_(self)
+
+
+def _sin(self):
+    return flow.sin(self)
+
+
+def _sin_(self):
+    return flow.sin_(self)
+    
+    
 def _sinh(self):
     return flow.sinh(self)
 
@@ -376,6 +392,10 @@ def _sinh_(self):
 
 def _tan(self):
     return flow.tan(self)
+
+
+def _tan_(self):
+    return flow.tan_(self)
 
 
 def _gelu(self):
@@ -390,8 +410,16 @@ def _sigmoid(self):
     return flow.sigmoid(self)
 
 
+def _sigmoid_(self):
+    return flow.sigmoid_(self)
+
+
 def _tanh(self):
     return flow.tanh(self)
+
+
+def _tanh_(self):
+    return flow.tanh_(self)
 
 
 def _silu(self):
@@ -423,7 +451,11 @@ def _log1p_(self):
 
 
 def _reciprocal(self):
-    return flow.reciprocal(self)
+    return flow.reciprocal_no_nan(self)
+
+
+def _reciprocal_(self):
+    return flow.reciprocal_no_nan_(self)
 
 
 def _asin(self):
@@ -448,6 +480,10 @@ def _asinh(self):
 
 def _asinh_(self):
     return flow.asinh_(self)
+
+
+def _arcsinh(self):
+    return flow.arcsinh(self)
 
 
 def _arcsinh_(self):
@@ -574,12 +610,24 @@ def _rsqrt(self):
     return flow.rsqrt(self)
 
 
+def _rsqrt_(self):
+    return flow.rsqrt_(self)
+
+
 def _sqrt(self):
     return flow.sqrt(self)
 
 
+def _sqrt_(self):
+    return flow.sqrt_(self)
+
+
 def _square(self):
     return flow.square(self)
+
+
+def _square_(self):
+    return flow.square_(self)
 
 
 def _var(self, dim=None, unbiased=True, keepdim=False):
@@ -622,10 +670,18 @@ def _matmul(self, other):
 
 def _round(self):
     return flow.round(self)
+    
+
+def _round_(self):
+    return flow.round_(self)
 
 
 def _softplus(self):
     return flow.softplus(self)
+
+
+def _softplus_(self):
+    return flow.softplus_(self)
 
 
 def _tril(self, diagonal=0):
@@ -887,9 +943,13 @@ def RegisterMethods():
     Tensor.arctanh = _arctanh
     Tensor.arctanh_ = _arctanh_
     Tensor.sign = _sign
+    Tensor.sign_ = _sign_
+    Tensor.sin = _sin
+    Tensor.sin_ = _sin_
     Tensor.sinh = _sinh
     Tensor.sinh_ = _sinh_
     Tensor.tan = _tan
+    Tensor.tan_ = _tan_
     Tensor.gt = _gt
     Tensor.ge = _ge
     Tensor.gelu = _gelu
@@ -899,7 +959,9 @@ def RegisterMethods():
     Tensor.neg = _neg
     Tensor.neg_ = _neg_
     Tensor.sigmoid = _sigmoid
+    Tensor.sigmoid_ = _sigmoid_
     Tensor.tanh = _tanh
+    Tensor.tanh_ = _tanh_
     Tensor.silu = _silu
     Tensor.selu = _selu
     Tensor.softsign = _softsign
@@ -912,6 +974,7 @@ def RegisterMethods():
     Tensor.div = _truediv
     Tensor.mul = _mul
     Tensor.reciprocal = _reciprocal
+    Tensor.reciprocal_ = _reciprocal_
     Tensor.sub = _sub
     Tensor.asin = _asin
     Tensor.asin_ = _asin_
@@ -948,13 +1011,18 @@ def RegisterMethods():
     Tensor.maximum = _maximum
     Tensor.pow = _pow
     Tensor.rsqrt = _rsqrt
+    Tensor.rsqrt_ = _rsqrt_
     Tensor.sqrt = _sqrt
+    Tensor.sqrt_ = _sqrt_
     Tensor.square = _square
+    Tensor.square_ = _square_
     Tensor.var = _var
     Tensor.std = _std
     Tensor.matmul = _matmul
     Tensor.round = _round
+    Tensor.round_ = _round_
     Tensor.softplus = _softplus
+    Tensor.softplus_ = _softplus_
     Tensor.tril = _tril
     Tensor.triu = _triu
     Tensor.contiguous = _contiguous

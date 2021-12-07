@@ -46,6 +46,40 @@ class Testsoftplus(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_softplus_impl(test_case, *arg)
+    
+    @autotest
+    def test_flow_softplus(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        torch.softplus_(x)
+        return x
+
+    @autotest
+    def test_tensor_softplus(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        x.softplus_()
+        return x
+    
+    @autotest
+    def test_flow_inplace_softplus(test_case):
+        device = random_device()
+        x_0 = random_pytorch_tensor().to(device)
+        x = x_0 + 1
+        id_x = id(x)
+        torch.softplus_(x)
+        test_case.assertTrue(id_x == id(x))
+        return x
+
+    @autotest
+    def test_tensor_inplace_softplus(test_case):
+        device = random_device()
+        x_0 = random_pytorch_tensor().to(device)
+        x = x_0 + 1
+        id_x = id(x)
+        x.softplus_()
+        test_case.assertTrue(id_x == id(x))
+        return x
 
 
 if __name__ == "__main__":

@@ -73,7 +73,7 @@ from oneflow._C import acosh_ as arccosh_
 from oneflow._C import atanh, atanh_
 from oneflow._C import atanh as arctanh
 from oneflow._C import atanh_ as arctanh_
-from oneflow._C import sign, sign_
+from oneflow._C import sign
 from oneflow._C import sinh, sinh_
 from oneflow._C import tan, tan_
 from oneflow._C import greater
@@ -86,7 +86,7 @@ from oneflow._C import logical_xor
 from oneflow._C import logical_not
 from oneflow._C import gelu
 from oneflow._C import mish
-from oneflow._C import sigmoid
+from oneflow._C import sigmoid, sigmoid_
 from oneflow._C import tanh, tanh_
 from oneflow._C import silu
 from oneflow._C import selu
@@ -101,8 +101,8 @@ from oneflow._C import div
 from oneflow._C import floor_divide
 from oneflow._C import floor, floor_
 from oneflow._C import mul
-from oneflow._C import reciprocal
-from oneflow._C import reciprocal_ as reciprocal_
+from oneflow._C import reciprocal_no_nan as reciprocal
+from oneflow._C import reciprocal_no_nan_ as reciprocal_
 from oneflow._C import sub
 from oneflow._C import sin, sin_
 from oneflow._C import asin, asin_
