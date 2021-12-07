@@ -45,18 +45,20 @@ using namespace nonstd::string_view_literals;
 namespace oneflow {
 namespace tblgen {
 
-cl::opt<std::string> SourceIncludeFilename{
-    "op-include", cl::desc("header filename to include in source file (used in gen-op-schema)"),
-    cl::value_desc("include filename"), cl::init("")};
+cl::OptionCategory OpSchemaCat("Options for -gen-op-schema");
 
-cl::opt<std::string> DumpJson{
-    "op-dump-json", cl::desc("dump tablegen code to json in provided file (used in gen-op-schema)"),
-    cl::value_desc("filename"), cl::init("")};
+cl::opt<std::string> SourceIncludeFilename{
+    "op-include", cl::desc("header filename to include in source file"),
+    cl::value_desc("include filename"), cl::init(""), cl::cat(OpSchemaCat)};
+
+cl::opt<std::string> DumpJson{"op-dump-json",
+                              cl::desc("dump tablegen code to json in provided file"),
+                              cl::value_desc("filename"), cl::init(""), cl::cat(OpSchemaCat)};
 
 cl::opt<bool> HeaderOnly{"op-header-only",
                          cl::desc("only generate header files, use static inlined member functions "
-                                  "instead of static fields (used in gen-op-schema)"),
-                         cl::init(false)};
+                                  "instead of static fields"),
+                         cl::init(false), cl::cat(OpSchemaCat)};
 
 const std::string& outputFilename() {
   auto* Option =
