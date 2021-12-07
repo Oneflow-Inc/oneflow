@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/device/net_ib_device_descriptor.h"
+#include "oneflow/core/hardware/net_ib_device_descriptor.h"
 
 #ifdef WITH_RDMA
 
@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace device {
+namespace hardware {
 
 namespace {
 
@@ -152,7 +152,7 @@ std::shared_ptr<const NetIBDeviceDescriptor> NetIBDeviceDescriptor::Deserialize(
   return std::shared_ptr<const NetIBDeviceDescriptor>(desc);
 }
 
-}  // namespace device
+}  // namespace hardware
 
 }  // namespace oneflow
 
