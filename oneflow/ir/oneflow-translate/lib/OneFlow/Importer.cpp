@@ -191,6 +191,8 @@ llvm::Optional<mlir::oneflow::DataTypeAttr> GetDataTypeAttr(MLIRContext* context
       DEFINE_ONE_ELIF(OFRecord)
       DEFINE_ONE_ELIF(Float16)
       DEFINE_ONE_ELIF(TensorBuffer)
+      DEFINE_ONE_ELIF(BFloat16)
+      DEFINE_ONE_ELIF(Bool)
 #undef DEFINE_ONE_ELIF
     default: return llvm::None;
   }
