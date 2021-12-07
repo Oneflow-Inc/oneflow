@@ -27,7 +27,7 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    oneflow::populateFuserPasses(patterns);
+    oneflow_foundation::populateFuserPasses(patterns);
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
@@ -36,7 +36,7 @@ class FuseIntoExistingOpPass : public FuseIntoExistingOpPassBase<FuseIntoExistin
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    oneflow::populateFuserForExistingOp(patterns);
+    oneflow_foundation::populateFuserForExistingOp(patterns);
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
@@ -45,7 +45,7 @@ class FuseIntoExistingOpPass : public FuseIntoExistingOpPassBase<FuseIntoExistin
 
 namespace mlir {
 
-namespace oneflow {
+namespace oneflow_foundation {
 
 std::unique_ptr<Pass> createOutlineJitFunctionPass() {
   return std::make_unique<OutlineJitFunctionPass>();
@@ -55,6 +55,6 @@ std::unique_ptr<Pass> createFuseIntoExistingOpPass() {
   return std::make_unique<FuseIntoExistingOpPass>();
 }
 
-}  // namespace oneflow
+}  // namespace oneflow_foundation
 
 }  // namespace mlir

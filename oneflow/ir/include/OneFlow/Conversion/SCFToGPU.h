@@ -20,11 +20,11 @@ limitations under the License.
 
 namespace mlir {
 
-namespace oneflow {
+namespace oneflow_foundation {
 
 std::unique_ptr<mlir::Pass> createMapSCFToGPUPass();
 
-}  // namespace oneflow
+}  // namespace oneflow_foundation
 
 }  // namespace mlir
 

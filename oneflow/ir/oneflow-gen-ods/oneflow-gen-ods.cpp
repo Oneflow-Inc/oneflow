@@ -442,7 +442,7 @@ void PrintReturnStaticVal(const std::string& type, const std::string& func_name,
   std::cout << "    static const " + type + "* " + func_name + "() { static " + type + " val(" + val
                    + "); return &val; }\n";
 }
-void PrintExtraClassDeclaration(const oneflow::UserOpDef& op_def) {
+void PrintExtraClassDeclaration(const ::oneflow::UserOpDef& op_def) {
   return;
   std::cout << "  let extraClassDeclaration = [{"
             << "\n";
@@ -463,7 +463,7 @@ void PrintHasCanonicalizer(const std::string& op_name) {
   }
 }
 
-void PrintTraitAttrs(const oneflow::UserOpDef& op_def) {
+void PrintTraitAttrs(const ::oneflow::UserOpDef& op_def) {
   const bool need_operand_segment_sizes = HasAtLeastTwoVariadic(op_def.input());
   const bool need_result_segment_sizes = HasAtLeastTwoVariadic(op_def.output());
   if (need_operand_segment_sizes || need_result_segment_sizes) {
@@ -479,18 +479,18 @@ void PrintTraitAttrs(const oneflow::UserOpDef& op_def) {
   }
 }
 
-bool IsUnaryOp(const oneflow::user_op::OpRegistryResult& r) {
+bool IsUnaryOp(const ::oneflow::user_op::OpRegistryResult& r) {
   return NumMultipleVariadic(r.op_def.input()) == 0 && NumMultipleVariadic(r.op_def.output()) == 0
          && r.op_def.input().size() == 1 && r.op_def.output().size() == 1;
 }
 
-bool IsBinaryOp(const oneflow::user_op::OpRegistryResult& r) {
+bool IsBinaryOp(const ::oneflow::user_op::OpRegistryResult& r) {
   return NumMultipleVariadic(r.op_def.input()) == 0 && NumMultipleVariadic(r.op_def.output()) == 0
          && r.op_def.input().size() == 2 && r.op_def.output().size() == 1;
 }
 
-void PrintBody(const oneflow::user_op::OpRegistryResult& r) {
-  const oneflow::UserOpDef& op_def = r.op_def;
+void PrintBody(const ::oneflow::user_op::OpRegistryResult& r) {
+  const ::oneflow::UserOpDef& op_def = r.op_def;
   // TODO: handle in out size/optional
   // TODO: handle "," in last element
   std::cout << "{"
@@ -558,8 +558,8 @@ std::string GetOpClassName(const std::string& op_name) {
   return PostProcessClassName(ret);
 }
 
-std::string GetTraits(const oneflow::user_op::OpRegistryResult& r) {
-  const oneflow::UserOpDef& op_def = r.op_def;
+std::string GetTraits(const ::oneflow::user_op::OpRegistryResult& r) {
+  const ::oneflow::UserOpDef& op_def = r.op_def;
   std::string ret{};
   if (HasSideEffect(r.op_type_name) == false) { ret += "NoSideEffect"; }
   const bool need_operand_segment_sizes = HasAtLeastTwoVariadic(op_def.input());
@@ -587,7 +587,7 @@ bool ShoudSkipOp(const std::string& op_name) { return op_name == "mlir_jit"; }
 void PrintODSFromOpRegistryResults(const std::map<K, V>& results) {
   for (const auto& kv : results) {
     if (ShoudSkipOp(kv.first)) continue;
-    const oneflow::user_op::OpRegistryResult& r = kv.second;
+    const ::oneflow::user_op::OpRegistryResult& r = kv.second;
     auto op_class_name = GetOpClassName(kv.first);
     std::cout << (ShouldGenBaseClass(r.op_type_name) ? "class" : "def") << " OneFlow_"
               << op_class_name << "Op : " << GetBaseOp(r.op_type_name) << "<\"" << kv.first
@@ -639,7 +639,7 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
                             std::map<std::string, std::map<K, V>>& groups) {
   for (const auto& kv : results) {
     std::string group_name = "MISC";
-    const oneflow::user_op::OpRegistryResult& r = kv.second;
+    const ::oneflow::user_op::OpRegistryResult& r = kv.second;
     if (IsUnaryOp(r)) { group_name = "Unary"; }
     if (IsBinaryOp(r)) { group_name = "Binary"; }
     if (IsImageOp(r.op_type_name)) { group_name = "Image"; }

@@ -28,7 +28,7 @@ def OneFlow_IsOpConfCompatible : NativeOpTrait<"IsOpConfCompatible">;
 def OneFlow_IsImportCompatible : NativeOpTrait<"IsImportCompatible">;
 
 class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
-        Op<OneFlow_Dialect, mnemonic, !listconcat(traits, [OneFlow_IsOpConfCompatible])> {
+        Op<OneFlowFoundation_Dialect, mnemonic, !listconcat(traits, [OneFlow_IsOpConfCompatible])> {
   dag op_conf_attrs = (ins
     StrAttr:$op_name,
     StrAttr:$device_tag,

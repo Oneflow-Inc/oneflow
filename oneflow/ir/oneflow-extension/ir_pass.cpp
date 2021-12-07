@@ -71,7 +71,7 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
     TeePersistentLogStream::Create(JoinPath(LogDir(), filename))->Write(content);
   }
 
-  const oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) const {
+  const ::oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) const {
     return job_builder_.ParallelConf4OpName(op_name);
   }
   const ::oneflow::OperatorConf& OpConf4OpName(const std::string& op_name) const {

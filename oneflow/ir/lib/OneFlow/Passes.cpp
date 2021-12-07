@@ -52,7 +52,7 @@ limitations under the License.
 #endif  // WITH_MLIR_CUDA_CODEGEN
 
 using namespace mlir;
-using namespace mlir::oneflow;
+using namespace mlir::oneflow_foundation;
 
 LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
   // TODO: now we only need one JIT engine
@@ -105,8 +105,8 @@ FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, 
 NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op_name,
                                  int32_t input_size, int32_t output_size,
                                  Operation* op_to_replace) {
-  oneflow::UserOpAdaptor op_to_replace_adaptor(op_to_replace->getOperands(),
-                                               op_to_replace->getAttrDictionary());
+  oneflow_foundation::UserOpAdaptor op_to_replace_adaptor(op_to_replace->getOperands(),
+                                                          op_to_replace->getAttrDictionary());
   NamedAttrList attributes;
   attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
                  op_to_replace_adaptor.device_tag());
@@ -155,7 +155,7 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
 
 namespace mlir {
 
-namespace oneflow {
+namespace oneflow_foundation {
 
 void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addPass(createLowerOneFlowToTosaPass());            // lower-oneflow-to-tosa
@@ -219,6 +219,6 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
 }
 
-}  // namespace oneflow
+}  // namespace oneflow_foundation
 
 }  // namespace mlir

@@ -99,30 +99,30 @@ def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpI
 
 def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
   let summary = "";
-  let constructor = "mlir::oneflow::createLowerOneFlowToTosaPass()";
+  let constructor = "mlir::oneflow_foundation::createLowerOneFlowToTosaPass()";
   let dependentDialects = ["tosa::TosaDialect", "memref::MemRefDialect", "StandardOpsDialect"];
 }
 
 def MapSCFToGPUPass : Pass<"gpu-greedy-parallel-loop-mapping", "FuncOp"> {
   let summary = "Greedily maps all parallel loops to gpu hardware ids";
-  let constructor = "mlir::oneflow::createMapSCFToGPUPass()";
+  let constructor = "mlir::oneflow_foundation::createMapSCFToGPUPass()";
   let dependentDialects = ["scf::SCFDialect"];
 }
 
 def BufferHostRegisterPass : FunctionPass<"buffer-host-register"> {
   let summary = "";
-  let constructor = "mlir::oneflow::createBufferHostRegisterPass()";
+  let constructor = "mlir::oneflow_foundation::createBufferHostRegisterPass()";
   let dependentDialects = ["gpu::GPUDialect"];
 }
 
 def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
   let summary = "move ops could be jitted to jit function";
-  let constructor = "mlir::oneflow::createOutlineJitFunctionPass()";
+  let constructor = "mlir::oneflow_foundation::createOutlineJitFunctionPass()";
 }
 
 def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "FuncOp"> {
   let summary = "";
-  let constructor = "mlir::oneflow::createFuseIntoExistingOpPass()";
+  let constructor = "mlir::oneflow_foundation::createFuseIntoExistingOpPass()";
 }
 
 #endif // ONEFLOW_PASSES

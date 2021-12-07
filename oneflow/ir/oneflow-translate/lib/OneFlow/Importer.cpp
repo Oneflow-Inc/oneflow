@@ -124,12 +124,12 @@ LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorCo
   const auto& user_conf = op.user_conf();
   const ::oneflow::UserOpDef& op_def = GetUserOpDef(op.user_conf().op_type_name());
   const auto UserOpOperationName =
-      OperationName(oneflow::UserOp::getOperationName(), GetMLIRContext());
+      OperationName(oneflow_foundation::UserOp::getOperationName(), GetMLIRContext());
   attr_vec.push_back(GetBuilder().getNamedAttr(
-      oneflow::UserOp::input_sizesAttrName(UserOpOperationName),
+      oneflow_foundation::UserOp::input_sizesAttrName(UserOpOperationName),
       GetBuilder().getI32ArrayAttr(GetSizesFromArgs(user_conf.input(), op_def.input()))));
   attr_vec.push_back(GetBuilder().getNamedAttr(
-      oneflow::UserOp::output_sizesAttrName(UserOpOperationName),
+      oneflow_foundation::UserOp::output_sizesAttrName(UserOpOperationName),
       GetBuilder().getI32ArrayAttr(GetSizesFromArgs(user_conf.output(), op_def.output()))));
   auto output_lbns = GetOutputLbns(op, op_def.output());
   attr_vec.push_back(GetBuilder().getNamedAttr(
@@ -173,11 +173,11 @@ llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op) {
 LogicalResult StringifyDataType(::oneflow::DataType value, std::string& stringified) {
   switch (value) {
     case ::oneflow::DataType::kInvalidDataType:
-      stringified = stringifyEnum(oneflow::DataType::DT_InvalidDataType).str();
+      stringified = stringifyEnum(oneflow_foundation::DataType::DT_InvalidDataType).str();
       break;
-#define DEFINE_ONE_ELIF(datatype)                                        \
-  case ::oneflow::DataType::k##datatype:                                 \
-    stringified = stringifyEnum(oneflow::DataType::DT_##datatype).str(); \
+#define DEFINE_ONE_ELIF(datatype)                                                   \
+  case ::oneflow::DataType::k##datatype:                                            \
+    stringified = stringifyEnum(oneflow_foundation::DataType::DT_##datatype).str(); \
     break;
       DEFINE_ONE_ELIF(Char)
       DEFINE_ONE_ELIF(Float)
@@ -399,7 +399,8 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   }
 
   if (failed(AppendCtrlOutType(out_types))) { return failure(); }
-  OperationState state(FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0), "oneflow.user");
+  OperationState state(FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0),
+                       oneflow_foundation::UserOp::getOperationName());
   uint32_t data_input_size = 0;
   uint32_t data_output_size = 0;
   for (const auto& input : op.user_conf().input()) { data_input_size += input.second.s().size(); }
@@ -427,7 +428,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
 }  // namespace
 
 LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf) {
-  if (op->isRegistered() && !llvm::dyn_cast<oneflow::UserOp>(op)) return success();
+  if (op->isRegistered() && !llvm::dyn_cast<oneflow_foundation::UserOp>(op)) return success();
   if (auto ctrl_ins = GetCtrlIntputOperands(op)) {
     for (auto ctrl_in : ctrl_ins.getValue()) {
       op_conf.add_ctrl_in_op_name(
@@ -578,7 +579,7 @@ llvm::Optional<std::string> GetOutputLbn(OpResult result) {
   return llvm::None;
 }
 
-LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
+LogicalResult ConvertUserOpInputs(Operation* op, oneflow_foundation::UserOpAdaptor& user_op_adaptor,
                                   ::oneflow::UserOpConf* user_conf) {
   std::vector<std::string> keys{};
   std::vector<int32_t> sizes{};
@@ -605,7 +606,8 @@ LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op
   return success();
 }
 
-LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
+LogicalResult ConvertUserOpOutputs(Operation* op,
+                                   oneflow_foundation::UserOpAdaptor& user_op_adaptor,
                                    ::oneflow::UserOpConf* user_conf) {
   std::vector<std::string> keys{};
   std::vector<int32_t> sizes{};
@@ -627,15 +629,18 @@ LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_o
 }
 
 LogicalResult ConvertDT(Attribute attr, ::oneflow::DataType& data_type) {
-  Optional<mlir::oneflow::DataType> dt =
-      oneflow::symbolizeEnum<oneflow::DataType>(attr.dyn_cast<StringAttr>().getValue().trim());
+  Optional<mlir::oneflow_foundation::DataType> dt =
+      oneflow_foundation::symbolizeEnum<oneflow_foundation::DataType>(
+          attr.dyn_cast<StringAttr>().getValue().trim());
   assert(dt.hasValue());
   switch (dt.getValue()) {
-    case oneflow::DataType::DT_InvalidDataType:
+    case oneflow_foundation::DataType::DT_InvalidDataType:
       data_type = ::oneflow::DataType::kInvalidDataType;
       break;
-#define DEFINE_ONE_CASE(datatype) \
-  case oneflow::DataType::DT_##datatype: data_type = ::oneflow::DataType::k##datatype; break;
+#define DEFINE_ONE_CASE(datatype)                   \
+  case oneflow_foundation::DataType::DT_##datatype: \
+    data_type = ::oneflow::DataType::k##datatype;   \
+    break;
       DEFINE_ONE_CASE(Char)
       DEFINE_ONE_CASE(Float)
       DEFINE_ONE_CASE(Double)
@@ -653,7 +658,7 @@ LogicalResult ConvertDT(Attribute attr, ::oneflow::DataType& data_type) {
 }
 
 LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
-                                                oneflow::UserOpAdaptor& user_op_adaptor,
+                                                oneflow_foundation::UserOpAdaptor& user_op_adaptor,
                                                 ::oneflow::OperatorConf& op_conf) {
   auto user_conf = op_conf.mutable_user_conf();
   std::string op_type_name = GetOpTypeName(op);

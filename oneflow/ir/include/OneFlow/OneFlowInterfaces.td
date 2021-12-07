@@ -11,12 +11,12 @@ def UserOpCompatibleInterface : OpInterface<"UserOpCompatible"> {
   let methods = [
     StaticInterfaceMethod<"",
         "const std::vector<std::string>*", "inputKeys", (ins), [{
-        static std::vector<std::string> val(mlir::oneflow::support::GetInputKeys(ConcreteOp::getOperationName().split('.').second.str()));
+        static std::vector<std::string> val(mlir::oneflow_foundation::support::GetInputKeys(ConcreteOp::getOperationName().split('.').second.str()));
         return &val;
     }]>,
     StaticInterfaceMethod<"",
         "const std::vector<std::string>*", "outputKeys", (ins), [{
-        static std::vector<std::string> val(mlir::oneflow::support::GetOutputKeys(ConcreteOp::getOperationName().split('.').second.str()));
+        static std::vector<std::string> val(mlir::oneflow_foundation::support::GetOutputKeys(ConcreteOp::getOperationName().split('.').second.str()));
         return &val;
     }]>,
     InterfaceMethod<"",
@@ -41,12 +41,12 @@ def AlternativeOpTypeNameInterface : OpInterface<"HasAlternativeOpTypeName"> {
     >,
     StaticInterfaceMethod<"",
         "const std::vector<std::string>*", "inputKeys", (ins), [{
-        static std::vector<std::string> val(mlir::oneflow::support::GetInputKeys(ConcreteOp::getOriginalOpTypeName()));
+        static std::vector<std::string> val(mlir::oneflow_foundation::support::GetInputKeys(ConcreteOp::getOriginalOpTypeName()));
         return &val;
     }]>,
     StaticInterfaceMethod<"",
         "const std::vector<std::string>*", "outputKeys", (ins), [{
-        static std::vector<std::string> val(mlir::oneflow::support::GetOutputKeys(ConcreteOp::getOriginalOpTypeName()));
+        static std::vector<std::string> val(mlir::oneflow_foundation::support::GetOutputKeys(ConcreteOp::getOriginalOpTypeName()));
         return &val;
     }]>,
   ];

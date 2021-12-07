@@ -28,7 +28,7 @@ limitations under the License.
 #include "oneflow/ir/include/OneFlow/OneFlowSupport.h"
 
 using namespace mlir;
-using namespace mlir::oneflow;
+using namespace mlir::oneflow_foundation;
 
 ::mlir::OperandRange UserOp::dataInputOperands() { return data_input(); }
 ::mlir::OperandRange UserOp::ctrlInputOperands() { return ctrl_inputs(); }
@@ -49,7 +49,7 @@ static mlir::ParseResult parseConstantOp(mlir::OpAsmParser& parser, mlir::Operat
   return success();
 }
 
-static mlir::LogicalResult verify(oneflow::ConstantOp op) { return mlir::success(); }
+static mlir::LogicalResult verify(oneflow_foundation::ConstantOp op) { return mlir::success(); }
 
 template<typename OpType>
 LogicalResult TrimRedundantCtrl(OpType& op, PatternRewriter& rewriter) {
@@ -73,9 +73,9 @@ LogicalResult TrimRedundantCtrl(OpType& op, PatternRewriter& rewriter) {
   return failure();
 }
 
-bool IsCtrlOutTrimmed(oneflow::UserOp& op) { return !op.ctrl_output(); }
+bool IsCtrlOutTrimmed(oneflow_foundation::UserOp& op) { return !op.ctrl_output(); }
 
-bool IsCtrlInAbsent(oneflow::UserOp& op) {
+bool IsCtrlInAbsent(oneflow_foundation::UserOp& op) {
   if (!op->hasAttrOfType<::mlir::DenseIntElementsAttr>(
           mlir::OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr()))
     op.dump();
@@ -158,10 +158,10 @@ static void getValuesFromIntArrayAttribute(ArrayAttr attr, SmallVector<T>& array
   }
 }
 
-struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
+struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow_foundation::UserOp> {
   explicit ConcreteUserOps(mlir::MLIRContext* context)
-      : OpRewritePattern<oneflow::UserOp>(context, /*benefit=*/1) {}
-  mlir::LogicalResult matchAndRewrite(oneflow::UserOp op,
+      : OpRewritePattern<oneflow_foundation::UserOp>(context, /*benefit=*/1) {}
+  mlir::LogicalResult matchAndRewrite(oneflow_foundation::UserOp op,
                                       mlir::PatternRewriter& rewriter) const override {
     if (succeeded(TrimRedundantCtrl(op, rewriter))) { return success(); }
     // In principle, a concrete user op has no ctrl input/output. Some benefits:
@@ -187,7 +187,8 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
             mlir::OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr(),
             rewriter.getI32VectorAttr(output_sizes)));
       }
-      OperationState state(op->getLoc(), "oneflow." + op.op_type_name().str());
+      OperationState state(op->getLoc(), OneFlowFoundationDialect::getDialectNamespace().str() + "."
+                                             + op.op_type_name().str());
       state.addAttributes(attributes);
       state.addOperands(op.getODSOperands(0) /* data in */);
       state.addTypes(op.getODSResults(0 /* data out */).getTypes());
@@ -220,10 +221,10 @@ void UserOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
   results.insert<ConcreteUserOps>(context);
 }
 
-struct ConcreteSystemOps : public mlir::OpRewritePattern<oneflow::SystemOp> {
+struct ConcreteSystemOps : public mlir::OpRewritePattern<oneflow_foundation::SystemOp> {
   explicit ConcreteSystemOps(mlir::MLIRContext* context)
-      : OpRewritePattern<oneflow::SystemOp>(context, /*benefit=*/1) {}
-  mlir::LogicalResult matchAndRewrite(oneflow::SystemOp op,
+      : OpRewritePattern<oneflow_foundation::SystemOp>(context, /*benefit=*/1) {}
+  mlir::LogicalResult matchAndRewrite(oneflow_foundation::SystemOp op,
                                       mlir::PatternRewriter& rewriter) const override {
     return TrimRedundantCtrl(op, rewriter);
   }
@@ -234,10 +235,10 @@ void SystemOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
   results.insert<ConcreteSystemOps>(context);
 }
 
-struct ConvertAddOpWithArity : public mlir::OpRewritePattern<oneflow::AddNOp> {
+struct ConvertAddOpWithArity : public mlir::OpRewritePattern<oneflow_foundation::AddNOp> {
   explicit ConvertAddOpWithArity(mlir::MLIRContext* context)
-      : OpRewritePattern<oneflow::AddNOp>(context, /*benefit=*/1) {}
-  mlir::LogicalResult matchAndRewrite(oneflow::AddNOp op,
+      : OpRewritePattern<oneflow_foundation::AddNOp>(context, /*benefit=*/1) {}
+  mlir::LogicalResult matchAndRewrite(oneflow_foundation::AddNOp op,
                                       mlir::PatternRewriter& rewriter) const override {
     const auto arity = op.in().size();
     if (arity == 2) {

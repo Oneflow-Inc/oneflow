@@ -61,12 +61,12 @@ class GpuGreedyParallelLoopMappingPass
 
 namespace mlir {
 
-namespace oneflow {
+namespace oneflow_foundation {
 
 std::unique_ptr<Pass> createMapSCFToGPUPass() {
   return std::make_unique<GpuGreedyParallelLoopMappingPass>();
 }
 
-}  // namespace oneflow
+}  // namespace oneflow_foundation
 
 }  // namespace mlir
