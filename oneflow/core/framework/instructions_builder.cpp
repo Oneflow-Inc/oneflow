@@ -1080,7 +1080,7 @@ const std::shared_ptr<const ParallelDesc>& GetParallelDesc(
 }  // namespace
 
 template<typename T>
-Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_tensor, const int64_t offset) {
+Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_tensor) {
   /**
    * TensorView instruction assign the data pointer of input tensor to output view tensor,
    * so they can share memory.
@@ -1092,7 +1092,7 @@ Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_t
   const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object =
       JUST(view_tensor->eager_blob_object());
   // init view blob (with empty data pointer)
-  JUST(view_eager_blob_object->InitBlobWithOffset(offset));
+  JUST(view_eager_blob_object->InitBlobWithOffset(JUST(view_tensor->storage_offset())));
   view_eager_blob_object->set_is_shape_synced(true);
   // prepare instruction operand
   const auto& phy_instr_operand = std::make_shared<vm::TensorViewOperand>(
@@ -1108,8 +1108,7 @@ Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_t
 
 template Maybe<void> InstructionsBuilder::TensorView(
     const std::shared_ptr<one::MirroredTensor> input_tensor,
-    const std::shared_ptr<one::MirroredTensor> view_tensor,
-    const int64_t offset
+    const std::shared_ptr<one::MirroredTensor> view_tensor
 );
 
 template<typename T>
