@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/device/node_device_descriptor.h"
-#include "oneflow/core/device/device_descriptor_class.h"
+#include "oneflow/core/hardware/node_device_descriptor.h"
+#include "oneflow/core/hardware/device_descriptor_class.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include <json.hpp>
@@ -24,7 +24,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace device {
+namespace hardware {
 
 namespace {
 
@@ -108,6 +108,7 @@ class HWLocMemoryAffinityDescriptor : public TopologyMemoryAffinityDescriptor {
 
 class HWLocTopologyDescriptor : public TopologyDescriptor {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(HWLocTopologyDescriptor);
   ~HWLocTopologyDescriptor() override { hwloc_topology_destroy(topology_); }
 
   std::shared_ptr<const TopologyCPUAffinityDescriptor> GetCPUAffinity() const override {
@@ -118,7 +119,7 @@ class HWLocTopologyDescriptor : public TopologyDescriptor {
 
   std::shared_ptr<const TopologyMemoryAffinityDescriptor> GetMemoryAffinity() const override {
     hwloc_bitmap_t set = hwloc_bitmap_alloc();
-    hwloc_membind_policy_t policy;
+    hwloc_membind_policy_t policy{};
     if (hwloc_get_membind(topology_, set, &policy, HWLOC_MEMBIND_THREAD) != 0) { return nullptr; }
     return std::make_shared<const HWLocMemoryAffinityDescriptor>(set, policy);
   }
@@ -189,8 +190,8 @@ class HWLocTopologyDescriptor : public TopologyDescriptor {
   }
 
   void Serialize(std::string* serialized) const {
-    char* buffer;
-    int len;
+    char* buffer = nullptr;
+    int len = 0;
     if (hwloc_topology_export_xmlbuffer(topology_, &buffer, &len, 0) == 0) {
       *serialized = buffer;
       hwloc_free_xmlbuffer(topology_, buffer);
@@ -206,7 +207,7 @@ class HWLocTopologyDescriptor : public TopologyDescriptor {
   }
 
   explicit HWLocTopologyDescriptor(hwloc_topology_t topology) : topology_(topology) {}
-  hwloc_topology_t topology_;
+  hwloc_topology_t topology_{};
 };
 
 #endif  // WITH_HWLOC
@@ -353,6 +354,6 @@ std::shared_ptr<const NodeDeviceDescriptor> NodeDeviceDescriptor::Deserialize(
   return std::shared_ptr<const NodeDeviceDescriptor>(desc);
 }
 
-}  // namespace device
+}  // namespace hardware
 
 }  // namespace oneflow
