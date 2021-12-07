@@ -13,24 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EP_PRIMITIVE_UNARY_OP_H_
-#define ONEFLOW_CORE_EP_PRIMITIVE_UNARY_OP_H_
+#include "oneflow/core/ep/common/primitive/unary_functor.h"
+#include "oneflow/core/ep/cpu/primitive/type_seq.h"
+#include <cmath>
 
 namespace oneflow {
-
 namespace ep {
 namespace primitive {
 
-enum class UnaryOp {
-  kRelu,
-  kGelu,
-  kTanh,
-  kLogicalNot,
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kGelu, Dst, Src> {
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    return static_cast<Src>(0.5) * src * (static_cast<Src>(1.0) + std::erf(inv_sqrt2 * src));
+  }
+  Src inv_sqrt2 = std::sqrt(0.5);
 };
 
-}
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kTanh, Dst, Src> {
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return std::tanh(src); }
+};
+
+}  // namespace primitive
 }  // namespace ep
-
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_EP_PRIMITIVE_UNARY_OP_H_

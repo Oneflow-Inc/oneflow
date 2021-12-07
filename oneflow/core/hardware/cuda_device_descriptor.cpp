@@ -13,8 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/device/cuda_device_descriptor.h"
-#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/hardware/cuda_device_descriptor.h"
 
 #ifdef WITH_CUDA
 
@@ -24,7 +23,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace device {
+namespace hardware {
 
 namespace {
 
@@ -82,7 +81,8 @@ const std::string& CudaDeviceDescriptor::PCIBusID() const { return impl_->pci_bu
 
 std::shared_ptr<const CudaDeviceDescriptor> CudaDeviceDescriptor::Query(int32_t ordinal) {
   cudaDeviceProp prop{};
-  OF_CUDA_CHECK(cudaGetDeviceProperties(&prop, ordinal));
+  const cudaError_t err = cudaGetDeviceProperties(&prop, ordinal);
+  CHECK(err == cudaSuccess);
   auto* desc = new CudaDeviceDescriptor();
   desc->impl_->ordinal = ordinal;
   desc->impl_->name = prop.name;
@@ -135,7 +135,7 @@ std::shared_ptr<const CudaDeviceDescriptor> CudaDeviceDescriptor::Deserialize(
   return std::shared_ptr<const CudaDeviceDescriptor>(desc);
 }
 
-}  // namespace device
+}  // namespace hardware
 
 }  // namespace oneflow
 

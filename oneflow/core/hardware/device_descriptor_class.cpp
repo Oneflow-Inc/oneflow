@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/device/device_descriptor_class.h"
+#include "oneflow/core/hardware/device_descriptor_class.h"
 #include <mutex>
 #include <utility>
 #include <vector>
@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace device {
+namespace hardware {
 
 namespace {
 
@@ -91,6 +91,6 @@ std::shared_ptr<const DeviceDescriptorClass> DeviceDescriptorClass::GetRegistere
   return DeviceClassRegistryStorage::Instance().GetRegistered(class_name);
 }
 
-}  // namespace device
+}  // namespace hardware
 
 }  // namespace oneflow

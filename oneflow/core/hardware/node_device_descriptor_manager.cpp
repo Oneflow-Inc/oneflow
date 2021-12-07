@@ -13,14 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/device/node_device_descriptor_manager.h"
+#include "oneflow/core/hardware/node_device_descriptor_manager.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
-namespace device {
+namespace hardware {
 
 namespace {
 
@@ -74,6 +74,6 @@ void NodeDeviceDescriptorManager::DumpSummary(const std::string& base) const {
   }
 }
 
-}  // namespace device
+}  // namespace hardware
 
 }  // namespace oneflow
