@@ -46,7 +46,7 @@ class ElementwiseUnaryneDnnImpl : public ElementwiseUnary {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ElementwiseUnaryneDnnImpl);
   ElementwiseUnaryneDnnImpl(dnnl::algorithm algorithm, dnnl::memory::data_type type)
-      : type_onednn_(type), algorithm_(algorithm) {};
+      : type_onednn_(type), algorithm_(algorithm){};
   ~ElementwiseUnaryneDnnImpl() override = default;
 
   void Launch(Stream* stream, const void* src_ptr, void* dst_ptr, size_t count) override {
@@ -62,7 +62,7 @@ class ElementwiseUnaryneDnnImpl : public ElementwiseUnary {
     auto dst_mem = dnnl::memory(dst_md, *onednn_engine, dst_ptr);
 
     auto eltwise_d = dnnl::eltwise_forward::desc(dnnl::prop_kind::forward_inference, algorithm_,
-                                                 src_md, 1.0, 0.0);
+                                                 src_md, 0.0, 0.0);
     auto eltwise_pd = dnnl::eltwise_forward::primitive_desc(eltwise_d, *onednn_engine);
     auto eltwise_prim = dnnl::eltwise_forward(eltwise_pd);
 
@@ -78,30 +78,27 @@ class ElementwiseUnaryneDnnImpl : public ElementwiseUnary {
   dnnl::algorithm algorithm_;
 };
 
-#define CPU_PRIMITIVE_ADD_ONEDNN_TYPE_SEQ \
-  CPU_PRIMITIVE_ONEDNN_INT8_TYPE_SEQ      \
-  CPU_PRIMITIVE_ONEDNN_UINT8_TYPE_SEQ     \
-  CPU_PRIMITIVE_ONEDNN_INT32_TYPE_SEQ     \
-  CPU_PRIMITIVE_ONEDNN_FLOAT_TYPE_SEQ     \
-  CPU_PRIMITIVE_ONEDNN_FLOAT16_TYPE_SEQ   \
+#define CPU_PRIMITIVE_ELTWISE_ONEDNN_TYPE_SEQ \
+  CPU_PRIMITIVE_ONEDNN_INT8_TYPE_SEQ          \
+  CPU_PRIMITIVE_ONEDNN_UINT8_TYPE_SEQ         \
+  CPU_PRIMITIVE_ONEDNN_INT32_TYPE_SEQ         \
+  CPU_PRIMITIVE_ONEDNN_FLOAT_TYPE_SEQ         \
+  CPU_PRIMITIVE_ONEDNN_FLOAT16_TYPE_SEQ       \
   CPU_PRIMITIVE_ONEDNN_BFLOAT16_TYPE_SEQ
 
-#define CPU_PRIMITIVE_ADD_DEFAULT_TYPE_SEQ \
-  CPU_PRIMITIVE_CHAR_TYPE_SEQ              \
-  CPU_PRIMITIVE_DOUBLE_TYPE_SEQ            \
+#define CPU_PRIMITIVE_ELTWISE_DEFAULT_TYPE_SEQ \
+  CPU_PRIMITIVE_CHAR_TYPE_SEQ                  \
+  CPU_PRIMITIVE_DOUBLE_TYPE_SEQ                \
   CPU_PRIMITIVE_INT64_TYPE_SEQ
 
 #define ELTWISE_ONEDNN_GELU_ERF_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kGeluErf, dnnl::algorithm::eltwise_gelu_erf)
-#define ELTWISE_ONEDNN_GELU_TANH_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kGeluTanh, dnnl::algorithm::eltwise_gelu_tanh)
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kGelu, dnnl::algorithm::eltwise_gelu_erf)
 #define ELTWISE_ONEDNN_RELU_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRelu, dnnl::algorithm::eltwise_relu)
 #define ELTWISE_ONEDNN_TANH_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kTanh, dnnl::algorithm::eltwise_tanh)
 
-#define ELTWISE_ONEDNN_SEQ        \
-  ELTWISE_ONEDNN_GELU_ERF_SEQ     \
-  ELTWISE_ONEDNN_GELU_TANH_SEQ    \
-  ELTWISE_ONEDNN_RELU_SEQ         \
+#define ELTWISE_ONEDNN_SEQ    \
+  ELTWISE_ONEDNN_GELU_ERF_SEQ \
+  ELTWISE_ONEDNN_RELU_SEQ     \
   ELTWISE_ONEDNN_TANH_SEQ
 
 template<dnnl::algorithm algorithm, dnnl::memory::data_type type_onednn>
@@ -142,22 +139,28 @@ class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
     static const std::map<std::tuple<UnaryOp, DataType, DataType>,
                           std::function<std::unique_ptr<ElementwiseUnary>()>>
         new_elementwise_unary_handle{
+            // For All ONEDNN OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_ONEDNN_ELEMENTWISE_UNARY_ENTRY,
-                                             ELTWISE_ONEDNN_SEQ, CPU_PRIMITIVE_ADD_ONEDNN_TYPE_SEQ)
-
-                OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY,
-                                                 UNARY_MATH_OP_SEQ,
-                                                 CPU_PRIMITIVE_ADD_DEFAULT_TYPE_SEQ)
-
-                    OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-                        MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY, UNARY_LOGICAL_OP_SEQ,
-                        CPU_PRIMITIVE_NATIVE_TYPE_SEQ, CPU_PRIMITIVE_INT8_TYPE_SEQ)};
+                                             ELTWISE_ONEDNN_SEQ,
+                                             CPU_PRIMITIVE_ELTWISE_ONEDNN_TYPE_SEQ)
+            // For RELU
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY,
+                                             UNARY_MATH_OP_SEQ,
+                                             CPU_PRIMITIVE_ELTWISE_DEFAULT_TYPE_SEQ)
+            // Double Type OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY,
+                                             UNARY_FLOATING_MATH_OP_SEQ,
+                                             CPU_PRIMITIVE_DOUBLE_TYPE_SEQ)
+            // For Logical OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY,
+                                             UNARY_LOGICAL_OP_SEQ, CPU_PRIMITIVE_NATIVE_TYPE_SEQ,
+                                             CPU_PRIMITIVE_INT8_TYPE_SEQ)};
 
 #else
     static const std::map<std::tuple<UnaryOp, DataType, DataType>,
                           std::function<std::unique_ptr<ElementwiseUnary>()>>
         new_elementwise_unary_handle{
-			// For All Type OP
+            // For All Type OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY,
                                              UNARY_MATH_OP_SEQ, CPU_PRIMITIVE_NATIVE_TYPE_SEQ)
             // For Float Type OP
@@ -169,9 +172,6 @@ class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
                                              UNARY_LOGICAL_OP_SEQ, CPU_PRIMITIVE_NATIVE_TYPE_SEQ,
                                              CPU_PRIMITIVE_INT8_TYPE_SEQ)};
 
-                OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-                    MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY, UNARY_LOGICAL_OP_SEQ,
-                    CPU_PRIMITIVE_NATIVE_TYPE_SEQ, CPU_PRIMITIVE_INT8_TYPE_SEQ)};
 #endif
 
 #undef MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY
