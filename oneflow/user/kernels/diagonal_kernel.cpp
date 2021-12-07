@@ -67,7 +67,6 @@ class DiagonalKernel final : public user_op::OpKernel {
     const T* in_buf = in->dptr<T>();
     T* out_buf = out->mut_dptr<T>();
 
-    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0, out_shape.elem_cnt() * sizeof(T));
     int32_t size = out_shape.At(out_shape.NumAxes() - 1);
     int32_t dim1 = in_shape.At(1);
     int32_t dim2 = 0;
