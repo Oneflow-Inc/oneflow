@@ -7,7 +7,6 @@ export CXX=$ONEFLOW_CI_LLVM_DIR/bin/clang++
 # clean python dir
 cd ${ONEFLOW_CI_SRC_DIR}
 ${ONEFLOW_CI_PYTHON_EXE} -m pip install -i https://mirrors.aliyun.com/pypi/simple --user -r ci/fixed-dev-requirements.txt
-${ONEFLOW_CI_PYTHON_EXE} -m pip install -i https://mirrors.aliyun.com/pypi/simple --user cmake==3.22.0 ninja==1.10.2.3
 cd python
 git clean -nXd -e \!dist -e \!dist/**
 git clean -fXd -e \!dist -e \!dist/**
