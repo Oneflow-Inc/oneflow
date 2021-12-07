@@ -871,6 +871,7 @@ Maybe<void> UserOp::GetNdSbpSignatureList(
         op_conf(), parallel_desc, &empty_sbp_signature, logical_blob_desc4bn);
     return val_->get_nd_sbp_list_fn(&user_op_compute_complexity_fn_context, nd_sbp_sig_list);
   } else {
+    JUST(Operator::GetNdSbpSignatureList(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list));
   }
   return Maybe<void>::Ok();
 }
