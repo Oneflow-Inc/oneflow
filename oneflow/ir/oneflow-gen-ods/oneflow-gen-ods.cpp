@@ -246,6 +246,15 @@ bool IsConvOp(const std::string& op_name) {
 bool IsLazyPoolOp(const std::string& op_name) {
   return op_name.find("_pool") != std::string::npos && op_name.find("tf_") != std::string::npos;
 }
+
+bool IsMaxPoolOp(const std::string& op_name) {
+  return op_name.find("maxpool") != std::string::npos;
+}
+
+bool IsAvgPoolOp(const std::string& op_name) {
+  return op_name.find("avgpool") != std::string::npos;
+}
+
 bool IsAdaptivePoolOp(const std::string& op_name) {
   return op_name.find("_pool") != std::string::npos
          && op_name.find("adaptive_") != std::string::npos;
@@ -356,8 +365,14 @@ std::string GetBaseOp(const std::string& op_name) {
   } else if (IsConvOp(op_name)) {
     return "OneFlow_ConvolutionBaseOp";
   } else if (IsPoolOp(op_name)) {
-    return "OneFlow_" + std::string(IsLazyPoolOp(op_name) ? "TF" : "") + "Pool"
-           + std::string(IsGradOp(op_name) ? "Grad" : "") + "BaseOp";
+    if (IsLazyPoolOp(op_name)) {
+      return "OneFlow_" + std::string("TFPool") + std::string(IsGradOp(op_name) ? "Grad" : "")
+             + "BaseOp";
+    } else {
+      return "OneFlow_" + std::string(IsMaxPoolOp(op_name) ? "Max" : "")
+             + std::string(IsAvgPoolOp(op_name) ? "Avg" : "") + "Pool"
+             + std::string(IsGradOp(op_name) ? "Grad" : "") + "BaseOp";
+    }
   } else if (IsAdaptivePoolOp(op_name)) {
     return "OneFlow_AdaptivePool" + std::string(IsGradOp(op_name) ? "Grad" : "") + "BaseOp";
   } else {
