@@ -29,6 +29,7 @@ add_docstr(
     Args:
         tensors (list of Tensor): list of scalars or 1 dimensional tensors. Scalars will be
             treated as tensors of size :math:`(1,)` automatically
+        indexing (str):
 
     Returns:
         seq (sequence of Tensors): If the input has :math:`k` tensors of size

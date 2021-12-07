@@ -2073,7 +2073,7 @@ class MaskedFillFunctor {
 
 class MeshgridFunctor {
  public:
-  Maybe<TensorTuple> operator()(const TensorTuple& tensors) const {
+  Maybe<TensorTuple> operator()(const TensorTuple& tensors, const std::string& indexing) const {
     int size = tensors.size();
     CHECK_GT_OR_RETURN(size, 0) << "meshgrid expects a non-empty TensorList";
     DimVector shape_vec(size);
@@ -2103,7 +2103,12 @@ class MeshgridFunctor {
       std::shared_ptr<one::Tensor> reshaped = JUST(Reshape(tensors.at(i), view_shape));
       outputs[i] = JUST(Expand(reshaped, shape));
     }
-
+    
+    if(size > 1 && indexing == "xy"){
+      for(int i = 0; i < size; ++i){
+        outputs[i] = JUST(Transpose2dim(outputs[i], 0, 1));
+      }
+    }
     return outputs;
   }
 };
