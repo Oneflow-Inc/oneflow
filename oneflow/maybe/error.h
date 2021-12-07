@@ -41,26 +41,26 @@ struct ErrorStackFromContainerBase {
  private:
   using Derived = D;
 
-  auto& stack() { return static_cast<Derived*>(this)->getStack(); }
+  auto& Stack() { return static_cast<Derived*>(this)->GetStack(); }
 
-  const auto& stack() const { return static_cast<const Derived*>(this)->getStack(); }
+  const auto& Stack() const { return static_cast<const Derived*>(this)->GetStack(); }
 
  public:
-  std::size_t StackSize() const { return stack().size(); }
+  std::size_t StackSize() const { return Stack().size(); }
 
   template<typename... Args>
   void PushStack(Args&&... args) {
-    auto& s = stack();
+    auto& s = Stack();
     s.emplace(s.end(), std::forward<Args>(args)...);
   }
 
   template<typename T = Derived>
   const typename T::StackType::value_type& StackElem(std::size_t index) const {
-    return stack()[index];
+    return Stack()[index];
   }
 
-  auto StackBegin() const { return stack().begin(); }
-  auto StackEnd() const { return stack().end(); }
+  auto StackBegin() const { return Stack().begin(); }
+  auto StackEnd() const { return Stack().end(); }
 };
 
 }  // namespace details
@@ -229,9 +229,9 @@ struct StackedError : details::ErrorStackFromContainerBase<StackedError<E, M>> {
   ErrorType error_;
   StackType stack_;
 
-  StackType& getStack() { return stack_; }
+  StackType& GetStack() { return stack_; }
 
-  const StackType& getStack() const { return stack_; }
+  const StackType& GetStack() const { return stack_; }
 
   friend BaseType;
 };

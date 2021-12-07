@@ -37,8 +37,10 @@ limitations under the License.
 #if !__is_identifier(__is_aggregate)
 #define OF_MAYBE_HAS_IS_AGGREGATE
 #endif
-#elif __has_builtin(__is_aggregate)
+#else
+#if __has_builtin(__is_aggregate)
 #define OF_MAYBE_HAS_IS_AGGREGATE
+#endif
 #endif
 
 #ifdef OF_MAYBE_HAS_IS_AGGREGATE
