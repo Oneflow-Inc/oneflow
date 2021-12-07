@@ -595,6 +595,20 @@ void TaskGraph::RemoveEmptyRegsts() {
   ForEachNode([&](TaskNode* node) { node->UnbindBnWithEmptyRegst(); });
 }
 
+void TaskGraph::UpdateTickDataAndCtrlRegstNum() {
+  // NOTE(chengcheng): tick_regst_num need to update by user config for control overlap.
+  const int64_t tick_regst_num = GlobalJobDesc().job_conf().tick_regst_num();
+  ForEachNode([&](TaskNode* node) {
+    const CompTaskNode* comp_task_node = dynamic_cast<const CompTaskNode*>(node);
+    if (comp_task_node == nullptr) { return; }
+    if (IsTickOpConf(comp_task_node->op()->op_conf())) {
+      for (auto& pair : node->produced_regsts()) {
+        pair.second->UpdtMinRegstNumIfNeed(tick_regst_num);
+      }
+    }
+  });
+}
+
 void TaskGraph::MergeChainAndAddOrderingCtrlEdgeInSameChain() {
   MergeChain();
   BuildCtrlRegstDescInSameChain();

@@ -33,7 +33,8 @@ class SourceTickCompTaskNode final : public CompTaskNode {
 };
 
 void SourceTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 2, 2);
+  // NOTE(chengcheng): tick task min regst num need at least 2 for pipeline.
+  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 2, kMaxRegisterNum);
   ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("out", out_regst); });
 }
 

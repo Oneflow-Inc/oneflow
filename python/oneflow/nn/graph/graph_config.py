@@ -47,7 +47,7 @@ class GraphConfig(object):
         r"""Set the outputs buffer size of ``nn.Graph``.
         When graph's outputs buffer size is greater than 2, multiple call on the
         graph can work like a pipeline. This makes multiple call takes less time.
-        
+
         The default outputs buffer size is 2.
 
         Args:
@@ -82,7 +82,7 @@ class GraphConfig(object):
 
     def allow_fuse_cast_scale(self, mode: bool = True):
         """If true, try to fuse cast and scalar_mul_by_tensor to improve performance.
-    
+
         Args:
             mode (bool, optional): [description]. Default is True.
         """
@@ -94,6 +94,19 @@ class GraphConfig(object):
         Args:
             value (int): num of steps.
         """
+        self.proto.set_num_gradient_accumulation_steps(value)
+
+    def set_tick_regst_num(self, value: int = 128):
+        """Set regst num of tick actor. This value is at least 2 for overlap control actor subgraph.
+        And it need be greater than total stage num in pipeline parallelism.
+
+
+        Args:
+            value (int, optional): Tick regst num. Default is 128.
+        """
+
+        assert value > 1
+
         self.proto.set_num_gradient_accumulation_steps(value)
 
     def set_zero_redundancy_optimizer_mode(self, mode: str = "distributed_split"):
@@ -111,7 +124,7 @@ class GraphConfig(object):
         self.proto.set_optimizer_placement_optimization_mode(mode)
 
     def enable_xla_jit(self, value=True):
-        """Whether use xla_jit in xrt or not. When this option enable, oneflow will check all operators is supported by 
+        """Whether use xla_jit in xrt or not. When this option enable, oneflow will check all operators is supported by
            xla_jit or not. Clustering supported operators as subgraph, then runing subgraph by xla_jit.
 
            XLA: https://www.tensorflow.org/xla
@@ -122,7 +135,7 @@ class GraphConfig(object):
         self.proto.mutable_xrt_config().set_use_xla_jit(value)
 
     def enable_tensorrt(self, value=True):
-        """Whether use tensorrt in xrt or not. When this option enable, oneflow will check all operators is supported by 
+        """Whether use tensorrt in xrt or not. When this option enable, oneflow will check all operators is supported by
            tensorrt or not. Clustering supported operators as subgraph, then runing subgraph by tensorrt.
 
            TensorRT: https://developer.nvidia.com/tensorrt
@@ -133,7 +146,7 @@ class GraphConfig(object):
         self.proto.mutable_xrt_config().set_use_tensorrt(value)
 
     def enable_openvino(self, value=True):
-        """Whether use openvino in xrt or not. When this option enable, oneflow will check all operators is supported by 
+        """Whether use openvino in xrt or not. When this option enable, oneflow will check all operators is supported by
            openvino or not. Clustering supported operators as subgraph, then runing subgraph by openvino.
 
            Please note that, openvino only support inference mode.
@@ -147,7 +160,7 @@ class GraphConfig(object):
 
     def enable_cudnn_conv_heuristic_search_algo(self, mode: bool = True):
         """ Whether enable cudnn conv operatioin to use heuristic search algorithm.
-    
+
         Args:
             mode (bool, optional): Whether enable cudnn conv operatioin to use heuristic
                                    search algorithm. Default is True.

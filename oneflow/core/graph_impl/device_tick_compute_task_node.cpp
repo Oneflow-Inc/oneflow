@@ -34,7 +34,8 @@ class DeviceTickCompTaskNode final : public CompTaskNode {
 };
 
 void DeviceTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("out", false, 1, 1);
+  // NOTE(chengcheng): tick task min regst num need at least 2 for pipeline.
+  ProduceRegst("out", false, 2, kMaxRegisterNum);
   ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
 }
 

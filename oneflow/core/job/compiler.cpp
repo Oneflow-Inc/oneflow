@@ -72,6 +72,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   //   In Multi-Client, each rank has its own src_tick/dst_tick and input/output with callback,
   //   which need to be forced sequenced.
   task_gph->AddCtrlEdgeBetweenSrcDstTickAndInputOutputInSameRank();
+  task_gph->UpdateTickDataAndCtrlRegstNum();
   task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();
   auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
   if (job_desc.enable_inplace()) { task_gph->EnableInplaceMemSharing(IsReachable); }
