@@ -48,7 +48,8 @@ Maybe<void> EagerBlobObject::InitBlob() {
     int64_t header_byte_size = blob_desc_.AlignedByteSizeOfBlobHeader();
     header_buffer_ = std::make_unique<char[]>(header_byte_size);
   }
-  blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer_.get(), nullptr));
+  storage_offset_ = 0;
+  blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer_.get(), nullptr, storage_offset_));
   return Maybe<void>::Ok();
 }
 

@@ -89,7 +89,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
   // run tensor view instruction
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->TensorView(JUST(input->AsMirroredTensor()), JUST(output->AsMirroredTensor()), storage_offset);
+    return builder->TensorView(JUST(input->AsMirroredTensor()), JUST(output->AsMirroredTensor()));
   }));
   return output;
 }
