@@ -14,7 +14,7 @@ foreach (OP_GROUP_NAME IN LISTS ONEFLOW_OP_GROUPS)
     configure_file(OneFlowOpGetGen.cpp.in ${CPP_FILE} @ONLY)
 endforeach()
 
-add_mlir_dialect_library(MLIROneFlow
+oneflow_add_mlir_dialect_library(MLIROneFlow
   OneFlowDialect.cpp
   OneFlowOps.cpp
   OneFlowSupport.cpp
@@ -46,6 +46,7 @@ add_mlir_dialect_library(MLIROneFlow
   ${oneflow_third_party_libs}
   oneflow
 )
+set_compile_options_to_oneflow_target(MLIROneFlow)
 
 if(WITH_MLIR_CUDA_CODEGEN)
   find_library(CUDA_DRIVER_LIBRARY cuda)
