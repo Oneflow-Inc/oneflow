@@ -45,8 +45,12 @@ else()
   set(OPENCV_CXX_COMPILER_LAUNCHER_DEF "-DCMAKE_CXX_COMPILER_LAUNCHER:STRING=${CMAKE_CXX_COMPILER_LAUNCHER}")
 endif()
 
+set(OPENCV_DEPS "")
+if (WITH_ZLIB)
+  list(APPEND OPENCV_DEPS zlib)
+endif()
 ExternalProject_Add(opencv
-    DEPENDS zlib libjpeg_copy_headers_to_destination libjpeg_copy_libs_to_destination
+    DEPENDS ${OPENCV_DEPS} libjpeg_copy_headers_to_destination libjpeg_copy_libs_to_destination
     PREFIX opencv
     URL ${OPENCV_URL}
     URL_MD5 59870e55385f5202c1aa178fe37ed2de
@@ -110,7 +114,7 @@ ExternalProject_Add(opencv
         -DBUILD_opencv_world:BOOL=OFF
         -DBUILD_opencv_apps:BOOL=OFF
         -DBUILD_opencv_js:BOOL=OFF
-        -DBUILD_ZLIB:BOOL=OFF
+        -DBUILD_ZLIB:BOOL=${WITH_ZLIB}
         -DZLIB_ROOT:PATH=${ZLIB_INSTALL}
         -DBUILD_TIFF:BOOL=ON
         -DBUILD_JASPER:BOOL=ON
