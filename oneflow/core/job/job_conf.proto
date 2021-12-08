@@ -250,6 +250,7 @@ message JobConfigProto {
   optional bool enable_quantization_aware_training = 603 [default = false];
   
   optional int64 concurrency_width = 1000 [default = 128];
+  optional int64 tick_regst_num = 1001 [default = 128];
 
   map<string, AttrValue> flag_name2flag_value = 2000;
 

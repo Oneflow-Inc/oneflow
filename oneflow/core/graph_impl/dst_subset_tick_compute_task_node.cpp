@@ -34,7 +34,8 @@ class DstSubsetTickCompTaskNode final : public CompTaskNode {
 };
 
 void DstSubsetTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("out", false, 2, 2);
+  // NOTE(chengcheng): tick task min regst num need at least 2 for pipeline.
+  ProduceRegst("out", false, 2, kMaxRegisterNum);
   ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
 }
 
