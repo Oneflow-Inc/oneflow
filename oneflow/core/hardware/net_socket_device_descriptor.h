@@ -13,24 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_DEVICE_NET_SOCKET_DEVICE_DESCRIPTOR_H_
-#define ONEFLOW_CORE_DEVICE_NET_SOCKET_DEVICE_DESCRIPTOR_H_
+#ifndef ONEFLOW_CORE_HARDWARE_NET_SOCKET_DEVICE_DESCRIPTOR_H_
+#define ONEFLOW_CORE_HARDWARE_NET_SOCKET_DEVICE_DESCRIPTOR_H_
 
 #ifdef __linux__
 
-#include "oneflow/core/device/device_descriptor.h"
+#include "oneflow/core/hardware/device_descriptor.h"
+#include "oneflow/core/common/util.h"
 #include <string>
 #include <memory>
 #include <ifaddrs.h>
 
 namespace oneflow {
 
-namespace device {
+namespace hardware {
 
 constexpr char kNetSocketDeviceDescriptorClassName[] = "net_socket";
 
 class NetSocketDeviceDescriptor : public DeviceDescriptor {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(NetSocketDeviceDescriptor);
   ~NetSocketDeviceDescriptor() override;
 
   int32_t Ordinal() const;
@@ -51,10 +53,10 @@ class NetSocketDeviceDescriptor : public DeviceDescriptor {
   std::unique_ptr<Impl> impl_;
 };
 
-}  // namespace device
+}  // namespace hardware
 
 }  // namespace oneflow
 
 #endif  // __linux__
 
-#endif  // ONEFLOW_CORE_DEVICE_NET_SOCKET_DEVICE_DESCRIPTOR_H_
+#endif  // ONEFLOW_CORE_HARDWARE_NET_SOCKET_DEVICE_DESCRIPTOR_H_

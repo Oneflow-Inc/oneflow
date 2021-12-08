@@ -13,28 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_DEVICE_DEVICE_DESCRIPTOR_LIST_H_
-#define ONEFLOW_CORE_DEVICE_DEVICE_DESCRIPTOR_LIST_H_
 
-#include "oneflow/core/device/device_descriptor.h"
-#include <cstdint>
-#include <memory>
+#include "oneflow/core/hardware/topology_descriptor.h"
 
 namespace oneflow {
 
-namespace device {
+namespace hardware {
 
-class DeviceDescriptorList {
- public:
-  DeviceDescriptorList() = default;
-  virtual ~DeviceDescriptorList() = default;
+void TopologyDescriptor::SetCPUAffinityByPCIBusID(const std::string& bus_id) const {
+  SetCPUAffinity(GetCPUAffinityByPCIBusID(bus_id));
+}
 
-  virtual size_t DeviceCount() const = 0;
-  virtual std::shared_ptr<const DeviceDescriptor> GetDevice(size_t ordinal) const = 0;
-};
+void TopologyDescriptor::SetMemoryAffinityByPCIBusID(const std::string& bus_id) const {
+  SetMemoryAffinity(GetMemoryAffinityByPCIBusID(bus_id));
+}
 
-}  // namespace device
+}  // namespace hardware
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_DEVICE_DEVICE_DESCRIPTOR_LIST_H_
