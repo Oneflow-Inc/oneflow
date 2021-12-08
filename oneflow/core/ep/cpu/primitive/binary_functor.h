@@ -19,6 +19,7 @@ namespace oneflow {
 
 namespace ep {
 namespace primitive {
+namespace broadcast_elementwise_binary {
 
 template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kPow, Src, Dst> {
@@ -32,6 +33,7 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kPow, float16, float16> {
   }
 };
 
+}  // namespace broadcast_elementwise_binary
 }  // namespace primitive
 }  // namespace ep
 }  // namespace oneflow

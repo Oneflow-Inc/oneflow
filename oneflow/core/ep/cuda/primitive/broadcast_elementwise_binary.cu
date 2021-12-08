@@ -24,6 +24,7 @@ namespace oneflow {
 
 namespace ep {
 namespace primitive {
+namespace broadcast_elementwise_binary {
 
 template<BinaryOp binary_op, typename Src, typename Dst>
 std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary();
@@ -78,6 +79,7 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
 REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, BroadcastElementwiseBinaryFactory,
                            BroadcastElementwiseBinaryFactoryImpl);
 }  // namespace
+}  // namespace broadcast_elementwise_binary
 }  // namespace primitive
 }  // namespace ep
 

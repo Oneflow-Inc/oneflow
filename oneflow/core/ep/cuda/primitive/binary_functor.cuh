@@ -19,6 +19,7 @@ limitations under the License.
 namespace oneflow {
 namespace ep {
 namespace primitive {
+namespace broadcast_elementwise_binary {
 
 template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, Src, Dst> {
@@ -43,6 +44,7 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, nv_bfloat16, nv_bfloat16
 
 #endif  // CUDA_VERSION >= 11000
 
+}  // namespace broadcast_elementwise_binary
 }  // namespace primitive
 }  // namespace ep
 }  // namespace oneflow

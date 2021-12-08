@@ -24,6 +24,7 @@ namespace oneflow {
 
 namespace ep {
 namespace primitive {
+namespace broadcast_elementwise_binary {
 
 namespace {
 
@@ -51,8 +52,8 @@ struct BroadcastElementwiseBinaryParams {
   NdIndexOffsetHelper<IndexType, max_dims> src1_index_helper;
   NdIndexOffsetHelper<IndexType, max_dims> dst_index_helper;
   size_t num_dims;
-  IndexType src0_dims[max_dims];
-  IndexType src1_dims[max_dims];
+  IndexType src0_index_multiplier[max_dims];
+  IndexType src1_index_multiplier[max_dims];
   IndexType count{};
   const void* src0{};
   const void* src1{};
@@ -82,15 +83,9 @@ __global__ void BroadcastElementwiseBinaryGpu(
     params.dst_index_helper.OffsetToNdIndex(offset, dst_index, num_dims);
 #pragma unroll
     for (int i = 0; i < max_dims; ++i) {
-      if (params.src0_dims[i] == 1) {
-        src0_index[i] = 0;
-      } else {
-        src0_index[i] = dst_index[i];
-      }
-      if (params.src1_dims[i] == 1) {
-        src1_index[i] = 0;
-      } else {
-        src1_index[i] = dst_index[i];
+      if (i < num_dims) {
+        src0_index[i] = params.src0_index_multiplier[i] * dst_index[i];
+        src1_index[i] = params.src1_index_multiplier[i] * dst_index[i];
       }
     }
     const IndexType src0_offset = params.src0_index_helper.NdIndexToOffset(src0_index, num_dims);
@@ -100,7 +95,6 @@ __global__ void BroadcastElementwiseBinaryGpu(
     Pack<Src, src1_pack_size> src1_pack;
     src1_pack.storage = src1[src1_offset];
     Pack<Dst, dst_pack_size> dst_pack;
-
 #pragma unroll
     for (int j = 0; j < dst_pack_size; ++j) {
       const Src src0_val =
@@ -120,15 +114,21 @@ void LaunchKernel(Stream* stream, int num_dims, const int64_t* src0_dims, const 
                   const int64_t* src1_dims, const void* src1, const int64_t* dst_dims, void* dst,
                   size_t count) {
   BroadcastElementwiseBinaryParams<max_dims, IndexType> params;
-  IndexType params_dst_dims[max_dims];
   for (size_t i = 0; i < num_dims; ++i) {
-    params.src0_dims[i] = src0_dims[i];
-    params.src1_dims[i] = src1_dims[i];
-    params_dst_dims[i] = dst_dims[i];
+    if (src0_dims[i] == 1) {
+      params.src0_index_multiplier[i] = 0;
+    } else {
+      params.src0_index_multiplier[i] = 1;
+    }
+    if (src1_dims[i] == 1) {
+      params.src1_index_multiplier[i] = 0;
+    } else {
+      params.src1_index_multiplier[i] = 1;
+    }
   }
-  params.src0_index_helper = NdIndexOffsetHelper<IndexType, max_dims>(params.src0_dims, num_dims);
-  params.src1_index_helper = NdIndexOffsetHelper<IndexType, max_dims>(params.src1_dims, num_dims);
-  params.dst_index_helper = NdIndexOffsetHelper<IndexType, max_dims>(params_dst_dims, num_dims);
+  params.src0_index_helper = NdIndexOffsetHelper<IndexType, max_dims>(src0_dims, num_dims);
+  params.src1_index_helper = NdIndexOffsetHelper<IndexType, max_dims>(src1_dims, num_dims);
+  params.dst_index_helper = NdIndexOffsetHelper<IndexType, max_dims>(dst_dims, num_dims);
   params.num_dims = num_dims;
   params.src0 = src0;
   params.src1 = src1;
@@ -178,10 +178,9 @@ void DispatchPackSize(Stream* stream, size_t src0_pack_size, size_t src1_pack_si
 }
 
 template<BinaryOp op, typename T, typename R>
-void LaunchWithSimplified(Stream* stream, size_t src0_pack_size, size_t src1_pack_size,
-                          size_t num_dims, const int64_t* src0_dims, const void* src0,
-                          const int64_t* src1_dims, const void* src1, const int64_t* dst_dims,
-                          void* dst) {
+void DispatchNumDims(Stream* stream, size_t src0_pack_size, size_t src1_pack_size, size_t num_dims,
+                     const int64_t* src0_dims, const void* src0, const int64_t* src1_dims,
+                     const void* src1, const int64_t* dst_dims, void* dst) {
   void (*func)(Stream* /*stream*/, size_t /*src0_pack_size*/, size_t /*src1_pack_size*/,
                size_t /*num_dims*/, const int64_t* /*src0_dims*/, const void* /*src0*/,
                const int64_t* /*src1_dims*/, const void* /*src1*/, const int64_t* /*dst_dims*/,
@@ -206,21 +205,18 @@ template<size_t max_pack_size, typename T, typename R>
 size_t GetPackSize(size_t num_src_dims, const int64_t* src0_dims, const void* src0,
                    const int64_t* src1_dims, const void* src1, void* dst) {
   static_assert(max_pack_size > 0 && (max_pack_size & (max_pack_size - 1)) == 0, "");
+  CHECK(src0_dims[num_src_dims - 1] != 1 || src1_dims[num_src_dims - 1] != 1);
   auto src0_ptr = reinterpret_cast<std::uintptr_t>(src0);
   auto src1_ptr = reinterpret_cast<std::uintptr_t>(src1);
   auto dst_ptr = reinterpret_cast<std::uintptr_t>(dst);
-  const auto is_pack_size_supported = [&](const size_t pack_size, const int64_t* src_dims,
-                                          std::uintptr_t src_ptr) -> bool {
-    if (src_dims[num_src_dims - 1] == 1) { return true; }
-    if ((src_dims[num_src_dims - 1] % pack_size == 0) && (src_ptr % (pack_size * sizeof(T)) == 0)) {
-      return true;
-    }
-    return false;
-  };
   for (size_t pack_size = max_pack_size; pack_size > 2; pack_size /= 2) {
-    if (is_pack_size_supported(pack_size, src0_dims, src0_ptr)
-        && is_pack_size_supported(pack_size, src1_dims, src1_ptr)
-        && (dst_ptr % (pack_size * sizeof(R))) == 0) {
+    bool is_src0_supported =
+        (src0_dims[num_src_dims - 1] == 1)
+        || IsPackSizeSupported<T>(pack_size, num_src_dims, src0_dims, src0_ptr);
+    bool is_src1_supported =
+        (src1_dims[num_src_dims - 1] == 1)
+        || IsPackSizeSupported<T>(pack_size, num_src_dims, src1_dims, src1_ptr);
+    if (is_src0_supported && is_src1_supported && (dst_ptr % (pack_size * sizeof(R))) == 0) {
       return pack_size;
     }
   }
@@ -230,25 +226,12 @@ size_t GetPackSize(size_t num_src_dims, const int64_t* src0_dims, const void* sr
 constexpr size_t kMaxPackSize = 4;
 
 template<BinaryOp op, typename T, typename R>
-void SimplifyThenLaunch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims,
-                        const void* src0, size_t num_src1_dims, const int64_t* src1_dims,
-                        const void* src1, void* dst) {
-  CHECK_LE(num_src0_dims, kMaxNumDims);
-  CHECK_LE(num_src1_dims, kMaxNumDims);
-  size_t simplified_num_dims = 0;
-  int64_t simplified_src0_dims[kMaxNumDims];
-  int64_t simplified_src1_dims[kMaxNumDims];
-  SimplifyDims(num_src0_dims, src0_dims, num_src1_dims, src1_dims, &simplified_num_dims,
-               simplified_src0_dims, simplified_src1_dims);
+void LaunchWithSimplified(Stream* stream, size_t simplified_num_dims, int64_t* simplified_src0_dims,
+                          const void* src0, int64_t* simplified_src1_dims, const void* src1,
+                          int64_t* simplified_dst_dims, void* dst) {
+  CHECK_LE(simplified_num_dims, kMaxNumDims);
   size_t pack_size = GetPackSize<kMaxPackSize, T, R>(simplified_num_dims, simplified_src0_dims,
                                                      src0, simplified_src1_dims, src1, dst);
-  int64_t simplified_dst_dims[kMaxNumDims];
-  for (int64_t i = 0; i < simplified_num_dims; ++i) {
-    simplified_dst_dims[i] = std::max(simplified_src0_dims[i], simplified_src1_dims[i]);
-    // inplace check
-    if (src0 == dst) { CHECK_EQ(simplified_src0_dims[i], simplified_dst_dims[i]); }
-    if (src1 == dst) { CHECK_EQ(simplified_src1_dims[i], simplified_dst_dims[i]); }
-  }
   size_t src0_pack_size = 1;
   size_t src1_pack_size = 1;
   if (simplified_src0_dims[simplified_num_dims - 1] != 1) {
@@ -260,9 +243,9 @@ void SimplifyThenLaunch(Stream* stream, size_t num_src0_dims, const int64_t* src
     src1_pack_size = pack_size;
   }
   simplified_dst_dims[simplified_num_dims - 1] /= pack_size;
-  LaunchWithSimplified<op, T, R>(stream, src0_pack_size, src1_pack_size, simplified_num_dims,
-                                 simplified_src0_dims, src0, simplified_src1_dims, src1,
-                                 simplified_dst_dims, dst);
+  DispatchNumDims<op, T, R>(stream, src0_pack_size, src1_pack_size, simplified_num_dims,
+                            simplified_src0_dims, src0, simplified_src1_dims, src1,
+                            simplified_dst_dims, dst);
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst>
@@ -303,37 +286,38 @@ struct BinaryRhsScalarPtrFunctorFactory {
   const Src* scalar_ptr;
 };
 
-inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t num_src1_dims,
-                         const int64_t* src1_dims) {
-  if (num_src0_dims != num_src1_dims) { return false; }
-  for (size_t i = 0; i < num_src1_dims; ++i) {
-    if (src0_dims[i] != src1_dims[i]) { return false; }
-  }
-  return true;
-}
-
 template<BinaryOp binary_op, typename Src, typename Dst>
 void DispatchLaunch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const Src* src0,
                     size_t num_src1_dims, const int64_t* src1_dims, const Src* src1, Dst* dst) {
   auto* cuda_stream = stream->As<CudaStream>();
-  size_t src0_count = GetElementCount(num_src0_dims, src0_dims);
-  size_t src1_count = GetElementCount(num_src1_dims, src1_dims);
-  const size_t elem_cnt = std::max(src0_count, src1_count);
-  if (IsDimsEquals(num_src0_dims, src0_dims, num_src1_dims, src1_dims)) {
+  size_t simplified_num_dims = 0;
+  int64_t simplified_src0_dims[kMaxNumDims];
+  int64_t simplified_src1_dims[kMaxNumDims];
+  int64_t simplified_dst_dims[kMaxNumDims];
+  SimplifyDims(num_src0_dims, src0_dims, num_src1_dims, src1_dims, &simplified_num_dims,
+               simplified_src0_dims, simplified_src1_dims, simplified_dst_dims);
+  CheckInplace(simplified_num_dims, simplified_src0_dims, src0, simplified_src1_dims, src1,
+               simplified_dst_dims, dst);
+  if (IsDimsEquals(simplified_num_dims, simplified_src0_dims, simplified_num_dims,
+                   simplified_src1_dims)) {
+    const int64_t elem_cnt = GetElementCount(simplified_num_dims, simplified_src0_dims);
     OF_CUDA_CHECK(
         (cuda::elementwise::Binary(BinaryFunctor<DeviceType::kCUDA, binary_op, Src, Dst>(),
                                    elem_cnt, dst, src0, src1, cuda_stream->cuda_stream())));
-  } else if (src0_count == 1) {
-    OF_CUDA_CHECK((cuda::elementwise::UnaryWithFactory(
-        BinaryLhsScalarPtrFunctorFactory<binary_op, Src, Dst>(src0), elem_cnt, dst, src1,
-        cuda_stream->cuda_stream())));
-  } else if (src1_count == 1) {
-    OF_CUDA_CHECK((cuda::elementwise::UnaryWithFactory(
-        BinaryRhsScalarPtrFunctorFactory<binary_op, Src, Dst>(src1), elem_cnt, dst, src0,
-        cuda_stream->cuda_stream())));
   } else {
-    SimplifyThenLaunch<binary_op, Src, Dst>(stream, num_src0_dims, src0_dims, src0, num_src1_dims,
-                                            src1_dims, src1, dst);
+    if (simplified_num_dims == 1 && simplified_src0_dims[0] == 1) {
+      OF_CUDA_CHECK((cuda::elementwise::UnaryWithFactory(
+          BinaryLhsScalarPtrFunctorFactory<binary_op, Src, Dst>(src0), simplified_src1_dims[0], dst,
+          src1, cuda_stream->cuda_stream())));
+    } else if (simplified_num_dims == 1 && simplified_src1_dims[0] == 1) {
+      OF_CUDA_CHECK((cuda::elementwise::UnaryWithFactory(
+          BinaryRhsScalarPtrFunctorFactory<binary_op, Src, Dst>(src1), simplified_src0_dims[0], dst,
+          src0, cuda_stream->cuda_stream())));
+    } else {
+      LaunchWithSimplified<binary_op, Src, Dst>(stream, simplified_num_dims, simplified_src0_dims,
+                                                src0, simplified_src1_dims, src1,
+                                                simplified_dst_dims, dst);
+    }
   }
 }
 
@@ -398,6 +382,7 @@ std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary() {
       new BroadcastElementwiseBinaryImpl<binary_op, Src, Dst>());
 }
 
+}  // namespace broadcast_elementwise_binary
 }  // namespace primitive
 }  // namespace ep
 

@@ -13,23 +13,33 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/ep/cuda/primitive/broadcast_elementwise_binary.cuh"
+#ifndef ONEFLOW_CORE_EP_COMMON_PRIMITIVE_UTIL_H_
+#define ONEFLOW_CORE_EP_COMMON_PRIMITIVE_UTIL_H_
 
 namespace oneflow {
 
 namespace ep {
 namespace primitive {
-namespace broadcast_elementwise_binary {
 
-#define INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY(binary_op, data_type_pair) \
-  template std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary<      \
-      binary_op, OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(data_type_pair)>();
+inline size_t GetElementCount(size_t num_dims, const int64_t* dims) {
+  size_t count = 1;
+  for (size_t i = 0; i < num_dims; ++i) { count *= dims[i]; }
+  return count;
+}
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
-                                 BINARY_MATH_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ);
+template<typename T>
+bool IsPackSizeSupported(const size_t pack_size, size_t num_dims, const int64_t* dims,
+                         std::uintptr_t ptr) {
+  if ((dims[num_dims - 1] % pack_size == 0) && (ptr % (pack_size * sizeof(T)) == 0)) {
+    return true;
+  } else {
+    return false;
+  }
+};
 
-}  // namespace broadcast_elementwise_binary
 }  // namespace primitive
 }  // namespace ep
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_EP_COMMON_PRIMITIVE_UTIL_H_

@@ -19,15 +19,48 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/primitive.h"
 #include "oneflow/core/ep/include/primitive/binary_op.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
+#include "oneflow/core/ep/common/primitive/util.h"
 
 namespace oneflow {
 
 namespace ep {
 namespace primitive {
 
+namespace broadcast_elementwise_binary {
+
+constexpr size_t kMaxNumDims = 8;
+
+inline void CheckInplace(size_t num_dims, const int64_t* src0_dims, const void* src0,
+                         const int64_t* src1_dims, const void* src1, const int64_t* dst_dims,
+                         const void* dst) {
+  for (int64_t i = 0; i < num_dims; ++i) {
+    if (src0 == dst) { CHECK_EQ(src0_dims[i], dst_dims[i]); }
+    if (src1 == dst) { CHECK_EQ(src1_dims[i], dst_dims[i]); }
+  }
+}
+
+inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t num_src1_dims,
+                         const int64_t* src1_dims) {
+  if (num_src0_dims != num_src1_dims) { return false; }
+  for (size_t i = 0; i < num_src1_dims; ++i) {
+    if (src0_dims[i] != src1_dims[i]) { return false; }
+  }
+  return true;
+}
+
 inline void SimplifyDims(size_t num_src0_dims, const int64_t* src0_dims, size_t num_src1_dims,
                          const int64_t* src1_dims, size_t* simplified_num_dims,
-                         int64_t* simplified_src0_dims, int64_t* simplified_src1_dims) {
+                         int64_t* simplified_src0_dims, int64_t* simplified_src1_dims,
+                         int64_t* simplified_dst_dims) {
+  size_t src0_count = GetElementCount(num_src0_dims, src0_dims);
+  size_t src1_count = GetElementCount(num_src1_dims, src1_dims);
+  if (src0_count == 1 || src1_count == 1) {
+    *simplified_num_dims = 1;
+    simplified_src0_dims[0] = src0_count;
+    simplified_src1_dims[0] = src1_count;
+    simplified_dst_dims[0] = std::max(src0_count, src1_count);
+    return;
+  }
   const size_t num_max_dims = std::max(num_src0_dims, num_src1_dims);
   auto MakeGetDim = [num_max_dims](size_t num_dims, const int64_t* dims) {
     const int64_t num_padding_dims = num_max_dims - num_dims;
@@ -56,22 +89,16 @@ inline void SimplifyDims(size_t num_src0_dims, const int64_t* src0_dims, size_t 
                    && prev_broadcast_src1 == broadcast_src1)) {
       simplified_src0_dims[*simplified_num_dims - 1] *= src0_dim;
       simplified_src1_dims[*simplified_num_dims - 1] *= src1_dim;
+      simplified_dst_dims[*simplified_num_dims - 1] *= broadcast_dim;
     } else {
       simplified_src0_dims[*simplified_num_dims] = src0_dim;
       simplified_src1_dims[*simplified_num_dims] = src1_dim;
+      simplified_dst_dims[*simplified_num_dims] = broadcast_dim;
       *simplified_num_dims += 1;
       prev_broadcast_src0 = broadcast_src0;
       prev_broadcast_src1 = broadcast_src1;
     }
   }
-}
-
-constexpr size_t kMaxNumDims = 8;
-
-inline size_t GetElementCount(size_t num_dims, const int64_t* dims) {
-  size_t count = 1;
-  for (size_t i = 0; i < num_dims; ++i) { count *= dims[i]; }
-  return count;
 }
 
 #define BINARY_MATH_OP_SEQ             \
@@ -96,6 +123,7 @@ inline size_t GetElementCount(size_t num_dims, const int64_t* dims) {
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalOr)  \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalXor)
 
+}  // namespace broadcast_elementwise_binary
 }  // namespace primitive
 }  // namespace ep
 

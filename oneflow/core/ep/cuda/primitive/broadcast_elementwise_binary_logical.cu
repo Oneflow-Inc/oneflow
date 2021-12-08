@@ -19,6 +19,7 @@ namespace oneflow {
 
 namespace ep {
 namespace primitive {
+namespace broadcast_elementwise_binary {
 
 #define INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_LOGICAL_ENTRY(binary_op, src_data_type_pair, \
                                                                    dst_data_type_pair)            \
@@ -29,6 +30,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_LO
                                  BINARY_COMPARISION_OP_SEQ BINARY_LOGICAL_OP_SEQ,
                                  CUDA_PRIMITIVE_ALL_TYPE_SEQ, CUDA_PRIMITIVE_INT8_TYPE_SEQ);
 
+}  // namespace broadcast_elementwise_binary
 }  // namespace primitive
 }  // namespace ep
 

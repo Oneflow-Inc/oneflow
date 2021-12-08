@@ -25,6 +25,8 @@ namespace oneflow {
 
 namespace ep {
 namespace primitive {
+namespace broadcast_elementwise_binary {
+
 namespace {
 
 template<typename T>
@@ -65,27 +67,21 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
   void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0,
               size_t num_src1_dims, const int64_t* src1_dims, const void* src1,
               void* dst) override {
-    const size_t src0_elem_cnt = GetElementCount(num_src0_dims, src0_dims);
-    const size_t src1_elem_cnt = GetElementCount(num_src1_dims, src1_dims);
     DimVector src0_dim_vec;
     DimVector src1_dim_vec;
     DimVector dst_dim_vec;
     size_t num_dims;
-    if (src0_elem_cnt == 1 || src1_elem_cnt == 1) {
-      num_dims = 1;
-      src0_dim_vec.push_back(src0_elem_cnt);
-      src1_dim_vec.push_back(src1_elem_cnt);
-      dst_dim_vec.push_back(std::max(src0_elem_cnt, src1_elem_cnt));
-    } else {
-      int64_t simplified_src0_dims[kMaxNumDims];
-      int64_t simplified_src1_dims[kMaxNumDims];
-      SimplifyDims(num_src0_dims, src0_dims, num_src1_dims, src1_dims, &num_dims,
-                   simplified_src0_dims, simplified_src1_dims);
-      for (int64_t i = 0; i < num_dims; ++i) {
-        src0_dim_vec.push_back(simplified_src0_dims[i]);
-        src1_dim_vec.push_back(simplified_src1_dims[i]);
-        dst_dim_vec.push_back(std::max(simplified_src0_dims[i], simplified_src1_dims[i]));
-      }
+    int64_t simplified_src0_dims[kMaxNumDims];
+    int64_t simplified_src1_dims[kMaxNumDims];
+    int64_t simplified_dst_dims[kMaxNumDims];
+    SimplifyDims(num_src0_dims, src0_dims, num_src1_dims, src1_dims, &num_dims,
+                 simplified_src0_dims, simplified_src1_dims, simplified_dst_dims);
+    CheckInplace(num_dims, simplified_src0_dims, src0, simplified_src1_dims, src1,
+                 simplified_dst_dims, dst);
+    for (int64_t i = 0; i < num_dims; ++i) {
+      src0_dim_vec.push_back(simplified_src0_dims[i]);
+      src1_dim_vec.push_back(simplified_src1_dims[i]);
+      dst_dim_vec.push_back(simplified_dst_dims[i]);
     }
     binary_func(
         stream, XpuVarNdarray<Dst>(Shape(dst_dim_vec), reinterpret_cast<Dst*>(dst), num_dims),
@@ -186,6 +182,7 @@ REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, BroadcastElementwiseBinaryFactory,
                            BroadcastElementwiseBinaryFactoryImpl);
 
 }  // namespace
+}  // namespace broadcast_elementwise_binary
 }  // namespace primitive
 }  // namespace ep
 

@@ -23,6 +23,7 @@ namespace oneflow {
 
 namespace ep {
 namespace primitive {
+namespace broadcast_elementwise_binary {
 
 template<DeviceType device, BinaryOp binary_op, typename Src, typename Dst>
 struct BinaryFunctor;
@@ -102,6 +103,7 @@ struct BinaryFunctor<device, BinaryOp::kLogicalXor, Src, Dst> {
   OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const { return (!src0) != (!src1); }
 };
 
+}  // namespace broadcast_elementwise_binary
 }  // namespace primitive
 }  // namespace ep
 
