@@ -277,7 +277,7 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
     else if (value.has_at_list_data_type()) {
       auto dt_attr_list =
           llvm::map_range(value.at_list_data_type().val(), [&](auto t) -> mlir::Attribute {
-            auto dt = GetDataTypeAttr(GetMLIRContext(), static_cast<DataType>(t));
+            auto dt = GetDataTypeAttr(GetMLIRContext(), static_cast<::oneflow::DataType>(t));
             CHECK(dt) << "fail to convert op attr, key: " + name;
             return dt.getValue();
           });
