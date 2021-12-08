@@ -278,7 +278,8 @@ class PoolNdGradFunctorImpl : public PoolNdGradFunctorImplBase {
                            const std::string& padding, const std::vector<int32_t>& padding_before,
                            const std::vector<int32_t>& padding_after,
                            const std::vector<int32_t>& pool_size,
-                           const std::vector<int32_t>& strides, const bool& ceil_mode) const {
+                           const std::vector<int32_t>& strides,
+                           const bool& ceil_mode) const override {
     auto ctx = std::make_shared<ContextT>();
     ctx->set_data_format(data_format);
     ctx->set_padding(padding);
