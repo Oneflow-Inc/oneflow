@@ -607,11 +607,26 @@ class DimGatherFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("dim_gather").Input("input").Input("index").Output("output").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& indices, const int32_t& dim) const {
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& dim,
+                           const std::shared_ptr<one::Tensor>& index,
+                           const bool sparse_grad) const {
+    CHECK_EQ_OR_RETURN(sparse_grad, false) << "Only support bool = False for now!";
+    CHECK_LT_OR_RETURN(dim, index->ndim())
+        << "Value of dim is out of range(dim should be less than len(index.shape))";
+    CHECK_EQ_OR_RETURN(input->ndim(), index->ndim())
+        << "dimensions of input and index should equal";
+
+    FOR_RANGE(int32_t, i, 0, input->ndim()) {
+      if (i != dim) {
+        CHECK_LE_OR_RETURN(index->shape()->At(i), input->shape()->At(i))
+            << "index.size(d) <= input.size(d) for all dimensions d != dim";
+      }
+    }
+
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, indices}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
  private:

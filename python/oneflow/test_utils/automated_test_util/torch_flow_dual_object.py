@@ -549,7 +549,14 @@ def check_nonetype_equality(a, b, ignored1, ignored2):
     return True
 
 
-def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05, check_graph=True):
+def autotest(
+    n=20,
+    auto_backward=True,
+    rtol=0.0001,
+    atol=1e-05,
+    check_graph=True,
+    check_allclose=True,
+):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
     def deco(f):
@@ -620,14 +627,18 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05, check_graph=True
                         vis_tensor.append(x.pytorch)
                 # check eager
                 for x in dual_objects_to_test:
-                    test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol), x)
+                    if check_allclose:
+                        test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol), x)
                     if verbose:
                         print(f"{f.__name__} test eager passed.")
                 # check graph
                 for output in func_outputs:
                     flow_tensor = output.oneflow
                     if isinstance(flow_tensor, flow.Tensor):
-                        if id(flow_tensor) in flow_res_id_eager2_graph:
+                        if (
+                            id(flow_tensor) in flow_res_id_eager2_graph
+                            and check_allclose
+                        ):
                             test_case.assertTrue(
                                 np.allclose(
                                     flow_tensor.numpy(),
@@ -640,7 +651,7 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05, check_graph=True
                             if verbose:
                                 print(f"{f.__name__} test graph passed.")
                         else:
-                            if check_graph:
+                            if check_graph and check_allclose:
                                 test_case.assertTrue(
                                     False,
                                     f"{f.__name__} cannot find module to check graph.",

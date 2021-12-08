@@ -733,7 +733,7 @@
   bind_python: True
 
 - name: "dim_gather"
-  signature: "Tensor (Tensor x, Tensor indices, Int32 dim) => DimGather"
+  signature: " Tensor (Tensor input, Int64 dim, Tensor index, Bool sparse_grad=False) => DimGather"
   bind_python: True
 
 - name: "arg_sort"
@@ -1800,6 +1800,14 @@
 
 - name: "meshgrid"
   signature: "TensorTuple (TensorTuple tensors) => Meshgrid"
+  bind_python: True
+
+- name: "decode_onerec"
+  signature: "Tensor (Tensor input, String key, DataType dtype, Shape shape, Bool is_dynamic=False, Shape reshape=None, Shape batch_padding=None) => DecodeOneRec"
+  bind_python: True
+
+- name: "read_onerec"
+  signature: "Tensor (StringList files, Int32 batch_size, Bool random_shuffle, String shuffle_mode, Int32 shuffle_buffer_size=1024, Bool shuffle_after_epoch=False, Bool verify_example=True) => ReadOneRec"
   bind_python: True
 
 - name: "dot"
