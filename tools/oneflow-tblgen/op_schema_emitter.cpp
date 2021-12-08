@@ -116,7 +116,7 @@ class OpSchemaEmitter {
   void run(raw_ostream& OS) {
     emitSourceFileHeader("oneflow op schema", OS);
 
-    json Ops;
+    json Ops = json::object();
 
     for (const auto& R : Records.getAllDerivedDefinitions("OneFlow_BaseOp")) {
       auto Name = R->getValueAsString("opName");
