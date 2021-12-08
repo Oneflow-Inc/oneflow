@@ -65,6 +65,7 @@ class TestResNet50(flow.unittest.TestCase):
         res50_module = resnet50(
             replace_stride_with_dilation=[False, False, False], norm_layer=FakeBN
         )
+        res50_module = flow.jit.trace(res50_module)
         res50_module.train()
         res50_module.load_state_dict(
             flow.load("/dataset/imagenette/resnet50_pretrained")

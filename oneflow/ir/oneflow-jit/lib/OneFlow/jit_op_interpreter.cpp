@@ -77,7 +77,8 @@ template<template<typename T> class Trait>
 void InsertLbnSegmentIntoVec(Operation* op, std::vector<std::string>& indexed_bns) {
   std::vector<std::string> lbn_segment_keys;
   std::vector<int32_t> lbn_segment_sizes;
-  CHECK(GetFilteredSegmentKeyAndSizes<Trait>(op, lbn_segment_keys, lbn_segment_sizes).succeeded());
+  CHECK(mlir::oneflow::GetFilteredSegmentKeyAndSizes<Trait>(op, lbn_segment_keys, lbn_segment_sizes)
+            .succeeded());
   for (const auto& bn_size_pair : llvm::zip(lbn_segment_keys, lbn_segment_sizes)) {
     auto bn = std::get<0>(bn_size_pair);
     auto length = std::get<1>(bn_size_pair);
@@ -195,7 +196,7 @@ llvm::Optional<std::shared_ptr<one::UserOpExpr>> JitInterpreter::GetExpr(Operati
   return expr;
 }
 
-FuncOp JitInterpreter::Trace(ir::JitImporter& importer, const std::string& func_name,
+FuncOp JitInterpreter::Trace(mlir::oneflow::JitImporter& importer, const std::string& func_name,
                              const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
                              const std::function<void()>& forward_func) {
   current_importer_ = &importer;  // TODO: extract function

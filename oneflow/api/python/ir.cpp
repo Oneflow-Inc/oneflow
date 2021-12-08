@@ -81,7 +81,7 @@ struct Module {
   py::object py_module_;
   MLIRContext* context_;
   OwningOpRef<ModuleOp> module_;
-  JitImporter importer_;
+  mlir::oneflow::JitImporter importer_;
   llvm::Optional<FuncOp> func_op_;
 };
 }  // namespace jit

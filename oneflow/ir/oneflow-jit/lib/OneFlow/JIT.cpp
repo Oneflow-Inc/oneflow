@@ -29,26 +29,27 @@ limitations under the License.
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "OneFlow/Passes.h"
 
+namespace mlir {
+
+namespace oneflow {
+
 namespace {
 
-using namespace mlir;
-using namespace ::oneflow::user_op;
-using namespace ::oneflow;
-
-std::unique_ptr<BlobDesc> GetBlobDescFromMlirTensorType(TensorType tensor_type) {
-  auto dtype = DataType::kInvalidDataType;
+std::unique_ptr<::oneflow::BlobDesc> GetBlobDescFromMlirTensorType(TensorType tensor_type) {
+  auto dtype = ::oneflow::kInvalidDataType;
   if (tensor_type.getElementType().isF32()) {
-    dtype = DataType::kFloat;
+    dtype = ::oneflow::kFloat;
   } else {
     tensor_type.dump();
     LOG(FATAL) << "fail to get BlobDesc from TensorType";
   }
-  auto shape_from_mlir = new Shape({tensor_type.getShape().begin(), tensor_type.getShape().end()});
-  return std::make_unique<BlobDesc>(*shape_from_mlir, dtype);
+  auto shape_from_mlir =
+      new ::oneflow::Shape({tensor_type.getShape().begin(), tensor_type.getShape().end()});
+  return std::make_unique<::oneflow::BlobDesc>(*shape_from_mlir, dtype);
 }
 
-ParallelContext GetSingleDeviceParallelContext() {
-  ParallelContext parallel_ctx;
+::oneflow::ParallelContext GetSingleDeviceParallelContext() {
+  ::oneflow::ParallelContext parallel_ctx;
   parallel_ctx.set_parallel_id(0);
   parallel_ctx.set_parallel_num(1);
   return parallel_ctx;
@@ -72,118 +73,7 @@ void InsertLbnSegmentIntoMapping(Operation* op, ValueRange values,
   }
 }
 
-class ReturnAllLeaveResultPass : public ReturnAllLeaveResultPassBase<ReturnAllLeaveResultPass> {
-  void runOnFunction() override {
-    auto CollectNotUsedResults = [&](Operation* op) {
-      for (auto result : op->getOpResults()) {
-        if (result.use_empty()) {
-          llvm::errs() << "use_empty: ";
-          result.dump();
-        }
-      }
-      return WalkResult::advance();
-    };
-    getFunction()->walk(CollectNotUsedResults);
-  }
-};
-
-class CreateComputeCtxPass : public CreateComputeCtxPassBase<CreateComputeCtxPass> {
-  void runOnFunction() override {
-    ModuleOp top_module = getFunction()->getParentOfType<ModuleOp>();
-    mlir::MLIRContext& context = getContext();
-    auto jit_interpreter =
-        std::dynamic_pointer_cast<one::JitInterpreter>(one::JitInterpreter::Get());
-    auto importer = jit_interpreter->GetImporter();
-    Builder builder(&context);
-    // external func to launch kernel
-    auto func_type = builder.getFunctionType(
-        LLVM::LLVMPointerType::get(IntegerType::get(&context, 8)), llvm::None);
-    auto function = mlir::FuncOp::create(getFunction()->getLoc(), "LaunchOneFlowKernel", func_type);
-    top_module.push_back(function);
-    auto CollectLowering = [&](Operation* op) {
-      if (llvm::dyn_cast<mlir::oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
-        mlir::oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
-        llvm::errs() << "lowering op to launch kernel: ";
-        user_op_adaptor.op_name().dump();
-        ::oneflow::OperatorConf op_conf;
-        const std::string op_name = user_op_adaptor.op_name().getValue().str();
-        auto user_conf = op_conf.mutable_user_conf();
-        if (succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))
-            && succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))
-            && succeeded(importer.ConvertUserOpAttributes(op, user_op_adaptor, op_conf))
-            && succeeded(ConvertCtrlInputs(op, op_conf))) {
-          // pass
-        } else {
-          return WalkResult::interrupt();
-        }
-        auto oneflow_op = CHECK_JUST(ConstructOp(op_conf));
-        std::unordered_map<std::string, mlir::Value> value_mapping_;  // "a0" => %result
-        InsertLbnSegmentIntoMapping<OpTrait::AttrSizedOperandSegments>(op, op->getOperands(),
-                                                                       value_mapping_);
-        InsertLbnSegmentIntoMapping<OpTrait::AttrSizedResultSegments>(op, op->getResults(),
-                                                                      value_mapping_);
-        HashMap<std::string, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
-        static ParallelContext parallel_ctx = GetSingleDeviceParallelContext();
-        auto GetBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
-          if (lbi2logical_blob_desc_.find(bn) == lbi2logical_blob_desc_.end()) {
-            auto value_it = value_mapping_.find(bn);
-            if (value_it == value_mapping_.end()) {
-              auto blob_desc = std::make_unique<BlobDesc>(DataType::kInvalidDataType);
-              CHECK(lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc)).second);
-              if (bn != "tmp_buffer_0") {
-                op->dump();
-                LOG(FATAL) << "value not found in MLIR op for indexed bn: " << bn;
-              }
-            } else {
-              auto found =
-                  GetBlobDescFromMlirTensorType(value_it->second.getType().cast<TensorType>());
-              CHECK(lbi2logical_blob_desc_.emplace(bn, std::move(found)).second);
-            }
-          }
-          return lbi2logical_blob_desc_.at(bn).get();
-        };
-        KernelConf kernel_conf;
-        oneflow_op->GenKernelConf(GetBlobDesc4BnInOp, &parallel_ctx, &kernel_conf);
-      }
-      return WalkResult::advance();
-    };
-    getFunction()->walk(CollectLowering);
-  }
-};
-
 }  // namespace
-
-namespace mlir {
-namespace oneflow {
-
-std::unique_ptr<Pass> createReturnAllLeaveResultPass() {
-  return std::make_unique<ReturnAllLeaveResultPass>();
-}
-
-std::unique_ptr<Pass> createCreateComputeCtxPass() {
-  return std::make_unique<CreateComputeCtxPass>();
-}
-
-}  // namespace oneflow
-}  // namespace mlir
-
-namespace oneflow {
-
-namespace one {
-
-namespace ir {
-
-using namespace mlir;
-
-OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context) {
-  context->loadDialect<mlir::oneflow::OneFlowDialect>();
-  context->loadDialect<mlir::oneflow::jit::OneFlowJITDialect>();
-  context->loadDialect<StandardOpsDialect>();
-  context->loadDialect<LLVM::LLVMDialect>();
-  OwningOpRef<ModuleOp> module(
-      ModuleOp::create(FileLineColLoc::get(context, "", /*line=*/0, /*column=*/0)));
-  return module;
-}
 
 void ProcessFuncContext::InsertValueMapping(Tensor* t, mlir::Value v) {
   CHECK(value_mapping_.insert({t, v}).second);
@@ -219,7 +109,7 @@ LogicalResult JitImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
   return success();
 }
 Type JitImporter::GetTensorTypeOfLbn(const std::string& lbn) {
-  LogicalBlobId lbi = GenLogicalBlobId(lbn);
+  ::oneflow::LogicalBlobId lbi = ::oneflow::GenLogicalBlobId(lbn);
   return GetProcessOpContext().GetResultTypeMapping().at(lbi.blob_name());
 }
 
@@ -235,25 +125,26 @@ std::shared_ptr<Tensor> JitImporter::MakeIntermediateTensor(
     const std::string& lbn, Value result,
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   auto tensor_type = result.getType().cast<TensorType>();
-  auto dtype = DataType::kInvalidDataType;
+  auto dtype = ::oneflow::kInvalidDataType;
   if (tensor_type.getElementType().isF32()) {
-    dtype = DataType::kFloat;
+    dtype = ::oneflow::kFloat;
   } else if (tensor_type.getElementType().isInteger(32)) {
-    dtype = DataType::kInt32;
+    dtype = ::oneflow::kInt32;
   } else if (tensor_type.getElementType().isInteger(64)) {
-    dtype = DataType::kInt64;
+    dtype = ::oneflow::kInt64;
   } else {
     GetModule().dump();
     result.dump();
     LOG(FATAL) << "fail to create tensor";
   }
-  const auto& device = CHECK_JUST(Device::MakeDeviceByParallelDesc(*parallel_desc));
-  auto shape_from_mlir = new Shape({tensor_type.getShape().begin(), tensor_type.getShape().end()});
-  auto shape = std::make_shared<Shape>();
+  const auto& device = CHECK_JUST(::oneflow::Device::MakeDeviceByParallelDesc(*parallel_desc));
+  auto shape_from_mlir =
+      new ::oneflow::Shape({tensor_type.getShape().begin(), tensor_type.getShape().end()});
+  auto shape = std::make_shared<::oneflow::Shape>();
   shape.reset(shape_from_mlir);
-  auto lazy_tensor =
-      CHECK_JUST(MirroredTensor::MakeTensor(shape, dtype, device, /* is_lazy */ true,
-                                            /* requires_grad= */ false, /* is_leaf= */ true));
+  auto lazy_tensor = CHECK_JUST(
+      ::oneflow::one::MirroredTensor::MakeTensor(shape, dtype, device, /* is_lazy */ true,
+                                                 /* requires_grad= */ false, /* is_leaf= */ true));
   // tensor_ref holds an lazy or eager tensor
   auto tensor_ref = std::make_shared<TensorRef>(lazy_tensor);
   SaveIntermediate(result, tensor_ref);
@@ -265,7 +156,7 @@ LogicalResult JitImporter::InsertOpResults(const ::oneflow::OperatorConf& op_con
                                            Operation* created_op) {
   auto output_lbns = created_op->getAttrOfType<ArrayAttr>("output_lbns");
   CHECK_EQ(output_lbns.size(), process_op_context_.GetOutputs()->size());
-  for (const auto& data_out : llvm::enumerate(GetDataOutputResults(created_op))) {
+  for (const auto& data_out : llvm::enumerate(mlir::oneflow::GetDataOutputResults(created_op))) {
     auto lbn = output_lbns[data_out.index()].dyn_cast<StringAttr>().getValue().str();
     auto tensor =
         MakeIntermediateTensor(lbn, data_out.value(), process_op_context_.GetParallelDesc());
@@ -274,8 +165,8 @@ LogicalResult JitImporter::InsertOpResults(const ::oneflow::OperatorConf& op_con
   return success();
 }
 
-FuncOp JitImporter::StartProcessFunc(llvm::StringRef func_name,
-                                     const std::vector<std::shared_ptr<one::Tensor>>& args) {
+FuncOp JitImporter::StartProcessFunc(
+    llvm::StringRef func_name, const std::vector<std::shared_ptr<::oneflow::one::Tensor>>& args) {
   process_func_context_ = ProcessFuncContext(func_name, args);
   auto result_types = llvm::SmallVector<Type, 8>();
   SymbolTable symbol_table(GetModule());
@@ -319,7 +210,7 @@ void JitImporter::CreateOperandMapping(const ::oneflow::OperatorConf& op_conf,
                                        const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                        const TensorTuple& inputs, TensorTuple* outputs) {
   process_op_context_ = ProcessOpContext(input_arg_tuple, inputs, outputs, parallel_desc);
-  HashMap<std::string, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
+  ::oneflow::HashMap<std::string, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
   auto op = CHECK_JUST(ConstructOp(op_conf));
   for (auto pair : llvm::zip(input_arg_tuple->indexed_bns(),
                              input_arg_tuple->indexed_arg_name_and_index(), inputs)) {
@@ -342,17 +233,18 @@ void JitImporter::CreateOperandMapping(const ::oneflow::OperatorConf& op_conf,
     if (lbi2logical_blob_desc_.find(bn) == lbi2logical_blob_desc_.end()) {
       auto operand_it = GetProcessOpContext().GetOperandMapping().find(bn);
       if (operand_it == GetProcessOpContext().GetOperandMapping().end()) {
-        auto blob_desc = std::make_unique<BlobDesc>(DataType::kInvalidDataType);
+        auto blob_desc = std::make_unique<BlobDesc>(::oneflow::kInvalidDataType);
         CHECK(lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc)).second);
       } else {
-        auto found = GetBlobDescFromMlirTensorType(operand_it->second.getType().cast<TensorType>());
+        auto found = mlir::oneflow::GetBlobDescFromMlirTensorType(
+            operand_it->second.getType().cast<TensorType>());
         CHECK(lbi2logical_blob_desc_.emplace(bn, std::move(found)).second);
       }
     }
     return lbi2logical_blob_desc_.at(bn).get();
   };
   CHECK_JUST(op->InferLogicalOutBlobDescs(GetLogicalBlobDesc4BnInOp, *parallel_desc));
-  static ParallelContext parallel_ctx = GetSingleDeviceParallelContext();
+  static ::oneflow::ParallelContext parallel_ctx = mlir::oneflow::GetSingleDeviceParallelContext();
   for (auto& kv : lbi2logical_blob_desc_) {
     CHECK(GetProcessOpContext()
               .GetResultTypeMapping()
@@ -373,7 +265,8 @@ llvm::Optional<mlir::Value> JitImporter::GetResultByBnAndIndex(const std::string
   }
 }
 
-FuncOp JitImporter::FinalizeProcessFunction(std::shared_ptr<one::Tensor> returned_tensor) {
+FuncOp JitImporter::FinalizeProcessFunction(
+    std::shared_ptr<::oneflow::one::Tensor> returned_tensor) {
   llvm::SmallVector<Value, 8> return_values{};
   auto v = GetValueMapping().lookup(UnWrapTensorRefOrReturnSelf(returned_tensor).get());
   CHECK(v) << "returned tensor not found";
@@ -410,6 +303,28 @@ FuncOp JitImporter::FinalizeProcessFunction(std::shared_ptr<one::Tensor> returne
 
   func_hash_symbol_mapping_.insert({function_hash, function});
   return function;
+}
+
+}  // namespace oneflow
+
+}  // namespace mlir
+
+namespace oneflow {
+
+namespace one {
+
+namespace ir {
+
+using namespace mlir;
+
+OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context) {
+  context->loadDialect<mlir::oneflow::OneFlowDialect>();
+  context->loadDialect<mlir::oneflow::jit::OneFlowJITDialect>();
+  context->loadDialect<StandardOpsDialect>();
+  context->loadDialect<LLVM::LLVMDialect>();
+  OwningOpRef<ModuleOp> module(
+      ModuleOp::create(FileLineColLoc::get(context, "", /*line=*/0, /*column=*/0)));
+  return module;
 }
 
 }  // namespace ir

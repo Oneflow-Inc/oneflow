@@ -130,6 +130,25 @@ class TensorRef final : public TensorIf<TensorRef> {
   std::shared_ptr<Tensor> tensor_;
 };
 
+OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context);
+
+}  // namespace ir
+
+}  // namespace one
+
+}  // namespace oneflow
+
+namespace mlir {
+
+namespace oneflow {
+
+using ::oneflow::ArgTuple;
+using ::oneflow::BlobDesc;
+using ::oneflow::ParallelDesc;
+using ::oneflow::one::Tensor;
+using ::oneflow::one::TensorTuple;
+using ::oneflow::one::ir::TensorRef;
+
 class ProcessOpContext {
  public:
   ProcessOpContext() = default;
@@ -166,7 +185,7 @@ class ProcessOpContext {
 
 class ProcessFuncContext {
  public:
-  ProcessFuncContext(llvm::StringRef name, const std::vector<std::shared_ptr<one::Tensor>>& args)
+  ProcessFuncContext(llvm::StringRef name, const std::vector<std::shared_ptr<Tensor>>& args)
       : func_name_(name), forward_args_(args){};
   ProcessFuncContext(ProcessFuncContext&&) = default;
   ProcessFuncContext(const ProcessFuncContext&) = default;
@@ -183,11 +202,11 @@ class ProcessFuncContext {
   }
 
   const std::string& GetFuncName() { return func_name_; }
-  const std::vector<std::shared_ptr<one::Tensor>>& GetArgs() { return forward_args_; }
+  const std::vector<std::shared_ptr<Tensor>>& GetArgs() { return forward_args_; }
 
  private:
   std::string func_name_;
-  std::vector<std::shared_ptr<one::Tensor>> forward_args_;
+  std::vector<std::shared_ptr<Tensor>> forward_args_;
   llvm::DenseMap<Tensor*, mlir::Value> value_mapping_;
   llvm::DenseMap<Value, std::shared_ptr<TensorRef>> intermediate_tensors_mapping_;
 };
@@ -231,7 +250,7 @@ class JitImporter : public Importer {
   void SetParallelDesc(const std::shared_ptr<const ParallelDesc>& parallel_desc) {
     GetProcessOpContext().SetParallelDesc(parallel_desc);
   }
-  FuncOp FinalizeProcessFunction(std::shared_ptr<one::Tensor>);
+  FuncOp FinalizeProcessFunction(std::shared_ptr<Tensor>);
   ProcessOpContext& GetProcessOpContext() { return process_op_context_; }
   const llvm::DenseMap<Value, std::shared_ptr<TensorRef>>& GetIntermediateTensorsMapping() {
     CHECK(process_func_context_.hasValue());
@@ -249,13 +268,12 @@ class JitImporter : public Importer {
     CHECK(process_func_context_.hasValue());
     process_func_context_->InsertValueMapping(t, v);
   }
-  const std::vector<std::shared_ptr<one::Tensor>>& GetJitForwardArgs() {
+  const std::vector<std::shared_ptr<Tensor>>& GetJitForwardArgs() {
     CHECK(process_func_context_.hasValue());
     return process_func_context_->GetArgs();
   }
   const std::string& GetJitFuncName() { return process_func_context_.getValue().GetFuncName(); }
-  FuncOp StartProcessFunc(llvm::StringRef name,
-                          const std::vector<std::shared_ptr<one::Tensor>>& args);
+  FuncOp StartProcessFunc(llvm::StringRef name, const std::vector<std::shared_ptr<Tensor>>& args);
 
  private:
   // reset every func
@@ -266,12 +284,7 @@ class JitImporter : public Importer {
   DenseMap<llvm::hash_code, FuncOp> func_hash_symbol_mapping_;
 };
 
-OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context);
-
-}  // namespace ir
-
-}  // namespace one
-
 }  // namespace oneflow
 
+}  // namespace mlir
 #endif  // ONEFLOW_IR_ONEFLOW_JIT_INCLUDE_ONEFLOW_JIT_H_

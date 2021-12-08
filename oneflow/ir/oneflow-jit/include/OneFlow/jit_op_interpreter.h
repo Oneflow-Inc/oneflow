@@ -28,12 +28,10 @@ namespace oneflow {
 
 namespace one {
 
-using namespace mlir;
-
 class JitInterpreter : public OpExprInterpreter {
  public:
   JitInterpreter()
-      : context_(new MLIRContext()),
+      : context_(new mlir::MLIRContext()),
         module_(ir::CreateJitModule(context_)),
         importer_(context_, *module_),
         current_importer_(&importer_) {}
@@ -48,9 +46,9 @@ class JitInterpreter : public OpExprInterpreter {
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const OpExprInterpContext& ctx) const override;
   void Interrupt();
-  ir::JitImporter& GetImporter() const { return *current_importer_; }
-  void CacheExpr(Operation&, std::shared_ptr<one::UserOpExpr>);
-  llvm::Optional<std::shared_ptr<one::UserOpExpr>> GetExpr(Operation*);
+  mlir::oneflow::JitImporter& GetImporter() const { return *current_importer_; }
+  void CacheExpr(mlir::Operation&, std::shared_ptr<one::UserOpExpr>);
+  llvm::Optional<std::shared_ptr<one::UserOpExpr>> GetExpr(mlir::Operation*);
   void MarkMlirTraceStart() { trace_start_time_ = std::chrono::steady_clock::now(); }
   void MarkMlirTraceEnd() { trace_end_time_ = std::chrono::steady_clock::now(); }
   void MarkMlirDispatchEnd() { dispatch_end_time_ = std::chrono::steady_clock::now(); }
@@ -63,19 +61,19 @@ class JitInterpreter : public OpExprInterpreter {
                                .count();
     return mlir_trace_time / jit_time;
   }
-  FuncOp Trace(ir::JitImporter& importer, const std::string& func_name,
-               const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
-               const std::function<void()>& forward_func);
+  mlir::FuncOp Trace(mlir::oneflow::JitImporter& importer, const std::string& func_name,
+                     const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors,
+                     const std::function<void()>& forward_func);
   std::shared_ptr<one::Tensor> DispatchFunc(
-      FuncOp func, const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors);
+      mlir::FuncOp func, const std::vector<std::shared_ptr<one::Tensor>>& arg_tensors);
 
  private:
   DECLARE_NORMAL_APPLY_FUNC(UserOp);  // note(BBuf) jit deal with user op only, now.
   mutable llvm::DenseMap<llvm::hash_code, std::shared_ptr<one::UserOpExpr>> cached_user_op_exprs_;
-  mutable MLIRContext* context_;
-  mutable OwningOpRef<ModuleOp> module_;
-  mutable ir::JitImporter importer_;
-  ir::JitImporter* current_importer_;
+  mutable mlir::MLIRContext* context_;
+  mutable mlir::OwningOpRef<mlir::ModuleOp> module_;
+  mutable mlir::oneflow::JitImporter importer_;
+  mlir::oneflow::JitImporter* current_importer_;
   mutable std::chrono::steady_clock::time_point trace_start_time_;
   mutable std::chrono::steady_clock::time_point trace_end_time_;
   mutable std::chrono::steady_clock::time_point dispatch_end_time_;
