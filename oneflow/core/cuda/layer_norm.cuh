@@ -871,6 +871,7 @@ __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_SCALED_DY load_scaled_
   static_assert(kWarpSize % thread_group_width == 0, "");
   ComputeType normalized_buf[rows_per_access][cols_per_thread];
   ComputeType dy_buf[rows_per_access][cols_per_thread];
+  const ComputeType one_over_cols = static_cast<ComputeType>(1.0) / static_cast<ComputeType>(cols);
   const int64_t global_thread_group_id = blockIdx.x * blockDim.y + threadIdx.y;
   const int64_t num_global_thread_group = gridDim.x * blockDim.y;
   const int lane_id = threadIdx.x;
@@ -921,8 +922,7 @@ __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_SCALED_DY load_scaled_
       const int global_row_id = row + row_id;
       ComputeType* row_normalized_buf = normalized_buf[row_id];
       ComputeType* row_dy_buf = dy_buf[row_id];
-      const ComputeType inv_variance_over_cols =
-          inv_variance_buf[row_id] / static_cast<ComputeType>(cols);
+      const ComputeType inv_variance_over_cols = inv_variance_buf[row_id] * one_over_cols;
 #pragma unroll
       for (int pack_id = 0; pack_id < pack_per_thread; ++pack_id) {
         const int col = (pack_id * thread_group_width + lane_id) * pack_size;
@@ -1147,12 +1147,13 @@ __global__ void LayerNormGradBlockSMemImpl(LOAD_X load_x, LOAD_SCALED_DY load_sc
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = static_cast<int>(cols) / pack_size;
+  const ComputeType one_over_cols = static_cast<ComputeType>(1.0) / static_cast<ComputeType>(cols);
   for (int row = blockIdx.x; row < rows; row += gridDim.x) {
     ComputeType sum_stats1 = 0;
     ComputeType sum_stats2 = 0;
     const ComputeType mean_val = mean[row];
     const ComputeType inv_variance_val = inv_variance[row];
-    const ComputeType inv_variance_over_cols = inv_variance_val / cols;
+    const ComputeType inv_variance_over_cols = inv_variance_val * one_over_cols;
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType x_pack[pack_size];
       ComputeType dy_pack[pack_size];
@@ -1318,11 +1319,11 @@ __global__ void LayerNormGradBlockUncachedImpl(LOAD_X load_x, LOAD_SCALED_DY loa
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = static_cast<int>(cols) / pack_size;
-  const ComputeType cols_reciprocal = static_cast<ComputeType>(1) / cols;
+  const ComputeType one_over_cols = static_cast<ComputeType>(1.0) / static_cast<ComputeType>(cols);
   for (int row = blockIdx.x; row < rows; row += gridDim.x) {
     const ComputeType mean_val = mean[row];
     const ComputeType inv_variance_val = inv_variance[row];
-    const ComputeType inv_variance_over_cols = inv_variance_val / cols;
+    const ComputeType inv_variance_over_cols = inv_variance_val * one_over_cols;
     ComputeType sum_stats1 = 0;
     ComputeType sum_stats2 = 0;
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
