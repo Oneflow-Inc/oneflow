@@ -51,8 +51,9 @@ limitations under the License.
 #include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
 #endif  // WITH_MLIR_CUDA_CODEGEN
 
-using namespace mlir;
-using namespace mlir::oneflow_foundation;
+namespace mlir {
+
+namespace oneflow_foundation {
 
 LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
   // TODO: now we only need one JIT engine
@@ -150,6 +151,10 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
   }
   return {};
 }
+
+}  // namespace oneflow_foundation
+
+}  // namespace mlir
 
 #include "OneFlow/OneFlowPatterns.cpp.inc"
 
