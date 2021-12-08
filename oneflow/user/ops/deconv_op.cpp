@@ -23,6 +23,7 @@ namespace {
 template<size_t NDims>
 Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
+
   CHECK_EQ_OR_RETURN(NDims + 2, in.shape().NumAxes());
 
   const std::string& data_format = ctx->Attr<std::string>("data_format");
@@ -30,6 +31,10 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(NDims, kernel_size.size());
   const int32_t filters = ctx->Attr<int32_t>("filters");
   size_t idx_offset = IdxOffset(data_format);
+  int32_t groups = ctx->Attr<int32_t>("groups");
+  std::cout <<"groups:" <<groups << std::endl;
+  std::cout <<"filters:" <<filters << std::endl;
+
 
   {
     const auto& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
@@ -41,6 +46,7 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(NDims, output_padding.size());
 
     user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+    std::cout <<"out:" <<out->shape() << std::endl; 
     DimVector out_shape(NDims + 2);
     out_shape.at(0) = in.shape().At(0);
     const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
@@ -59,16 +65,17 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
     }
     *out->mut_is_dynamic() = in.is_dynamic();
     *out->mut_shape() = Shape(out_shape);
+    std::cout <<"out:" <<out->shape() << std::endl; 
   }
 
   {
     DimVector weight_shape(in.shape().dim_vec());
     if (data_format == "channels_first") {
       weight_shape.at(0) = in.shape().At(1);
-      weight_shape.at(1) = filters;
+      weight_shape.at(1) = filters / groups;
     } else if (data_format == "channels_last") {
       weight_shape.at(0) = in.shape().At(NDims + 1);
-      weight_shape.at(NDims + 1) = filters;
+      weight_shape.at(NDims + 1) = filters / groups;
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
@@ -150,11 +157,14 @@ Maybe<void> GenerateBackwardOpConf4DeConv(const user_op::UserOpWrapper& op,
   const auto& strides = op.attr<std::vector<int32_t>>("strides");
   const auto& dilation_rate = op.attr<std::vector<int32_t>>("dilation_rate");
   const Shape& weight_shape = op.TensorDesc4ArgNameAndIndex("weight", 0).shape();
+  int32_t groups = op.attr<int32_t>("groups");
+  std::cout << groups << std::endl;
+
 
   const int32_t ndims = kernel_size.size();
   CHECK_EQ_OR_RETURN(ndims, strides.size());
   CHECK_EQ_OR_RETURN(ndims, dilation_rate.size());
-
+  
   if (op.NeedGenGradTensor4OpInput("weight", 0)) {
     auto filter_grad_op =
         user_op::UserOpConfWrapperBuilder("System-AutoGrad-" + op.op_name() + "-FilterGrad")
@@ -168,7 +178,7 @@ Maybe<void> GenerateBackwardOpConf4DeConv(const user_op::UserOpWrapper& op,
             .Attr<std::vector<int32_t>>("kernel_size", kernel_size)
             .Attr<std::vector<int32_t>>("strides", strides)
             .Attr<std::vector<int32_t>>("dilation_rate", dilation_rate)
-            .Attr<int32_t>("groups", 1)
+            .Attr<int32_t>("groups", groups)
             .Build();
     op.BindGradTensorWithOpInput(filter_grad_op.output("filter_diff", 0), "weight", 0);
     AddOp(filter_grad_op);
@@ -188,7 +198,7 @@ Maybe<void> GenerateBackwardOpConf4DeConv(const user_op::UserOpWrapper& op,
             .Attr<std::vector<int32_t>>("kernel_size", kernel_size)
             .Attr<std::vector<int32_t>>("strides", strides)
             .Attr<std::vector<int32_t>>("dilation_rate", dilation_rate)
-            .Attr<int32_t>("groups", 1)
+            .Attr<int32_t>("groups", groups)
             .Build();
     op.BindGradTensorWithOpInput(data_grad_op.output("out", 0), "in", 0);
     AddOp(data_grad_op);

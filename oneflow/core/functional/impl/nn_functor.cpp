@@ -140,22 +140,25 @@ class DeConvBaseFunctor {
     JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("output_padding", output_padding));
     JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("strides", strides));
     JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation));
+    JUST(deconv_attrs.SetAttr<int32_t>("groups", groups));
     JUST(deconv_attrs.SetAttr<std::string>("data_format", data_format));
+
     std::shared_ptr<one::Tensor> deconv_out = nullptr;
-    if (groups == 1) {
-      deconv_out = JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {x, weight}, deconv_attrs));
-    } else {
-      auto nc = x->dim(1) / groups;
-      auto split_x = JUST(functional::Split(x, nc, 1));
-      auto split_weight = JUST(functional::Split(weight, nc, 0));
-      one::TensorTuple split_out;
-      for (int i = 0; i < groups; i++) {
-        const std::shared_ptr<one::Tensor>& deconv_i = JUST(OpInterpUtil::Dispatch<Tensor>(
-            *deconv_op_, {split_x->at(i), split_weight->at(i)}, deconv_attrs));
-        split_out.emplace_back(deconv_i);
-      }
-      deconv_out = JUST(functional::Concat(split_out, 1));
-    }
+    deconv_out = JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {x, weight}, deconv_attrs));
+    // if (groups == 1) {
+    //   deconv_out = JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {x, weight}, deconv_attrs));
+    // } else {
+    //   auto nc = x->dim(1) / groups;
+    //   auto split_x = JUST(functional::Split(x, nc, 1));
+    //   auto split_weight = JUST(functional::Split(weight, nc, 0));
+    //   one::TensorTuple split_out;
+    //   for (int i = 0; i < groups; i++) {
+    //     const std::shared_ptr<one::Tensor>& deconv_i = JUST(OpInterpUtil::Dispatch<Tensor>(
+    //         *deconv_op_, {split_x->at(i), split_weight->at(i)}, deconv_attrs));
+    //     split_out.emplace_back(deconv_i);
+    //   }
+    //   deconv_out = JUST(functional::Concat(split_out, 1));
+    // }
 
     if (bias) {
       MutableAttrMap bias_attrs;
@@ -176,6 +179,14 @@ class DeConv1dFunctor : public DeConvBaseFunctor {
   DeConv1dFunctor() {
     deconv_op_ =
         CHECK_JUST(one::OpBuilder("deconv1d").Input("in").Input("weight").Output("out").Build());
+  }
+};
+
+class DeConv2dFunctor : public DeConvBaseFunctor {
+ public:
+  DeConv2dFunctor() {
+    deconv_op_ =
+        CHECK_JUST(one::OpBuilder("deconv2d").Input("in").Input("weight").Output("out").Build());
   }
 };
 
@@ -2111,6 +2122,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::Conv2dFunctor>("Conv2d");
   m.add_functor<impl::Conv3dFunctor>("Conv3d");
   m.add_functor<impl::DeConv1dFunctor>("Deconv1d");
+  m.add_functor<impl::DeConv2dFunctor>("Deconv2d");
   m.add_functor<impl::DeConv3dFunctor>("Deconv3d");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");

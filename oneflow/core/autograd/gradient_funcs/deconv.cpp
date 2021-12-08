@@ -31,6 +31,7 @@ struct DeConvolutionNdCaptureState : public AutoGradCaptureState {
   std::vector<int32_t> kernel_size;
   std::vector<int32_t> strides;
   std::vector<int32_t> dilation_rate;
+  int32_t groups;
 };
 
 class DeConvolutionNd : public OpExprGradFunction<DeConvolutionNdCaptureState> {
@@ -69,6 +70,9 @@ Maybe<void> DeConvolutionNd::Capture(DeConvolutionNdCaptureState* ctx, const Ten
   ctx->kernel_size = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("kernel_size"));
   ctx->strides = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("strides"));
   ctx->dilation_rate = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("dilation_rate"));
+  ctx->groups = JUST(composed_attrs.GetAttr<int32_t>("groups"));
+  std::cout << "deconv.cpp_"
+            << "groups: " << ctx->groups << std::endl;
   ctx->ndims = ctx->kernel_size.size();
   return Maybe<void>::Ok();
 }
@@ -94,7 +98,7 @@ Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdCaptureState* ctx,
     } else if (ctx->ndims == 2) {
       std::shared_ptr<Tensor> result =
           JUST(functional::Conv2d(out_grads.at(0), weight, Optional<Tensor>(), ctx->strides,
-                                  ctx->padding_before, ctx->dilation_rate, /*groups=*/1));
+                                  ctx->padding_before, ctx->dilation_rate, ctx->groups));
       result = JUST(functional::Slice(result, start, stop, step));
       in_grads->at(0) = result;
     } else if (ctx->ndims == 3) {
