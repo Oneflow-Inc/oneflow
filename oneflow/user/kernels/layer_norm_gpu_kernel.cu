@@ -38,16 +38,18 @@ struct AffineStore {
     cuda::layer_norm::Pack<DST, N> normalized_pack;
     cuda::layer_norm::Pack<DST, N> gamma_pack;
     cuda::layer_norm::Pack<DST, N> beta_pack;
-    const int64_t offset = row * row_size + col;
+    const int64_t offset = (row * row_size + col) / N;
+    const int64_t gamma_offset = col / N;
     if (do_scale) {
       gamma_pack.storage =
-          *reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(gamma + col);
+          *(reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(gamma) + gamma_offset);
     } else {
 #pragma unroll
       for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = 1; }
     }
     if (do_center) {
-      beta_pack.storage = *reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(beta + col);
+      beta_pack.storage =
+          *(reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(beta) + gamma_offset);
     } else {
 #pragma unroll
       for (int i = 0; i < N; ++i) { beta_pack.elem[i] = 0; }
@@ -62,9 +64,9 @@ struct AffineStore {
         y_pack.elem[i] = normalized_i;
       }
     }
-    *reinterpret_cast<cuda::layer_norm::PackType<DST, N>*>(y + offset) = y_pack.storage;
+    *(reinterpret_cast<cuda::layer_norm::PackType<DST, N>*>(y) + offset) = y_pack.storage;
     if (do_scale) {
-      *reinterpret_cast<cuda::layer_norm::PackType<DST, N>*>(normalized + offset) =
+      *(reinterpret_cast<cuda::layer_norm::PackType<DST, N>*>(normalized) + offset) =
           normalized_pack.storage;
     }
   }
@@ -83,11 +85,12 @@ struct ScaleLoad {
   __device__ void load(DST* dst, int64_t row, int64_t col) const {
     cuda::layer_norm::Pack<SRC, N> src_pack;
     cuda::layer_norm::Pack<SRC, N> gamma_pack;
-    const int64_t offset = row * row_size + col;
-    src_pack.storage = *reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(src + offset);
+    const int64_t offset = (row * row_size + col) / N;
+    const int64_t gamma_offset = col / N;
+    src_pack.storage = *(reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(src) + offset);
     if (do_scale) {
       gamma_pack.storage =
-          *reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(gamma + col);
+          *(reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(gamma) + gamma_offset);
     } else {
 #pragma unroll
       for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = static_cast<SRC>(1); }
@@ -110,10 +113,10 @@ struct AddStore {
   __device__ void store(const SRC* src, int64_t row, int64_t col) {
     cuda::layer_norm::Pack<DST, N> add_to_output_pack;
     cuda::layer_norm::Pack<DST, N> dst_pack;
-    const int64_t offset = row * row_size + col;
+    const int64_t offset = (row * row_size + col) / N;
     if (do_add) {
       add_to_output_pack.storage =
-          *reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(add_to_output + offset);
+          *(reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(add_to_output) + offset);
     }
 #pragma unroll
     for (int i = 0; i < N; ++i) {
@@ -123,7 +126,7 @@ struct AddStore {
         dst_pack.elem[i] = static_cast<DST>(src[i]);
       }
     }
-    *reinterpret_cast<cuda::layer_norm::PackType<DST, N>*>(dst + offset) = dst_pack.storage;
+    *(reinterpret_cast<cuda::layer_norm::PackType<DST, N>*>(dst) + offset) = dst_pack.storage;
   }
   const DST* add_to_output;
   DST* dst;

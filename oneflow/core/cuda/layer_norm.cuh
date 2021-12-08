@@ -156,8 +156,8 @@ struct DirectLoad {
   template<int N>
   __device__ void load(DST* dst, int64_t row, int64_t col) const {
     Pack<SRC, N> pack;
-    const int64_t offset = row * row_size + col;
-    pack.storage = *reinterpret_cast<const PackType<SRC, N>*>(src + offset);
+    const int64_t offset = (row * row_size + col) / N;
+    pack.storage = *(reinterpret_cast<const PackType<SRC, N>*>(src) + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) { dst[i] = static_cast<DST>(pack.elem[i]); }
   }
@@ -171,10 +171,10 @@ struct DirectStore {
   template<int N>
   __device__ void store(const SRC* src, int64_t row, int64_t col) {
     Pack<DST, N> pack;
-    const int64_t offset = row * row_size + col;
+    const int64_t offset = (row * row_size + col) / N;
 #pragma unroll
     for (int i = 0; i < N; ++i) { pack.elem[i] = static_cast<DST>(src[i]); }
-    *reinterpret_cast<PackType<DST, N>*>(dst + offset) = pack.storage;
+    *(reinterpret_cast<PackType<DST, N>*>(dst) + offset) = pack.storage;
   }
   DST* dst;
   int64_t row_size;
@@ -290,7 +290,7 @@ __global__ void LayerNormWarpImpl(LOAD load, STORE store, const int64_t rows, co
   const int64_t num_global_thread_group = gridDim.x * blockDim.y;
   const int64_t lane_id = threadIdx.x;
   const int64_t step = num_global_thread_group * rows_per_access;
-  for (int row = global_thread_group_id * rows_per_access; row < rows; row += step) {
+  for (int64_t row = global_thread_group_id * rows_per_access; row < rows; row += step) {
     ComputeType thread_mean[rows_per_access];
     ComputeType thread_m2[rows_per_access];
     ComputeType thread_count[rows_per_access];
@@ -590,7 +590,7 @@ __global__ void LayerNormBlockSMemImpl(LOAD load, STORE store, const int64_t row
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = static_cast<int>(cols) / pack_size;
-  for (int row = blockIdx.x; row < rows; row += gridDim.x) {
+  for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
     ComputeType thread_mean = 0;
     ComputeType thread_m2 = 0;
     ComputeType thread_count = 0;
@@ -747,7 +747,7 @@ __global__ void LayerNormBlockUncachedImpl(LOAD load, STORE store, const int64_t
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = static_cast<int>(cols) / pack_size;
-  for (int row = blockIdx.x; row < rows; row += gridDim.x) {
+  for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
     ComputeType thread_mean = 0;
     ComputeType thread_m2 = 0;
     ComputeType thread_count = 0;
@@ -876,7 +876,7 @@ __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_SCALED_DY load_scaled_
   const int64_t num_global_thread_group = gridDim.x * blockDim.y;
   const int lane_id = threadIdx.x;
   const int64_t step = num_global_thread_group * rows_per_access;
-  for (int row = global_thread_group_id * rows_per_access; row < rows; row += step) {
+  for (int64_t row = global_thread_group_id * rows_per_access; row < rows; row += step) {
     ComputeType sum_stats1[rows_per_access];
     ComputeType sum_stats2[rows_per_access];
     ComputeType inv_variance_buf[rows_per_access];
@@ -1148,7 +1148,7 @@ __global__ void LayerNormGradBlockSMemImpl(LOAD_X load_x, LOAD_SCALED_DY load_sc
   assert(cols % pack_size == 0);
   const int num_packs = static_cast<int>(cols) / pack_size;
   const ComputeType one_over_cols = static_cast<ComputeType>(1.0) / static_cast<ComputeType>(cols);
-  for (int row = blockIdx.x; row < rows; row += gridDim.x) {
+  for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
     ComputeType sum_stats1 = 0;
     ComputeType sum_stats2 = 0;
     const ComputeType mean_val = mean[row];
@@ -1320,7 +1320,7 @@ __global__ void LayerNormGradBlockUncachedImpl(LOAD_X load_x, LOAD_SCALED_DY loa
   assert(cols % pack_size == 0);
   const int num_packs = static_cast<int>(cols) / pack_size;
   const ComputeType one_over_cols = static_cast<ComputeType>(1.0) / static_cast<ComputeType>(cols);
-  for (int row = blockIdx.x; row < rows; row += gridDim.x) {
+  for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
     const ComputeType mean_val = mean[row];
     const ComputeType inv_variance_val = inv_variance[row];
     const ComputeType inv_variance_over_cols = inv_variance_val * one_over_cols;
