@@ -198,7 +198,7 @@ std::string NdSbpParallelToString(const cfg::NdSbp& nd_sbp_parallel) {
   if (nd_sbp_parallel.sbp_parallel_size() == 1) {
     return SbpParallelToString(nd_sbp_parallel.sbp_parallel(0));
   } else if (nd_sbp_parallel.sbp_parallel_size() > 1) {
-    std::string sbp_str = "(" + SbpParallelToString(nd_sbp_parallel.sbp_parallel(0));
+    sbp_str = "(" + SbpParallelToString(nd_sbp_parallel.sbp_parallel(0));
     for (int32_t k = 1; k < nd_sbp_parallel.sbp_parallel_size(); k++) {
       sbp_str += ", " + SbpParallelToString(nd_sbp_parallel.sbp_parallel(k));
     }
