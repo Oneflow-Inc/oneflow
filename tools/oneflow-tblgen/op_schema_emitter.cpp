@@ -122,7 +122,7 @@ class OpSchemaEmitter {
       auto Name = R->getValueAsString("opName");
       if (Name == "") { PrintFatalError(R, "`opName` of op definitions cannot be omitted"); }
 
-      json Op{{"name", Name}};
+      json Op{{"name", Name}, {"attrs", json::object()}};
 
       const auto* D = R->getValueAsDag("attrs");
       if (!D) { PrintFatalError(R, "`attrs` in op should be typed as `dag`"); }
