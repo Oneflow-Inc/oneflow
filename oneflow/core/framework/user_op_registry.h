@@ -40,6 +40,7 @@ class InferOutputBlobTimeShapeFnContext;
 class InferNdSbpFnContext;
 class DeviceInferContext;
 class ComputeComplexityFnContext;
+class GetNdSbpSignatureListContext;
 
 using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConfWrapper&)>;
 using TensorDescInferFn = std::function<Maybe<void>(InferContext*)>;
@@ -60,8 +61,7 @@ using OutputBlobTimeShapeInferFn = std::function<Maybe<void>(InferOutputBlobTime
 using NdSbpInferFn = std::function<Maybe<void>(InferNdSbpFnContext*)>;
 using ComputeComplexityFn = std::function<Maybe<double>(ComputeComplexityFnContext*)>;
 // TODO: set up another context
-using GetNdSbpSignatureListFn =
-    std::function<Maybe<void>(ComputeComplexityFnContext*, std::vector<cfg::NdSbpSignature>&)>;
+using GetNdSbpSignatureListFn = std::function<Maybe<void>(GetNdSbpSignatureListContext*)>;
 
 struct OpRegistryResult {
   OpRegistryResult()

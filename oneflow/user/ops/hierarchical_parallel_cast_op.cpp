@@ -49,9 +49,7 @@ REGISTER_USER_OP("hierarchical_parallel_cast")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast)
-    .SetGetNdSbpSignatureListFn([](user_op::ComputeComplexityFnContext* ctx,
-                                   std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list)
-                                    -> Maybe<void> {
+    .SetGetNdSbpSignatureListFn([](user_op::GetNdSbpSignatureListContext* ctx) -> Maybe<void> {
       const auto& conf = ctx->Attr<std::vector<std::string>>("nd_sbp");
       cfg::NdSbpSignature nd_sbp_signature;
       for (const std::string& sbp_str : conf) {
@@ -62,7 +60,7 @@ REGISTER_USER_OP("hierarchical_parallel_cast")
         *(*nd_sbp_signature.mutable_bn_in_op2nd_sbp())[GenRepeatedBn("out", 0)].add_sbp_parallel() =
             sbp_parallel;
       }
-      nd_sbp_sig_list.emplace_back(nd_sbp_signature);
+      ctx->AddNdSbpSignature(nd_sbp_signature);
       return Maybe<void>::Ok();
     });
 

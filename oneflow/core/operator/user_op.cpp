@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/infer_output_blob_time_shape_fn_context.h"
 #include "oneflow/core/framework/infer_nd_sbp_fn_context.h"
 #include "oneflow/core/framework/compute_complexity_fn_context.h"
+#include "oneflow/core/framework/get_nd_sbp_signature_list_context.h"
 
 namespace oneflow {
 
@@ -553,6 +554,21 @@ class UserOpComputeComplexityFnContext : public user_op::ComputeComplexityFnCont
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
 };
 
+class UserOpGetNdSbpSignatureListContext : public user_op::GetNdSbpSignatureListContext {
+ public:
+  UserOpGetNdSbpSignatureListContext(const OperatorConf& op_conf,
+                                     std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list)
+      : user_op::GetNdSbpSignatureListContext(user_op::UserOpConfWrapper(op_conf)),
+        nd_sbp_sig_list_(nd_sbp_sig_list) {}
+  ~UserOpGetNdSbpSignatureListContext() override = default;
+  void AddNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig) override {
+    nd_sbp_sig_list_->emplace_back(nd_sbp_sig);
+  }
+
+ private:
+  std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list_;
+};
+
 Maybe<void> UserOp::InitFromOpConf() {
   CHECK_OR_RETURN(op_conf().has_user_conf());
   for (const auto& pair : op_conf().user_conf().input()) {
@@ -863,13 +879,9 @@ Maybe<void> UserOp::GetNdSbpSignatureList(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const {
   if (val_->get_nd_sbp_list_fn) {
-    auto logical_blob_desc4bn = [&](const std::string& bn) -> const BlobDesc& {
-      return CHECK_JUST(LogicalBlobDesc4Ibn(bn));
-    };
     cfg::NdSbpSignature empty_sbp_signature;
-    UserOpComputeComplexityFnContext user_op_compute_complexity_fn_context(
-        op_conf(), parallel_desc, &empty_sbp_signature, logical_blob_desc4bn);
-    return val_->get_nd_sbp_list_fn(&user_op_compute_complexity_fn_context, nd_sbp_sig_list);
+    UserOpGetNdSbpSignatureListContext user_op_get_nd_sbp_list_context(op_conf(), &nd_sbp_sig_list);
+    return val_->get_nd_sbp_list_fn(&user_op_get_nd_sbp_list_context);
   } else {
     JUST(Operator::GetNdSbpSignatureList(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list));
   }
