@@ -895,7 +895,7 @@ class ReshapeFunctor {
     size_t count = 1;
     for (int i = 0; i < shape.NumAxes(); ++i) {
       if (shape.At(i) < -1) {
-        Error::RuntimeError() << "Invalid shape dimension " << shape.At(i);
+        return Error::RuntimeError() << "Invalid shape dimension " << shape.At(i);
       } else if (shape.At(i) == -1) {
         CHECK_EQ_OR_RETURN(need_infer_axis, -1)
             << "Shape " << shape.ToString() << " has more than 1 axis that needs to be infered.";
@@ -910,7 +910,7 @@ class ReshapeFunctor {
       CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
           << "\n Shape " << shape.ToString() << " is invalid for input shape "
           << x->shape()->ToString();
-      if (*(x->shape()) == shape) return x;
+      if (*(x->shape()) == shape) { return x };
       JUST(attrs.SetAttr<Shape>("shape", shape));
     } else {
       Shape infered_shape = shape;
@@ -918,7 +918,7 @@ class ReshapeFunctor {
       CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
           << "\n Shape " << shape.ToString() << " is invalid for input shape "
           << x->shape()->ToString();
-      if (infered_shape == shape) return x;
+      if (infered_shape == shape) { return x };
       JUST(attrs.SetAttr<Shape>("shape", infered_shape));
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);

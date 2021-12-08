@@ -585,7 +585,7 @@ class TransposeFunctor {
         break;
       }
     }
-    if (flag) return input;
+    if (flag) { return input; }
 
     // normal handling routine
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
