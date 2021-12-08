@@ -50,7 +50,7 @@ if (WITH_ZLIB)
   list(APPEND OPENCV_DEPS zlib)
 endif()
 ExternalProject_Add(opencv
-    DEPENDS ${OPENCV_DEPS} libjpeg_copy_headers_to_destination libjpeg_copy_libs_to_destination
+    DEPENDS "${OPENCV_DEPS}" libjpeg_copy_headers_to_destination libjpeg_copy_libs_to_destination
     PREFIX opencv
     URL ${OPENCV_URL}
     URL_MD5 59870e55385f5202c1aa178fe37ed2de
