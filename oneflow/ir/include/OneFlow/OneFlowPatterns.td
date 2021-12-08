@@ -225,7 +225,4 @@ def NormalizationAddReluPattern : Pattern<
   [(IsTraingTrue $bn_training)]
 >;
 
-
-
-
 #endif // ONEFLOW_PATTERNS
