@@ -168,6 +168,23 @@ def test_combining_indexing(test_case, numpy_x):
     )
 
 
+def test_mask_getitem(test_case, numpy_x):
+    x = flow.tensor(numpy_x)
+
+    mask = np.random.rand(*numpy_x.shape).astype(np.float32)
+    y = flow.tensor(mask)
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0.5], x[y > 0.5].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 1.0], x[y > 1.0].numpy()))
+
+    mask = np.random.rand(numpy_x.shape[0]).astype(np.float32)
+    y = flow.tensor(mask)
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0.5], x[y > 0.5].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 1.0], x[y > 1.0].numpy()))
+
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0.5, 1], x[y > 0.5, 1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 1.0, 1], x[y > 1.0, 1].numpy()))
+
+
 def test_mask_setitem(test_case, numpy_x):
     x = flow.tensor(numpy_x)
 
@@ -237,6 +254,30 @@ class TestTensorIndexing(flow.unittest.TestCase):
 
         numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
         test_combining_indexing(test_case, numpy_x)
+
+    def test_mask_getitem(test_case):
+        numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
+        test_mask_getitem(test_case, numpy_x)
+
+        numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6]).astype(np.float32)
+        test_mask_getitem(test_case, numpy_x)
+
+        numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
+        test_mask_getitem(test_case, numpy_x)
+
+        numpy_x = np.arange(0, 27, 1).reshape(3, 3, 3)
+        x = flow.tensor(numpy_x)
+        test_case.assertTrue(
+            np.allclose(
+                numpy_x[[False, True, False], 1], x[[False, True, False], 1].numpy()
+            )
+        )
+        test_case.assertTrue(
+            np.allclose(
+                numpy_x[[False, True, False], [True, False, False]],
+                x[[False, True, False], [True, False, False]].numpy(),
+            )
+        )
 
     def test_mask_setitem(test_case):
         numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
