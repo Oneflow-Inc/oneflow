@@ -139,7 +139,9 @@ class DeConvBaseFunctor {
     JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("output_padding", output_padding));
     JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("strides", strides));
     JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation));
+    JUST(deconv_attrs.SetAttr<int32_t>("groups", groups));
     JUST(deconv_attrs.SetAttr<std::string>("data_format", data_format));
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
     std::shared_ptr<one::Tensor> deconv_out = nullptr;
@@ -162,16 +164,11 @@ class DeConvBaseFunctor {
 
 =======
 >>>>>>> 2b6201d2a (remove useless lines)
+=======
+
+>>>>>>> 0b4146f97 (add deconv2d import)
     std::shared_ptr<one::Tensor> deconv_out = nullptr;
     deconv_out = JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {x, weight}, deconv_attrs));
-    if (bias) {
-      MutableAttrMap bias_attrs;
-      JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
-      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {deconv_out, JUST(bias)}, bias_attrs);
-    } else {
-      return deconv_out;
-    }
-  }
     if (bias) {
       MutableAttrMap bias_attrs;
       JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
@@ -191,6 +188,14 @@ class DeConv1dFunctor : public DeConvBaseFunctor {
   DeConv1dFunctor() {
     deconv_op_ =
         CHECK_JUST(one::OpBuilder("deconv1d").Input("in").Input("weight").Output("out").Build());
+  }
+};
+
+class DeConv2dFunctor : public DeConvBaseFunctor {
+ public:
+  DeConv2dFunctor() {
+    deconv_op_ =
+        CHECK_JUST(one::OpBuilder("deconv2d").Input("in").Input("weight").Output("out").Build());
   }
 };
 
@@ -2004,6 +2009,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::Conv2dFunctor>("Conv2d");
   m.add_functor<impl::Conv3dFunctor>("Conv3d");
   m.add_functor<impl::DeConv1dFunctor>("Deconv1d");
+  m.add_functor<impl::DeConv2dFunctor>("Deconv2d");
   m.add_functor<impl::DeConv3dFunctor>("Deconv3d");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
