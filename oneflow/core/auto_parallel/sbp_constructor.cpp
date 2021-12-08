@@ -64,7 +64,7 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
   LOG(INFO) << "Initial cost: " << ori_cost;
   int elimination_num = sbp_graph_.NodeAndEdgeEliminations();
   LOG(INFO) << "Elimination number: " << elimination_num;
-  sbp_graph_.GreedyStrategy(5);
+  sbp_graph_.GreedyStrategy(4);
   sbp_graph_.FinalizeSbp();
 
   double final_cost = sbp_graph_.ComputeCost();
