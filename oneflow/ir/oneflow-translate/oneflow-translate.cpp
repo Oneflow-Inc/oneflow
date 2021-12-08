@@ -20,7 +20,7 @@ limitations under the License.
 
 int32_t main(int32_t argc, char** argv) {
   mlir::registerAllTranslations();
-  mlir::registerFromOneFlowJobTranslation();
+  mlir::oneflow::registerFromOneFlowJobTranslation();
 
   return failed(mlir::mlirTranslateMain(argc, argv, "MLIR Translation Testing Tool"));
 }
