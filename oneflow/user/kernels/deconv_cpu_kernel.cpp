@@ -328,7 +328,7 @@ class DeconvCpuKernel final : public user_op::OpKernel {
 
   std::shared_ptr<ConvOpKernelState<T>> DoCreateOpKernelState(
       user_op::KernelComputeContext* ctx) const {
-    return CreateConvOpKernelState<T>(ctx,"out", "in",  "weight");
+    return CreateConvOpKernelState<T>(ctx, "out", "in", "weight");
   }
 
  private:
@@ -356,7 +356,6 @@ class DeconvCpuKernel final : public user_op::OpKernel {
           conv_state->weight_5d_shape_.At(0), static_cast<T>(1), weight->dptr<T>(),
           GetImgDptr<T>(in, i), static_cast<T>(0), col_buf->mut_dptr<T>());
 
-      std::cout << conv_state->in_5d_shape_ <<" " <<conv_state->weight_5d_shape_ <<" " <<conv_state->out_5d_shape_<<std::endl;
       // out = col2im(col_buf')
       conv_state->col2im_func_(col_buf->dptr<T>(), ShapeView(conv_state->in_5d_shape_),
                                ShapeView(conv_state->weight_5d_shape_),

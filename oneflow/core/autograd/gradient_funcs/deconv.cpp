@@ -71,8 +71,6 @@ Maybe<void> DeConvolutionNd::Capture(DeConvolutionNdCaptureState* ctx, const Ten
   ctx->strides = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("strides"));
   ctx->dilation_rate = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("dilation_rate"));
   ctx->groups = JUST(composed_attrs.GetAttr<int32_t>("groups"));
-  std::cout << "deconv.cpp_"
-            << "groups: " << ctx->groups << std::endl;
   ctx->ndims = ctx->kernel_size.size();
   return Maybe<void>::Ok();
 }
@@ -92,7 +90,7 @@ Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdCaptureState* ctx,
     if (ctx->ndims == 1) {
       std::shared_ptr<Tensor> result =
           JUST(functional::Conv1d(out_grads.at(0), weight, Optional<Tensor>(), ctx->strides,
-                                  ctx->padding_before, ctx->dilation_rate, /*groups=*/1));
+                                  ctx->padding_before, ctx->dilation_rate, ctx->groups));
       result = JUST(functional::Slice(result, start, stop, step));
       in_grads->at(0) = result;
     } else if (ctx->ndims == 2) {
@@ -104,7 +102,7 @@ Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdCaptureState* ctx,
     } else if (ctx->ndims == 3) {
       std::shared_ptr<Tensor> result =
           JUST(functional::Conv3d(out_grads.at(0), weight, Optional<Tensor>(), ctx->strides,
-                                  ctx->padding_before, ctx->dilation_rate, /*groups=*/1));
+                                  ctx->padding_before, ctx->dilation_rate, ctx->groups));
       result = JUST(functional::Slice(result, start, stop, step));
       in_grads->at(0) = result;
     } else {
@@ -116,7 +114,7 @@ Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdCaptureState* ctx,
     const auto& x = ctx->SavedTensors().at(idx);
     in_grads->at(1) = JUST(functional::ConvFilterGrad(
         x, out_grads.at(0), ctx->ndims, ctx->kernel_size, ctx->strides, ctx->padding_before,
-        ctx->dilation_rate, /*groups=*/1, ctx->data_format));
+        ctx->dilation_rate, ctx->groups, ctx->data_format));
   }
   return Maybe<void>::Ok();
 }

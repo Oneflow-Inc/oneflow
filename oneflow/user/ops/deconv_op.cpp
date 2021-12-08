@@ -32,10 +32,6 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
   const int32_t filters = ctx->Attr<int32_t>("filters");
   size_t idx_offset = IdxOffset(data_format);
   int32_t groups = ctx->Attr<int32_t>("groups");
-  std::cout <<"groups:" <<groups << std::endl;
-  std::cout <<"filters:" <<filters << std::endl;
-
-
   {
     const auto& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
     const auto& output_padding = ctx->Attr<std::vector<int32_t>>("output_padding");
@@ -46,7 +42,6 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(NDims, output_padding.size());
 
     user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
-    std::cout <<"out:" <<out->shape() << std::endl; 
     DimVector out_shape(NDims + 2);
     out_shape.at(0) = in.shape().At(0);
     const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
@@ -65,7 +60,6 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
     }
     *out->mut_is_dynamic() = in.is_dynamic();
     *out->mut_shape() = Shape(out_shape);
-    std::cout <<"out:" <<out->shape() << std::endl; 
   }
 
   {
@@ -80,7 +74,6 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
       UNIMPLEMENTED_THEN_RETURN();
     }
     for (size_t i = 0; i < NDims; ++i) { weight_shape.at(idx_offset + i) = kernel_size.at(i); }
-
     const user_op::TensorDesc& weight = ctx->InputTensorDesc("weight", 0);
     CHECK_EQ_OR_RETURN(weight.shape(), Shape(weight_shape));
   }
@@ -158,8 +151,6 @@ Maybe<void> GenerateBackwardOpConf4DeConv(const user_op::UserOpWrapper& op,
   const auto& dilation_rate = op.attr<std::vector<int32_t>>("dilation_rate");
   const Shape& weight_shape = op.TensorDesc4ArgNameAndIndex("weight", 0).shape();
   int32_t groups = op.attr<int32_t>("groups");
-  std::cout << groups << std::endl;
-
 
   const int32_t ndims = kernel_size.size();
   CHECK_EQ_OR_RETURN(ndims, strides.size());

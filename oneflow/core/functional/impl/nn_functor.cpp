@@ -145,21 +145,6 @@ class DeConvBaseFunctor {
 
     std::shared_ptr<one::Tensor> deconv_out = nullptr;
     deconv_out = JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {x, weight}, deconv_attrs));
-    // if (groups == 1) {
-    //   deconv_out = JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {x, weight}, deconv_attrs));
-    // } else {
-    //   auto nc = x->dim(1) / groups;
-    //   auto split_x = JUST(functional::Split(x, nc, 1));
-    //   auto split_weight = JUST(functional::Split(weight, nc, 0));
-    //   one::TensorTuple split_out;
-    //   for (int i = 0; i < groups; i++) {
-    //     const std::shared_ptr<one::Tensor>& deconv_i = JUST(OpInterpUtil::Dispatch<Tensor>(
-    //         *deconv_op_, {split_x->at(i), split_weight->at(i)}, deconv_attrs));
-    //     split_out.emplace_back(deconv_i);
-    //   }
-    //   deconv_out = JUST(functional::Concat(split_out, 1));
-    // }
-
     if (bias) {
       MutableAttrMap bias_attrs;
       JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
