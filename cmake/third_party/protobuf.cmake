@@ -43,13 +43,8 @@ set(PROTOBUF_PROTOC_EXECUTABLE ${PROTOBUF_BINARY_DIR}/${PROTOC_EXECUTABLE_NAME})
 
 if (THIRD_PARTY)
 
-set(PROTOBUF_DEPS "")
-if (WITH_ZLIB)
-  list(APPEND PROTOBUF_DEPS zlib)
-endif()
 ExternalProject_Add(protobuf
     PREFIX protobuf
-    DEPENDS ${PROTOBUF_DEPS}
     URL ${PROTOBUF_URL}
     URL_MD5 ${PROTOBUF_MD5}
     UPDATE_COMMAND ""
@@ -77,6 +72,9 @@ ExternalProject_Add(protobuf
         -Dprotobuf_DEBUG_POSTFIX:STRING=
         ${PROTOBUF_ADDITIONAL_CMAKE_OPTIONS}
 )
+if (WITH_ZLIB)
+  add_dependencies(protobuf zlib)
+endif()
 else()
 add_custom_target(protobuf)
 endif(THIRD_PARTY)
