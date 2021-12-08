@@ -21,9 +21,11 @@ limitations under the License.
 #include <regex>
 
 namespace {
-using namespace ::oneflow;
+
 using K = std::string;
-using V = user_op::OpRegistryResult;
+using V = ::oneflow::user_op::OpRegistryResult;
+using ::oneflow::AttrType;
+using ::oneflow::UserOpDef_ArgDef;
 
 // from llvm
 std::string convertToCamelFromSnakeCase(const std::string& input, bool capitalizeFirst) {
@@ -686,11 +688,8 @@ int main(int argc, char* argv[]) {
   std::streambuf* fileBuf = of.rdbuf();
   std::cout.rdbuf(fileBuf);
 
-  using K = std::string;
-  using V = user_op::OpRegistryResult;
-
   std::map<K, V> sorted{};
-  auto unordered = user_op::UserOpRegistryMgr::Get().GetAllOpRegistryResults();
+  auto unordered = oneflow::user_op::UserOpRegistryMgr::Get().GetAllOpRegistryResults();
   std::transform(unordered.begin(), unordered.end(), std::inserter(sorted, sorted.end()),
                  [](const std::pair<K, V>& p) { return p; });
   std::map<std::string, std::map<K, V>> groups;
