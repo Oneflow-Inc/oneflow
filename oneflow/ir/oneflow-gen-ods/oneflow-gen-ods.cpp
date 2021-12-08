@@ -689,7 +689,7 @@ int main(int argc, char* argv[]) {
   std::cout.rdbuf(fileBuf);
 
   std::map<K, V> sorted{};
-  auto unordered = oneflow::user_op::UserOpRegistryMgr::Get().GetAllOpRegistryResults();
+  auto unordered = ::oneflow::user_op::UserOpRegistryMgr::Get().GetAllOpRegistryResults();
   std::transform(unordered.begin(), unordered.end(), std::inserter(sorted, sorted.end()),
                  [](const std::pair<K, V>& p) { return p; });
   std::map<std::string, std::map<K, V>> groups;

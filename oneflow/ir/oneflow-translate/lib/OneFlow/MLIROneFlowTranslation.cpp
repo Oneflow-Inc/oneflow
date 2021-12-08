@@ -195,7 +195,7 @@ LogicalResult JobImporter::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
       GetBuilder().getStrArrayAttr(
           std::vector<llvm::StringRef>({output_lbns.begin(), output_lbns.end()}))));
   OperationState state(FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0),
-                       oneflow::SystemOp::getOperationName());
+                       SystemOp::getOperationName());
   attr_vec.push_back(
       GetBuilder().getNamedAttr("op_type_case", GetBuilder().getI32IntegerAttr(op.op_type_case())));
   if (failed(AddOperandSegmentSizes(static_cast<int>(input_lbns.size()), op.ctrl_in_op_name_size(),

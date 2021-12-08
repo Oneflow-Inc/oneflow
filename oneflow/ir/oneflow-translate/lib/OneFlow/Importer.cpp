@@ -124,8 +124,7 @@ LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorCo
   if (op.has_user_conf() == false) return failure();
   const auto& user_conf = op.user_conf();
   const ::oneflow::UserOpDef& op_def = GetUserOpDef(op.user_conf().op_type_name());
-  const auto UserOpOperationName =
-      OperationName(oneflow::UserOp::getOperationName(), GetMLIRContext());
+  const auto UserOpOperationName = OperationName(UserOp::getOperationName(), GetMLIRContext());
   attr_vec.push_back(GetBuilder().getNamedAttr(
       oneflow::UserOp::input_sizesAttrName(UserOpOperationName),
       GetBuilder().getI32ArrayAttr(GetSizesFromArgs(user_conf.input(), op_def.input()))));
@@ -402,7 +401,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
 
   if (failed(AppendCtrlOutType(out_types))) { return failure(); }
   OperationState state(FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0),
-                       oneflow::UserOp::getOperationName());
+                       UserOp::getOperationName());
   uint32_t data_input_size = 0;
   uint32_t data_output_size = 0;
   for (const auto& input : op.user_conf().input()) { data_input_size += input.second.s().size(); }
