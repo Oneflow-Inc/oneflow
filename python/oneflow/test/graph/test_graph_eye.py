@@ -18,6 +18,7 @@ import numpy as np
 import random
 import oneflow as flow
 import oneflow.unittest
+from test_util import generate_graph
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -27,15 +28,8 @@ class TestEyeGraph(oneflow.unittest.TestCase):
         m = random.randint(1, 10)
         y_eager = flow.eye(n, m)
 
-        class EyeGraph(flow.nn.Graph):
-            def __init__(self):
-                super().__init__()
-                self.eye = flow.eye
-            def build(self):
-                return self.eye(n, m)
-
-        eye_g = EyeGraph()
-        y_lazy = eye_g()
+        eye_graph = generate_graph(lambda: flow.eye(n, m))
+        y_lazy = eye_graph()
         test_case.assertTrue(np.array_equal(y_eager.numpy(), y_lazy.numpy()))
 
 
