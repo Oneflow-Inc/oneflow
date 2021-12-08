@@ -22,7 +22,7 @@ bool IsIntegralDataType(DataType data_type) {
   switch (data_type) {
 #define INTEGRAL_CASE(type_cpp, type_proto) \
   case type_proto: return true;
-    OF_PP_FOR_EACH_TUPLE(INTEGRAL_CASE, INT_DATA_TYPE_SEQ)
+    OF_PP_FOR_EACH_TUPLE(INTEGRAL_CASE, INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
     default: return false;
   }
 #undef INTEGRAL_CASE
