@@ -32,12 +32,13 @@ struct NdarrayReduce<
     device_type, T, binary_func,
     typename std::enable_if<std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
     final {
-  static void Reduce(ep::Stream* stream, const XpuVarNdarray<T>& origin_y,
+  using RetT = typename BinaryFuncTrait<binary_func, T>::return_type;
+  static void Reduce(ep::Stream* stream, const XpuVarNdarray<RetT>& origin_y,
                      const XpuVarNdarray<const T>& origin_x, const XpuVarNdarray<T>& tmp_storage) {
     DimVector simplified_x_dim;
     DimVector simplified_y_dim;
     TrySimplifyDims(origin_x.shape(), origin_y.shape(), &simplified_x_dim, &simplified_y_dim);
-    XpuVarNdarray<T> y(Shape(simplified_y_dim), origin_y.ptr());
+    XpuVarNdarray<RetT> y(Shape(simplified_y_dim), origin_y.ptr());
     XpuVarNdarray<const T> x(Shape(simplified_x_dim), origin_x.ptr());
 
     CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
