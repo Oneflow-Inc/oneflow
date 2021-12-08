@@ -49,10 +49,6 @@ mlir_tablegen(OneFlow.Ops.h.inc -gen-op-decls)
 add_public_tablegen_target(MLIROneFlowOpGroupDeclsIncGen)
 add_dependencies(MLIROneFlowOpGroupDeclsIncGen GenUserOpODS)
 
-set(LLVM_TARGET_DEFINITIONS OneFlowJIT.td)
-mlir_tablegen(OneFlowJITPasses.h.inc -gen-pass-decls)
-add_public_tablegen_target(MLIROneFlowJITPassIncGen)
-
 set(LLVM_TABLEGEN_FLAGS "")
 add_mlir_dialect(
     OneFlowOps oneflow DEPENDS
@@ -62,5 +58,4 @@ add_mlir_dialect(
         MLIROneFlowInterfacesIncGen
         MLIROneFlowOpGroupDefsIncGen
         MLIROneFlowOpGroupDeclsIncGen
-        MLIROneFlowJITPassIncGen
 )
