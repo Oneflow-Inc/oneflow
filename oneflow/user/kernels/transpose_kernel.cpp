@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/include/primitive/permute.h"
 namespace oneflow {
@@ -46,9 +47,29 @@ class TransposeKernel final : public OpKernel, public user_op::CudaGraphSupport 
     const int64_t* src_dims = in_shape.ptr();
 
     int64_t elem_cnt = tensor_out->shape().elem_cnt();
+
     if (elem_cnt != 0) {
-      primitive->Launch(ctx->stream(), dtype, num_dims, src_dims, tensor_in->dptr(), perm.data(),
-                        tensor_out->mut_dptr());
+      bool flag = true;
+      for (auto i = 0; i < perm.size(); i++) {
+        if (perm[i] != i) {
+          flag = false;
+          break;
+        }
+      }
+      if (flag) {
+        // if permute vector is 0,1,...,n, do data copy directly
+        if (tensor_out->mut_dptr() != tensor_in->dptr()) {
+          AutoMemcpy(ctx->stream(), tensor_out->mut_dptr(), tensor_in->dptr(),
+                     elem_cnt * GetSizeOfDataType(dtype), tensor_out->mem_case(),
+                     tensor_in->mem_case());
+        } else {
+          std::cout << "in ======= out" << std::endl;
+        }
+      } else {
+        primitive->Launch(ctx->stream(), dtype, num_dims, src_dims, tensor_in->dptr(), perm.data(),
+                          tensor_out->mut_dptr());
+      }
+
     } else {
       // For 0-d Tensor
       return;

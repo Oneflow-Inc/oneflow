@@ -910,7 +910,7 @@ class ReshapeFunctor {
       CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
           << "\n Shape " << shape.ToString() << " is invalid for input shape "
           << x->shape()->ToString();
-      if (*(x->shape()) == shape) { return x };
+      if (*(x->shape()) == shape) { return x; }
       JUST(attrs.SetAttr<Shape>("shape", shape));
     } else {
       Shape infered_shape = shape;
@@ -918,7 +918,7 @@ class ReshapeFunctor {
       CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
           << "\n Shape " << shape.ToString() << " is invalid for input shape "
           << x->shape()->ToString();
-      if (infered_shape == shape) { return x };
+      if (infered_shape == shape) { return x; }
       JUST(attrs.SetAttr<Shape>("shape", infered_shape));
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);

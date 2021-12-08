@@ -577,17 +577,6 @@ class TransposeFunctor {
     MutableAttrMap attrs;
     CHECK_EQ_OR_RETURN(input->ndim(), permute.size()) << "number of dims don't match in permute";
 
-    // if permute vector is 0,1,...,n, return input directly
-    bool flag = true;
-    for (auto i = 0; i < permute.size(); i++) {
-      if (i != permute[i]) {
-        flag = false;
-        break;
-      }
-    }
-    if (flag) { return input; }
-
-    // normal handling routine
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
     int32_t ndims = input->shape()->NumAxes();
     for (int i = 0; i < permute.size(); i++) {
