@@ -25,7 +25,7 @@ limitations under the License.
 #include <regex>
 
 namespace {
-using namespace oneflow;
+using namespace ::oneflow;
 using K = std::string;
 using V = user_op::OpRegistryResult;
 
