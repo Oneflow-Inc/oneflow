@@ -273,12 +273,9 @@ LogicalResult JobImporter::ProcessVariableOp(const ::oneflow::OperatorConf& op_c
   attr_vec.emplace_back(shape_named_attr);
   // attr data_type
   if (op_conf.variable_conf().has_data_type()) {
-    std::string dtype_str;
-    if (failed(StringifyDataType(op_conf.variable_conf().data_type(), dtype_str))) {
-      return failure();
-    }
-    attr_vec.emplace_back(
-        GetBuilder().getNamedAttr("data_type", GetBuilder().getStringAttr(dtype_str)));
+    attr_vec.emplace_back(GetBuilder().getNamedAttr(
+        "data_type",
+        GetDataTypeAttr(GetMLIRContext(), op_conf.variable_conf().data_type()).getValue()));
   }
   // attr model_name
   if (op_conf.variable_conf().has_model_name()) {
@@ -380,12 +377,9 @@ LogicalResult JobImporter::ProcessInputOp(const ::oneflow::OperatorConf& op_conf
   }
   // attr data_type
   if (op_conf.input_conf().blob_conf().has_data_type()) {
-    std::string dtype_str;
-    if (failed(StringifyDataType(op_conf.input_conf().blob_conf().data_type(), dtype_str))) {
-      return failure();
-    }
-    attr_vec.emplace_back(
-        GetBuilder().getNamedAttr("data_type", GetBuilder().getStringAttr(dtype_str)));
+    attr_vec.emplace_back(GetBuilder().getNamedAttr(
+        "data_type", GetDataTypeAttr(GetMLIRContext(), op_conf.input_conf().blob_conf().data_type())
+                         .getValue()));
   }
   // attr is_dynamic
   if (op_conf.input_conf().blob_conf().has_is_dynamic()) {
@@ -477,12 +471,10 @@ LogicalResult JobImporter::ProcessOutputOp(const ::oneflow::OperatorConf& op_con
   }
   // attr data_type
   if (op_conf.output_conf().blob_conf().has_data_type()) {
-    std::string dtype_str;
-    if (failed(StringifyDataType(op_conf.output_conf().blob_conf().data_type(), dtype_str))) {
-      return failure();
-    }
-    attr_vec.emplace_back(
-        GetBuilder().getNamedAttr("data_type", GetBuilder().getStringAttr(dtype_str)));
+    attr_vec.emplace_back(GetBuilder().getNamedAttr(
+        "data_type",
+        GetDataTypeAttr(GetMLIRContext(), op_conf.output_conf().blob_conf().data_type())
+            .getValue()));
   }
   // attr is_dynamic
   if (op_conf.output_conf().blob_conf().has_is_dynamic()) {

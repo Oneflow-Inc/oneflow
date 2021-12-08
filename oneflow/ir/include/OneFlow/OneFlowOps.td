@@ -115,7 +115,7 @@ def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", []> {
   let output = (outs AnyType:$output);
   let custom_attrs = (ins
     AnyI64ElementsAttr:$shape,
-    OptionalAttr<StrAttr>:$data_type,
+    OptionalAttr<OneFlow_DataType>:$data_type,
     DefaultValuedAttr<StrAttr, "\"weight\"">:$model_name,
     DefaultValuedAttr<F32Attr, "0.0f">:$l1_regularization,
     DefaultValuedAttr<F32Attr, "0.0f">:$l2_regularization,
@@ -130,7 +130,7 @@ def OneFlow_InputOp : OneFlow_ConcreteSystemOp<"input", []> {
   let output = (outs AnyType:$output);
   let custom_attrs = (ins
     OptionalAttr<AnyI64ElementsAttr>:$shape,
-    OptionalAttr<StrAttr>:$data_type,
+    OptionalAttr<OneFlow_DataType>:$data_type,
     OptionalAttr<BoolAttr>:$is_dynamic,
     OptionalAttr<StrArrayAttr>:$nd_sbp,
     OptionalAttr<StrAttr>:$job_name
@@ -143,7 +143,7 @@ def OneFlow_OutputOp : OneFlow_ConcreteSystemOp<"output", []> {
   let output = (outs AnyType:$output);
   let custom_attrs = (ins
     OptionalAttr<AnyI64ElementsAttr>:$shape,
-    OptionalAttr<StrAttr>:$data_type,
+    OptionalAttr<OneFlow_DataType>:$data_type,
     OptionalAttr<BoolAttr>:$is_dynamic,
     OptionalAttr<StrArrayAttr>:$nd_sbp,
     OptionalAttr<StrAttr>:$job_name

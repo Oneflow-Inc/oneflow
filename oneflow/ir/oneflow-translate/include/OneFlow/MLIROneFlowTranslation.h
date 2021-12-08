@@ -47,7 +47,8 @@ LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf)
 ResultRange GetDataOutputResults(Operation* op);
 llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op);
 llvm::Optional<std::string> GetOutputLbn(OpResult result);
-LogicalResult StringifyDataType(::oneflow::DataType value, std::string& stringified);
+llvm::Optional<mlir::oneflow::DataTypeAttr> GetDataTypeAttr(MLIRContext* context,
+                                                            ::oneflow::DataType oneflow_value);
 LogicalResult ConvertVariableOpConf(Operation* op, oneflow::VariableOpAdaptor& adaptor,
                                     ::oneflow::OperatorConf* op_conf);
 LogicalResult ConvertInputOpConf(Operation* op, oneflow::InputOpAdaptor& adaptor,
