@@ -345,47 +345,48 @@ REGISTER_USER_OP("broadcast_matmul")
       }
 
       const int64_t max_num_axes = std::max(a_num_axes, b_num_axes); 
-      if(a_num_axes > b_num_axes){
-        // S(b axis) x B -> S(b axis)
-        for (int64_t i = 0; i < a_num_axes - 2; ++i) {
+      const size_t num_max_batch_dims = max_num_axes - 2;
+      auto MakeGetBatchDim = [num_max_batch_dims](size_t num_dims, const Shape& shape_dim) {
+        const int64_t num_batch_dims = num_dims - 2;
+        const int64_t num_padding_dims = num_max_batch_dims - num_batch_dims;
+        return [num_padding_dims, shape_dim](size_t index) {
+          return index < num_padding_dims ? 1 : shape_dim.At(index - num_padding_dims);
+        };
+      };
+      auto GetABatchDim = MakeGetBatchDim(a_num_axes, a_shape);
+      auto GetBBatchDim = MakeGetBatchDim(b_num_axes, b_shape);
+
+      for(int i =0; i < num_max_batch_dims; i++){
+        const int64_t a_batch_dim = GetABatchDim(i); 
+        const int64_t b_batch_dim = GetBBatchDim(i); 
+        if(a_batch_dim == b_batch_dim && a_batch_dim!=1){
+          // S(b axis) x S(b axis) -> S(b axis)
+          ctx->NewBuilder()
+            .Split(user_op::OpArg("a", 0), i)
+            .Split(user_op::OpArg("b", 0), i)
+            .Split(out_and_add_to_output_args, i)
+            .Build();
+        }else if(a_batch_dim == 1){
+          // B x S(b axis) -> S(b axis)
+          ctx->NewBuilder()
+            .Broadcast(user_op::OpArg("a", 0))
+            .Split(user_op::OpArg("b", 0), i)
+            .Split(out_and_add_to_output_args, i)
+            .Build();
+        }else if(b_batch_dim == 1){
+          // S(b axis) x B -> S(b axis)
           ctx->NewBuilder()
             .Split(user_op::OpArg("a", 0), i)
             .Broadcast(user_op::OpArg("b", 0))
             .Split(out_and_add_to_output_args, i)
             .Build();
         }
-      } else if (a_num_axes < b_num_axes){
-        // B x S(b axis) -> S(b axis)
-        for (int64_t i = 0; i < b_num_axes - 2; ++i) {
-          ctx->NewBuilder()
-            .Broadcast(user_op::OpArg("a", 0))
-            .Split(user_op::OpArg("b", 0), i)
-            .Split(out_and_add_to_output_args, i)
-            .Build();
-        }
-      } else{
-        for (int64_t i = 0; i < max_num_axes - 2; ++i) {
-          if(a_shape.At(i) == 1){
-            ctx->NewBuilder()
-                .Broadcast(user_op::OpArg("a", 0))
-                .Split(user_op::OpArg("b", 0), i)
-                .Split(out_and_add_to_output_args, i)
-                .Build();
-          }
-          if(b_shape.At(i) == 1){
-            ctx->NewBuilder()
-                .Split(user_op::OpArg("a", 0), i)
-                .Broadcast(user_op::OpArg("b", 0))
-                .Split(out_and_add_to_output_args, i)
-                .Build();
-          }
-        }
       }
 
       // S(m axis) x B -> S(m axis)
       ctx->NewBuilder()
         .Split(user_op::OpArg("a", 0), m_a_axis)
-        .Broadcast(user_op::OpArg("a", 0))
+        .Broadcast(user_op::OpArg("b", 0))
         .Split(out_and_add_to_output_args, max_num_axes - 2)
         .Build();
 
@@ -413,7 +414,7 @@ REGISTER_USER_OP("broadcast_matmul")
       // B x P -> P
       ctx->NewBuilder()
           .Broadcast(user_op::OpArg("a", 0))
-          .PartialSum(user_op::OpArg("b", 0))
+          .PartialSum(user_op::OpArg("b", 0)) 
           .PartialSum(out_and_add_to_output_args)
           .Build();
       return Maybe<void>::Ok();
