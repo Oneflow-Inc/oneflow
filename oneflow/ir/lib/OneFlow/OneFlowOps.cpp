@@ -268,23 +268,25 @@ struct ConvertNormalizationAddReluOp
       : OpRewritePattern<oneflow::CudnnFusedNormalizationAddReluOp>(context, /*benefit=*/1) {}
   mlir::LogicalResult matchAndRewrite(oneflow::CudnnFusedNormalizationAddReluOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    // if op's device is gpu, rewrtire it
-
-    NamedAttrList attributes = op->getAttrs();
-    attributes.push_back(
-        rewriter.getNamedAttr(OpTrait::IsAlternative<void>::getOpTypeNameAttr(),
-                              rewriter.getStringAttr("cudnn_fused_normalization_add_relu")));
-    if (auto created_op = rewriter.replaceOpWithNewOp<NormalizationAddReluOp>(
-            op, op->getResultTypes(), op.getOperands(), attributes)) {
-      return success();
-    } else {
-      op->emitError(
-          "Fail to convert normalization_add_relu op to cudnn_fused_normalization_add_relu!");
-      op->dump();
-      return failure();
+    // if op's device is gpu, rewrite it.
+    if (op.getDeviceNameAttr() == this->getDeviceNameAttr()) {
+      NamedAttrList attributes = op->getAttrs();
+      attributes.push_back(
+          rewriter.getNamedAttr(OpTrait::IsAlternative<void>::getOpTypeNameAttr(),
+                                rewriter.getStringAttr("cudnn_fused_normalization_add_relu")));
+      if (auto created_op = rewriter.replaceOpWithNewOp<NormalizationAddReluOp>(
+              op, op->getResultTypes(), op.getOperands(), attributes)) {
+        return success();
+      } else {
+        op->emitError(
+            "Fail to convert normalization_add_relu op to cudnn_fused_normalization_add_relu op!");
+        op->dump();
+        return failure();
+      }
     }
     return failure();
   }
+  static StringRef getDeviceNameAttr() { return "gpu"; }
 };
 
 void NormalizationAddReluOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
