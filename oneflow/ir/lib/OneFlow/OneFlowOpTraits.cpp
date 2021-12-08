@@ -16,7 +16,9 @@ bool HaveIdenticalPlacement(mlir::Operation* a, mlir::Operation* b) {
 
 }  // namespace
 
-OpFoldResult OpTrait::impl::foldIdempotentOfIdenticalPlacement(Operation* op) {
+namespace impl {
+
+OpFoldResult foldIdempotentOfIdenticalPlacement(Operation* op) {
   auto* argument_op = op->getOperand(0).getDefiningOp();
   if (argument_op && op->getName() == argument_op->getName()
       && HaveIdenticalPlacement(op, argument_op)) {
@@ -25,7 +27,7 @@ OpFoldResult OpTrait::impl::foldIdempotentOfIdenticalPlacement(Operation* op) {
   return {};
 }
 
-OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
+OpFoldResult foldInvolutionOfIdenticalPlacement(Operation* op) {
   auto* argument_op = op->getOperand(0).getDefiningOp();
   if (argument_op && op->getName() == argument_op->getName()
       && HaveIdenticalPlacement(op, argument_op)) {
@@ -34,7 +36,7 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
   return {};
 }
 
-LogicalResult OpTrait::impl::VerifyIsOpConfCompatible(Operation* op) {
+LogicalResult VerifyIsOpConfCompatible(Operation* op) {
   for (auto attr : {
            IsOpConfCompatible<void>::getOpNameAttr(),
            IsOpConfCompatible<void>::getDeviceTagAttr(),
@@ -50,7 +52,7 @@ LogicalResult OpTrait::impl::VerifyIsOpConfCompatible(Operation* op) {
   return success();
 }
 
-LogicalResult OpTrait::impl::VerifyIsImportCompatible(Operation* op) {
+LogicalResult VerifyIsImportCompatible(Operation* op) {
   if (auto output_lbns =
           op->getAttrOfType<ArrayAttr>(IsImportCompatible<void>::getOutputLBNsAttr())) {
     if (auto cec = dyn_cast<ControlEdgeCompatible>(op)) {
@@ -68,6 +70,8 @@ LogicalResult OpTrait::impl::VerifyIsImportCompatible(Operation* op) {
   }
   return success();
 }
+
+}  // namespace impl
 
 }  // namespace OpTrait
 
