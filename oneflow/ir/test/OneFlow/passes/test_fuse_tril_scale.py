@@ -25,7 +25,7 @@ os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = '1'
 os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = '1'
 
 @flow.unittest.skip_unless_1n1d()
-class TestFuseTrilScaledMLIR(oneflow.unittest.TestCase):
+class TestFuseTrilScaleCPUMLIR(oneflow.unittest.TestCase):
     def test_fused_tril_scale_graph(test_case):
         data = np.random.randn(1, 2, 3)
         x = flow.tensor(data, dtype=flow.float32)
@@ -42,6 +42,24 @@ class TestFuseTrilScaledMLIR(oneflow.unittest.TestCase):
         y_lazy = tril_scale(x)
         test_case.assertTrue(np.array_equal(y_eager.numpy(), y_lazy.numpy()))
 
+
+@flow.unittest.skip_unless_1n1d()
+class TestFuseTrilScaleGPUMLIR(oneflow.unittest.TestCase):
+    def test_fused_tril_scale_graph(test_case):
+        data = np.random.randn(1, 2, 3)
+        x = flow.tensor(data, dtype=flow.float32).to("cuda")
+        y_eager = flow.tril(x * 2.0) + flow.tril(x) * 2.0
+
+        class FuseTrilScaleGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+
+            def build(self, x):
+                return flow.tril(x * 2.0) + flow.tril(x) * 2.0
+
+        tril_scale = FuseTrilScaleGraph()
+        y_lazy = tril_scale(x)
+        test_case.assertTrue(np.array_equal(y_eager.detach().cpu().numpy(), y_lazy.numpy()))
 
 if __name__ == "__main__":
     unittest.main()

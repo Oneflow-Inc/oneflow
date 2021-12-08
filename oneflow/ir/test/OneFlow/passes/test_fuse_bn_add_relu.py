@@ -25,40 +25,49 @@ os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = '1'
 os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = '1'
 
 @flow.unittest.skip_unless_1n1d()
-class TestFuseCastMulCPUMLIR(oneflow.unittest.TestCase):
-    def test_fused_cast_mul_graph(test_case):
-        data = np.random.randn(1, 2, 3)
+class TestFuseBNAddReLUCPUMLIR(oneflow.unittest.TestCase):
+    def test_fused_bn_add_relu_graph(test_case):
+        data = np.random.randn(2, 96, 96, 3)
         x = flow.tensor(data, dtype=flow.float32)
-        y_eager = flow.cast(x, flow.int32) * 2.0
+        bn = flow.nn.BatchNorm2d(96)
+        relu = flow.nn.ReLU()
+        y_eager = relu(bn(x) + 2.0) + 1.0
 
-        class FuseCastMulGraph(flow.nn.Graph):
+        class FuseBNAddReLUGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
+                self.bn = bn
+                self.relu = relu
 
             def build(self, x):
-                return flow.cast(x, flow.int32) * 2.0
+                return self.relu(self.bn(x) + 2.0) + 1.0
 
-        cast_mul = FuseCastMulGraph()
-        y_lazy = cast_mul(x)
+        bn_add_relu = FuseBNAddReLUGraph()
+        y_lazy = bn_add_relu(x)
         test_case.assertTrue(np.array_equal(y_eager.numpy(), y_lazy.numpy()))
 
-
 @flow.unittest.skip_unless_1n1d()
-class TestFuseCastMulGPUMLIR(oneflow.unittest.TestCase):
-    def test_fused_cast_mul_graph(test_case):
-        data = np.random.randn(1, 2, 3)
+class TestFuseBNAddReLUGPUMLIR(oneflow.unittest.TestCase):
+    def test_fused_bn_add_relu_graph(test_case):
+        data = np.random.randn(2, 96, 96, 3)
         x = flow.tensor(data, dtype=flow.float32).to("cuda")
-        y_eager = flow.cast(x, flow.int32) * 2.0
+        bn = flow.nn.BatchNorm2d(96)
+        relu = flow.nn.ReLU()
+        bn.to("cuda")
+        relu.to("cuda")
+        y_eager = relu(bn(x) + 2.0) + 1.0
 
-        class FuseCastMulGraph(flow.nn.Graph):
+        class FuseBNAddReLUGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
+                self.bn = bn
+                self.relu = relu
 
             def build(self, x):
-                return flow.cast(x, flow.int32) * 2.0
+                return self.relu(self.bn(x) + 2.0) + 1.0
 
-        cast_mul = FuseCastMulGraph()
-        y_lazy = cast_mul(x)
+        bn_add_relu = FuseBNAddReLUGraph()
+        y_lazy = bn_add_relu(x)
         test_case.assertTrue(np.array_equal(y_eager.detach().cpu().numpy(), y_lazy.numpy()))
 
 if __name__ == "__main__":
