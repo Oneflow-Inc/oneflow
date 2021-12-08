@@ -54,4 +54,3 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("OneRecReader")
     });
 
 }  // namespace oneflow
-
