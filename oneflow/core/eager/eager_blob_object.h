@@ -28,9 +28,12 @@ namespace oneflow {
 
 namespace vm {
 
-class TensorBuffer {
+class TensorStorage {
  public:
-  TensorBuffer() : non_pod_allocator_(std::make_unique<MemoryAllocator>()) {}
+  TensorStorage()
+      : non_pod_allocator_(std::make_unique<MemoryAllocator>()),
+        producer_op_device_(NullOpt),
+        last_used_device_(NullOpt) {}
 
   size_t blob_bytes() const { return blob_bytes_; }
 
@@ -42,60 +45,6 @@ class TensorBuffer {
     blob_dptr_ = std::move(blob_dptr);
     blob_bytes_ = bytes;
   }
-
- private:
-  size_t blob_bytes_;
-  std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
-  std::unique_ptr<MemoryAllocator> non_pod_allocator_;
-};
-
-class EagerBlobObject final : public BlobObject {
- public:
-  EagerBlobObject(const EagerBlobObject&) = delete;
-  EagerBlobObject(EagerBlobObject&&) = delete;
-  EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
-                  DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer)
-      : EagerBlobObject(mem_case, shape, data_type, tensor_buffer, Optional<LocalDepObject*>()) {}
-
-  EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
-                  DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
-                  LocalDepObject* dep_object)
-      : EagerBlobObject(mem_case, shape, data_type, tensor_buffer,
-                        Optional<LocalDepObject*>(dep_object)) {}
-
-  ~EagerBlobObject() override {
-    tensor_buffer_.reset();
-    header_buffer_.reset();
-    blob_.reset();
-  }
-
-  BlobDesc* mut_blob_desc() override { return &blob_desc_; }
-
-  const Blob& blob() const override { return *blob_; }
-  Blob* mut_blob() override { return blob_.get(); }
-
-  Maybe<void> TryInitBlob() override;
-  Maybe<void> InitBlob();
-
-  Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
-  Maybe<void> DeallocateBlobDataPtr() override {
-    tensor_buffer_.reset(new TensorBuffer);
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<LocalDepObject*> compute_local_dep_object() const {
-    return JUST(compute_local_dep_object_);
-  }
-
-  std::shared_ptr<TensorBuffer>& tensor_buffer() { return tensor_buffer_; }
-
-  bool is_shape_synced() const { return is_shape_synced_; }
-
-  void set_is_shape_synced(bool val) { is_shape_synced_ = val; }
-
-  int64_t storage_offset() const { return storage_offset_; }
-
-  void set_storage_offset(int64_t storage_offset) { storage_offset_ = storage_offset; }
 
   const Optional<Symbol<Device>>& producer_op_device() const { return producer_op_device_; }
   Maybe<void> init_producer_op_device(Symbol<Device> producer_op_device) {
@@ -110,17 +59,85 @@ class EagerBlobObject final : public BlobObject {
   }
 
  private:
+  size_t blob_bytes_;
+  std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
+  std::unique_ptr<MemoryAllocator> non_pod_allocator_;
+  Optional<Symbol<Device>> producer_op_device_;
+  Optional<Symbol<Device>> last_used_device_;
+};
+
+class EagerBlobObject final : public BlobObject {
+ public:
+  EagerBlobObject(const EagerBlobObject&) = delete;
+  EagerBlobObject(EagerBlobObject&&) = delete;
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
-                  DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
+                  DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage)
+      : EagerBlobObject(mem_case, shape, data_type, tensor_storage, Optional<LocalDepObject*>()) {}
+
+  EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
+                  DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage,
+                  LocalDepObject* dep_object)
+      : EagerBlobObject(mem_case, shape, data_type, tensor_storage,
+                        Optional<LocalDepObject*>(dep_object)) {}
+
+  ~EagerBlobObject() override {
+    tensor_storage_.reset();
+    header_buffer_.reset();
+    blob_.reset();
+  }
+
+  BlobDesc* mut_blob_desc() override { return &blob_desc_; }
+
+  const Blob& blob() const override { return *blob_; }
+  Blob* mut_blob() override { return blob_.get(); }
+
+  Maybe<void> TryInitBlob() override;
+  Maybe<void> InitBlob();
+
+  Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
+  Maybe<void> DeallocateBlobDataPtr() override {
+    tensor_storage_.reset(new TensorStorage);
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<LocalDepObject*> compute_local_dep_object() const {
+    return JUST(compute_local_dep_object_);
+  }
+
+  std::shared_ptr<TensorStorage>& tensor_storage() { return tensor_storage_; }
+
+  bool is_shape_synced() const { return is_shape_synced_; }
+
+  void set_is_shape_synced(bool val) { is_shape_synced_ = val; }
+
+  int64_t storage_offset() const { return storage_offset_; }
+
+  void set_storage_offset(int64_t storage_offset) { storage_offset_ = storage_offset; }
+
+  const Optional<Symbol<Device>>& producer_op_device() const {
+    return tensor_storage_->producer_op_device();
+  }
+  Maybe<void> init_producer_op_device(Symbol<Device> producer_op_device) {
+    return tensor_storage_->init_producer_op_device(producer_op_device);
+  }
+
+  const Optional<Symbol<Device>>& last_used_device() const {
+    return tensor_storage_->last_used_device();
+  }
+  void set_last_used_device(Symbol<Device> last_used_device) {
+    tensor_storage_->set_last_used_device(last_used_device);
+  }
+
+ private:
+  EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
+                  DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage,
                   const Optional<LocalDepObject*>& dep_object);
   std::unique_ptr<Blob> blob_;
   std::unique_ptr<char[]> header_buffer_;
-  std::shared_ptr<TensorBuffer> tensor_buffer_;
+  std::shared_ptr<TensorStorage> tensor_storage_;
   std::atomic<bool> is_shape_synced_;
   int64_t storage_offset_;
   Optional<LocalDepObject*> compute_local_dep_object_;
-  Optional<Symbol<Device>> producer_op_device_;
-  Optional<Symbol<Device>> last_used_device_;
 };
 
 }  // namespace vm
