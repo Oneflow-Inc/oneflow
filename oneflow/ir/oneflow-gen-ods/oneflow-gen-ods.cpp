@@ -14,10 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifdef WITH_MLIR
-#include "oneflow/ir/include/OneFlow/Extension.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowRoundTrip.h"
-#endif  // WITH_MLIR
 #include <glog/logging.h>
 #include "oneflow/core/framework/user_op_def.h"
 #include "oneflow/core/framework/user_op_registry.h"

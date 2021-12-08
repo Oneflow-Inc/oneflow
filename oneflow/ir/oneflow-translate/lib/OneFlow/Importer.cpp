@@ -72,16 +72,15 @@ using PbMessage = google::protobuf::Message;
 
 namespace {
 
-using namespace ::oneflow;
-const UserOpDef& GetUserOpDef(const std::string& op_type_name) {
-  const user_op::OpRegistryResult* val =
-      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
+const ::oneflow::UserOpDef& GetUserOpDef(const std::string& op_type_name) {
+  const ::oneflow::user_op::OpRegistryResult* val =
+      ::oneflow::user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
   CHECK(val) << " Cannot find op_type_name: " << op_type_name;
   return val->op_def;
 }
 
 ::oneflow::AttrType QueryAttrType(const std::string& op_type_name, const std::string& attr_name) {
-  user_op::UserOpDefWrapper op_def(GetUserOpDef(op_type_name));
+  ::oneflow::user_op::UserOpDefWrapper op_def(GetUserOpDef(op_type_name));
   CHECK(op_def.IsAttrName(attr_name)) << attr_name << " not a attr name for op: " << op_type_name;
   return op_def.GetAttrType(attr_name);
 }
