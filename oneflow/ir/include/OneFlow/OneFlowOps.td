@@ -112,6 +112,7 @@ class OneFlow_ConcreteSystemOp<string mnemonic, list<OpTrait> traits = []> :
 
 def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", []> {
   let summary = "";
+  let input = (ins);
   let output = (outs AnyType:$output);
   let custom_attrs = (ins
     AnyI64ElementsAttr:$shape,
