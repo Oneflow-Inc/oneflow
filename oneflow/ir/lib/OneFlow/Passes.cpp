@@ -53,7 +53,7 @@ limitations under the License.
 
 namespace mlir {
 
-namespace oneflow_foundation {
+namespace oneflow {
 
 LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
   // TODO: now we only need one JIT engine
@@ -106,8 +106,8 @@ FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, 
 NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op_name,
                                  int32_t input_size, int32_t output_size,
                                  Operation* op_to_replace) {
-  oneflow_foundation::UserOpAdaptor op_to_replace_adaptor(op_to_replace->getOperands(),
-                                                          op_to_replace->getAttrDictionary());
+  oneflow::UserOpAdaptor op_to_replace_adaptor(op_to_replace->getOperands(),
+                                               op_to_replace->getAttrDictionary());
   NamedAttrList attributes;
   attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
                  op_to_replace_adaptor.device_tag());
@@ -152,7 +152,7 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
   return {};
 }
 
-}  // namespace oneflow_foundation
+}  // namespace oneflow
 
 }  // namespace mlir
 
@@ -160,7 +160,7 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
 
 namespace mlir {
 
-namespace oneflow_foundation {
+namespace oneflow {
 
 void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addPass(createLowerOneFlowToTosaPass());            // lower-oneflow-to-tosa
@@ -224,6 +224,6 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
 }
 
-}  // namespace oneflow_foundation
+}  // namespace oneflow
 
 }  // namespace mlir

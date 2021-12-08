@@ -8,8 +8,8 @@ namespace {
 
 // TODO: merge all ctrl input and output when folding op
 bool HaveIdenticalPlacement(mlir::Operation* a, mlir::Operation* b) {
-  oneflow_foundation::UserOpAdaptor adaptor_a(a->getOperands(), a->getAttrDictionary());
-  oneflow_foundation::UserOpAdaptor adaptor_b(b->getOperands(), b->getAttrDictionary());
+  oneflow::UserOpAdaptor adaptor_a(a->getOperands(), a->getAttrDictionary());
+  oneflow::UserOpAdaptor adaptor_b(b->getOperands(), b->getAttrDictionary());
   return adaptor_a.device_tag() == adaptor_b.device_tag()
          && adaptor_a.device_name() == adaptor_b.device_name();
 }

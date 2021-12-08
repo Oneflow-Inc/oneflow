@@ -40,12 +40,12 @@ class BufferHostRegisterPass : public BufferHostRegisterPassBase<BufferHostRegis
 
 namespace mlir {
 
-namespace oneflow_foundation {
+namespace oneflow {
 
 std::unique_ptr<Pass> createBufferHostRegisterPass() {
   return std::make_unique<BufferHostRegisterPass>();
 }
 
-}  // namespace oneflow_foundation
+}  // namespace oneflow
 
 }  // namespace mlir

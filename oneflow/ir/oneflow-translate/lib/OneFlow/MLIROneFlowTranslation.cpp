@@ -63,7 +63,7 @@ limitations under the License.
 
 namespace mlir {
 
-namespace oneflow_foundation {
+namespace oneflow {
 
 using PbMessage = google::protobuf::Message;
 
@@ -195,7 +195,7 @@ LogicalResult JobImporter::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
       GetBuilder().getStrArrayAttr(
           std::vector<llvm::StringRef>({output_lbns.begin(), output_lbns.end()}))));
   OperationState state(FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0),
-                       oneflow_foundation::SystemOp::getOperationName());
+                       oneflow::SystemOp::getOperationName());
   attr_vec.push_back(
       GetBuilder().getNamedAttr("op_type_case", GetBuilder().getI32IntegerAttr(op.op_type_case())));
   if (failed(AddOperandSegmentSizes(static_cast<int>(input_lbns.size()), op.ctrl_in_op_name_size(),
@@ -273,9 +273,8 @@ LogicalResult JobImporter::TryToUpdateJob() {
   new_job.clear_net();
   new_job.mutable_placement()->clear_placement_group();
   auto convertOps = [&](Operation* op) {
-    if (llvm::dyn_cast<oneflow_foundation::SystemOp>(op)) {
-      oneflow_foundation::SystemOpAdaptor system_op_adaptor(op->getOperands(),
-                                                            op->getAttrDictionary());
+    if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
+      oneflow::SystemOpAdaptor system_op_adaptor(op->getOperands(), op->getAttrDictionary());
       UpdatePlacement(op, system_op_adaptor, new_job);
       auto op_name = system_op_adaptor.op_name().getValue().str();
       ::oneflow::OperatorConf op_conf = job_wrapper_.OpConf4OpName(op_name);
@@ -294,7 +293,7 @@ LogicalResult JobImporter::TryToUpdateJob() {
                || llvm::dyn_cast<ModuleOp>(op)) {
       return WalkResult::advance();
     } else {
-      oneflow_foundation::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
+      oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
       UpdatePlacement(op, user_op_adaptor, new_job);
       ::oneflow::OperatorConf op_conf;
       const std::string op_name = user_op_adaptor.op_name().getValue().str();
@@ -327,9 +326,9 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
   std::string graphviz;
   if (job_wrapper.IsLastIRPass() && std::getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS") != nullptr) {
-    pm.addPass(oneflow_foundation::createOutlineJitFunctionPass());
+    pm.addPass(oneflow::createOutlineJitFunctionPass());
   }
-  pm.addNestedPass<mlir::FuncOp>(oneflow_foundation::createFuseIntoExistingOpPass());
+  pm.addNestedPass<mlir::FuncOp>(oneflow::createFuseIntoExistingOpPass());
   pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
   llvm::raw_string_ostream os_graphviz(graphviz);
   pm.addPass(createPrintOpGraphPass(os_graphviz));
@@ -349,7 +348,7 @@ OwningModuleRef TranslateOneFlowJobToModule(llvm::StringRef str, MLIRContext* co
   std::string cpp_str = str.str();
   ::oneflow::Job job;
   google::protobuf::TextFormat::ParseFromString(cpp_str, &job);
-  context->loadDialect<oneflow_foundation::OneFlowFoundationDialect>();
+  context->loadDialect<oneflow::OneFlowDialect>();
   context->loadDialect<StandardOpsDialect>();
   OwningModuleRef module(
       ModuleOp::create(FileLineColLoc::get(context, "", /*line=*/0, /*column=*/0)));
@@ -361,7 +360,7 @@ void RoundTripOneFlowJob(
     const std::function<bool(::oneflow::Job* job, std::string& reason)>& is_legit_job) {
   const ::oneflow::Job* job = job_wrapper.job();
   mlir::MLIRContext context;
-  context.getOrLoadDialect<oneflow_foundation::OneFlowFoundationDialect>();
+  context.getOrLoadDialect<oneflow::OneFlowDialect>();
   context.loadDialect<StandardOpsDialect>();
 
   OwningModuleRef module(
@@ -393,6 +392,6 @@ void registerFromOneFlowJobTranslation() {
                                              });
 }
 
-}  // namespace oneflow_foundation
+}  // namespace oneflow
 
 }  // namespace mlir

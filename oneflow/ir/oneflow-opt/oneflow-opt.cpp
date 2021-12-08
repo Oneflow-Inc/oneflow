@@ -47,11 +47,11 @@ int32_t main(int32_t argc, char** argv) {
   mlir::registerMapSCFToGPUPassPass();
   mlir::registerBufferHostRegisterPassPass();
 #ifdef WITH_MLIR_CUDA_CODEGEN
-  mlir::oneflow_foundation::registerGpuSerializeToCubinPass();
+  mlir::oneflow::registerGpuSerializeToCubinPass();
 #endif  // WITH_MLIR_CUDA_CODEGEN
   mlir::registerOutlineJitFunctionPassPass();
   mlir::DialectRegistry registry;
-  registry.insert<mlir::oneflow_foundation::OneFlowFoundationDialect>();
+  registry.insert<mlir::oneflow::OneFlowDialect>();
   registry.insert<mlir::StandardOpsDialect>();
   registry.insert<mlir::tosa::TosaDialect>();
   registry.insert<mlir::linalg::LinalgDialect>();

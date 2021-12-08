@@ -30,7 +30,7 @@ def OneFlow_DataType: I32EnumAttr<"DataType", "OneFlow Data Type enum",
     OneFlow_TensorBuffer,
   ]
 > {
-  let cppNamespace = "::mlir::oneflow_foundation";
+  let cppNamespace = "::mlir::oneflow";
   let stringToSymbolFnName = "ConvertToEnum";
   let symbolToStringFnName = "ConvertToString";
 }

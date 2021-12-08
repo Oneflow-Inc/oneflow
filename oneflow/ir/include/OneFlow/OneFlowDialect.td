@@ -3,13 +3,13 @@
 
 include "mlir/IR/OpBase.td"
 
-def OneFlowFoundation_Dialect : Dialect {
+def OneFlow_Dialect : Dialect {
     let name = "oneflow";
     let summary = "OneFlow MLIR dialect.";
     let description = [{
         This dialect is the IR of OneFlow.
     }];
-    let cppNamespace = "::mlir::oneflow_foundation";
+    let cppNamespace = "::mlir::oneflow";
 }
 
 #endif // ONEFLOW_DIALECT

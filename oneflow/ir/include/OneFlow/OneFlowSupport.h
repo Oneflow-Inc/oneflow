@@ -19,11 +19,12 @@ limitations under the License.
 #include <string>
 #include <vector>
 
-// We need this "pure" header file to avoid the collision of MLIR and OneFlow's includes...
+// This include is not necessary now, but it is here for testing the namespace collision
+#include "oneflow/core/framework/user_op_registry_manager.h"
 
 namespace mlir {
 
-namespace oneflow_foundation {
+namespace oneflow {
 
 namespace support {
 
@@ -38,7 +39,7 @@ std::vector<std::string> GetOutputKeys(const std::string& op_type_name);
 
 }  // namespace support
 
-}  // namespace oneflow_foundation
+}  // namespace oneflow
 
 }  // namespace mlir
 

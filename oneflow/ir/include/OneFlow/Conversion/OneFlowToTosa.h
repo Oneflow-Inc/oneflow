@@ -21,11 +21,11 @@ limitations under the License.
 
 namespace mlir {
 
-namespace oneflow_foundation {
+namespace oneflow {
 
 std::unique_ptr<mlir::Pass> createLowerOneFlowToTosaPass();
 
-}  // namespace oneflow_foundation
+}  // namespace oneflow
 
 }  // namespace mlir
 

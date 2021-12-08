@@ -19,9 +19,9 @@ limitations under the License.
 
 namespace mlir {
 
-namespace oneflow_foundation {
+namespace oneflow {
 
-void OneFlowFoundationDialect::initialize() {
+void OneFlowDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "OneFlow/OneFlowOps.cpp.inc"
@@ -133,6 +133,6 @@ void OneFlowFoundationDialect::initialize() {
       >();
 }
 
-}  // namespace oneflow_foundation
+}  // namespace oneflow
 
 }  // namespace mlir

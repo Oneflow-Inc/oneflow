@@ -20,12 +20,12 @@ limitations under the License.
 
 namespace mlir {
 
-namespace oneflow_foundation {
+namespace oneflow {
 
 std::unique_ptr<mlir::Pass> createOutlineJitFunctionPass();
 std::unique_ptr<mlir::Pass> createFuseIntoExistingOpPass();
 
-}  // namespace oneflow_foundation
+}  // namespace oneflow
 
 }  // namespace mlir
 

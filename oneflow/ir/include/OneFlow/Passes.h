@@ -37,7 +37,7 @@ namespace mlir {
 #define GEN_PASS_REGISTRATION
 #include "OneFlow/OneFlowPasses.h.inc"
 
-namespace oneflow_foundation {
+namespace oneflow {
 
 LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module);
 #ifdef WITH_MLIR_CUDA_CODEGEN
@@ -46,7 +46,7 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 void populateFuserPasses(::mlir::RewritePatternSet& patterns);
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns);
 
-}  // namespace oneflow_foundation
+}  // namespace oneflow
 
 }  // namespace mlir
 

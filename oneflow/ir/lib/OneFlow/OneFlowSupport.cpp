@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace mlir {
 
-namespace oneflow_foundation {
+namespace oneflow {
 
 namespace support {
 
@@ -45,6 +45,6 @@ std::vector<std::string> GetOutputKeys(const std::string& op_type_name) {
 
 }  // namespace support
 
-}  // namespace oneflow_foundation
+}  // namespace oneflow
 
 }  // namespace mlir

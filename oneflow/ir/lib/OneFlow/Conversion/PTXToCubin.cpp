@@ -130,7 +130,7 @@ std::unique_ptr<std::vector<char>> SerializeToCubinPass::serializeISA(const std:
 
 namespace mlir {
 
-namespace oneflow_foundation {
+namespace oneflow {
 
 void InitializeLLVMNVPTXBackend() {
   LLVMInitializeNVPTXTarget();
@@ -150,7 +150,7 @@ std::unique_ptr<Pass> createSerializeToCubinPass() {
   return std::make_unique<SerializeToCubinPass>();
 }
 
-}  // namespace oneflow_foundation
+}  // namespace oneflow
 
 }  // namespace mlir
 

@@ -39,7 +39,7 @@ limitations under the License.
 
 namespace mlir {
 
-namespace oneflow_foundation {
+namespace oneflow {
 
 struct ScalarMulByTensorOpLowering final : public OpConversionPattern<ScalarMulByTensorOp> {
  public:
@@ -90,7 +90,7 @@ std::unique_ptr<Pass> createLowerOneFlowToTosaPass() {
 void OneFlowLoweringToTosaPass::runOnOperation() {
   ConversionTarget target(getContext());
   target.addLegalDialect<memref::MemRefDialect, StandardOpsDialect, tosa::TosaDialect>();
-  target.addIllegalDialect<OneFlowFoundationDialect>();
+  target.addIllegalDialect<OneFlowDialect>();
   RewritePatternSet patterns(&getContext());
   patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering>(&getContext());
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
@@ -99,6 +99,6 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   }
 }
 
-}  // namespace oneflow_foundation
+}  // namespace oneflow
 
 }  // namespace mlir

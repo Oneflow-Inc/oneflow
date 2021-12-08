@@ -136,8 +136,8 @@ void WithMlirContext(
     const std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)>& lower) {
   mlir::DialectRegistry registry;
   registry
-      .insert<mlir::oneflow_foundation::OneFlowFoundationDialect, mlir::StandardOpsDialect,
-              mlir::memref::MemRefDialect, mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect>();
+      .insert<mlir::oneflow::OneFlowDialect, mlir::StandardOpsDialect, mlir::memref::MemRefDialect,
+              mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect>();
   mlir::registerLLVMDialectTranslation(registry);
   mlir::MLIRContext mlir_ctx(registry);
   mlir::OwningModuleRef module = parse(&mlir_ctx);
@@ -178,7 +178,7 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
                                                          mlir_ctx);
         },
         [](mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module) {
-          CHECK(mlir::succeeded(mlir::oneflow_foundation::LowerModuleToLLVM(mlir_ctx, module)))
+          CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToLLVM(mlir_ctx, module)))
               << "fail to lower OneFlow to LLVM";
         });
   }
@@ -221,7 +221,7 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
                                                          mlir_ctx);
         },
         [](mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module) {
-          CHECK(mlir::succeeded(mlir::oneflow_foundation::LowerModuleToCUDALLVM(mlir_ctx, module)))
+          CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToCUDALLVM(mlir_ctx, module)))
               << "fail to lower OneFlow to CUDA LLVM";
         });
   }

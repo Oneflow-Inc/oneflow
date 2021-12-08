@@ -31,14 +31,13 @@ using UserOpArgDefs = const ::google::protobuf::RepeatedPtrField<::oneflow::User
 
 namespace mlir {
 
-namespace oneflow_foundation {
+namespace oneflow {
 
 // TODO: wrap in a helper namespace
 
-LogicalResult ConvertUserOpInputs(Operation* op, oneflow_foundation::UserOpAdaptor& user_op_adaptor,
+LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
                                   ::oneflow::UserOpConf* user_conf);
-LogicalResult ConvertUserOpOutputs(Operation* op,
-                                   oneflow_foundation::UserOpAdaptor& user_op_adaptor,
+LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
                                    ::oneflow::UserOpConf* user_conf);
 OperandRange GetDataInputOperands(Operation* op);
 LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf);
@@ -103,8 +102,7 @@ class Importer {
   ModuleOp& GetModule() { return module_; }
   Location& GetRootLocation() { return unknown_loc_; }
   virtual Type GetTensorTypeOfLbn(const std::string& lbn) = 0;
-  LogicalResult ConvertUserOpAttributes(Operation* op,
-                                        oneflow_foundation::UserOpAdaptor& user_op_adaptor,
+  LogicalResult ConvertUserOpAttributes(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
                                         ::oneflow::OperatorConf& op_conf);
 
  private:
@@ -142,7 +140,7 @@ void RoundTripOneFlowJob(
     const std::function<bool(::oneflow::Job* job, std::string& reason)>& is_legit_job);
 void registerFromOneFlowJobTranslation();
 
-}  // namespace oneflow_foundation
+}  // namespace oneflow
 
 }  // namespace mlir
 
