@@ -259,7 +259,6 @@ class BroadcastMatmulKernel final : public user_op::OpKernel, public user_op::Cu
     double alpha = ctx->Attr<double>("alpha");
     bool transpose_a = ctx->Attr<bool>("transpose_a");
     bool transpose_b = ctx->Attr<bool>("transpose_b");
-    CHECK(!transpose_a);
 
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
@@ -280,8 +279,14 @@ class BroadcastMatmulKernel final : public user_op::OpKernel, public user_op::Cu
     const int64_t a_num_axes = a->shape().NumAxes(); 
     const int64_t b_num_axes = b->shape().NumAxes(); 
     const int64_t out_num_axes = out->shape().NumAxes(); 
-    int64_t k = a->shape().At(a_num_axes - 1);
-    int64_t n = -1;
+    int64_t m, n, k = -1;  // tensor a (no trans): batch_dims*m*k, tensor b (no trans): batch_dims*k*n
+    if (!transpose_a) {
+      m = a->shape().At(a_num_axes - 2);
+      k = a->shape().At(a_num_axes - 1);
+    } else {
+      m = a->shape().At(a_num_axes - 1);
+      k = a->shape().At(a_num_axes - 2);
+    }
     if (!transpose_b) {
       n = b->shape().At(b_num_axes-1);
       CHECK_EQ(k, b->shape().At(b_num_axes-2));
