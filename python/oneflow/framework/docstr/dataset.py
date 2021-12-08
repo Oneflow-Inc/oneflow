@@ -39,20 +39,26 @@ add_docstr(
 
     .. code-block:: python
 
-        import oneflow as flow
-        files = ['file01.onerec', 'file02.onerec']
-        readdata_1 = flow.read_onerec(files, 10, True, "batch")
-
-        readdata_2 = flow.read_onerec(
-            files,
-            batch_size=10,
-            random_shuffle=True,
-            shuffle_mode="batch",
-            placement=flow.placement("cpu", {0: [0]}),
-            sbp=[flow.sbp.split(0)],
-        )    
+        >>> import oneflow as flow
+        >>> files = ['file01.onerec', 'file02.onerec']
+        >>> readdata_1 = flow.read_onerec(files, 10, True, "batch")
       
         # decode readdata_1 ... 
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> files = ['file01.onerec', 'file02.onerec']
+
+        >>> readdata_2 = flow.read_onerec(
+        ...     files,
+        ...     batch_size=10,
+        ...     random_shuffle=True,
+        ...     shuffle_mode="batch",
+        ...     placement=flow.placement("cpu", {0: [0]}),
+        ...     sbp=[flow.sbp.split(0)],
+        ... )    
+      
         # decode readdata_2 ... 
 
     """,
