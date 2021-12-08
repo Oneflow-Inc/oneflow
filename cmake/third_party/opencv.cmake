@@ -45,9 +45,9 @@ else()
   set(OPENCV_CXX_COMPILER_LAUNCHER_DEF "-DCMAKE_CXX_COMPILER_LAUNCHER:STRING=${CMAKE_CXX_COMPILER_LAUNCHER}")
 endif()
 
-set(OPENCV_DEPS "libjpeg_copy_headers_to_destination;libjpeg_copy_libs_to_destination")
+set(OPENCV_DEPS "libjpeg_copy_headers_to_destination libjpeg_copy_libs_to_destination")
 if (WITH_ZLIB)
-  list(APPEND OPENCV_DEPS zlib)
+  set(OPENCV_DEPS "zlib ${OPENCV_DEPS}")
 endif()
 ExternalProject_Add(opencv
     DEPENDS ${OPENCV_DEPS}
