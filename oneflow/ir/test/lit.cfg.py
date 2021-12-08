@@ -60,7 +60,7 @@ config.excludes = [
     "CMakeLists.txt",
     "README.txt",
     "LICENSE.txt",
-    "networks",
+    "model",
     "test_fuse_cast_scale.mlir.py",
     "test_util.py",
     "test_mlir_opt.mlir.py",
