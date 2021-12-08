@@ -28,15 +28,15 @@ namespace data {
 class OFRecordDataReader final : public DataReader<TensorBuffer> {
  public:
   OFRecordDataReader(user_op::KernelInitContext* ctx) : DataReader<TensorBuffer>(ctx) {
-    loader_.reset(new OFRecordDataset(ctx));
-    parser_.reset(new OFRecordParser());
-    if (ctx->Attr<bool>("random_shuffle")) {
-      loader_.reset(new RandomShuffleDataset<TensorBuffer>(ctx, std::move(loader_)));
-    }
     int32_t batch_size = ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().elem_cnt();
     TensorBufferPool::New(/* pool_size */ batch_size,
                           /* thread_local_cache_size */ 32);
+    loader_.reset(new OFRecordDataset(ctx));
+    if (ctx->Attr<bool>("random_shuffle")) {
+      loader_.reset(new RandomShuffleDataset<TensorBuffer>(ctx, std::move(loader_)));
+    }
     loader_.reset(new BatchDataset<TensorBuffer>(batch_size, std::move(loader_)));
+    parser_.reset(new OFRecordParser());
     StartLoadThread();
   }
   ~OFRecordDataReader() override = default;

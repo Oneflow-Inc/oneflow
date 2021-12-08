@@ -203,6 +203,7 @@ void TensorBufferPool::Allocate(TensorBuffer& tensor_buffer, const Shape& shape,
   } else {
     tensor_buffer.impl_ = thread_local_cache.back();
     thread_local_cache.pop_back();
+    tensor_buffer.impl_->Reset(shape, dtype);
   }
 }
 

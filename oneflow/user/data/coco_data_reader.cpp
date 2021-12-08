@@ -27,6 +27,10 @@ namespace oneflow {
 namespace data {
 
 COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COCOImage>(ctx) {
+  size_t batch_size = ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
+  TensorBufferPool::New(/* pool_size */ batch_size / 4 + 1,
+                        /* thread_local_cache_size */ 4);
+
   std::shared_ptr<const COCOMeta> meta(new COCOMeta(
       ctx->Attr<int64_t>("session_id"), ctx->Attr<std::string>("annotation_file"),
       ctx->Attr<std::string>("image_dir"), ctx->Attr<bool>("remove_images_without_annotations")));
@@ -49,9 +53,6 @@ COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COC
       ctx->Attr<bool>("shuffle_after_epoch"), ctx->Attr<int64_t>("random_seed"),
       std::move(coco_dataset_ptr)));
 
-  size_t batch_size = ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
-  TensorBufferPool::New(/* pool_size */ batch_size / 4 + 1,
-                        /* thread_local_cache_size */ 4);
   if (ctx->Attr<bool>("group_by_ratio")) {
     auto GetGroupId = [](const COCOImage& sample) {
       return static_cast<int64_t>(sample.height / sample.width);
