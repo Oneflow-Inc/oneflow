@@ -556,7 +556,13 @@ void TaskGraph::UpdateTickDataAndCtrlRegstNum() {
     if (comp_task_node == nullptr) { return; }
     if (IsTickOpConf(comp_task_node->op()->op_conf())) {
       for (auto& pair : node->produced_regsts()) {
-        pair.second->UpdtMinRegstNumIfNeed(tick_regst_num);
+        if (pair.second->max_register_num() < tick_regst_num) {
+          LOG(FATAL) << " cclog: oh no! op: " << comp_task_node->op()->op_conf().DebugString()
+                     << " regst: " << pair.first << " num is: " << pair.second->max_register_num()
+                     << " which is less than " << tick_regst_num;
+        } else {
+          pair.second->UpdtMinRegstNumIfNeed(tick_regst_num);
+        }
       }
     }
   });
