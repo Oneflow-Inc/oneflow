@@ -29,6 +29,7 @@ def ShapeArrayAttr : TypedArrayAttrBase<AnyI64ElementsAttr,
 
 def OneFlow_IsOpConfCompatible : NativeOpTrait<"IsOpConfCompatible">;
 def OneFlow_IsImportCompatible : NativeOpTrait<"IsImportCompatible">;
+def OneFlow_AlternativeOp : NativeOpTrait<"IsAlternative">;
 
 class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, !listconcat(traits, [OneFlow_IsOpConfCompatible])> {
@@ -69,8 +70,6 @@ class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
     I32ElementsAttr:$result_segment_sizes
   );
 }
-
-def OneFlow_AlternativeOp : NativeOpTrait<"IsAlternative">;
 
 class OneFlow_UserBaseOp<string mnemonic, list<OpTrait> traits = [OneFlow_AlternativeOp]> :
         OneFlow_BaseOp<mnemonic, traits> {

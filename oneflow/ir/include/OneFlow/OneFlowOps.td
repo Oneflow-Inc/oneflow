@@ -177,9 +177,9 @@ def OneFlow_ReturnOp : Op<OneFlow_Dialect, "return", [NoSideEffect, HasParent<"J
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 
-  let printer = [{ return ::print(p, *this); }];
-  let verifier = [{ return ::verify(*this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
+  let printer = [{ return ::mlir::oneflow::print(p, *this); }];
+  let verifier = [{ return ::mlir::oneflow::verify(*this); }];
+  let parser = [{ return ::mlir::oneflow::parse$cppClass(parser, result); }];
 }
 
 #endif // ONEFLOW_OPS
