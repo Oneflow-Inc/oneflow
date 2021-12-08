@@ -47,7 +47,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
-  void AddCtrlEdgeBetweenSrcDstTickAndInputOutputInSameRank();
   void UpdateTickDataAndCtrlRegstNum();
   void MergeChainAndAddOrderingCtrlEdgeInSameChain();
 
