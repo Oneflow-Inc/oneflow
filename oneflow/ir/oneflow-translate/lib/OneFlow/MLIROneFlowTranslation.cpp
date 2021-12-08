@@ -63,6 +63,8 @@ limitations under the License.
 
 namespace mlir {
 
+namespace oneflow_foundation {
+
 using PbMessage = google::protobuf::Message;
 
 class JobImporter : Importer {
@@ -390,5 +392,7 @@ void registerFromOneFlowJobTranslation() {
                                                return TranslateOneFlowJobToModule(str, context);
                                              });
 }
+
+}  // namespace oneflow_foundation
 
 }  // namespace mlir

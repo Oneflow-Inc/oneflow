@@ -31,6 +31,8 @@ using UserOpArgDefs = const ::google::protobuf::RepeatedPtrField<::oneflow::User
 
 namespace mlir {
 
+namespace oneflow_foundation {
+
 // TODO: wrap in a helper namespace
 
 LogicalResult ConvertUserOpInputs(Operation* op, oneflow_foundation::UserOpAdaptor& user_op_adaptor,
@@ -139,6 +141,8 @@ void RoundTripOneFlowJob(
     RoundTripOneFlowJobWrapperInterface& job_wrapper,
     const std::function<bool(::oneflow::Job* job, std::string& reason)>& is_legit_job);
 void registerFromOneFlowJobTranslation();
+
+}  // namespace oneflow_foundation
 
 }  // namespace mlir
 

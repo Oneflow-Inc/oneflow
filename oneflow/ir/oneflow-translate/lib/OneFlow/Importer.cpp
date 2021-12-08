@@ -66,6 +66,8 @@ limitations under the License.
 
 namespace mlir {
 
+namespace oneflow_foundation {
+
 using PbMessage = google::protobuf::Message;
 
 namespace {
@@ -783,5 +785,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
   }
   return success();
 }
+
+}  // namespace oneflow_foundation
 
 }  // namespace mlir
