@@ -25,21 +25,23 @@ namespace data {
 template<typename LoadTarget>
 class BatchDataset final : public Dataset<LoadTarget> {
  public:
-  using LoadTargetPtr = std::shared_ptr<LoadTarget>;
-  using LoadTargetPtrList = std::vector<LoadTargetPtr>;
+  using Base = Dataset<LoadTarget>;
+  using SampleType = typename Base::SampleType;
+  using BatchType = typename Base::BatchType;
+
   BatchDataset(int32_t batch_size, std::unique_ptr<Dataset<LoadTarget>>&& data_set)
       : batch_size_(batch_size), loader_(std::move(data_set)) {}
   ~BatchDataset() = default;
 
-  LoadTargetPtrList Next() override {
-    LoadTargetPtrList ret;
-    ret.reserve(batch_size_);
-    for (int32_t i = 0; i < batch_size_; ++i) {
-      LoadTargetPtrList tmp = loader_->Next();
+  BatchType Next() override {
+    BatchType batch;
+    batch.reserve(batch_size_);
+    for (size_t i = 0; i < batch_size_; ++i) {
+      BatchType tmp = loader_->Next();
       CHECK_EQ(tmp.size(), 1);
-      ret.emplace_back(std::move(tmp.at(0)));
+      batch.push_back(std::move(tmp[0]));
     }
-    return ret;
+    return batch;
   }
 
  private:
