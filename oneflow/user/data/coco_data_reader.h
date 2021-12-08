@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/user/data/data_reader.h"
 #include "oneflow/user/data/coco_parser.h"
 #include "oneflow/core/common/str_util.h"
+
 #include <json.hpp>
 
 namespace oneflow {

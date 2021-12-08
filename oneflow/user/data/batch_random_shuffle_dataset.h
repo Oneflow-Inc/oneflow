@@ -26,8 +26,10 @@ namespace data {
 template<typename LoadTarget>
 class BatchRandomShuffleDataset final : public Dataset<LoadTarget> {
  public:
-  using LoadTargetPtr = std::shared_ptr<LoadTarget>;
-  using LoadTargetPtrList = std::vector<LoadTargetPtr>;
+  using Base = Dataset<LoadTarget>;
+  using SampleType = typename Base::SampleType;
+  using BatchType = typename Base::BatchType;
+
   BatchRandomShuffleDataset(user_op::KernelInitContext* ctx,
                             std::unique_ptr<Dataset<LoadTarget>>&& data_set)
       : loader_(std::move(data_set)) {
@@ -40,23 +42,23 @@ class BatchRandomShuffleDataset final : public Dataset<LoadTarget> {
     // fill buffer
     initial_buffer_fill_ = ctx->Attr<int32_t>("shuffle_buffer_size");
     for (int32_t i = 0; i < initial_buffer_fill_; ++i) {
-      LoadTargetPtrList batch = loader_->Next();
-      batch_buffer_.emplace_back(std::move(batch));
+      BatchType batch = loader_->Next();
+      batch_buffer_.push_back(std::move(batch));
     }
   }
   ~BatchRandomShuffleDataset() = default;
 
-  LoadTargetPtrList Next() override {
-    LoadTargetPtrList ret = loader_->Next();
+  BatchType Next() override {
+    BatchType batch = loader_->Next();
     std::uniform_int_distribution<> dis(0, batch_buffer_.size() - 1);
     const int offset = dis(rand_engine_);
-    std::swap(batch_buffer_.at(offset), ret);
-    return ret;
+    std::swap(batch_buffer_.at(offset), batch);
+    return batch;
   }
 
  private:
   std::unique_ptr<Dataset<LoadTarget>> loader_;
-  std::vector<LoadTargetPtrList> batch_buffer_;
+  std::vector<BatchType> batch_buffer_;
 
   int32_t initial_buffer_fill_;
 

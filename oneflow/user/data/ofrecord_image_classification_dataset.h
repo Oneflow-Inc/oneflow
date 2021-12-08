@@ -35,6 +35,7 @@ class OFRecordImageClassificationDataset final : public Dataset<ImageClassificat
   using SampleType = Base::SampleType;
   using BatchType = Base::BatchType;
   using NestedDS = Dataset<TensorBuffer>;
+  using NestedSampleType = NestedDS::SampleType;
 
   OF_DISALLOW_COPY_AND_MOVE(OFRecordImageClassificationDataset);
 
@@ -43,12 +44,13 @@ class OFRecordImageClassificationDataset final : public Dataset<ImageClassificat
   ~OFRecordImageClassificationDataset() override;
 
   BatchType Next() override {
-    BatchType batch;
-    SampleType sample;
     size_t thread_idx =
         out_thread_idx_.fetch_add(1, std::memory_order_relaxed) % decode_out_buffers_.size();
     CHECK_LT(thread_idx, decode_out_buffers_.size());
-    auto status = decode_out_buffers_[thread_idx].Pull(&sample);
+
+    BatchType batch;
+    SampleType sample;
+    auto status = decode_out_buffers_[thread_idx]->Pull(sample);
     CHECK_EQ(status, kBufferStatusSuccess);
     batch.push_back(std::move(sample));
     return batch;
@@ -58,8 +60,8 @@ class OFRecordImageClassificationDataset final : public Dataset<ImageClassificat
   std::unique_ptr<NestedDS> nested_ds_;
   std::thread load_thread_;
   std::vector<std::thread> decode_threads_;
-  std::vector<Buffer<SampleType>> decode_in_buffers_;
-  std::vector<Buffer<SampleType>> decode_out_buffers_;
+  std::vector<std::unique_ptr<Buffer<NestedSampleType>>> decode_in_buffers_;
+  std::vector<std::unique_ptr<Buffer<SampleType>>> decode_out_buffers_;
   std::atomic<size_t> out_thread_idx_;
 };
 

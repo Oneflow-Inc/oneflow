@@ -18,14 +18,6 @@ limitations under the License.
 #include "oneflow/user/image/image_util.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
-// #include "oneflow/core/thread/thread_pool.h"
-// #include "oneflow/core/common/buffer.h"
-// #include "oneflow/user/data/dataset.h"
-// #include "oneflow/core/common/balanced_splitter.h"
-// #include "oneflow/core/common/str_util.h"
-// #include "oneflow/core/framework/op_kernel.h"
-// #include "oneflow/core/persistence/persistent_in_stream.h"
-// #include "oneflow/core/job/job_set.pb.h"
 
 #include <opencv2/opencv.hpp>
 
@@ -83,17 +75,15 @@ void DecodeLabelFromFromOFRecord(const OFRecord& record, const std::string& feat
 }
 
 void LoadWorker(Dataset<TensorBuffer>* record_dataset,
-                std::vector<Buffer<TensorBuffer>>& decode_in_buffers) {
-  CHECK_GT(decode_in_buffers.size(), 0);
+                std::vector<std::unique_ptr<Buffer<TensorBuffer>>>* decode_in_buffers) {
   int64_t thread_idx = 0;
   bool shutdown = false;
   while (!shutdown) {
     auto records = record_dataset->Next();
     for (auto& record : records) {
-      auto& current_in_buffer = decode_in_buffers[thread_idx];
-      ++thread_idx;
-      if (thread_idx >= decode_in_buffers.size()) { thread_idx = 0; }
-      auto status = current_in_buffer.Push(std::move(record));
+      auto& current_in_buffer = decode_in_buffers->at(thread_idx++);
+      if (thread_idx >= decode_in_buffers->size()) { thread_idx = 0; }
+      auto status = current_in_buffer->Push(std::move(record));
       if (status == kBufferStatusErrorClosed) {
         shutdown = true;
         break;
@@ -104,11 +94,11 @@ void LoadWorker(Dataset<TensorBuffer>* record_dataset,
 }
 
 void DecodeWorker(const std::string image_feature_name, const std::string label_feature_name,
-                  const std::string color_space, Buffer<TensorBuffer>& in_buffer,
-                  Buffer<ImageClassificationDataInstance>& out_buffer) {
+                  const std::string color_space, Buffer<TensorBuffer>* in_buffer,
+                  Buffer<ImageClassificationDataInstance>* out_buffer) {
   while (true) {
     TensorBuffer serialized_record;
-    auto receive_status = in_buffer.Pull(serialized_record);
+    auto receive_status = in_buffer->Pull(serialized_record);
     if (receive_status == kBufferStatusErrorClosed) { break; }
     CHECK(receive_status == kBufferStatusSuccess);
     OFRecord record;
@@ -117,7 +107,7 @@ void DecodeWorker(const std::string image_feature_name, const std::string label_
     ImageClassificationDataInstance instance;
     DecodeImageFromOFRecord(record, image_feature_name, color_space, &instance.image);
     DecodeLabelFromFromOFRecord(record, label_feature_name, &instance.label);
-    auto send_status = out_buffer.Push(std::move(instance));
+    auto send_status = out_buffer->Push(std::move(instance));
     if (send_status == kBufferStatusErrorClosed) { break; }
     CHECK(send_status == kBufferStatusSuccess);
   }
@@ -143,24 +133,26 @@ OFRecordImageClassificationDataset::OFRecordImageClassificationDataset(
   const std::string& color_space = ctx->Attr<std::string>("color_space");
   const std::string& image_feature_name = ctx->Attr<std::string>("image_feature_name");
   const std::string& label_feature_name = ctx->Attr<std::string>("label_feature_name");
-  const auto num_decode_threads_per_machine = ctx->Attr<int32_t>("num_decode_threads_per_machine");
-  const auto decode_buffer_size_per_thread = ctx->Attr<int32_t>("decode_buffer_size_per_thread");
-  const int32_t num_local_decode_threads = GetNumLocalDecodeThreads(
+  auto num_decode_threads_per_machine = ctx->Attr<int32_t>("num_decode_threads_per_machine");
+  auto decode_buffer_size_per_thread = ctx->Attr<int32_t>("decode_buffer_size_per_thread");
+  auto num_local_decode_threads = GetNumLocalDecodeThreads(
       num_decode_threads_per_machine, ctx->parallel_desc(), ctx->parallel_ctx());
   decode_in_buffers_.reserve(num_local_decode_threads);
   decode_out_buffers_.reserve(num_local_decode_threads);
   for (int64_t i = 0; i < num_local_decode_threads; ++i) {
-    decode_in_buffers_.emplace_back(decode_buffer_size_per_thread);
-    decode_out_buffers_.emplace_back(decode_buffer_size_per_thread);
-    decode_threads_.emplace_back(&DecodeWorker, image_feature_name, label_feature_name, color_space,
-                                 decode_in_buffers_.back(), decode_out_buffers_.back());
+    decode_in_buffers_.emplace_back(
+        std::make_unique<Buffer<NestedSampleType>>(decode_buffer_size_per_thread));
+    decode_out_buffers_.emplace_back(
+        std::make_unique<Buffer<SampleType>>(decode_buffer_size_per_thread));
+    decode_threads_.emplace_back(DecodeWorker, image_feature_name, label_feature_name, color_space,
+                                 decode_in_buffers_.back().get(), decode_out_buffers_.back().get());
   }
-  load_thread_ = std::thread(&LoadWorker, nested_ds_.get(), decode_in_buffers_);
+  load_thread_ = std::thread(LoadWorker, nested_ds_.get(), &decode_in_buffers_);
 }
 
 OFRecordImageClassificationDataset::~OFRecordImageClassificationDataset() {
-  for (auto& out_buffer : decode_out_buffers_) { out_buffer.Close(); }
-  for (auto& in_buffer : decode_in_buffers_) { in_buffer.Close(); }
+  for (auto& out_buffer : decode_out_buffers_) { out_buffer->Close(); }
+  for (auto& in_buffer : decode_in_buffers_) { in_buffer->Close(); }
   load_thread_.join();
   for (auto& decode_thread : decode_threads_) { decode_thread.join(); }
 }

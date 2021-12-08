@@ -25,13 +25,13 @@ namespace data {
 template<typename LoadTarget>
 class Parser {
  public:
-  using LoadTargetPtr = std::shared_ptr<LoadTarget>;
-  using LoadTargetPtrList = std::vector<LoadTargetPtr>;
+  using SampleType = LoadTarget;
+  using BatchType = std::vector<SampleType>;
+
   Parser() = default;
   virtual ~Parser() = default;
 
-  virtual void Parse(std::shared_ptr<LoadTargetPtrList> batch_data,
-                     user_op::KernelComputeContext* ctx) = 0;
+  virtual void Parse(BatchType& batch_data, user_op::KernelComputeContext* ctx) = 0;
 };
 
 }  // namespace data

@@ -27,24 +27,25 @@ namespace data {
 
 class OneRecParser final : public Parser<TensorBuffer> {
  public:
-  using LoadTargetPtr = std::shared_ptr<TensorBuffer>;
-  using LoadTargetPtrList = std::vector<LoadTargetPtr>;
+  using Base = Parser<TensorBuffer>;
+  using SampleType = typename Base::SampleType;
+  using BatchType = typename Base::BatchType;
+
   OneRecParser() = default;
   ~OneRecParser() = default;
 
-  void Parse(std::shared_ptr<LoadTargetPtrList> batch_data,
-             user_op::KernelComputeContext* ctx) override {
+  void Parse(BatchType& batch_data, user_op::KernelComputeContext* ctx) override {
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const bool verify_example = ctx->Attr<bool>("verify_example");
-    FOR_RANGE(int32_t, i, 0, batch_data->size()) {
-      TensorBuffer* tensor = batch_data->at(i).get();
+    FOR_RANGE(size_t, i, 0, batch_data.size()) {
+      auto& sample = batch_data[i];
       if (verify_example) {
-        flatbuffers::Verifier verifier(reinterpret_cast<const uint8_t*>(tensor->data()),
-                                       static_cast<size_t>(tensor->elem_cnt()));
+        flatbuffers::Verifier verifier(reinterpret_cast<const uint8_t*>(sample.data()),
+                                       static_cast<size_t>(sample.elem_cnt()));
         CHECK(onerec::example::VerifyExampleBuffer(verifier));
       }
       TensorBuffer* out = out_tensor->mut_dptr<TensorBuffer>() + i;
-      out->Swap(tensor);
+      out->Swap(sample);
     }
   }
 };

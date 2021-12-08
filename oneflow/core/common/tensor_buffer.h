@@ -60,7 +60,7 @@ class TensorBuffer final {
   void Resize(const Shape& shape, DataType dtype) { Reset(shape, dtype); }
 
   void CopyFrom(const TensorBuffer& src);
-  void Swap(TensorBuffer* lhs);
+  void Swap(TensorBuffer& other);
 
   template<typename T = void>
   T* mut_data() {
@@ -117,8 +117,8 @@ class TensorBufferPool final {
   ~TensorBufferPool();
   OF_DISALLOW_COPY_AND_MOVE(TensorBufferPool);
 
-  void Allocate(TensorBuffer* tensor_buffer, const Shape& shape, DataType dtype);
-  void Deallocate(TensorBuffer* tensor_buffer);
+  void Allocate(TensorBuffer& tensor_buffer, const Shape& shape, DataType dtype);
+  void Deallocate(TensorBuffer& tensor_buffer);
 
  private:
   static std::unique_ptr<TensorBufferPool>& Ptr() {
