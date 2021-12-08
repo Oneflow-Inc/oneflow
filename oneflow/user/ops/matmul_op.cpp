@@ -257,27 +257,45 @@ REGISTER_USER_OP("broadcast_matmul")
       const user_op::TensorDesc& b = ctx->InputTensorDesc("b", 0);
       user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
 
-      // NOTE: support broadcast b to a for now
-      // TODO(zwx): support broadcast a to b
-      
-      // CHECK_GT_OR_RETURN(a.shape().NumAxes(), b.shape().NumAxes());
-      // CHECK_EQ_OR_RETURN(b.shape().NumAxes(), 2);
-      
-      // NOTE: don't support transpose_a for now
-      CHECK_OR_RETURN(!transpose_a);
+      const int64_t num_a_dims = a.shape().NumAxes(); 
+      const int64_t num_b_dims = b.shape().NumAxes(); 
+      const size_t num_max_batch_dims = std::max(num_a_dims, num_b_dims) - 2;
+      auto MakeGetBatchDim = [num_max_batch_dims](size_t num_dims, const Shape& shape_dim) {
+        const int64_t num_batch_dims = num_dims - 2;
+        const int64_t num_padding_dims = num_max_batch_dims - num_batch_dims;
+        return [num_padding_dims, shape_dim](size_t index) {
+          return index < num_padding_dims ? 1 : shape_dim.At(index - num_padding_dims);
+        };
+      };
+      auto GetABatchDim = MakeGetBatchDim(num_a_dims, a.shape());
+      auto GetBBatchDim = MakeGetBatchDim(num_b_dims, b.shape());
 
-      DimVector out_dim_vec(a.shape().NumAxes() - 1);
-      FOR_RANGE(int64_t, i, 0, out_dim_vec.size()) { out_dim_vec[i] = a.shape().At(i); }
-      int64_t k = a.shape().At(a.shape().NumAxes() - 1);
-      int64_t n = -1;
-      if (!transpose_b) {
-        CHECK_EQ_OR_RETURN(k, b.shape().At(b.shape().NumAxes() - 2));
-        n = b.shape().At(b.shape().NumAxes() - 1);
-      } else {
-        CHECK_EQ_OR_RETURN(k, b.shape().At(b.shape().NumAxes() - 1));
-        n = b.shape().At(b.shape().NumAxes() - 2);
+      DimVector out_dim_vec(std::max(num_a_dims, num_b_dims));
+      FOR_RANGE(int64_t, i, 0, out_dim_vec.size() - 2) {
+        // Set broadcast shape
+        //                       m  k          k  n
+        // For example: A(16, 1, 4, 8) B(1, 8, 8, 6)
+        // We First set the previous batch dims to broadcasted shape: C(16, 8)
+        // Then we emplace back m, n -> C(16, 8, 4, 6)
+        out_dim_vec[i] = std::max(GetABatchDim(i), GetBBatchDim(i));
       }
-      out_dim_vec.emplace_back(n);
+      int64_t m, n, k = 0;  // tensor a (no trans): batch_dims*m*k, tensor b (no trans): batch_dims*k*n
+      if (!transpose_a) {
+        m = a.shape().At(num_a_dims - 2);
+        k = a.shape().At(num_a_dims - 1);
+      } else {
+        m = a.shape().At(num_a_dims - 1);
+        k = a.shape().At(num_a_dims - 2);
+      }
+      if (!transpose_b) {
+        CHECK_EQ_OR_RETURN(k, b.shape().At(num_b_dims - 2));
+        n = b.shape().At(num_b_dims - 1);
+      } else {
+        CHECK_EQ_OR_RETURN(k, b.shape().At(num_b_dims - 1));
+        n = b.shape().At(num_b_dims - 2);
+      }
+      out_dim_vec.at(num_max_batch_dims) = m;
+      out_dim_vec.at(num_max_batch_dims+1) = n;
       *out->mut_shape() = Shape(out_dim_vec);
 
       if (ctx->has_input("_add_to_output", 0)) {
