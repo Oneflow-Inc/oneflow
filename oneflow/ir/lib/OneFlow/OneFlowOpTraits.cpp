@@ -16,7 +16,6 @@ bool HaveIdenticalPlacement(mlir::Operation* a, mlir::Operation* b) {
 
 }  // namespace
 
-using namespace OpTrait;
 OpFoldResult OpTrait::impl::foldIdempotentOfIdenticalPlacement(Operation* op) {
   auto* argument_op = op->getOperand(0).getDefiningOp();
   if (argument_op && op->getName() == argument_op->getName()
