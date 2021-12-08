@@ -32,7 +32,7 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("OneRecReader")
       int32_t local_batch_size = ctx->Attr<int32_t>("batch_size");
       const cfg::SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
       int64_t parallel_num = ctx->parallel_ctx().parallel_num();
-      CHECK_OR_RETURN(sbp.has_split_parallel());
+      CHECK_OR_RETURN(parallel_num == 1 || sbp.has_split_parallel());
       CHECK_EQ_OR_RETURN(local_batch_size % parallel_num, 0);
       local_batch_size /= parallel_num;
       *out_tensor->mut_shape() = Shape({local_batch_size});
@@ -54,3 +54,4 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("OneRecReader")
     });
 
 }  // namespace oneflow
+
