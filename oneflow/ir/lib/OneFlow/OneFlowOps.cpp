@@ -27,8 +27,9 @@ limitations under the License.
 #include "mlir/Support/LogicalResult.h"
 #include "oneflow/ir/include/OneFlow/OneFlowSupport.h"
 
-using namespace mlir;
-using namespace mlir::oneflow;
+namespace mlir {
+
+namespace oneflow {
 
 ::mlir::OperandRange UserOp::dataInputOperands() { return data_input(); }
 ::mlir::OperandRange UserOp::ctrlInputOperands() { return ctrl_inputs(); }
@@ -50,6 +51,8 @@ static mlir::ParseResult parseConstantOp(mlir::OpAsmParser& parser, mlir::Operat
 }
 
 static mlir::LogicalResult verify(oneflow::ConstantOp op) { return mlir::success(); }
+
+namespace {
 
 template<typename OpType>
 LogicalResult TrimRedundantCtrl(OpType& op, PatternRewriter& rewriter) {
@@ -82,74 +85,7 @@ bool IsCtrlInAbsent(oneflow::UserOp& op) {
   return op.ctrl_inputs().empty();
 }
 
-StringSet<>* GetPrintedOpTypeNames() {
-  static llvm::StringSet<> names({});
-  return &names;
-}
-
-const StringSet<>& GetUnaryOpTypeNames() {
-  static llvm::StringSet<> names({"abs", "acos", "ceil", "cosh", "floor", "lgamma", "log_sigmoid",
-                                  "reciprocal_no_nan", "rint", "round", "softplus"
-
-  });
-  return names;
-}
-
-const StringSet<>& GetScalarMathOpTypeNames() {
-  static llvm::StringSet<> names(
-      {"scalar_add", "scalar_floordiv", "scalar_fmod", "scalar_mul", "scalar_pow"
-
-      });
-  return names;
-}
-
-const StringSet<>& GetDataOpsTypeNames() {
-  static llvm::StringSet<> names({"OFRecordReader", "ofrecord_raw_decoder"
-
-  });
-  return names;
-}
-
-const StringSet<>& GetLossOpsTypeNames() {
-  static llvm::StringSet<> names(
-      {"sparse_softmax_cross_entropy", "sparse_softmax_cross_entropy_grad"
-
-      });
-  return names;
-}
-
-const StringSet<>& GetReduceOpTypeNames() {
-  static llvm::StringSet<> names({"reduce_min", "reduce_prod", "reduce_sum", "reduce_max"
-
-  });
-  return names;
-}
-
-const StringSet<>& GetConvOpTypeNames() {
-  static llvm::StringSet<> names(
-      {"conv1d", "conv2d", "conv3d", "conv_filter_grad", "conv_data_grad"});
-  return names;
-}
-
-const StringSet<>& GetPoolOpTypeNames() {
-  static llvm::StringSet<> names({"avgpool_1d", "avgpool_2d", "avgpool_3d", "tf_avg_pool_1d",
-                                  "tf_avg_pool_2d", "tf_avg_pool_3d", "tf_max_pool_1d",
-                                  "tf_max_pool_2d", "tf_max_pool_3d", "tf_max_pool_1d_grad",
-                                  "max_pool_2d_grad", "max_pool_3d_grad", "tf_avg_pool_1d_grad",
-                                  "tf_avg_pool_2d_grad", "tf_avg_pool_3d_grad", "avgpool_1d_grad",
-                                  "avgpool_2d_grad", "avgpool_3d_grad"
-
-  });
-  return names;
-}
-
-const StringSet<>& GetFloatUnaryOpTypeNames() {
-  static llvm::StringSet<> names({"acosh", "asin",     "asinh",      "atan",  "atanh",      "sin",
-                                  "cos",   "erf",      "erfc",       "exp",   "expm1",      "log",
-                                  "log1p", "negative", "reciprocal", "rsqrt", "sigmoid_v2", "sign",
-                                  "sinh",  "sqrt",     "square",     "tan",   "tanh"});
-  return names;
-}
+}  // namespace
 
 template<typename T>
 static void getValuesFromIntArrayAttribute(ArrayAttr attr, SmallVector<T>& arrayValues) {
@@ -187,7 +123,8 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
             mlir::OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr(),
             rewriter.getI32VectorAttr(output_sizes)));
       }
-      OperationState state(op->getLoc(), "oneflow." + op.op_type_name().str());
+      OperationState state(op->getLoc(), OneFlowDialect::getDialectNamespace().str() + "."
+                                             + op.op_type_name().str());
       state.addAttributes(attributes);
       state.addOperands(op.getODSOperands(0) /* data in */);
       state.addTypes(op.getODSResults(0 /* data out */).getTypes());
@@ -262,68 +199,6 @@ void AddNOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
   results.insert<ConvertAddOpWithArity>(context);
 }
 
-// TODO: merge all ctrl input and output when folding op
-bool HaveIdenticalPlacement(mlir::Operation* a, mlir::Operation* b) {
-  UserOpAdaptor adaptor_a(a->getOperands(), a->getAttrDictionary());
-  UserOpAdaptor adaptor_b(b->getOperands(), b->getAttrDictionary());
-  return adaptor_a.device_tag() == adaptor_b.device_tag()
-         && adaptor_a.device_name() == adaptor_b.device_name();
-}
-
-using namespace OpTrait;
-OpFoldResult OpTrait::impl::foldIdempotentOfIdenticalPlacement(Operation* op) {
-  auto* argument_op = op->getOperand(0).getDefiningOp();
-  if (argument_op && op->getName() == argument_op->getName()
-      && HaveIdenticalPlacement(op, argument_op)) {
-    return op->getOperand(0);
-  }
-  return {};
-}
-
-OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
-  auto* argument_op = op->getOperand(0).getDefiningOp();
-  if (argument_op && op->getName() == argument_op->getName()
-      && HaveIdenticalPlacement(op, argument_op)) {
-    return argument_op->getOperand(0);
-  }
-  return {};
-}
-
-LogicalResult OpTrait::impl::VerifyIsOpConfCompatible(Operation* op) {
-  for (auto attr : {
-           IsOpConfCompatible<void>::getOpNameAttr(),
-           IsOpConfCompatible<void>::getDeviceTagAttr(),
-       }) {
-    if (!op->hasAttrOfType<StringAttr>(attr)) {
-      return op->emitError("expected operation to have attribute: " + attr);
-    }
-  }
-  if (!op->hasAttrOfType<ArrayAttr>(IsOpConfCompatible<void>::getDeviceNameAttr())) {
-    return op->emitError("expected operation to have attribute: "
-                         + IsOpConfCompatible<void>::getDeviceNameAttr());
-  }
-  return success();
-}
-
-LogicalResult OpTrait::impl::VerifyIsImportCompatible(Operation* op) {
-  if (auto output_lbns =
-          op->getAttrOfType<ArrayAttr>(IsImportCompatible<void>::getOutputLBNsAttr())) {
-    if (auto cec = dyn_cast<ControlEdgeCompatible>(op)) {
-      if (cec.dataOutputResults().size() != output_lbns.size()) {
-        return op->emitError("expected number of data output results to be "
-                             + std::to_string(output_lbns.size()) + " but got "
-                             + std::to_string(cec.dataOutputResults().size()));
-      }
-    } else {
-      return op->emitError("expected to support ControlEdgeCompatible");
-    }
-  } else {
-    return op->emitError("expected operation to have attribute: "
-                         + IsImportCompatible<void>::getOutputLBNsAttr());
-  }
-  return success();
-}
-
 void NormalizationAddReluOp::build(::mlir::OpBuilder& odsBuilder, ::mlir::OperationState& odsState,
                                    Value x, Value addend, Value moving_mean, Value moving_variance,
                                    Value gamma, Value beta, StringRef op_name, StringRef device_tag,
@@ -364,6 +239,10 @@ void NormalizationAddReluOp::build(::mlir::OpBuilder& odsBuilder, ::mlir::Operat
 }
 
 std::string Add2Op::getOriginalOpTypeName() { return "add_n"; }
+
+}  // namespace oneflow
+
+}  // namespace mlir
 
 #include "OneFlow/OneFlowEnums.cpp.inc"
 
