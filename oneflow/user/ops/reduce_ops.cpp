@@ -40,6 +40,11 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InferLogicalDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("output_tensor", 0) = DataType::kBool;
+  return Maybe<void>::Ok();
+}
+
 template<template<typename> class binary_func>
 void GeneratePartialSbp(user_op::SbpContext* ctx, int64_t axis) {
   // TODO(lixinqi)
@@ -88,8 +93,18 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
       .SetGetSbpFn(GetSbpFn<binary_func>)             \
       .SetDataTypeInferFn(InferDataType);
 
-REGISTER_REDUCE_USER_OP("reduce_any", BinaryFuncAny)
-REGISTER_REDUCE_USER_OP("reduce_all", BinaryFuncAll)
+#define REGISTER_REDUCE_LOGICAL_USER_OP(op_name, binary_func) \
+  REGISTER_USER_OP(op_name)                                   \
+      .Input("input_tensor")                                  \
+      .Output("output_tensor")                                \
+      .Attr<std::vector<int32_t>>("axis")                     \
+      .Attr<bool>("keepdims")                                 \
+      .SetTensorDescInferFn(InferTensorDescFn)                \
+      .SetGetSbpFn(GetSbpFn<binary_func>)                     \
+      .SetDataTypeInferFn(InferLogicalDataType);
+
+REGISTER_REDUCE_LOGICAL_USER_OP("reduce_any", BinaryFuncAny)
+REGISTER_REDUCE_LOGICAL_USER_OP("reduce_all", BinaryFuncAll)
 REGISTER_REDUCE_USER_OP("reduce_min", BinaryFuncMin)
 REGISTER_REDUCE_USER_OP("reduce_prod", BinaryFuncProd)
 REGISTER_REDUCE_USER_OP("reduce_sum", BinaryFuncSum)
