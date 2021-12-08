@@ -252,6 +252,19 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
   CHECK_OR_RETURN(input_tensor->is_eager());
 
+  // Check outputs num and setup output tensor properties.
+  CHECK_EQ_OR_RETURN(outputs->size(), 1);
+  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
+  CHECK_OR_RETURN(!(*outputs)[0]);
+
+  const std::string& opt_lbn = TensorNameScope::Global()->Lookup(input_tensor);
+  if (!opt_lbn.empty()) {
+    // NOTE(chengcheng): This eager tensor has been feed as variable op before, so we just use the
+    //  lbn, and will NOT create duplicate variable op again.
+    (*outputs)[0] = input_tensor;
+    return Maybe<void>::Ok();
+  }
+
   std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
 
   OperatorConf op_conf;
@@ -287,11 +300,6 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(op_conf));
   auto blob_parallel_desc = JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(parallel_desc_sym_id));
-
-  // Check outputs num and setup output tensor properties.
-  CHECK_EQ_OR_RETURN(outputs->size(), 1);
-  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
-  CHECK_OR_RETURN(!(*outputs)[0]);
 
   const std::string obn = "out";  // NOTE(chengcheng): obn is NOT op_expr.indexed_obns
   (*outputs)[0] = JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true,

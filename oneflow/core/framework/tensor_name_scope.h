@@ -31,6 +31,9 @@ class TensorNameScope {
 
   void Record(const std::shared_ptr<Tensor>& tensor, const std::string& name);
 
+  // NOTE(chengcheng): TensorNameScope need to be cleared after current graph build.
+  void Clear();
+
  private:
   TensorNameScope() : default_tensor_name_("") {}
   virtual ~TensorNameScope() = default;
