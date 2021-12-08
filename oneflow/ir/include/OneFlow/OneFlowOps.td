@@ -48,6 +48,7 @@ def OneFlow_NormalizationAddReluOp : OneFlow_NormalizationAddReluBaseOp {
       "FloatAttr":$momentum
     )>
   ];
+  let hasCanonicalizer = 1;
 }
 
 def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>]> {

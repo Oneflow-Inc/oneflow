@@ -262,6 +262,34 @@ void AddNOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
   results.insert<ConvertAddOpWithArity>(context);
 }
 
+struct ConvertNormalizationAddReluOp
+    : public mlir::OpRewritePattern<oneflow::CudnnFusedNormalizationAddReluOp> {
+  explicit ConvertNormalizationAddReluOp(mlir::MLIRContext* context)
+      : OpRewritePattern<oneflow::CudnnFusedNormalizationAddReluOp>(context, /*benefit=*/1) {}
+  mlir::LogicalResult matchAndRewrite(oneflow::CudnnFusedNormalizationAddReluOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    // if op's device is gpu, rewrtire it
+    NamedAttrList attributes = op->getAttrs();
+    attributes.push_back(
+        rewriter.getNamedAttr(OpTrait::IsAlternative<void>::getOpTypeNameAttr(),
+                              rewriter.getStringAttr("cudnn_fused_normalization_add_relu")));
+    if (auto created_op = rewriter.replaceOpWithNewOp<NormalizationAddReluOp>(
+            op, op->getResultTypes(), op.getOperands(), attributes)) {
+      return success();
+    } else {
+      op->emitError("Fail to convert add op with arity: ");
+      op->dump();
+      return failure();
+    }
+    return failure();
+  }
+};
+
+void NormalizationAddReluOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
+                                                         ::mlir::MLIRContext* context) {
+  results.insert<ConvertNormalizationAddReluOp>(context);
+}
+
 // TODO: merge all ctrl input and output when folding op
 bool HaveIdenticalPlacement(mlir::Operation* a, mlir::Operation* b) {
   UserOpAdaptor adaptor_a(a->getOperands(), a->getAttrDictionary());
