@@ -14,12 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 # RUN: python3 %s
+import os
 import unittest
 import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
 
+os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = '1'
+os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = '1'
 
 @flow.unittest.skip_unless_1n1d()
 class TestFuseCastMuldMLIR(oneflow.unittest.TestCase):

@@ -216,7 +216,6 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedBiasAddGeluPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern2>(patterns.getContext());
-  patterns.add<MulCastPattern>(patterns.getContext());
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
 }
 
