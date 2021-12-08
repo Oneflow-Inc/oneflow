@@ -313,15 +313,29 @@ REGISTER_USER_OP("broadcast_matmul")
       CHECK_OR_RETURN(!transpose_a);
 
       const auto& a_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0).shape();
-      int32_t k_a_axis = a_shape.NumAxes() - 1;
+      const auto& b_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("b", 0).shape();
+      
+      const int64_t a_num_axes = a_shape.NumAxes(); 
+      const int64_t b_num_axes = b_shape.NumAxes(); 
+
+      int32_t m_a_axis =  - 1;
+      int32_t k_a_axis = a_num_axes - 1;
       int32_t k_b_axis = -1;
       int32_t n_axis = -1;
-      if (transpose_b) {
-        k_b_axis = 1;
-        n_axis = 0;
+
+      if (transpose_a) {
+        m_a_axis = a_num_axes - 1; 
+        k_a_axis = a_num_axes - 2;
       } else {
-        k_b_axis = 0;
-        n_axis = 1;
+        m_a_axis = a_num_axes - 2; 
+        k_a_axis = a_num_axes - 1;
+      }
+      if (transpose_b) {
+        k_b_axis = b_num_axes - 1;
+        n_axis = b_num_axes - 2;
+      } else {
+        k_b_axis = b_num_axes - 2;
+        n_axis = b_num_axes - 1;
       }
 
       std::vector<user_op::OpArg> out_and_add_to_output_args;
@@ -330,32 +344,72 @@ REGISTER_USER_OP("broadcast_matmul")
         out_and_add_to_output_args.emplace_back("_add_to_output", 0);
       }
 
-      // S(b or m axis) x B -> S(b or m axis)
-      for (int64_t i = 0; i < a_shape.NumAxes() - 1; ++i) {
-        ctx->NewBuilder()
+      const int64_t max_num_axes = std::max(a_num_axes, b_num_axes); 
+      if(a_num_axes > b_num_axes){
+        // S(b axis) x B -> S(b axis)
+        for (int64_t i = 0; i < a_num_axes - 2; ++i) {
+          ctx->NewBuilder()
             .Split(user_op::OpArg("a", 0), i)
             .Broadcast(user_op::OpArg("b", 0))
             .Split(out_and_add_to_output_args, i)
             .Build();
+        }
+      } else if (a_num_axes < b_num_axes){
+        // B x S(b axis) -> S(b axis)
+        for (int64_t i = 0; i < b_num_axes - 2; ++i) {
+          ctx->NewBuilder()
+            .Broadcast(user_op::OpArg("a", 0))
+            .Split(user_op::OpArg("b", 0), i)
+            .Split(out_and_add_to_output_args, i)
+            .Build();
+        }
+      } else{
+        for (int64_t i = 0; i < max_num_axes - 2; ++i) {
+          if(a_shape.At(i) == 1){
+            ctx->NewBuilder()
+                .Broadcast(user_op::OpArg("a", 0))
+                .Split(user_op::OpArg("b", 0), i)
+                .Split(out_and_add_to_output_args, i)
+                .Build();
+          }
+          if(b_shape.At(i) == 1){
+            ctx->NewBuilder()
+                .Split(user_op::OpArg("a", 0), i)
+                .Broadcast(user_op::OpArg("b", 0))
+                .Split(out_and_add_to_output_args, i)
+                .Build();
+          }
+        }
       }
+
+      // S(m axis) x B -> S(m axis)
+      ctx->NewBuilder()
+        .Split(user_op::OpArg("a", 0), m_a_axis)
+        .Broadcast(user_op::OpArg("a", 0))
+        .Split(out_and_add_to_output_args, max_num_axes - 2)
+        .Build();
+
       // B x S(n_axis) -> S(n_axis)
       ctx->NewBuilder()
-          .Broadcast(user_op::OpArg("a", 0))
-          .Split(user_op::OpArg("b", 0), n_axis)
-          .Split(out_and_add_to_output_args, a_shape.NumAxes() - 1)
-          .Build();
+        .Broadcast(user_op::OpArg("a", 0))
+        .Split(user_op::OpArg("b", 0), n_axis)
+        .Split(out_and_add_to_output_args, max_num_axes - 1)
+        .Build();
+
       // S(a_k_axis) x S(b_k_axis) -> P
       ctx->NewBuilder()
           .Split(user_op::OpArg("a", 0), k_a_axis)
           .Split(user_op::OpArg("b", 0), k_b_axis)
           .PartialSum(out_and_add_to_output_args)
           .Build();
+
       // P x B -> P
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("a", 0))
           .Broadcast(user_op::OpArg("b", 0))
           .PartialSum(out_and_add_to_output_args)
           .Build();
+
       // B x P -> P
       ctx->NewBuilder()
           .Broadcast(user_op::OpArg("a", 0))
