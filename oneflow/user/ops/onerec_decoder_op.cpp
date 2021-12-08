@@ -56,11 +56,16 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("onerec_decoder")
     })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
                              const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
-      user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("out", 0);
-      CHECK_OR_RETURN(out_modifier != nullptr);
-      // NOTE(yaochi): refer to OFRecordReader
-      // In order to support consistent tensor, infered shape before computing is required
-      // out_modifier->set_header_infered_before_compute(false);
+      // NOTE(yaochi): refer to tensor_buffer_to_list_of_tensors
+      // In order to support consistent tensor, set set_header_infered_before_compute to false
+      // only when is_dynamic == true
+      if (conf.attr<bool>("is_dynamic")) {
+        FOR_RANGE(int64_t, i, 0, conf.output_size("out")) {
+          user_op::OutputArgModifier* out_i_modifier = GetOutputArgModifierFn("out", i);
+          CHECK_OR_RETURN(out_i_modifier != nullptr);
+          out_i_modifier->set_header_infered_before_compute(false);
+        }
+      }
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
