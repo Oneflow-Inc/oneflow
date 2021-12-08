@@ -53,7 +53,7 @@ bool IsLastIRPassForIRPassType<kAfterAD>() {
 }
 
 template<IRPassType ir_pass_type>
-class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterface {
+class RoundTripOneFlowJobWrapper : public mlir::oneflow::RoundTripOneFlowJobWrapperInterface {
  public:
   RoundTripOneFlowJobWrapper(::oneflow::Job* job)
       : job_(job), op_graph_(*job), job_builder_(job), is_updated_(false) {}
@@ -71,7 +71,7 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
     TeePersistentLogStream::Create(JoinPath(LogDir(), filename))->Write(content);
   }
 
-  const oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) const {
+  const ::oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) const {
     return job_builder_.ParallelConf4OpName(op_name);
   }
   const ::oneflow::OperatorConf& OpConf4OpName(const std::string& op_name) const {
@@ -160,7 +160,7 @@ Maybe<void> IRRoundTrip<ir_pass_type>::Apply(Job* job, JobPassCtx* ctx) const {
   RoundTripOneFlowJobWrapper<ir_pass_type> w(job);
   TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_before_ir_round_trip.prototxt"))
       ->Write(*job);
-  mlir::RoundTripOneFlowJob(w, [](::oneflow::Job* job, std::string& reason) {
+  mlir::oneflow::RoundTripOneFlowJob(w, [](::oneflow::Job* job, std::string& reason) {
     // TODO: It is not clear how to define if extra boxing is introduced
     TODO();
     return true;

@@ -17,6 +17,7 @@ endforeach()
 add_mlir_dialect_library(MLIROneFlow
   OneFlowDialect.cpp
   OneFlowOps.cpp
+  OneFlowOpTraits.cpp
   OneFlowSupport.cpp
   Conversion/OneFlowToTosa.cpp
   Conversion/SCFToGPU.cpp
