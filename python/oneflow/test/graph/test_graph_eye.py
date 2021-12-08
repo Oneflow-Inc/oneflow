@@ -26,9 +26,10 @@ class TestEyeGraph(oneflow.unittest.TestCase):
     def test_eye_graph(test_case):
         n = random.randint(1, 10)
         m = random.randint(1, 10)
-        y_eager = flow.eye(n, m)
 
-        eye_graph = generate_graph(lambda: flow.eye(n, m))
+        eye_fn = lambda: flow.eye(n, m)
+        y_eager = eye_fn()
+        eye_graph = generate_graph(eye_fn)
         y_lazy = eye_graph()
         test_case.assertTrue(np.array_equal(y_eager.numpy(), y_lazy.numpy()))
 
