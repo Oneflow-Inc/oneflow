@@ -21,6 +21,7 @@ limitations under the License.
 #include <string>
 #include <vector>
 #include "oneflow/api/cpp/framework/device.h"
+#include "oneflow/api/cpp/framework/shape.h"
 #include "oneflow/api/cpp/framework/tensor.h"
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/framework/tensor.h"
@@ -41,18 +42,18 @@ class Graph final {
   explicit Graph(const std::string& model_path, const Device& device);
   explicit Graph(const std::string& model_path);
   std::vector<Tensor> Forward(const std::vector<Tensor>& inputs);
-  void SetBatchSize(int batch_size);
+  void set_batch_size(int batch_size);
 
   // not must, better if provided
   // void To(const Device& device);
 
  private:
-  void Compile(const std::vector<Tensor>& inputs);
-  std::vector<Tensor> Run(const std::vector<Tensor>& inputs);
-  void AddOp(oneflow::OperatorConf op_conf);
-  void BuildGraph(const std::vector<Tensor>& inputs);
-  void LoadCheckpoint();
-  void RegisterTensors();
+  oneflow::Maybe<void> Compile(const std::vector<Tensor>& inputs);
+  oneflow::Maybe<std::vector<Tensor>> Run(const std::vector<Tensor>& inputs) const;
+  oneflow::Maybe<void> AddOp(oneflow::OperatorConf op_conf);
+  oneflow::Maybe<void> BuildGraph(const std::vector<Tensor>& inputs);
+  oneflow::Maybe<void> LoadCheckpoint();
+  oneflow::Maybe<void> RegisterTensors();
 
   std::shared_ptr<oneflow::NNGraph> graph_ = nullptr;
   bool is_compiled_ = false;
@@ -70,6 +71,18 @@ class Graph final {
 Graph Load(const std::string& model_path, const Device& device);
 
 Graph Load(const std::string& model_path);
+
+// TODO(zzk0): only for debug, remove this
+inline void PrintTensor(const Tensor& tensor) {
+  std::cout << tensor.shape().elem_cnt() << " ";
+  for (int i = 0; i < tensor.shape().NumAxes(); ++i) { std::cout << tensor.shape().At(i) << " "; }
+  std::cout << std::endl;
+  float* data = new float[tensor.shape().elem_cnt() * 4];
+  tensor.copy_to(data);
+  for (int i = 0; i < tensor.shape().elem_cnt(); ++i) { std::cout << data[i] << " "; }
+  std::cout << std::endl;
+  delete[] data;
+}
 
 }  // namespace oneflow_api
 

@@ -27,7 +27,7 @@ limitations under the License.
 
 namespace oneflow {
 
-inline Maybe<std::shared_ptr<Scope>> MakeInitialScope(const JobConfigProto& config_proto) {
+inline Maybe<Scope> MakeInitialScope(const JobConfigProto& config_proto) {
   std::shared_ptr<Scope> scope;
   std::shared_ptr<cfg::JobConfigProto> cfg_config_proto =
       std::make_shared<cfg::JobConfigProto>(config_proto);

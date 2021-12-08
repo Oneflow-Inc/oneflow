@@ -123,7 +123,7 @@ of::Maybe<void> initEnv() {
   config_proto.mutable_resource()->set_cpu_device_num(1);
   config_proto.set_session_id(of::NewSessionId());
   of::Global<of::MultiClientSessionContext>::Get()->TryInit(config_proto).GetOrThrow();
-    
+
   return of::Maybe<void>::Ok();
 }
 
@@ -146,6 +146,9 @@ void release() {
       of::ClusterInstruction::MasterSendHalt();
     }
     of::Global<of::EnvGlobalObjectsScope>::Delete();
+    // TODO(zzk0): segmentation fault
+    // of::Global<of::MultiClientSessionContext>::Get()->TryClose().GetOrThrow();
+    of::Global<of::MultiClientSessionContext>::Delete();
   }
   // TODO close session
   of::SetShuttingDown();
