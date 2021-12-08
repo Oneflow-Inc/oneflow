@@ -315,8 +315,6 @@ namespace one {
 
 namespace ir {
 
-using namespace mlir;
-
 OwningOpRef<ModuleOp> CreateJitModule(MLIRContext* context) {
   context->loadDialect<mlir::oneflow::OneFlowDialect>();
   context->loadDialect<mlir::oneflow::jit::OneFlowJITDialect>();
