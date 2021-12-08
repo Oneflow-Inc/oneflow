@@ -90,8 +90,9 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     tensor_buffer_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
                                   required_body_bytes);
 
-    int64_t storage_offset_bytes = storage_offset_ * GetSizeOfDataType(blob_desc_.data_type());
-    blob->reset_dptr(dptr + storage_offset_bytes);
+    // int64_t storage_offset_bytes = storage_offset_ * GetSizeOfDataType(blob_desc_.data_type());
+    // blob->reset_dptr(dptr + storage_offset_bytes);
+    blob->reset_dptr(dptr);
     InitNonPODTypeBlobIfNeed(tensor_buffer_->non_pod_allocator(), blob_.get());
   }
   return Maybe<void>::Ok();

@@ -954,11 +954,22 @@ class SliceBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
                            const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
-    
+    printf("\nstart:(");
+    for(int i=0; i < start.size(); ++i){
+      printf("%ld, ",start[i]);
+    }
+    printf(")\nstop:(");
+    for(int i=0; i < stop.size(); ++i){
+      printf("%ld, ",stop[i]);
+    }
+    printf(")\nsteps:(");
+    for(int i=0; i < step.size(); ++i){
+      printf("%ld, ",step[i]);
+    }
     if (x->is_eager() && x->is_local()) {
       // TODO: view support 0-dim tensor 
       if(!(x->shape()->NumAxes()<=1 || x->shape()->elem_cnt()<=1)){
-        return view::Slice(x->contiguous(), start, stop, step);
+        return view::Slice(x, start, stop, step);
       }
     }
 

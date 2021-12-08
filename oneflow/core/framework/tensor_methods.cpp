@@ -32,6 +32,9 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
   if(tensor->is_lazy() || tensor->is_consistent()){
     return true;
   }
+  // if(JUST(tensor->storage_offset()) > 0){
+  //   return false;
+  // }
   const Shape& shape = *tensor->shape();
   if(!shape.is_initialized() || shape.NumAxes()<1 || shape.elem_cnt() <= 1 ){
     return true;
@@ -71,13 +74,12 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
 
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         const Stride& target_stride, int64_t storage_offset) {
-  // const int64_t blob_offset = storage_offset + JUST(JUST(input->AsMirroredTensor())->storage_offset());
-  storage_offset = storage_offset + JUST(JUST(input->AsMirroredTensor())->storage_offset());
+  // storage_offset = storage_offset + JUST(JUST(input->AsMirroredTensor())->storage_offset());
   // TODO(): Check shape compatible.
   auto device = JUST(input->device());
   auto tensor_meta = std::make_shared<MirroredTensorMeta>(
       std::make_shared<Shape>(target_shape), input->dtype()->data_type(), device,
-      std::make_shared<Stride>(target_stride), JUST(JUST(input->AsMirroredTensor())->storage_offset()));
+      std::make_shared<Stride>(target_stride), storage_offset);
 
   JUST(input->has_eager_blob_object());
   // new output tensor
@@ -178,6 +180,9 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
     target_strides[i] = step * strides->At(i);
     storage_offset += start * strides->At(i);
   }
+
+  printf("\ninput shape:%s; output shape:%s; ", shape->DebugStr().c_str(), Shape(target_dims).DebugStr().c_str());
+  printf("\ninput strides:%s; output strides:%s; storage_offset:%ld\n", strides->ToString().c_str(), Stride(target_strides).ToString().c_str(), storage_offset);
 
   auto output = JUST(BasicView(input, Shape(target_dims), Stride(target_strides), storage_offset));
   if (input->requires_grad()) {
