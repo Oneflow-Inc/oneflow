@@ -156,6 +156,8 @@ from oneflow._C import to
 from oneflow._C import dim_gather as gather
 from oneflow._C import gather_nd
 from oneflow._C import roi_align
+from oneflow._C import read_onerec
+from oneflow._C import decode_onerec
 from oneflow._C import dot
 
 

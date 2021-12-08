@@ -20,6 +20,8 @@ limitations under the License.
 
 #ifdef WITH_CUDA
 
+#include <cuda_runtime.h>
+
 namespace oneflow {
 
 namespace ep {
@@ -46,11 +48,14 @@ class CudaDevice : public Device {
   Maybe<void> AllocPinned(const AllocationOptions& options, void** ptr, size_t size) override;
   void FreePinned(const AllocationOptions& options, void* ptr) override;
 
+  const cudaDeviceProp& properties() const;
+
  private:
   int device_index_;
   std::mutex events_mutex_;
   std::vector<Event*> events_;
   unsigned int event_flags_;
+  cudaDeviceProp properties_;
 };
 
 }  // namespace ep
