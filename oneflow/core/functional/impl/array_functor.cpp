@@ -935,16 +935,6 @@ class SliceBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
                            const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
-    // judge whether is full slice in front end
-    auto is_full_slice = [&]() {
-      for (auto i = 0; i < x->ndim(); ++i) {
-        if (start[i] != 0 || stop[i] != x->dim(i) || step[i] != 1) { return false; }
-      }
-      return true;
-    }();
-    if (is_full_slice) return x;
-
-    // normal handling routine
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
