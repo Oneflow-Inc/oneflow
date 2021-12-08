@@ -269,6 +269,7 @@ struct ConvertNormalizationAddReluOp
   mlir::LogicalResult matchAndRewrite(oneflow::CudnnFusedNormalizationAddReluOp op,
                                       mlir::PatternRewriter& rewriter) const override {
     // if op's device is gpu, rewrtire it
+
     NamedAttrList attributes = op->getAttrs();
     attributes.push_back(
         rewriter.getNamedAttr(OpTrait::IsAlternative<void>::getOpTypeNameAttr(),
@@ -277,7 +278,8 @@ struct ConvertNormalizationAddReluOp
             op, op->getResultTypes(), op.getOperands(), attributes)) {
       return success();
     } else {
-      op->emitError("Fail to convert add op with arity: ");
+      op->emitError(
+          "Fail to convert normalization_add_relu op to cudnn_fused_normalization_add_relu!");
       op->dump();
       return failure();
     }
