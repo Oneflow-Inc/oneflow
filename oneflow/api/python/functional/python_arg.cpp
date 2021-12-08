@@ -16,7 +16,7 @@ limitations under the License.
 
 #include "oneflow/api/python/functional/python_arg.h"
 
-#include "oneflow/api/python/framework/device.h"
+#include "oneflow/api/common/device.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/indexing.h"
 #include "oneflow/core/common/scalar.h"
@@ -164,6 +164,13 @@ Maybe<PyObject*> PythonArg::ObjectAs<PyObject*>() const {
 template<>
 Maybe<const PyObject*> PythonArg::ObjectAs<const PyObject*>() const {
   return object_;
+}
+
+template<>
+Maybe<std::vector<std::string>> PythonArg::ObjectAs<std::vector<std::string>>() const {
+  return PyUnpackSequence<std::string>(object_, [](PyObject* item) -> Maybe<std::string> {
+    return std::make_shared<std::string>(JUST(PyStringAsString(item)));
+  });
 }
 
 Maybe<bool> PythonArg::TypeCheck(ValueType type) const {

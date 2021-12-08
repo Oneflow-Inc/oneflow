@@ -118,18 +118,18 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
       } else if (op_conf.has_user_conf()) {  // repeat tick
         OperatorConf* new_op_conf = GetOperatorConf4Modify(op_conf);
         OperatorConf tick_conf{};
-        tick_conf.set_name("System-GradientAccumulation-RepeatTick-Tick-" + op_conf.name());
-        tick_conf.mutable_tick_conf()->set_out("out");
+        tick_conf.set_name("System-GradientAccumulation-RepeatTick-DeviceTick-" + op_conf.name());
+        tick_conf.mutable_device_tick_conf()->set_out("out");
         tick_conf.set_scope_symbol_id(op_conf.scope_symbol_id());
+        auto tick_lbn = GenLogicalBlobName(tick_conf.name(), tick_conf.device_tick_conf().out());
         user_op::UserOpConfWrapperBuilder repeat_builder(
             "System-GradientAccumulation-RepeatTick-Repeat-" + op_conf.name());
-        const auto repeat_op =
-            repeat_builder.OpTypeName("repeat")
-                .Input("in", GenLogicalBlobName(tick_conf.name(), tick_conf.tick_conf().out()))
-                .Output("out")
-                .Attr<int32_t>("repeat_num", repeat_num)
-                .ScopeSymbolId(op_conf.scope_symbol_id())
-                .Build();
+        const auto repeat_op = repeat_builder.OpTypeName("repeat")
+                                   .Input("in", tick_lbn)
+                                   .Output("out")
+                                   .Attr<int32_t>("repeat_num", repeat_num)
+                                   .ScopeSymbolId(op_conf.scope_symbol_id())
+                                   .Build();
         job_builder.AddOps(node->parallel_desc().parallel_conf(), {tick_conf, repeat_op.op_conf()});
         (*new_op_conf->mutable_user_conf()->mutable_input())[user_op::kUserSourceOpTickInputArgName]
             .add_s(repeat_op.output("out", 0));

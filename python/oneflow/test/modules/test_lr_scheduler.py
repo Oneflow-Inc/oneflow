@@ -176,6 +176,23 @@ class TestLrScheduler(flow.unittest.TestCase):
             new_lr = multistep_lr_step(TestLrScheduler.base_lr, i, milestones, gamma)
             test_case.assertAlmostEqual(multistep_lr.get_last_lr()[0], new_lr, places=5)
 
+    def test_exponential_lr(test_case):
+        optimizer = flow.optim.SGD(
+            [{"params": [Parameter(flow.Tensor([1.0]))]}], lr=TestLrScheduler.base_lr
+        )
+
+        def exponential_lr_step(base_lr, current_step, gamma):
+            return base_lr * gamma ** current_step
+
+        gamma = 0.1
+        exponential_lr = flow.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
+        for i in range(1, 21):
+            exponential_lr.step()
+            new_lr = exponential_lr_step(TestLrScheduler.base_lr, i, gamma)
+            test_case.assertAlmostEqual(
+                exponential_lr.get_last_lr()[0], new_lr, places=5
+            )
+
     def test_lambda_lr(test_case):
         optimizer = flow.optim.SGD(
             [

@@ -30,19 +30,19 @@ using Col2ImFunc = void (*)(const T* col_buf, const ShapeView& in_shape,
                             const int32_t* padding_before, T* in_diff_ptr);
 
 template<typename T>
-void Gemm4ChannelFirst(enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b, const int m,
-                       const int n, const int k, const T alpha, const T* a, const T* b,
-                       const T beta, T* c) {
-  NewKernelUtil<DeviceType::kCPU>::OFGemm(nullptr, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
+void Gemm4ChannelFirst(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a,
+                       enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
+                       const T alpha, const T* a, const T* b, const T beta, T* c) {
+  NewKernelUtil<DeviceType::kCPU>::OFGemm(stream, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
 
 template<typename T>
-void Gemm4ChannelLast(enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b, const int m,
-                      const int n, const int k, const T alpha, const T* a, const T* b, const T beta,
-                      T* c) {
+void Gemm4ChannelLast(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a,
+                      enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
+                      const T alpha, const T* a, const T* b, const T beta, T* c) {
   trans_a = (trans_a == CblasNoTrans) ? CblasTrans : CblasNoTrans;
   trans_b = (trans_b == CblasNoTrans) ? CblasTrans : CblasNoTrans;
-  NewKernelUtil<DeviceType::kCPU>::OFGemm(nullptr, trans_b, trans_a, n, m, k, alpha, b, a, beta, c);
+  NewKernelUtil<DeviceType::kCPU>::OFGemm(stream, trans_b, trans_a, n, m, k, alpha, b, a, beta, c);
 }
 
 template<typename T>
@@ -280,6 +280,7 @@ std::shared_ptr<ConvOpKernelState<T>> CreateConvOpKernelState(user_op::KernelCom
                                                               const std::string& out_name,
                                                               const std::string& weight_name) {
   const auto& data_format = ctx->Attr<std::string>("data_format");
+
   std::shared_ptr<ConvOpKernelState<T>> state(new ConvOpKernelState<T>());
   if (data_format == "channels_first") {
     state->col2im_func_ = ConvKernelUtil<T>::NCDHWCol2Im;
@@ -291,14 +292,14 @@ std::shared_ptr<ConvOpKernelState<T>> CreateConvOpKernelState(user_op::KernelCom
     state->idx_offset_ = 1;
   }
 
+  state->groups = ctx->Attr<int32_t>("groups");
+
   auto Gen5DShape = [](const Shape& shape, int32_t idx_offset) -> Shape {
     DimVector ret_vec(shape.dim_vec());
     int32_t ndims = ret_vec.size() - 2;
     ret_vec.insert(ret_vec.begin() + idx_offset, 3 - ndims, 1);
     return Shape(ret_vec);
   };
-  state->groups = ctx->Attr<int32_t>("groups");
-
   state->in_5d_shape_ =
       Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(in_name, 0)->shape(), state->idx_offset_);
   state->out_5d_shape_ =
@@ -362,15 +363,20 @@ class DeconvCpuKernel final : public user_op::OpKernel {
     const int32_t k = conv_state->weight_5d_shape_.At(0) / conv_state->groups;
 
     conv_state->Update(in->shape(), out->shape());
-    Memset<DeviceType::kCPU>(ctx->device_ctx(), out->mut_dptr<T>(), 0,
+    Memset<DeviceType::kCPU>(ctx->stream(), out->mut_dptr<T>(), 0,
                              out->shape().elem_cnt() * sizeof(T));
     FOR_RANGE(int64_t, i, 0, in->shape().At(0)) {
+      // channels first:  col_buf' = weight(T) * in[i]'
+      // channels last :  col_buf' = weight(T) * in[i]'(T)
+      // m, n, k
+
       const T* input_ptr = GetImgDptr<T>(in, i);
       const T* weight_ptr = weight->dptr<T>();
       T* output_ptr = GetImgMutDptr<T>(out, i);
+
       FOR_RANGE(int64_t, g, 0, conv_state->groups) {
         NewKernelUtil<DeviceType::kCPU>::OFGemm(
-            nullptr, CblasTrans, conv_state->is_out_diff_need_trans_,
+            ctx->stream(), CblasTrans, conv_state->is_out_diff_need_trans_,
             m,  //   ci * kd * kh * kw
             n,  //  od * oh * ow / groups
             k,  //  filter / groups
@@ -381,7 +387,6 @@ class DeconvCpuKernel final : public user_op::OpKernel {
             ShapeView(conv_state->weight_5d_shape_), ShapeView(conv_state->out_5d_shape_),
             conv_state->strides_3d_.data(), conv_state->dilation_rate_3d_.data(),
             conv_state->padding_before_3d_.data(), output_ptr);
-
         input_ptr += input_step;
         weight_ptr += weight_step;
         output_ptr += output_step;
@@ -390,21 +395,21 @@ class DeconvCpuKernel final : public user_op::OpKernel {
   }
 };
 
-#define REGISTER_DECONV_DATA_KERNEL(op_name, dtype)                                     \
-  REGISTER_USER_KERNEL(#op_name)                                                        \
-      .SetCreateFn<DeconvCpuKernel<dtype>>()                                            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                               \
-                       & (user_op::HobAttr<int32_t>("groups") > 1)                      \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                     \
-        size_t tmp_buffer_size = 0;                                                     \
-        const auto& in_shape = ctx->InputTensorDesc("in", 0).shape();                   \
-        const auto& weight_shape = ctx->InputTensorDesc("weight", 0).shape();           \
-                                                                                        \
-        int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));          \
-        tmp_buffer_size +=                                                              \
-            CalcElemNumOfColBuf(in_shape, weight_shape, idx_offset) * sizeof(dtype);    \
-        return tmp_buffer_size;                                                         \
+#define REGISTER_DECONV_DATA_KERNEL(op_name, dtype)                                      \
+  REGISTER_USER_KERNEL(#op_name)                                                         \
+      .SetCreateFn<DeconvCpuKernel<dtype>>()                                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                    \
+                       && (user_op::HobAttr<int32_t>("groups") > 1)                      \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                      \
+        size_t tmp_buffer_size = 0;                                                      \
+        const auto& in_shape = ctx->InputTensorDesc("in", 0).shape();                    \
+        const auto& weight_shape = ctx->InputTensorDesc("weight", 0).shape();            \
+                                                                                         \
+        int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));           \
+        tmp_buffer_size +=                                                               \
+            CalcElemNumOfColBuf(in_shape, weight_shape, idx_offset) * sizeof(dtype);     \
+        return tmp_buffer_size;                                                          \
       })
 
 REGISTER_DECONV_DATA_KERNEL(deconv1d, float);

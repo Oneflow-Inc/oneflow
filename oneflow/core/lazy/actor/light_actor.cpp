@@ -26,10 +26,14 @@ limitations under the License.
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/stream/cuda/cuda_graph_context.h"
 #include "oneflow/core/kernel/user_kernel.h"
 #include "oneflow/core/stream/include/stream_context.h"
-#include "oneflow/core/device/device_context_adapter.h"
+
+#ifdef WITH_CUDA
+
+#include "oneflow/core/ep/cuda/cuda_stream.h"
+
+#endif  // WITH_CUDA
 
 namespace oneflow {
 
@@ -205,7 +209,6 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       : thread_(nullptr),
         actor_ctx_(actor_ctx),
         stream_ctx_(actor_ctx->stream_ctx()),
-        device_ctx_(NewDeviceCtxAdapter(actor_ctx->stream_ctx())),
         stream_kernel_observer_(nullptr) {
     auto* kernel_observer_provider = dynamic_cast<KernelObserverProvider*>(stream_ctx_);
     if (kernel_observer_provider != nullptr) {
@@ -222,10 +225,10 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       const KernelConf& kernel_conf = task_proto.exec_sequence().exec_node(0).kernel_conf();
       kernel_info_[0]->kernel = ConstructKernel(kernel_conf, this);
 #ifdef WITH_CUDA_GRAPHS
-      cuda_graph_ctx_[0] = dynamic_cast<CudaGraphContext*>(actor_ctx->stream_ctx());
-      if (cuda_graph_ctx_[0] != nullptr && kernel_conf.all_blobs_are_static()
+      auto* cuda_stream = dynamic_cast<ep::CudaStream*>(actor_ctx->stream_ctx()->stream());
+      if (cuda_stream != nullptr && kernel_conf.all_blobs_are_static()
           && IsCUDAGraphSupported(kernel_info_[0]->kernel.get())) {
-        cuda_graph_exec_[0].reset(new CudaGraphExecutable());
+        cuda_graph_exec_[0].reset(new ep::CudaGraphExecutable());
       }
 #endif
     }
@@ -458,18 +461,20 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   inline void LaunchKernel() {
 #ifdef WITH_CUDA_GRAPHS
     if (cuda_graph_exec_[0]) {
+      auto* cuda_stream = stream_ctx_->stream()->As<ep::CudaStream>();
       if (cuda_graph_exec_[0]->IsInstantiated()) {
-        cuda_graph_ctx_[0]->LaunchGraph(cuda_graph_exec_[0].get());
+        cuda_stream->LaunchGraph(cuda_graph_exec_[0].get());
         return;
       }
-      cuda_graph_ctx_[0]->BeginGraphCapture();
+      cuda_stream->BeginGraphCapture();
     }
 #endif
     kernel_info_[0]->kernel->Launch(this);
 #ifdef WITH_CUDA_GRAPHS
     if (cuda_graph_exec_[0]) {
-      cuda_graph_ctx_[0]->EndGraphCapture(cuda_graph_exec_[0].get());
-      cuda_graph_ctx_[0]->LaunchGraph(cuda_graph_exec_[0].get());
+      auto* cuda_stream = stream_ctx_->stream()->As<ep::CudaStream>();
+      cuda_stream->EndGraphCapture(cuda_graph_exec_[0].get());
+      cuda_stream->LaunchGraph(cuda_graph_exec_[0].get());
     }
 #endif
   }
@@ -488,11 +493,9 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
     }
   }
 
-  StreamContext* stream_ctx() const override { return stream_ctx_; }
+  ep::Stream* stream() const override { return stream_ctx_->stream(); }
 
   ActorContext* GetActorContext() const override { return actor_ctx_; }
-
-  DeviceCtx* device_ctx() const override { return device_ctx_.get(); }
 
   Blob* BnInOp2Blob(const std::string& bn) const override {
     if (exec_kernel) {
@@ -576,12 +579,10 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   Thread* thread_;
   std::unique_ptr<KernelInfo> kernel_info_[exec_kernel];
 #ifdef WITH_CUDA_GRAPHS
-  std::unique_ptr<CudaGraphExecutable> cuda_graph_exec_[exec_kernel];
-  CudaGraphContext* cuda_graph_ctx_[exec_kernel]{};
+  std::unique_ptr<ep::CudaGraphExecutable> cuda_graph_exec_[exec_kernel];
 #endif
   ActorContext* actor_ctx_;
   StreamContext* stream_ctx_;
-  std::unique_ptr<DeviceCtx> device_ctx_;
   std::vector<ActorMsg> sync_post_act_msgs_;
   std::vector<ActorMsg> async_post_act_msgs_;
   KernelObserver* stream_kernel_observer_;

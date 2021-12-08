@@ -420,7 +420,7 @@ class TestInstanceNorm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=5, auto_backward=True, rtol=1e-3, atol=1e-3)
+    @autotest(n=5, auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=False)
     def test_instancenorm_with_random_data(test_case):
         height = random(1, 6).to(int)
         width = random(1, 6).to(int)
@@ -438,7 +438,7 @@ class TestInstanceNorm(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(n=5, auto_backward=True, rtol=1e-3, atol=1e-3)
+    @autotest(n=5, auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=False)
     def test_instancenorm_with_random_data(test_case):
         channel = random(1, 6).to(int)
         height = random(1, 6).to(int)
@@ -459,7 +459,7 @@ class TestInstanceNorm(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(n=5, auto_backward=False, rtol=1e-3, atol=1e-3)
+    @autotest(n=5, auto_backward=False, rtol=1e-3, atol=1e-3, check_graph=False)
     def test_instancenorm_with_random_data(test_case):
         channel = random(1, 6).to(int)
         depth = random(1, 6).to(int)

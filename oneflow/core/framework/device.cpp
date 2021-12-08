@@ -40,6 +40,7 @@ inline size_t HashDevice(const std::string& type, int64_t device_id) {
 
 Device::Device(const std::string& type, int64_t device_id)
     : type_(type),
+      enum_type_(kInvalidDevice),
       device_id_(device_id),
       hash_value_(HashDevice(type, device_id)),
       transport_local_dep_object_(),
@@ -47,8 +48,8 @@ Device::Device(const std::string& type, int64_t device_id)
 
 Maybe<void> Device::Init() {
   if (type_ == "auto") { return Maybe<void>::Ok(); }
-  DeviceType dev_type = JUST(DeviceType4DeviceTag(JUST(of_type())));
-  mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, device_id_);
+  enum_type_ = JUST(DeviceType4DeviceTag(JUST(of_type())));
+  mem_case_ = MemoryCaseUtil::MakeMemCase(enum_type_, device_id_);
   const auto& opt_device_transport_tag = JUST(GetSharedTransportDeviceType());
   if (opt_device_transport_tag.has_value()) {
     const auto& device_transport_tag = *JUST(opt_device_transport_tag);
@@ -190,6 +191,7 @@ std::string Device::ToString() const {
 Maybe<Symbol<Device>> Device::MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc) {
   std::string type = Type4DeviceTag(parallel_desc.device_tag());
   std::vector<std::string> machine_device_ids;
+  machine_device_ids.reserve(parallel_desc.parallel_conf().device_name().size());
   for (const auto& item : parallel_desc.parallel_conf().device_name()) {
     machine_device_ids.emplace_back(item);
   }

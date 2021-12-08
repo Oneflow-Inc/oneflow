@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/primitive/include/fill.h"
+#include "oneflow/core/ep/include/primitive/fill.h"
 
 namespace oneflow {
 
@@ -33,10 +33,11 @@ class ShapeElemCntKernel final : public Kernel {
 template<DeviceType device_type, typename T>
 void ShapeElemCntKernel<device_type, T>::ForwardDataContent(KernelContext* ctx) const {
   const T elem_cnt = GetShapePartialElemCnt(ctx->BnInOp2Blob("x")->shape());
-  std::unique_ptr<primitive::Fill> fill = primitive::NewPrimitive<primitive::FillFactory>(
-      ctx->stream_ctx()->device_type(), ctx->BnInOp2Blob("y")->data_type());
+  std::unique_ptr<ep::primitive::Fill> fill =
+      ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream()->device_type(),
+                                                              ctx->BnInOp2Blob("y")->data_type());
   CHECK(fill);
-  fill->Launch(ctx->stream_ctx(), ctx->BnInOp2Blob("y")->mut_dptr(), elem_cnt, 1);
+  fill->Launch(ctx->stream(), ctx->BnInOp2Blob("y")->mut_dptr(), elem_cnt, 1);
 }
 
 template<DeviceType device_type, typename T>

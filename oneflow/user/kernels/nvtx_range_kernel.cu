@@ -65,8 +65,8 @@ class NvtxStartKernel final : public user_op::OpKernel {
     CHECK_EQ(out->shape(), in_shape);
     const DataType in_data_type = in->data_type();
     CHECK_EQ(out->data_type(), in_data_type);
-    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out->mut_dptr<void>(), in->dptr<void>(),
-                             in_shape.elem_cnt() * GetSizeOfDataType(in_data_type));
+    Memcpy<DeviceType::kCUDA>(ctx->stream(), out->mut_dptr<void>(), in->dptr<void>(),
+                              in_shape.elem_cnt() * GetSizeOfDataType(in_data_type));
 #ifdef OF_ENABLE_PROFILER
     auto* kernel_state = dynamic_cast<NvtxOpKernelState*>(state);
     const std::string mark_prefix = ctx->Attr<std::string>("mark_prefix");
@@ -81,7 +81,7 @@ class NvtxStartKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("nvtx_start")
     .SetCreateFn<NvtxStartKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == DeviceType::kGPU)
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA)
     .SetInplaceProposalFn([](const user_op::InferContext&,
                              user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
       OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, false));
@@ -116,8 +116,8 @@ class NvtxEndKernel final : public user_op::OpKernel {
     nvtxRangeId_t range_id = it->second;
     mark2range_id.erase(it);
     nvtxRangeEnd(range_id);
-    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out->mut_dptr<void>(), in->dptr<void>(),
-                             in_shape.elem_cnt() * GetSizeOfDataType(in_data_type));
+    Memcpy<DeviceType::kCUDA>(ctx->stream(), out->mut_dptr<void>(), in->dptr<void>(),
+                              in_shape.elem_cnt() * GetSizeOfDataType(in_data_type));
     kernel_state->IncreaseCount();
 #endif
   }
@@ -126,7 +126,7 @@ class NvtxEndKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("nvtx_end")
     .SetCreateFn<NvtxEndKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == DeviceType::kGPU)
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA)
     .SetInplaceProposalFn([](const user_op::InferContext&,
                              user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
       OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, false));

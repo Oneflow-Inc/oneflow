@@ -50,7 +50,7 @@ class NormalKernel final : public user_op::OpKernel {
     const auto& generator = distribution_state->generator();
     CHECK_NOTNULL(generator);
     NormalDistribution<device_type, T> distribution(static_cast<T>(mean), static_cast<T>(std));
-    distribution(ctx->device_ctx(), elem_cnt, out_dptr, generator);
+    distribution(ctx->stream(), elem_cnt, out_dptr, generator);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

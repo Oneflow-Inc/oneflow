@@ -83,7 +83,7 @@ class ConstantPad1dKernel final : public OpKernel {
     y->shape().ToDimVector(&y_vector);
     NdIndexOffsetHelper<int64_t, 3> index_helper(y_vector.data());
 
-    ConstantPad1dFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper, x_shape,
+    ConstantPad1dFunctor<device_type, IN_T>()(ctx->stream(), src, dest, index_helper, x_shape,
                                               y_shape, padding, constant_value);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -113,10 +113,10 @@ class ConstantPad1dGradKernel final : public OpKernel {
     NdIndexOffsetHelper<int64_t, 3> index_helper(dy_vector.data());
 
     size_t out_bytes_size = dx->shape().Count(0) * GetSizeOfDataType(dx->data_type());
-    Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
+    Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
-    ConstantPad1dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
-                                                  dy_shape, dx_shape, padding);
+    ConstantPad1dGradFunctor<device_type, IN_T>()(ctx->stream(), src, dest, index_helper, dy_shape,
+                                                  dx_shape, padding);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -145,7 +145,7 @@ class ConstantPad3dKernel final : public OpKernel {
     y->shape().ToDimVector(&y_vector);
     NdIndexOffsetHelper<int64_t, 5> index_helper(y_vector.data());
 
-    ConstantPad3dFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper, x_shape,
+    ConstantPad3dFunctor<device_type, IN_T>()(ctx->stream(), src, dest, index_helper, x_shape,
                                               y_shape, padding, constant_value);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -175,31 +175,31 @@ class ConstantPad3dGradKernel final : public OpKernel {
     NdIndexOffsetHelper<int64_t, 5> index_helper(dy_vector.data());
 
     size_t out_bytes_size = dx->shape().Count(0) * GetSizeOfDataType(dx->data_type());
-    Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
+    Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
-    ConstantPad3dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
-                                                  dy_shape, dx_shape, padding);
+    ConstantPad3dGradFunctor<device_type, IN_T>()(ctx->stream(), src, dest, index_helper, dy_shape,
+                                                  dx_shape, padding);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CONSTANT_PAD_KERNELS(device, dtype)                                    \
-  REGISTER_USER_KERNEL("constant_pad1d")                                                \
-      .SetCreateFn<ConstantPad1dKernel<device, dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));  \
-  REGISTER_USER_KERNEL("constant_pad1d_grad")                                           \
-      .SetCreateFn<ConstantPad1dGradKernel<device, dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("constant_pad3d")                                                \
-      .SetCreateFn<ConstantPad3dKernel<device, dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));  \
-  REGISTER_USER_KERNEL("constant_pad3d_grad")                                           \
-      .SetCreateFn<ConstantPad3dGradKernel<device, dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_CONSTANT_PAD_KERNELS(device, dtype)                                     \
+  REGISTER_USER_KERNEL("constant_pad1d")                                                 \
+      .SetCreateFn<ConstantPad1dKernel<device, dtype>>()                                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                              \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));  \
+  REGISTER_USER_KERNEL("constant_pad1d_grad")                                            \
+      .SetCreateFn<ConstantPad1dGradKernel<device, dtype>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                              \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("constant_pad3d")                                                 \
+      .SetCreateFn<ConstantPad3dKernel<device, dtype>>()                                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                              \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));  \
+  REGISTER_USER_KERNEL("constant_pad3d_grad")                                            \
+      .SetCreateFn<ConstantPad3dGradKernel<device, dtype>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                              \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_CONSTANT_PAD_WITH_DEVICE(device) \
   REGISTER_CONSTANT_PAD_KERNELS(device, float)    \
@@ -208,8 +208,8 @@ class ConstantPad3dGradKernel final : public OpKernel {
 
 REGISTER_CONSTANT_PAD_WITH_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_CONSTANT_PAD_WITH_DEVICE(DeviceType::kGPU)
-REGISTER_CONSTANT_PAD_KERNELS(DeviceType::kGPU, float16)
+REGISTER_CONSTANT_PAD_WITH_DEVICE(DeviceType::kCUDA)
+REGISTER_CONSTANT_PAD_KERNELS(DeviceType::kCUDA, float16)
 #endif
 
 }  // namespace user_op

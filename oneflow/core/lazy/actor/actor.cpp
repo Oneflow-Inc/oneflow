@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/stream/include/stream_context.h"
-#include "oneflow/core/device/device_context_adapter.h"
 
 namespace oneflow {
 
@@ -29,7 +28,6 @@ class KernelContextImpl : public KernelContext, public ActorContextProvider {
   explicit KernelContextImpl(ActorContext* actor_ctx)
       : actor_ctx_(actor_ctx),
         stream_ctx_(actor_ctx->stream_ctx()),
-        device_ctx_(NewDeviceCtxAdapter(actor_ctx->stream_ctx())),
         state_(nullptr),
         stream_kernel_observer_(nullptr) {
     auto* kernel_observer_provider = dynamic_cast<KernelObserverProvider*>(stream_ctx_);
@@ -39,11 +37,9 @@ class KernelContextImpl : public KernelContext, public ActorContextProvider {
   }
   ~KernelContextImpl() = default;
 
-  StreamContext* stream_ctx() const override { return stream_ctx_; }
+  ep::Stream* stream() const override { return stream_ctx_->stream(); }
 
   ActorContext* GetActorContext() const override { return actor_ctx_; }
-
-  DeviceCtx* device_ctx() const override { return device_ctx_.get(); }
 
   Blob* BnInOp2Blob(const std::string& bn) const override { return bn_in_op2blob_fn_(bn); }
 
@@ -67,7 +63,6 @@ class KernelContextImpl : public KernelContext, public ActorContextProvider {
  private:
   ActorContext* actor_ctx_;
   StreamContext* stream_ctx_;
-  std::unique_ptr<DeviceCtx> device_ctx_;
   std::function<Blob*(const std::string&)> bn_in_op2blob_fn_;
   std::shared_ptr<KernelState> state_;
   KernelObserver* stream_kernel_observer_;
@@ -141,7 +136,7 @@ void Actor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
     ExecKernel ek;
     ek.kernel_ctx.reset(new KernelContextImpl(actor_ctx));
     ek.kernel = ConstructKernel(node.kernel_conf(), ek.kernel_ctx.get());
-    exec_kernel_vec_.push_back(std::move(ek));
+    exec_kernel_vec_.emplace_back(std::move(ek));
   }
 
   is_kernel_launch_synchronized_ =
@@ -171,7 +166,7 @@ void Actor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
     CHECK(name2regst_desc_id_.find(pair.first) == name2regst_desc_id_.end());
     std::vector<int64_t>& regst_desc_id_vec = name2regst_desc_id_[pair.first];
     for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
-      regst_desc_id_vec.push_back(regst_desc_id);
+      regst_desc_id_vec.emplace_back(regst_desc_id);
     }
     remaining_eord_cnt_ += pair.second.regst_desc_id_size();
     if (pair.first == "in_ctrl") {
@@ -467,7 +462,7 @@ void Actor::AsyncRetInplaceConsumedRegstIfNoConsumer() {
           Regst* in_regst = deq.front();
           CHECK(in_regst);
           AsyncSendRegstMsgToProducer(in_regst);
-          tmp_regst_desc_id_vec_.push_back(in_regst->regst_desc_id());
+          tmp_regst_desc_id_vec_.emplace_back(in_regst->regst_desc_id());
         }
       });
   inplace_consumed_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
@@ -499,7 +494,7 @@ void Actor::AsyncSendConsumedCtrlRegstMsgToProducer() {
         Regst* regst = reg_deq.front();
         CHECK_GE(reg_deq.size(), 1);
         // must access regst before sending it to producer
-        tmp_regst_desc_id_vec_.push_back(regst_desc_id);
+        tmp_regst_desc_id_vec_.emplace_back(regst_desc_id);
         EnqueueAsyncMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, producer_task_id, regst));
       });
   naive_consumed_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
@@ -514,7 +509,7 @@ void Actor::AsyncSendProducedCtrlRegstMsgToConsumer() {
   naive_produced_rs_.ForChosenFrontRegst(IsChosenRegstDescId, [&](Regst* regst) {
     CHECK(regst->regst_desc()->regst_desc_type().has_ctrl_regst_desc());
     int64_t real_consumer_cnt = HandleRegstToConsumer(regst);
-    if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.push_back(regst->regst_desc_id()); }
+    if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.emplace_back(regst->regst_desc_id()); }
   });
   naive_produced_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
 }
@@ -580,7 +575,7 @@ void Actor::HandleProducedNaiveDataRegstToConsumer() {
   naive_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
     if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
       int64_t real_consumer_cnt = HandleRegstToConsumer(regst);
-      if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.push_back(regst->regst_desc_id()); }
+      if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.emplace_back(regst->regst_desc_id()); }
     }
   });
   naive_produced_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
@@ -591,7 +586,7 @@ void Actor::HandleProducedInplaceDataRegstToConsumer() {
   inplace_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
     CHECK(regst->regst_desc()->regst_desc_type().has_data_regst_desc());
     int64_t real_consumer_cnt = HandleRegstToConsumer(regst);
-    if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.push_back(regst->regst_desc_id()); }
+    if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.emplace_back(regst->regst_desc_id()); }
   });
   inplace_produced_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
 }
@@ -602,7 +597,7 @@ void Actor::HandleConsumedNaiveDataRegstToProducer() {
     if (IsConsumedCtrlRegstDescId(regst_desc_id)) { return; }
     if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
       // must access regst before sending it to producer
-      tmp_regst_desc_id_vec_.push_back(regst->regst_desc_id());
+      tmp_regst_desc_id_vec_.emplace_back(regst->regst_desc_id());
       EnqueueAsyncMsg(
           ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
     }
@@ -666,7 +661,7 @@ void Actor::EnqueueAsyncMsg(const ActorMsg& msg) {
   if (is_kernel_launch_synchronized_ && thrd_id_ == ThrdId4ActorId(msg.dst_actor_id())) {
     Global<ActorMsgBus>::Get()->SendMsg(msg);
   } else {
-    async_msg_queue_.push_back(msg);
+    async_msg_queue_.emplace_back(msg);
   }
 }
 

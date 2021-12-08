@@ -35,7 +35,7 @@ class CPUUniformDistributionImpl<T,
 
 template<typename T>
 void UniformDistribution<DeviceType::kCPU, T>::operator()(
-    DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,
+    ep::Stream* stream, const int64_t elem_cnt, T* dptr,
     const std::shared_ptr<one::Generator>& generator) const {
   CHECK_GE(elem_cnt, 0);
   auto gen = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
@@ -45,7 +45,7 @@ void UniformDistribution<DeviceType::kCPU, T>::operator()(
 
 #define INITIATE_CPU_UNIFORM_DISTRIBUTION(T, typeproto)               \
   template void UniformDistribution<DeviceType::kCPU, T>::operator()( \
-      DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,         \
+      ep::Stream* stream, const int64_t elem_cnt, T* dptr,            \
       const std::shared_ptr<one::Generator>& generator) const;
 
 OF_PP_FOR_EACH_TUPLE(INITIATE_CPU_UNIFORM_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)

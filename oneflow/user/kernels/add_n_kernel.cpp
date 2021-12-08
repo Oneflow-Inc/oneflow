@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/primitive/include/add.h"
+#include "oneflow/core/ep/include/primitive/add.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 
@@ -25,9 +25,9 @@ namespace user_op {
 namespace {
 
 template<typename Context>
-std::unique_ptr<primitive::Add> NewAddPrimitive(Context* ctx) {
+std::unique_ptr<ep::primitive::Add> NewAddPrimitive(Context* ctx) {
   const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
-  return primitive::NewPrimitive<primitive::AddFactory>(ctx->device_type(), data_type);
+  return ep::primitive::NewPrimitive<ep::primitive::AddFactory>(ctx->device_type(), data_type);
 }
 
 class AddNKernel : public OpKernel, public CudaGraphSupport {
@@ -53,12 +53,12 @@ class AddNKernel : public OpKernel, public CudaGraphSupport {
       CHECK_EQ(in_i->data_type(), data_type);
       srcs[i] = in_i->template dptr();
     }
-    primitive->Launch(ctx->stream_ctx(), srcs.data(), in_num, out->mut_dptr(), count);
+    primitive->Launch(ctx->stream(), srcs.data(), in_num, out->mut_dptr(), count);
   }
 };
 
-hob::HobContextGetter<KernelRegContext, bool> AddPrimitiveExists() {
-  return HobCtxGetter<bool>("AddPrimitiveExists", [](const KernelRegContext& ctx) {
+auto AddPrimitiveExists() {
+  return hob::make_custom("AddPrimitiveExists", [](const KernelRegContext& ctx) {
     return NewAddPrimitive(&ctx).operator bool();
   });
 }

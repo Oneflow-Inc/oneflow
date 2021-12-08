@@ -22,7 +22,7 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T>
 struct L1L2RegularizeGradientKernelUtil {
-  static void RegularizeGradient(DeviceCtx* ctx, int64_t n, const T* model, const T* model_diff,
+  static void RegularizeGradient(ep::Stream* stream, int64_t n, const T* model, const T* model_diff,
                                  T* out, T l1, T l2);
 };
 

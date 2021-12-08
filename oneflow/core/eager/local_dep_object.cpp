@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/static_global.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/vm_object.h"
-#include "oneflow/core/vm/oneflow_vm.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/control/global_process_ctx.h"
 
@@ -35,10 +35,10 @@ Maybe<void> LocalDepObject::Init(const Device& device) {
     int64_t machine_id = CHECK_JUST(parallel_desc->MachineId4ParallelId(0));
     CHECK_EQ(machine_id, GlobalProcessCtx::Rank());
     int64_t device_id = CHECK_JUST(parallel_desc->DeviceId4ParallelId(0));
-    if (Global<OneflowVM>::Get() == nullptr) {
+    if (Global<VirtualMachine>::Get() == nullptr) {
       global_device_id = 0;
     } else {
-      const auto& vm = Global<OneflowVM>::Get()->vm();
+      const auto& vm = Global<VirtualMachine>::Get()->vm();
       CHECK_EQ(vm.this_machine_id(), machine_id);
       global_device_id = vm.this_start_global_device_id() + device_id;
     }

@@ -30,7 +30,6 @@ limitations under the License.
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Translation.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
 #include "llvm-c/Core.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
@@ -49,6 +48,8 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/common/util.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <google/protobuf/text_format.h>
@@ -61,6 +62,8 @@ limitations under the License.
 #include <vector>
 
 namespace mlir {
+
+namespace oneflow {
 
 using PbMessage = google::protobuf::Message;
 
@@ -81,10 +84,6 @@ class JobImporter : Importer {
   LogicalResult ProcessJob();
   LogicalResult TryToUpdateJob();
   Type GetTensorTypeOfLbn(const std::string& lbn) override;
-  ::oneflow::AttrType QueryAttrType(const std::string& op_type_name,
-                                    const std::string& attr_name) override {
-    return job_wrapper_.QueryAttrType(op_type_name, attr_name);
-  }
 
  private:
   std::unordered_map<std::string, mlir::OpResult> lbn2result_;
@@ -121,14 +120,29 @@ LogicalResult JobImporter::AppendDataInOperand(const std::string& lbn,
 
 LogicalResult JobImporter::InsertOpResults(const ::oneflow::OperatorConf& op,
                                            Operation* created_op) {
-  for (auto data_out : llvm::enumerate(GetDataOutputResults(created_op))) {
-    auto output_lbns = created_op->getAttrOfType<ArrayAttr>("output_lbns");
-    lbn2result_.insert({output_lbns[data_out.index()].dyn_cast<StringAttr>().getValue().str(),
+  auto output_lbns =
+      created_op->getAttrOfType<ArrayAttr>(OpTrait::IsImportCompatible<void>::getOutputLBNsAttr());
+  auto data_results = GetDataOutputResults(created_op);
+  if (output_lbns.size() != data_results.size()) {
+    output_lbns.dump();
+    llvm::errs() << "output_lbns size: " << output_lbns.size()
+                 << " != data_results size: " << data_results.size() << "\n"
+                 << op.DebugString();
+    created_op->getAttrDictionary().dump();
+    created_op->dump();
+    return failure();
+  }
+  for (const auto& data_out : llvm::enumerate(data_results)) {
+    auto data_out_index = data_out.index();
+    lbn2result_.insert({output_lbns[data_out_index].dyn_cast<StringAttr>().getValue().str(),
                         data_out.value().dyn_cast<OpResult>()});
   }
   if (auto ctrl_out = GetCtrlOutputResult(created_op)) {
-    op_name2ctrl_result_.insert({created_op->getAttrOfType<StringAttr>("op_name").getValue().str(),
-                                 ctrl_out->dyn_cast<OpResult>()});
+    op_name2ctrl_result_.insert(
+        {created_op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
+             .getValue()
+             .str(),
+         ctrl_out->dyn_cast<OpResult>()});
   }
   return success();
 }
@@ -138,10 +152,11 @@ LogicalResult JobImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
   const ::oneflow::ParallelConf& pc = job_wrapper_.ParallelConf4OpName(op.name());
   std::vector<llvm::StringRef> device_vec = {pc.device_name().begin(), pc.device_name().end()};
   attr_vec.push_back(
-      GetBuilder().getNamedAttr("device_name", GetBuilder().getStrArrayAttr(device_vec)));
+      GetBuilder().getNamedAttr(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
+                                GetBuilder().getStrArrayAttr(device_vec)));
   if (pc.has_hierarchy()) {
     attr_vec.push_back(GetBuilder().getNamedAttr(
-        "hierarchy",
+        OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(),
         GetBuilder().getI64ArrayAttr({pc.hierarchy().dim().begin(), pc.hierarchy().dim().end()})));
   }
   return success();
@@ -176,9 +191,11 @@ LogicalResult JobImporter::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
       "input_bns", GetBuilder().getStrArrayAttr(
                        std::vector<llvm::StringRef>({input_bns.begin(), input_bns.end()}))));
   attr_vec.push_back(GetBuilder().getNamedAttr(
-      "output_lbns", GetBuilder().getStrArrayAttr(
-                         std::vector<llvm::StringRef>({output_lbns.begin(), output_lbns.end()}))));
-  OperationState state(FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0), "oneflow.system");
+      OpTrait::IsImportCompatible<void>::getOutputLBNsAttr(),
+      GetBuilder().getStrArrayAttr(
+          std::vector<llvm::StringRef>({output_lbns.begin(), output_lbns.end()}))));
+  OperationState state(FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0),
+                       oneflow::SystemOp::getOperationName());
   attr_vec.push_back(
       GetBuilder().getNamedAttr("op_type_case", GetBuilder().getI32IntegerAttr(op.op_type_case())));
   if (failed(AddOperandSegmentSizes(static_cast<int>(input_lbns.size()), op.ctrl_in_op_name_size(),
@@ -199,9 +216,9 @@ LogicalResult JobImporter::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
   if (failed(AppendCtrlOutType(out_types))) { return failure(); }
   state.addOperands(operand_vec);
   state.addTypes(out_types);
-  auto created_op = GetBuilder().createOperation(state);
-  if (failed(InsertOpResults(op, created_op))) { return failure(); }
-  if (!created_op) {
+  if (auto created_op = GetBuilder().createOperation(state)) {
+    if (failed(InsertOpResults(op, created_op))) { return failure(); }
+  } else {
     GetModule()->emitError("fail to create op, name: " + op.name());
     return failure();
   }
@@ -256,7 +273,26 @@ LogicalResult JobImporter::TryToUpdateJob() {
   new_job.clear_net();
   new_job.mutable_placement()->clear_placement_group();
   auto convertOps = [&](Operation* op) {
-    if (llvm::dyn_cast<oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
+    if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
+      oneflow::SystemOpAdaptor system_op_adaptor(op->getOperands(), op->getAttrDictionary());
+      UpdatePlacement(op, system_op_adaptor, new_job);
+      auto op_name = system_op_adaptor.op_name().getValue().str();
+      ::oneflow::OperatorConf op_conf = job_wrapper_.OpConf4OpName(op_name);
+      for (const auto& ibn : llvm::enumerate(op->getAttrOfType<ArrayAttr>("input_bns"))) {
+        auto result = GetDataInputOperands(op)[ibn.index()].dyn_cast<OpResult>();
+        std::string new_val = GetOutputLbn(result).getValue();
+        job_wrapper_.ReplaceInputLbnInOpCustomizedConf(
+            &op_conf, ibn.value().dyn_cast<StringAttr>().getValue().str(), new_val);
+      }
+      if (succeeded(ConvertCtrlInputs(op, op_conf))) {
+        *(new_job.mutable_net()->add_op()) = op_conf;
+      } else {
+        return WalkResult::interrupt();
+      }
+    } else if (llvm::dyn_cast<ReturnOp>(op) || llvm::dyn_cast<FuncOp>(op)
+               || llvm::dyn_cast<ModuleOp>(op)) {
+      return WalkResult::advance();
+    } else {
       oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
       UpdatePlacement(op, user_op_adaptor, new_job);
       ::oneflow::OperatorConf op_conf;
@@ -270,33 +306,6 @@ LogicalResult JobImporter::TryToUpdateJob() {
       } else {
         return WalkResult::interrupt();
       }
-    } else if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
-      oneflow::SystemOpAdaptor system_op_adaptor(op->getOperands(), op->getAttrDictionary());
-      UpdatePlacement(op, system_op_adaptor, new_job);
-      auto op_name = system_op_adaptor.op_name().getValue().str();
-      ::oneflow::OperatorConf op_conf = job_wrapper_.OpConf4OpName(op_name);
-      for (auto ibn : llvm::enumerate(op->getAttrOfType<ArrayAttr>("input_bns"))) {
-        auto result = GetDataInputOperands(op)[ibn.index()].dyn_cast<OpResult>();
-        std::string new_val =
-            result.getDefiningOp()
-                ->getAttrOfType<ArrayAttr>("output_lbns")[result.getResultNumber()]
-                .dyn_cast<StringAttr>()
-                .getValue()
-                .str();
-        job_wrapper_.ReplaceInputLbnInOpCustomizedConf(
-            &op_conf, ibn.value().dyn_cast<StringAttr>().getValue().str(), new_val);
-      }
-      if (succeeded(ConvertCtrlInputs(op, op_conf))) {
-        *(new_job.mutable_net()->add_op()) = op_conf;
-      } else {
-        return WalkResult::interrupt();
-      }
-    } else if (llvm::dyn_cast<ReturnOp>(op) || llvm::dyn_cast<FuncOp>(op)
-               || llvm::dyn_cast<ModuleOp>(op)) {
-      return WalkResult::advance();
-    } else {
-      op->emitError("failed to convert op: " + op->getName().getStringRef().str()) << "\n" << *op;
-      return WalkResult::interrupt();
     } /* convert op conf */
     return WalkResult::advance();
   };
@@ -316,7 +325,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   mlir::PassManager pm(context);
   pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
   std::string graphviz;
-  if (std::getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS") != nullptr) {
+  if (job_wrapper.IsLastIRPass() && std::getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS") != nullptr) {
     pm.addPass(oneflow::createOutlineJitFunctionPass());
   }
   pm.addNestedPass<mlir::FuncOp>(oneflow::createFuseIntoExistingOpPass());
@@ -324,7 +333,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   llvm::raw_string_ostream os_graphviz(graphviz);
   pm.addPass(createPrintOpGraphPass(os_graphviz));
   if (mlir::failed(pm.run(*module))) {
-    module->emitError("Failed to run canonicalizer pass");
+    module->emitError("Failed to run round-trip passes");
     return failure();
   }
   job_wrapper.DumpLog("RoundTripOneFlowJob.mlir.dot", graphviz);
@@ -360,7 +369,9 @@ void RoundTripOneFlowJob(
   // TODO: Add flag in job desc to decide whether to run mlir optimizer
   if (succeeded(imp.ProcessJob())) {
     if (failed(ApplyRoundTripPatterns(job_wrapper, &context, module))) { exit(EXIT_FAILURE); }
-    if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
+    if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) {
+      module->print(llvm::outs());
+    }
     // TODO: Add flag in oneflow to define if failure in MLIR is allowed
     if (failed(imp.TryToUpdateJob())) {
       llvm::errs() << "fail to update job with IR, job will stay intact, job_name: "
@@ -369,7 +380,7 @@ void RoundTripOneFlowJob(
     }
 
   } else {
-    llvm::errs() << "fail to convert job to IR, job_name: " << job->job_conf().job_name();
+    llvm::errs() << "fail to convert job to IR, job_name: " << job->job_conf().job_name() << "\n";
     exit(EXIT_FAILURE);
   }
 }
@@ -380,5 +391,7 @@ void registerFromOneFlowJobTranslation() {
                                                return TranslateOneFlowJobToModule(str, context);
                                              });
 }
+
+}  // namespace oneflow
 
 }  // namespace mlir

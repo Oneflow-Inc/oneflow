@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/job/resource.pb.h"
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 
@@ -31,7 +31,7 @@ template<>
 class RandomGenerator<DeviceType::kCPU> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RandomGenerator);
-  RandomGenerator(int64_t seed, DeviceCtx* device_ctx) : mt19937_generator_(seed) {}
+  RandomGenerator(int64_t seed, ep::Stream* stream) : mt19937_generator_(seed) {}
   ~RandomGenerator() {}
 
   template<typename T>
@@ -44,10 +44,10 @@ class RandomGenerator<DeviceType::kCPU> final {
 };
 
 template<>
-class RandomGenerator<DeviceType::kGPU> final {
+class RandomGenerator<DeviceType::kCUDA> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RandomGenerator);
-  RandomGenerator(int64_t seed, DeviceCtx* device_ctx);
+  RandomGenerator(int64_t seed, ep::Stream* stream);
   ~RandomGenerator();
 
   template<typename T>

@@ -49,6 +49,10 @@ class UserOpRegistryMgr final {
   Maybe<const OpKernelRegistryResult*> GetOpKernelRegistryResult(const std::string& op_type_name,
                                                                  const KernelRegContext& ctx);
 
+  const HashMap<std::string, OpRegistryResult>& GetAllOpRegistryResults() {
+    return op_reg_result_;
+  };
+
  private:
   HashMap<std::string, OpRegistryResult> op_reg_result_;
   HashMap<std::string, OpGradRegistryResult> op_grad_reg_result_;

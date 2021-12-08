@@ -125,16 +125,16 @@ class GpuFakeQuantizationKernel final : public user_op::OpKernel {
 
     if (quantization_formula == "google") {
       if (quantization_scheme == "symmetric") {
-        RUN_CUDA_KERNEL((FakeQuantizationSymmetric<T>), ctx->device_ctx(), elements, in->dptr<T>(),
+        RUN_CUDA_KERNEL((FakeQuantizationSymmetric<T>), ctx->stream(), elements, in->dptr<T>(),
                         scale->dptr<T>(), scale_size, elements, panel_size, quantization_bit,
                         out->mut_dptr<T>());
       } else {  // quantization_scheme == "affine"
-        RUN_CUDA_KERNEL((FakeQuantizationAffine<T>), ctx->device_ctx(), elements, in->dptr<T>(),
+        RUN_CUDA_KERNEL((FakeQuantizationAffine<T>), ctx->stream(), elements, in->dptr<T>(),
                         scale->dptr<T>(), zero_point->dptr<T>(), scale_size, elements, panel_size,
                         quantization_bit, out->mut_dptr<T>());
       }
     } else if (quantization_formula == "cambricon") {
-      RUN_CUDA_KERNEL((FakeQuantizationCambricon<T>), ctx->device_ctx(), elements, in->dptr<T>(),
+      RUN_CUDA_KERNEL((FakeQuantizationCambricon<T>), ctx->stream(), elements, in->dptr<T>(),
                       scale->dptr<T>(), scale_size, elements, panel_size, quantization_bit,
                       out->mut_dptr<T>());
     } else {
@@ -147,11 +147,11 @@ class GpuFakeQuantizationKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FAKE_QUANTIZATION_KERNEL(dtype)                     \
-  REGISTER_USER_KERNEL("fake_quantization")                          \
-      .SetCreateFn<GpuFakeQuantizationKernel<dtype>>()               \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU) \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
+#define REGISTER_FAKE_QUANTIZATION_KERNEL(dtype)                       \
+  REGISTER_USER_KERNEL("fake_quantization")                            \
+      .SetCreateFn<GpuFakeQuantizationKernel<dtype>>()                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
 
 REGISTER_FAKE_QUANTIZATION_KERNEL(float);
 REGISTER_FAKE_QUANTIZATION_KERNEL(double);

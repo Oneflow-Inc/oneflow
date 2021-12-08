@@ -24,6 +24,7 @@ Maybe<void> InferRandpermNdSbp(user_op::InferNdSbpFnContext* ctx);
 REGISTER_NO_GRAD_USER_OP("randperm")
     .Output("out")
     .Attr<int32_t>("n")
+    .Attr<int64_t>("seed")
     .Attr<std::string>("nd_sbp")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->OutputShape("out", 0);

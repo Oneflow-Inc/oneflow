@@ -93,7 +93,7 @@ Maybe<std::vector<Symbol<cfg::SbpParallel>>> RawGetSbpList(Symbol<cfg::NdSbp> nd
   const auto& vec = std::make_shared<std::vector<Symbol<cfg::SbpParallel>>>();
   CHECK_OR_RETURN(!nd_sbp->sbp_parallel().empty());
   for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
-    vec->push_back(SymbolOf(sbp_parallel));
+    vec->emplace_back(SymbolOf(sbp_parallel));
   }
   return vec;
 }

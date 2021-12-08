@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/register/tensor_slice_copier.h"
-#include "oneflow/core/primitive/include/add.h"
+#include "oneflow/core/ep/include/primitive/add.h"
 
 namespace oneflow {
 
@@ -148,10 +148,10 @@ class EagerPToSKernel final : public user_op::OpKernel {
     const auto& sorted_p2p_pair = kernel_state->sorted_p2p_pair();
     CHECK_EQ(sorted_in_tensor_slice_copier.size(), sorted_p2p_pair.size());
 
-    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
+    Memset<device_type>(ctx->stream(), out->mut_dptr(), 0,
                         elem_cnt_per_chunk * GetSizeOfDataType(out->data_type()));
-    std::unique_ptr<primitive::Add> add_primitive =
-        primitive::NewPrimitive<primitive::AddFactory>(ctx->device_type(), in->data_type());
+    std::unique_ptr<ep::primitive::Add> add_primitive =
+        ep::primitive::NewPrimitive<ep::primitive::AddFactory>(ctx->device_type(), in->data_type());
     CHECK(add_primitive);
     for (int64_t i = 0; i < sorted_p2p_pair.size(); ++i) {
       const auto& p2p_pair = sorted_p2p_pair.at(i);
@@ -159,14 +159,14 @@ class EagerPToSKernel final : public user_op::OpKernel {
       int64_t dst = p2p_pair.second;
       if (GlobalProcessCtx::Rank() == src) {
         const auto& tensor_slice_copier = sorted_in_tensor_slice_copier.at(i);
-        tensor_slice_copier->Copy(ctx->stream_ctx(), tmp_buffer_ptr, in_ptr);
+        tensor_slice_copier->Copy(ctx->stream(), tmp_buffer_ptr, in_ptr);
         CHECK_JUST(Send<device_type>(reinterpret_cast<const void*>(tmp_buffer_ptr),
-                                     elem_cnt_per_chunk, in->data_type(), dst, ctx->device_ctx()));
+                                     elem_cnt_per_chunk, in->data_type(), dst, ctx->stream()));
       }
       if (GlobalProcessCtx::Rank() == dst) {
         CHECK_JUST(Recv<device_type>(tmp_buffer_ptr, elem_cnt_per_chunk, out->data_type(), src,
-                                     ctx->device_ctx()));
-        add_primitive->Launch(ctx->stream_ctx(), tmp_buffer_ptr, out->dptr(), out->mut_dptr(),
+                                     ctx->stream()));
+        add_primitive->Launch(ctx->stream(), out->dptr(), tmp_buffer_ptr, out->mut_dptr(),
                               elem_cnt_per_chunk);
       }
     }
@@ -174,15 +174,15 @@ class EagerPToSKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EAGER_P_TO_S_KERNEL(device)                \
-  REGISTER_USER_KERNEL("eager_p_to_s")                      \
-      .SetCreateFn<EagerPToSKernel<device>>()               \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)) \
+#define REGISTER_EAGER_P_TO_S_KERNEL(device)                 \
+  REGISTER_USER_KERNEL("eager_p_to_s")                       \
+      .SetCreateFn<EagerPToSKernel<device>>()                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)) \
       .SetInferTmpSizeFn(InferEagerPToSKernelTmpBufferSize);
 
 REGISTER_EAGER_P_TO_S_KERNEL(DeviceType::kCPU)
-#if defined(WITH_CUDA) && HAS_GPU_SEND_RECV
-REGISTER_EAGER_P_TO_S_KERNEL(DeviceType::kGPU)
+#if defined(WITH_CUDA) && HAS_NCCL_SEND_RECV
+REGISTER_EAGER_P_TO_S_KERNEL(DeviceType::kCUDA)
 #endif
 
 }  // namespace oneflow

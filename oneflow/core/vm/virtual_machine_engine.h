@@ -22,12 +22,14 @@ limitations under the License.
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/stream_runtime_desc.h"
+#include "oneflow/core/vm/runtime_instr_type_id.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/vm_object.h"
 #include "oneflow/core/vm/vm_resource_desc.h"
 #include "oneflow/core/common/range.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/intrusive/mutexed_list.h"
+#include "oneflow/core/intrusive/object_pool.h"
 
 namespace oneflow {
 
@@ -66,7 +68,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   const LogicalObjectDeleteList& delete_logical_object_list() const {
     return delete_logical_object_list_;
   }
-  const InstructionList& waiting_instruction_list() const { return waiting_instruction_list_; }
   const LivelyInstructionList& lively_instruction_list() const { return lively_instruction_list_; }
   const BarrierInstructionList& barrier_instruction_list() const {
     return barrier_instruction_list_;
@@ -85,7 +86,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   ActiveStreamList* mut_active_stream_list() { return &active_stream_list_; }
   ThreadCtxList* mut_thread_ctx_list() { return &thread_ctx_list_; }
   LogicalObjectDeleteList* mut_delete_logical_object_list() { return &delete_logical_object_list_; }
-  InstructionList* mut_waiting_instruction_list() { return &waiting_instruction_list_; }
   LivelyInstructionList* mut_lively_instruction_list() { return &lively_instruction_list_; }
   BarrierInstructionList* mut_barrier_instruction_list() { return &barrier_instruction_list_; }
   InstructionMsgMutextList* mut_pending_msg_list() { return &pending_msg_list_; }
@@ -112,6 +112,12 @@ class VirtualMachineEngine final : public intrusive::Base {
     return this_machine_id() * vm_resource_desc().max_device_num_per_machine();
   }
 
+  void GetCachedInstrTypeIdAndPhyInstrStream(const std::string& instr_type_name, int device_id,
+                                             InstrTypeId* instr_type_id, Stream** stream);
+
+  void GetInstrTypeIdAndSoleStream(const std::string& instr_type_name, InstrTypeId* instr_type_id,
+                                   Stream** stream);
+
  private:
   using InstructionMsgList = intrusive::List<INTRUSIVE_FIELD(InstructionMsg, instr_msg_hook_)>;
   using ReadyInstructionList =
@@ -120,14 +126,14 @@ class VirtualMachineEngine final : public intrusive::Base {
   ReadyInstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
 
   void ReleaseFinishedInstructions();
-  void MovePendingToReadyOrWaiting();
+  void HandlePending();
   void TryRunBarrierInstruction();
   void DispatchAndPrescheduleInstructions();
   bool OnSchedulerThread(const StreamType& stream_type);
 
   void ReleaseInstruction(Instruction* instruction);
-  void FilterAndRunInstructionsInAdvance(InstructionMsgList* instr_msg_list);
-  void MakeInstructions(InstructionMsgList*, /*out*/ InstructionList* ret_instruction_list);
+  void MakeInstructions(InstructionMsg*, /*out*/ InstructionList* ret_instruction_list);
+  void RunInstructionsInAdvance(InstructionMsg* instr_msg);
   template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
   void ForEachMirroredObject(Id2LogicalObject* id2logical_object, const Operand& operand,
                              int64_t global_device_id, const DoEachT& DoEach);
@@ -158,19 +164,19 @@ class VirtualMachineEngine final : public intrusive::Base {
       const ModifiedOperand<kDeleteModifier, mem_zone_modifier>& mut2_operand,
       int64_t global_device_id, const DoEachT& DoEach);
 
-  void ConnectInstruction(Instruction* src_instruction, Instruction* dst_instruction);
-  RwMutexedObjectAccess* ConsumeMirroredObject(OperandAccessType access_type,
-                                               MirroredObject* mirrored_object,
-                                               Instruction* instrution);
-  void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
-                              InstructionList* new_instruction_list);
-  void MoveToReadyOrWaiting(InstructionList* new_instruction_list);
+  void TryConnectInstruction(Instruction* src_instruction, Instruction* dst_instruction);
+  void ConnectInstructionsByWrite(RwMutexedObjectAccess* dst_access);
+  void ConnectInstructionsByRead(RwMutexedObjectAccess* dst_access);
+  RwMutexedObjectAccess* AccessMirroredObject(OperandAccessType access_type,
+                                              MirroredObject* mirrored_object,
+                                              Instruction* instrution);
+  void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object, Instruction* instruction);
   void DispatchInstruction(Instruction* instruction);
   void TryDeleteLogicalObjects();
 
+  bool EdgeDispatchable(const Instruction* src, const Instruction* dst) const;
   bool Dispatchable(Instruction* instruction) const;
   void TryDispatchReadyInstructions();
-  void TryMoveFromWaitingToReady(Instruction* instruction);
 
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
@@ -185,7 +191,6 @@ class VirtualMachineEngine final : public intrusive::Base {
         id2logical_object_(),
         delete_logical_object_list_(),
         pending_msg_list_(),
-        waiting_instruction_list_(),
         ready_instruction_list_(),
         lively_instruction_list_(),
         barrier_instruction_list_() {}
@@ -202,10 +207,12 @@ class VirtualMachineEngine final : public intrusive::Base {
   Id2LogicalObject id2logical_object_;
   LogicalObjectDeleteList delete_logical_object_list_;
   InstructionMsgMutextList pending_msg_list_;
-  InstructionList waiting_instruction_list_;
   ReadyInstructionList ready_instruction_list_;
   LivelyInstructionList lively_instruction_list_;
   BarrierInstructionList barrier_instruction_list_;
+  std::map<std::string, RtInstrTypeId> instr_type_name2rt_instr_type_id_;
+  RwMutexedObjectAccess::object_pool_type access_pool_;
+  InstructionEdge::object_pool_type instruction_edge_pool_;
 };
 
 }  // namespace vm

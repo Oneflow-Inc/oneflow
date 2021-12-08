@@ -18,7 +18,9 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/cpp_attribute.h"
 
 namespace oneflow {
 namespace vm {
@@ -71,6 +73,25 @@ void InstructionMsg::__Init__(const std::string& instr_type_name) {
   *mut_instr_type_name() = instr_type_name;
 }
 
+void InstructionMsg::__Init__(VirtualMachineEngine* vm, const std::string& instr_type_name,
+                              const std::shared_ptr<const ParallelDesc>& phy_instr_parallel_desc,
+                              const std::shared_ptr<PhyInstrOperand>& phy_instr_operand) {
+  __Init__();
+  // There are instructions without concept of ParallelDesc, like LaunchLazyJob,
+  // ComputeGlobalFrontSeqBarrier. If phy_instr_parallel_desc is empty, Instructions are run on the
+  // sole stream within the StreamRtDesc.
+  if (likely(phy_instr_parallel_desc)) {
+    int device_id = phy_instr_parallel_desc->parallel_id2device_id().at(0);
+    vm->GetCachedInstrTypeIdAndPhyInstrStream(instr_type_name, device_id, mut_instr_type_id(),
+                                              &phy_instr_stream_);
+  } else {
+    vm->GetInstrTypeIdAndSoleStream(instr_type_name, mut_instr_type_id(), &phy_instr_stream_);
+  }
+  *mut_instr_type_name() = instr_type_name;
+  phy_instr_parallel_desc_ = phy_instr_parallel_desc;
+  phy_instr_operand_ = phy_instr_operand;
+}
+
 void InstructionMsg::__Init__(const InstructionProto& proto) { InitFromProto(this, proto); }
 void InstructionMsg::__Init__(const cfg::InstructionProto& proto) { InitFromProto(this, proto); }
 
@@ -78,12 +99,14 @@ void InstructionMsg::__Init__(const InstructionMsg& instr_msg) {
   __Init__();
   mut_instr_type_id()->CopyFrom(instr_msg.instr_type_id());
   *mut_instr_type_name() = instr_msg.instr_type_name();
-  if (instr_msg.parallel_desc()) { *mut_parallel_desc() = instr_msg.parallel_desc(); }
+  const auto& parallel_desc = instr_msg.phy_instr_parallel_desc();
+  if (parallel_desc) { phy_instr_parallel_desc_ = parallel_desc; }
   if (instr_msg.has_parallel_desc_symbol_id()) {
     set_parallel_desc_symbol_id(instr_msg.parallel_desc_symbol_id());
   }
   reset_operand_list(instr_msg.operand_list());
-  *mut_phy_instr_operand() = instr_msg.phy_instr_operand();
+  phy_instr_operand_ = instr_msg.phy_instr_operand();
+  if (instr_msg.phy_instr_stream() != nullptr) { phy_instr_stream_ = instr_msg.phy_instr_stream(); }
 }
 
 void InstructionMsg::ToProto(InstructionProto* proto) const {
@@ -226,7 +249,7 @@ intrusive::shared_ptr<InstructionMsg> InstructionMsg::MakeInferInstrMsg() const 
   auto* stream_type_id = infer_instr_msg->mut_instr_type_id()->mut_stream_type_id();
   CHECK_EQ(stream_type_id->interpret_type(), InterpretType::kCompute);
   stream_type_id->CopyFrom(LookupInferStreamTypeId(*stream_type_id));
-  *infer_instr_msg->mut_phy_instr_operand() = phy_instr_operand();
+  infer_instr_msg->phy_instr_operand_ = phy_instr_operand();
   return infer_instr_msg;
 }
 
@@ -325,7 +348,6 @@ int64_t Instruction::GetOperandDefaultGlobalDeviceId() const { return stream().g
 void Instruction::Init(InstructionMsg* instr_msg, Stream* stream,
                        const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   __Init__();
-  mut_status_buffer();
   reset_instr_msg(instr_msg);
   set_stream(stream);
   instr_msg->instr_type_id().instruction_type().InitInstructionStatusIf(this);

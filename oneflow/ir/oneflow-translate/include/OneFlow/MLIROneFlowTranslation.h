@@ -25,19 +25,26 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf.pb.h"
 #include <functional>
 #include <string>
+
+using UserOpArgs = const ::google::protobuf::Map<std::string, ::oneflow::UserOpConf_ListString>&;
+using UserOpArgDefs = const ::google::protobuf::RepeatedPtrField<::oneflow::UserOpDef_ArgDef>&;
+
 namespace mlir {
 
+namespace oneflow {
+
 // TODO: wrap in a helper namespace
-std::pair<unsigned, unsigned> getODSResultIndexAndLength(Operation* op, unsigned index);
-::mlir::Operation::result_range getODSResults(Operation* op, unsigned index);
-llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op);
-ResultRange GetDataOutputResults(Operation* op);
+
 LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
                                   ::oneflow::UserOpConf* user_conf);
 LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
                                    ::oneflow::UserOpConf* user_conf);
-LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf);
 OperandRange GetDataInputOperands(Operation* op);
+LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf);
+ResultRange GetDataOutputResults(Operation* op);
+llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op);
+llvm::Optional<std::string> GetOutputLbn(OpResult result);
+
 class Importer {
  public:
   Importer(MLIRContext* context, ModuleOp module)
@@ -94,8 +101,6 @@ class Importer {
   MLIRContext* GetMLIRContext() { return context_; }
   ModuleOp& GetModule() { return module_; }
   Location& GetRootLocation() { return unknown_loc_; }
-  virtual ::oneflow::AttrType QueryAttrType(const std::string& op_type_name,
-                                            const std::string& attr_name) = 0;
   virtual Type GetTensorTypeOfLbn(const std::string& lbn) = 0;
   LogicalResult ConvertUserOpAttributes(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
                                         ::oneflow::OperatorConf& op_conf);
@@ -121,20 +126,21 @@ class RoundTripOneFlowJobWrapperInterface {
   virtual std::string ReplaceInputLbnInOpCustomizedConf(::oneflow::OperatorConf* op_conf,
                                                         const std::string& ibn,
                                                         const std::string& new_val) const = 0;
-  virtual ::oneflow::AttrType QueryAttrType(const std::string& op_type_name,
-                                            const std::string& attr_name) const = 0;
   virtual void QueryLogicalBlob(
       const std::string& lbn, std::function<void(const int64_t* shape_begin,
                                                  const int64_t* shape_end, ::oneflow::DataType dt)>
                                   cb) const = 0;
   virtual void TopoForEachOpConf(
       std::function<void(const ::oneflow::OperatorConf*)> Handler) const = 0;
+  virtual bool IsLastIRPass() const = 0;
 };
 
 void RoundTripOneFlowJob(
     RoundTripOneFlowJobWrapperInterface& job_wrapper,
     const std::function<bool(::oneflow::Job* job, std::string& reason)>& is_legit_job);
 void registerFromOneFlowJobTranslation();
+
+}  // namespace oneflow
 
 }  // namespace mlir
 
