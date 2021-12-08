@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/to_string.h"
@@ -466,6 +467,7 @@ Maybe<void> Operator::GetSbpSignaturesIf(
         .Broadcast(output_bns())
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   }
+  FilterAndCheckSbpSignature4bn(sbp_sig_list);
   return Maybe<void>::Ok();
 }
 
@@ -687,6 +689,40 @@ Maybe<void> Operator::FilterNdSbpSignatureListByLogicalShape(
       nd_sbp_sig_list[sbp_id] = nd_sbp_sig_list[nd_sbp_sig_list.size() - 1];
       nd_sbp_sig_list.pop_back();
     }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> Operator::FilterAndCheckSbpSignature4bn(cfg::SbpSignatureList* sbp_sig_list) const {
+  CHECK_GT_OR_RETURN(sbp_sig_list->sbp_signature_size(), 0)
+      << "0 candidate before filter in " << op_name();
+  int32_t sbp_size = sbp_sig_list->sbp_signature(0).bn_in_op2sbp_parallel_size();
+  int32_t bn_size = input_bns().size() + output_bns().size();
+  CHECK_GT_OR_RETURN(sbp_size, bn_size) << " some blob don not have sbp in " << op_name();
+  // Might change filter to CHECK if all the operators are set up properly.
+  if (sbp_size > bn_size) {
+    cfg::SbpSignatureList filtered_sbp_sig_list;
+    auto add_sbp_parallel4bns = [&](const PbRpf<std::string>& bns, const cfg::SbpSignature& sbp_sig,
+                                    cfg::SbpSignature& filtered_sbp_sig) {
+      for (const auto& bn : bns) {
+        (*filtered_sbp_sig.mutable_bn_in_op2sbp_parallel())[bn] =
+            sbp_sig.bn_in_op2sbp_parallel().at(bn);
+      }
+    };
+    for (const auto& sbp_sig : sbp_sig_list->sbp_signature()) {
+      cfg::SbpSignature filtered_sbp_sig;
+      add_sbp_parallel4bns(input_bns(), sbp_sig, filtered_sbp_sig);
+      add_sbp_parallel4bns(output_bns(), sbp_sig, filtered_sbp_sig);
+      bool have_no_same_sbp = true;
+      for (const auto& filtered_sbp_sig_in_list : filtered_sbp_sig_list.sbp_signature()) {
+        if (filtered_sbp_sig == filtered_sbp_sig_in_list) {
+          have_no_same_sbp = false;
+          break;
+        }
+      }
+      if (have_no_same_sbp) { *filtered_sbp_sig_list.add_sbp_signature() = filtered_sbp_sig; }
+    }
+    *sbp_sig_list = filtered_sbp_sig_list;
   }
   return Maybe<void>::Ok();
 }
