@@ -256,7 +256,7 @@ void InitOutputBlobObjects(vm::Instruction* instruction, const T& args,
       CHECK(rw_mutexed_object->Has<BlobObject>());
     } else {
       rw_mutexed_object->Init<EagerBlobObject>(mem_case, std::make_shared<Shape>(), data_type,
-                                               std::make_shared<TensorBuffer>());
+                                               std::make_shared<TensorStorage>());
     }
   };
   FOR_RANGE(int, i, 0, args.output_blob_size()) {

@@ -387,7 +387,7 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
 
   opkernel->tmp_blob_object_.reset(
       new vm::EagerBlobObject(opkernel->mem_case(), std::make_shared<Shape>(), DataType::kChar,
-                              std::make_shared<vm::TensorBuffer>()));
+                              std::make_shared<vm::TensorStorage>()));
 
   const std::string& device_tag = op_conf->device_tag();
   const user_op::UserOpConfWrapper* user_op_conf = opkernel->user_op_conf_.get();
