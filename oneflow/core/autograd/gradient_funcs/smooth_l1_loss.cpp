@@ -22,38 +22,38 @@ namespace oneflow {
 namespace one {
 
 struct SmoothL1LossCaptureState : public AutoGradCaptureState {
-  std::string reduction = "none";
-  float beta = 0.0;
   bool requires_grad = false;
+  float beta = 0.0;
 };
 
 class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossCaptureState> {
  public:
   Maybe<void> Capture(SmoothL1LossCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
     state->requires_grad = inputs.at(0)->requires_grad();  // prediction
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);
     state->SaveTensorForBackward(inputs.at(0));  // prediction
     state->SaveTensorForBackward(inputs.at(1));  // label
 
     auto* interp_ctx = dynamic_cast<const SmoothL1LossOpInterpCtx*>(ctx);
     state->beta = interp_ctx->beta();
-    state->reduction = interp_ctx->reduction();
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const SmoothL1LossCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
+    if (!state->requires_grad) { return Maybe<void>::Ok(); }
+
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(2);
 
     if (state->requires_grad) {
       const auto& prediction = state->SavedTensors().at(0);
       const auto& label = state->SavedTensors().at(1);
-      in_grads->at(0) = JUST(functional::SmoothL1LossGrad(out_grads.at(0), prediction, label,
-                                                          state->beta, state->reduction));
+      in_grads->at(0) =
+          JUST(functional::SmoothL1LossGrad(out_grads.at(0), prediction, label, state->beta));
     }
     return Maybe<void>::Ok();
   }

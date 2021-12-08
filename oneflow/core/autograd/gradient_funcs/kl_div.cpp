@@ -21,8 +21,8 @@ namespace oneflow {
 namespace one {
 
 struct KLDivLossCaptureState : public AutoGradCaptureState {
+  bool requires_grad = false;
   bool log_target = false;
-  std::string reduction = "";
 };
 
 class KLDivLoss : public OpExprGradFunction<KLDivLossCaptureState> {
@@ -35,23 +35,25 @@ class KLDivLoss : public OpExprGradFunction<KLDivLossCaptureState> {
 
 Maybe<void> KLDivLoss::Capture(KLDivLossCaptureState* state, const TensorTuple& inputs,
                                const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+  state->requires_grad = inputs.at(0)->requires_grad();
+  if (!state->requires_grad) { return Maybe<void>::Ok(); }
+
   auto* interp_ctx = dynamic_cast<const KlDivLossOpInterpCtx*>(ctx);
   state->log_target = interp_ctx->log_target();
-  state->reduction = interp_ctx->reduction();
   state->SaveTensorForBackward(inputs.at(0));  // input
   state->SaveTensorForBackward(inputs.at(1));  // target
   return Maybe<void>::Ok();
 }
 Maybe<void> KLDivLoss::Apply(const KLDivLossCaptureState* state, const TensorTuple& out_grads,
                              TensorTuple* in_grads) const {
+  if (!state->requires_grad) { return Maybe<void>::Ok(); }
+
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   const auto& dy = out_grads.at(0);
   const auto& input = state->SavedTensors().at(0);
   const auto& target = state->SavedTensors().at(1);
   in_grads->resize(state->SavedTensors().size());
-  in_grads->at(0) =
-      JUST(functional::KLDivLossGrad(dy, input, target, state->log_target, state->reduction));
-
+  in_grads->at(0) = JUST(functional::KLDivLossGrad(dy, input, target, state->log_target));
   return Maybe<void>::Ok();
 }
 REGISTER_OP_EXPR_GRAD_FUNCTION("kl_div_loss", KLDivLoss);

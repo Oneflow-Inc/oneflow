@@ -5305,26 +5305,12 @@ class BiasAddOp {
 REGISTER_OP_INTERP_CTX("user.bias_add", BiasAddOpInterpCtxImpl<schema::BiasAddOp>);
 #endif  // NEED_REGISTER_OP_INTERP_CTX
 
-class BinaryCrossEntropyOpInterpCtx : public OpInterpCtx {
- public:
-  virtual const std::string& reduction() const = 0;
-  virtual std::string* mutable_reduction() = 0;
-  virtual void set_reduction(const std::string& reduction) = 0;
-
-  const HashSet<std::string>& AttrNames() const override {
-    static HashSet<std::string> attr_names{"reduction"};
-    return attr_names;
-  }
-};
+class BinaryCrossEntropyOpInterpCtx : public OpInterpCtx {};
 template<typename Provider>
 class BinaryCrossEntropyOpInterpCtxImpl : public BinaryCrossEntropyOpInterpCtx {
  public:
   BinaryCrossEntropyOpInterpCtxImpl() = default;
   BinaryCrossEntropyOpInterpCtxImpl(const Provider& impl) : impl_(impl) {}
-
-  const std::string& reduction() const override { return impl_.reduction(); }
-  std::string* mutable_reduction() override { return impl_.mutable_reduction(); }
-  void set_reduction(const std::string& reduction) override { impl_.set_reduction(reduction); }
 
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     return impl_.GetAttr(attr_name);
@@ -5340,21 +5326,11 @@ class BinaryCrossEntropyOp {
   BinaryCrossEntropyOp() : internal_(std::make_shared<Internal>()) {}
 
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const {
-    if (attr_name == "reduction") {
-      return CastAttr(&internal_->reduction);
-    } else {
-      return Error::RuntimeError() << "BinaryCrossEntropy op has no attribute named " << attr_name;
-    }
+    return Error::RuntimeError() << "BinaryCrossEntropy op has no attribute named " << attr_name;
   }
 
-  const std::string& reduction() const { return internal_->reduction; }
-  std::string* mutable_reduction() { return &internal_->reduction; }
-  void set_reduction(const std::string& reduction) { internal_->reduction = reduction; }
-
  private:
-  struct Internal {
-    std::string reduction;
-  };
+  struct Internal {};
 
  private:
   std::shared_ptr<Internal> internal_;
@@ -5366,26 +5342,12 @@ REGISTER_OP_INTERP_CTX("user.binary_cross_entropy",
                        BinaryCrossEntropyOpInterpCtxImpl<schema::BinaryCrossEntropyOp>);
 #endif  // NEED_REGISTER_OP_INTERP_CTX
 
-class BinaryCrossEntropyGradOpInterpCtx : public OpInterpCtx {
- public:
-  virtual const std::string& reduction() const = 0;
-  virtual std::string* mutable_reduction() = 0;
-  virtual void set_reduction(const std::string& reduction) = 0;
-
-  const HashSet<std::string>& AttrNames() const override {
-    static HashSet<std::string> attr_names{"reduction"};
-    return attr_names;
-  }
-};
+class BinaryCrossEntropyGradOpInterpCtx : public OpInterpCtx {};
 template<typename Provider>
 class BinaryCrossEntropyGradOpInterpCtxImpl : public BinaryCrossEntropyGradOpInterpCtx {
  public:
   BinaryCrossEntropyGradOpInterpCtxImpl() = default;
   BinaryCrossEntropyGradOpInterpCtxImpl(const Provider& impl) : impl_(impl) {}
-
-  const std::string& reduction() const override { return impl_.reduction(); }
-  std::string* mutable_reduction() override { return impl_.mutable_reduction(); }
-  void set_reduction(const std::string& reduction) override { impl_.set_reduction(reduction); }
 
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     return impl_.GetAttr(attr_name);
@@ -5401,22 +5363,12 @@ class BinaryCrossEntropyGradOp {
   BinaryCrossEntropyGradOp() : internal_(std::make_shared<Internal>()) {}
 
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const {
-    if (attr_name == "reduction") {
-      return CastAttr(&internal_->reduction);
-    } else {
-      return Error::RuntimeError()
-             << "BinaryCrossEntropyGrad op has no attribute named " << attr_name;
-    }
+    return Error::RuntimeError() << "BinaryCrossEntropyGrad op has no attribute named "
+                                 << attr_name;
   }
 
-  const std::string& reduction() const { return internal_->reduction; }
-  std::string* mutable_reduction() { return &internal_->reduction; }
-  void set_reduction(const std::string& reduction) { internal_->reduction = reduction; }
-
  private:
-  struct Internal {
-    std::string reduction;
-  };
+  struct Internal {};
 
  private:
   std::shared_ptr<Internal> internal_;
@@ -5434,12 +5386,8 @@ class BinaryCrossEntropyWithLogitsOpInterpCtx : public OpInterpCtx {
   virtual bool* mutable_has_pos_weight() = 0;
   virtual void set_has_pos_weight(const bool& has_pos_weight) = 0;
 
-  virtual const std::string& reduction() const = 0;
-  virtual std::string* mutable_reduction() = 0;
-  virtual void set_reduction(const std::string& reduction) = 0;
-
   const HashSet<std::string>& AttrNames() const override {
-    static HashSet<std::string> attr_names{"has_pos_weight", "reduction"};
+    static HashSet<std::string> attr_names{"has_pos_weight"};
     return attr_names;
   }
 };
@@ -5454,10 +5402,6 @@ class BinaryCrossEntropyWithLogitsOpInterpCtxImpl : public BinaryCrossEntropyWit
   void set_has_pos_weight(const bool& has_pos_weight) override {
     impl_.set_has_pos_weight(has_pos_weight);
   }
-
-  const std::string& reduction() const override { return impl_.reduction(); }
-  std::string* mutable_reduction() override { return impl_.mutable_reduction(); }
-  void set_reduction(const std::string& reduction) override { impl_.set_reduction(reduction); }
 
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     return impl_.GetAttr(attr_name);
@@ -5475,8 +5419,6 @@ class BinaryCrossEntropyWithLogitsOp {
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const {
     if (attr_name == "has_pos_weight") {
       return CastAttr(&internal_->has_pos_weight);
-    } else if (attr_name == "reduction") {
-      return CastAttr(&internal_->reduction);
     } else {
       return Error::RuntimeError()
              << "BinaryCrossEntropyWithLogits op has no attribute named " << attr_name;
@@ -5489,14 +5431,9 @@ class BinaryCrossEntropyWithLogitsOp {
     internal_->has_pos_weight = has_pos_weight;
   }
 
-  const std::string& reduction() const { return internal_->reduction; }
-  std::string* mutable_reduction() { return &internal_->reduction; }
-  void set_reduction(const std::string& reduction) { internal_->reduction = reduction; }
-
  private:
   struct Internal {
     bool has_pos_weight;
-    std::string reduction;
   };
 
  private:
@@ -5516,12 +5453,8 @@ class BinaryCrossEntropyWithLogitsGradOpInterpCtx : public OpInterpCtx {
   virtual bool* mutable_has_pos_weight() = 0;
   virtual void set_has_pos_weight(const bool& has_pos_weight) = 0;
 
-  virtual const std::string& reduction() const = 0;
-  virtual std::string* mutable_reduction() = 0;
-  virtual void set_reduction(const std::string& reduction) = 0;
-
   const HashSet<std::string>& AttrNames() const override {
-    static HashSet<std::string> attr_names{"has_pos_weight", "reduction"};
+    static HashSet<std::string> attr_names{"has_pos_weight"};
     return attr_names;
   }
 };
@@ -5537,10 +5470,6 @@ class BinaryCrossEntropyWithLogitsGradOpInterpCtxImpl
   void set_has_pos_weight(const bool& has_pos_weight) override {
     impl_.set_has_pos_weight(has_pos_weight);
   }
-
-  const std::string& reduction() const override { return impl_.reduction(); }
-  std::string* mutable_reduction() override { return impl_.mutable_reduction(); }
-  void set_reduction(const std::string& reduction) override { impl_.set_reduction(reduction); }
 
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     return impl_.GetAttr(attr_name);
@@ -5558,8 +5487,6 @@ class BinaryCrossEntropyWithLogitsGradOp {
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const {
     if (attr_name == "has_pos_weight") {
       return CastAttr(&internal_->has_pos_weight);
-    } else if (attr_name == "reduction") {
-      return CastAttr(&internal_->reduction);
     } else {
       return Error::RuntimeError()
              << "BinaryCrossEntropyWithLogitsGrad op has no attribute named " << attr_name;
@@ -5572,14 +5499,9 @@ class BinaryCrossEntropyWithLogitsGradOp {
     internal_->has_pos_weight = has_pos_weight;
   }
 
-  const std::string& reduction() const { return internal_->reduction; }
-  std::string* mutable_reduction() { return &internal_->reduction; }
-  void set_reduction(const std::string& reduction) { internal_->reduction = reduction; }
-
  private:
   struct Internal {
     bool has_pos_weight;
-    std::string reduction;
   };
 
  private:
@@ -11962,14 +11884,50 @@ REGISTER_OP_INTERP_CTX("user.distributed_partial_fc_sample_disable_boxing",
                            schema::DistributedPartialFcSampleDisableBoxingOp>);
 #endif  // NEED_REGISTER_OP_INTERP_CTX
 
+class DotOpInterpCtx : public OpInterpCtx {};
+template<typename Provider>
+class DotOpInterpCtxImpl : public DotOpInterpCtx {
+ public:
+  DotOpInterpCtxImpl() = default;
+  DotOpInterpCtxImpl(const Provider& impl) : impl_(impl) {}
+
+  Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
+    return impl_.GetAttr(attr_name);
+  }
+
+ private:
+  Provider impl_;
+};
+
+namespace schema {
+class DotOp {
+ public:
+  DotOp() : internal_(std::make_shared<Internal>()) {}
+
+  Maybe<AttrVal> GetAttr(const std::string& attr_name) const {
+    return Error::RuntimeError() << "Dot op has no attribute named " << attr_name;
+  }
+
+ private:
+  struct Internal {};
+
+ private:
+  std::shared_ptr<Internal> internal_;
+};
+}  // namespace schema
+
+#ifdef NEED_REGISTER_OP_INTERP_CTX
+REGISTER_OP_INTERP_CTX("user.dot", DotOpInterpCtxImpl<schema::DotOp>);
+#endif  // NEED_REGISTER_OP_INTERP_CTX
+
 class DropoutOpInterpCtx : public OpInterpCtx {
  public:
-  virtual const float& scale() const = 0;
-  virtual float* mutable_scale() = 0;
-  virtual void set_scale(const float& scale) = 0;
+  virtual const float& rate() const = 0;
+  virtual float* mutable_rate() = 0;
+  virtual void set_rate(const float& rate) = 0;
 
   const HashSet<std::string>& AttrNames() const override {
-    static HashSet<std::string> attr_names{"scale"};
+    static HashSet<std::string> attr_names{"rate"};
     return attr_names;
   }
 };
@@ -11979,9 +11937,9 @@ class DropoutOpInterpCtxImpl : public DropoutOpInterpCtx {
   DropoutOpInterpCtxImpl() = default;
   DropoutOpInterpCtxImpl(const Provider& impl) : impl_(impl) {}
 
-  const float& scale() const override { return impl_.scale(); }
-  float* mutable_scale() override { return impl_.mutable_scale(); }
-  void set_scale(const float& scale) override { impl_.set_scale(scale); }
+  const float& rate() const override { return impl_.rate(); }
+  float* mutable_rate() override { return impl_.mutable_rate(); }
+  void set_rate(const float& rate) override { impl_.set_rate(rate); }
 
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     return impl_.GetAttr(attr_name);
@@ -11997,20 +11955,20 @@ class DropoutOp {
   DropoutOp() : internal_(std::make_shared<Internal>()) {}
 
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const {
-    if (attr_name == "scale") {
-      return CastAttr(&internal_->scale);
+    if (attr_name == "rate") {
+      return CastAttr(&internal_->rate);
     } else {
       return Error::RuntimeError() << "Dropout op has no attribute named " << attr_name;
     }
   }
 
-  const float& scale() const { return internal_->scale; }
-  float* mutable_scale() { return &internal_->scale; }
-  void set_scale(const float& scale) { internal_->scale = scale; }
+  const float& rate() const { return internal_->rate; }
+  float* mutable_rate() { return &internal_->rate; }
+  void set_rate(const float& rate) { internal_->rate = rate; }
 
  private:
   struct Internal {
-    float scale;
+    float rate;
   };
 
  private:
@@ -18368,16 +18326,12 @@ REGISTER_OP_INTERP_CTX("user.indexed_slices_sgd_update",
 
 class KlDivLossOpInterpCtx : public OpInterpCtx {
  public:
-  virtual const std::string& reduction() const = 0;
-  virtual std::string* mutable_reduction() = 0;
-  virtual void set_reduction(const std::string& reduction) = 0;
-
   virtual const bool& log_target() const = 0;
   virtual bool* mutable_log_target() = 0;
   virtual void set_log_target(const bool& log_target) = 0;
 
   const HashSet<std::string>& AttrNames() const override {
-    static HashSet<std::string> attr_names{"reduction", "log_target"};
+    static HashSet<std::string> attr_names{"log_target"};
     return attr_names;
   }
 };
@@ -18386,10 +18340,6 @@ class KlDivLossOpInterpCtxImpl : public KlDivLossOpInterpCtx {
  public:
   KlDivLossOpInterpCtxImpl() = default;
   KlDivLossOpInterpCtxImpl(const Provider& impl) : impl_(impl) {}
-
-  const std::string& reduction() const override { return impl_.reduction(); }
-  std::string* mutable_reduction() override { return impl_.mutable_reduction(); }
-  void set_reduction(const std::string& reduction) override { impl_.set_reduction(reduction); }
 
   const bool& log_target() const override { return impl_.log_target(); }
   bool* mutable_log_target() override { return impl_.mutable_log_target(); }
@@ -18409,18 +18359,12 @@ class KlDivLossOp {
   KlDivLossOp() : internal_(std::make_shared<Internal>()) {}
 
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const {
-    if (attr_name == "reduction") {
-      return CastAttr(&internal_->reduction);
-    } else if (attr_name == "log_target") {
+    if (attr_name == "log_target") {
       return CastAttr(&internal_->log_target);
     } else {
       return Error::RuntimeError() << "KlDivLoss op has no attribute named " << attr_name;
     }
   }
-
-  const std::string& reduction() const { return internal_->reduction; }
-  std::string* mutable_reduction() { return &internal_->reduction; }
-  void set_reduction(const std::string& reduction) { internal_->reduction = reduction; }
 
   const bool& log_target() const { return internal_->log_target; }
   bool* mutable_log_target() { return &internal_->log_target; }
@@ -18428,7 +18372,6 @@ class KlDivLossOp {
 
  private:
   struct Internal {
-    std::string reduction;
     bool log_target;
   };
 
@@ -18443,16 +18386,12 @@ REGISTER_OP_INTERP_CTX("user.kl_div_loss", KlDivLossOpInterpCtxImpl<schema::KlDi
 
 class KlDivLossGradOpInterpCtx : public OpInterpCtx {
  public:
-  virtual const std::string& reduction() const = 0;
-  virtual std::string* mutable_reduction() = 0;
-  virtual void set_reduction(const std::string& reduction) = 0;
-
   virtual const bool& log_target() const = 0;
   virtual bool* mutable_log_target() = 0;
   virtual void set_log_target(const bool& log_target) = 0;
 
   const HashSet<std::string>& AttrNames() const override {
-    static HashSet<std::string> attr_names{"reduction", "log_target"};
+    static HashSet<std::string> attr_names{"log_target"};
     return attr_names;
   }
 };
@@ -18461,10 +18400,6 @@ class KlDivLossGradOpInterpCtxImpl : public KlDivLossGradOpInterpCtx {
  public:
   KlDivLossGradOpInterpCtxImpl() = default;
   KlDivLossGradOpInterpCtxImpl(const Provider& impl) : impl_(impl) {}
-
-  const std::string& reduction() const override { return impl_.reduction(); }
-  std::string* mutable_reduction() override { return impl_.mutable_reduction(); }
-  void set_reduction(const std::string& reduction) override { impl_.set_reduction(reduction); }
 
   const bool& log_target() const override { return impl_.log_target(); }
   bool* mutable_log_target() override { return impl_.mutable_log_target(); }
@@ -18484,18 +18419,12 @@ class KlDivLossGradOp {
   KlDivLossGradOp() : internal_(std::make_shared<Internal>()) {}
 
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const {
-    if (attr_name == "reduction") {
-      return CastAttr(&internal_->reduction);
-    } else if (attr_name == "log_target") {
+    if (attr_name == "log_target") {
       return CastAttr(&internal_->log_target);
     } else {
       return Error::RuntimeError() << "KlDivLossGrad op has no attribute named " << attr_name;
     }
   }
-
-  const std::string& reduction() const { return internal_->reduction; }
-  std::string* mutable_reduction() { return &internal_->reduction; }
-  void set_reduction(const std::string& reduction) { internal_->reduction = reduction; }
 
   const bool& log_target() const { return internal_->log_target; }
   bool* mutable_log_target() { return &internal_->log_target; }
@@ -18503,7 +18432,6 @@ class KlDivLossGradOp {
 
  private:
   struct Internal {
-    std::string reduction;
     bool log_target;
   };
 
@@ -22305,12 +22233,8 @@ class NllOpInterpCtx : public OpInterpCtx {
   virtual int64_t* mutable_ignore_index() = 0;
   virtual void set_ignore_index(const int64_t& ignore_index) = 0;
 
-  virtual const std::string& reduction() const = 0;
-  virtual std::string* mutable_reduction() = 0;
-  virtual void set_reduction(const std::string& reduction) = 0;
-
   const HashSet<std::string>& AttrNames() const override {
-    static HashSet<std::string> attr_names{"ignore_index", "reduction"};
+    static HashSet<std::string> attr_names{"ignore_index"};
     return attr_names;
   }
 };
@@ -22325,10 +22249,6 @@ class NllOpInterpCtxImpl : public NllOpInterpCtx {
   void set_ignore_index(const int64_t& ignore_index) override {
     impl_.set_ignore_index(ignore_index);
   }
-
-  const std::string& reduction() const override { return impl_.reduction(); }
-  std::string* mutable_reduction() override { return impl_.mutable_reduction(); }
-  void set_reduction(const std::string& reduction) override { impl_.set_reduction(reduction); }
 
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     return impl_.GetAttr(attr_name);
@@ -22346,8 +22266,6 @@ class NllOp {
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const {
     if (attr_name == "ignore_index") {
       return CastAttr(&internal_->ignore_index);
-    } else if (attr_name == "reduction") {
-      return CastAttr(&internal_->reduction);
     } else {
       return Error::RuntimeError() << "Nll op has no attribute named " << attr_name;
     }
@@ -22357,14 +22275,9 @@ class NllOp {
   int64_t* mutable_ignore_index() { return &internal_->ignore_index; }
   void set_ignore_index(const int64_t& ignore_index) { internal_->ignore_index = ignore_index; }
 
-  const std::string& reduction() const { return internal_->reduction; }
-  std::string* mutable_reduction() { return &internal_->reduction; }
-  void set_reduction(const std::string& reduction) { internal_->reduction = reduction; }
-
  private:
   struct Internal {
     int64_t ignore_index;
-    std::string reduction;
   };
 
  private:
@@ -22382,12 +22295,8 @@ class NllGradOpInterpCtx : public OpInterpCtx {
   virtual int64_t* mutable_ignore_index() = 0;
   virtual void set_ignore_index(const int64_t& ignore_index) = 0;
 
-  virtual const std::string& reduction() const = 0;
-  virtual std::string* mutable_reduction() = 0;
-  virtual void set_reduction(const std::string& reduction) = 0;
-
   const HashSet<std::string>& AttrNames() const override {
-    static HashSet<std::string> attr_names{"ignore_index", "reduction"};
+    static HashSet<std::string> attr_names{"ignore_index"};
     return attr_names;
   }
 };
@@ -22402,10 +22311,6 @@ class NllGradOpInterpCtxImpl : public NllGradOpInterpCtx {
   void set_ignore_index(const int64_t& ignore_index) override {
     impl_.set_ignore_index(ignore_index);
   }
-
-  const std::string& reduction() const override { return impl_.reduction(); }
-  std::string* mutable_reduction() override { return impl_.mutable_reduction(); }
-  void set_reduction(const std::string& reduction) override { impl_.set_reduction(reduction); }
 
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
     return impl_.GetAttr(attr_name);
@@ -22423,8 +22328,6 @@ class NllGradOp {
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const {
     if (attr_name == "ignore_index") {
       return CastAttr(&internal_->ignore_index);
-    } else if (attr_name == "reduction") {
-      return CastAttr(&internal_->reduction);
     } else {
       return Error::RuntimeError() << "NllGrad op has no attribute named " << attr_name;
     }
@@ -22434,14 +22337,9 @@ class NllGradOp {
   int64_t* mutable_ignore_index() { return &internal_->ignore_index; }
   void set_ignore_index(const int64_t& ignore_index) { internal_->ignore_index = ignore_index; }
 
-  const std::string& reduction() const { return internal_->reduction; }
-  std::string* mutable_reduction() { return &internal_->reduction; }
-  void set_reduction(const std::string& reduction) { internal_->reduction = reduction; }
-
  private:
   struct Internal {
     int64_t ignore_index;
-    std::string reduction;
   };
 
  private:
@@ -27394,6 +27292,260 @@ REGISTER_OP_INTERP_CTX("user.rmsprop_update",
                        RmspropUpdateOpInterpCtxImpl<schema::RmspropUpdateOp>);
 #endif  // NEED_REGISTER_OP_INTERP_CTX
 
+class RoiAlignOpInterpCtx : public OpInterpCtx {
+ public:
+  virtual const int32_t& pooled_h() const = 0;
+  virtual int32_t* mutable_pooled_h() = 0;
+  virtual void set_pooled_h(const int32_t& pooled_h) = 0;
+
+  virtual const int32_t& pooled_w() const = 0;
+  virtual int32_t* mutable_pooled_w() = 0;
+  virtual void set_pooled_w(const int32_t& pooled_w) = 0;
+
+  virtual const float& spatial_scale() const = 0;
+  virtual float* mutable_spatial_scale() = 0;
+  virtual void set_spatial_scale(const float& spatial_scale) = 0;
+
+  virtual const int32_t& sampling_ratio() const = 0;
+  virtual int32_t* mutable_sampling_ratio() = 0;
+  virtual void set_sampling_ratio(const int32_t& sampling_ratio) = 0;
+
+  virtual const bool& aligned() const = 0;
+  virtual bool* mutable_aligned() = 0;
+  virtual void set_aligned(const bool& aligned) = 0;
+
+  const HashSet<std::string>& AttrNames() const override {
+    static HashSet<std::string> attr_names{"pooled_h", "pooled_w", "spatial_scale",
+                                           "sampling_ratio", "aligned"};
+    return attr_names;
+  }
+};
+template<typename Provider>
+class RoiAlignOpInterpCtxImpl : public RoiAlignOpInterpCtx {
+ public:
+  RoiAlignOpInterpCtxImpl() = default;
+  RoiAlignOpInterpCtxImpl(const Provider& impl) : impl_(impl) {}
+
+  const int32_t& pooled_h() const override { return impl_.pooled_h(); }
+  int32_t* mutable_pooled_h() override { return impl_.mutable_pooled_h(); }
+  void set_pooled_h(const int32_t& pooled_h) override { impl_.set_pooled_h(pooled_h); }
+
+  const int32_t& pooled_w() const override { return impl_.pooled_w(); }
+  int32_t* mutable_pooled_w() override { return impl_.mutable_pooled_w(); }
+  void set_pooled_w(const int32_t& pooled_w) override { impl_.set_pooled_w(pooled_w); }
+
+  const float& spatial_scale() const override { return impl_.spatial_scale(); }
+  float* mutable_spatial_scale() override { return impl_.mutable_spatial_scale(); }
+  void set_spatial_scale(const float& spatial_scale) override {
+    impl_.set_spatial_scale(spatial_scale);
+  }
+
+  const int32_t& sampling_ratio() const override { return impl_.sampling_ratio(); }
+  int32_t* mutable_sampling_ratio() override { return impl_.mutable_sampling_ratio(); }
+  void set_sampling_ratio(const int32_t& sampling_ratio) override {
+    impl_.set_sampling_ratio(sampling_ratio);
+  }
+
+  const bool& aligned() const override { return impl_.aligned(); }
+  bool* mutable_aligned() override { return impl_.mutable_aligned(); }
+  void set_aligned(const bool& aligned) override { impl_.set_aligned(aligned); }
+
+  Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
+    return impl_.GetAttr(attr_name);
+  }
+
+ private:
+  Provider impl_;
+};
+
+namespace schema {
+class RoiAlignOp {
+ public:
+  RoiAlignOp() : internal_(std::make_shared<Internal>()) {}
+
+  Maybe<AttrVal> GetAttr(const std::string& attr_name) const {
+    if (attr_name == "pooled_h") {
+      return CastAttr(&internal_->pooled_h);
+    } else if (attr_name == "pooled_w") {
+      return CastAttr(&internal_->pooled_w);
+    } else if (attr_name == "spatial_scale") {
+      return CastAttr(&internal_->spatial_scale);
+    } else if (attr_name == "sampling_ratio") {
+      return CastAttr(&internal_->sampling_ratio);
+    } else if (attr_name == "aligned") {
+      return CastAttr(&internal_->aligned);
+    } else {
+      return Error::RuntimeError() << "RoiAlign op has no attribute named " << attr_name;
+    }
+  }
+
+  const int32_t& pooled_h() const { return internal_->pooled_h; }
+  int32_t* mutable_pooled_h() { return &internal_->pooled_h; }
+  void set_pooled_h(const int32_t& pooled_h) { internal_->pooled_h = pooled_h; }
+
+  const int32_t& pooled_w() const { return internal_->pooled_w; }
+  int32_t* mutable_pooled_w() { return &internal_->pooled_w; }
+  void set_pooled_w(const int32_t& pooled_w) { internal_->pooled_w = pooled_w; }
+
+  const float& spatial_scale() const { return internal_->spatial_scale; }
+  float* mutable_spatial_scale() { return &internal_->spatial_scale; }
+  void set_spatial_scale(const float& spatial_scale) { internal_->spatial_scale = spatial_scale; }
+
+  const int32_t& sampling_ratio() const { return internal_->sampling_ratio; }
+  int32_t* mutable_sampling_ratio() { return &internal_->sampling_ratio; }
+  void set_sampling_ratio(const int32_t& sampling_ratio) {
+    internal_->sampling_ratio = sampling_ratio;
+  }
+
+  const bool& aligned() const { return internal_->aligned; }
+  bool* mutable_aligned() { return &internal_->aligned; }
+  void set_aligned(const bool& aligned) { internal_->aligned = aligned; }
+
+ private:
+  struct Internal {
+    int32_t pooled_h;
+    int32_t pooled_w;
+    float spatial_scale;
+    int32_t sampling_ratio;
+    bool aligned;
+  };
+
+ private:
+  std::shared_ptr<Internal> internal_;
+};
+}  // namespace schema
+
+#ifdef NEED_REGISTER_OP_INTERP_CTX
+REGISTER_OP_INTERP_CTX("user.roi_align", RoiAlignOpInterpCtxImpl<schema::RoiAlignOp>);
+#endif  // NEED_REGISTER_OP_INTERP_CTX
+
+class RoiAlignGradOpInterpCtx : public OpInterpCtx {
+ public:
+  virtual const int32_t& pooled_h() const = 0;
+  virtual int32_t* mutable_pooled_h() = 0;
+  virtual void set_pooled_h(const int32_t& pooled_h) = 0;
+
+  virtual const int32_t& pooled_w() const = 0;
+  virtual int32_t* mutable_pooled_w() = 0;
+  virtual void set_pooled_w(const int32_t& pooled_w) = 0;
+
+  virtual const float& spatial_scale() const = 0;
+  virtual float* mutable_spatial_scale() = 0;
+  virtual void set_spatial_scale(const float& spatial_scale) = 0;
+
+  virtual const int32_t& sampling_ratio() const = 0;
+  virtual int32_t* mutable_sampling_ratio() = 0;
+  virtual void set_sampling_ratio(const int32_t& sampling_ratio) = 0;
+
+  virtual const bool& aligned() const = 0;
+  virtual bool* mutable_aligned() = 0;
+  virtual void set_aligned(const bool& aligned) = 0;
+
+  const HashSet<std::string>& AttrNames() const override {
+    static HashSet<std::string> attr_names{"pooled_h", "pooled_w", "spatial_scale",
+                                           "sampling_ratio", "aligned"};
+    return attr_names;
+  }
+};
+template<typename Provider>
+class RoiAlignGradOpInterpCtxImpl : public RoiAlignGradOpInterpCtx {
+ public:
+  RoiAlignGradOpInterpCtxImpl() = default;
+  RoiAlignGradOpInterpCtxImpl(const Provider& impl) : impl_(impl) {}
+
+  const int32_t& pooled_h() const override { return impl_.pooled_h(); }
+  int32_t* mutable_pooled_h() override { return impl_.mutable_pooled_h(); }
+  void set_pooled_h(const int32_t& pooled_h) override { impl_.set_pooled_h(pooled_h); }
+
+  const int32_t& pooled_w() const override { return impl_.pooled_w(); }
+  int32_t* mutable_pooled_w() override { return impl_.mutable_pooled_w(); }
+  void set_pooled_w(const int32_t& pooled_w) override { impl_.set_pooled_w(pooled_w); }
+
+  const float& spatial_scale() const override { return impl_.spatial_scale(); }
+  float* mutable_spatial_scale() override { return impl_.mutable_spatial_scale(); }
+  void set_spatial_scale(const float& spatial_scale) override {
+    impl_.set_spatial_scale(spatial_scale);
+  }
+
+  const int32_t& sampling_ratio() const override { return impl_.sampling_ratio(); }
+  int32_t* mutable_sampling_ratio() override { return impl_.mutable_sampling_ratio(); }
+  void set_sampling_ratio(const int32_t& sampling_ratio) override {
+    impl_.set_sampling_ratio(sampling_ratio);
+  }
+
+  const bool& aligned() const override { return impl_.aligned(); }
+  bool* mutable_aligned() override { return impl_.mutable_aligned(); }
+  void set_aligned(const bool& aligned) override { impl_.set_aligned(aligned); }
+
+  Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
+    return impl_.GetAttr(attr_name);
+  }
+
+ private:
+  Provider impl_;
+};
+
+namespace schema {
+class RoiAlignGradOp {
+ public:
+  RoiAlignGradOp() : internal_(std::make_shared<Internal>()) {}
+
+  Maybe<AttrVal> GetAttr(const std::string& attr_name) const {
+    if (attr_name == "pooled_h") {
+      return CastAttr(&internal_->pooled_h);
+    } else if (attr_name == "pooled_w") {
+      return CastAttr(&internal_->pooled_w);
+    } else if (attr_name == "spatial_scale") {
+      return CastAttr(&internal_->spatial_scale);
+    } else if (attr_name == "sampling_ratio") {
+      return CastAttr(&internal_->sampling_ratio);
+    } else if (attr_name == "aligned") {
+      return CastAttr(&internal_->aligned);
+    } else {
+      return Error::RuntimeError() << "RoiAlignGrad op has no attribute named " << attr_name;
+    }
+  }
+
+  const int32_t& pooled_h() const { return internal_->pooled_h; }
+  int32_t* mutable_pooled_h() { return &internal_->pooled_h; }
+  void set_pooled_h(const int32_t& pooled_h) { internal_->pooled_h = pooled_h; }
+
+  const int32_t& pooled_w() const { return internal_->pooled_w; }
+  int32_t* mutable_pooled_w() { return &internal_->pooled_w; }
+  void set_pooled_w(const int32_t& pooled_w) { internal_->pooled_w = pooled_w; }
+
+  const float& spatial_scale() const { return internal_->spatial_scale; }
+  float* mutable_spatial_scale() { return &internal_->spatial_scale; }
+  void set_spatial_scale(const float& spatial_scale) { internal_->spatial_scale = spatial_scale; }
+
+  const int32_t& sampling_ratio() const { return internal_->sampling_ratio; }
+  int32_t* mutable_sampling_ratio() { return &internal_->sampling_ratio; }
+  void set_sampling_ratio(const int32_t& sampling_ratio) {
+    internal_->sampling_ratio = sampling_ratio;
+  }
+
+  const bool& aligned() const { return internal_->aligned; }
+  bool* mutable_aligned() { return &internal_->aligned; }
+  void set_aligned(const bool& aligned) { internal_->aligned = aligned; }
+
+ private:
+  struct Internal {
+    int32_t pooled_h;
+    int32_t pooled_w;
+    float spatial_scale;
+    int32_t sampling_ratio;
+    bool aligned;
+  };
+
+ private:
+  std::shared_ptr<Internal> internal_;
+};
+}  // namespace schema
+
+#ifdef NEED_REGISTER_OP_INTERP_CTX
+REGISTER_OP_INTERP_CTX("user.roi_align_grad", RoiAlignGradOpInterpCtxImpl<schema::RoiAlignGradOp>);
+#endif  // NEED_REGISTER_OP_INTERP_CTX
+
 class RollOpInterpCtx : public OpInterpCtx {
  public:
   virtual const std::vector<int32_t>& shifts() const = 0;
@@ -30920,16 +31072,12 @@ REGISTER_OP_INTERP_CTX("user.slice_update", SliceUpdateOpInterpCtxImpl<schema::S
 
 class SmoothL1LossOpInterpCtx : public OpInterpCtx {
  public:
-  virtual const std::string& reduction() const = 0;
-  virtual std::string* mutable_reduction() = 0;
-  virtual void set_reduction(const std::string& reduction) = 0;
-
   virtual const float& beta() const = 0;
   virtual float* mutable_beta() = 0;
   virtual void set_beta(const float& beta) = 0;
 
   const HashSet<std::string>& AttrNames() const override {
-    static HashSet<std::string> attr_names{"reduction", "beta"};
+    static HashSet<std::string> attr_names{"beta"};
     return attr_names;
   }
 };
@@ -30938,10 +31086,6 @@ class SmoothL1LossOpInterpCtxImpl : public SmoothL1LossOpInterpCtx {
  public:
   SmoothL1LossOpInterpCtxImpl() = default;
   SmoothL1LossOpInterpCtxImpl(const Provider& impl) : impl_(impl) {}
-
-  const std::string& reduction() const override { return impl_.reduction(); }
-  std::string* mutable_reduction() override { return impl_.mutable_reduction(); }
-  void set_reduction(const std::string& reduction) override { impl_.set_reduction(reduction); }
 
   const float& beta() const override { return impl_.beta(); }
   float* mutable_beta() override { return impl_.mutable_beta(); }
@@ -30961,18 +31105,12 @@ class SmoothL1LossOp {
   SmoothL1LossOp() : internal_(std::make_shared<Internal>()) {}
 
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const {
-    if (attr_name == "reduction") {
-      return CastAttr(&internal_->reduction);
-    } else if (attr_name == "beta") {
+    if (attr_name == "beta") {
       return CastAttr(&internal_->beta);
     } else {
       return Error::RuntimeError() << "SmoothL1Loss op has no attribute named " << attr_name;
     }
   }
-
-  const std::string& reduction() const { return internal_->reduction; }
-  std::string* mutable_reduction() { return &internal_->reduction; }
-  void set_reduction(const std::string& reduction) { internal_->reduction = reduction; }
 
   const float& beta() const { return internal_->beta; }
   float* mutable_beta() { return &internal_->beta; }
@@ -30980,7 +31118,6 @@ class SmoothL1LossOp {
 
  private:
   struct Internal {
-    std::string reduction;
     float beta;
   };
 
@@ -30995,16 +31132,12 @@ REGISTER_OP_INTERP_CTX("user.smooth_l1_loss", SmoothL1LossOpInterpCtxImpl<schema
 
 class SmoothL1LossGradOpInterpCtx : public OpInterpCtx {
  public:
-  virtual const std::string& reduction() const = 0;
-  virtual std::string* mutable_reduction() = 0;
-  virtual void set_reduction(const std::string& reduction) = 0;
-
   virtual const float& beta() const = 0;
   virtual float* mutable_beta() = 0;
   virtual void set_beta(const float& beta) = 0;
 
   const HashSet<std::string>& AttrNames() const override {
-    static HashSet<std::string> attr_names{"reduction", "beta"};
+    static HashSet<std::string> attr_names{"beta"};
     return attr_names;
   }
 };
@@ -31013,10 +31146,6 @@ class SmoothL1LossGradOpInterpCtxImpl : public SmoothL1LossGradOpInterpCtx {
  public:
   SmoothL1LossGradOpInterpCtxImpl() = default;
   SmoothL1LossGradOpInterpCtxImpl(const Provider& impl) : impl_(impl) {}
-
-  const std::string& reduction() const override { return impl_.reduction(); }
-  std::string* mutable_reduction() override { return impl_.mutable_reduction(); }
-  void set_reduction(const std::string& reduction) override { impl_.set_reduction(reduction); }
 
   const float& beta() const override { return impl_.beta(); }
   float* mutable_beta() override { return impl_.mutable_beta(); }
@@ -31036,18 +31165,12 @@ class SmoothL1LossGradOp {
   SmoothL1LossGradOp() : internal_(std::make_shared<Internal>()) {}
 
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const {
-    if (attr_name == "reduction") {
-      return CastAttr(&internal_->reduction);
-    } else if (attr_name == "beta") {
+    if (attr_name == "beta") {
       return CastAttr(&internal_->beta);
     } else {
       return Error::RuntimeError() << "SmoothL1LossGrad op has no attribute named " << attr_name;
     }
   }
-
-  const std::string& reduction() const { return internal_->reduction; }
-  std::string* mutable_reduction() { return &internal_->reduction; }
-  void set_reduction(const std::string& reduction) { internal_->reduction = reduction; }
 
   const float& beta() const { return internal_->beta; }
   float* mutable_beta() { return &internal_->beta; }
@@ -31055,7 +31178,6 @@ class SmoothL1LossGradOp {
 
  private:
   struct Internal {
-    std::string reduction;
     float beta;
   };
 
@@ -38826,5 +38948,4 @@ REGISTER_OP_INTERP_CTX("user.zero_like", ZeroLikeOpInterpCtxImpl<schema::ZeroLik
 #endif  // NEED_REGISTER_OP_INTERP_CTX
 
 }  // namespace oneflow
-
 #endif  // ONEFLOW_CORE_FRAMEWORK_OP_INTERP_CTX_GENERATED_H_

@@ -20,8 +20,8 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 struct NllCaptureState : public AutoGradCaptureState {
+  bool requires_grad = false;
   int64_t ignore_index = -100;
-  std::string reduction = "";
 };
 
 class Nll : public OpExprGradFunction<NllCaptureState> {
@@ -33,9 +33,11 @@ class Nll : public OpExprGradFunction<NllCaptureState> {
 };
 Maybe<void> Nll::Capture(NllCaptureState* state, const TensorTuple& inputs,
                          const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+  state->requires_grad = inputs.at(0)->requires_grad();
+  if (!state->requires_grad) { return Maybe<void>::Ok(); }
+
   auto* interp_ctx = dynamic_cast<const NllOpInterpCtx*>(ctx);
   state->ignore_index = interp_ctx->ignore_index();
-  state->reduction = interp_ctx->reduction();
   state->SaveTensorForBackward(inputs.at(0));   // input
   state->SaveTensorForBackward(inputs.at(1));   // target
   state->SaveTensorForBackward(outputs.at(1));  // total_weight
@@ -46,6 +48,8 @@ Maybe<void> Nll::Capture(NllCaptureState* state, const TensorTuple& inputs,
 }
 Maybe<void> Nll::Apply(const NllCaptureState* state, const TensorTuple& out_grads,
                        TensorTuple* in_grads) const {
+  if (!state->requires_grad) { return Maybe<void>::Ok(); }
+
   CHECK_EQ_OR_RETURN(out_grads.size(), 2);
   const auto& dy = out_grads.at(0);
   const auto& input = state->SavedTensors().at(0);
@@ -56,11 +60,11 @@ Maybe<void> Nll::Apply(const NllCaptureState* state, const TensorTuple& out_grad
 
   if (state->SavedTensors().size() == 4) {
     const auto& weight = state->SavedTensors().at(3);
-    in_grads->at(0) = JUST(functional::NllLossGrad(dy, input, target, weight, total_weight,
-                                                   state->ignore_index, state->reduction));
+    in_grads->at(0) =
+        JUST(functional::NllLossGrad(dy, input, target, weight, total_weight, state->ignore_index));
   } else {
-    in_grads->at(0) = JUST(functional::NllLossGrad(dy, input, target, NullOpt, total_weight,
-                                                   state->ignore_index, state->reduction));
+    in_grads->at(0) = JUST(
+        functional::NllLossGrad(dy, input, target, NullOpt, total_weight, state->ignore_index));
   }
   return Maybe<void>::Ok();
 }

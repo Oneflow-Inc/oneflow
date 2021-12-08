@@ -21,7 +21,7 @@ namespace oneflow {
 namespace one {
 
 struct BinaryCrossEntropyWithLogitsCaptureState : public AutoGradCaptureState {
-  std::string reduction = "";
+  bool requires_grad = false;
   bool has_pos_weight = false;
 };
 
@@ -37,8 +37,10 @@ Maybe<void> BinaryCrossEntropyWithLogits::Capture(BinaryCrossEntropyWithLogitsCa
                                                   const TensorTuple& inputs,
                                                   const TensorTuple& outputs,
                                                   const OpInterpCtx* ctx) const {
+  state->requires_grad = inputs.at(0)->requires_grad();
+  if (!state->requires_grad) { return Maybe<void>::Ok(); }
+
   auto* interp_ctx = dynamic_cast<const BinaryCrossEntropyWithLogitsOpInterpCtx*>(ctx);
-  state->reduction = interp_ctx->reduction();
   state->has_pos_weight = interp_ctx->has_pos_weight();
   state->SaveTensorForBackward(inputs.at(0));  // input
   state->SaveTensorForBackward(inputs.at(1));  // target
@@ -54,6 +56,7 @@ Maybe<void> BinaryCrossEntropyWithLogits::Capture(BinaryCrossEntropyWithLogitsCa
 Maybe<void> BinaryCrossEntropyWithLogits::Apply(
     const BinaryCrossEntropyWithLogitsCaptureState* state, const TensorTuple& out_grads,
     TensorTuple* in_grads) const {
+  if (!state->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   const auto& dy = out_grads.at(0);
   const auto& input = state->SavedTensors().at(0);
@@ -64,21 +67,21 @@ Maybe<void> BinaryCrossEntropyWithLogits::Apply(
   if (state->SavedTensors().size() == 3) {
     if (state->has_pos_weight) {
       const auto& pos_weight = state->SavedTensors().at(2);
-      in_grads->at(0) = JUST(functional::BinaryCrossEntropyWithLogitsLossGrad(
-          dy, input, target, NullOpt, pos_weight, state->reduction));
+      in_grads->at(0) = JUST(
+          functional::BinaryCrossEntropyWithLogitsLossGrad(dy, input, target, NullOpt, pos_weight));
     } else {
       const auto& weight = state->SavedTensors().at(2);
-      in_grads->at(0) = JUST(functional::BinaryCrossEntropyWithLogitsLossGrad(
-          dy, input, target, weight, NullOpt, state->reduction));
+      in_grads->at(0) = JUST(
+          functional::BinaryCrossEntropyWithLogitsLossGrad(dy, input, target, weight, NullOpt));
     }
   } else if (state->SavedTensors().size() == 4) {
     const auto& weight = state->SavedTensors().at(2);
     const auto& pos_weight = state->SavedTensors().at(3);
-    in_grads->at(0) = JUST(functional::BinaryCrossEntropyWithLogitsLossGrad(
-        dy, input, target, weight, pos_weight, state->reduction));
+    in_grads->at(0) = JUST(
+        functional::BinaryCrossEntropyWithLogitsLossGrad(dy, input, target, weight, pos_weight));
   } else {
-    in_grads->at(0) = JUST(functional::BinaryCrossEntropyWithLogitsLossGrad(
-        dy, input, target, NullOpt, NullOpt, state->reduction));
+    in_grads->at(0) =
+        JUST(functional::BinaryCrossEntropyWithLogitsLossGrad(dy, input, target, NullOpt, NullOpt));
   }
   return Maybe<void>::Ok();
 }

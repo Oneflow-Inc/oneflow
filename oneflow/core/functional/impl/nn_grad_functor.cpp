@@ -477,11 +477,9 @@ class SmoothL1LossGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& input,
-                           const std::shared_ptr<one::Tensor>& target, const float& beta,
-                           const std::string& reduction) const {
+                           const std::shared_ptr<one::Tensor>& target, const float& beta) const {
     auto ctx = std::make_shared<SmoothL1LossGradOpInterpCtxImpl<schema::SmoothL1LossGradOp>>();
     ctx->set_beta(beta);
-    ctx->set_reduction(reduction);
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, input, target}, ctx);
   }
 
@@ -501,11 +499,10 @@ class KLDivLossGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& input,
-                           const std::shared_ptr<one::Tensor>& target, const bool log_target,
-                           const std::string& reduction) const {
+                           const std::shared_ptr<one::Tensor>& target,
+                           const bool log_target) const {
     auto ctx = std::make_shared<KlDivLossGradOpInterpCtxImpl<schema::KlDivLossGradOp>>();
     ctx->set_log_target(log_target);
-    ctx->set_reduction(reduction);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, target, dy}, ctx);
   }
 
@@ -537,10 +534,9 @@ class NllLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight,
                            const std::shared_ptr<one::Tensor>& total_weight,
-                           const int64_t ignore_index, const std::string& reduction) const {
+                           const int64_t ignore_index) const {
     auto ctx = std::make_shared<NllGradOpInterpCtxImpl<schema::NllGradOp>>();
     ctx->set_ignore_index(ignore_index);
-    ctx->set_reduction(reduction);
     if (weight) {
       return OpInterpUtil::Dispatch<one::Tensor>(
           *op_weight_, {input, target, total_weight, JUST(weight), dy}, ctx);
@@ -574,11 +570,9 @@ class BinaryCrossEntropyLossGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
-                           const Optional<one::Tensor>& weight,
-                           const std::string& reduction) const {
+                           const Optional<one::Tensor>& weight) const {
     auto ctx =
         std::make_shared<BinaryCrossEntropyGradOpInterpCtxImpl<schema::BinaryCrossEntropyGradOp>>();
-    ctx->set_reduction(reduction);
     if (weight) {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_weight_, {input, target, JUST(weight), dy},
                                                  ctx);
@@ -628,11 +622,9 @@ class BinaryCrossEntropyWithLogitsLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight,
-                           const Optional<one::Tensor>& pos_weight,
-                           const std::string& reduction) const {
+                           const Optional<one::Tensor>& pos_weight) const {
     auto ctx = std::make_shared<BinaryCrossEntropyWithLogitsGradOpInterpCtxImpl<
         schema::BinaryCrossEntropyWithLogitsGradOp>>();
-    ctx->set_reduction(reduction);
     ctx->set_has_pos_weight(pos_weight.has_value());
     if (weight) {
       if (pos_weight) {

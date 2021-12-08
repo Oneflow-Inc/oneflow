@@ -42,22 +42,22 @@ ZeroCopyBaseContext::ZeroCopyBaseContext(const std::shared_ptr<const ArgTuple>& 
                                          vm::EagerBlobObject* tmp_buffer)
     : input_arg_tuple_(input_arg_tuple), output_arg_tuple_(output_arg_tuple) {
   for (int i = 0; i < input_arg_tuple->size(); i++) {
-    input_tensor_views_.push_back(std::make_unique<EagerBlobObjectTensorView>(
+    input_tensor_views_.emplace_back(std::make_unique<EagerBlobObjectTensorView>(
         [this, i]() -> vm::EagerBlobObject* { return input_tensors_->at(i).get(); }));
-    input_tensor_desc_views_.push_back(std::make_unique<EagerBlobObjectTensorDescView>(
+    input_tensor_desc_views_.emplace_back(std::make_unique<EagerBlobObjectTensorDescView>(
         [this, i]() -> vm::EagerBlobObject* { return input_tensors_->at(i).get(); }));
-    input_consistent_tensor_meta_views_.push_back(
+    input_consistent_tensor_meta_views_.emplace_back(
         std::make_unique<ConsistentTensorMetaTensorDescView>(
             [this, i]() -> Symbol<ConsistentTensorMeta> {
               return CHECK_NOTNULL(consistent_tensor_infer_result_)->input_tensor_metas().at(i);
             }));
   }
   for (int i = 0; i < output_arg_tuple->size(); i++) {
-    output_tensor_views_.push_back(std::make_unique<EagerBlobObjectTensorView>(
+    output_tensor_views_.emplace_back(std::make_unique<EagerBlobObjectTensorView>(
         [this, i]() -> vm::EagerBlobObject* { return output_tensors_->at(i).get(); }));
-    output_tensor_desc_views_.push_back(std::make_unique<EagerBlobObjectTensorDescView>(
+    output_tensor_desc_views_.emplace_back(std::make_unique<EagerBlobObjectTensorDescView>(
         [this, i]() -> vm::EagerBlobObject* { return output_tensors_->at(i).get(); }));
-    output_consistent_tensor_meta_views_.push_back(
+    output_consistent_tensor_meta_views_.emplace_back(
         std::make_unique<ConsistentTensorMetaTensorDescView>(
             [this, i]() -> Symbol<ConsistentTensorMeta> {
               return CHECK_NOTNULL(consistent_tensor_infer_result_)->output_tensor_metas().at(i);
@@ -348,9 +348,9 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
     const auto& pair = indexed_input_pairs.at(i);
     const std::string ibn = GenRepeatedBn(pair.first, pair.second);
     if (arg_modifier_signature.ibn2input_blob_modifier().at(ibn).is_mutable()) {
-      input_tuple_indexes4mut_ibns->push_back(i);
+      input_tuple_indexes4mut_ibns->emplace_back(i);
     } else {
-      input_tuple_indexes4const_ibns->push_back(i);
+      input_tuple_indexes4const_ibns->emplace_back(i);
     }
   }
 
@@ -358,9 +358,9 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
     const auto& pair = indexed_output_pairs.at(i);
     const std::string obn = GenRepeatedBn(pair.first, pair.second);
     if (arg_modifier_signature.obn2output_blob_modifier().at(obn).header_infered_before_compute()) {
-      output_tuple_indexes4mut_obns->push_back(i);
+      output_tuple_indexes4mut_obns->emplace_back(i);
     } else {
-      output_tuple_indexes4mut2_obns->push_back(i);
+      output_tuple_indexes4mut2_obns->emplace_back(i);
     }
   }
   return Maybe<void>::Ok();

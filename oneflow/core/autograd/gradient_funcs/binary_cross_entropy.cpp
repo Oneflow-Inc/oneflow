@@ -14,14 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
 
 struct BinaryCrossEntropyCaptureState : public AutoGradCaptureState {
-  std::string reduction = "";
+  bool requires_grad = false;
 };
 
 class BinaryCrossEntropy : public OpExprGradFunction<BinaryCrossEntropyCaptureState> {
@@ -35,8 +34,8 @@ class BinaryCrossEntropy : public OpExprGradFunction<BinaryCrossEntropyCaptureSt
 Maybe<void> BinaryCrossEntropy::Capture(BinaryCrossEntropyCaptureState* state,
                                         const TensorTuple& inputs, const TensorTuple& outputs,
                                         const OpInterpCtx* ctx) const {
-  auto* interp_ctx = dynamic_cast<const BinaryCrossEntropyOpInterpCtx*>(ctx);
-  state->reduction = interp_ctx->reduction();
+  state->requires_grad = inputs.at(0)->requires_grad();
+  if (!state->requires_grad) { return Maybe<void>::Ok(); }
   state->SaveTensorForBackward(inputs.at(0));  // input
   state->SaveTensorForBackward(inputs.at(1));  // target
   if (inputs.size() == 3) {
@@ -46,6 +45,8 @@ Maybe<void> BinaryCrossEntropy::Capture(BinaryCrossEntropyCaptureState* state,
 }
 Maybe<void> BinaryCrossEntropy::Apply(const BinaryCrossEntropyCaptureState* state,
                                       const TensorTuple& out_grads, TensorTuple* in_grads) const {
+  if (!state->requires_grad) { return Maybe<void>::Ok(); }
+
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   const auto& dy = out_grads.at(0);
   const auto& input = state->SavedTensors().at(0);
@@ -54,11 +55,9 @@ Maybe<void> BinaryCrossEntropy::Apply(const BinaryCrossEntropyCaptureState* stat
 
   if (state->SavedTensors().size() == 3) {
     const auto& weight = state->SavedTensors().at(2);
-    in_grads->at(0) =
-        JUST(functional::BinaryCrossEntropyLossGrad(dy, input, target, weight, state->reduction));
+    in_grads->at(0) = JUST(functional::BinaryCrossEntropyLossGrad(dy, input, target, weight));
   } else {
-    in_grads->at(0) =
-        JUST(functional::BinaryCrossEntropyLossGrad(dy, input, target, NullOpt, state->reduction));
+    in_grads->at(0) = JUST(functional::BinaryCrossEntropyLossGrad(dy, input, target, NullOpt));
   }
   return Maybe<void>::Ok();
 }

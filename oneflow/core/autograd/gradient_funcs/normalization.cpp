@@ -93,8 +93,8 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
     } else {
       const auto& moving_mean = state->SavedTensors().at(2);      // moving_mean
       const auto& moving_variance = state->SavedTensors().at(3);  // moving_variance
-      const auto& add_eps =
-          JUST(functional::ScalarAdd(moving_variance, state->epsilon, /*inplace=*/false));
+      const auto& add_eps = JUST(
+          functional::ScalarAdd(moving_variance, state->epsilon, /*alpha=*/1, /*inplace=*/false));
       mean = moving_mean;
       inv_variance = JUST(functional::Rsqrt(add_eps));
     }
@@ -132,9 +132,9 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
     DimVector dim_vec;
     for (int i = 0; i < x->shape()->NumAxes(); ++i) {
       if (i != state->axis) {
-        dim_vec.push_back(1);
+        dim_vec.emplace_back(1);
       } else {
-        dim_vec.push_back(x->shape()->At(state->axis));
+        dim_vec.emplace_back(x->shape()->At(state->axis));
       }
     }
     Shape shape(dim_vec);

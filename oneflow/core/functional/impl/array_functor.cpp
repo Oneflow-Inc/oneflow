@@ -87,8 +87,9 @@ class ArgMaxFunctor {
     }
 
     std::vector<int32_t> permute;
-    for (int32_t i = 0; i < ndims - 1; i++) { permute.push_back(i < new_dim ? i : i + 1); }
-    permute.push_back(new_dim);
+    permute.reserve(ndims);
+    for (int32_t i = 0; i < ndims - 1; i++) { permute.emplace_back(i < new_dim ? i : i + 1); }
+    permute.emplace_back(new_dim);
 
     std::vector<int32_t> permute_inv(ndims, 0);
     for (int32_t i = 0; i < ndims; i++) { permute_inv[i] = -1; }
@@ -230,6 +231,15 @@ class FlattenFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& start_dim,
                            const int32_t& end_dim) const {
+    const auto& x_shape = x->shape();
+    const int32_t x_dim = x_shape->dim_vec().size();
+
+    int new_start_dim = start_dim;
+    int new_end_dim = end_dim;
+    if (start_dim < 0) { new_start_dim += x_dim; }
+    if (end_dim < 0) { new_end_dim += x_dim; }
+    if (new_start_dim == new_end_dim) { return x; }
+
     auto ctx = std::make_shared<FlattenOpInterpCtxImpl<schema::FlattenOp>>();
     ctx->set_start_dim(start_dim);
     ctx->set_end_dim(end_dim);
@@ -418,7 +428,7 @@ class ConcatFunctor {
       size_t size = (i + kMaxInputCount) < inputs.size() ? kMaxInputCount : inputs.size() - i;
       TensorTuple partial_inputs(size);
       for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
-      outputs.push_back(
+      outputs.emplace_back(
           JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, ctx)));
     }
     if (outputs.size() == 1) { return outputs.at(0); }
@@ -540,7 +550,7 @@ class RollFunctor {
     if (dims.has_value()) {
       actual_dims = *JUST(dims);
     } else {
-      actual_dims.push_back(-1);
+      actual_dims.emplace_back(-1);
     }
     CHECK_GE_OR_RETURN(shifts.size(), actual_dims.size())
         << "The `shifts` and `dims` parameters should have the same size.";
@@ -574,11 +584,25 @@ class DimGatherFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("dim_gather").Input("input").Input("index").Output("output").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& indices, const int32_t& dim) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& dim,
+                           const std::shared_ptr<one::Tensor>& index,
+                           const bool sparse_grad) const {
+    CHECK_EQ_OR_RETURN(sparse_grad, false) << "Only support bool = False for now!";
+    CHECK_LT_OR_RETURN(dim, index->ndim())
+        << "Value of dim is out of range(dim should be less than len(index.shape))";
+    CHECK_EQ_OR_RETURN(input->ndim(), index->ndim())
+        << "dimensions of input and index should equal";
+
+    FOR_RANGE(int32_t, i, 0, input->ndim()) {
+      if (i != dim) {
+        CHECK_LE_OR_RETURN(index->shape()->At(i), input->shape()->At(i))
+            << "index.size(d) <= input.size(d) for all dimensions d != dim";
+      }
+    }
+
     auto ctx = std::make_shared<DimGatherOpInterpCtxImpl<schema::DimGatherOp>>();
     ctx->set_dim(dim);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, indices}, ctx);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, ctx);
   }
 
  private:
@@ -1033,7 +1057,8 @@ class SqueezeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<std::vector<int32_t>>& dim) const {
     int32_t ndim = x->shape()->NumAxes();
-    std::vector<int32_t> squeeze_dims(0);
+    std::vector<int32_t> squeeze_dims;
+    squeeze_dims.reserve(ndim);
     if (dim.has_value() == true) {
       std::vector<int32_t> dims = *JUST(dim);
       for (int32_t dim_i : dims) {
@@ -1041,11 +1066,11 @@ class SqueezeFunctor {
             << "Dimension out of range (expected to be in range of  [" << -ndim << "," << ndim - 1
             << "], but got " << dim_i;
         if (dim_i < 0) { dim_i += ndim; }
-        if (x->shape()->At(dim_i) == 1) { squeeze_dims.push_back(dim_i); }
+        if (x->shape()->At(dim_i) == 1) { squeeze_dims.emplace_back(dim_i); }
       }
     } else {
       for (int i = 0; i < ndim; ++i) {
-        if (x->shape()->At(i) == 1) { squeeze_dims.push_back(i); }
+        if (x->shape()->At(i) == 1) { squeeze_dims.emplace_back(i); }
       }
     }
 

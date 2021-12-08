@@ -131,8 +131,8 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
     } else {
       const auto& moving_mean = state->SavedTensors().at(3);      // moving_mean
       const auto& moving_variance = state->SavedTensors().at(4);  // moving_variance
-      const auto& add_eps =
-          JUST(functional::ScalarAdd(moving_variance, state->epsilon, /*inplace=*/false));
+      const auto& add_eps = JUST(
+          functional::ScalarAdd(moving_variance, state->epsilon, /*alpha=*/1, /*inplace=*/false));
       mean = moving_mean;
       inv_variance = JUST(functional::Rsqrt(add_eps));
     }

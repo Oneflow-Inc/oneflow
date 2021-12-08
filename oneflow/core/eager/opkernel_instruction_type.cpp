@@ -678,7 +678,7 @@ void FeedOrFetchBlob(vm::Instruction* instruction) {
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
   auto* rw_mutext_blob = instruction->mut_operand_type(args->blob());
   auto* blob_object = CHECK_JUST(rw_mutext_blob->template Mut<BlobObject>());
-  OfBlob of_blob(device_ctx, blob_object->mut_blob());
+  OfBlob of_blob(device_ctx->stream(), blob_object->mut_blob());
   int64_t of_blob_ptr = reinterpret_cast<int64_t>(&of_blob);
   (*Global<std::shared_ptr<ForeignCallback>>::Get())
       ->OfBlobCall(args->unique_callback_id(), of_blob_ptr);

@@ -21,8 +21,9 @@ namespace oneflow {
 namespace one {
 
 struct DropoutCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  float scale;
+  bool requires_grad = true;
+  bool has_addend = false;
+  float rate = 0.0;
 };
 
 class Dropout : public OpExprGradFunction<DropoutCaptureState> {
@@ -35,13 +36,19 @@ class Dropout : public OpExprGradFunction<DropoutCaptureState> {
 
 Maybe<void> Dropout::Capture(DropoutCaptureState* state, const TensorTuple& inputs,
                              const TensorTuple& outputs, const OpInterpCtx* ctx) const {
-  auto* interp_ctx = dynamic_cast<const DropoutOpInterpCtx*>(ctx);
   state->requires_grad = inputs.at(0)->requires_grad();
-
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
-  state->scale = interp_ctx->scale();
-  CHECK_EQ_OR_RETURN(inputs.size(), 2);
 
+  auto* interp_ctx = dynamic_cast<const DropoutOpInterpCtx*>(ctx);
+  state->rate = interp_ctx->rate();
+  CHECK_EQ_OR_RETURN(inputs.size(), 2);
+  if (inputs.size() == 1) {
+    state->has_addend = false;
+  } else if (inputs.size() == 2) {
+    state->has_addend = true;
+  } else {
+    UNIMPLEMENTED();
+  }
   state->SaveTensorForBackward(inputs.at(1));  // mask
   return Maybe<void>::Ok();
 }
@@ -49,13 +56,20 @@ Maybe<void> Dropout::Capture(DropoutCaptureState* state, const TensorTuple& inpu
 Maybe<void> Dropout::Apply(const DropoutCaptureState* state, const TensorTuple& out_grads,
                            TensorTuple* in_grads) const {
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-
+  CHECK_EQ_OR_RETURN(out_grads.size(), 2);  // Output has y and mask.
+  float scale = 0.0f;                       // When dropout rate = 1.0, we set scale as zero.
+  if (state->rate < 1.0f) { scale = 1.0f / (1.0f - state->rate); }
   const std::shared_ptr<oneflow::one::Tensor>& mask = state->SavedTensors().at(0);
-  // mask hava no grad(reqiures_grad=False), but still take a place in in_grads
-  in_grads->resize(2);
-  in_grads->at(0) = JUST(functional::DropoutGrad(out_grads.at(0), mask, state->scale));
-  return Maybe<void>::Ok();
+  if (state->has_addend) {
+    in_grads->resize(2);
+    in_grads->at(0) = JUST(functional::DropoutGrad(out_grads.at(0), mask, scale));
+    in_grads->at(1) = out_grads.at(0);
+    return Maybe<void>::Ok();
+  } else {
+    in_grads->resize(1);
+    in_grads->at(0) = JUST(functional::DropoutGrad(out_grads.at(0), mask, scale));
+    return Maybe<void>::Ok();
+  }
 }
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("dropout", Dropout);

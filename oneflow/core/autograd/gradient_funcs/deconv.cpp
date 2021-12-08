@@ -70,9 +70,9 @@ Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdCaptureState* state,
     const auto& x = state->SavedTensors().at(1);
     std::vector<int64_t> start, stop, step;
     for (int i = 0; i < x->shape()->NumAxes(); i++) {
-      start.push_back(0);
-      stop.push_back(x->shape()->At(i));
-      step.push_back(1);
+      start.emplace_back(0);
+      stop.emplace_back(x->shape()->At(i));
+      step.emplace_back(1);
     }
     const auto& weight = state->SavedTensors().at(0);
     if (state->ndims == 1) {

@@ -62,11 +62,9 @@ template<SCATTER_TYPE T>
 Maybe<void> DimScatter<T>::ApplyCommon(const DimScatterCaptureState* state,
                                        const TensorTuple& out_grads, TensorTuple* in_grads) const {
   const std::shared_ptr<oneflow::one::Tensor>& index = state->SavedTensors().at(0);
-
   in_grads->resize(3);
-
   if (state->src_requires_grad) {
-    in_grads->at(2) = JUST(functional::DimGather(out_grads.at(0), index, state->dim));
+    in_grads->at(2) = JUST(functional::DimGather(out_grads.at(0), state->dim, index, false));
   }
   return Maybe<void>::Ok();
 }

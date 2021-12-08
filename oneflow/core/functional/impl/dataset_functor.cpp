@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/function_library.h"
@@ -41,9 +42,78 @@ class ImageFlipFuntor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class DecodeOneRecFunctor {
+ public:
+  DecodeOneRecFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("onerec_decoder").Input("in").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const std::string& key,
+                           const Symbol<DType>& dtype, const Shape& shape, const bool is_dynamic,
+                           const Optional<Shape>& reshape,
+                           const Optional<Shape>& batch_padding) const {
+    bool has_reshape = false;
+    bool has_batch_padding = false;
+
+    auto ctx = std::make_shared<OnerecDecoderOpInterpCtxImpl<schema::OnerecDecoderOp>>();
+    if (reshape.has_value()) {
+      has_reshape = true;
+      ctx->set_reshape(*JUST(reshape));
+    } else {
+      has_reshape = false;
+      ctx->set_reshape(shape);
+    }
+
+    if (batch_padding.has_value()) {
+      has_batch_padding = true;
+      ctx->set_batch_padding(*JUST(batch_padding));
+    } else {
+      has_batch_padding = false;
+      ctx->set_batch_padding(shape);
+    }
+    ctx->set_key(key);
+    ctx->set_data_type(dtype->data_type());
+    ctx->set_static_shape(shape);
+    ctx->set_is_dynamic(is_dynamic);
+    ctx->set_has_reshape(has_reshape);
+    ctx->set_has_batch_padding(has_batch_padding);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, ctx);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ReadOneRecFunctor {
+ public:
+  ReadOneRecFunctor() { op_ = CHECK_JUST(one::OpBuilder("OneRecReader").Output("out").Build()); }
+
+  Maybe<Tensor> operator()(const std::vector<std::string>& files, const int32_t batch_size,
+                           const bool random_shuffle, const std::string& shuffle_mode,
+                           const int32_t shuffle_buffer_size, const bool shuffle_after_epoch,
+                           const bool verify_example) const {
+    auto ctx = std::make_shared<OneRecReaderOpInterpCtxImpl<schema::OneRecReaderOp>>();
+    ctx->set_files(files);
+    ctx->set_batch_size(batch_size);
+    ctx->set_random_shuffle(random_shuffle);
+    ctx->set_shuffle_mode(shuffle_mode);
+    ctx->set_shuffle_buffer_size(shuffle_buffer_size);
+    ctx->set_shuffle_after_epoch(shuffle_after_epoch);
+    ctx->set_verify_example(verify_example);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
-ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::ImageFlipFuntor>("ImageFlip"); };
+ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::ImageFlipFuntor>("ImageFlip");
+  m.add_functor<impl::DecodeOneRecFunctor>("DecodeOneRec");
+  m.add_functor<impl::ReadOneRecFunctor>("ReadOneRec");
+};
 
 }  // namespace functional
 }  // namespace one
