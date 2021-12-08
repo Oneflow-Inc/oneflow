@@ -331,6 +331,11 @@ jobs:
     name: Build with clang
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     runs-on: [self-hosted, linux, build]
+    env:
+      ONEFLOW_SRC: .
+      MANYLINUX_CACHE_DIR: ~/manylinux-cache-dir/clang13
+      CUDA_VERSION: "10.1"
+      WHEELHOUSE_DIR: ./wheelhouse
     steps:
       - name: Fix permissions
         run: |
@@ -354,18 +359,24 @@ jobs:
           repository: Oneflow-Inc/conda-env
           ref: 30a7f00eb48ee9009d85a848e720823e5054c66b
           path: conda-env
-      - uses: Oneflow-Inc/get-oneflow@canary-release
-        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
-        name: Build with clang10
+            - uses: Oneflow-Inc/get-oneflow@canary-release
+      - name: Build with Clang
         with:
-          cmake-init-cache: cmake/caches/ci/gh-hosted/cpu-clang.cmake
-          oneflow-src: .
-          oneflow-build-env: conda
-          conda-env-file: conda-env/dev/clang10/environment-v2.yml
-          conda-env-name: oneflow-dev-clang10-v2
-          conda-installer-url: https://oneflow-static.oss-cn-beijing.aliyuncs.com/downloads/conda-installers/Miniconda3-py39_4.10.3-Linux-x86_64.sh
-          conda-prefix: ~/miniconda3-prefixes/py39_4.10.3
+          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/llvm/cuda-75-clang.cmake
+          build-script: ${{ env.ONEFLOW_SRC }}/ci/clang/build-llvm-12.sh
+          oneflow-src: ${{ env.ONEFLOW_SRC }}
+          oneflow-build-env: llvm
+          wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
+          clear-wheelhouse-dir: true
           self-hosted: true
+          cuda-version: ${{ env.CUDA_VERSION }}
+          manylinux-cache-dir: ${{ env.MANYLINUX_CACHE_DIR }}
+          docker-run-use-system-http-proxy: false
+          docker-run-use-lld: true
+          retry-failed-build: true
+          clean-ccache: true
+          python-versions: |
+            3.8
 
   find-test-cache:
     name: "Find test cache"
