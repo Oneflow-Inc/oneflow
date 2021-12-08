@@ -188,7 +188,7 @@ void TensorBufferPool::Allocate(TensorBuffer& tensor_buffer, const Shape& shape,
   }
 
   thread_local TensorBufferList thread_local_cache;
-  if (thread_local_cache.empty()) {
+  if (thread_local_cache.empty() && thread_local_cache_size_ > 0) {
     std::unique_lock<std::mutex> lck(mtx_);
     if (!global_free_list_.empty()) {
       auto begin = global_free_list_.size() >= thread_local_cache_size_
@@ -200,10 +200,10 @@ void TensorBufferPool::Allocate(TensorBuffer& tensor_buffer, const Shape& shape,
 
   if (thread_local_cache.empty()) {
     tensor_buffer.impl_ = new detail::TensorBufferImpl(shape, dtype);
+  } else {
+    tensor_buffer.impl_ = thread_local_cache.back();
+    thread_local_cache.pop_back();
   }
-
-  tensor_buffer.impl_ = thread_local_cache.back();
-  thread_local_cache.pop_back();
 }
 
 void TensorBufferPool::Deallocate(TensorBuffer& tensor_buffer) {

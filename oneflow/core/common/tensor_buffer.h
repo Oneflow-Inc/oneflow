@@ -127,7 +127,9 @@ class TensorBufferPool final {
   }
 
   TensorBufferPool(size_t pool_size, size_t thread_local_cache_size) noexcept
-      : pool_size_(pool_size), thread_local_cache_size_(thread_local_cache_size) {}
+      : pool_size_(pool_size), thread_local_cache_size_(thread_local_cache_size) {
+    if (thread_local_cache_size_ > pool_size) { thread_local_cache_size_ = pool_size_; }
+  }
 
   size_t pool_size_;
   size_t thread_local_cache_size_;

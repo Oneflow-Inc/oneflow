@@ -28,7 +28,7 @@ namespace data {
 class COCODataReader final : public DataReader<COCOImage> {
  public:
   COCODataReader(user_op::KernelInitContext* ctx);
-  ~COCODataReader() = default;
+  ~COCODataReader() override = default;
 
  protected:
   using DataReader<COCOImage>::loader_;

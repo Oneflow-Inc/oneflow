@@ -50,6 +50,8 @@ COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COC
       std::move(coco_dataset_ptr)));
 
   size_t batch_size = ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
+  TensorBufferPool::New(/* pool_size */ batch_size / 4 + 1,
+                        /* thread_local_cache_size */ 4);
   if (ctx->Attr<bool>("group_by_ratio")) {
     auto GetGroupId = [](const COCOImage& sample) {
       return static_cast<int64_t>(sample.height / sample.width);

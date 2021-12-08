@@ -39,6 +39,8 @@ class OFRecordImageClassificationDataReader final
     }
     loader_.reset(new OFRecordImageClassificationDataset(ctx, std::move(base)));
     const int64_t batch_size = ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
+    TensorBufferPool::New(/* pool_size */ batch_size / 4 + 1,
+                          /* thread_local_cache_size */ 4);
     loader_.reset(
         new BatchDataset<ImageClassificationDataInstance>(batch_size, std::move(loader_)));
     parser_.reset(new OFRecordImageClassificationParser());

@@ -37,6 +37,7 @@ class DataReader {
   virtual ~DataReader() {
     Close();
     if (load_thrd_.joinable()) { load_thrd_.join(); }
+    TensorBufferPool::Delete();
   }
 
   void Read(user_op::KernelComputeContext* ctx) {

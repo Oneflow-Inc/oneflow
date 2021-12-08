@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/user/data/random_shuffle_dataset.h"
 #include "oneflow/user/data/batch_random_shuffle_dataset.h"
 #include "oneflow/user/data/batch_dataset.h"
-#include <iostream>
 
 namespace oneflow {
 namespace data {
@@ -31,6 +30,8 @@ class OneRecDataReader final : public DataReader<TensorBuffer> {
  public:
   OneRecDataReader(user_op::KernelInitContext* ctx) : DataReader<TensorBuffer>(ctx) {
     const int32_t batch_size = ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().elem_cnt();
+    TensorBufferPool::New(/* pool_size */ batch_size,
+                          /* thread_local_cache_size */ 32);
     const auto random_shuffle = ctx->Attr<bool>("random_shuffle");
     parser_.reset(new OneRecParser());
     if (random_shuffle) {
@@ -50,7 +51,7 @@ class OneRecDataReader final : public DataReader<TensorBuffer> {
     }
     StartLoadThread();
   }
-  ~OneRecDataReader() = default;
+  ~OneRecDataReader() override = default;
 
  protected:
   using DataReader<TensorBuffer>::loader_;
