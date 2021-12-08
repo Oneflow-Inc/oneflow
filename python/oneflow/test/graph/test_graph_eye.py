@@ -30,7 +30,7 @@ class TestEyeGraph(oneflow.unittest.TestCase):
         class EyeGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
-                self.eye = flow._C.eye
+                self.eye = flow.eye
             def build(self):
                 return self.eye(n, m)
 
