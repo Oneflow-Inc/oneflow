@@ -70,6 +70,7 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
   double final_cost = sbp_graph_.ComputeCost();
   LOG(INFO) << "Final cost: " << final_cost;
   if (ori_cost + 1.0 < final_cost) { LOG(WARNING) << "ori_cost less than final_cost!!!"; }
+  // TODO: Restart searching with another original random strategy
   CHECK_LT_OR_RETURN(final_cost, cut_cost)
       << "Failed! Auto parallel can't find a strategy with reasonable cost!";
   return Maybe<void>::Ok();

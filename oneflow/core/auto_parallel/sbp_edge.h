@@ -456,9 +456,12 @@ double SbpEdge<SbpSignature>::FindCutRatio(int32_t thrhld) {
       if (Cost[i][j] < cut_cost) { num++; }
     }
   }
-  // lift the cut ratio to 1 to filter out some improper couples
-  if (num <= Cost.size() * 2 || num <= Cost[0].size() * 2 || num <= thrhld) {
-    return double(num) / double(Cost.size() * Cost[0].size());
+  // lift the cut ratio to 1 to filter out some improper couples to avoid unlimited merging
+  double n = Cost.size();
+  double m = Cost[0].size();
+  double cut_ratio = double(num) / (n * m) + 0.16 * (n + m) / double(thrhld);
+  if (num <= n * 2 || num <= m * 2 || (num <= thrhld && cut_ratio < 0.51)) {
+    return cut_ratio;
   } else {
     return 1.0;
   }
