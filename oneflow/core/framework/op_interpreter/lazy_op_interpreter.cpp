@@ -252,6 +252,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
   CHECK_OR_RETURN(input_tensor->is_eager());
 
+  auto infer_ctx = JUST(GetCurInferCtx());
+
   // Check outputs num and setup output tensor properties.
   CHECK_EQ_OR_RETURN(outputs->size(), 1);
   CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
@@ -262,6 +264,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
     // NOTE(chengcheng): This eager tensor has been feed as variable op before, so we just use the
     //  lbn, and will NOT create duplicate variable op again.
     (*outputs)[0] = input_tensor;
+    VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
+            << " try to add variable op name : \n: " << op_expr.op_name()
+            << " but it has been created as : " << opt_lbn << ". \n So we just reuse this tensor.";
     return Maybe<void>::Ok();
   }
 
@@ -288,7 +293,6 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
     if (unlikely(l2 != 0.0)) { var_conf->mutable_regularizer()->mutable_l1_l2_conf()->set_l2(l2); }
   }
 
-  auto infer_ctx = JUST(GetCurInferCtx());
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
           << " try to add op: \n: " << op_conf.DebugString() << std::endl;
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
