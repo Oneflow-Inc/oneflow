@@ -148,6 +148,8 @@ class SbpEdge {
   // (#c>cut_cost in Cost)/(#c in Cost)
   // But we would lift the cut ratio to 1 to filter out some improper couples
   double FindCutRatio(int32_t thrhld);
+  // Get the cut ratio
+  double GetCutRatio();
 };
 
 // function in cpp. Should be put in one file due to use of template
@@ -446,20 +448,28 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool comp
   }
 }
 
-// find the cut ratio
-// (#c>cut_cost in Cost)/(#c in Cost)
+// Set the cut ratio
 template<class SbpSignature>
-double SbpEdge<SbpSignature>::FindCutRatio(int32_t thrhld) {
+double SbpEdge<SbpSignature>::GetCutRatio() {
   int32_t num = 0;
   for (int32_t i = 0; i < Cost.size(); i++) {
     for (int32_t j = 0; j < Cost[i].size(); j++) {
       if (Cost[i][j] < cut_cost) { num++; }
     }
   }
+  return double(num) / double(Cost.size() * Cost[0].size());
+}
+
+// find the cut ratio
+// (#c>cut_cost in Cost)/(#c in Cost)
+template<class SbpSignature>
+double SbpEdge<SbpSignature>::FindCutRatio(int32_t thrhld) {
+  double cut_ratio = GetCutRatio();
   // lift the cut ratio to 1 to filter out some improper couples to avoid unlimited merging
   double n = Cost.size();
   double m = Cost[0].size();
-  double cut_ratio = double(num) / (n * m) + 0.16 * (n + m) / double(thrhld);
+  double num = cut_ratio * n * m;
+  cut_ratio += 0.16 * (n + m) / double(thrhld);
   if (num <= n * 2 || num <= m * 2 || (num <= thrhld && cut_ratio < 0.51)) {
     return cut_ratio;
   } else {

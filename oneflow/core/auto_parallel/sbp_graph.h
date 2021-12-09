@@ -614,7 +614,8 @@ bool SbpGraph<SbpSignature>::DFS_FindReasonableCost(
   // We found such a strategy
   if (nbh_id == nbh_id2order.size()) { return true; }
   SbpNode<SbpSignature>* sbp_node = NodeList[nbh_id2NodeListId[nbh_id]];
-  for (int32_t sbp_id = 0; sbp_id < sbp_node->Cost.size(); sbp_id++) {
+  // Start from B.
+  for (int32_t sbp_id = sbp_node->Cost.size() - 1; sbp_id >= 0; sbp_id--) {
     sbp_node->FinalSbpSignatureId = sbp_id;
     // If the cost for this node is reasonable, then go to the next one
     if (sbp_node->EvalInNbhCost(NodeListId2nbh_id, nbh_id2order) < cut_cost) {
@@ -637,30 +638,37 @@ void SbpGraph<SbpSignature>::Find1Strategy4Greedy() {
   std::vector<int32_t> nbh_1ring;
   int32_t head = 0;
   int32_t tail = 0;
+  std::vector<double> node_cut_ratios(NodeList.size());
+  // Initialize cut ratio for all the nodes
+  for (int32_t NodeListId = 0; NodeListId < NodeList.size(); NodeListId++) {
+    node_cut_ratios[NodeListId] = NodeList[NodeListId]->GetCutRatio();
+  }
   // If have not visited all the nodes
   while (tail < NodeList.size()) {
-    // Find the node with maximum connection
-    int32_t node_with_max_edge_num = -1;
-    int32_t max_edge_num = -1;
+    // Find the node with the minimum cut ratio
+    int32_t node_with_min_cut_ratio = -1;
+    double min_cut_ratio = 2.0;
     for (int32_t NodeListId = 0; NodeListId < NodeList.size(); NodeListId++) {
       if (not_visited[NodeListId]) {
-        int32_t curr_edge_num =
-            NodeList[NodeListId]->EdgesIn.size() + NodeList[NodeListId]->EdgesOut.size();
-        if (curr_edge_num > max_edge_num) {
-          max_edge_num = curr_edge_num;
-          node_with_max_edge_num = NodeListId;
+        double curr_cut_ratio = node_cut_ratios[NodeListId];
+        if (curr_cut_ratio < min_cut_ratio) {
+          min_cut_ratio = curr_cut_ratio;
+          node_with_min_cut_ratio = NodeListId;
         }
       }
     }
     // put this node into the open set
-    nbh_id2NodeListId.push_back(node_with_max_edge_num);
-    not_visited[node_with_max_edge_num] = false;
+    nbh_id2NodeListId.push_back(node_with_min_cut_ratio);
+    not_visited[node_with_min_cut_ratio] = false;
     tail++;
     // BFS
     while (head < tail) {
       // look for the neighborhood of the head
       int32_t NodeListId = nbh_id2NodeListId[head];
       NodeList[NodeListId]->OneRingNeighborhood(nbh_1ring);
+      // sort
+      std::sort(nbh_1ring.begin(), nbh_1ring.end(),
+                [&](int32_t i, int32_t j) { return node_cut_ratios[i] < node_cut_ratios[j]; });
       for (int32_t curr_id : nbh_1ring) {
         if (not_visited[curr_id]) {
           nbh_id2NodeListId.push_back(curr_id);

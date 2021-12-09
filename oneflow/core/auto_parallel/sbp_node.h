@@ -47,18 +47,18 @@ class SbpNode {
   // compound edge out
   std::vector<SbpEdge<SbpSignature>*> EdgesOut;
   // Identity, use it to distinguish itself from node set
-  int32_t id;
+  int32_t id = -1;
 
   // We should use Sbp-signature for edge with lowest OrderValue
   std::vector<int32_t> OrderValue;
   // Lowest OrderValue
-  int32_t LowOrderValue;
+  int32_t LowOrderValue = -1;
   // Available SbpSignature pointer for this node
   std::vector<SbpSignature*> SbpSignatureList;
   // Available SbpSignature object for this node
   std::vector<SbpSignature> SbpSignatureObjList;
   // Global SbpSignature List Size
-  int32_t GlobalSbpSigSize;
+  int32_t GlobalSbpSigSize = -1;
   // Decide to use SbpSignature with this id
   int32_t FinalSbpSignatureId;
   // Location in NodeList
@@ -201,6 +201,8 @@ class SbpNode {
 
   // Get the minimum element in Cost
   double GetMinCost();
+  // get the cut ratio
+  double GetCutRatio();
 
   // Judge if this node is on the mainstem
   // If so, judge it for its producer/upstream nodes
@@ -732,6 +734,15 @@ double SbpNode<SbpSignature>::GetMinCost() {
   CHECK(Cost.size() > 0) << "Cost not initialized!" << std::endl;
   // Compute the min_comp_cost
   return *std::min_element(Cost.begin(), Cost.end());
+}
+
+// Set the cut ratio
+template<class SbpSignature>
+double SbpNode<SbpSignature>::GetCutRatio() {
+  double curr_cut_ratio = 1.0;
+  for (auto* this_edge : EdgesIn) { curr_cut_ratio *= this_edge->GetCutRatio(); }
+  for (auto* this_edge : EdgesOut) { curr_cut_ratio *= this_edge->GetCutRatio(); }
+  return curr_cut_ratio;
 }
 
 // Judge if this node is on the mainstem
