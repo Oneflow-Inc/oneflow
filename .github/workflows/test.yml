@@ -353,6 +353,8 @@ jobs:
           digest-type: build
           mark-as-completed: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
       - name: Build with Clang
+        uses: Oneflow-Inc/get-oneflow@support-clang-12
+        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/llvm/cuda-75-clang.cmake
           build-script: ${{ env.ONEFLOW_SRC }}/ci/clang/build-llvm.sh
