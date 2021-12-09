@@ -66,20 +66,21 @@ limitations under the License.
 
 namespace mlir {
 
+namespace oneflow {
+
 using PbMessage = google::protobuf::Message;
 
 namespace {
 
-using namespace ::oneflow;
-const UserOpDef& GetUserOpDef(const std::string& op_type_name) {
-  const user_op::OpRegistryResult* val =
-      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
+const ::oneflow::UserOpDef& GetUserOpDef(const std::string& op_type_name) {
+  const ::oneflow::user_op::OpRegistryResult* val =
+      ::oneflow::user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
   CHECK(val) << " Cannot find op_type_name: " << op_type_name;
   return val->op_def;
 }
 
 ::oneflow::AttrType QueryAttrType(const std::string& op_type_name, const std::string& attr_name) {
-  user_op::UserOpDefWrapper op_def(GetUserOpDef(op_type_name));
+  ::oneflow::user_op::UserOpDefWrapper op_def(GetUserOpDef(op_type_name));
   CHECK(op_def.IsAttrName(attr_name)) << attr_name << " not a attr name for op: " << op_type_name;
   return op_def.GetAttrType(attr_name);
 }
@@ -276,7 +277,7 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
     else if (value.has_at_list_data_type()) {
       auto dt_attr_list =
           llvm::map_range(value.at_list_data_type().val(), [&](auto t) -> mlir::Attribute {
-            auto dt = GetDataTypeAttr(GetMLIRContext(), static_cast<DataType>(t));
+            auto dt = GetDataTypeAttr(GetMLIRContext(), static_cast<::oneflow::DataType>(t));
             CHECK(dt) << "fail to convert op attr, key: " + name;
             return dt.getValue();
           });
@@ -400,7 +401,8 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   }
 
   if (failed(AppendCtrlOutType(out_types))) { return failure(); }
-  OperationState state(FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0), "oneflow.user");
+  OperationState state(FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0),
+                       oneflow::UserOp::getOperationName());
   uint32_t data_input_size = 0;
   uint32_t data_output_size = 0;
   for (const auto& input : op.user_conf().input()) { data_input_size += input.second.s().size(); }
@@ -613,7 +615,6 @@ LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_o
   assert(
       GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys, sizes).succeeded());
   const std::string op_name = user_op_adaptor.op_name().getValue().str();
-  int32_t result_idx = 0;
   for (auto tuple : llvm::zip(keys, sizes)) {
     auto name = std::get<0>(tuple);
     auto result_size = std::get<1>(tuple);
@@ -621,7 +622,6 @@ LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_o
     for (int32_t i = 0; i < result_size; i++) {
       auto out_s_ptr = (*user_conf->mutable_output())[name].mutable_s()->Add();
       *(out_s_ptr) = op_name + "/" + name + "_" + std::to_string(i);
-      result_idx += 1;
     }
   }
   return success();
@@ -778,5 +778,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
   }
   return success();
 }
+
+}  // namespace oneflow
 
 }  // namespace mlir
