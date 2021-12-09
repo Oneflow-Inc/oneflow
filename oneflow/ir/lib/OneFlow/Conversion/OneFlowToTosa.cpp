@@ -41,6 +41,30 @@ namespace mlir {
 
 namespace oneflow {
 
+struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
+ public:
+  using OpConversionPattern<Conv2DOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(Conv2DOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto in = op.in();
+    auto weight = op.weight();
+    auto bias = op.bias();
+    auto padding_before = op.padding_before();
+    auto stride = op.strides();
+    auto dilation = op.dilation_rate();
+    rewriter.replaceOpWithNewOp<tosa::Conv2DOp>(
+        op,
+        /* output */ op->getResultTypes().front().cast<TensorType>(),
+        /* input  */ in,
+        /* weight */ weight,
+        /* bias */ bias,
+        /* pad  */ padding_before,
+        /* stride*/ stride,
+        /* dilation*/ dilation);
+    return success();
+  }
+};
 struct ScalarMulByTensorOpLowering final : public OpConversionPattern<ScalarMulByTensorOp> {
  public:
   using OpConversionPattern<ScalarMulByTensorOp>::OpConversionPattern;
@@ -92,7 +116,7 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   target.addLegalDialect<memref::MemRefDialect, StandardOpsDialect, tosa::TosaDialect>();
   target.addIllegalDialect<OneFlowDialect>();
   RewritePatternSet patterns(&getContext());
-  patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering>(&getContext());
+  patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering, Conv2DOpLowering>(&getContext());
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     getOperation()->dump();
     signalPassFailure();
