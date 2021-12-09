@@ -159,7 +159,10 @@ def FusedBiasAddGeluPattern : Pat<
     $gelu_hierarchy,
     $axis
   ),
-  []
+  [
+    (IsGPU $bias_add_device_tag),
+    (IsGPU $gelu_device_tag)
+  ]
 >;
 
 def IsTraingTrue: Constraint<CPred<"$0.getValue()">, "">;

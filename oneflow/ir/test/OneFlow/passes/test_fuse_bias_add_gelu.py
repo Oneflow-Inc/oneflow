@@ -50,19 +50,19 @@ class TestFuseBiasAddGeLUGPUMLIR(oneflow.unittest.TestCase):
     def test_fused_bias_add_gelu_graph(test_case):
         data = np.random.randn(1, 2, 3)
         bias_data = np.random.randn(2)
-        x = flow.tensor(data, dtype=flow.float32).to("gpu")
-        bias = flow.tensor(bias_data, dtype=flow.float32).to("gpu")
+        x = flow.tensor(data, dtype=flow.float32).to("cuda")
+        bias = flow.tensor(bias_data, dtype=flow.float32).to("cuda")
         y_eager = flow.gelu(flow._C.bias_add(x, bias, axis=1))
 
         class FuseBiasAddGeLUGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
 
-            def build(self, x):
+            def build(self, x, bias):
                 return flow.gelu(flow._C.bias_add(x, bias, axis=1))
 
         bias_add_gelu = FuseBiasAddGeLUGraph()
-        y_lazy = bias_add_gelu(x)
+        y_lazy = bias_add_gelu(x, bias)
         test_case.assertTrue(np.array_equal(y_eager.detach().cpu().numpy(), y_lazy.numpy()))
 
 if __name__ == "__main__":
