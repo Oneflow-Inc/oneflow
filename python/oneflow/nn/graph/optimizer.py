@@ -49,7 +49,9 @@ class OptDict(object):
         if self._optimizer is not None:
             opt_confs = self._optimizer._generate_conf_for_graph(train_conf, vars_conf)
             if self._is_sparse:
-                self._optimizer._generate_indexed_slices_optimizer_conf(job_conf, vars_conf)
+                self._optimizer._generate_indexed_slices_optimizer_conf(
+                    job_conf, vars_conf
+                )
 
         if self._lr_scheduler is not None:
             self._lr_scheduler._generate_conf_for_graph(opt_confs)
