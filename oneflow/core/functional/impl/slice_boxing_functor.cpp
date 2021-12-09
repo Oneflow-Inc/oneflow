@@ -136,7 +136,7 @@ class EagerSToBFunctor {
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerSToBpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(in_nd_sbp->sbp_parallel(0)), shape));
-    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x->contiguous()}));
   }
 };
 
@@ -152,7 +152,7 @@ class EagerPToBFunctor {
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerPToBpExpr(in_parallel_desc, out_parallel_desc, shape));
-    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x->contiguous()}));
   }
 };
 
@@ -178,7 +178,7 @@ class EagerNaiveSToSFunctor {
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerNaiveSToSOpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(in_nd_sbp->sbp_parallel(0)),
         SymbolOf(out_nd_sbp->sbp_parallel(0)), shape));
-    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x->contiguous()}));
   }
 };
 
@@ -199,7 +199,7 @@ class EagerBToSFunctor {
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerBToSpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(out_nd_sbp->sbp_parallel(0)), shape));
-    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x->contiguous()}));
   }
 };
 
@@ -220,7 +220,7 @@ class EagerPToSFunctor {
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerPToSpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(out_nd_sbp->sbp_parallel(0)), shape));
-    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x->contiguous()}));
   }
 };
 

@@ -264,7 +264,7 @@ class FlattenFunctor {
     JUST(attrs.SetAttr<int32_t>("start_dim", start_dim));
     JUST(attrs.SetAttr<int32_t>("end_dim", end_dim));
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -280,7 +280,7 @@ class WhereFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition,
                            const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, x, y});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition->contiguous(), x->contiguous(), y->contiguous()});
   }
 
  private:
@@ -307,7 +307,7 @@ class WhereScalarXFunctor {
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be float or int.";
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, y}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition->contiguous(), y->contiguous()}, attrs);
   }
 
  private:
@@ -334,7 +334,7 @@ class WhereScalarYFunctor {
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be float or int.";
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition->contiguous(), x->contiguous()}, attrs);
   }
 
  private:
@@ -366,7 +366,7 @@ class WhereScalarXYFunctor {
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be float or int.";
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition->contiguous()}, attrs);
   }
 
  private:
@@ -400,7 +400,7 @@ class BroadcastLikeFunctor {
                            const std::vector<int32_t>& broadcast_axes) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("broadcast_axes", broadcast_axes));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), like->contiguous()}, attrs);
   }
 
  private:
@@ -579,7 +579,7 @@ class RollFunctor {
         << "The `shifts` and `dims` parameters should have the same size.";
     JUST(attrs.SetAttr<std::vector<int32_t>>("dims", actual_dims));
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -890,6 +890,13 @@ class ReshapeFunctor {
     op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
+    // if input tensor is eager local, than return tensor's view
+    if (x->is_eager() && x->is_local()) {
+      if(!(x->shape()->NumAxes()<=1 || x->shape()->elem_cnt()<=1)){
+        return view::Reshape(x->contiguous(), shape);
+      }
+    }
+
     int need_infer_axis = -1;
     size_t count = 1;
     for (int i = 0; i < shape.NumAxes(); ++i) {
@@ -916,12 +923,7 @@ class ReshapeFunctor {
           << x->shape()->ToString();
       JUST(attrs.SetAttr<Shape>("shape", infered_shape));
     }
-    // if input tensor is eager local, than return tensor's view
-    if (x->is_eager() && x->is_local()) {
-      if(!(x->shape()->NumAxes()<=1 || x->shape()->elem_cnt()<=1)){
-        return view::Reshape(x->contiguous(), infered_shape);
-      }
-    }
+  
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
@@ -1042,7 +1044,7 @@ class NarrowGradFunctor {
     JUST(attrs.SetAttr<int64_t>("dim", dim));
     JUST(attrs.SetAttr<int64_t>("start", start));
     JUST(attrs.SetAttr<int64_t>("length", length));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), like}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), like->contiguous()}, attrs);
   }
 
  private:
@@ -1172,7 +1174,7 @@ class CopyFunctor {
 #ifdef WITH_CUDA
     if (device_type == "cuda") { InitCudaContextOnce(device_id); }
 #endif
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -1812,7 +1814,7 @@ class ElementwiseMaximumGradFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dz,
                                 const std::shared_ptr<one::Tensor>& x,
                                 const std::shared_ptr<one::Tensor>& y) const {
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dz, x, y});
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dz->contiguous(), x->contiguous(), y->contiguous()});
   }
 
  private:
@@ -1902,7 +1904,7 @@ class AmpWhiteIdentityFunctor {
     op_ = CHECK_JUST(one::OpBuilder("amp_white_identity").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {in});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in->contiguous()});
   }
 
  private:
@@ -2059,7 +2061,7 @@ class UnsortedBatchSegmentSumFunctor {
                            const int64_t& num_segments) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("num_segments", num_segments));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {data, segment_ids}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {data->contiguous(), segment_ids->contiguous()}, attrs);
   }
 
  protected:

@@ -49,7 +49,7 @@ class MinMaxObserverFunctor {
     JUST(attrs.SetAttr<int32_t>("quantization_bit", quantization_bit));
     JUST(attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme));
     JUST(attrs.SetAttr<bool>("per_layer_quantization", per_layer_quantization));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in->contiguous()}, attrs);
   }
 
  private:
@@ -84,7 +84,7 @@ class MovingAverageMinMaxObserverFunctor {
     JUST(attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme));
     JUST(attrs.SetAttr<float>("momentum", momentum));
     return OpInterpUtil::Dispatch<TensorTuple>(
-        *op_, {in, current_train_step, moving_max, moving_min}, attrs);
+        *op_, {in->contiguous(), current_train_step->contiguous(), moving_max->contiguous(), moving_min->contiguous()}, attrs);
   }
 
  private:
@@ -110,7 +110,7 @@ class FakeQuantizationFunctor {
     JUST(attrs.SetAttr<std::string>("quantization_formula", quantization_formula));
     JUST(attrs.SetAttr<int32_t>("quantization_bit", quantization_bit));
     JUST(attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {in, scale, zero_point}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in->contiguous(), scale->contiguous(), zero_point->contiguous()}, attrs);
   }
 
  private:
@@ -136,7 +136,7 @@ class QuantizationFunctor {
     JUST(attrs.SetAttr<std::string>("quantization_formula", quantization_formula));
     JUST(attrs.SetAttr<int32_t>("quantization_bit", quantization_bit));
     JUST(attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {in, scale, zero_point}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in->contiguous(), scale->contiguous(), zero_point->contiguous()}, attrs);
   }
 
  private:

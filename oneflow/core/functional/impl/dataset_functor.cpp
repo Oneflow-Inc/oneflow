@@ -34,7 +34,7 @@ class ImageFlipFuntor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& flip_code) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, flip_code});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), flip_code->contiguous()});
   }
 
  private:
@@ -77,7 +77,7 @@ class DecodeOneRecFunctor {
     JUST(attrs.SetAttr<bool>("has_reshape", has_reshape));
     JUST(attrs.SetAttr<bool>("has_batch_padding", has_batch_padding));
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()}, attrs);
   }
 
  private:

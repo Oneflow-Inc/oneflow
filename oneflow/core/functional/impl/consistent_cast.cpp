@@ -228,7 +228,7 @@ Maybe<Tensor> ConsistentToConsistent(
   const auto& op = JUST(GetConsistentToConsistentOpExpr(grad_sbp_parallels));
   const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
   const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-      *op, {consistent_tensor}, OpExprInterpContext(AttrMap{}, parallel_desc, nd_sbp)));
+      *op, {consistent_tensor->contiguous()}, OpExprInterpContext(AttrMap{}, parallel_desc, nd_sbp)));
   if (!LazyMode::is_enabled() && tensor != x && !IsConsistentTensorMetaCheckDisabled()) {
     const auto& input_consistent_id = JUST(x->transport_token());
     const auto& output_consistend_id = JUST(tensor->transport_token());
@@ -273,7 +273,7 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
   JUST(attrs.SetAttr<Shape>("shape", *shape));
   JUST(attrs.SetAttr<DataType>("dtype", dtype));
   const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-      *op, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
+      *op, {input->contiguous()}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
   return output;
 }
 
@@ -313,7 +313,7 @@ class LocalToConsistentFunctor {
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     DisableCheckConsistentTensorMetaScope scope{};
     const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-        *op_, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
+        *op_, {input->contiguous()}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
     return tensor;
   }
 
@@ -356,7 +356,7 @@ class ConsistentToLocalFunctor {
     CHECK_OR_RETURN(!x->is_lazy())
         << "consistent_tensor.to_local() is not supported within nn.Graph for now";
     CHECK_OR_RETURN(x->is_consistent()) << "consistent tensors supported only";
-    return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}));
+    return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {x->contiguous()}));
   }
 
  private:

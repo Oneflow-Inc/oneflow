@@ -111,7 +111,7 @@ class ScalarMathBaseFunctor {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+      JUST(OpInterpUtil::Dispatch(*op_, {x->contiguous()}, outputs.get(), attrs));
       return outputs->at(0);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, casted_vec, attrs);
@@ -348,7 +348,7 @@ class ReduceAllFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -372,7 +372,7 @@ class ReduceAnyFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -393,7 +393,7 @@ class ReduceDeviceStageBaseFunctor {
                                 const std::vector<int32_t>& axis) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in->contiguous()}, attrs);
   }
   virtual ~ReduceDeviceStageBaseFunctor() = default;
 
@@ -417,7 +417,7 @@ class ReduceDeviceStageGradBaseFunctor {
                            const std::vector<int32_t>& axis) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, count}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff->contiguous(), mask->contiguous(), count->contiguous()}, attrs);
   }
   virtual ~ReduceDeviceStageGradBaseFunctor() = default;
 
@@ -465,7 +465,7 @@ class ReduceGlobalStageBaseFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in, device_count}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in->contiguous(), device_count->contiguous()}, attrs);
   }
   virtual ~ReduceGlobalStageBaseFunctor() = default;
 
@@ -490,7 +490,7 @@ class ReduceGlobalStageGradBaseFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, device_count}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff->contiguous(), mask->contiguous(), device_count->contiguous()}, attrs);
   }
   virtual ~ReduceGlobalStageGradBaseFunctor() = default;
 
@@ -768,7 +768,7 @@ class CastFunctor {
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -1606,7 +1606,7 @@ class DotFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& other) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, other});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous(), other->contiguous()});
   }
 
  private:
