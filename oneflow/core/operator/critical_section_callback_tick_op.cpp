@@ -74,7 +74,7 @@ Maybe<void> CriticalSectionCallbackTickOp::GetSbpSignatures(
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kCriticalSectionCallbackTickConf, 2);
+REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kCriticalSectionCallbackTickConf, 128);
 REGISTER_OP(OperatorConf::kCriticalSectionCallbackTickConf, CriticalSectionCallbackTickOp);
 REGISTER_TICK_TOCK_OP(OperatorConf::kCriticalSectionCallbackTickConf);
 

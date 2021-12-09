@@ -34,7 +34,7 @@ class CriticalSectionWaitTickCompTaskNode final : public CompTaskNode {
 };
 
 void CriticalSectionWaitTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("out", false, 1, 1);
+  ProduceRegst("out", false, 128, 128);
   ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
 }
 
