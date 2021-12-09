@@ -63,13 +63,13 @@ class Blob final {
   template<typename T = void>
   const T* dptr() const {
     CheckDataType<T>(data_type());
-    return static_cast<T*>(static_cast<char*>(dptr_) + storage_offset_ * GetSizeOfDataType(data_type()));
+    return reinterpret_cast<T*>(static_cast<char*>(dptr_) + storage_offset_ * GetSizeOfDataType(data_type()));
   }
   template<typename T = void>
   T* mut_dptr() {
     this->blob_access_checker()->CheckBodyMutable();
     CheckDataType<T>(data_type());
-    return static_cast<T*>(static_cast<char*>(dptr_) + storage_offset_ * GetSizeOfDataType(data_type()));
+    return reinterpret_cast<T*>(static_cast<char*>(dptr_) + storage_offset_ * GetSizeOfDataType(data_type()));
   }
   template<typename T = void>
   T* ForceMutDptr() {
