@@ -25,7 +25,6 @@ REGISTER_USER_OP("to_contiguous")
     .Input("in")
     .Output("out")
     .Attr<std::vector<int64_t>>("stride")
-    .Attr<int64_t>("storage_offset")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();

@@ -32,16 +32,11 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
   if(tensor->is_lazy() || tensor->is_consistent()){
     return true;
   }
-  // if(JUST(tensor->storage_offset()) > 0){
-  //   return false;
-  // }
   const Shape& shape = *tensor->shape();
   if(!shape.is_initialized() || shape.NumAxes()<1 || shape.elem_cnt() <= 1 ){
     return true;
   }
-  // printf("; >>> shape:%s", shape.DebugStr().c_str());
   const Stride& stride = *JUST(tensor->stride());
-  // printf("; >>> stride:%s", stride.ToString().c_str());
   int64_t dim = shape.NumAxes();
   int64_t expected_stride = 1;
   bool contig_if_nonempty = true;
@@ -74,7 +69,6 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
 
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         const Stride& target_stride, int64_t storage_offset) {
-  // storage_offset = storage_offset + JUST(JUST(input->AsMirroredTensor())->storage_offset());
   // TODO(): Check shape compatible.
   auto device = JUST(input->device());
   auto tensor_meta = std::make_shared<MirroredTensorMeta>(
@@ -112,19 +106,19 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) 
       count *= shape.At(i);
     }
   }
-
+  int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
   std::shared_ptr<Tensor> output;
   size_t x_count = input->shape()->Count(0);
   if (need_infer_axis == -1) {
     CHECK_EQ_OR_RETURN(shape.Count(0), x_count);
-    output = JUST(BasicView(input, shape, 0));
+    output = JUST(BasicView(input, shape, storage_offset));
   } else {
     Shape infered_shape = shape;
     infered_shape.Set(need_infer_axis, x_count / count);
     CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
         << "Shape " << shape.ToString() << " is invalid for input of shape "
         << input->shape()->ToString();
-    output = JUST(BasicView(input, infered_shape, 0));
+    output = JUST(BasicView(input, infered_shape, storage_offset));
   }
 
   if (autograd::GradMode::is_enabled() && input->requires_grad()) {
@@ -165,7 +159,7 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
   }
   DimVector target_dims(ndim);
   StrideVector target_strides(ndim);
-  int64_t storage_offset = 0;
+  int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
   for (int i = 0; i < ndim; ++i) {
     int64_t step = std::min(steps.at(i), shape->At(i));
     if (step < 0) { return Error::RuntimeError() << "Step must be greater than zero."; }
@@ -180,9 +174,6 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
     target_strides[i] = step * strides->At(i);
     storage_offset += start * strides->At(i);
   }
-
-  printf("\ninput shape:%s; output shape:%s; ", shape->DebugStr().c_str(), Shape(target_dims).DebugStr().c_str());
-  printf("\ninput strides:%s; output strides:%s; storage_offset:%ld\n", strides->ToString().c_str(), Stride(target_strides).ToString().c_str(), storage_offset);
 
   auto output = JUST(BasicView(input, Shape(target_dims), Stride(target_strides), storage_offset));
   if (input->requires_grad()) {
@@ -220,7 +211,7 @@ Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, c
   dim_vec.insert(dim_vec.end(), length);
   dim_vec.insert(dim_vec.end(), shape->dim_vec().cbegin() + dim + 1, shape->dim_vec().end());
 
-  int64_t storage_offset = 0;
+  int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
   Shape target_shape(dim_vec);
 
   StrideVector stride_vec(ndim);
@@ -265,7 +256,7 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
   const auto& shape = input->shape();
   const auto& strides = JUST(input->stride());
   const int64_t ndim = shape->NumAxes();
-  const int64_t storage_offset = 0;
+  int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
 
   CHECK_EQ_OR_RETURN(permute.size(), ndim);
   CheckIsPerm(permute);

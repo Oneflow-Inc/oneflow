@@ -61,9 +61,8 @@ class ToContiguousKernel final : public user_op::OpKernel {
     CHECK_EQ(out->data_type(), in_data_type);
 
     const auto& in_stride = ctx->Attr<std::vector<int64_t>>("stride");
-    int64_t storage_offset = ctx->Attr<int64_t>("storage_offset");
 
-    const char* in_dptr = static_cast<const char*>(in->raw_dptr()) + storage_offset * sizeof(T);
+    const char* in_dptr = static_cast<const char*>(in->raw_dptr());
     char* out_dptr = static_cast<char*>(out->mut_raw_dptr());
 
     ToContiguousUtil<device_type, T>(ctx->stream(), in_shape, in_stride, in_dptr, out_dptr)();

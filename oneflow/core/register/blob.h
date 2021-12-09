@@ -64,7 +64,6 @@ class Blob final {
   const T* dptr() const {
     CheckDataType<T>(data_type());
     return reinterpret_cast<T*>(static_cast<char*>(dptr_) + storage_offset_ * GetSizeOfDataType(data_type()));
-    // return static_cast<T*>(dptr_)+storage_offset_;
   }
   template<typename T = void>
   T* mut_dptr() {

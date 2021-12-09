@@ -1092,7 +1092,6 @@ Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_t
   const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object =
       JUST(view_tensor->eager_blob_object());
   // init view blob (with empty data pointer)
-  printf("\n InstructionsBuilder::TensorView() >>> offset: %ld", JUST(view_tensor->storage_offset()));
   JUST(view_eager_blob_object->InitBlobWithOffset(JUST(view_tensor->storage_offset())));
   view_eager_blob_object->set_is_shape_synced(true);
   // prepare instruction operand
