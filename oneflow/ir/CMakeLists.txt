@@ -123,6 +123,16 @@ set_property(GLOBAL PROPERTY ALL_ONEFLOW_LIBS
   -Wl,--no-as-needed ${oneflow_third_party_libs} -Wl,--as-needed
 )
 
+function(oneflow_add_llvm_library)
+  add_llvm_library(${ARGV})
+  set_compile_options_to_oneflow_target(${ARGV0})
+endfunction()
+
+function(oneflow_add_mlir_dialect_library)
+  add_mlir_dialect_library(${ARGV})
+  set_compile_options_to_oneflow_target(${ARGV0})
+endfunction()
+
 add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(test)
