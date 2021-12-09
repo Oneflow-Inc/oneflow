@@ -371,24 +371,6 @@ if(BUILD_TESTING)
   endif()
 endif()
 
-
-
-set(DEVICE_REG_HEADERS "${PROJECT_SOURCE_DIR}/oneflow/core/framework/device_register_*.h")
-set(AUTO_GEN_DEV_REG_HEADER "${PROJECT_BINARY_DIR}/oneflow/core/framework/auto_gen_device_registry.h")
-set(AUTO_GEN_DEV_REG_MACRO_ID "ONEFLOW_CORE_FRAMEWORK_AUTO_GEN_DEVICE_REGISTRY_H_")
-
-message(STATUS "auto generated header file: ${AUTO_GEN_DEV_REG_HEADER}")
-set(AUTO_GEN_DEV_REG_HEADER_CONTENT "#ifndef ${AUTO_GEN_DEV_REG_MACRO_ID}\n#define ${AUTO_GEN_DEV_REG_MACRO_ID}\n")
-file(GLOB_RECURSE DEVICE_REGISTER_HEADERS ${DEVICE_REG_HEADERS})
-foreach(item ${DEVICE_REGISTER_HEADERS})
-    file(RELATIVE_PATH item ${PROJECT_SOURCE_DIR} ${item})
-    message(STATUS "device register header file found: " ${item})
-    set(AUTO_GEN_DEV_REG_HEADER_CONTENT "${AUTO_GEN_DEV_REG_HEADER_CONTENT}#include \"${item}\"\n")
-endforeach()
-set(AUTO_GEN_DEV_REG_HEADER_CONTENT "${AUTO_GEN_DEV_REG_HEADER_CONTENT}#endif //${AUTO_GEN_DEV_REG_MACRO_ID}\n\n")
-write_file_if_different(${AUTO_GEN_DEV_REG_HEADER} ${AUTO_GEN_DEV_REG_HEADER_CONTENT})
-list(APPEND PROTO_HDRS ${AUTO_GEN_DEV_REG_HEADER})
-
 # build include
 add_custom_target(of_include_copy ALL)
 
