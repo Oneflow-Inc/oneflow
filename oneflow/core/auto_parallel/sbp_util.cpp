@@ -97,6 +97,15 @@ Maybe<double> ComputCopyCostBetweenTwoNdSbp(const cfg::NdSbp& producer_nd_sbp,
       // Otherwise, switch the dimension to dim_diff_sbp
       if (producer_sbp_size == 2) { dim_producer = dim_diff_sbp; }
       if (consumer_sbp_size == 2) { dim_consumer = dim_diff_sbp; }
+      // Spliting at the same dimension needs special cares!
+      // Not supported by nccl
+      if (dim_diff_sbp == 0
+          && producer_nd_sbp.sbp_parallel(dim_producer)
+                 != consumer_nd_sbp.sbp_parallel(dim_consumer)
+          && (NdSbpAllSameSplitParallel(producer_nd_sbp)
+              || NdSbpAllSameSplitParallel(consumer_nd_sbp))) {
+        return GetMaxVal<float>();
+      }
       return ComputCopyCostBetweenTwoDiffSbpParallel(
           producer_nd_sbp.sbp_parallel(dim_producer), consumer_nd_sbp.sbp_parallel(dim_consumer),
           logical_blob_size, hierarchy->At(dim_diff_sbp), on_same_devices);
