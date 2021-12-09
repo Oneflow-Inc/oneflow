@@ -27,7 +27,7 @@ import oneflow.compatible.single_client.unittest
 from oneflow.compatible import single_client as flow
 
 
-def of_run(device_type, x_shape, data_type, rate, seed):
+def of_run(device_type, x_shape, data_type, rate):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -50,12 +50,12 @@ def of_run(device_type, x_shape, data_type, rate, seed):
                 x = flow.cast(flow.cast(x, flow.float16), dtype)
                 of_out = flow.cast(
                     flow.nn.dropout(
-                        flow.cast(x, flow.float16), rate=rate, seed=seed, name="dropout"
+                        flow.cast(x, flow.float16), rate=rate, name="dropout"
                     ),
                     dtype,
                 )
             else:
-                of_out = flow.nn.dropout(x, rate=rate, seed=seed, name="dropout")
+                of_out = flow.nn.dropout(x, rate=rate, name="dropout")
             loss = flow.math.square(of_out)
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [0.0001]), momentum=0
@@ -69,9 +69,7 @@ def of_run(device_type, x_shape, data_type, rate, seed):
     of_out = DropoutJob().get()
     of_out = test_global_storage.Get("out")
     out_diff = test_global_storage.Get("out_diff")
-    assert np.allclose(
-        [1 - np.count_nonzero(of_out) / of_out.size], [rate], atol=rate / 5
-    )
+    assert np.allclose([1 - np.count_nonzero(of_out) / of_out.size], [rate], atol=1e-4)
     x = test_global_storage.Get("x")
     x_diff = test_global_storage.Get("x_diff")
     out_scale = of_out[np.where(of_out != 0)] / x[np.where(of_out != 0)]
@@ -80,7 +78,7 @@ def of_run(device_type, x_shape, data_type, rate, seed):
     assert np.allclose(diff_scale, 1.0 / (1.0 - rate), atol=1e-05)
 
 
-def of_run_module(device_type, x_shape, data_type, rate, seed):
+def of_run_module(device_type, x_shape, data_type, rate):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -96,7 +94,7 @@ def of_run_module(device_type, x_shape, data_type, rate, seed):
                 initializer=flow.ones_initializer(),
                 trainable=True,
             )
-            of_out = flow.nn.dropout(x, rate=rate, seed=seed, name="dropout")
+            of_out = flow.nn.dropout(x, rate=rate, name="dropout")
             loss = flow.math.square(of_out)
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [0.0001]), momentum=0
@@ -115,114 +113,11 @@ class TestDropout(flow.unittest.TestCase):
         arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["x_shape"] = [(100, 100, 10, 20)]
         arg_dict["data_type"] = ["float32", "double", "float16"]
-        arg_dict["rate"] = [0.75]
-        arg_dict["seed"] = [12345, None]
+        arg_dict["rate"] = [0.0]
         for arg in GenArgList(arg_dict):
             if arg[0] == "cpu" and arg[2] == "float16":
                 continue
             of_run(*arg)
-
-    def test_dropout_module(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu", "gpu"]
-        arg_dict["x_shape"] = [(2, 2, 2, 2)]
-        arg_dict["data_type"] = ["float32"]
-        arg_dict["rate"] = [0.75]
-        arg_dict["seed"] = [12345]
-        literals = {
-            "cpu": [
-                np.array(
-                    [
-                        4.0,
-                        4.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        4.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        4.0,
-                        4.0,
-                        0.0,
-                        0.0,
-                        4.0,
-                    ]
-                ),
-                np.array(
-                    [
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        4.0,
-                        4.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        4.0,
-                        0.0,
-                        0.0,
-                    ]
-                ),
-            ],
-            "gpu": [
-                np.array(
-                    [
-                        4.0,
-                        4.0,
-                        0.0,
-                        4.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        4.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                    ]
-                ),
-                np.array(
-                    [
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        4.0,
-                        4.0,
-                        0.0,
-                    ]
-                ),
-            ],
-        }
-        for arg in GenArgList(arg_dict):
-            (of_out_a, of_out_b) = of_run_module(*arg)
-            test_case.assertEqual(
-                (np.abs(literals[arg[0]][0] - of_out_a.flatten()) < 1e-06).all(), True
-            )
-            test_case.assertEqual(
-                (np.abs(literals[arg[0]][1] - of_out_b.flatten()) < 1e-06).all(), True
-            )
 
 
 if __name__ == "__main__":

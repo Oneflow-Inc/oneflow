@@ -16,11 +16,13 @@ limitations under the License.
 #include "oneflow/api/python/functional/indexing.h"
 
 #include <pybind11/pybind11.h>
+#include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/api/python/functional/tensor_api.yaml.h"
 
 namespace oneflow {
 namespace one {
@@ -54,10 +56,12 @@ Maybe<void> PySliceUnpack(PyObject* object, Py_ssize_t* start, Py_ssize_t* stop,
 }
 
 Maybe<DataType> InferScalarType(PyObject* object) {
-  if (PyLong_Check(object)) {
-    return DataType::kInt64;
-  } else if (PyBool_Check(object)) {
+  if (PyBool_Check(object)) {
     return DataType::kUInt8;
+  } else if (PyLong_Check(object)) {
+    return DataType::kInt64;
+  } else if (PyArray_Check(object)) {
+    return numpy::GetOFDataTypeFromNpArray(reinterpret_cast<PyArrayObject*>(object));
   } else if (PySequence_Check(object)) {
     int64_t length = PySequence_Length(object);
     CHECK_GT_OR_RETURN(length, 0) << "Index should not be empty.";
@@ -134,7 +138,7 @@ Maybe<Shape> InferArraySizes(PyObject* object) {
   while (PySequence_Check(seq)) {
     int64_t length = PySequence_Length(seq);
     CHECK_GT_OR_RETURN(length, 0) << "Index should not be empty.";
-    sizes.push_back(length);
+    sizes.emplace_back(length);
     CHECK_LE_OR_RETURN(sizes.size(), /*MAX_DIMS=*/128)
         << "Too many dimensions " << Py_TYPE(seq)->tp_name;
     if (length == 0) break;
@@ -146,8 +150,17 @@ Maybe<Shape> InferArraySizes(PyObject* object) {
 
 Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
   const DataType dtype = JUST(InferScalarType(object));
-  const auto& sizes = JUST(InferArraySizes(object));
   const auto& device = JUST(Device::New("cpu"));
+
+  // index type must be integers
+  if (!IsIntegralDataType(dtype)) {
+    return Error::IndexError() << "only integers, slices (`:`), ellipsis (`...`), numpy.newaxis "
+                                  "(`None`) and integer or boolean arrays are valid indices";
+  }
+  // In advanced indexing condition, index can be array object, need to handle it specially.
+  if (PyArray_Check(object)) { return TensorWithData(object, NullOpt, device, false); }
+
+  const auto& sizes = JUST(InferArraySizes(object));
   const auto& tensor = JUST(functional::Empty(*sizes, CHECK_JUST(DType::Get(dtype)), device));
   // Prevent the python object release until the callback is complete.
   Py_INCREF(object);

@@ -96,10 +96,10 @@ Maybe<void> FuseCastScalePass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
       } else {
         UNIMPLEMENTED();
       }
-      delete_ops.push_back(sole_dst_node->op().op_conf());
+      delete_ops.emplace_back(sole_dst_node->op().op_conf());
       sole_dst_node = sole_dst_node->SoleOutEdge()->dst_node();
     }
-    delete_ops.push_back(op_node->op().op_conf());
+    delete_ops.emplace_back(op_node->op().op_conf());
     const user_op::UserOpConfWrapper scale_user_conf(sole_dst_node->op().op_conf());
 
     user_op::UserOpConfWrapperBuilder fused_op_builder(sole_dst_node->op().op_name());
