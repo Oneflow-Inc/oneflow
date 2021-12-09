@@ -55,30 +55,30 @@ bool IsLastIRPassForIRPassType<kAfterAD>() {
 template<IRPassType ir_pass_type>
 class RoundTripOneFlowJobWrapper : public mlir::oneflow::RoundTripOneFlowJobWrapperInterface {
  public:
-  RoundTripOneFlowJobWrapper(::oneflow::Job* job)
+  explicit RoundTripOneFlowJobWrapper(::oneflow::Job* job)
       : job_(job), op_graph_(*job), job_builder_(job), is_updated_(false) {}
 
-  const Job* job() const { return job_; }
+  const Job* job() const override { return job_; }
 
-  bool IsLastIRPass() const { return IsLastIRPassForIRPassType<ir_pass_type>(); }
+  bool IsLastIRPass() const override { return IsLastIRPassForIRPassType<ir_pass_type>(); }
 
-  void UpdateJob(::oneflow::Job* new_job) {
+  void UpdateJob(::oneflow::Job* new_job) override {
     CHECK(is_updated_ == false);
     job_->Swap(new_job);
     is_updated_ = true;
   }
-  void DumpLog(const std::string& filename, const std::string& content) {
+  void DumpLog(const std::string& filename, const std::string& content) override {
     TeePersistentLogStream::Create(JoinPath(LogDir(), filename))->Write(content);
   }
 
-  const ::oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) const {
+  const ::oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) const override {
     return job_builder_.ParallelConf4OpName(op_name);
   }
-  const ::oneflow::OperatorConf& OpConf4OpName(const std::string& op_name) const {
+  const ::oneflow::OperatorConf& OpConf4OpName(const std::string& op_name) const override {
     return job_builder_.OpConf4OpName(op_name).GetOrThrow();
   }
   std::pair<std::vector<std::string>, std::vector<std::string>> InputBns4OpName(
-      const std::string& op_name) const {
+      const std::string& op_name) const override {
     auto node = op_graph_.OpNode4OpName(op_name);
     std::vector<std::string> input_bns{};
     std::vector<std::string> input_lbns{};
@@ -93,18 +93,18 @@ class RoundTripOneFlowJobWrapper : public mlir::oneflow::RoundTripOneFlowJobWrap
     return std::make_pair(input_bns, input_lbns);
   }
 
-  std::vector<std::string> OutputLbns4OpName(const std::string& op_name) const {
+  std::vector<std::string> OutputLbns4OpName(const std::string& op_name) const override {
     std::unordered_set<std::string> ret{};
     auto node = op_graph_.OpNode4OpName(op_name);
     for (auto e : node->out_edges()) {
-      for (auto lbi : e->lbis()) { ret.insert(GenLogicalBlobName(lbi)); }
+      for (const auto& lbi : e->lbis()) { ret.insert(GenLogicalBlobName(lbi)); }
     }
     return {ret.begin(), ret.end()};
   }
 
   std::string ReplaceInputLbnInOpCustomizedConf(::oneflow::OperatorConf* op_conf,
                                                 const std::string& ibn,
-                                                const std::string& new_val) const {
+                                                const std::string& new_val) const override {
     return ::oneflow::ReplaceInputLbnInOpCustomizedConf(op_conf, ibn, new_val);
   }
 
@@ -124,14 +124,15 @@ class RoundTripOneFlowJobWrapper : public mlir::oneflow::RoundTripOneFlowJobWrap
   void QueryLogicalBlob(
       const std::string& lbn,
       std::function<void(const int64_t* shape_begin, const int64_t* shape_end, DataType dt)> cb)
-      const {
+      const override {
     LogicalBlobId lbi = GenLogicalBlobId(lbn);
     auto& blob_desc = op_graph_.GetLogicalBlobDesc(lbi);
     cb(blob_desc.shape().dim_vec().begin(), blob_desc.shape().dim_vec().end(),
        blob_desc.data_type());
   }
 
-  void TopoForEachOpConf(std::function<void(const ::oneflow::OperatorConf*)> Handler) const {
+  void TopoForEachOpConf(
+      std::function<void(const ::oneflow::OperatorConf*)> Handler) const override {
     op_graph_.TopoForEachNode([&](OpNode* op_node) { Handler(&op_node->op().op_conf()); });
   }
 
