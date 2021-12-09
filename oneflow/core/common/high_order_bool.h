@@ -32,13 +32,16 @@ namespace hob {
 
 template<typename Context, typename ValueT>
 struct BaseExpr {
+  virtual ~BaseExpr() = default;
   ALWAYS_INLINE virtual scalar_or_const_ref_t<ValueT> get(const Context&) const = 0;
   virtual std::string DebugStr(const Context&, bool display_result = true) const = 0;  // NOLINT
   operator bool() = delete;
 };
 
 template<typename Context, typename ValueT, typename E>
-struct Expr : public BaseExpr<Context, ValueT> {};
+struct Expr : public BaseExpr<Context, ValueT> {
+  virtual ~Expr() = default;
+};
 
 template<typename Context, typename ValueT>
 struct Literal final : public Expr<Context, ValueT, Literal<Context, ValueT>> {
