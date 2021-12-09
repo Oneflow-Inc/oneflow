@@ -575,20 +575,24 @@ class TransposeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::vector<int32_t>& permute) const {
     MutableAttrMap attrs;
-    CHECK_EQ_OR_RETURN(input->ndim(), permute.size()) << "number of dims don't match in permute";
+    auto ndim = input->ndim();
+    CHECK_EQ_OR_RETURN(ndim, permute.size()) << "number of dims don't match in permute";
 
-    JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
-    int32_t ndims = input->shape()->NumAxes();
-    for (int i = 0; i < permute.size(); i++) {
-      int32_t dim = permute.at(i);
-      if (dim < 0) { dim += ndims; }
-      CHECK_GE_OR_RETURN(dim, 0)
-          << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
-          << ndims << " ] but got " << ndims;
-      CHECK_LT_OR_RETURN(dim, ndims)
-          << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
-          << ndims << " ] but got " << ndims;
+    // according to colleague's advice, handle negative permute value here
+    // because of permute is const, so copy it to local var and do modification.
+    auto positive_perm = permute;
+    for (auto i = 0; i < positive_perm.size(); i++) {
+      CHECK_LT_OR_RETURN(positive_perm[i], ndim)
+          << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
+          << ndim << " ) but got " << positive_perm[i];
+      CHECK_GE_OR_RETURN(positive_perm[i], -ndim)
+          << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
+          << ndim << " ) but got " << positive_perm[i];
+
+      if (positive_perm[i] < 0) { positive_perm[i] += ndim; }
     }
+
+    JUST(attrs.SetAttr<std::vector<int32_t>>("perm", positive_perm));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
