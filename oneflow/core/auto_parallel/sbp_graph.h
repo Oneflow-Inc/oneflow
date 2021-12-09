@@ -20,6 +20,7 @@ limitations under the License.
 #include <unordered_map>
 #include "binary_set.h"
 #include "oneflow/core/auto_parallel/sbp_node.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "sbp_edge.h"
 #include "algorithm_util.h"
@@ -104,6 +105,8 @@ class SbpGraph {
   // Use greedy strategy on the one ring neighborhood with the maximum number of points nbh_num.
   double GreedyStrategy(int32_t nbh_num = 4);
 
+  // Find one strategy with finite cost for adjustment
+  void Find1Strategy4Greedy();
   // Use brute force to search for a strategy with minimum cost for a neighborhood
   double NbhGreedyStrategy(std::vector<int32_t>& nbh_id2NodeListId);
 
@@ -141,6 +144,10 @@ class SbpGraph {
                       std::vector<std::vector<int32_t>>& nbh_id2order2sbp_id,
                       std::vector<int32_t>& MinSbpSignatureId, double& MinCost, int32_t order,
                       double CurrCost);
+
+  bool DFS_FindReasonableCost(std::vector<int32_t>& nbh_id2NodeListId,
+                              std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id,
+                              std::vector<int32_t>& nbh_id2order, int32_t nbh_id);
 
 #ifdef DEBUG_ALGORITHM_
 
@@ -575,7 +582,8 @@ void SbpGraph<SbpSignature>::DFS_AddNbhCost(std::vector<int32_t>& nbh_id2NodeLis
                                             double& MinCost, int32_t order, double CurrCost) {
   // We have finished visiting the neighborhood
   if (order >= nbh_id2NodeListId.size()) {
-    if (CurrCost < MinCost) {
+    // relative difference > 1e-12
+    if (CurrCost < MinCost * 0.999999999999) {
       MinCost = CurrCost;
       for (int32_t nbh_id = 0; nbh_id < nbh_id2NodeListId.size(); nbh_id++) {
         MinSbpSignatureId[nbh_id] = NodeList[nbh_id2NodeListId[nbh_id]]->FinalSbpSignatureId;
@@ -596,6 +604,83 @@ void SbpGraph<SbpSignature>::DFS_AddNbhCost(std::vector<int32_t>& nbh_id2NodeLis
                    CurrCost + OutNbhCosts[nbh_id][sbp_id]
                        + sbp_node->EvalInNbhCost(NodeListId2nbh_id, nbh_id2order));
   }
+}
+
+template<class SbpSignature>
+bool SbpGraph<SbpSignature>::DFS_FindReasonableCost(
+    std::vector<int32_t>& nbh_id2NodeListId,
+    std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id, std::vector<int32_t>& nbh_id2order,
+    int32_t nbh_id) {
+  // We found such a strategy
+  if (nbh_id == nbh_id2order.size()) { return true; }
+  SbpNode<SbpSignature>* sbp_node = NodeList[nbh_id2NodeListId[nbh_id]];
+  for (int32_t sbp_id = 0; sbp_id < sbp_node->Cost.size(); sbp_id++) {
+    sbp_node->FinalSbpSignatureId = sbp_id;
+    // If the cost for this node is reasonable, then go to the next one
+    if (sbp_node->EvalInNbhCost(NodeListId2nbh_id, nbh_id2order) < cut_cost) {
+      if (DFS_FindReasonableCost(nbh_id2NodeListId, NodeListId2nbh_id, nbh_id2order, nbh_id + 1)) {
+        // If we found one strategy, then exist the DFS.
+        return true;
+      }
+    }
+  }
+  // Can not find a reasonable strategy with the setting for previous nodes.
+  // Go back and change the previous node.
+  return false;
+}
+
+// Find one strategy with finite cost for adjustment
+template<class SbpSignature>
+void SbpGraph<SbpSignature>::Find1Strategy4Greedy() {
+  std::vector<int32_t> nbh_id2NodeListId;
+  std::vector<bool> not_visited(NodeList.size(), true);
+  std::vector<int32_t> nbh_1ring;
+  int32_t head = 0;
+  int32_t tail = 0;
+  // If have not visited all the nodes
+  while (tail < NodeList.size()) {
+    // Find the node with maximum connection
+    int32_t node_with_max_edge_num = -1;
+    int32_t max_edge_num = -1;
+    for (int32_t NodeListId = 0; NodeListId < NodeList.size(); NodeListId++) {
+      if (not_visited[NodeListId]) {
+        int32_t curr_edge_num =
+            NodeList[NodeListId]->EdgesIn.size() + NodeList[NodeListId]->EdgesOut.size();
+        if (curr_edge_num > max_edge_num) {
+          max_edge_num = curr_edge_num;
+          node_with_max_edge_num = NodeListId;
+        }
+      }
+    }
+    // put this node into the open set
+    nbh_id2NodeListId.push_back(node_with_max_edge_num);
+    not_visited[node_with_max_edge_num] = false;
+    tail++;
+    // BFS
+    while (head < tail) {
+      // look for the neighborhood of the head
+      int32_t NodeListId = nbh_id2NodeListId[head];
+      NodeList[NodeListId]->OneRingNeighborhood(nbh_1ring);
+      for (int32_t curr_id : nbh_1ring) {
+        if (not_visited[curr_id]) {
+          nbh_id2NodeListId.push_back(curr_id);
+          tail++;
+          not_visited[curr_id] = false;
+        }
+      }
+      head++;
+    }
+  }
+  // mapping from the NodeListId to the id in the nbh_id2NodeListId
+  std::unordered_map<int32_t, int32_t> NodeListId2nbh_id;
+  InverseFunction<int32_t>(nbh_id2NodeListId, NodeListId2nbh_id);
+  // Initial an ordinary order
+  std::vector<int32_t> nbh_id2order(nbh_id2NodeListId.size());
+  for (int32_t nbh_id = 0; nbh_id < nbh_id2NodeListId.size(); nbh_id++) {
+    nbh_id2order[nbh_id] = nbh_id;
+  }
+  // DFS
+  DFS_FindReasonableCost(nbh_id2NodeListId, NodeListId2nbh_id, nbh_id2order, 0);
 }
 
 // Use brute force to search for a strategy with minimum cost for a neighborhood
@@ -684,7 +769,7 @@ double SbpGraph<SbpSignature>::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2No
     // diff: -4.65661e-10, relative diff:2.09279e-16
     // Therefore, we use a threshold to filter out such fake true detection to
     // avoid unlimited search.
-    if ((OrgCost - MinCost) / OrgCost > 3e-15) { return MinCost - OrgCost; }
+    if ((OrgCost - MinCost) / OrgCost > 1e-12) { return MinCost - OrgCost; }
   }
   return 0.0;
 }

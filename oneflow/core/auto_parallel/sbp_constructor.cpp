@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/auto_parallel/sbp_constructor.h"
+#include "oneflow/core/auto_parallel/sbp_node.h"
 #include "oneflow/core/auto_parallel/sbp_util.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job.pb.h"
@@ -64,6 +65,11 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
   LOG(INFO) << "Initial cost: " << ori_cost;
   int elimination_num = sbp_graph_.NodeAndEdgeEliminations();
   LOG(INFO) << "Elimination number: " << elimination_num;
+  if (ori_cost > cut_cost) {
+    sbp_graph_.Find1Strategy4Greedy();
+    ori_cost = sbp_graph_.ComputeCost();
+    LOG(INFO) << "Greedy cost: " << ori_cost;
+  }
   sbp_graph_.GreedyStrategy(4);
   sbp_graph_.FinalizeSbp();
 

@@ -22,6 +22,7 @@ limitations under the License.
 #include <vector>
 
 #include "binary_set.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "algorithm_util.h"
 
@@ -516,6 +517,7 @@ double SbpNode<SbpSignature>::EvalOutNbhCost(
   return CurrCost;
 }
 
+// Compute the cost between this node and adjacent nodes with a lower order
 template<class SbpSignature>
 double SbpNode<SbpSignature>::EvalInNbhCost(std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id,
                                             std::vector<int32_t>& nbh_id2order) {
@@ -533,6 +535,8 @@ double SbpNode<SbpSignature>::EvalInNbhCost(std::unordered_map<int32_t, int32_t>
     // if the start node is in the neighborhood
     if (it != NodeListId2nbh_id.end() && nbh_id2order[it->second] < order) {
       CurrCost += this_edge->Cost[this_edge->StartNode->FinalSbpSignatureId][FinalSbpSignatureId];
+      // End this function and return infinity.
+      if (CurrCost > cut_cost) { return GetMaxVal<float>(); }
     }
   }
   for (SbpEdge<SbpSignature>* this_edge : EdgesOut) {
@@ -540,6 +544,7 @@ double SbpNode<SbpSignature>::EvalInNbhCost(std::unordered_map<int32_t, int32_t>
     // if the end node is in the neighborhood
     if (it != NodeListId2nbh_id.end() && nbh_id2order[it->second] < order) {
       CurrCost += this_edge->Cost[FinalSbpSignatureId][this_edge->EndNode->FinalSbpSignatureId];
+      if (CurrCost > cut_cost) { return GetMaxVal<float>(); }
     }
   }
   return CurrCost;
