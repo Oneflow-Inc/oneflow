@@ -44,11 +44,14 @@ limitations under the License.
 #endif
 
 #ifdef OF_MAYBE_HAS_IS_AGGREGATE
-#define OF_MAYBE_IS_AGGREGATE(...) __is_aggregate(__VA_ARGS__)
+#define OF_MAYBE_IS_AGGREGATE(...) (__is_aggregate(__VA_ARGS__))
 #else
 // decay to POD checking if no such builtin (because implementing __is_aggregate need reflection)
 #define OF_MAYBE_IS_AGGREGATE(...) \
-  std::is_standard_layout<__VA_ARGS__>::value&& std::is_trivial<__VA_ARGS__>::value
+  (std::is_standard_layout<__VA_ARGS__>::value && std::is_trivial<__VA_ARGS__>::value)
 #endif
+
+// `__builtin_expect` exists at least since GCC 4 / Clang 3
+#define OF_MAYBE_EXPECT_FALSE(x) (__builtin_expect((x), 0))
 
 #endif  // ONEFLOW_MAYBE_CONFIG_H_
