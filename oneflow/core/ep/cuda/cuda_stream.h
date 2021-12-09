@@ -73,6 +73,7 @@ class CudaStream : public Stream {
   cudaStream_t cuda_stream() const;
   cublasHandle_t cublas_handle() const;
   cudnnHandle_t cudnn_handle() const;
+  const cudaDeviceProp& device_properties() const;
 
 #ifdef WITH_CUDA_GRAPHS
   void BeginGraphCapture();
