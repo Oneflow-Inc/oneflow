@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 
@@ -31,6 +32,10 @@ template<typename T>
 void WaitAndSendIdsKernel<T>::ForwardDataContent(KernelContext* ctx) const {
   auto* status = CHECK_NOTNULL(dynamic_cast<WaitAndSendIdsStatus*>(ctx->state().get()));
   const auto& conf = this->op_conf().wait_and_send_ids_conf();
+  OF_PROFILER_RANGE_GUARD(std::string("WaitAndSendId(")
+                          + (CHECK_JUST(IsMultiClient()) ? "True" : "False") + "): out_idx_("
+                          + std::to_string(status->out_idx_) + ") | out_num_("
+                          + std::to_string(status->out_num_) + ")");
   if (status->out_idx_ >= status->out_num_) {
     if (CHECK_JUST(IsMultiClient())) {
       CHECK(this->op_conf().wait_and_send_ids_conf().has_job_name());
@@ -39,6 +44,10 @@ void WaitAndSendIdsKernel<T>::ForwardDataContent(KernelContext* ctx) const {
       auto* buffer = buffer_mgr->Get(GetSourceTickBufferName(job_name));
       status->in_id_ = 0;
       {
+        OF_PROFILER_RANGE_GUARD(std::string("buffer Pull(")
+                                + (CHECK_JUST(IsMultiClient()) ? "True" : "False") + "): out_idx_("
+                                + std::to_string(status->out_idx_) + ") | out_num_("
+                                + std::to_string(status->out_num_) + ")");
         std::shared_ptr<JobInstance> job_instance;
         status->buffer_status_ = buffer->Pull(&job_instance);
       }

@@ -34,7 +34,7 @@ class OFRecordParser final : public Parser<TensorBuffer> {
 
   void Parse(std::shared_ptr<LoadTargetPtrList> batch_data,
              user_op::KernelComputeContext* ctx) override {
-    OF_PROFILER_RANGE_GUARD("OFRecordParser");
+    // OF_PROFILER_RANGE_GUARD("OFRecordParser");
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     OFRecord* dptr = out_tensor->mut_dptr<OFRecord>();
     MultiThreadLoop(batch_data->size(), [&](size_t i) {
