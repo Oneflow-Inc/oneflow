@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_USER_DATA_DISTRIBUTED_TRAINING_DATASET_H_
 #define ONEFLOW_USER_DATA_DISTRIBUTED_TRAINING_DATASET_H_
 
-#include <memory>
 #include "oneflow/user/data/dataset.h"
 
 namespace oneflow {
