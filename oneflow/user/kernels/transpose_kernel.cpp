@@ -58,13 +58,9 @@ class TransposeKernel final : public OpKernel, public user_op::CudaGraphSupport 
       }
       if (flag) {
         // if permute vector is 0,1,...,n, do data copy directly
-        if (tensor_out->mut_dptr() != tensor_in->dptr()) {
-          AutoMemcpy(ctx->stream(), tensor_out->mut_dptr(), tensor_in->dptr(),
-                     elem_cnt * GetSizeOfDataType(dtype), tensor_out->mem_case(),
-                     tensor_in->mem_case());
-        } else {
-          std::cout << "in ======= out" << std::endl;
-        }
+        AutoMemcpy(ctx->stream(), tensor_out->mut_dptr(), tensor_in->dptr(),
+                   elem_cnt * GetSizeOfDataType(dtype), tensor_out->mem_case(),
+                   tensor_in->mem_case());
       } else {
         primitive->Launch(ctx->stream(), dtype, num_dims, src_dims, tensor_in->dptr(), perm.data(),
                           tensor_out->mut_dptr());
