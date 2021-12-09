@@ -375,6 +375,7 @@ jobs:
           docker-run-use-lld: true
           retry-failed-build: true
           clean-ccache: true
+          wheel-audit: false
           python-versions: |
             3.8
 
