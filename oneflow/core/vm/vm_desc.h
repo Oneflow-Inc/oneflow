@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_MEM_ZONE_TYPE_DESC__H_
 
 #include "oneflow/core/vm/stream_desc.h"
-#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/vm/interpret_type.h"
 #include "oneflow/core/vm/vm_resource_desc.h"
 #include "oneflow/core/common/range.h"
@@ -25,12 +25,10 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-// clang-format off
-INTRUSIVE_BEGIN(VmDesc);
+class VmDesc final : public intrusive::Base {
  public:
   // types
-  using StreamTypeId2StreamDesc =
-      intrusive::SkipList<INTRUSIVE_FIELD(StreamDesc, stream_type_id_)>;
+  using StreamTypeId2StreamDesc = intrusive::SkipList<INTRUSIVE_FIELD(StreamDesc, stream_type_id_)>;
   // Getters
   const VmResourceDesc& vm_resource_desc() const {
     if (vm_resource_desc_) { return vm_resource_desc_.Get(); }
@@ -39,7 +37,7 @@ INTRUSIVE_BEGIN(VmDesc);
   }
   const Range& machine_id_range() const { return machine_id_range_; }
   const StreamTypeId2StreamDesc& stream_type_id2desc() const { return stream_type_id2desc_; }
-  //Setters
+  // Setters
   VmResourceDesc* mut_vm_resource_desc() {
     if (!vm_resource_desc_) { vm_resource_desc_ = intrusive::make_shared<VmResourceDesc>(); }
     return vm_resource_desc_.Mutable();
@@ -48,26 +46,24 @@ INTRUSIVE_BEGIN(VmDesc);
   StreamTypeId2StreamDesc* mut_stream_type_id2desc() { return &stream_type_id2desc_; }
 
   // methods
-  void __Init__(const VmResourceDesc& vm_resource_desc) {
-    __Init__(vm_resource_desc, Range(0, 1));
-  }
+  void __Init__(const VmResourceDesc& vm_resource_desc) { __Init__(vm_resource_desc, Range(0, 1)); }
   void __Init__(const VmResourceDesc& vm_resource_desc, const Range& machine_id_range) {
     mut_vm_resource_desc()->CopyFrom(vm_resource_desc);
     *mut_machine_id_range() = machine_id_range;
   }
- private:  
+
+ private:
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
   VmDesc() : intrusive_ref_(), vm_resource_desc_(), machine_id_range_(), stream_type_id2desc_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
+  intrusive::Ref intrusive_ref_;
   // fields
-  INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<VmResourceDesc>, vm_resource_desc_);
-  INTRUSIVE_DEFINE_FIELD(Range, machine_id_range_);
+  intrusive::shared_ptr<VmResourceDesc> vm_resource_desc_;
+  Range machine_id_range_;
   // maps
-  INTRUSIVE_DEFINE_FIELD(StreamTypeId2StreamDesc, stream_type_id2desc_);
-INTRUSIVE_END(VmDesc);
-// clang-format on
+  StreamTypeId2StreamDesc stream_type_id2desc_;
+};
 
 intrusive::shared_ptr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_id);
 intrusive::shared_ptr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_id,

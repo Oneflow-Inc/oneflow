@@ -134,45 +134,42 @@ class BroadcastFunctor {
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
     std::string device_type_str = JUST(x->device())->type();
     CHECK_OR_RETURN(device_type_str == "cuda" || device_type_str == "cpu");
-    DeviceType device_type = device_type_str == "cuda" ? DeviceType::kGPU : DeviceType::kCPU;
+    DeviceType device_type = device_type_str == "cuda" ? DeviceType::kCUDA : DeviceType::kCPU;
     const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
     return one::Broadcast(x, src_rank, parallel_desc, inplace);
   }
 };
 
+namespace {
+
+Maybe<one::UserOpExpr> RankGroupAndDeviceType2AllReduceOpExpr(Symbol<RankGroup> rank_group,
+                                                              DeviceType device_type) {
+  const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
+  return one::OpBuilder("eager_nccl_all_reduce")
+      .Input("in")
+      .Output("out")
+      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Attr<bool>("async_launch", true)
+      .Build();
+}
+
+auto* CachedRankGroupAndDeviceType2AllReduceOpExpr =
+    DECORATE(&RankGroupAndDeviceType2AllReduceOpExpr, ThreadLocal);
+
+}  // namespace
+
 class LocalAllReduceFunctor {
  public:
   LocalAllReduceFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
-    {
-      const auto& device = JUST(x->device());
-      CHECK_EQ_OR_RETURN(JUST(device->of_type()), "gpu");
-      CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank());
-    }
-    static thread_local std::unordered_map<Symbol<RankGroup>, std::shared_ptr<OpExpr>>
-        rank_group2op_expr;
+    const auto& device = JUST(x->device());
+    CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank());
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
-    auto iter = rank_group2op_expr.find(rank_group);
-    std::shared_ptr<OpExpr> op_expr;
-    if (iter == rank_group2op_expr.end()) {
-      ParallelConf parallel_conf;
-      parallel_conf.set_device_tag("gpu");
-      JUST(rank_group->ForEachRank([&parallel_conf](int64_t rank) -> Maybe<void> {
-        parallel_conf.add_device_name("@" + std::to_string(rank) + ":"
-                                      + std::to_string(GlobalProcessCtx::LocalRank(rank)));
-        return Maybe<void>::Ok();
-      }));
-
-      op_expr = JUST(one::OpBuilder("eager_nccl_all_reduce")
-                         .Input("in")
-                         .Output("out")
-                         .Attr("parallel_conf", PbMessage2TxtString(parallel_conf))
-                         .Attr<bool>("async_launch", true)
-                         .Build());
-      rank_group2op_expr[rank_group] = op_expr;
-    } else {
-      op_expr = iter->second;
-    }
+    const std::string& device_type_str = device->type();
+    CHECK_OR_RETURN(device_type_str == "cuda" || device_type_str == "cpu");
+    DeviceType device_type = device_type_str == "cuda" ? DeviceType::kCUDA : DeviceType::kCPU;
+    std::shared_ptr<OpExpr> op_expr =
+        JUST(CachedRankGroupAndDeviceType2AllReduceOpExpr(rank_group, device_type));
     if (const auto& static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(x)) {
       return OpInterpUtil::Dispatch<Tensor>(*op_expr,
                                             {JUST(static_zeros_tensor->AsMirroredTensor())}, {});
@@ -205,7 +202,7 @@ class ConsistentReduceScatterFunctor {
       CHECK_OR_RETURN(x->is_consistent());
       if (op_type == "max") {
         CHECK_OR_RETURN(IsAllBroadcastNdSbp(JUST(x->nd_sbp())));
-        CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
+        CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kCUDA);
       } else if (op_type == "sum") {
         CHECK_OR_RETURN(IsAllPartialSumNdSbp(JUST(x->nd_sbp())));
       } else {

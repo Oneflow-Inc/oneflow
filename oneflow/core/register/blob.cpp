@@ -42,11 +42,11 @@ void Blob::Init(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* hea
   MutShapeView(shape_ptr, static_shape().NumAxes()).set_shape(static_shape());
 }
 
-void Blob::CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+void Blob::CopyHeaderFrom(const Blob* rhs) {
   size_t header_size = blob_desc().ByteSizeOfBlobHeader();
   CHECK_EQ(header_size, rhs->blob_desc().ByteSizeOfBlobHeader());
   if (this == rhs || header_size == 0) { return; }
-  Memcpy<DeviceType::kCPU>(device_ctx, header_ptr_, rhs->header_ptr(), header_size);
+  std::memcpy(header_ptr_, rhs->header_ptr(), header_size);
 }
 
 char* Blob::mut_contiguous_header_ptr() {

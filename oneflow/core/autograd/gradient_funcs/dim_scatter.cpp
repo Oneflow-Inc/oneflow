@@ -15,8 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/functional/functional.h"
 
@@ -79,7 +77,7 @@ Maybe<void> DimScatter<T>::ApplyCommon(const DimScatterCaptureState* ctx,
   in_grads->resize(3);
 
   if (ctx->src_requires_grad) {
-    in_grads->at(2) = JUST(functional::DimGather(out_grads.at(0), index, ctx->dim));
+    in_grads->at(2) = JUST(functional::DimGather(out_grads.at(0), ctx->dim, index, false));
   }
   return Maybe<void>::Ok();
 }

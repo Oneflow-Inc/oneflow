@@ -19,7 +19,8 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/cuda_stream_handle_device_context.h"
-#include "oneflow/core/vm/cuda_instruction_status_querier.h"
+#include "oneflow/core/vm/cuda_optional_event_record_status_querier.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace vm {
@@ -31,22 +32,29 @@ void AsyncCudaStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
 
 void AsyncCudaStreamType::InitInstructionStatus(const Stream& stream,
                                                 InstructionStatusBuffer* status_buffer) const {
-  static_assert(sizeof(CudaInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
-  CudaInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data(), stream.device_id());
+  static_assert(sizeof(CudaOptionalEventRecordStatusQuerier) < kInstructionStatusBufferBytes, "");
+  auto* event_provider = dynamic_cast<QueryCudaEventProvider*>(stream.device_ctx().get());
+  auto* data_ptr = status_buffer->mut_buffer()->mut_data();
+  const auto& cuda_event = CHECK_NOTNULL(event_provider)->GetCudaEvent();
+  CudaOptionalEventRecordStatusQuerier::PlacementNew(data_ptr, cuda_event);
 }
 
 void AsyncCudaStreamType::DeleteInstructionStatus(const Stream& stream,
                                                   InstructionStatusBuffer* status_buffer) const {
-  auto* ptr = CudaInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
-  ptr->~CudaInstrStatusQuerier();
+  auto* ptr =
+      CudaOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  ptr->~CudaOptionalEventRecordStatusQuerier();
 }
 
 bool AsyncCudaStreamType::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
-  return CudaInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
+  return CudaOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
 void AsyncCudaStreamType::Compute(Instruction* instruction) const {
+  OF_PROFILER_RANGE_PUSH(
+      "S:"
+      + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction));
   auto* stream = instruction->mut_stream();
   cudaSetDevice(stream->device_id());
   {
@@ -56,7 +64,8 @@ void AsyncCudaStreamType::Compute(Instruction* instruction) const {
     OF_CUDA_CHECK(cudaGetLastError());
   }
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
-  CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
+  CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
+  OF_PROFILER_RANGE_POP();
 }
 
 intrusive::shared_ptr<StreamDesc> AsyncCudaStreamType::MakeStreamDesc(

@@ -77,7 +77,7 @@ Maybe<void> Cluster::WorkerLoop() {
       } else if (mut_cluster_instruction->has_cluster_ctrl_session_start()) {
         ClusterInstruction::NewSessionBarrier();
         auto wait_session_init = std::make_shared<BlockingCounter>(1);
-        wait_session_init_list.push_back(wait_session_init);
+        wait_session_init_list.emplace_back(wait_session_init);
         AsyncRunLazyJobSet(&lazy_runtime_thread, wait_session_init);
       } else if (mut_cluster_instruction->has_eager_instruction()) {
         while (!wait_session_init_list.empty()) {

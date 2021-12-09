@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_operand.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/vm/object_wrapper.h"
-#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
@@ -42,10 +42,10 @@ class NewParallelDescSymbolInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(ParallelDescObjectInstrOperand);
   // clang-format on
 
-  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+  void Infer(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const override {
     Run<&IdUtil::GetTypeId>(vm, instr_msg);
   }
-  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+  void Compute(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const override {
     Run<&IdUtil::GetValueId>(vm, instr_msg);
   }
   void Infer(Instruction*) const override { UNIMPLEMENTED(); }
@@ -53,7 +53,7 @@ class NewParallelDescSymbolInstructionType final : public InstructionType {
 
  private:
   template<int64_t (*GetLogicalObjectId)(int64_t)>
-  void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+  void Run(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
     FlatMsgView<ParallelDescObjectInstrOperand> view(instr_msg->operand());
     FOR_RANGE(int, i, 0, view->logical_object_id_size()) {
       int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id(i));

@@ -15,9 +15,9 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/register/tensor_slice_copier.h"
-#include "oneflow/core/device/memory_copier.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/primitive/include/add.h"
+#include "oneflow/core/ep/include/primitive/add.h"
+#include "oneflow/core/ep/include/primitive/copy_nd.h"
 
 namespace oneflow {
 
@@ -29,14 +29,13 @@ class SliceBoxingKernel : public Kernel {
 
  protected:
   virtual const SliceBoxingConf& GetCustomizedBoxingConf() const = 0;
-  MemoryCopier* memory_copier() const;
+
   const std::vector<std::shared_ptr<TensorSliceCopier>>& tensor_slice_copier_vec() const;
 
  private:
   void VirtualKernelInit(KernelContext* ctx) override;
 
   std::vector<std::shared_ptr<TensorSliceCopier>> tensor_slice_copier_vec_;
-  std::unique_ptr<MemoryCopier> memory_copier_;
 };
 
 class SliceBoxingCopyKernel final : public SliceBoxingKernel {
@@ -62,17 +61,14 @@ class SliceBoxingAddKernel final : public SliceBoxingKernel {
 };
 
 void SliceBoxingKernel::VirtualKernelInit(KernelContext* ctx) {
-  memory_copier_.reset(NewDefaultMemoryCopier(ctx->stream_ctx()->device_type()));
   const SliceBoxingConf& conf = GetCustomizedBoxingConf();
   const TensorSliceView out_slice(conf.out_slice());
   for (const TensorSliceViewProto& in_slice_proto : conf.in_slice()) {
     const TensorSliceView in_slice(in_slice_proto);
-    tensor_slice_copier_vec_.emplace_back(
-        new TensorSliceCopier(out_slice, in_slice, this->kernel_conf().data_type()));
+    tensor_slice_copier_vec_.emplace_back(new TensorSliceCopier(
+        out_slice, in_slice, this->kernel_conf().data_type(), ctx->stream()->device_type()));
   }
 }
-
-MemoryCopier* SliceBoxingKernel::memory_copier() const { return memory_copier_.get(); }
 
 const std::vector<std::shared_ptr<TensorSliceCopier>>& SliceBoxingKernel::tensor_slice_copier_vec()
     const {
@@ -87,8 +83,7 @@ void SliceBoxingCopyKernel::ForwardDataContent(KernelContext* ctx) const {
   Blob* out = ctx->BnInOp2Blob("out");
   FOR_RANGE(int64_t, i, 0, this->op_attribute().input_bns().size()) {
     const Blob* in_i = ctx->BnInOp2Blob(GenRepeatedBn("in", i));
-    this->tensor_slice_copier_vec().at(i)->Copy(ctx->device_ctx(), *this->memory_copier(), out,
-                                                in_i);
+    this->tensor_slice_copier_vec().at(i)->Copy(ctx->stream(), out, in_i);
   }
 }
 
@@ -98,23 +93,26 @@ const SliceBoxingConf& SliceBoxingAddKernel::GetCustomizedBoxingConf() const {
 
 void SliceBoxingAddKernel::ForwardDataContent(KernelContext* ctx) const {
   Blob* out = ctx->BnInOp2Blob("out");
-  std::unique_ptr<primitive::Add> primitive = primitive::NewPrimitive<primitive::AddFactory>(
-      ctx->stream_ctx()->device_type(), out->data_type());
+  std::unique_ptr<ep::primitive::Add> primitive =
+      ep::primitive::NewPrimitive<ep::primitive::AddFactory>(ctx->stream()->device_type(),
+                                                             out->data_type());
   CHECK(primitive);
   FOR_RANGE(int64_t, i, 0, this->op_attribute().input_bns().size()) {
     const Blob* in_i = ctx->BnInOp2Blob(GenRepeatedBn("in", i));
     if (i == 0) {
-      this->tensor_slice_copier_vec().at(i)->Copy(ctx->device_ctx(), *this->memory_copier(), out,
-                                                  in_i);
+      if (in_i->shape().NumAxes() == 0 && out->shape().NumAxes() == 0) {
+        AutoMemcpy(ctx->stream(), out, in_i);
+      } else {
+        this->tensor_slice_copier_vec().at(i)->Copy(ctx->stream(), out, in_i);
+      }
     } else {
       if (in_i->shape() == out->shape()) {
-        primitive->Launch(ctx->stream_ctx(), in_i->dptr(), out->dptr(), out->mut_dptr(),
+        primitive->Launch(ctx->stream(), out->dptr(), in_i->dptr(), out->mut_dptr(),
                           out->shape().elem_cnt());
       } else {
         Blob* buf = ctx->BnInOp2Blob("buf");
-        this->tensor_slice_copier_vec().at(i)->Copy(ctx->device_ctx(), *this->memory_copier(), buf,
-                                                    in_i);
-        primitive->Launch(ctx->stream_ctx(), buf->dptr(), out->dptr(), out->mut_dptr(),
+        this->tensor_slice_copier_vec().at(i)->Copy(ctx->stream(), buf, in_i);
+        primitive->Launch(ctx->stream(), out->dptr(), buf->dptr(), out->mut_dptr(),
                           out->shape().elem_cnt());
       }
     }

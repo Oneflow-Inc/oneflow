@@ -14,17 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/memory/memory_zone.h"
-#include "oneflow/core/common/device_type.h"
 
 namespace oneflow {
 
 namespace {
 
 constexpr size_t kMemZoneIdDeviceTypeShift = MemZoneId::kDeviceIndexBits;
-constexpr size_t kMemZoneIdNodeIndexShift = kMemZoneIdDeviceTypeShift + MemZoneId::kDeviceTypeBits;
+constexpr size_t kMemZoneIdRankShift = kMemZoneIdDeviceTypeShift + MemZoneId::kDeviceTypeBits;
 
-constexpr int64_t kMemZoneIdNodeIndexInt64Mask = ((int64_t{1} << MemZoneId::kNodeIndexBits) - 1)
-                                                 << kMemZoneIdNodeIndexShift;
+constexpr int64_t kMemZoneIdRankInt64Mask = ((int64_t{1} << MemZoneId::kRankBits) - 1)
+                                            << kMemZoneIdRankShift;
 constexpr int64_t kMemZoneIdDeviceTypeInt64Mask = ((int64_t{1} << MemZoneId::kDeviceTypeBits) - 1)
                                                   << kMemZoneIdDeviceTypeShift;
 constexpr int64_t kMemZoneIdDeviceIndexInt64Mask = (int64_t{1} << MemZoneId::kDeviceIndexBits) - 1;
@@ -33,23 +32,22 @@ constexpr int64_t kMemZoneIdDeviceIndexInt64Mask = (int64_t{1} << MemZoneId::kDe
 
 const MemZoneId kInvalidMemZoneId = MemZoneId{0, DeviceType::kInvalidDevice, 0};
 
-MemZoneId GetNodeCPUMemZoneId(MemZoneId::node_index_t node_index) {
-  return MemZoneId{node_index, DeviceType::kCPU, MemZoneId::kCPUDeviceIndex};
+MemZoneId GetNodeCPUMemZoneId(MemZoneId::rank_t node_index) {
+  return MemZoneId{node_index, DeviceType::kCPU, 0};
 }
 
 int64_t EncodeMemZoneIdToInt64(const MemZoneId& mem_zone_id) {
   int64_t id = static_cast<int64_t>(mem_zone_id.device_index());
   id |= static_cast<int64_t>(mem_zone_id.device_type()) << kMemZoneIdDeviceTypeShift;
-  id |= static_cast<int64_t>(mem_zone_id.node_index()) << kMemZoneIdNodeIndexShift;
+  id |= static_cast<int64_t>(mem_zone_id.rank()) << kMemZoneIdRankShift;
   return id;
 }
 
 MemZoneId DecodeMemZoneIdFromInt64(int64_t mem_zone_id) {
-  int64_t node_index = (mem_zone_id & kMemZoneIdNodeIndexInt64Mask) >> kMemZoneIdNodeIndexShift;
+  int64_t rank = (mem_zone_id & kMemZoneIdRankInt64Mask) >> kMemZoneIdRankShift;
   int64_t device_type = (mem_zone_id & kMemZoneIdDeviceTypeInt64Mask) >> kMemZoneIdDeviceTypeShift;
   int64_t device_index = mem_zone_id & kMemZoneIdDeviceIndexInt64Mask;
-  return MemZoneId(static_cast<MemZoneId::node_index_t>(node_index),
-                   static_cast<DeviceType>(device_type),
+  return MemZoneId(static_cast<MemZoneId::rank_t>(rank), static_cast<DeviceType>(device_type),
                    static_cast<MemZoneId::device_index_t>(device_index));
 }
 

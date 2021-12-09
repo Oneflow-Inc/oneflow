@@ -27,6 +27,7 @@ template<typename HookField>
 class MutexedList {
  public:
   using value_type = typename HookField::struct_type;
+  using list_type = List<HookField>;
 
   MutexedList(const MutexedList&) = delete;
   MutexedList(MutexedList&&) = delete;
@@ -67,12 +68,15 @@ class MutexedList {
     return list_head_.PopFront();
   }
 
-  void MoveFrom(List<HookField>* src) {
+  // Returns true if old list is empty.
+  bool MoveFrom(list_type* src) {
     std::unique_lock<std::mutex> lock(mutex_);
+    bool old_list_empty = list_head_.empty();
     src->MoveToDstBack(&list_head_);
+    return old_list_empty;
   }
 
-  void MoveTo(List<HookField>* dst) {
+  void MoveTo(list_type* dst) {
     std::unique_lock<std::mutex> lock(mutex_);
     list_head_.MoveToDstBack(dst);
   }
@@ -83,7 +87,7 @@ class MutexedList {
   }
 
  private:
-  List<HookField> list_head_;
+  list_type list_head_;
   mutable std::mutex mutex_;
 };
 

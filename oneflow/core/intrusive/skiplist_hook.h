@@ -65,7 +65,8 @@ struct ListHookArray final {
   }
   static ListHookArray* ThisPtr4HookPtr(ListHook* slist_ptr, int level) {
     auto* hooks_ptr = (std::array<intrusive::ListHook, max_level>*)(slist_ptr - level);
-    return StructField<self_type, decltype(hooks_), HooksOffset()>::StructPtr4FieldPtr(hooks_ptr);
+    return OffsetStructField<self_type, decltype(hooks_), HooksOffset()>::StructPtr4FieldPtr(
+        hooks_ptr);
   }
   void CheckEmpty() const {
     for (const auto& hook : hooks_) { CHECK(hook.empty()); }
@@ -152,7 +153,7 @@ struct SkipListHook {
   }
   static SkipListHook* ThisPtr4HookPtr(ListHook* list_hook_ptr, int level) {
     auto* skip_list_ptr = hook_type::ThisPtr4HookPtr(list_hook_ptr, level);
-    using FieldUtil = StructField<self_type, hook_type, SkipListIteratorOffset()>;
+    using FieldUtil = OffsetStructField<self_type, hook_type, SkipListIteratorOffset()>;
     return FieldUtil::StructPtr4FieldPtr(skip_list_ptr);
   }
 
@@ -195,10 +196,10 @@ class SkipListHead {
   using key_hook_type = typename ValueHookField::field_type;
   using key_type = typename key_hook_type::key_type;
   using value_key_level0_hook_struct_field =
-      StructField<typename ValueHookField::field_type, intrusive::ListHook,
-                  ValueHookField::field_type::LevelZeroHookOffset()>;
+      OffsetStructField<typename ValueHookField::field_type, intrusive::ListHook,
+                        ValueHookField::field_type::LevelZeroHookOffset()>;
   using value_level0_hook_struct_field =
-      typename ComposeStructField<ValueHookField, value_key_level0_hook_struct_field>::type;
+      ComposeStructField<ValueHookField, value_key_level0_hook_struct_field>;
   static const int max_level = key_hook_type::max_level;
   template<typename Enabled = void>
   static constexpr int IteratorHookOffset() {

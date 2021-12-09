@@ -50,10 +50,4 @@ int64_t EnvDesc::GetMachineId(const std::string& addr) const {
   return machine_id;
 }
 
-Maybe<bool> GlobalMultiClientEnv() {
-  Maybe<bool>* is_multi_client = Global<Maybe<bool>, MultiClient>::Get();
-  CHECK_NOTNULL_OR_RETURN(is_multi_client);
-  return *is_multi_client;
-}
-
 }  // namespace oneflow

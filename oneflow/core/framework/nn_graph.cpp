@@ -111,8 +111,8 @@ Maybe<void> NNGraph::RegisterInputOpNamesAndTensors(
   input_tensors_valid_.reserve(input_tensors.size());
   inputs_tensor_meta_str_.reserve(input_tensors.size());
   for (const auto& input_tensor : input_tensors) {
-    input_tensors_valid_.push_back(JUST(GetTensorValidInCurRank(input_tensor)));
-    inputs_tensor_meta_str_.push_back(*JUST(GetTensorMetaString(input_tensor)));
+    input_tensors_valid_.emplace_back(JUST(GetTensorValidInCurRank(input_tensor)));
+    inputs_tensor_meta_str_.emplace_back(*JUST(GetTensorMetaString(input_tensor)));
   }
   CHECK_EQ_OR_RETURN(input_tensors_valid_.size(), input_tensors.size());
   return Maybe<void>::Ok();
@@ -130,8 +130,8 @@ Maybe<void> NNGraph::RegisterOutputOpNamesAndTensors(
   output_tensors_valid_.reserve(output_tensors.size());
   outputs_tensor_meta_str_.reserve(output_tensors.size());
   for (const auto& output_tensor : output_tensors) {
-    output_tensors_valid_.push_back(JUST(GetTensorValidInCurRank(output_tensor)));
-    outputs_tensor_meta_str_.push_back(*JUST(GetTensorMetaString(output_tensor)));
+    output_tensors_valid_.emplace_back(JUST(GetTensorValidInCurRank(output_tensor)));
+    outputs_tensor_meta_str_.emplace_back(*JUST(GetTensorMetaString(output_tensor)));
   }
   CHECK_EQ_OR_RETURN(output_tensors_valid_.size(), output_tensors.size());
   return Maybe<void>::Ok();
@@ -289,7 +289,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     if (GlobalProcessCtx::IsThisProcessMaster()) { Global<CtrlClient>::Get()->ClearKV(plan_name); }
   }
   // NOTE(chengcheng): recovery op_attr
-  PlanUtil::PopulateOpAttibute(&plan_, plan_.job_id2op_attribute_ref_table());
+  PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
 
   NewRuntimeBuffers();
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_));
@@ -333,12 +333,13 @@ namespace {
 
 Maybe<void> MakeEagerBlobObjectList(std::vector<std::shared_ptr<vm::EagerBlobObject>>* blob_list,
                                     const one::TensorTuple& tensor_list) {
+  blob_list->reserve(tensor_list.size());
   for (const auto& tensor : tensor_list) {
     CHECK_OR_RETURN(tensor->is_eager());
     if (tensor->is_consistent()) {
-      blob_list->push_back(JUST(JUST(tensor->cur_rank_phy_tensor())->eager_blob_object()));
+      blob_list->emplace_back(JUST(JUST(tensor->cur_rank_phy_tensor())->eager_blob_object()));
     } else {
-      blob_list->push_back(JUST(tensor->eager_blob_object()));
+      blob_list->emplace_back(JUST(tensor->eager_blob_object()));
     }
   }
   return Maybe<void>::Ok();

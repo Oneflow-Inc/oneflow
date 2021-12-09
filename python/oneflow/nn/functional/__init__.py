@@ -17,6 +17,7 @@ from oneflow.nn.modules.interpolate import interpolate
 from oneflow.nn.modules.norm import l2_normalize
 from oneflow.nn.modules.affine_grid import affine_grid
 from oneflow.nn.modules.grid_sample import grid_sample
+from oneflow.nn.modules.sparse_softmax_cross_entropy import sparse_softmax_cross_entropy
 from oneflow._C import conv1d
 from oneflow._C import conv2d
 from oneflow._C import conv3d
@@ -35,6 +36,7 @@ from oneflow._C import hardsigmoid
 from oneflow._C import hardswish
 from oneflow._C import leaky_relu
 from oneflow._C import elu
+from oneflow._C import celu
 from oneflow._C import selu
 from oneflow._C import sigmoid
 from oneflow._C import prelu
@@ -52,8 +54,9 @@ from oneflow._C import dropout
 from oneflow._C import smooth_l1_loss
 from oneflow._C import pad
 from oneflow._C import upsample
+from oneflow._C import triplet_margin_loss
 from oneflow._C import ctc_greedy_decoder
-from oneflow.nn.modules.one_hot import one_hot
+from oneflow._C import one_hot
 from oneflow.nn.modules.sparse import embedding
 from oneflow.nn.modules.linear import linear
 from oneflow.nn.modules.activation import relu6

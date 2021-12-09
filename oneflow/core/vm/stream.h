@@ -25,21 +25,25 @@ namespace vm {
 
 struct ThreadCtx;
 
-// clang-format off
-INTRUSIVE_BEGIN(Stream);
+class Stream final : public intrusive::Base {
  public:
   // types
-  using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, instruction_hook_)>;
+  using DispatchedInstructionList =
+      intrusive::List<INTRUSIVE_FIELD(Instruction, dispatched_instruction_hook_)>;
 
   // Getters
   int64_t max_device_num_per_machine() const { return max_device_num_per_machine_; }
   const ThreadCtx& thread_ctx() const { return *thread_ctx_; }
   bool has_thread_ctx() const { return thread_ctx_ != nullptr; }
   const std::unique_ptr<DeviceCtx>& device_ctx() const { return device_ctx_; }
-  bool is_active_stream_hook_empty() const { return active_stream_hook_.empty(); }
-  const InstructionList& free_instruction_list() const { return free_instruction_list_; }
-  const InstructionList& zombie_instruction_list() const { return zombie_instruction_list_; }
-  const InstructionList& running_instruction_list() const { return running_instruction_list_; }
+  const intrusive::ListHook& active_stream_hook() const { return active_stream_hook_; }
+  const DispatchedInstructionList& free_instruction_list() const { return free_instruction_list_; }
+  const DispatchedInstructionList& zombie_instruction_list() const {
+    return zombie_instruction_list_;
+  }
+  const DispatchedInstructionList& running_instruction_list() const {
+    return running_instruction_list_;
+  }
   const StreamId& stream_id() const { return stream_id_.key(); }
 
   // Setters
@@ -48,15 +52,17 @@ INTRUSIVE_BEGIN(Stream);
   void set_thread_ctx(ThreadCtx* val) { thread_ctx_ = val; }
   void clear_thread_ctx() { thread_ctx_ = nullptr; }
   std::unique_ptr<DeviceCtx>* mut_device_ctx() { return &device_ctx_; }
-  InstructionList* mut_free_instruction_list() { return &free_instruction_list_; }
-  InstructionList* mut_zombie_instruction_list() { return &zombie_instruction_list_; }
-  InstructionList* mut_running_instruction_list() { return &running_instruction_list_; }
+  DispatchedInstructionList* mut_free_instruction_list() { return &free_instruction_list_; }
+  DispatchedInstructionList* mut_zombie_instruction_list() { return &zombie_instruction_list_; }
+  DispatchedInstructionList* mut_running_instruction_list() { return &running_instruction_list_; }
   StreamId* mut_stream_id() { return stream_id_.mut_key(); }
 
   // methods
   void __Init__();
-  void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id, const int64_t max_device_num_per_machine);
-  intrusive::shared_ptr<Instruction> NewInstruction(InstructionMsg* instr_msg, const std::shared_ptr<const ParallelDesc>& parallel_desc);
+  void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id,
+                const int64_t max_device_num_per_machine);
+  intrusive::shared_ptr<Instruction> NewInstruction(
+      InstructionMsg* instr_msg, const std::shared_ptr<const ParallelDesc>& parallel_desc);
   void DeleteInstruction(intrusive::shared_ptr<Instruction>&&);
   int64_t global_device_id() const { return stream_id().global_device_id(); }
   int64_t machine_id() const;
@@ -71,23 +77,34 @@ INTRUSIVE_BEGIN(Stream);
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  Stream() : intrusive_ref_(), thread_ctx_(), device_ctx_(), max_device_num_per_machine_(), active_stream_hook_(), thread_ctx_stream_hook_(), stream_id_(), free_instruction_list_(), zombie_instruction_list_(), running_instruction_list_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
+  Stream()
+      : intrusive_ref_(),
+        thread_ctx_(),
+        device_ctx_(),
+        max_device_num_per_machine_(),
+        free_instruction_list_(),
+        zombie_instruction_list_(),
+        running_instruction_list_(),
+        stream_id_(),
+        active_stream_hook_(),
+        thread_ctx_stream_hook_() {}
+  intrusive::Ref intrusive_ref_;
   // fields
-  INTRUSIVE_DEFINE_FIELD(ThreadCtx*, thread_ctx_); 
-  INTRUSIVE_DEFINE_FIELD(std::unique_ptr<DeviceCtx>, device_ctx_);
-  INTRUSIVE_DEFINE_FIELD(int64_t, max_device_num_per_machine_);
+  ThreadCtx* thread_ctx_;
+  std::unique_ptr<DeviceCtx> device_ctx_;
+  int64_t max_device_num_per_machine_;
+  // lists
+  DispatchedInstructionList free_instruction_list_;
+  DispatchedInstructionList zombie_instruction_list_;
+  DispatchedInstructionList running_instruction_list_;
+
+ public:
+  // skiplist hooks
+  intrusive::SkipListHook<StreamId, 10> stream_id_;
   // list hooks
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, active_stream_hook_);
-  INTRUSIVE_DEFINE_FIELD(intrusive::ListHook, thread_ctx_stream_hook_);
-  using StreamIdKey = intrusive::SkipListHook<StreamId, 10>;
-  INTRUSIVE_DEFINE_FIELD(StreamIdKey, stream_id_);
-  // lists 
-  INTRUSIVE_DEFINE_FIELD(InstructionList, free_instruction_list_);
-  INTRUSIVE_DEFINE_FIELD(InstructionList, zombie_instruction_list_);
-  INTRUSIVE_DEFINE_FIELD(InstructionList, running_instruction_list_);
-INTRUSIVE_END(Stream);
-// clang-format on
+  intrusive::ListHook active_stream_hook_;
+  intrusive::ListHook thread_ctx_stream_hook_;
+};
 
 }  // namespace vm
 }  // namespace oneflow

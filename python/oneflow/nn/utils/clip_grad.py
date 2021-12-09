@@ -107,7 +107,7 @@ def clip_grad_norm_(
             ),
             norm_type,
         )
-    if np.isnan(total_norm.numpy()) or np.isinf(total_norm.numpy()):
+    if np.isnan(total_norm.numpy()).all() or np.isinf(total_norm.numpy()).all():
         if error_if_nonfinite:
             raise RuntimeError(
                 f"The total norm of order {norm_type} for gradients from "
@@ -124,12 +124,33 @@ def clip_grad_norm_(
                 FutureWarning,
                 stacklevel=2,
             )
+
     clip_coef = max_norm / (total_norm + 1e-6)
-    if clip_coef.numpy().item() < 1:
-        for p in parameters:
-            # TODO: Switch to inplace multiply in future
-            p.grad[:] = p.grad.detach().mul(clip_coef.to(p.grad.device))
+    clip_coef_clamped = clip_coef.clamp(max=1.0)
+    for p in parameters:
+        # TODO: Switch to inplace multiply in future
+        p.grad[:] = p.grad.detach().mul(clip_coef_clamped.to(p.grad.device))
     return total_norm
+
+
+def clip_grad_value_(parameters: _tensor_or_tensors, clip_value: float) -> None:
+    r"""Clips gradient of an iterable of parameters at specified value.
+
+    Gradients are modified in-place.
+
+    Args:
+        parameters (Iterable[Tensor] or Tensor): an iterable of Tensors or a
+            single Tensor that will have gradients normalized
+        clip_value (float or int): maximum allowed value of the gradients.
+            The gradients are clipped in the range
+            :math:`\left[\text{-clip\_value}, \text{clip\_value}\right]`
+    """
+    if isinstance(parameters, flow.Tensor):
+        parameters = [parameters]
+    clip_value = float(clip_value)
+    for p in filter(lambda p: p.grad is not None, parameters):
+        # TODO: Switch to inplace clamp function
+        p.grad[:] = p.grad.clamp(min=-clip_value, max=clip_value)
 
 
 if __name__ == "__main__":

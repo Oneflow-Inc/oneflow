@@ -62,7 +62,7 @@ class Channel {
     return kChannelStatusSuccess;
   }
 
-  ChannelStatus MoveFrom(intrusive::List<HookField>* src) {
+  ChannelStatus MoveFrom(List<HookField>* src) {
     std::unique_lock<std::mutex> lock(*mut_mutex());
     if (is_closed_) { return kChannelStatusErrorClosed; }
     src->MoveToDstBack(&list_head_);
@@ -70,7 +70,7 @@ class Channel {
     return kChannelStatusSuccess;
   }
 
-  ChannelStatus MoveTo(intrusive::List<HookField>* dst) {
+  ChannelStatus MoveTo(List<HookField>* dst) {
     std::unique_lock<std::mutex> lock(*mut_mutex());
     mut_cond()->wait(lock, [this]() { return (!list_head_.empty()) || is_closed_; });
     if (list_head_.empty()) { return kChannelStatusErrorClosed; }
@@ -78,7 +78,7 @@ class Channel {
     return kChannelStatusSuccess;
   }
 
-  ChannelStatus TryMoveTo(intrusive::List<HookField>* dst) {
+  ChannelStatus TryMoveTo(List<HookField>* dst) {
     std::unique_lock<std::mutex> lock(*mut_mutex());
     if (list_head_.empty()) { return kChannelStatusSuccess; }
     mut_cond()->wait(lock, [this]() { return (!list_head_.empty()) || is_closed_; });
@@ -97,7 +97,7 @@ class Channel {
   std::mutex* mut_mutex() { return &mutex_; }
   std::condition_variable* mut_cond() { return &cond_; }
 
-  intrusive::List<HookField> list_head_;
+  List<HookField> list_head_;
   std::mutex mutex_;
   std::condition_variable cond_;
   bool is_closed_;

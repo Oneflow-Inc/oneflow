@@ -31,7 +31,7 @@ class OpNodeSignatureDesc final {
   OpNodeSignatureDesc(OpNodeSignatureDesc&&) = delete;
   OpNodeSignatureDesc(int64_t symbol_id, const OpNodeSignature& op_node_signature);
 
-  const Maybe<int64_t>& symbol_id() const { return symbol_id_; }
+  const Optional<int64_t>& symbol_id() const { return symbol_id_; }
   const std::shared_ptr<cfg::OpNodeSignature>& op_node_signature() const {
     return op_node_signature_;
   }
@@ -43,7 +43,7 @@ class OpNodeSignatureDesc final {
   Maybe<const BlobDesc&> LogicalBlobDesc4BnInOp(const std::string& bn_in_op) const;
 
  private:
-  Maybe<int64_t> symbol_id_;
+  Optional<int64_t> symbol_id_;
   std::shared_ptr<cfg::OpNodeSignature> op_node_signature_;
   HashMap<std::string, std::unique_ptr<BlobDesc>> bn_in_op2blob_desc_;
 };

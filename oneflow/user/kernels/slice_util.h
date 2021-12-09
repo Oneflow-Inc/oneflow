@@ -17,7 +17,8 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_SLICE_UTIL_H_
 
 #include "oneflow/core/common/nd_index_offset_helper.h"
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 
@@ -85,13 +86,14 @@ OF_DEVICE_FUNC int64_t SliceOffsetToEntireOffset(int64_t offset, const SlicePara
 
 template<DeviceType device_type, typename T>
 struct SliceKernelUtil {
-  static void Forward(DeviceCtx* ctx, const SliceParams& params, const T* entire, T* sliced);
-  static void Backward(DeviceCtx* ctx, const SliceParams& params, const T* sliced, T* entire);
+  static void Forward(ep::Stream* stream, const SliceParams& params, const T* entire, T* sliced);
+  static void Backward(ep::Stream* stream, const SliceParams& params, const T* sliced, T* entire);
 };
 
 #define INSTANTIATE_SLICE_KERNEL_UTIL(device, dtype) template struct SliceKernelUtil<device, dtype>;
 
 #define INSTANTIATE_SLICE_KERNEL_UTIL_WITH_DEVICE(device) \
+  INSTANTIATE_SLICE_KERNEL_UTIL(device, bool)             \
   INSTANTIATE_SLICE_KERNEL_UTIL(device, float)            \
   INSTANTIATE_SLICE_KERNEL_UTIL(device, double)           \
   INSTANTIATE_SLICE_KERNEL_UTIL(device, int32_t)          \

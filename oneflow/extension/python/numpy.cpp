@@ -13,12 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <pybind11/pybind11.h>
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/registry_error.h"
 #include "oneflow/extension/python/numpy_internal.h"
+
+namespace py = pybind11;
 
 namespace oneflow {
 
 namespace numpy {
+
+NumPyArrayInternal::NumPyArrayInternal(PyObject* obj, const std::function<void()>& deleter)
+    : obj_((PyArrayObject*)obj), deleter_(deleter) {
+  CHECK_OR_THROW(PyArray_Check(obj)) << "The object is not a numpy array.";
+  CHECK_OR_THROW(PyArray_ISCONTIGUOUS(obj_)) << "Contiguous array is expected.";
+  size_ = PyArray_SIZE(obj_);
+  data_ = PyArray_DATA(obj_);
+}
+
+NumPyArrayInternal::~NumPyArrayInternal() {
+  if (deleter_) { deleter_(); }
+}
 
 Maybe<int> OFDataTypeToNumpyType(DataType of_data_type) {
   switch (of_data_type) {

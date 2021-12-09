@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/intrusive/ref.h"
 #include "oneflow/core/intrusive/list_hook.h"
 #include "oneflow/core/intrusive/struct_traits.h"
+#include "oneflow/core/intrusive/reflective.h"
 
 namespace oneflow {
 namespace intrusive {
@@ -50,13 +51,13 @@ class HeadFreeList {
   void __Init__() {
     list_head_.__Init__();
     static_assert(
-        std::is_same<HeadFreeList,
-                     INTRUSIVE_FIELD_TYPE(typename value_type, field_number_in_countainter)>::value,
+        std::is_same<HeadFreeList, REFLECTIVE_FIELD_TYPE(typename value_type,
+                                                         field_number_in_countainter)>::value,
         "It's invalid to define fields between definition of head-free list type and definition of "
         "head-free list field.");
     using ThisInContainer =
-        StructField<value_type, HeadFreeList,
-                    INTRUSIVE_FIELD_OFFSET(value_type, field_number_in_countainter)>;
+        OffsetStructField<value_type, HeadFreeList,
+                          REFLECTIVE_FIELD_OFFSET(value_type, field_number_in_countainter)>;
     container_ = ThisInContainer::StructPtr4FieldPtr(this);
   }
 

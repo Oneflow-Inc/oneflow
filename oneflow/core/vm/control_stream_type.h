@@ -22,7 +22,7 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-struct VirtualMachine;
+struct VirtualMachineEngine;
 struct InstructionMsg;
 
 class ControlStreamType final : public StreamType {
@@ -44,13 +44,13 @@ class ControlStreamType final : public StreamType {
                                                    int64_t this_machine_id) const override;
   void Compute(Instruction* instruction) const override;
 
-  bool SharingVirtualMachineThread() const override { return true; }
+  bool OnSchedulerThread() const override { return true; }
   bool SupportingTransportInstructions() const override { return false; }
   bool IsControlStreamType() const override { return true; }
-  void Infer(VirtualMachine* vm, Instruction* instruction) const override;
-  void Compute(VirtualMachine* vm, Instruction* instruction) const override;
-  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override;
-  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override;
+  void Infer(VirtualMachineEngine* vm, Instruction* instruction) const override;
+  void Compute(VirtualMachineEngine* vm, Instruction* instruction) const override;
+  void Infer(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const override;
+  void Compute(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const override;
 };
 
 }  // namespace vm

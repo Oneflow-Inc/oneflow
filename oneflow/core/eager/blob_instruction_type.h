@@ -41,6 +41,16 @@ class LazyReferenceInstructionType : public vm::InstructionType {
   Maybe<void> Run(vm::Instruction* instruction) const;
 };
 
+class TensorViewInstructionType : public vm::InstructionType {
+ public:
+  TensorViewInstructionType() = default;
+  ~TensorViewInstructionType() override = default;
+
+  void Compute(vm::Instruction* instruction) const override;
+
+  void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
+};
+
 class AccessBlobByCallbackInstructionType : public vm::InstructionType {
  public:
   AccessBlobByCallbackInstructionType() = default;
@@ -56,9 +66,7 @@ class RecordEventInstructionType : public vm::InstructionType {
   RecordEventInstructionType() = default;
   ~RecordEventInstructionType() override = default;
 
-  void Compute(vm::Instruction* instruction) const override {
-    instruction->set_has_event_record(true);
-  }
+  void Compute(vm::Instruction* instruction) const override {}
 
   void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
 };

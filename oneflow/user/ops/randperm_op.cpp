@@ -13,10 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/global.h"
+#include "oneflow/core/common/multi_client.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/global_for.h"
 namespace oneflow {
 
@@ -24,6 +24,7 @@ Maybe<void> InferRandpermNdSbp(user_op::InferNdSbpFnContext* ctx);
 REGISTER_NO_GRAD_USER_OP("randperm")
     .Output("out")
     .Attr<int32_t>("n")
+    .Attr<int64_t>("seed")
     .Attr<std::string>("nd_sbp")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->OutputShape("out", 0);
@@ -41,7 +42,7 @@ REGISTER_NO_GRAD_USER_OP("randperm")
 
 Maybe<void> InferRandpermNdSbp(user_op::InferNdSbpFnContext* ctx) {
   cfg::NdSbp* out = ctx->NdSbp4ArgNameAndIndex("out", 0);
-  if (JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+  if (JUST(IsMultiClient())) {
     const auto& pb_str = ctx->user_op_conf().attr<std::string>("nd_sbp");
     NdSbp pb;
     CHECK_OR_RETURN(TxtString2PbMessage(pb_str, &pb));

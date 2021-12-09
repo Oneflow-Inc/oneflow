@@ -138,8 +138,8 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
     } else {
       const auto& moving_mean = ctx->SavedTensors().at(3);      // moving_mean
       const auto& moving_variance = ctx->SavedTensors().at(4);  // moving_variance
-      const auto& add_eps =
-          JUST(functional::ScalarAdd(moving_variance, ctx->epsilon, /*inplace=*/false));
+      const auto& add_eps = JUST(
+          functional::ScalarAdd(moving_variance, ctx->epsilon, /*alpha=*/1, /*inplace=*/false));
       mean = moving_mean;
       inv_variance = JUST(functional::Rsqrt(add_eps));
     }
@@ -180,14 +180,14 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
       // or has 4 inputs which are x, addend, gamma and beta.
       if (ctx->has_addend) {
         in_grads->resize(4);
-        if (ctx->gamma_requires_grad) {
-          in_grads->at(1) = results->at(1);  // gamma_diff;
-        }
-        if (ctx->beta_requires_grad) {
-          in_grads->at(2) = results->at(2);  // beta_diff
-        }
         if (ctx->addend_requires_grad) {
           in_grads->at(1) = results->at(3);  // addend_diff
+        }
+        if (ctx->gamma_requires_grad) {
+          in_grads->at(2) = results->at(1);  // gamma_diff;
+        }
+        if (ctx->beta_requires_grad) {
+          in_grads->at(3) = results->at(2);  // beta_diff
         }
       } else {
         in_grads->resize(3);

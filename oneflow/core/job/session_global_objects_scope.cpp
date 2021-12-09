@@ -16,11 +16,10 @@ limitations under the License.
 #include "oneflow/core/job/session_global_objects_scope.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/global_process_ctx.h"
-#include "oneflow/core/device/node_device_descriptor_manager.h"
+#include "oneflow/core/hardware/node_device_descriptor_manager.h"
 #include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
 #include "oneflow/core/job/collective_boxing/scheduler.h"
-#include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/id_manager.h"
@@ -39,9 +38,10 @@ limitations under the License.
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/user/summary/events_writer.h"
 #include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
 
 #ifdef WITH_CUDA
-#include "oneflow/core/device/cuda_device_descriptor.h"
+#include "oneflow/core/hardware/cuda_device_descriptor.h"
 #endif  // WITH_CUDA
 
 namespace oneflow {
@@ -51,17 +51,17 @@ namespace {
 AvailableMemDescOfMachine GetAvailableMemDescOfMachine(int64_t rank) {
   AvailableMemDescOfMachine machine_mem_desc;
   const auto node_desc =
-      Global<device::NodeDeviceDescriptorManager>::Get()->GetNodeDeviceDescriptor(rank);
+      Global<hardware::NodeDeviceDescriptorManager>::Get()->GetNodeDeviceDescriptor(rank);
 #ifdef WITH_CUDA
   const auto cuda_device_list =
-      node_desc->GetDeviceDescriptorList(device::kCudaDeviceDescriptorClassName);
+      node_desc->GetDeviceDescriptorList(hardware::kCudaDeviceDescriptorClassName);
   CHECK(cuda_device_list);
   FOR_RANGE(int, i, 0, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum())) {
     if (i >= cuda_device_list->DeviceCount()) {
       LOG(WARNING) << "Invalid CUDA device ordinal: rank " << rank << " ordinal " << i;
       machine_mem_desc.add_zone_size(0);
     } else {
-      const auto cuda_device = std::dynamic_pointer_cast<const device::CudaDeviceDescriptor>(
+      const auto cuda_device = std::dynamic_pointer_cast<const hardware::CudaDeviceDescriptor>(
           cuda_device_list->GetDevice(i));
       CHECK(cuda_device);
       machine_mem_desc.add_zone_size(cuda_device->GlobalMemorySizeBytes());
@@ -108,6 +108,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   Global<ResourceDesc, ForSession>::New(config_proto.resource(),
                                         GlobalProcessCtx::NumOfProcessPerNode());
   Global<IDMgr>::New();
+  Global<TaskStreamIndexManager>::New();
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     Global<AvailableMemDesc>::New();
     if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
@@ -134,7 +135,6 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Global<RuntimeJobDescs>::New();
     Global<summary::EventsWriter>::New();
     Global<boxing::collective::Scheduler>::New();
-    Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
   }
 
   return Maybe<void>::Ok();
@@ -152,7 +152,6 @@ Maybe<void> SessionGlobalObjectsScope::EagerInit(const ConfigProto& config_proto
 SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   {
     // NOTE(chengcheng): Delete Global Runtime objects.
-    Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
     Global<boxing::collective::Scheduler>::Delete();
     Global<summary::EventsWriter>::Delete();
     Global<RuntimeJobDescs>::Delete();
@@ -173,6 +172,7 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
     Global<JobName2JobId>::Delete();
     Global<AvailableMemDesc>::Delete();
   }
+  Global<TaskStreamIndexManager>::Delete();
   Global<IDMgr>::Delete();
   Global<ResourceDesc, ForSession>::Delete();
   Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),

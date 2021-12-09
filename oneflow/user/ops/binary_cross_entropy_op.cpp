@@ -30,8 +30,9 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(weight_desc.shape(), input_desc.shape());
   }
 
-  JUST(CheckLossReductionAndInferOutputTenserDesc(ctx, "out", input_desc.is_dynamic(),
-                                                  input_desc.shape()));
+  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  *out_desc->mut_is_dynamic() = input_desc.is_dynamic();
+  *out_desc->mut_shape() = input_desc.shape();
 
   return Maybe<void>::Ok();
 }
@@ -53,14 +54,15 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
 Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   const auto& input_desc = ctx->InputTensorDesc("input", 0);
   const auto& target_desc = ctx->InputTensorDesc("target", 0);
+  const auto& dy_desc = ctx->InputTensorDesc("dy", 0);
   CHECK_EQ_OR_RETURN(input_desc.is_dynamic(), target_desc.is_dynamic());
   CHECK_EQ_OR_RETURN(input_desc.shape(), target_desc.shape());
+  CHECK_EQ_OR_RETURN(dy_desc.shape(), target_desc.shape());
   if (ctx->has_input("weight", 0)) {
     const auto& weight_desc = ctx->InputTensorDesc("weight", 0);
     CHECK_EQ_OR_RETURN(weight_desc.is_dynamic(), input_desc.is_dynamic());
     CHECK_EQ_OR_RETURN(weight_desc.shape(), input_desc.shape());
   }
-  JUST(CheckLossReductionAndCheckInputTenserDesc(ctx, "dy", target_desc.shape()));
 
   user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
   *dx_desc->mut_is_dynamic() = input_desc.is_dynamic();
@@ -88,7 +90,6 @@ REGISTER_USER_OP("binary_cross_entropy")
     .Input("target")
     .OptionalInput("weight")
     .Output("out")
-    .Attr<std::string>("reduction")
     .SetTensorDescInferFn(InferTensorDescFn)
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
@@ -98,15 +99,7 @@ REGISTER_USER_OP("binary_cross_entropy")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn(InferDataType)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("input", 0), 0)
-          .Split(user_op::OpArg("target", 0), 0)
-          .Broadcast(user_op::OpArg("weight", 0))
-          .Split(user_op::OpArg("out", 0), 0)
-          .Build();
-      return Maybe<void>::Ok();
-    });
+    .SetGetSbpFn(GenLossForwardDefaultGetSbpFn());
 
 REGISTER_USER_OP("binary_cross_entropy_grad")
     .Input("input")
@@ -114,19 +107,9 @@ REGISTER_USER_OP("binary_cross_entropy_grad")
     .OptionalInput("weight")
     .Input("dy")
     .Output("dx")
-    .Attr<std::string>("reduction")
     .SetTensorDescInferFn(InferGradTensorDescFn)
     .SetDataTypeInferFn(InferGradDataType)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("input", 0), 0)
-          .Split(user_op::OpArg("target", 0), 0)
-          .Broadcast(user_op::OpArg("weight", 0))
-          .Split(user_op::OpArg("dy", 0), 0)
-          .Split(user_op::OpArg("dx", 0), 0)
-          .Build();
-      return Maybe<void>::Ok();
-    });
+    .SetGetSbpFn(GenLossBackwardDefaultGetSbpFn());
 
 REGISTER_USER_OP_GRAD("binary_cross_entropy")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
@@ -137,8 +120,7 @@ REGISTER_USER_OP_GRAD("binary_cross_entropy")
             .Input("input", op.input("input", 0))
             .Input("target", op.input("target", 0))
             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-            .Output("dx")
-            .Attr("reduction", op.attr<std::string>("reduction"));
+            .Output("dx");
         if (op.user_op_conf().has_input("weight", 0)) {
           builder.Input("weight", op.input("weight", 0));
         }

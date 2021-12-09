@@ -18,29 +18,6 @@ import numpy as np
 
 import oneflow as flow
 from oneflow.framework.tensor import Tensor, register_tensor_op
-from oneflow.nn.module import Module
-
-
-class Split(Module):
-    def __init__(
-        self, split_size_or_sections: Union[int, List[int]], dim: int = 0
-    ) -> None:
-        super().__init__()
-        self.split_size_or_sections = split_size_or_sections
-        self.dim = dim
-
-    def forward(self, x):
-        dim = self.dim + x.dim() if self.dim < 0 else self.dim
-        if isinstance(self.split_size_or_sections, list):
-            return tuple(
-                flow._C.split_with_size(
-                    x, split_sizes=self.split_size_or_sections, dim=dim
-                )
-            )
-        else:
-            return tuple(
-                flow._C.split(x, split_size=self.split_size_or_sections, dim=dim)
-            )
 
 
 @register_tensor_op("split")
@@ -74,7 +51,7 @@ def split_op(x, split_size_or_sections: Union[int, List[int]], dim: int = 0):
                 [6, 7],
                 [8, 9]], dtype=oneflow.int64))
     """
-    return Split(split_size_or_sections, dim)(x)
+    return flow._C.split(x, split_size=split_size_or_sections, dim=dim)
 
 
 if __name__ == "__main__":

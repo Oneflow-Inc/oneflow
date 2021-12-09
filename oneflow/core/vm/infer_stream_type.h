@@ -74,7 +74,7 @@ class InferStreamType final : public StreamType {
     }
     return stream_desc;
   }
-  bool SharingVirtualMachineThread() const override { return true; }
+  bool OnSchedulerThread() const override { return true; }
   bool SupportingTransportInstructions() const override { return false; }
 };
 
@@ -101,16 +101,18 @@ class InferStreamType<ControlStreamType> final : public StreamType {
     return ControlStreamType().QueryInstructionStatusDone(stream, status_buffer);
   }
   void Infer(Instruction* instruction) const override { UNIMPLEMENTED(); }
-  void Infer(VirtualMachine* vm, Instruction* instruction) const override {
+  void Infer(VirtualMachineEngine* vm, Instruction* instruction) const override {
     ControlStreamType().Infer(vm, instruction);
   }
-  void Infer(VirtualMachine* vm, InstructionMsg* instruction_msg) const override {
+  void Infer(VirtualMachineEngine* vm, InstructionMsg* instruction_msg) const override {
     ControlStreamType().Infer(vm, instruction_msg);
   }
   void Compute(Instruction* instruction) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
-  void Compute(VirtualMachine*, InstructionMsg*) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
+  void Compute(VirtualMachineEngine*, InstructionMsg*) const override {
+    LOG(FATAL) << "UNIMPLEMENTED";
+  }
 
-  bool SharingVirtualMachineThread() const override { return true; }
+  bool OnSchedulerThread() const override { return true; }
   bool SupportingTransportInstructions() const override { return false; }
   bool IsControlStreamType() const override { return true; }
 

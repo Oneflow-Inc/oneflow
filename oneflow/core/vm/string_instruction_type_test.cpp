@@ -19,7 +19,7 @@ limitations under the License.
 #include <sstream>
 #define private public
 #include "oneflow/core/vm/id_util.h"
-#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/test_util.h"
@@ -36,7 +36,7 @@ namespace test {
 TEST(StringStreamType, init_string_object) {
   auto vm_desc = intrusive::make_shared<VmDesc>(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol", "InitStringSymbol"});
-  auto vm = intrusive::make_shared<VirtualMachine>(vm_desc.Get());
+  auto vm = intrusive::make_shared<VirtualMachineEngine>(vm_desc.Get());
   InstructionMsgList list;
   int64_t symbol_id = IdUtil::NewLogicalSymbolId();
   CHECK_JUST(Global<symbol::Storage<StringSymbol>>::Get()->Add(symbol_id, "foobar"));

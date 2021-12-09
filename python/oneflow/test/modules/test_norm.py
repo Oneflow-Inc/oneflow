@@ -19,7 +19,7 @@ from collections import OrderedDict
 
 import numpy as np
 from test_util import GenArgList
-
+from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
 
@@ -254,6 +254,55 @@ class TestNormModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(check_graph=False)
+    def test_no_dim_no_ord_norm_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        keepdim = random_bool()
+        m = torch.linalg.norm(input, keepdim=keepdim)
+        return m
+
+    @autotest(check_graph=False)
+    def test_one_dim_norm_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=4).to(device)
+        dim = random(low=0, high=4).to(int)
+        k = random().to(float)
+        ord = oneof(float("inf"), float("-inf"), k, None)
+        keepdim = random_bool()
+        m = torch.linalg.norm(input, ord, dim, keepdim)
+        return m
+
+    @autotest(check_graph=False)
+    def test_no_dim_one_shape_norm_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=1).to(device)
+        k = random().to(float)
+        ord = oneof(float("inf"), float("-inf"), k)
+        keepdim = random_bool()
+        m = torch.linalg.norm(input, ord=ord, keepdim=keepdim)
+        return m
+
+    @autotest(check_graph=False)
+    def test_no_dim_two_shape_norm_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=2).to(device)
+        ord = oneof(float("inf"), float("-inf"), "fro", 1, -1)
+        keepdim = random().to(bool)
+        m = torch.linalg.norm(input, ord=ord, keepdim=keepdim)
+        return m
+
+    @autotest(check_graph=False)
+    def test_tuple_dim_norm_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=2).to(device)
+        k = random(low=-2, high=1).to(int)
+        dim = oneof((-2, -1), (0, 1), (-1, 0))
+        ord = oneof(float("inf"), float("-inf"), "fro", 1, -1, None)
+        keepdim = random().to(bool)
+        m = torch.linalg.norm(input, ord=ord, dim=dim, keepdim=keepdim)
+        return m
 
 
 if __name__ == "__main__":

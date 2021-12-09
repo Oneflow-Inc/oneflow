@@ -28,23 +28,27 @@ void CudaCopyD2HStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx
   device_ctx->reset(new CudaCopyD2HDeviceCtx(stream->device_id()));
 }
 
-// Reinterprets status_buffer as CudaInstrStatusQuerier
+// Reinterprets status_buffer as CudaOptionalEventRecordStatusQuerier
 void CudaCopyD2HStreamType::InitInstructionStatus(const Stream& stream,
                                                   InstructionStatusBuffer* status_buffer) const {
-  static_assert(sizeof(CudaInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
-  CudaInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data(), stream.device_id());
+  static_assert(sizeof(CudaOptionalEventRecordStatusQuerier) < kInstructionStatusBufferBytes, "");
+  auto* event_provider = dynamic_cast<QueryCudaEventProvider*>(stream.device_ctx().get());
+  auto* data_ptr = status_buffer->mut_buffer()->mut_data();
+  const auto& cuda_event = CHECK_NOTNULL(event_provider)->GetCudaEvent();
+  CudaOptionalEventRecordStatusQuerier::PlacementNew(data_ptr, cuda_event);
 }
 
 void CudaCopyD2HStreamType::DeleteInstructionStatus(const Stream& stream,
                                                     InstructionStatusBuffer* status_buffer) const {
-  auto* ptr = CudaInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
-  ptr->~CudaInstrStatusQuerier();
+  auto* ptr =
+      CudaOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  ptr->~CudaOptionalEventRecordStatusQuerier();
 }
 
 // Returns true if the instruction launched and the cuda event completed.
 bool CudaCopyD2HStreamType::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
-  return CudaInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
+  return CudaOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
 // Launches a cuda kernel
@@ -58,7 +62,7 @@ void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
     OF_CUDA_CHECK(cudaGetLastError());
   }
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
-  CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
+  CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
 
 // Specifies copy_d2h stream description of the virtual machine to be used.

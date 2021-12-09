@@ -81,13 +81,9 @@ def compare_with_numpy_adam(
                     [{"params": [x],}], do_bias_correction=do_bias_correction,
                 )
                 if save_load_by_pickle:
-                    with tempfile.NamedTemporaryFile("wb", delete=False) as f:
-                        file_name = f.name
-                        import pickle
-
-                        pickle.dump(state_dict, f)
-                    with open(file_name, "rb") as f:
-                        state_dict = pickle.load(f)
+                    with tempfile.TemporaryDirectory() as save_dir:
+                        flow.save(state_dict, save_dir)
+                        state_dict = flow.load(save_dir)
                 adam.load_state_dict(state_dict)
         return x
 
@@ -193,13 +189,9 @@ def compare_with_numpy_adam_clip_grad(
                     [{"params": [x],}], do_bias_correction=do_bias_correction,
                 )
                 if save_load_by_pickle:
-                    with tempfile.NamedTemporaryFile("wb", delete=False) as f:
-                        file_name = f.name
-                        import pickle
-
-                        pickle.dump(state_dict, f)
-                    with open(file_name, "rb") as f:
-                        state_dict = pickle.load(f)
+                    with tempfile.TemporaryDirectory() as save_dir:
+                        flow.save(state_dict, save_dir)
+                        state_dict = flow.load(save_dir)
                 adam.load_state_dict(state_dict)
         return x
 

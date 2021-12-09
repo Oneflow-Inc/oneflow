@@ -367,15 +367,6 @@ struct TanFunctor<float> {
   }
 };
 
-template<>
-struct TanhFunctor<float> {
-  static OF_DEVICE_FUNC float Forward(const float x) { return MATH_FUNC_F(tanh, x); }
-
-  static OF_DEVICE_FUNC float Backward(const float x, const float dy) {
-    return dy * (1.0f - MATH_FUNC_F(tanh, x) * MATH_FUNC_F(tanh, x));
-  }
-};
-
 // double version
 
 template<>
@@ -644,15 +635,6 @@ struct TanFunctor<double> {
 
   static OF_DEVICE_FUNC double Backward(const double x, const double dy) {
     return dy * (1.0 / (MATH_FUNC_D(cos, x) * MATH_FUNC_D(cos, x)));
-  }
-};
-
-template<>
-struct TanhFunctor<double> {
-  static OF_DEVICE_FUNC double Forward(const double x) { return MATH_FUNC_D(tanh, x); }
-
-  static OF_DEVICE_FUNC double Backward(const double x, const double dy) {
-    return dy * (1.0 - MATH_FUNC_D(tanh, x) * MATH_FUNC_D(tanh, x));
   }
 };
 
@@ -959,16 +941,6 @@ struct TanFunctor<half> {
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
     return __hmul(dy, hrcp(__hmul(hcos(x), hcos(x))));
-  }
-};
-
-template<>
-struct TanhFunctor<half> {
-  static OF_HALF_FUNC half Forward(const half x) { return MATH_FUNC_H(tanh, x); }
-
-  static OF_HALF_FUNC half Backward(const half x, const half dy) {
-    float x_float = __half2float(x);
-    return __hmul(dy, __float2half(1.0 - tanhf(x_float) * tanhf(x_float)));
   }
 };
 

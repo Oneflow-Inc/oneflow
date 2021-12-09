@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/infer_stream_type.h"
 #include "oneflow/core/vm/string_object.h"
-#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/vm/object_wrapper.h"
 #include "oneflow/core/common/util.h"
@@ -73,10 +73,10 @@ class NewObjectInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(NewObjectInstruction);
   // clang-format on
 
-  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+  void Infer(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const override {
     Run<&IdUtil::GetTypeId>(vm, instr_msg);
   }
-  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+  void Compute(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const override {
     Run<&IdUtil::GetValueId>(vm, instr_msg);
   }
   void Infer(Instruction*) const override { UNIMPLEMENTED(); }
@@ -84,7 +84,7 @@ class NewObjectInstructionType final : public InstructionType {
 
  private:
   template<int64_t (*GetLogicalObjectId)(int64_t)>
-  void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+  void Run(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
     FlatMsgView<NewObjectInstruction> view(instr_msg->operand());
     const auto& parallel_desc = CHECK_JUST(vm->GetInstructionParallelDesc(*instr_msg));
     CHECK(static_cast<bool>(parallel_desc));
@@ -123,10 +123,10 @@ class BroadcastObjectReferenceInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(BroadcastObjectReferenceInstruction);
   // clang-format on
 
-  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+  void Infer(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const override {
     Run<&IdUtil::GetTypeId>(vm, instr_msg);
   }
-  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+  void Compute(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const override {
     Run<&IdUtil::GetValueId>(vm, instr_msg);
   }
   void Infer(Instruction*) const override { UNIMPLEMENTED(); }
@@ -134,7 +134,7 @@ class BroadcastObjectReferenceInstructionType final : public InstructionType {
 
  private:
   template<int64_t (*GetLogicalObjectId)(int64_t)>
-  void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+  void Run(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
     const auto& parallel_desc = CHECK_JUST(vm->GetInstructionParallelDesc(*instr_msg));
     FlatMsgView<BroadcastObjectReferenceInstruction> args(instr_msg->operand());
     const RwMutexedObject* sole_rw_mutexed_object = nullptr;
@@ -182,10 +182,10 @@ class ReplaceMirroredInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(ReplaceMirroredInstruction);
   // clang-format on
 
-  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+  void Infer(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const override {
     Run<&IdUtil::GetTypeId>(vm, instr_msg);
   }
-  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+  void Compute(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const override {
     Run<&IdUtil::GetValueId>(vm, instr_msg);
   }
   void Infer(Instruction*) const override { UNIMPLEMENTED(); }
@@ -193,7 +193,7 @@ class ReplaceMirroredInstructionType final : public InstructionType {
 
  private:
   template<int64_t (*GetLogicalObjectId)(int64_t)>
-  void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+  void Run(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
     FlatMsgView<ReplaceMirroredInstruction> args(instr_msg->operand());
     auto DoEachRhsObject = [&](MirroredObject* lhs, int64_t global_device_id) {
       CHECK_EQ(lhs->rw_mutexed_object().access_list().size(), 0);
@@ -235,11 +235,11 @@ class DeleteObjectInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(DeleteObjectInstruction);
   // clang-format on
 
-  void Infer(VirtualMachine* vm, Instruction* instruction) const override {
+  void Infer(VirtualMachineEngine* vm, Instruction* instruction) const override {
     // do nothing, delete objects in Compute method
     Run<&IdUtil::GetTypeId>(vm, instruction);
   }
-  void Compute(VirtualMachine* vm, Instruction* instruction) const override {
+  void Compute(VirtualMachineEngine* vm, Instruction* instruction) const override {
     Run<&IdUtil::GetValueId>(vm, instruction);
   }
   void Infer(Instruction*) const override { UNIMPLEMENTED(); }
@@ -247,7 +247,7 @@ class DeleteObjectInstructionType final : public InstructionType {
 
  private:
   template<int64_t (*GetLogicalObjectId)(int64_t)>
-  void Run(VirtualMachine* vm, Instruction* instruction) const {
+  void Run(VirtualMachineEngine* vm, Instruction* instruction) const {
     auto* instr_msg = instruction->mut_instr_msg();
     const auto* parallel_desc = CHECK_JUST(vm->GetInstructionParallelDesc(*instr_msg)).get();
     if (parallel_desc && !parallel_desc->ContainingMachineId(vm->this_machine_id())) { return; }
@@ -258,7 +258,7 @@ class DeleteObjectInstructionType final : public InstructionType {
       logical_object_id = GetLogicalObjectId(logical_object_id);
       auto* logical_object = vm->mut_id2logical_object()->FindPtr(logical_object_id);
       CHECK_NOTNULL(logical_object);
-      CHECK(logical_object->is_delete_hook_empty());
+      CHECK(logical_object->delete_hook().empty());
       vm->mut_delete_logical_object_list()->PushBack(logical_object);
     }
   }

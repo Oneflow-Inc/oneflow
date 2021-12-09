@@ -26,11 +26,8 @@ class StreamType;
 struct StreamDesc;
 
 // Rt is short for Runtime
-// clang-format off
-INTRUSIVE_BEGIN(StreamRtDesc);
+class StreamRtDesc final : public intrusive::Base {
  public:
-  // types
-  using StreamId2Stream = intrusive::SkipList<INTRUSIVE_FIELD(Stream, stream_id_)>;
   // Getters
   const StreamDesc& stream_desc() const {
     if (stream_desc_) { return stream_desc_.Get(); }
@@ -38,15 +35,30 @@ INTRUSIVE_BEGIN(StreamRtDesc);
     return default_val.Get();
   }
   const StreamTypeId& stream_type_id() const { return stream_type_id_.key().Get(); }
-  const StreamId2Stream& stream_id2stream() const { return stream_id2stream_; }
+  const std::vector<intrusive::shared_ptr<Stream>>& device_id2stream() const {
+    return device_id2stream_;
+  }
+
+  // The value of `device_id` is ignored.
+  Stream* GetSoleStream(int device_id) const { return GetSoleStream(); }
+  Stream* GetSoleStream() const {
+    CHECK_EQ(device_id2stream().size(), 1);
+    return device_id2stream().at(0).get();
+  }
+
+  Stream* GetDeviceStream(int device_id) const { return device_id2stream().at(device_id).get(); }
+
   // Setters
-  StreamDesc* mut_stream_desc() { 
+  StreamDesc* mut_stream_desc() {
     if (!stream_desc_) { stream_desc_ = intrusive::make_shared<StreamDesc>(); }
     return stream_desc_.Mutable();
   }
   void reset_stream_desc(StreamDesc* stream_desc) { stream_desc_.Reset(stream_desc); }
   StreamTypeId* mut_stream_type_id() { return stream_type_id_.mut_key()->Mutable(); }
-  StreamId2Stream* mut_stream_id2stream() { return &stream_id2stream_; }
+  void add_stream(intrusive::shared_ptr<Stream> stream) {
+    CHECK_EQ(stream->device_id(), device_id2stream_.size());
+    device_id2stream_.emplace_back(stream);
+  }
 
   // methods
   void __Init__(StreamDesc* stream_desc);
@@ -56,16 +68,17 @@ INTRUSIVE_BEGIN(StreamRtDesc);
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  StreamRtDesc() : intrusive_ref_(), stream_desc_(), stream_type_id_(), stream_id2stream_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
+  StreamRtDesc() : intrusive_ref_(), stream_desc_(), device_id2stream_(), stream_type_id_() {}
+  intrusive::Ref intrusive_ref_;
   // fields
-  INTRUSIVE_DEFINE_FIELD(intrusive::shared_ptr<StreamDesc>, stream_desc_); 
-  // list hooks
-  using StreamTypeIdKey = intrusive::SkipListHook<FlatMsg<StreamTypeId>, 7>;
-  INTRUSIVE_DEFINE_FIELD(StreamTypeIdKey, stream_type_id_);
-  INTRUSIVE_DEFINE_FIELD(StreamId2Stream, stream_id2stream_);
-INTRUSIVE_END(StreamRtDesc);
-// clang-format on
+  intrusive::shared_ptr<StreamDesc> stream_desc_;
+  // containers
+  std::vector<intrusive::shared_ptr<Stream>> device_id2stream_;
+
+ public:
+  // skiplist hooks
+  intrusive::SkipListHook<FlatMsg<StreamTypeId>, 7> stream_type_id_;
+};
 
 }  // namespace vm
 }  // namespace oneflow

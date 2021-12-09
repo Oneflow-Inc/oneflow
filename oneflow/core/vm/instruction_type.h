@@ -25,7 +25,7 @@ namespace vm {
 
 struct InstructionMsg;
 struct Instruction;
-struct VirtualMachine;
+struct VirtualMachineEngine;
 
 class InstructionType {
  public:
@@ -37,17 +37,38 @@ class InstructionType {
   virtual void Compute(Instruction* instruction) const = 0;
   virtual void Infer(Instruction* instruction) const = 0;
 
-  virtual void Compute(VirtualMachine* vm, Instruction* instruction) const;
-  virtual void Infer(VirtualMachine* vm, Instruction* instruction) const;
-  virtual void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+  virtual void Compute(VirtualMachineEngine* vm, Instruction* instruction) const;
+  virtual void Infer(VirtualMachineEngine* vm, Instruction* instruction) const;
+  virtual void Compute(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
-  virtual void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+  virtual void Infer(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";
+  }
+  void InitInstructionStatusIf(Instruction* instruction) const {
+    InitInstructionStatus(instruction);
+  }
+  void DeleteInstructionStatusIf(Instruction* instruction) const {
+    DeleteInstructionStatus(instruction);
+  }
+
+  virtual const std::string& DebugOpTypeName(Instruction* instruction) const {
+    static thread_local std::string empty("");
+    return empty;
   }
 
  protected:
   InstructionType() = default;
+
+ private:
+  virtual void InitInstructionStatus(Instruction* instruction) const {
+    instruction->stream_type().InitInstructionStatus(instruction->stream(),
+                                                     instruction->mut_status_buffer());
+  }
+  virtual void DeleteInstructionStatus(Instruction* instruction) const {
+    instruction->stream_type().DeleteInstructionStatus(instruction->stream(),
+                                                       instruction->mut_status_buffer());
+  }
 };
 
 class InstrTypeId;

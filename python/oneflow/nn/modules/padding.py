@@ -142,18 +142,7 @@ class ReflectionPad2d(Module):
         self.padding = boundary
 
     def forward(self, x):
-        (H, W) = (x.shape[2], x.shape[3])
-        if (
-            self.padding[2] < H
-            and self.padding[3] < H
-            and (self.padding[0] < W)
-            and (self.padding[1] < W)
-        ):
-            return flow._C.pad(x, pad=self.padding, mode="reflect")
-        else:
-            raise ValueError(
-                "padding size should be less than the corresponding input dimension!"
-            )
+        return flow._C.pad(x, pad=self.padding, mode="reflect")
 
     def extra_repr(self) -> str:
         return "{}".format(self.padding)
@@ -210,10 +199,6 @@ class ConstantPad1d(Module):
         self.value = value
 
     def forward(self, x):
-        if x.dtype in (flow.float32, flow.float16, flow.float64):
-            self.value = float(self.value)
-        else:
-            self.value = int(self.value)
         return flow._C.pad(x, pad=self.padding, mode="constant", value=self.value)
 
 
@@ -279,10 +264,6 @@ class ConstantPad2d(Module):
         self.value = value
 
     def forward(self, x):
-        if x.dtype in (flow.float32, flow.float16, flow.float64):
-            self.value = float(self.value)
-        else:
-            self.value = int(self.value)
         return flow._C.pad(x, pad=self.padding, mode="constant", value=self.value)
 
 
@@ -354,10 +335,6 @@ class ConstantPad3d(Module):
         self.value = value
 
     def forward(self, x):
-        if x.dtype in (flow.float32, flow.float16, flow.float64):
-            self.value = float(self.value)
-        else:
-            self.value = int(self.value)
         return flow._C.pad(x, pad=self.padding, mode="constant", value=self.value)
 
 
@@ -434,11 +411,6 @@ class ZeroPad2d(Module):
         self.value = 0.0
 
     def forward(self, x):
-        if x.dtype in (flow.float32, flow.float16, flow.float64):
-            self.value = float(self.value)
-        else:
-            self.value = int(self.value)
-
         return flow._C.pad(x, pad=self.padding, mode="constant", value=self.value)
 
 

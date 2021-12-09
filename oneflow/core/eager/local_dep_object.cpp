@@ -20,8 +20,8 @@ limitations under the License.
 #include "oneflow/core/common/static_global.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/vm_object.h"
-#include "oneflow/core/vm/oneflow_vm.h"
 #include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
@@ -35,10 +35,10 @@ Maybe<void> LocalDepObject::Init(const Device& device) {
     int64_t machine_id = CHECK_JUST(parallel_desc->MachineId4ParallelId(0));
     CHECK_EQ(machine_id, GlobalProcessCtx::Rank());
     int64_t device_id = CHECK_JUST(parallel_desc->DeviceId4ParallelId(0));
-    if (Global<OneflowVM>::Get() == nullptr) {
+    if (Global<VirtualMachine>::Get() == nullptr) {
       global_device_id = 0;
     } else {
-      const auto& vm = Global<OneflowVM>::Get()->vm();
+      const auto& vm = Global<VirtualMachine>::Get()->vm();
       CHECK_EQ(vm.this_machine_id(), machine_id);
       global_device_id = vm.this_start_global_device_id() + device_id;
     }
@@ -101,16 +101,16 @@ Maybe<LocalDepObject*> GetLocalDepObjectFromDevicePool(Symbol<Device> device) {
     local_dep_object = *JUST(LocalDepObject::New(*device));
     GlobalLifetimeLocalDepObjectList(device)->PushBack(local_dep_object.Mutable());
   }
-  CHECK_OR_RETURN(local_dep_object->is_pool_hook_empty());
-  CHECK_OR_RETURN(local_dep_object->is_stored_hook_empty());
-  CHECK_OR_RETURN(!local_dep_object->is_lifetime_hook_empty());
+  CHECK_OR_RETURN(local_dep_object->pool_hook().empty());
+  CHECK_OR_RETURN(local_dep_object->stored_hook().empty());
+  CHECK_OR_RETURN(!local_dep_object->lifetime_hook().empty());
   return local_dep_object.Mutable();
 }
 
 Maybe<void> PutLocalDepObjectToDevicePool(Symbol<Device> device, LocalDepObject* local_dep_object) {
-  CHECK_OR_RETURN(local_dep_object->is_pool_hook_empty());
-  CHECK_OR_RETURN(local_dep_object->is_stored_hook_empty());
-  CHECK_OR_RETURN(!local_dep_object->is_lifetime_hook_empty());
+  CHECK_OR_RETURN(local_dep_object->pool_hook().empty());
+  CHECK_OR_RETURN(local_dep_object->stored_hook().empty());
+  CHECK_OR_RETURN(!local_dep_object->lifetime_hook().empty());
   auto* pool_list = ThreadLocalPoolLocalDepObjectList(device);
   const auto& pool_size = JUST(device->instr_local_dep_object_pool_size());
   // Keep pool_list->size() not bigger than pool_size

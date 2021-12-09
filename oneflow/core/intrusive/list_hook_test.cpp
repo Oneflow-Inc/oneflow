@@ -44,7 +44,7 @@ class TestListHead : public intrusive::ListHead<ItemField> {
   TestListHead() { this->__Init__(); }
 };
 
-using BarListHead = TestListHead<STRUCT_FIELD(ListItemBar, bar_list)>;
+using BarListHead = TestListHead<INTRUSIVE_FIELD(ListItemBar, bar_list)>;
 
 TEST(TestListHook, init) {
   TestListHook list_iterator;

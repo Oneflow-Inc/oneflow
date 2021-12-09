@@ -20,7 +20,7 @@ limitations under the License.
 #include <vector>
 #include <pybind11/pybind11.h>
 
-#include "oneflow/api/python/framework/throw.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/scalar.h"
@@ -39,6 +39,7 @@ namespace functional {
 
 struct PyObjectPtrDeleter {
   inline void operator()(PyObject* obj) {
+    py::gil_scoped_acquire acquire;
     if (obj) { Py_DECREF(obj); }
     obj = NULL;
   }
@@ -125,10 +126,6 @@ Maybe<TensorTuple> PyUnpackTensorTuple(PyObject* obj);
 // DType
 bool PyDTypeCheck(PyObject* obj);
 Maybe<Symbol<DType>> PyUnpackDType(PyObject* obj);
-
-// Shape
-bool PyShapeCheck(PyObject* obj);
-Maybe<Shape> PyUnpackShape(PyObject* obj);
 
 // Generator
 bool PyGeneratorCheck(PyObject* obj);

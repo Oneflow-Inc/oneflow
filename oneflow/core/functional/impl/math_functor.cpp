@@ -24,7 +24,6 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
@@ -57,9 +56,10 @@ class AddNFunctor {
         std::shared_ptr<TensorTuple> outs = std::make_shared<TensorTuple>(1);
         outs->at(0) = partial_inputs.at(0);
         JUST(OpInterpUtil::Dispatch(*op_.at(size - 1), partial_inputs, outs.get()));
-        outputs.push_back(outs->at(0));
+        outputs.emplace_back(outs->at(0));
       } else {
-        outputs.push_back(JUST(OpInterpUtil::Dispatch<Tensor>(*op_.at(size - 1), partial_inputs)));
+        outputs.emplace_back(
+            JUST(OpInterpUtil::Dispatch<Tensor>(*op_.at(size - 1), partial_inputs)));
       }
     }
     if (outputs.size() == 1) { return outputs.at(0); }
@@ -125,12 +125,42 @@ class ScalarMathBaseFunctor {
 class ScalarAddFunctor : public ScalarMathBaseFunctor {
  public:
   ScalarAddFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_add") {}
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Scalar& other,
+                           const Scalar& alpha, const bool& inplace) const {
+    if (IsIntegralDataType(input->dtype()->data_type()) && other.IsIntegral()
+        && alpha.IsFloatingPoint()) {
+      return Error::RuntimeError()
+             << "For integral input tensors, argument alpha must not be a floating point number.";
+    }
+    Scalar scalar;
+    if (other.IsFloatingPoint() || alpha.IsFloatingPoint()) {
+      scalar = Scalar(other.Value<double>() * alpha.Value<double>());
+    } else {
+      scalar = Scalar(other.Value<int64_t>() * alpha.Value<int64_t>());
+    }
+    return ScalarMathBaseFunctor::operator()(input, scalar, inplace);
+  }
 };
 
 class ScalarAdd2Functor {
  public:
-  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
-    return ScalarAdd(x, scalar, /*inplace=*/false);
+  Maybe<Tensor> operator()(const Scalar& input, const std::shared_ptr<one::Tensor>& other,
+                           const Scalar& alpha) const {
+    if (IsIntegralDataType(other->dtype()->data_type()) && input.IsIntegral()
+        && alpha.IsFloatingPoint()) {
+      return Error::RuntimeError()
+             << "For integral input tensors, argument alpha must not be a floating point number.";
+    }
+    std::shared_ptr<one::Tensor> other_;
+    if ((alpha.IsIntegral() && alpha.Value<int64_t>() == 1)
+        || (alpha.IsFloatingPoint()
+            && std::fabs(alpha.Value<double>() - 1.0) < std::numeric_limits<double>::epsilon())) {
+      other_ = other;
+    } else {
+      other_ = JUST(ScalarMul(alpha, other));
+    }
+    return ScalarAdd(other_, input, /*alpha=*/1, /*inplace=*/false);
   }
 };
 
@@ -138,14 +168,15 @@ class ScalarSubFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar,
                            bool inplace) const {
-    return ScalarAdd(x, Scalar(-1) * scalar, inplace);
+    return ScalarAdd(x, Scalar(-1) * scalar, /*alpha=*/1, inplace);
   }
 };
 
 class ScalarSub2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
-    return ScalarAdd(JUST(ScalarMul(x, Scalar(-1), false)), scalar, /*inplace=*/false);
+    return ScalarAdd(JUST(ScalarMul(x, Scalar(-1), false)), scalar, /*alpha=*/1,
+                     /*inplace=*/false);
   }
 };
 
@@ -158,6 +189,14 @@ class ScalarMul2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
     return ScalarMul(x, scalar, false);
+  }
+};
+
+class InplaceScalarMulFunctor : public ScalarMathBaseFunctor {
+ public:
+  InplaceScalarMulFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_mul") {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    return ScalarMathBaseFunctor::operator()(x, scalar, true);
   }
 };
 
@@ -292,6 +331,197 @@ class ReduceSumFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ReduceAllFunctor {
+ public:
+  ReduceAllFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("reduce_all").Input("input_tensor").Output("output_tensor").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
+                           const bool& keepdims) const {
+    MutableAttrMap attrs;
+    if (axis.empty()) {
+      std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+      std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
+    } else {
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+    }
+    JUST(attrs.SetAttr<bool>("keepdims", keepdims));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ReduceAnyFunctor {
+ public:
+  ReduceAnyFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("reduce_any").Input("input_tensor").Output("output_tensor").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
+                           const bool& keepdims) const {
+    MutableAttrMap attrs;
+    if (axis.empty()) {
+      std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+      std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
+    } else {
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+    }
+    JUST(attrs.SetAttr<bool>("keepdims", keepdims));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+template<class T>
+class ReduceDeviceStageBaseFunctor {
+ public:
+  ReduceDeviceStageBaseFunctor()
+      : op_(CHECK_JUST(one::OpBuilder(T::GetOpName())
+                           .Input("in")
+                           .Output("out")
+                           .Output("mask")
+                           .Output("count")
+                           .Build())) {}
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in,
+                                const std::vector<int32_t>& axis) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in}, attrs);
+  }
+  virtual ~ReduceDeviceStageBaseFunctor() = default;
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+template<class T>
+class ReduceDeviceStageGradBaseFunctor {
+ public:
+  ReduceDeviceStageGradBaseFunctor()
+      : op_(CHECK_JUST(one::OpBuilder(T::GetOpName())
+                           .Input("out_diff")
+                           .Input("mask")
+                           .Input("count")
+                           .Output("in_diff")
+                           .Build())) {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& out_diff,
+                           const std::shared_ptr<one::Tensor>& mask,
+                           const std::shared_ptr<one::Tensor>& count,
+                           const std::vector<int32_t>& axis) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, count}, attrs);
+  }
+  virtual ~ReduceDeviceStageGradBaseFunctor() = default;
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ReduceMinDeviceStageFunctor
+    : public ReduceDeviceStageBaseFunctor<ReduceMinDeviceStageFunctor> {
+ public:
+  static std::string GetOpName() { return "reduce_min_device_stage"; }
+};
+
+class ReduceMaxDeviceStageFunctor
+    : public ReduceDeviceStageBaseFunctor<ReduceMaxDeviceStageFunctor> {
+ public:
+  static std::string GetOpName() { return "reduce_max_device_stage"; }
+};
+
+class ReduceMinDeviceStageGradFunctor
+    : public ReduceDeviceStageGradBaseFunctor<ReduceMinDeviceStageGradFunctor> {
+ public:
+  static std::string GetOpName() { return "reduce_min_device_stage_grad"; }
+};
+
+class ReduceMaxDeviceStageGradFunctor
+    : public ReduceDeviceStageGradBaseFunctor<ReduceMaxDeviceStageGradFunctor> {
+ public:
+  static std::string GetOpName() { return "reduce_max_device_stage_grad"; }
+};
+
+template<class T>
+class ReduceGlobalStageBaseFunctor {
+ public:
+  ReduceGlobalStageBaseFunctor()
+      : op_(CHECK_JUST(one::OpBuilder(T::GetOpName())
+                           .Input("in")
+                           .Input("device_count")
+                           .Output("out")
+                           .Output("mask")
+                           .Build())) {}
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in,
+                                const std::shared_ptr<one::Tensor>& device_count,
+                                const std::vector<int32_t>& axis, const bool& keepdims) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+    JUST(attrs.SetAttr<bool>("keepdims", keepdims));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in, device_count}, attrs);
+  }
+  virtual ~ReduceGlobalStageBaseFunctor() = default;
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+template<class T>
+class ReduceGlobalStageGradBaseFunctor {
+ public:
+  ReduceGlobalStageGradBaseFunctor()
+      : op_(CHECK_JUST(one::OpBuilder(T::GetOpName())
+                           .Input("out_diff")
+                           .Input("mask")
+                           .Input("device_count")
+                           .Output("in_diff")
+                           .Build())) {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& out_diff,
+                           const std::shared_ptr<one::Tensor>& mask,
+                           const std::shared_ptr<one::Tensor>& device_count,
+                           const std::vector<int32_t>& axis, const bool& keepdims) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+    JUST(attrs.SetAttr<bool>("keepdims", keepdims));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, device_count}, attrs);
+  }
+  virtual ~ReduceGlobalStageGradBaseFunctor() = default;
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ReduceMinGlobalStageFunctor
+    : public ReduceGlobalStageBaseFunctor<ReduceMinGlobalStageFunctor> {
+ public:
+  static std::string GetOpName() { return "reduce_min_global_stage"; }
+};
+
+class ReduceMinGlobalStageGradFunctor
+    : public ReduceGlobalStageGradBaseFunctor<ReduceMinGlobalStageGradFunctor> {
+ public:
+  static std::string GetOpName() { return "reduce_min_global_stage_grad"; }
+};
+
+class ReduceMaxGlobalStageFunctor
+    : public ReduceGlobalStageBaseFunctor<ReduceMaxGlobalStageFunctor> {
+ public:
+  static std::string GetOpName() { return "reduce_max_global_stage"; }
+};
+
+class ReduceMaxGlobalStageGradFunctor
+    : public ReduceGlobalStageGradBaseFunctor<ReduceMaxGlobalStageGradFunctor> {
+ public:
+  static std::string GetOpName() { return "reduce_max_global_stage_grad"; }
+};
+
 class ReduceMeanFunctor {
  public:
   ReduceMeanFunctor() {}
@@ -342,11 +572,12 @@ class TransposeFunctor {
   TransposeFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("transpose").Input("input").Output("output").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::vector<int32_t>& permute) const {
     MutableAttrMap attrs;
+    CHECK_EQ_OR_RETURN(input->ndim(), permute.size()) << "number of dims don't match in permute";
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
-    int32_t ndims = x->shape()->NumAxes();
+    int32_t ndims = input->shape()->NumAxes();
     for (int i = 0; i < permute.size(); i++) {
       int32_t dim = permute.at(i);
       if (dim < 0) { dim += ndims; }
@@ -357,7 +588,7 @@ class TransposeFunctor {
           << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
           << ndims << " ] but got " << ndims;
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
  private:
@@ -367,12 +598,12 @@ class TransposeFunctor {
 class EyeFunctor {
  public:
   EyeFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Scalar& n, const Optional<Scalar>& m,
+  Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("n", JUST(n.As<int64_t>())));
-    JUST(attrs.SetAttr<int64_t>("m", JUST(m.value_or(n).As<int64_t>())));
+    JUST(attrs.SetAttr<int64_t>("rows", JUST(rows.As<int64_t>())));
+    JUST(attrs.SetAttr<int64_t>("cols", JUST(cols.value_or(rows).As<int64_t>())));
     JUST(attrs.SetAttr<DataType>("dtype", dtype ? JUST(dtype)->data_type() : DataType::kFloat));
     OpExprInterpContext ctx(attrs);
     ctx.device = device;
@@ -386,13 +617,13 @@ class EyeFunctor {
 class ConsistentEyeFunctor {
  public:
   ConsistentEyeFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Scalar& n, const Optional<Scalar>& m,
+  Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
                            const Optional<Symbol<DType>>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("n", JUST(n.As<int64_t>())));
-    JUST(attrs.SetAttr<int64_t>("m", JUST(m.value_or(n).As<int64_t>())));
+    JUST(attrs.SetAttr<int64_t>("rows", JUST(rows.As<int64_t>())));
+    JUST(attrs.SetAttr<int64_t>("cols", JUST(cols.value_or(rows).As<int64_t>())));
     JUST(attrs.SetAttr<DataType>("dtype", dtype ? JUST(dtype)->data_type() : DataType::kFloat));
     if (LazyMode::is_enabled()) {
       std::vector<std::string> nd_sbp(sbp_tuple.size());
@@ -421,6 +652,7 @@ class Transpose2dimFunctor {
     MutableAttrMap attrs;
     const int64_t ndim = x->shape()->NumAxes();
     std::vector<int32_t> permute;
+    permute.reserve(ndim);
     int32_t dim_0 = dim0;
     int32_t dim_1 = dim1;
 
@@ -431,7 +663,7 @@ class Transpose2dimFunctor {
         << "Invalid dim0:" << dim_0 << " len(shape):" << ndim;
     CHECK_OR_RETURN(dim_1 >= 0 && dim1 < ndim)
         << "Invalid dim1:" << dim_1 << " len(shape):" << ndim;
-    for (int32_t i = 0; i < ndim; ++i) { permute.push_back(i); }
+    for (int32_t i = 0; i < ndim; ++i) { permute.emplace_back(i); }
     std::swap(permute[dim_0], permute[dim_1]);
 
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
@@ -444,7 +676,7 @@ class Transpose2dimFunctor {
 
 class ArangeFunctor {
  public:
-  ArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
+  ArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
@@ -479,7 +711,7 @@ class Arange2Functor {
 
 class ConsistentArangeFunctor {
  public:
-  ConsistentArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
+  ConsistentArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Symbol<DType>& dtype, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
@@ -592,6 +824,377 @@ class ClampFunctor {
   std::shared_ptr<OpExpr> clip_max_op_;
 };
 
+class VectorNormFunctor {
+ public:
+  VectorNormFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& ord,
+                           const Optional<std::vector<int32_t>>& input_dim, const bool& keepdim,
+                           const Optional<Symbol<DType>>& dtype) const {
+    std::shared_ptr<one::Tensor> res;
+    Symbol<DType> dtype_val;
+    if (dtype) {
+      dtype_val = JUST(dtype);
+      if (!(dtype_val->data_type() == DataType::kFloat
+            || dtype_val->data_type() == DataType::kDouble
+            || dtype_val->data_type() == DataType::kFloat16
+            || dtype_val->data_type() == DataType::kBFloat16)) {
+        UNIMPLEMENTED_THEN_RETURN() << "linalg.vector_norm(): only supports floating point and "
+                                       "complex dtypes, but got: Int.";
+      }
+    } else {
+      if (!IsFloatingDataType(x->dtype()->data_type())) {
+        UNIMPLEMENTED_THEN_RETURN() << "linalg.vector_norm(): only supports floating point and "
+                                       "complex dtypes, but got: Int.";
+      }
+      dtype_val = x->dtype();
+    }
+    std::vector<int32_t> dim;
+    if (!input_dim.has_value()) {
+      std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+      std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
+      dim = reduce_axis;
+    } else {
+      std::vector<int32_t> dim_check;
+      dim_check = *JUST(input_dim);
+      for (int i = 0; i < dim_check.size(); ++i) {
+        if (dim_check[i] >= 0) {
+          dim.emplace_back(dim_check[i]);
+        } else {
+          dim.emplace_back(dim_check[i] + x->shape()->NumAxes());
+        }
+      }
+    }
+    if (ord.IsIntegral() || ord.IsFloatingPoint()) {
+      double ord_val = JUST(ord.As<double>());
+      if (ord_val == 0) {
+        std::vector<int32_t> dim_column(1, 0);
+        res = JUST(ReduceSum(JUST(ScalarLogicalNotEqual(x, 0)), dim_column, keepdim));
+      } else if (ord_val == INFINITY) {
+        res = JUST(ReduceMax(JUST(Abs(x)), dim, keepdim));
+      } else if (ord_val == -INFINITY) {
+        res = JUST(ReduceMin(JUST(Abs(x)), dim, keepdim));
+      } else {
+        res =
+            JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord, false)), dim, keepdim)),
+                           Scalar(1.0) / ord, false));
+      }
+      res = JUST(Cast(res, dtype_val));
+      return res;
+    } else {
+      UNIMPLEMENTED_THEN_RETURN()
+          << "linalg_vector_norm(): argument 'ord' must be Number, not str.";
+    }
+  }
+};
+
+class ScalarVectorNormFunctor {
+ public:
+  ScalarVectorNormFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& ord,
+                           const Scalar& input_dim, const bool& keepdim,
+                           const Optional<Symbol<DType>>& dtype) const {
+    if (dtype) {
+      Symbol<DType> dtype_val = JUST(dtype);
+      if (!(dtype_val->data_type() == DataType::kFloat
+            || dtype_val->data_type() == DataType::kDouble
+            || dtype_val->data_type() == DataType::kFloat16
+            || dtype_val->data_type() == DataType::kBFloat16)) {
+        UNIMPLEMENTED_THEN_RETURN() << "linalg.vector_norm(): only supports the float, double, "
+                                       "cfloat and cdouble dtypes, but got: Int.";
+      }
+    } else {
+      if (!IsFloatingDataType(x->dtype()->data_type())) {
+        UNIMPLEMENTED_THEN_RETURN() << "linalg.vector_norm(): only supports the float, double, "
+                                       "cfloat and cdouble dtypes, but got: Int.";
+      }
+    }
+    if (input_dim.IsIntegral()) {
+      std::vector<int32_t> dim(1, JUST(input_dim.As<int>()));
+      return functional::VectorNorm(x, ord, dim, keepdim, dtype);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "linalg.vector_norm(): only support int dim.";
+    }
+  }
+};
+
+class ScalarMatrixNormFunctor {
+ public:
+  ScalarMatrixNormFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& ord,
+                           const std::vector<int32_t>& input_dim, const bool& keepdim,
+                           const Optional<Symbol<DType>>& dtype) const {
+    std::shared_ptr<one::Tensor> res;
+
+    auto num_dims = x->shape()->NumAxes();
+    auto axis = input_dim.size();
+    CHECK_OR_RETURN(num_dims >= 2)
+        << "linalg.matrix_norm(): input tensor must be a matrix or batch of matrices";
+    CHECK_OR_RETURN(axis == 2 && input_dim[0] != input_dim[1])
+        << "linalg.matrix_norm(): input_dim must be a 2-tuple of ints with different elements";
+
+    Symbol<DType> dtype_val;
+    if (dtype) {
+      dtype_val = JUST(dtype);
+      if (!(dtype_val->data_type() == DataType::kFloat
+            || dtype_val->data_type() == DataType::kDouble
+            || dtype_val->data_type() == DataType::kFloat16
+            || dtype_val->data_type() == DataType::kBFloat16)) {
+        UNIMPLEMENTED_THEN_RETURN() << "linalg.matrix_norm(): only supports the float, double, "
+                                       "cfloat and cdouble dtypes, but got: Int.";
+      }
+    } else {
+      if (!IsFloatingDataType(x->dtype()->data_type())) {
+        UNIMPLEMENTED_THEN_RETURN() << "linalg.matrix_norm(): only supports the float, double, "
+                                       "cfloat and cdouble dtypes, but got: Int.";
+      }
+      dtype_val = x->dtype();
+    }
+    std::vector<int32_t> dim_tmp;
+    dim_tmp.reserve(axis);
+    for (int i = 0; i < axis; ++i) {
+      if (input_dim[i] >= 0) {
+        dim_tmp.emplace_back(input_dim[i]);
+      } else {
+        dim_tmp.emplace_back(input_dim[i] + num_dims);
+      }
+    }
+    std::vector<int32_t> dim(2);
+    double ord_tmp = JUST(ord.As<double>());
+    if (ord_tmp == INFINITY || ord_tmp == -INFINITY) {
+      dim = dim_tmp;
+      dim[0] = dim_tmp[1];
+      dim[1] = dim_tmp[0];
+    } else if (ord_tmp == 1 || ord_tmp == -1) {
+      dim = dim_tmp;
+    } else {
+      UNIMPLEMENTED_THEN_RETURN()
+          << "linalg.matrix_norm(): Only support INFINITY,-INFINITY,1 or -1 data type.";
+    }
+
+    if (dim[1] > dim[0] && keepdim == false) { dim[1] -= 1; }
+    std::vector<int32_t> dim_tmp0_vec(1, dim[0]);
+    std::vector<int32_t> dim_tmp1_vec(1, dim[1]);
+    res = JUST(ReduceSum(JUST(Abs(x)), dim_tmp0_vec, keepdim));
+
+    if (ord_tmp == INFINITY || ord_tmp == 1) {
+      res = JUST(ReduceMax(res, dim_tmp1_vec, keepdim));
+    } else if (ord_tmp == -INFINITY || ord_tmp == -1) {
+      res = JUST(ReduceMin(res, dim_tmp1_vec, keepdim));
+    }
+    res = JUST(Cast(res, dtype_val));
+    return res;
+  }
+};
+
+class MatrixNormFunctor {
+ public:
+  MatrixNormFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& ord,
+                           const std::vector<int32_t>& input_dim, const bool& keepdim,
+                           const Optional<Symbol<DType>>& dtype) const {
+    std::shared_ptr<one::Tensor> res;
+    Symbol<DType> dtype_val;
+    if (dtype) {
+      dtype_val = JUST(dtype);
+      if (!(dtype_val->data_type() == DataType::kFloat
+            || dtype_val->data_type() == DataType::kDouble
+            || dtype_val->data_type() == DataType::kFloat16
+            || dtype_val->data_type() == DataType::kBFloat16)) {
+        UNIMPLEMENTED_THEN_RETURN() << "linalg.matrix_norm(): only supports the float, double, "
+                                       "cfloat and cdouble dtypes, but got: Int.";
+      }
+    } else {
+      if (!IsFloatingDataType(x->dtype()->data_type())) {
+        UNIMPLEMENTED_THEN_RETURN() << "linalg.matrix_norm(): only supports the float, double, "
+                                       "cfloat and cdouble dtypes, but got: Int.";
+      }
+      dtype_val = x->dtype();
+    }
+    auto num_dims = x->shape()->NumAxes();
+    auto axis = input_dim.size();
+    std::vector<int32_t> dim_tmp(axis);
+    for (int i = 0; i < axis; ++i) {
+      if (input_dim[i] >= 0) {
+        dim_tmp.emplace_back(input_dim[i]);
+      } else {
+        dim_tmp.emplace_back(input_dim[i] + num_dims);
+      }
+    }
+    if (ord == "nuc") {
+      UNIMPLEMENTED_THEN_RETURN() << "linalg.matrix_norm(): Not support ord is nuc.";
+    } else if (ord == "fro") {
+      res = JUST(Sqrt(JUST(ReduceSum(JUST(Square(x)), dim_tmp, keepdim))));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "linalg.matrix_norm(): could not convert string to float:"
+                                  << ord;
+    }
+    res = JUST(Cast(res, dtype_val));
+    return res;
+  }
+};
+
+class NormFunctor {
+ public:
+  NormFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& ord,
+                           const Optional<std::vector<int32_t>>& input_dim, const bool& keepdim,
+                           const Optional<Symbol<DType>>& dtype) const {
+    std::shared_ptr<one::Tensor> res;
+    if (dtype) {
+      Symbol<DType> dtype_val = JUST(dtype);
+      if (!(dtype_val->data_type() == DataType::kFloat
+            || dtype_val->data_type() == DataType::kDouble
+            || dtype_val->data_type() == DataType::kFloat16
+            || dtype_val->data_type() == DataType::kBFloat16)) {
+        UNIMPLEMENTED_THEN_RETURN() << "linalg.norm(): only supports the float, double, cfloat and "
+                                       "cdouble dtypes, but got: Int.";
+      }
+    } else {
+      if (!IsFloatingDataType(x->dtype()->data_type())) {
+        UNIMPLEMENTED_THEN_RETURN() << "linalg.norm(): only supports the float, double, cfloat and "
+                                       "cdouble dtypes, but got: Int.";
+      }
+    }
+    Scalar ord_sca;
+    if (ord.has_value()) {
+      auto ord_type = (*JUST(ord)).IsIntegral();
+      if (ord_type) {
+        ord_sca = Scalar(JUST((*JUST(ord)).As<double>()));
+      } else {
+        ord_sca = *JUST(ord);
+      }
+    }
+    if (input_dim.has_value()) {
+      auto axis = (*JUST(input_dim)).size();
+      if (axis == 1) {
+        Scalar ord_val;
+        if (!ord.has_value()) {
+          ord_val = Scalar(2.0);
+        } else {
+          ord_val = ord_sca;
+        }
+        res = JUST(VectorNorm(x, ord_val, input_dim, keepdim, dtype));
+      } else if (axis > 2) {
+        res = JUST(MatrixNorm(x, ord_sca, *JUST(input_dim), keepdim, dtype));
+      } else if (axis == 2) {
+        if (!ord.has_value()) {
+          res = JUST(MatrixNorm(x, "fro", *JUST(input_dim), keepdim, dtype));
+        } else {
+          res = JUST(MatrixNorm(x, ord_sca, *JUST(input_dim), keepdim, dtype));
+        }
+      }
+    } else {
+      if (ord.has_value()) {
+        CHECK_OR_RETURN(x->shape()->NumAxes() <= 2)
+            << "linalg.norm(): input must be 1-D or 2-D when dim is None and ord is not None";
+        if (x->shape()->NumAxes() == 1) {
+          res = JUST(VectorNorm(x, ord_sca, input_dim, keepdim, dtype));
+        } else {
+          std::vector<int32_t> dim{0, 1};
+          res = JUST(MatrixNorm(x, ord_sca, dim, keepdim, dtype));
+        }
+      } else {
+        std::vector<int32_t> dim(1, 2);
+        res = JUST(VectorNorm(JUST(Flatten(x, 0, -1)), Scalar(2.0), input_dim, keepdim, dtype));
+      }
+    }
+    return res;
+  }
+};
+
+class Norm2Functor {
+ public:
+  Norm2Functor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& ord,
+                           const Optional<std::vector<int32_t>>& input_dim, const bool& keepdim,
+                           const Optional<Symbol<DType>>& dtype) const {
+    std::shared_ptr<one::Tensor> res;
+    std::vector<int32_t> dim(x->shape()->NumAxes());
+    std::iota(dim.begin(), dim.end(), 0);
+    if (dtype) {
+      Symbol<DType> dtype_val = JUST(dtype);
+      if (!(dtype_val->data_type() == DataType::kFloat
+            || dtype_val->data_type() == DataType::kDouble
+            || dtype_val->data_type() == DataType::kFloat16
+            || dtype_val->data_type() == DataType::kBFloat16)) {
+        UNIMPLEMENTED_THEN_RETURN() << "linalg.norm(): only supports the float, double, cfloat and "
+                                       "cdouble dtypes, but got: Int.";
+      }
+    } else {
+      if (!IsFloatingDataType(x->dtype()->data_type())) {
+        UNIMPLEMENTED_THEN_RETURN() << "linalg.norm(): only supports the float, double, cfloat and "
+                                       "cdouble dtypes, but got: Int.";
+      }
+    }
+    if (input_dim.has_value()) {
+      res = JUST(MatrixNorm(x, ord, *JUST(input_dim), keepdim, dtype));
+    } else {
+      res = JUST(MatrixNorm(x, ord, dim, keepdim, dtype));
+    }
+    return res;
+  }
+};
+
+class ScalarNormFunctor {
+ public:
+  ScalarNormFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& ord,
+                           const Scalar& input_dim, const bool& keepdim,
+                           const Optional<Symbol<DType>>& dtype) const {
+    if (dtype) {
+      Symbol<DType> dtype_val = JUST(dtype);
+      if (!(dtype_val->data_type() == DataType::kFloat
+            || dtype_val->data_type() == DataType::kDouble
+            || dtype_val->data_type() == DataType::kFloat16
+            || dtype_val->data_type() == DataType::kBFloat16)) {
+        UNIMPLEMENTED_THEN_RETURN() << "linalg.norm(): only supports the float, double, cfloat and "
+                                       "cdouble dtypes, but got: Int.";
+      }
+    } else {
+      if (!IsFloatingDataType(x->dtype()->data_type())) {
+        UNIMPLEMENTED_THEN_RETURN() << "linalg.norm(): only supports the float, double, cfloat and "
+                                       "cdouble dtypes, but got: Int.";
+      }
+    }
+    if (input_dim.IsIntegral()) {
+      std::vector<int32_t> dim(1, JUST(input_dim.As<int>()));
+      return functional::Norm(x, ord, dim, keepdim, dtype);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "linalg_norm(): only supports int dim.";
+    }
+  }
+};
+
+class ScalarNorm2Functor {
+ public:
+  ScalarNorm2Functor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& ord,
+                           const Scalar& input_dim, const bool& keepdim,
+                           const Optional<Symbol<DType>>& dtype) const {
+    if (dtype) {
+      Symbol<DType> dtype_val = JUST(dtype);
+      if (!(dtype_val->data_type() == DataType::kFloat
+            || dtype_val->data_type() == DataType::kDouble
+            || dtype_val->data_type() == DataType::kFloat16
+            || dtype_val->data_type() == DataType::kBFloat16)) {
+        UNIMPLEMENTED_THEN_RETURN() << "linalg.norm(): only supports the float, double, cfloat and "
+                                       "cdouble dtypes, but got: Int.";
+      }
+    } else {
+      if (!IsFloatingDataType(x->dtype()->data_type())) {
+        UNIMPLEMENTED_THEN_RETURN() << "linalg.norm(): only supports the float, double, cfloat and "
+                                       "cdouble dtypes, but got: Int.";
+      }
+    }
+    if (input_dim.IsIntegral()) {
+      std::vector<int32_t> dim(1, JUST(input_dim.As<int>()));
+      return functional::Norm(x, ord, dim, keepdim, dtype);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "linalg_norm(): only supports int dim.";
+    }
+  }
+};
+
 class ClampGradFunctor {
  public:
   ClampGradFunctor() {
@@ -657,7 +1260,17 @@ class SelectTopNFunctor {
   Maybe<TensorTuple> operator()(const TensorTuple& inputs, int32_t n) const {
     MutableAttrMap attr;
     JUST(attr.SetAttr<int32_t>("top_n", n));
+    std::vector<bool> require_grad(n);
+    std::vector<bool> is_leaf(n);
+    for (int i = 0; i < n; ++i) {
+      is_leaf.at(i) = (inputs.at(i)->is_leaf());
+      require_grad.at(i) = (inputs.at(i)->requires_grad());
+    }
     const auto& output = JUST(OpInterpUtil::Dispatch<one::TensorTuple>(*op_, inputs, attr));
+    for (int i = 0; i < n; ++i) {
+      inputs.at(i)->set_is_leaf(is_leaf.at(i));
+      JUST(inputs.at(i)->set_requires_grad(require_grad.at(i)));
+    }
     return output;
   }
 
@@ -867,9 +1480,10 @@ class StandardDeviationFunctor {
                            const Optional<std::vector<int32_t>>& dim,
                            const Optional<bool>& unbiased, const Optional<bool>& keepdim) const {
     const int32_t ndim = input->shape()->NumAxes();
-    std::vector<int32_t> axis(0);
+    std::vector<int32_t> axis;
+    axis.reserve(ndim);
     if (dim.has_value() == false) {
-      for (int i = 0; i < ndim; ++i) { axis.push_back(i); }
+      for (int i = 0; i < ndim; ++i) { axis.emplace_back(i); }
     } else {
       std::vector<int32_t>& dims = *JUST(dim);
       CHECK_GE_OR_RETURN(ndim, dims.size())
@@ -953,9 +1567,10 @@ class VarianceFunctor {
                            const Optional<std::vector<int32_t>>& dim,
                            const Optional<bool>& unbiased, const Optional<bool>& keepdim) const {
     const int32_t ndim = input->shape()->NumAxes();
-    std::vector<int32_t> axis(0);
+    std::vector<int32_t> axis;
+    axis.reserve(ndim);
     if (dim.has_value() == false) {
-      for (int i = 0; i < ndim; ++i) { axis.push_back(i); }
+      for (int i = 0; i < ndim; ++i) { axis.emplace_back(i); }
     } else {
       std::vector<int32_t>& dims = *JUST(dim);
       CHECK_GE_OR_RETURN(ndim, dims.size())
@@ -979,6 +1594,92 @@ class VarianceFunctor {
   }
 };
 
+class DotFunctor {
+ public:
+  DotFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("dot").Input("x").Input("y").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& other) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, other});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+class MovedimVecFunctor {
+ public:
+  MovedimVecFunctor() = default;
+  static Maybe<void> CheckNoRepeat(const std::vector<int32_t>& perm, std::vector<int32_t>& perm_out,
+                                   int32_t ndim, const std::string& desc) {
+    std::vector<bool> is_used(ndim, false);
+    FOR_RANGE(size_t, i, 0, perm.size()) {
+      int32_t item = perm[i];
+      if (item < 0) { item += ndim; }
+      CHECK_GE_OR_RETURN(item, 0) << ", Dimension out of range (expected to be in range of ["
+                                  << -ndim << ", " << ndim - 1 << "], but got " << perm[i] << ")";
+      CHECK_LT_OR_RETURN(item, ndim)
+          << ", Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
+          << "], but got " << perm[i] << ")";
+      CHECK_EQ_OR_RETURN(is_used[item], false) << "repeated dim in " << desc;
+
+      is_used[item] = true;
+      perm_out[i] = item;
+    }
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::vector<int32_t>& source,
+                           const std::vector<int32_t>& destination) const {
+    int32_t ndim = input->shape()->NumAxes();
+    int32_t dim = source.size();
+
+    CHECK_EQ_OR_RETURN(source.size(), destination.size())
+        << "movedim: Invalid source or destination dims: source (" << source.size()
+        << " dims ) should contain the same number of dims as destination (" << destination.size()
+        << " dims)";
+
+    std::vector<int32_t> source_nopeat(dim);
+    std::vector<int32_t> destination_nopeat(dim);
+
+    JUST(CheckNoRepeat(source, source_nopeat, ndim, "source"));
+    JUST(CheckNoRepeat(destination, destination_nopeat, ndim, "destination"));
+
+    std::vector<int32_t> order(ndim);
+    std::vector<int32_t> source_dims(ndim);
+    std::vector<int32_t> destination_dims(ndim);
+
+    std::iota(source_dims.begin(), source_dims.end(), 0);
+    std::iota(destination_dims.begin(), destination_dims.end(), 0);
+
+    FOR_RANGE(size_t, i, 0, dim) {
+      order[destination_nopeat[i]] = source_nopeat[i];
+      source_dims[source_nopeat[i]] = -1;
+      destination_dims[destination_nopeat[i]] = -1;
+    }
+
+    std::remove(source_dims.begin(), source_dims.end(), -1);
+    std::remove(destination_dims.begin(), destination_dims.end(), -1);
+
+    int64_t rest_dim = ndim - dim;
+    FOR_RANGE(size_t, i, 0, rest_dim) { order[destination_dims[i]] = source_dims[i]; }
+
+    return Transpose(input, order);
+  }
+};
+
+class MovedimIntFunctor {
+ public:
+  MovedimIntFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& source,
+                           const int32_t& destination) const {
+    std::vector<int32_t> src{source};
+    std::vector<int32_t> dest{destination};
+    return MovedimVec(input, src, dest);
+  }
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -988,6 +1689,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarAddFunctor, ScalarAdd2Functor>("ScalarAdd");
   m.add_functor<ScalarSubFunctor, ScalarSub2Functor>("ScalarSub");
   m.add_functor<ScalarMulFunctor, ScalarMul2Functor>("ScalarMul");
+  m.add_functor<InplaceScalarMulFunctor>("InplaceScalarMul");
   m.add_functor<ScalarDivFunctor, ScalarDiv2Functor>("ScalarDiv");
   m.add_functor<ScalarPowFunctor>("ScalarPow");
   m.add_functor<ScalarPowGradFunctor>("ScalarPowGrad");
@@ -995,8 +1697,19 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceMeanFunctor>("ReduceMean");
   m.add_functor<ReduceMinFunctor>("ReduceMin");
   m.add_functor<ReduceSumFunctor>("ReduceSum");
+  m.add_functor<ReduceAllFunctor>("ReduceAll");
+  m.add_functor<ReduceAnyFunctor>("ReduceAny");
   m.add_functor<ReduceProdFunctor>("ReduceProd");
+  m.add_functor<ReduceMinDeviceStageFunctor>("ReduceMinDeviceStage");
+  m.add_functor<ReduceMaxDeviceStageFunctor>("ReduceMaxDeviceStage");
+  m.add_functor<ReduceMinGlobalStageFunctor>("ReduceMinGlobalStage");
+  m.add_functor<ReduceMaxGlobalStageFunctor>("ReduceMaxGlobalStage");
+  m.add_functor<ReduceMinDeviceStageGradFunctor>("ReduceMinDeviceStageGrad");
+  m.add_functor<ReduceMaxDeviceStageGradFunctor>("ReduceMaxDeviceStageGrad");
+  m.add_functor<ReduceMinGlobalStageGradFunctor>("ReduceMinGlobalStageGrad");
+  m.add_functor<ReduceMaxGlobalStageGradFunctor>("ReduceMaxGlobalStageGrad");
   m.add_functor<TransposeFunctor>("Transpose");
+  m.add_functor<TransposeFunctor>("Permute");
   m.add_functor<EyeFunctor>("Eye");
   m.add_functor<ConsistentEyeFunctor>("ConsistentEye");
   m.add_functor<Transpose2dimFunctor>("Transpose2dim");
@@ -1004,6 +1717,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
+  m.add_functor<VectorNormFunctor, ScalarVectorNormFunctor>("VectorNorm");
+  m.add_functor<ScalarMatrixNormFunctor, MatrixNormFunctor>("MatrixNorm");
+  m.add_functor<NormFunctor, Norm2Functor>("Norm");
+  m.add_functor<ScalarNormFunctor, ScalarNorm2Functor>("ScalarNorm");
   m.add_functor<ClampGradFunctor>("ClampGrad");
   m.add_functor<SelectTopNFunctor>("SelectTopN");
   m.add_functor<MinimumFunctor>("Minimum");
@@ -1024,6 +1741,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarLogicalXorFunctor, ScalarLogicalXor2Functor>("ScalarLogicalXor");
   m.add_functor<StandardDeviationFunctor>("StandardDeviation");
   m.add_functor<VarianceFunctor>("Variance");
+  m.add_functor<DotFunctor>("Dot");
+  m.add_functor<MovedimVecFunctor>("MovedimVec");
+  m.add_functor<MovedimIntFunctor>("MovedimInt");
 };
 
 }  // namespace functional

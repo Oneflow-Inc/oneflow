@@ -124,13 +124,22 @@ inline int32_t SMBlocksNum4ThreadsNum(const int32_t n) {
                   GetSMCudaMaxBlocksNum());
 }
 
+namespace ep {
+
+class Stream;
+class CudaStream;
+
+}  // namespace ep
+
+cudaStream_t RunCudaKernelGetStream(ep::Stream* stream);
+
 #define RUN_CUDA_KERNEL(func, device_ctx_ptr, thread_num, ...)           \
   func<<<SMBlocksNum4ThreadsNum(thread_num), kCudaThreadsNumPerBlock, 0, \
-         (device_ctx_ptr)->cuda_stream()>>>(__VA_ARGS__)
+         RunCudaKernelGetStream(device_ctx_ptr)>>>(__VA_ARGS__)
 
 size_t GetAvailableGpuMemSize(int dev_id);
 
-void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size);
+cudaError_t NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size);
 
 class CudaCurrentDeviceGuard final {
  public:
@@ -161,6 +170,14 @@ class CublasMathModeGuard final {
 int GetCudaSmVersion();
 
 int GetCudaPtxVersion();
+
+int GetCudaDeviceIndex();
+
+int GetCudaDeviceCount();
+
+void InitCudaContextOnce(int device_id);
+
+cudaError_t CudaDriverGetPrimaryCtxActive(int dev, int* active);
 
 }  // namespace oneflow
 

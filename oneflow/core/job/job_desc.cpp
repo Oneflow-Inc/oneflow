@@ -43,14 +43,14 @@ void CheckFunctionConfig(const JobConfigProto& job_conf) {
 }  // namespace
 
 JobDesc::JobDesc(const JobConfigProto& job_conf, int64_t job_id)
-    : job_conf_(job_conf), job_id_(job_id), symbol_id_(Error::SymbolIdUninitializedError()) {
+    : job_conf_(job_conf), job_id_(job_id), symbol_id_(NullOpt) {
   CHECK_JUST(Init());
   Global<ResourceDesc, ForSession>::Get()->DumpCudnnConf(job_conf);
 }
 
 Maybe<JobDesc> JobDesc::New(int64_t symbol_id, const JobConfigProto& job_conf) {
   auto job_desc = std::make_shared<JobDesc>(job_conf);
-  job_desc->symbol_id_ = Maybe<int64_t>(symbol_id);
+  job_desc->symbol_id_ = symbol_id;
   return job_desc;
 }
 

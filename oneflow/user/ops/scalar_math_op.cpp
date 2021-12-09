@@ -17,37 +17,51 @@ limitations under the License.
 
 namespace oneflow {
 
-#define REGISTER_SCALAR_MATH_OP(op_name)                                              \
-  REGISTER_USER_OP(op_name)                                                           \
-      .Input("in")                                                                    \
-      .Output("out")                                                                  \
-      .Attr<bool>("has_int_operand")                                                  \
-      .Attr<bool>("has_float_operand")                                                \
-      .Attr<int64_t>("int_operand")                                                   \
-      .Attr<double>("float_operand")                                                  \
-      .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {           \
-        *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);                       \
-        *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);               \
-        return Maybe<void>::Ok();                                                     \
-      })                                                                              \
-      .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {                      \
-        const user_op::TensorDesc& in_tensor =                                        \
-            ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);                     \
-        FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {                       \
-          ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build(); \
-        }                                                                             \
-        return Maybe<void>::Ok();                                                     \
-      })                                                                              \
-      .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {             \
-        *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);                       \
-        return Maybe<void>::Ok();                                                     \
+namespace {
+
+Maybe<void> GetSbp4ScalarMath(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> GetSbp4ScalarMul(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+  }
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
+#define REGISTER_SCALAR_MATH_OP(op_name, get_sbp_fn)                        \
+  REGISTER_USER_OP(op_name)                                                 \
+      .Input("in")                                                          \
+      .Output("out")                                                        \
+      .Attr<bool>("has_int_operand")                                        \
+      .Attr<bool>("has_float_operand")                                      \
+      .Attr<int64_t>("int_operand")                                         \
+      .Attr<double>("float_operand")                                        \
+      .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> { \
+        *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);             \
+        *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);     \
+        return Maybe<void>::Ok();                                           \
+      })                                                                    \
+      .SetGetSbpFn(get_sbp_fn)                                              \
+      .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {   \
+        *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);             \
+        return Maybe<void>::Ok();                                           \
       });
 
-REGISTER_SCALAR_MATH_OP("scalar_add")
-REGISTER_SCALAR_MATH_OP("scalar_floordiv")
-REGISTER_SCALAR_MATH_OP("scalar_fmod")
-REGISTER_SCALAR_MATH_OP("scalar_mul")
-REGISTER_SCALAR_MATH_OP("scalar_pow")
+REGISTER_SCALAR_MATH_OP("scalar_add", GetSbp4ScalarMath)
+REGISTER_SCALAR_MATH_OP("scalar_floordiv", GetSbp4ScalarMath)
+REGISTER_SCALAR_MATH_OP("scalar_fmod", GetSbp4ScalarMath)
+REGISTER_SCALAR_MATH_OP("scalar_mul", GetSbp4ScalarMul)
+REGISTER_SCALAR_MATH_OP("scalar_pow", GetSbp4ScalarMath)
 
 REGISTER_USER_OP("scalar_pow_grad")
     .Input("x")

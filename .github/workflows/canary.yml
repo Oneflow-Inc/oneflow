@@ -1,0 +1,84 @@
+name: Canary
+
+on:
+  push:
+    branches:
+      - master
+      - add-canary-release
+  workflow_dispatch:
+    inputs:
+      oneflow-ref:
+        description: ""
+        default: "master"
+        required: true
+
+jobs:
+  canary_release:
+    name: Canary Release
+    timeout-minutes: 1200
+    runs-on: [self-hosted, linux, release]
+    if: github.repository == 'Oneflow-Inc/oneflow'
+    env:
+      ONEFLOW_SRC: .
+      MANYLINUX_CACHE_DIR: ~/manylinux-cache-dir/canary-cu112
+      WHEELHOUSE_DIR: manylinux-wheelhouse
+      COMPUTE_PLATFORM: cu112
+      CUDA_VERSION: "11.2"
+      OSS_BUCKET: oneflow-staging
+      OSS_WHEEL_HOUSE_DIR: canary/commit/${{ github.sha }}
+      OSS_GITHUB_REF_DIR: canary/${{ github.ref }}
+    steps:
+      - name: Fix permissions
+        run: |
+          set -x
+          docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
+      - name: Remove leftover cuda-installer.log
+        run: |
+          docker run --rm -v /tmp:/host/tmp -w /p busybox rm -f /host/tmp/cuda-installer.log
+      - name: Checkout Oneflow-Inc/oneflow
+        if: ${{ github.event.inputs.oneflow-ref != '' }}
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.inputs.oneflow-ref }}
+      - name: Checkout Oneflow-Inc/oneflow
+        if: ${{ github.event.inputs.oneflow-ref == '' }}
+        uses: actions/checkout@v2
+      - uses: Oneflow-Inc/get-oneflow@canary-release
+        name: Build manylinux
+        id: build-cuda
+        with:
+          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/canary/cuda.cmake
+          build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc7.sh
+          oneflow-src: ${{ env.ONEFLOW_SRC }}
+          oneflow-build-env: manylinux
+          wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
+          clear-wheelhouse-dir: true
+          self-hosted: true
+          cuda-version: ${{ env.CUDA_VERSION }}
+          manylinux-cache-dir: ${{ env.MANYLINUX_CACHE_DIR }}
+          docker-run-use-system-http-proxy: false
+          docker-run-use-lld: true
+          retry-failed-build: true
+          clean-ccache: true
+          python-versions: |
+            3.6
+            3.7
+            3.8
+      - name: Upload wheelhouse
+        uses: ./.github/actions/upload_oss
+        with:
+          src_path: ${{ env.WHEELHOUSE_DIR }}
+          oss_dst_path: oss://${{ env.OSS_BUCKET }}/${{ env.OSS_WHEEL_HOUSE_DIR }}/${{ env.COMPUTE_PLATFORM }}
+          oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+      - name: Update pip index
+        env:
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+        run: |
+          python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+          python3 -m pip install oss2 beautifulsoup4 --user
+          python3 tools/create_pip_index.py -b ${{ env.OSS_BUCKET }} \
+            --dir_key ${{ env.OSS_WHEEL_HOUSE_DIR }}/${{ env.COMPUTE_PLATFORM }} \
+            --index_key=${{ env.OSS_WHEEL_HOUSE_DIR }}/${{ env.COMPUTE_PLATFORM }}/index.html \
+            --index_key=${{ env.OSS_GITHUB_REF_DIR}}/${{ env.COMPUTE_PLATFORM }}/index.html

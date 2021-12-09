@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/compute_task_node.h"
-#include "oneflow/core/operator/acc_tick_op.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
 
 namespace oneflow {
 
@@ -49,6 +49,8 @@ void AccTickCompTaskNode::BuildExecGphAndRegst() {
   exec_node->BindBnWithRegst(op->SoleObn(), out_regst);
   exec_node->InferBlobDescs(parallel_ctx());
 }
+
+REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kAccTick);
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kAccTickConf, AccTickCompTaskNode);
 

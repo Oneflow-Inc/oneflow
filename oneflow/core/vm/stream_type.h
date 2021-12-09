@@ -32,7 +32,7 @@ namespace vm {
 struct Stream;
 struct InstructionStatusBuffer;
 struct Instruction;
-struct VirtualMachine;
+struct VirtualMachineEngine;
 struct InstructionMsg;
 class InstructionType;
 
@@ -41,46 +41,43 @@ class StreamType {
   virtual ~StreamType() = default;
 
   void Run(Instruction* instruction) const;
-  void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const;
-  void Run(VirtualMachine* vm, Instruction* instruction) const;
+  void Run(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const;
+  void Run(VirtualMachineEngine* vm, Instruction* instruction) const;
 
   virtual const char* device_tag() const = 0;
 
   virtual void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const = 0;
 
-  void InitInstructionStatusIf(const Stream& stream, InstructionStatusBuffer* status_buffer) const;
-  void DeleteInstructionStatusIf(const Stream& stream,
-                                 InstructionStatusBuffer* status_buffer) const;
+  virtual void InitInstructionStatus(const Stream& stream,
+                                     InstructionStatusBuffer* status_buffer) const = 0;
+  virtual void DeleteInstructionStatus(const Stream& stream,
+                                       InstructionStatusBuffer* status_buffer) const = 0;
   virtual bool QueryInstructionStatusDone(const Stream& stream,
                                           const InstructionStatusBuffer& status_buffer) const = 0;
-  virtual void set_has_event_record(InstructionStatusBuffer* status_buffer, bool val) const {
-    // Do nothing.
-  }
   virtual void Compute(Instruction* instruction) const = 0;
   virtual void Infer(Instruction* instruction) const { LOG(FATAL) << "UNIMPLEMENTED"; }
 
   virtual intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
                                                            int64_t this_machine_id) const = 0;
 
-  virtual bool SharingVirtualMachineThread() const = 0;
+  virtual bool OnSchedulerThread() const = 0;
   virtual bool SupportingTransportInstructions() const = 0;
   virtual bool IsControlStreamType() const { return false; }
-  virtual void Infer(VirtualMachine* vm, Instruction* instruction) const { Infer(instruction); }
-  virtual void Compute(VirtualMachine* vm, Instruction* instruction) const { Compute(instruction); }
-  virtual void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+  virtual void Infer(VirtualMachineEngine* vm, Instruction* instruction) const {
+    Infer(instruction);
+  }
+  virtual void Compute(VirtualMachineEngine* vm, Instruction* instruction) const {
+    Compute(instruction);
+  }
+  virtual void Infer(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
-  virtual void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+  virtual void Compute(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
 
  protected:
   StreamType() = default;
-
-  virtual void InitInstructionStatus(const Stream& stream,
-                                     InstructionStatusBuffer* status_buffer) const = 0;
-  virtual void DeleteInstructionStatus(const Stream& stream,
-                                       InstructionStatusBuffer* status_buffer) const = 0;
 };
 
 HashMap<std::type_index, const StreamType*>* StreamType4TypeIndex();

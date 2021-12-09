@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/infer_stream_type.h"
-#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/intrusive/flat_msg_view.h"
@@ -42,10 +42,10 @@ class NewSymbolInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(NewSymbolInstruction);
   // clang-format on
 
-  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+  void Infer(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const override {
     Run<&IdUtil::GetTypeId>(vm, instr_msg);
   }
-  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+  void Compute(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const override {
     Run<&IdUtil::GetValueId>(vm, instr_msg);
   }
   void Infer(Instruction*) const override { UNIMPLEMENTED(); }
@@ -53,7 +53,7 @@ class NewSymbolInstructionType final : public InstructionType {
 
  private:
   template<int64_t (*GetLogicalObjectId)(int64_t)>
-  void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+  void Run(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
     FlatMsgView<NewSymbolInstruction> view;
     CHECK(view.Match(instr_msg->operand()));
     FOR_RANGE(int, i, 0, view->symbol_id_size()) {
@@ -69,13 +69,13 @@ class NewSymbolInstructionType final : public InstructionType {
 };
 COMMAND(RegisterInstructionType<NewSymbolInstructionType>("NewSymbol"));
 
-void ControlStreamType::Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+void ControlStreamType::Infer(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
   const auto& instr_type_id = instr_msg->instr_type_id();
   CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kInfer);
   instr_type_id.instruction_type().Infer(vm, instr_msg);
 }
 
-void ControlStreamType::Infer(VirtualMachine* vm, Instruction* instruction) const {
+void ControlStreamType::Infer(VirtualMachineEngine* vm, Instruction* instruction) const {
   const auto& instr_type_id = instruction->instr_msg().instr_type_id();
   CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kInfer);
   instr_type_id.instruction_type().Infer(vm, instruction);
@@ -83,13 +83,13 @@ void ControlStreamType::Infer(VirtualMachine* vm, Instruction* instruction) cons
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 
-void ControlStreamType::Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+void ControlStreamType::Compute(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
   const auto& instr_type_id = instr_msg->instr_type_id();
   CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
   instr_type_id.instruction_type().Compute(vm, instr_msg);
 }
 
-void ControlStreamType::Compute(VirtualMachine* vm, Instruction* instruction) const {
+void ControlStreamType::Compute(VirtualMachineEngine* vm, Instruction* instruction) const {
   const auto& instr_type_id = instruction->instr_msg().instr_type_id();
   CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
   instr_type_id.instruction_type().Compute(vm, instruction);

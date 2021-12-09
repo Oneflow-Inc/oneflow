@@ -21,15 +21,24 @@ limitations under the License.
 #include "oneflow/core/common/preprocessor.h"
 
 namespace oneflow {
+namespace intrusive {
 
-#define STRUCT_FIELD(T, field) \
-  StructField<T, STRUCT_FIELD_TYPE(T, field), STRUCT_FIELD_OFFSET(T, field)>
-#define STRUCT_FIELD_TYPE(T, field) decltype(((T*)nullptr)->field)
-#define STRUCT_FIELD_OFFSET(T, field) offsetof(T, field)
+template<typename T, typename F, F T::*ptr2member>
+struct PtrStructField {
+  using struct_type = T;
+  using field_type = F;
 
-// details
+  static T* StructPtr4FieldPtr(const F* field_ptr) {
+    int offset_value = reinterpret_cast<long long>(&(((T*)nullptr)->*ptr2member));
+    return (T*)(((char*)field_ptr) - offset_value);
+  }
+  static F* FieldPtr4StructPtr(const T* struct_ptr) {
+    return &(const_cast<T*>(struct_ptr)->*ptr2member);
+  }
+};
+
 template<typename T, typename F, int offset>
-struct StructField {
+struct OffsetStructField {
   using struct_type = T;
   using field_type = F;
   static const int offset_value = offset;
@@ -42,12 +51,22 @@ struct StructField {
   }
 };
 
+#define INTRUSIVE_FIELD(struct_type, field_name)                                        \
+  intrusive::PtrStructField<struct_type, decltype(((struct_type*)nullptr)->field_name), \
+                            &struct_type::field_name>
+
 template<typename X, typename Y>
 struct ComposeStructField {
   static_assert(std::is_same<typename X::field_type, typename Y::struct_type>::value,
                 "invalid type");
-  using type = StructField<typename X::struct_type, typename Y::field_type,
-                           X::offset_value + Y::offset_value>;
+  using struct_type = typename X::struct_type;
+  using field_type = typename Y::field_type;
+  static struct_type* StructPtr4FieldPtr(const field_type* field_ptr) {
+    return X::StructPtr4FieldPtr(Y::StructPtr4FieldPtr(field_ptr));
+  }
+  static field_type* FieldPtr4StructPtr(const struct_type* struct_ptr) {
+    return Y::FieldPtr4StructPtr(X::FieldPtr4StructPtr(struct_ptr));
+  }
 };
 
 template<typename T>
@@ -75,6 +94,7 @@ struct ConstRefOrPtrStruct<T*> {
 template<typename T>
 using ConstRefOrPtr = typename ConstRefOrPtrStruct<T>::type;
 
+}  // namespace intrusive
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_INTRUSIVE_STRUCT_MACRO_TRAITS_H_

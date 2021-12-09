@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_VM_RESOURCE_DESC__H_
-#define ONEFLOW_CORE_VM_VM_RESOURCE_DESC__H_
+#ifndef ONEFLOW_CORE_VM_VM_RESOURCE_DESC_H_
+#define ONEFLOW_CORE_VM_VM_RESOURCE_DESC_H_
 
 #include <unordered_map>
 #include "oneflow/core/intrusive/intrusive.h"
@@ -28,24 +28,21 @@ namespace vm {
 
 using DeviceTag2DeviceNum = std::unordered_map<std::string, int64_t>;
 
-// clang-format off
-INTRUSIVE_BEGIN(VmResourceDesc);
+class VmResourceDesc final : public intrusive::Base {
  public:
   void __Init__() {}
   // Getters
   int64_t machine_num() const { return machine_num_; }
   int64_t max_device_num_per_machine() const { return max_device_num_per_machine_; }
-  const DeviceTag2DeviceNum& device_tag2device_num() const { return device_tag2device_num_.Get(); }
+  const DeviceTag2DeviceNum& device_tag2device_num() const { return device_tag2device_num_; }
   // Setters
   void set_machine_num(int64_t val) { machine_num_ = val; }
   void set_max_device_num_per_machine(int64_t val) { max_device_num_per_machine_ = val; }
-  DeviceTag2DeviceNum* mut_device_tag2device_num() { return device_tag2device_num_.Mutable(); }
-
+  DeviceTag2DeviceNum* mut_device_tag2device_num() { return &device_tag2device_num_; }
 
   // methods
   void __Init__(const Resource& resource);
-  void __Init__(
-      int64_t machine_num, const DeviceTag2DeviceNum& device_tag2device_num);
+  void __Init__(int64_t machine_num, const DeviceTag2DeviceNum& device_tag2device_num);
   void CopyFrom(const VmResourceDesc& vm_resource_desc);
   int64_t GetGlobalDeviceId(int64_t machine_id, int64_t device_id) const;
 
@@ -53,17 +50,17 @@ INTRUSIVE_BEGIN(VmResourceDesc);
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  VmResourceDesc() : intrusive_ref_(), machine_num_(), max_device_num_per_machine_(), device_tag2device_num_() {}
-  INTRUSIVE_DEFINE_FIELD(intrusive::Ref, intrusive_ref_);
+  VmResourceDesc()
+      : intrusive_ref_(), machine_num_(), max_device_num_per_machine_(), device_tag2device_num_() {}
+  intrusive::Ref intrusive_ref_;
   // fields
-  INTRUSIVE_DEFINE_FIELD(int64_t, machine_num_);
-  INTRUSIVE_DEFINE_FIELD(int64_t, max_device_num_per_machine_);
+  int64_t machine_num_;
+  int64_t max_device_num_per_machine_;
   // maps
-  INTRUSIVE_DEFINE_FIELD(intrusive::ForceStandardLayout<DeviceTag2DeviceNum>, device_tag2device_num_);
-INTRUSIVE_END(VmResourceDesc);
-// clang-format on
+  DeviceTag2DeviceNum device_tag2device_num_;
+};
 
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_VM_RESOURCE_DESC__H_
+#endif  // ONEFLOW_CORE_VM_VM_RESOURCE_DESC_H_

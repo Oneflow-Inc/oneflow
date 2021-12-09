@@ -128,7 +128,4 @@ class TestCifarDataset(flow.unittest.TestCase):
 
 
 if __name__ == "__main__":
-    import multiprocessing as mp
-
-    mp.set_start_method("spawn")
     unittest.main()

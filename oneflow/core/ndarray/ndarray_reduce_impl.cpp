@@ -20,16 +20,17 @@ limitations under the License.
 
 namespace oneflow {
 
-#define SPECIALIZE_CPU_NDARRAY_REDUCE_IMPL(struct_name)                                            \
-  template<typename T, template<typename> class binary_func>                                       \
-  struct struct_name<DeviceType::kCPU, T, binary_func> final {                                     \
-    static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {              \
-      return false;                                                                                \
-    }                                                                                              \
-    static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x, \
-                       const XpuVarNdarray<T>& tmp_storage) {                                      \
-      UNIMPLEMENTED();                                                                             \
-    }                                                                                              \
+#define SPECIALIZE_CPU_NDARRAY_REDUCE_IMPL(struct_name)                                        \
+  template<typename T, template<typename> class binary_func>                                   \
+  struct struct_name<DeviceType::kCPU, T, binary_func> final {                                 \
+    using RetT = typename BinaryFuncTrait<binary_func, T>::return_type;                        \
+    static bool Matched(const XpuVarNdarray<RetT>& y, const XpuVarNdarray<const T>& x) {       \
+      return false;                                                                            \
+    }                                                                                          \
+    static void Reduce(ep::Stream* stream, const XpuVarNdarray<RetT>& y,                       \
+                       const XpuVarNdarray<const T>& x, const XpuVarNdarray<T>& tmp_storage) { \
+      UNIMPLEMENTED();                                                                         \
+    }                                                                                          \
   }
 SPECIALIZE_CPU_NDARRAY_REDUCE_IMPL(NdarrayScalarReduce);
 SPECIALIZE_CPU_NDARRAY_REDUCE_IMPL(NdarrayMatrixRowReduce);
@@ -49,7 +50,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_IMPL,
 
 template<typename T, int NDIMS, template<typename> class binary_func>
 struct NdarrayReduceCoreWrapper<DeviceType::kCPU, T, NDIMS, binary_func> final {
-  static void ReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
+  static void ReduceAxis(ep::Stream* stream, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
                          const XpuReducedNdarray<T, NDIMS>& x, int axis) {
     NdarrayReduceCore<T, NDIMS, binary_func>::ReduceAxis(dst_reduced, x, axis);
   }

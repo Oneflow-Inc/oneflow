@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace vm {
@@ -47,6 +48,9 @@ bool CpuStreamType::QueryInstructionStatusDone(const Stream& stream,
 }
 
 void CpuStreamType::Compute(Instruction* instruction) const {
+  OF_PROFILER_RANGE_PUSH(
+      "S:"
+      + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction));
   {
     const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
     CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
@@ -54,6 +58,7 @@ void CpuStreamType::Compute(Instruction* instruction) const {
   }
   auto* status_buffer = instruction->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
+  OF_PROFILER_RANGE_POP();
 }
 
 intrusive::shared_ptr<StreamDesc> CpuStreamType::MakeStreamDesc(const Resource& resource,

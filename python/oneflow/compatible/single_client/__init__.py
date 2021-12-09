@@ -20,6 +20,7 @@ Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
 locals()["dtype"] = oneflow._oneflow_internal.dtype
+locals()["bool"] = oneflow._oneflow_internal.bool
 locals()["char"] = oneflow._oneflow_internal.char
 locals()["float16"] = oneflow._oneflow_internal.float16
 locals()["half"] = oneflow._oneflow_internal.float16
@@ -162,10 +163,7 @@ from oneflow.compatible.single_client.framework.function_util import (
 from oneflow.compatible.single_client.framework.generator import (
     create_generator as Generator,
 )
-from oneflow.compatible.single_client.framework.generator import (
-    default_generator,
-    manual_seed,
-)
+from oneflow.compatible.single_client.framework.generator import manual_seed
 from oneflow.compatible.single_client.framework.input_blob_def import (
     DeprecatedFixedTensorDef as FixedTensorDef,
 )

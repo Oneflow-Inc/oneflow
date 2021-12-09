@@ -19,12 +19,13 @@ namespace oneflow {
 
 template<typename KEY, typename IDX>
 struct UniqueKernelUtil<DeviceType::kCPU, KEY, IDX> {
-  static void Unique(DeviceCtx* ctx, int64_t n, const KEY* in, IDX* num_unique, KEY* unique_out,
+  static void Unique(ep::Stream* stream, int64_t n, const KEY* in, IDX* num_unique, KEY* unique_out,
                      IDX* idx_out, void* workspace, int64_t workspace_size_in_bytes) {
     UniqueKernelUtil<DeviceType::kCPU, KEY, IDX>::UniqueWithCounts(
-        ctx, n, in, num_unique, unique_out, idx_out, nullptr, workspace, workspace_size_in_bytes);
+        stream, n, in, num_unique, unique_out, idx_out, nullptr, workspace,
+        workspace_size_in_bytes);
   }
-  static void UniqueWithCounts(DeviceCtx* ctx, int64_t n, const KEY* in, IDX* num_unique,
+  static void UniqueWithCounts(ep::Stream* stream, int64_t n, const KEY* in, IDX* num_unique,
                                KEY* unique_out, IDX* idx_out, IDX* count, void* workspace,
                                int64_t workspace_size_in_bytes) {
     HashMap<KEY, IDX> map;
@@ -45,11 +46,11 @@ struct UniqueKernelUtil<DeviceType::kCPU, KEY, IDX> {
     }
     *num_unique = map.size();
   }
-  static void GetUniqueWorkspaceSizeInBytes(DeviceCtx* ctx, int64_t n,
+  static void GetUniqueWorkspaceSizeInBytes(ep::Stream* stream, int64_t n,
                                             int64_t* workspace_size_in_bytes) {
     *workspace_size_in_bytes = 1;
   }
-  static void GetUniqueWithCountsWorkspaceSizeInBytes(DeviceCtx* ctx, int64_t n,
+  static void GetUniqueWithCountsWorkspaceSizeInBytes(ep::Stream* stream, int64_t n,
                                                       int64_t* workspace_size_in_bytes) {
     *workspace_size_in_bytes = 1;
   }

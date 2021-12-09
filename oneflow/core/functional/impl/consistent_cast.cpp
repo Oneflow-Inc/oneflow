@@ -25,7 +25,6 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/autograd/autograd_engine.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"

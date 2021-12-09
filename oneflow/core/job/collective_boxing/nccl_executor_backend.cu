@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
-#include "oneflow/core/kernel/batch_memcpy_kernel_util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/device/cuda_util.h"
@@ -127,7 +126,7 @@ class CommRank final {
 
   ~CommRank() {
     if (nccl_comm_ != nullptr) {
-      CudaCurrentDeviceGuard(device_id_);
+      CudaCurrentDeviceGuard guard(device_id_);
       OF_NCCL_CHECK(ncclCommDestroy(nccl_comm_));
     }
   }
@@ -137,7 +136,7 @@ class CommRank final {
   ncclComm_t nccl_comm() const { return nccl_comm_; }
 
   void InitRank(ncclUniqueId unique_id, int32_t global_rank_count) {
-    CudaCurrentDeviceGuard(device_id_);
+    CudaCurrentDeviceGuard guard(device_id_);
     OF_NCCL_CHECK(ncclCommInitRank(&nccl_comm_, global_rank_count, unique_id, global_rank_));
   }
 
@@ -164,7 +163,7 @@ class CommGroup final {
     global_rank_count_ = device_set.device_size();
     std::vector<int32_t> local_ranks;
     for (int32_t i = 0; i < global_rank_count_; ++i) {
-      if (device_set.device(i).machine_id() == this_machine_id) { local_ranks.push_back(i); }
+      if (device_set.device(i).machine_id() == this_machine_id) { local_ranks.emplace_back(i); }
     }
     const int32_t local_rank_count = local_ranks.size();
     CHECK_GT(local_rank_count, 0);
@@ -225,6 +224,7 @@ class StreamCtx {
   }
 
   void PollEvent() {
+    CudaCurrentDeviceGuard guard(device_id_);
     while (true) {
       std::pair<cudaEvent_t, std::function<void()>> cb_event;
       ChannelStatus status = cb_event_chan_.Receive(&cb_event);
@@ -559,7 +559,7 @@ struct NcclExecutorBackend::Impl {
               group_size = 0;
             }
           }
-          group.push_back(request_id);
+          group.emplace_back(request_id);
           group_size += size;
         });
     if (!group.empty()) {

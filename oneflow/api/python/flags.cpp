@@ -45,12 +45,44 @@ ONEFLOW_API_PYBIND11_MODULE("flags", m) {
 #endif  // _GLIBCXX_USE_CXX11_ABI
   });
 
+  m.def("with_mlir", []() {
+#ifdef WITH_MLIR
+    return true;
+#else
+    return false;
+#endif  // WITH_MLIR
+  });
+
+  m.def("with_mlir_cuda_codegen", []() {
+#ifdef WITH_MLIR_CUDA_CODEGEN
+    return true;
+#else
+    return false;
+#endif  // WITH_MLIR_CUDA_CODEGEN
+  });
+
   m.def("with_xla", []() {
 #ifdef WITH_XLA
     return true;
 #else
     return false;
 #endif  // WITH_XLA
+  });
+
+  m.def("with_openvino", []() {
+#ifdef WITH_OPENVINO
+    return true;
+#else
+    return false;
+#endif  // WITH_OPENVINO
+  });
+
+  m.def("with_tensorrt", []() {
+#ifdef WITH_TENSORRT
+    return true;
+#else
+    return false;
+#endif  // WITH_TENSORRT
   });
 
   m.def("with_rdma", []() {

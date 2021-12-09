@@ -18,7 +18,8 @@ limitations under the License.
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 #include "oneflow/core/register/tensor_slice_copier.h"
-#include "oneflow/core/device/cpu_device_context.h"
+#include "oneflow/core/ep/cpu/cpu_stream.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
@@ -61,10 +62,12 @@ void SnapshotReader::Read(const std::string& key, const Shape& logical_blob_shap
     std::vector<char> buffer(logical_blob_size);
     PersistentInStream in_stream(SnapshotFS(), path);
     in_stream.ReadFully(buffer.data(), logical_blob_size);
-    TensorSliceCopier copier(slice, logical_blob_slice, data_type);
-    CpuDeviceCtx device_ctx;
-    std::unique_ptr<MemoryCopier> host_memory_copier(NewDefaultMemoryCopier(DeviceType::kCPU));
-    copier.Copy(&device_ctx, *host_memory_copier, dst, buffer.data());
+    TensorSliceCopier copier(slice, logical_blob_slice, data_type, DeviceType::kCPU);
+    auto device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCPU, 0);
+    CHECK(device);
+    auto* stream = device->CreateStream();
+    copier.Copy(stream, dst, buffer.data());
+    device->DestroyStream(stream);
   }
 }
 

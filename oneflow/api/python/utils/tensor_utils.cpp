@@ -54,9 +54,9 @@ Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t) {
 
 template<typename T>
 Maybe<void> CopyMirroredTensorFromUntypedArray(const std::shared_ptr<Tensor>& tensor,
-                                               py::object array) {
-  return CopyBetweenMirroredTensorAndNumpy(tensor, array.cast<py::array_t<T>>(),
-                                           OfBlob_CopyFromBuffer, "mut");
+                                               PyObject* array) {
+  return CopyBetweenMirroredTensorAndNumpy<T>(tensor, array, BlobNumpyCopyUtil<T>::From, "mut",
+                                              /*block_host_until_done=*/false);
 }
 
 Maybe<std::string> GetCopyMirroredTensorToNumpyFuncName(DataType dtype) {
@@ -64,7 +64,7 @@ Maybe<std::string> GetCopyMirroredTensorToNumpyFuncName(DataType dtype) {
   static const HashMap<int64_t, std::shared_ptr<std::string>> data_type2func_name{
 #define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
   {type_proto, std::make_shared<std::string>("_copy_to_numpy_" #type_cpp)},
-      OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ)
+      OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 #undef DATA_TYPE_FUNC_NAME_PAIR
   };
   return JUST(MapAt(data_type2func_name, static_cast<int64_t>(dtype)));
@@ -75,7 +75,7 @@ Maybe<std::string> GetCopyMirroredTensorFromNumpyFuncName(DataType dtype) {
   static const HashMap<int64_t, std::shared_ptr<std::string>> data_type2func_name{
 #define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
   {type_proto, std::make_shared<std::string>("_copy_from_numpy_" #type_cpp)},
-      OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ)
+      OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 #undef DATA_TYPE_FUNC_NAME_PAIR
   };
   return JUST(MapAt(data_type2func_name, static_cast<int64_t>(dtype)));
@@ -103,8 +103,8 @@ MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
   const auto* tensor_buffer_ptr = blob.dptr<TensorBuffer>();
   for (int64_t i = 0; i < blob_shape.elem_cnt(); ++i) {
     const TensorBuffer* tensor_buffer = tensor_buffer_ptr + i;
-    shapes.push_back(tensor_buffer->shape());
-    dtypes.push_back(DType::Get(tensor_buffer->data_type()).GetOrThrow());
+    shapes.emplace_back(tensor_buffer->shape());
+    dtypes.emplace_back(DType::Get(tensor_buffer->data_type()).GetOrThrow());
   }
   return std::make_tuple(shapes, dtypes);
 }
@@ -127,18 +127,21 @@ Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor) {
 
 #define MAKE_SWITCH_ENTRY(func_name, dtype) func_name<dtype>
 DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, CopyMirroredTensorFromUntypedArray, MAKE_SWITCH_ENTRY,
-                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ));
+                          MAKE_DATA_TYPE_CTRV_SEQ(POD_AND_HALF_DATA_TYPE_SEQ));
 
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                       const Optional<Symbol<Device>>& device, bool requires_grad) {
-  auto* np_arr_pyobject = PyArray_FromAny(data, nullptr, 0, 0, NPY_ARRAY_DEFAULT, nullptr);
-  if (!np_arr_pyobject) {
-    return Error::RuntimeError() << "Can not convert input data to a numpy array.";
+  PyObject* array = NULL;
+  if (PyArray_Check(data)) {
+    // Only NPY_CORDER is supported, and returns a new C-style contiguous array.
+    array = PyArray_NewCopy((PyArrayObject*)data, NPY_CORDER);
+  } else {
+    // NPY_ARRAY_DEFAULT is NPY_ARRAY_C_CONTIGUOUS | NPY_ARRAY_BEHAVED, so the
+    // array with NPY_ARRAY_DEFAULT flag is C-style contiguous.
+    array = PyArray_FromAny(data, nullptr, 0, 0, NPY_ARRAY_DEFAULT | NPY_ARRAY_ENSURECOPY, nullptr);
+    if (!array) { return Error::RuntimeError() << "Can not convert input data to a numpy array."; }
   }
-  // transfer the ownership to np_arr_raii so that the ref count
-  // can be decreased automatically when function exits either normally or abnormally
-  auto np_arr_raii = py::reinterpret_steal<py::array>(np_arr_pyobject);
-  auto* np_arr = reinterpret_cast<PyArrayObject*>(np_arr_pyobject);
+  auto* np_arr = reinterpret_cast<PyArrayObject*>(array);
   const npy_intp* dims_ptr = PyArray_SHAPE(np_arr);
   const Shape shape(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(np_arr)));
   DataType data_type = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
@@ -151,8 +154,9 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   }
   std::shared_ptr<Tensor> tensor =
       JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device_));
-  JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(data_type), tensor, np_arr_raii));
+  JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(data_type), tensor, array));
 
+  Py_DECREF(array);
   // Cast to float if data is double sequence, rather than numpy array.
   Symbol<DType> dtype_;
   if (dtype) {
@@ -183,24 +187,24 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
                                            Symbol<ParallelDesc> placement,
                                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
                                            bool requires_grad) {
-  auto* np_arr_pyobject = PyArray_FromAny(data, nullptr, 0, 0, NPY_ARRAY_DEFAULT, nullptr);
-  if (!np_arr_pyobject) {
-    return Error::RuntimeError() << "Can not convert input data to a numpy array.";
+  PyObject* array = NULL;
+  if (PyArray_Check(data)) {
+    // Only NPY_CORDER is supported, and returns a new C-style contiguous array.
+    array = PyArray_NewCopy((PyArrayObject*)data, NPY_CORDER);
+  } else {
+    // NPY_ARRAY_DEFAULT is NPY_ARRAY_C_CONTIGUOUS | NPY_ARRAY_BEHAVED, so the
+    // array with NPY_ARRAY_DEFAULT flag is C-style contiguous.
+    array = PyArray_FromAny(data, nullptr, 0, 0, NPY_ARRAY_DEFAULT | NPY_ARRAY_ENSURECOPY, nullptr);
+    if (!array) { return Error::RuntimeError() << "Can not convert input data to a numpy array."; }
   }
-  // transfer the ownership to np_arr_raii so that the ref count
-  // can be decreased automatically when function exits either normally or abnormally
-  auto np_arr_raii = py::reinterpret_steal<py::array>(np_arr_pyobject);
-  auto* np_arr = reinterpret_cast<PyArrayObject*>(np_arr_pyobject);
+  auto* np_arr = reinterpret_cast<PyArrayObject*>(array);
   const npy_intp* dims_ptr = PyArray_SHAPE(np_arr);
   const Shape shape(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(np_arr)));
   DataType data_type = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
 
   if (placement->parallel_num() > 1) {
-    py::array contiguous_array = py::reinterpret_steal<py::array>(reinterpret_cast<PyObject*>(
-        PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(np_arr_raii.ptr()))));
-    py::buffer_info buf = contiguous_array.request();
-    const void* buf_ptr = (const void*)buf.ptr;
-    size_t array_size = buf.size;
+    const void* buf_ptr = PyArray_DATA(np_arr);
+    size_t array_size = PyArray_SIZE(np_arr);
     CHECK_EQ_OR_RETURN(array_size, shape.elem_cnt());
     size_t byte_size = array_size * GetSizeOfDataType(data_type);
     JUST(DataConsistencyCheck(buf_ptr, byte_size, placement));
@@ -215,8 +219,9 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
   }
   std::shared_ptr<Tensor> local_tensor =
       JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device));
-  JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(data_type), local_tensor, np_arr_raii));
+  JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(data_type), local_tensor, array));
 
+  Py_DECREF(array);
   // Cast to float if data is double sequence, rather than numpy array.
   Symbol<DType> dtype_;
   if (dtype) {
@@ -231,7 +236,7 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
   Symbol<cfg::NdSbp> broadcast_nd_sbp = JUST(CachedGetAllBroadcastNdSbp(sbp_dims));
 
   std::shared_ptr<Tensor> broadcast_tensor = JUST(functional::LocalToConsistent(
-      local_tensor, placement, *JUST(GetSbpList(broadcast_nd_sbp)), shape, dtype_));
+      local_tensor, placement, *JUST(GetSbpList(broadcast_nd_sbp)), shape, local_tensor->dtype()));
 
   std::vector<Symbol<cfg::SbpParallel>> grad_sbp_tuple;
   return JUST(functional::ToConsistent(broadcast_tensor, placement, sbp_tuple, grad_sbp_tuple));

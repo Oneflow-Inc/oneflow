@@ -42,6 +42,7 @@ jobs:
           python3 -m pip install -U pip setuptools wheel
           python3 -m pip install oss2
           python3 tools/package_mirror.py -i cmake
+          python3 tools/package_mirror.py -i oneflow/ir
 
   check_license_and_format:
     name: License and format
@@ -50,8 +51,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
+          ref: ${{ github.head_ref }}
       - name: Check license
         id: license_check
         run: |
@@ -100,6 +101,17 @@ jobs:
         with:
           name: license_and_format-${{ github.sha }}.patch
           path: license_and_format.patch
+      - name: Add comment
+        if: ${{ failure() }}
+        uses: actions/github-script@v4
+        with:
+          script: |
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'Code got formatted by CI. Please request CI again if you still want to have this PR merged. If the PR is from a forked repo, please download the patch files from the GitHub Actions web page and apply them locally.'
+            })
       - name: Please request CI again
         if: ${{ failure() }}
         run: |
@@ -168,9 +180,9 @@ jobs:
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@add-experimental
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@canary-release
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -214,9 +226,9 @@ jobs:
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-experimental
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@canary-release
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -230,7 +242,7 @@ jobs:
         run: |
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
-      - uses: Oneflow-Inc/get-oneflow@add-experimental
+      - uses: Oneflow-Inc/get-oneflow@canary-release
         name: Build manylinux cpu only
         id: build-cpu
         if: ${{ matrix.entry =='cpu' && !matrix.cache-hit }}
@@ -251,7 +263,7 @@ jobs:
           python-versions: |
             3.6
             3.7
-      - uses: Oneflow-Inc/get-oneflow@add-experimental
+      - uses: Oneflow-Inc/get-oneflow@canary-release
         name: Build manylinux cu102
         id: build-cuda
         if: ${{ matrix.entry =='cu102' && !matrix.cache-hit }}
@@ -272,7 +284,7 @@ jobs:
           python-versions: |
             3.6
             3.7
-      - uses: Oneflow-Inc/get-oneflow@add-experimental
+      - uses: Oneflow-Inc/get-oneflow@canary-release
         name: Build manylinux cu101_xla
         id: build-xla
         if: ${{ matrix.entry =='cu101_xla' && !matrix.cache-hit && needs.changed_files.outputs.should_run_single_client_tests == '1' }}
@@ -294,7 +306,7 @@ jobs:
             3.6
       - name: Upload bin
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@add-experimental
+        uses: Oneflow-Inc/get-oneflow/digest/upload@canary-release
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -305,7 +317,7 @@ jobs:
           dst-dir: bin
       - name: Upload whl
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@add-experimental
+        uses: Oneflow-Inc/get-oneflow/digest/upload@canary-release
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -320,7 +332,13 @@ jobs:
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     runs-on: [self-hosted, linux, build]
     steps:
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-experimental
+      - name: Fix permissions
+        run: |
+          set -x
+          docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
+      - name: Checkout Oneflow-Inc/oneflow
+        uses: actions/checkout@v2
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@canary-release
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -329,14 +347,6 @@ jobs:
           entry: build-with-clang
           digest-type: build
           mark-as-completed: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
-      - name: Fix permissions
-        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
-        run: |
-          set -x
-          docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
-      - name: Checkout Oneflow-Inc/oneflow
-        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
-        uses: actions/checkout@v2
       - name: Checkout Oneflow-Inc/conda-env
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         uses: actions/checkout@v2
@@ -344,7 +354,7 @@ jobs:
           repository: Oneflow-Inc/conda-env
           ref: 30a7f00eb48ee9009d85a848e720823e5054c66b
           path: conda-env
-      - uses: Oneflow-Inc/get-oneflow@add-experimental
+      - uses: Oneflow-Inc/get-oneflow@canary-release
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         name: Build with clang10
         with:
@@ -370,9 +380,9 @@ jobs:
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@add-experimental
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@canary-release
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -407,14 +417,14 @@ jobs:
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
       - name: Remove container
         timeout-minutes: 45
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-experimental
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@canary-release
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -430,7 +440,7 @@ jobs:
           exit 1
       - name: Download wheel and binary
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (!fromJson(matrix.is-xla) || (fromJson(matrix.is-xla) && needs.changed_files.outputs.should_run_single_client_tests == '1')) }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@add-experimental
+        uses: Oneflow-Inc/get-oneflow/digest/download@canary-release
         id: download-digest
         timeout-minutes: 10
         with:
@@ -472,13 +482,17 @@ jobs:
           set -x
           EXTRA_DOCKER_ARGS+=" --network host "
           echo "EXTRA_DOCKER_ARGS=${EXTRA_DOCKER_ARGS}" >> $GITHUB_ENV
+      - name: Pull image
+        continue-on-error: true
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        run: |
+          docker pull ${{ env.TEST_IMG_TAG }}
       - name: Start container
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         working-directory: ${{ env.ONEFLOW_SRC }}
         env:
           ONEFLOW_BIN_PATH: ${{ steps.download-digest.outputs.entry-dir }}/bin
         run: |
-          docker pull ${{ env.TEST_IMG_TAG }}
           docker run -d --rm --privileged --shm-size=8g \
             --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
             --runtime=nvidia \
@@ -560,7 +574,20 @@ jobs:
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/dry_run_test.sh
       - name: Checkout Oneflow-Inc/models
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cuda' }}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/models
+          ref: test_resnet50_with_ci
+          path: oneflow-models-resnet50
+      - name: ResNet50 Graph DDP test
+        id: models-resnet50
+        timeout-minutes: 20
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
+        run: |
+          docker exec -e ONEFLOW_MODELS_DIR=$PWD/oneflow-models-resnet50 ${{ env.TEST_CONTAINER_NAME }} bash ci/test/test_resnet50_graph_ddp.sh
+      - name: Checkout Oneflow-Inc/models
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
         uses: actions/checkout@v2
         with:
           repository: Oneflow-Inc/models
@@ -569,12 +596,11 @@ jobs:
       - name: Speed test
         id: speed
         timeout-minutes: 20
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cuda' }}
-        continue-on-error: true
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
         run: |
           docker exec -e ONEFLOW_MODELS_DIR=$PWD/oneflow-models ${{ env.TEST_CONTAINER_NAME }} bash ci/test/test_speed_multi_client.sh
       - name: Post speed stats
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cuda' }}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
         continue-on-error: true
         uses: actions/github-script@v4
         with:
@@ -636,6 +662,7 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/graph ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
+          docker exec ${{ env.TEST_CONTAINER_NAME }} python3 -m oneflow.distributed.launch --nproc_per_node 8 $PWD/python/oneflow/test/graph/test_neq_device_process_num.py
       - name: Single client op test
         timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && contains(fromJson('["cuda", "cpu"]'), matrix.device) && matrix.test-type == 'legacy-op' && !fromJson(matrix.is-distributed) && needs.changed_files.outputs.should_run_single_client_tests == '1' }}
@@ -686,7 +713,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: 'CI failed, removing label automerge'
+              body: 'CI failed when running job: ${{ matrix.entry }}. PR label automerge has been removed'
             })
       - name: Print stacks in all core files
         timeout-minutes: 45
@@ -714,10 +741,10 @@ jobs:
       - name: Check out OneFlow
         uses: actions/checkout@v2
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-experimental
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@canary-release
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -793,5 +820,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: 'CI failed, removing label automerge'
+              body: 'Static analysis with clang failed. PR label automerge has been removed'
             })

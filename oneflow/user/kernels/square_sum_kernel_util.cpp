@@ -19,13 +19,14 @@ namespace oneflow {
 
 template<typename T>
 struct SquareSumKernelUtil<DeviceType::kCPU, T> {
-  static void SquareSum(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
+  static void SquareSum(ep::Stream* stream, int64_t n, const T* x, T* y) {
     T sum = 0;
     FOR_RANGE(int64_t, i, 0, n) { sum += x[i] * x[i]; }
     *y = sum;
   }
 
-  static void MultiSquareSum(DeviceCtx* ctx, const std::vector<SquareSumParam<T>>& params, T* y) {
+  static void MultiSquareSum(ep::Stream* stream, const std::vector<SquareSumParam<T>>& params,
+                             T* y) {
     T sum = 0;
     FOR_RANGE(int64_t, i, 0, params.size()) {
       const auto& p = params[i];

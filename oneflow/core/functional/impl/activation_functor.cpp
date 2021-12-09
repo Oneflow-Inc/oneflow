@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -25,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/functional/sequence_function.h"
 
 namespace oneflow {
 namespace one {
@@ -170,6 +172,44 @@ class EluGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class CeluFunctor {
+ public:
+  CeluFunctor() { op_ = CHECK_JUST(one::OpBuilder("celu").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& alpha,
+                           bool inplace) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("alpha", alpha));
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+      return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class CeluGradFunctor {
+ public:
+  CeluGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("celu_grad").Input("x").Input("dy").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& dy, const double& alpha) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("alpha", alpha));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class GeluFunctor : public UnaryFunctor {
  public:
   GeluFunctor() { op_ = CHECK_JUST(one::OpBuilder("gelu").Input("in").Output("out").Build()); }
@@ -197,9 +237,10 @@ class GluFunctor {
                                   << " is size " << nc;
     nc = nc / 2;
     std::vector<int64_t> split_sizes(2, nc);
-    auto split_x = JUST(SplitWithSize(input, split_sizes, dim));
-    auto sgmd_x1 = JUST(Sigmoid(split_x->at(1)));
-    return Mul(split_x->at(0), sgmd_x1);
+    const auto split_x = JUST(SplitWithSize(input, split_sizes, dim));
+    return sequence_function(functional::Sigmoid)
+        .then(std::bind(functional::Mul, split_x->at(0), std::placeholders::_1))
+        .call(split_x->at(1));
   }
 };
 
@@ -259,9 +300,12 @@ class SoftmaxFunctorBase {
       input_perm[dim_] = input_perm[input_perm.size() - 1];
       input_perm[input_perm.size() - 1] = dim_;
 
-      auto result = JUST(functional::Transpose(input, input_perm));
-      result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {result}));
-      return functional::Transpose(result, input_perm);
+      return sequence_function(functional::Transpose)
+          .then([&](const std::shared_ptr<one::Tensor>& x) {
+            return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+          })
+          .then(std::bind(functional::Transpose, std::placeholders::_1, input_perm))
+          .call(input, input_perm);
     }
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input});
@@ -279,6 +323,21 @@ class SoftmaxFunctor : public SoftmaxFunctorBase {
   SoftmaxFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("softmax").Input("in").Output("out").Build());
   }
+};
+
+class SoftmaxGradFunctor {
+ public:
+  SoftmaxGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softmax_grad").Input("y").Input("dy").Output("dx").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {y, dy});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class LogSoftmaxFunctor : public SoftmaxFunctorBase {
@@ -394,12 +453,15 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::HardTanhGradFunctor>("HardTanhGrad");
   m.add_functor<impl::EluFunctor>("Elu");
   m.add_functor<impl::EluGradFunctor>("EluGrad");
+  m.add_functor<impl::CeluFunctor>("Celu");
+  m.add_functor<impl::CeluGradFunctor>("CeluGrad");
   m.add_functor<impl::GeluFunctor>("Gelu");
   m.add_functor<impl::GeluGradFunctor>("GeluGrad");
   m.add_functor<impl::GluFunctor>("Glu");
   m.add_functor<impl::HardSigmoidFunctor>("HardSigmoid");
   m.add_functor<impl::HardSigmoidGradFunctor>("HardSigmoidGrad");
   m.add_functor<impl::SoftmaxFunctor>("Softmax");
+  m.add_functor<impl::SoftmaxGradFunctor>("SoftmaxGrad");
   m.add_functor<impl::LogSoftmaxFunctor>("LogSoftmax");
   m.add_functor<impl::HardSwishFunctor>("HardSwish");
   m.add_functor<impl::HardSwishGradFunctor>("HardSwishGrad");

@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_operand.h"
-#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/control/global_process_ctx.h"
 
@@ -64,7 +64,7 @@ class ComputeRankFrontSeqCallbackInstructionType final
 
   using stream_type = HostStreamType;
 
-  void Infer(Instruction* instruction) const override { UNIMPLEMENTED(); }
+  void Infer(Instruction* instruction) const override {}
   void Compute(Instruction* instruction) const override { Run(instruction->instr_msg()); }
 };
 COMMAND(RegisterInstructionType<ComputeRankFrontSeqCallbackInstructionType>(
@@ -78,9 +78,9 @@ class CtrlComputeRankFrontSeqCallbackInstructionType final
 
   using stream_type = ControlStreamType;
 
-  void Infer(VirtualMachine*, InstructionMsg* instr_msg) const override { UNIMPLEMENTED(); }
-  void Compute(VirtualMachine*, InstructionMsg* instr_msg) const override { Run(*instr_msg); }
-  void Infer(Instruction* instruction) const override { UNIMPLEMENTED(); }
+  void Infer(VirtualMachineEngine*, InstructionMsg* instr_msg) const override {}
+  void Compute(VirtualMachineEngine*, InstructionMsg* instr_msg) const override { Run(*instr_msg); }
+  void Infer(Instruction* instruction) const override {}
   void Compute(Instruction* instruction) const override { UNIMPLEMENTED(); }
 };
 COMMAND(RegisterInstructionType<CtrlComputeRankFrontSeqCallbackInstructionType>(
@@ -102,7 +102,7 @@ class ComputeGlobalFrontSeqBarrierInstructionType final
   ComputeGlobalFrontSeqBarrierInstructionType() = default;
   ~ComputeGlobalFrontSeqBarrierInstructionType() override = default;
 
-  void Infer(Instruction* instruction) const override { UNIMPLEMENTED(); }
+  void Infer(Instruction* instruction) const override {}
   void Compute(Instruction* instruction) const override { OF_ENV_BARRIER(); }
 };
 COMMAND(RegisterInstructionType<ComputeGlobalFrontSeqBarrierInstructionType>(

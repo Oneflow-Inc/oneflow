@@ -30,10 +30,39 @@ limitations under the License.
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/ep/include/active_device_guard.h"
 
 namespace oneflow {
 
 namespace {
+
+class EpBasedEventRecord : public EventRecord {
+ public:
+  OF_DISALLOW_COPY(EpBasedEventRecord);
+  EpBasedEventRecord(ep::Event* event, ep::Device* device) : event_(event), device_(device) {}
+  ~EpBasedEventRecord() {
+    ep::ActiveDeviceGuard guard(device_);
+    device_->DestroyEvent(event_);
+  };
+
+  bool QueryDone() const override {
+    ep::ActiveDeviceGuard guard(device_);
+    bool done = CHECK_JUST(event_->QueryDone());
+    return done;
+  }
+
+ private:
+  ep::Event* event_;
+  ep::Device* device_;
+};
+
+std::shared_ptr<EventRecord> MakeEventRecord(ep::Stream* stream) {
+  ep::Device* device = stream->device();
+  ep::ActiveDeviceGuard guard(device);
+  ep::Event* event = device->CreateEvent();
+  stream->RecordEvent(event);
+  return std::make_shared<EpBasedEventRecord>(event, device);
+}
 
 class LazyJobInstance final : public JobInstance {
  public:
@@ -93,11 +122,12 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
     const auto& cur_nn_graph = GetCurNNGraph(instruction);
     auto* device_ctx = GetLazyJobDeviceCtx(instruction);
 
+    static thread_local int64_t run_id = 0;
     OF_PROFILER_RANGE_PUSH("WaitUntilQueueEmptyIfFrontNNGraphNotEquals");
     device_ctx->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(cur_nn_graph);
     OF_PROFILER_RANGE_POP();  // WaitUntilQueueEmptyIfFrontNNGraphNotEquals
     {
-      OF_PROFILER_RANGE_PUSH("MakeJobInstance");
+      OF_PROFILER_RANGE_PUSH("i=" + std::to_string(run_id++) + "-MakeJobInstance");
       const auto& job_instance = MakeJobInstance(instruction);
       OF_PROFILER_RANGE_POP();  // MakeJobInstance
       OF_PROFILER_RANGE_PUSH("Send all buffers to BufferMgr");
@@ -156,14 +186,12 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
           OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
           const Blob* blob = &input_blob_object->blob();
           CHECK_NOTNULL(blob);
-          of_blob->mut_blob()->CopyHeaderFrom(of_blob->mut_device_ctx(), blob);
+          of_blob->mut_blob()->CopyHeaderFrom(blob);
           if (blob->dptr() == nullptr) {
             end_event_record->Init(std::make_shared<NaiveEventRecord>());
           } else {
-            AutoMemcpy(of_blob->mut_device_ctx(), of_blob->mut_blob(), blob);
-            auto* event_record_provider =
-                CHECK_NOTNULL(dynamic_cast<EventRecordProvider*>(of_blob->mut_device_ctx()));
-            end_event_record->Init(event_record_provider->MakeEventRecord());
+            AutoMemcpy(of_blob->stream(), of_blob->mut_blob(), blob);
+            end_event_record->Init(MakeEventRecord(of_blob->stream()));
           }
         };
         CHECK(push_cbs.emplace(input_op_name, PushCb).second);
@@ -183,14 +211,12 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
           OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
           Blob* mut_blob = output_blob_object->mut_blob();
           CHECK_NOTNULL(mut_blob);
-          mut_blob->CopyHeaderFrom(of_blob->mut_device_ctx(), &of_blob->blob());
+          mut_blob->CopyHeaderFrom(&of_blob->blob());
           if (mut_blob->dptr() == nullptr) {
             end_event_record->Init(std::make_shared<NaiveEventRecord>());
           } else {
-            AutoMemcpy(of_blob->mut_device_ctx(), mut_blob, &of_blob->blob());
-            auto* event_record_provider =
-                CHECK_NOTNULL(dynamic_cast<EventRecordProvider*>(of_blob->mut_device_ctx()));
-            end_event_record->Init(event_record_provider->MakeEventRecord());
+            AutoMemcpy(of_blob->stream(), mut_blob, &of_blob->blob());
+            end_event_record->Init(MakeEventRecord(of_blob->stream()));
           }
         };
         CHECK(pull_cbs.emplace(output_op_name, PullCb).second);
