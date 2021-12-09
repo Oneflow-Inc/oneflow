@@ -298,6 +298,38 @@ def GetDualObject(name, pytorch, oneflow):
                                         flow_res_id_eager2_graph[
                                             id(oneflow_res)
                                         ] = test_g_res
+                                elif (
+                                    oneflow.__module__ == "oneflow._oneflow_internal._C"
+                                ):
+                                    tensor_args = []
+                                    other_args = []
+                                    for a in oneflow_args:
+                                        if isinstance(a, flow.Tensor):
+                                            tensor_args.append(a)
+                                        else:
+                                            other_args.append(a)
+
+                                    class TestGraphOfFunctional(flow.nn.Graph):
+                                        def __init__(self):
+                                            super().__init__()
+                                            self.test_module = oneflow
+
+                                        def build(self, *tensor_args):
+                                            return self.test_module(
+                                                *tensor_args, *other_args
+                                            )
+
+                                    test_g = TestGraphOfFunctional()
+                                    test_g_res = test_g(*tensor_args)
+                                    if isinstance(test_g_res, tuple):
+                                        for idx, g_res in enumerate(test_g_res):
+                                            flow_res_id_eager2_graph[
+                                                id(oneflow_res[idx])
+                                            ] = g_res
+                                    else:
+                                        flow_res_id_eager2_graph[
+                                            id(oneflow_res)
+                                        ] = test_g_res
 
                         return GetDualObject("unused", pytorch_res, oneflow_res)
 
@@ -556,6 +588,7 @@ def autotest(
     atol=1e-05,
     check_graph=True,
     check_allclose=True,
+    func_name="",
 ):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
