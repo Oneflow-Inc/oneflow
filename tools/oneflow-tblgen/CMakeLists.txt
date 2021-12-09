@@ -24,22 +24,14 @@ if(NOT json_POPULATED)
 endif()
 include_directories(${json_SOURCE_DIR}/include)
 
-add_tablegen(oneflow_tblgen oneflow
+add_tablegen(oneflow_tblgen llvm
   tablegen.cpp
   op_schema_emitter.cpp
-
-  ADDITIONAL_HEADER_DIRS
-
-  DEPENDS
 )
-install(TARGETS oneflow_tblgen
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-  EXCLUDE_FROM_ALL
-  COMPONENT OneFlowSupport
-)
+
 add_custom_target(install-oneflow-tblgen
   DEPENDS oneflow_tblgen
   COMMAND
-      "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=OneFlowSupport
+      "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=OneFlowTableGen
       -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
 )
