@@ -133,20 +133,17 @@ Maybe<TensorTuple> ExpandIndices(const TensorTuple& indices) {
 }
 
 Maybe<bool> IsContinuosSubspace(const TensorTuple& indices) {
-  auto first_pos = 0;
-  auto last_pos = 0;
-  auto subspace_num = 0;
-  for (auto i = 0; i < indices.size(); i++) {
-    if (indices[i]) {
-      if (subspace_num++ == 0) { first_pos = i; }
-      last_pos = i;
+  int token = 0;
+  for (int i = 0; i < indices.size(); ++i) {
+    if (indices.at(i) && !token) {
+      token = 1;
+    } else if (indices.at(i) && token) {
+      if (token != 1) { return false; }
+    } else if (token) {
+      token += 1;
     }
   }
-  if (subspace_num == last_pos - first_pos + 1) {
-    return true;
-  } else {
-    return false;
-  }
+  return true;
 }
 
 Maybe<void> TransposeFront(const std::shared_ptr<Tensor>& input, const TensorTuple& indices,
