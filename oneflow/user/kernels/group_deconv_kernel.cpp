@@ -377,8 +377,8 @@ class DeconvCpuKernel final : public user_op::OpKernel {
       FOR_RANGE(int64_t, g, 0, deconv_state->groups) {
         NewKernelUtil<DeviceType::kCPU>::OFGemm(
             ctx->stream(), CblasTrans, deconv_state->is_out_diff_need_trans_,
-            m,  //   ci * kd * kh * kw
-            n,  //  od * oh * ow / groups
+            m,  //  (co / groups) * kd * kh * kw
+            n,  //  od * oh * ow
             k,  //  filter / groups
             static_cast<T>(1), weight_ptr, input_ptr, static_cast<T>(0), col_buf->mut_dptr<T>());
         // out = col2im(col_buf')
