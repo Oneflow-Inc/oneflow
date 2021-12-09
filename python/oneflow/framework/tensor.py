@@ -581,7 +581,7 @@ def _bmm(self, other):
 
 
 def _chunk(self, chunks=None, dim=None):
-    return flow.chunk(self, chunks, dim)
+    return flow._C.chunk(self, chunks, dim)
 
 
 def _all(self, dim=None, keepdim=False):

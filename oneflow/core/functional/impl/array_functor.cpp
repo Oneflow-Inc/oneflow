@@ -1950,7 +1950,8 @@ class ChunkFunctor {
     int64_t axis = dim;
     if (axis < 0) { axis += x->ndim(); }
     CHECK_OR_RETURN(axis >= 0 && axis < x->ndim())
-        << "The dim " << dim << " is out of bound " << x->ndim() - 1;
+        << "Dimension out of range (expected to be in range of [" << -(x->ndim()) << ", "
+        << x->ndim() - 1 << "], but got " << dim;
     CHECK_GE_OR_RETURN(split_size, 0)
         << "split expects split_size be non-negative, but got split_size=" << split_size;
     int64_t dim_size = x->shape()->At(axis);
