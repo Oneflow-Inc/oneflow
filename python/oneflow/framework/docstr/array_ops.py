@@ -36,9 +36,8 @@ add_docstr(
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> import numpy as np
         
-        >>> input = flow.tensor(np.random.randn(2,  3,  4), dtype=flow.float32)
+        >>> input = flow.randn(2,  3,  4)
         >>> output = flow.diagonal(input,offset=1,dim1=1,dim2=0)
         >>> output.shape
         oneflow.Size([4, 1])
