@@ -93,15 +93,15 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
 
 Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
   const auto& eager_blob_object = eager_blob_object_;
-  tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_buffer());
+  tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_storage());
   const auto& parallel_desc = JUST(Placement4Device(this->device())).shared_from_symbol();
   tensor_storage_->set_releaser_hook(
-      [eager_blob_object, parallel_desc](const std::shared_ptr<vm::TensorBuffer>&) {
+      [eager_blob_object, parallel_desc](const std::shared_ptr<vm::TensorStorage>&) {
         CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
           JUST(builder->ReleaseTensor(eager_blob_object, parallel_desc));
-          if (JUST(eager_blob_object->compute_local_dep_object())->last_used_device().has_value()) {
+          if (eager_blob_object->last_used_device().has_value()) {
+            const auto& device = JUST(eager_blob_object->producer_op_device());
             auto* local_dep_object = JUST(eager_blob_object->compute_local_dep_object());
-            const auto& device = JUST(local_dep_object->producer_op_device());
             JUST(PutLocalDepObjectToDevicePool(device, local_dep_object));
           }
           return Maybe<void>::Ok();
@@ -120,12 +120,12 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(LocalDepObject* dep_obj
   const auto& mut_shape = std::const_pointer_cast<Shape>(tensor_meta()->shape_ptr());
 
   if (tensor_storage_) {
-    auto tensor_buffer = tensor_storage_->buffer();
+    auto tensor_storage = tensor_storage_->storage();
     eager_blob_object_ = std::make_shared<vm::EagerBlobObject>(mem_case, mut_shape, dtype(),
-                                                               tensor_buffer, dep_object);
+                                                               tensor_storage, dep_object);
   } else {
     const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
-        mem_case, mut_shape, dtype(), std::make_shared<vm::TensorBuffer>(), dep_object);
+        mem_case, mut_shape, dtype(), std::make_shared<vm::TensorStorage>(), dep_object);
     JUST(set_eager_blob_object(eager_blob_object));
   }
   eager_blob_object_->set_storage_offset(tensor_meta()->storage_offset());
