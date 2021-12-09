@@ -163,7 +163,7 @@ namespace oneflow {
 namespace maybe {
 
 template<typename T>
-struct JustConfig {
+struct JustTraits {
   template<typename U>
   static simple::StackedError<std::string> ValueNotFoundError(U&&) {
     return {"not found"};

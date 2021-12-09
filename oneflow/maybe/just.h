@@ -62,7 +62,7 @@ struct IsOptional<Optional<T>> : std::true_type {};
 // };
 // ```
 template<typename T>
-struct JustConfig;
+struct JustTraits;
 
 namespace details {
 
@@ -79,7 +79,7 @@ struct JustPrivateScope {
 
   template<typename T, std::enable_if_t<!IsMaybe<RemoveCVRef<T>>::value, int> = 0>
   static decltype(auto) StackedError(T&& v) {
-    return JustConfig<RemoveCVRef<T>>::ValueNotFoundError(std::forward<T>(v));
+    return JustTraits<RemoveCVRef<T>>::ValueNotFoundError(std::forward<T>(v));
   }
 };
 
@@ -111,8 +111,8 @@ auto JustGetValue(T&& v) -> RemoveRValRef<decltype(JustPrivateScope::Value(std::
 
 template<typename T, std::enable_if_t<!IsMaybe<T>::value && !IsOptional<T>::value, int> = 0>
 auto JustGetValue(T&& v)
-    -> RemoveRValRef<decltype(JustConfig<RemoveCVRef<T>>::Value(std::forward<T>(v)))> {
-  return JustConfig<RemoveCVRef<T>>::Value(std::forward<T>(v));
+    -> RemoveRValRef<decltype(JustTraits<RemoveCVRef<T>>::Value(std::forward<T>(v)))> {
+  return JustTraits<RemoveCVRef<T>>::Value(std::forward<T>(v));
 }
 
 }  // namespace details
