@@ -70,7 +70,7 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
     DimVector src0_dim_vec;
     DimVector src1_dim_vec;
     DimVector dst_dim_vec;
-    size_t num_dims;
+    size_t num_dims = 0;
     int64_t simplified_src0_dims[kMaxNumDims];
     int64_t simplified_src1_dims[kMaxNumDims];
     int64_t simplified_dst_dims[kMaxNumDims];
