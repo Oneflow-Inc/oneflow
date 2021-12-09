@@ -136,6 +136,11 @@ def OneFlow_InputOp : OneFlow_ConcreteSystemOp<"input", []> {
     OptionalAttr<StrArrayAttr>:$nd_sbp,
     OptionalAttr<StrAttr>:$job_name
   );
+  let builders = [
+    OpBuilder<(ins
+      "::oneflow::OperatorConf":$op_conf
+    )>
+  ];
 }
 
 def OneFlow_OutputOp : OneFlow_ConcreteSystemOp<"output", []> {
