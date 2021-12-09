@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "OneFlow/JIT.h"
+#include "OneFlow/jit_importer.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Dialect/JIT/IR/OneFlowJITDialect.h"

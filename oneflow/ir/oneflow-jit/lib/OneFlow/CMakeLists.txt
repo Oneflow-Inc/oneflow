@@ -1,7 +1,7 @@
 add_subdirectory(Dialect)
 
 add_mlir_library(MLIROneFlowJIT
-  JIT.cpp
+  jit_importer.cpp
   jit_op_interpreter.cpp
   EXCLUDE_FROM_LIBMLIR
   ADDITIONAL_HEADER_DIRS

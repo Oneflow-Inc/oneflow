@@ -20,7 +20,7 @@ limitations under the License.
 #ifdef WITH_MLIR
 
 #include "oneflow/core/framework/op_interpreter.h"
-#include "oneflow/ir/oneflow-jit/include/OneFlow/JIT.h"
+#include "oneflow/ir/oneflow-jit/include/OneFlow/jit_importer.h"
 #include "mlir/IR/Builders.h"
 #include "oneflow/core/framework/op_expr.h"
 
