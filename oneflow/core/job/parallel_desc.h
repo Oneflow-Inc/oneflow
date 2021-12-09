@@ -117,6 +117,7 @@ class ParallelDesc final {
                                                           size_t cols);
   Maybe<void> SanityCheck();
   Maybe<void> CheckWithResourceDesc(const ResourceDesc& resource_desc);
+  Maybe<void> CheckDeviceIdsIsValid();
   bool EqualsMachineId2SortedDevPhyIds(const ParallelDesc& rhs) const;
 
   Optional<int64_t> symbol_id_;
