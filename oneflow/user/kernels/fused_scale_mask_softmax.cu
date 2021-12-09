@@ -23,11 +23,15 @@ namespace oneflow {
 template<typename SRC, typename DST, size_t num_dims>
 struct ScaleMaskLoad {
   ScaleMaskLoad(const SRC* src, const int8_t* mask, const int64_t row_size, 
-                const float fill, const float scale, const int64_t* mask_dims,
+                const float fill, const float scale, const int64_t* mask_dims_ptr,
                 NdIndexOffsetHelper<int64_t, num_dims> input_index_helper, 
                 NdIndexOffsetHelper<int64_t, num_dims> mask_index_helper)
-      : src(src), mask(mask), row_size(row_size), fill(fill), scale(scale), mask_dims(mask_dims),
-        input_index_helper(input_index_helper), mask_index_helper(mask_index_helper) {}
+      : src(src), mask(mask), row_size(row_size), fill(fill), scale(scale),
+        input_index_helper(input_index_helper), mask_index_helper(mask_index_helper) {
+          for(int i = 0; i < num_dims; i++){
+            mask_dims[i] = mask_dims_ptr[i]; 
+          }
+        }
   template<int N>
   __device__ void load(DST* dst, int64_t row, int64_t col) {
     cuda::softmax::Pack<SRC, N> pack;
@@ -46,6 +50,7 @@ struct ScaleMaskLoad {
     const int64_t mask_offset = mask_index_helper.NdIndexToOffset(mask_index);
     pack.storage = *reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(src + offset);
     mask_pack.storage = *reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask + mask_offset);
+
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       if (mask_pack.elem[i] == 0) {
@@ -60,7 +65,7 @@ struct ScaleMaskLoad {
   const int64_t row_size;
   const float fill;
   const float scale;
-  const int64_t* mask_dims;
+  int64_t mask_dims[num_dims];
   NdIndexOffsetHelper<int64_t, num_dims> input_index_helper;
   NdIndexOffsetHelper<int64_t, num_dims> mask_index_helper;
 };
@@ -89,7 +94,8 @@ struct ScaleMaskStore {
       }
     }
     const int64_t mask_offset = mask_index_helper.NdIndexToOffset(mask_index);
-    mask_pack.storage = *reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask + mask_offset);
+    mask_pack.storage = *reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask + offset);
+
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       if (mask_pack.elem[i] == 0) {
@@ -153,13 +159,11 @@ class FusedScaleMaskSoftmaxKernel final : public user_op::OpKernel {
     CHECK_GE(x_shape.NumAxes(), 2);
     const int64_t cols = x_shape.At(x_shape.NumAxes() - 1);
     const int64_t rows = x_shape.Count(0, x_shape.NumAxes() - 1);
-    const size_t num_dims = x_shape.NumAxes() - 1;
+    const size_t num_dims = x_shape.NumAxes();
     const int64_t* input_dims = x_shape.ptr();
     const int64_t* mask_dims = mask_shape.ptr();
     using ComputeType = typename cuda::softmax::DefaultComputeType<T>::type;
     if (num_dims == 2) {
-      NdIndexOffsetHelper<int64_t, 2> input_index_helper(input_dims);
-      NdIndexOffsetHelper<int64_t, 2> mask_index_helper(mask_dims);
       ScaleMaskLoad<T, ComputeType, 2> load(x->dptr<T>(), mask->dptr<int8_t>(), cols,
                                             ctx->Attr<float>("mask_fill_value"),
                                             ctx->Attr<float>("scale_value"),
@@ -199,30 +203,30 @@ class FusedScaleMaskSoftmaxKernel final : public user_op::OpKernel {
           ctx->stream()->As<ep::CudaStream>()->cuda_stream(), load, store, rows, cols)));
     } else {
       UNIMPLEMENTED();
-      NdIndexOffsetHelper<int64_t, 1> input_index_helper(input_dims);
-      NdIndexOffsetHelper<int64_t, 1> mask_index_helper(mask_dims);
-      ScaleMaskLoad<T, ComputeType, 1> load(x->dptr<T>(), mask->dptr<int8_t>(), cols,
-                                            ctx->Attr<float>("mask_fill_value"),
-                                            ctx->Attr<float>("scale_value"),
-                                            mask_dims, input_index_helper, mask_index_helper);
-      cuda::softmax::DirectStore<ComputeType, T> store(y->mut_dptr<T>(), cols);
-      OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
-          ctx->stream()->As<ep::CudaStream>()->cuda_stream(), load, store, rows, cols)));
+      // NdIndexOffsetHelper<int64_t, 1> input_index_helper(input_dims);
+      // NdIndexOffsetHelper<int64_t, 1> mask_index_helper(mask_dims);
+      // ScaleMaskLoad<T, ComputeType, 1> load(x->dptr<T>(), mask->dptr<int8_t>(), cols,
+      //                                       ctx->Attr<float>("mask_fill_value"),
+      //                                       ctx->Attr<float>("scale_value"),
+      //                                       mask_dims, input_index_helper, mask_index_helper);
+      // cuda::softmax::DirectStore<ComputeType, T> store(y->mut_dptr<T>(), cols);
+      // OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
+      //     ctx->stream()->As<ep::CudaStream>()->cuda_stream(), load, store, rows, cols)));
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUCED_SCALE_MASK_SOFTMAX_CUDA_KERNEL(dtype)           \
+#define REGISTER_FUSED_SCALE_MASK_SOFTMAX_CUDA_KERNEL(dtype)           \
   REGISTER_USER_KERNEL("fused_scale_mask_softmax")                     \
       .SetCreateFn<FusedScaleMaskSoftmaxKernel<dtype>>()               \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_CUDA_KERNEL(half)
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_CUDA_KERNEL(float)
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_CUDA_KERNEL(double)
-#undef REGISTER_FUCED_SCALE_MASK_SOFTMAX_CUDA_KERNEL
+REGISTER_FUSED_SCALE_MASK_SOFTMAX_CUDA_KERNEL(half)
+REGISTER_FUSED_SCALE_MASK_SOFTMAX_CUDA_KERNEL(float)
+REGISTER_FUSED_SCALE_MASK_SOFTMAX_CUDA_KERNEL(double)
+#undef REGISTER_FUSED_SCALE_MASK_SOFTMAX_CUDA_KERNEL
 
 template<typename T>
 class FusedScaleMaskSoftmaxGradKernel final : public user_op::OpKernel {
@@ -286,28 +290,28 @@ class FusedScaleMaskSoftmaxGradKernel final : public user_op::OpKernel {
          ctx->stream()->As<ep::CudaStream>()->cuda_stream(), load_y, load_dy, store, rows, cols)));
     } else {
       UNIMPLEMENTED();
-      NdIndexOffsetHelper<int64_t, 1> input_index_helper(input_dims);
-      NdIndexOffsetHelper<int64_t, 1> mask_index_helper(mask_dims);
-      ScaleMaskStore<ComputeType, T, 1> store(dx->mut_dptr<T>(), mask->dptr<int8_t>(), cols,
-                                              static_cast<float>(0.0), ctx->Attr<float>("scale_value"), 
-                                              mask_dims, input_index_helper, mask_index_helper);
-      OF_CUDA_CHECK((cuda::softmax::DispatchSoftmaxGrad<decltype(load_y), decltype(load_dy),
-                                                      decltype(store), ComputeType>(
-         ctx->stream()->As<ep::CudaStream>()->cuda_stream(), load_y, load_dy, store, rows, cols)));
+      // NdIndexOffsetHelper<int64_t, 1> input_index_helper(input_dims);
+      // NdIndexOffsetHelper<int64_t, 1> mask_index_helper(mask_dims);
+      // ScaleMaskStore<ComputeType, T, 1> store(dx->mut_dptr<T>(), mask->dptr<int8_t>(), cols,
+      //                                         static_cast<float>(0.0), ctx->Attr<float>("scale_value"), 
+      //                                         mask_dims, input_index_helper, mask_index_helper);
+      // OF_CUDA_CHECK((cuda::softmax::DispatchSoftmaxGrad<decltype(load_y), decltype(load_dy),
+      //                                                 decltype(store), ComputeType>(
+      //    ctx->stream()->As<ep::CudaStream>()->cuda_stream(), load_y, load_dy, store, rows, cols)));
     } 
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUCED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(dtype)           \
+#define REGISTER_FUSED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(dtype)           \
   REGISTER_USER_KERNEL("fused_scale_mask_softmax_grad")                \
       .SetCreateFn<FusedScaleMaskSoftmaxGradKernel<dtype>>()           \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(half)
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(float)
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(double)
-#undef REGISTER_FUCED_SCALE_MASK_SOFTMAX_GRAD_KERNEL
+REGISTER_FUSED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(half)
+REGISTER_FUSED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(float)
+REGISTER_FUSED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(double)
+#undef REGISTER_FUSED_SCALE_MASK_SOFTMAX_GRAD_KERNEL
 
 }  // namespace oneflow
