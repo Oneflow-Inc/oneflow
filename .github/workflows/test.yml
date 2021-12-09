@@ -352,14 +352,6 @@ jobs:
           entry: build-with-clang
           digest-type: build
           mark-as-completed: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
-      - name: Checkout Oneflow-Inc/conda-env
-        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
-        uses: actions/checkout@v2
-        with:
-          repository: Oneflow-Inc/conda-env
-          ref: 30a7f00eb48ee9009d85a848e720823e5054c66b
-          path: conda-env
-            - uses: Oneflow-Inc/get-oneflow@support-clang-12
       - name: Build with Clang
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/llvm/cuda-75-clang.cmake
