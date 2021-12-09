@@ -110,7 +110,7 @@ ExternalProject_Add(opencv
         -DBUILD_opencv_world:BOOL=OFF
         -DBUILD_opencv_apps:BOOL=OFF
         -DBUILD_opencv_js:BOOL=OFF
-        -DBUILD_ZLIB:BOOL=${WITH_ZLIB}
+        -DBUILD_ZLIB:BOOL=OFF
         -DZLIB_ROOT:PATH=${ZLIB_INSTALL}
         -DBUILD_TIFF:BOOL=ON
         -DBUILD_JASPER:BOOL=ON
