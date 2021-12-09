@@ -94,9 +94,6 @@ class EagerBlobObject final : public BlobObject {
 
   void set_is_shape_synced(bool val) { is_shape_synced_ = val; }
 
-  int64_t storage_offset() const { return storage_offset_; }
-
-  void set_storage_offset(int64_t storage_offset) { storage_offset_ = storage_offset; }
 
  private:
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
@@ -106,7 +103,6 @@ class EagerBlobObject final : public BlobObject {
   std::unique_ptr<char[]> header_buffer_;
   std::shared_ptr<TensorBuffer> tensor_buffer_;
   std::atomic<bool> is_shape_synced_;
-  int64_t storage_offset_;
   Optional<LocalDepObject*> compute_local_dep_object_;
 };
 

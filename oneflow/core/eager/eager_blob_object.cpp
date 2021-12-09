@@ -29,7 +29,6 @@ EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
     : BlobObject(mem_case, shape, data_type),
       tensor_buffer_(tensor_buffer),
       is_shape_synced_(true),
-      storage_offset_(0),
       compute_local_dep_object_(dep_object) {
   CHECK(static_cast<bool>(shape));
   CHECK(static_cast<bool>(tensor_buffer));
@@ -41,16 +40,7 @@ Maybe<void> EagerBlobObject::TryInitBlob() {
 }
 
 Maybe<void> EagerBlobObject::InitBlob() {
-  CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
-  if (!blob_desc_.shape().is_initialized()) { blob_desc_.set_shape(Shape(DimVector{})); }
-  {
-    header_buffer_.reset();
-    int64_t header_byte_size = blob_desc_.AlignedByteSizeOfBlobHeader();
-    header_buffer_ = std::make_unique<char[]>(header_byte_size);
-  }
-  storage_offset_ = 0;
-  blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer_.get(), nullptr, storage_offset_));
-  return Maybe<void>::Ok();
+  return InitBlobWithOffset(0);
 }
 
 Maybe<void> EagerBlobObject::InitBlobWithOffset(const int64_t offset) {

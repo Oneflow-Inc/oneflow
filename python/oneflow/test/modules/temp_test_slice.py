@@ -3,7 +3,8 @@ import torch
 import numpy as np
 
 #arr = np.arange(24).reshape(2,2,2,3)
-arr = np.arange(27).reshape(3,3,3)
+# arr = np.arange(27).reshape(3,3,3)
+arr = np.arange(9).reshape(3,3)
 print("input  >>>>>>>>>>> \n", arr)
 
 x_flow = flow.tensor(arr)
@@ -12,9 +13,12 @@ x_torch = torch.tensor(arr)
 # y_flow = x_flow[0:1, 1:2, 0:2, 1:2]
 # y_torch = x_torch[0:1, 1:2, 0:2, 1:2]
 # y_numpy = arr[0:1, 1:2, 0:2, 1:2]
-y_flow = x_flow[1:2, 1:3, 1:2]
-y_torch = x_torch[1:2, 1:3, 1:2]
-y_numpy = arr[1:2, 1:3, 1:2]
+# y_flow = x_flow[:, :, 1:2]
+# y_torch = x_torch[:, :, 1:2]
+# y_numpy = arr[:, :, 1:2]
+y_flow = x_flow[:, 1:2]
+y_torch = x_torch[:, 1:2]
+y_numpy = arr[:, 1:2]
 
 print("flow output >>>>>>>>>>> \n", y_flow.numpy())
 print("torch output >>>>>>>>>>> \n", y_torch.numpy())

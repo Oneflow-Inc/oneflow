@@ -60,7 +60,7 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
         JUST(functional::ToConsistent(t, tensor_meta->parallel_desc(), sbp_tuple, none));
     tensor = JUST(consistent_tensor->cur_rank_phy_tensor());
   }
-
+  // printf("\n >>>>>>>>>>>> storage_offset:%ld", JUST(tensor->eager_blob_object())->storage_offset());
   if (block_host_until_done) {
     NumPyArrayPtr array_ptr(array);
     const auto& Callback = std::make_shared<std::function<void(uint64_t)>>(
