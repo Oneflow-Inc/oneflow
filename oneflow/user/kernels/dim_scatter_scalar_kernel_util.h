@@ -18,7 +18,7 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include "oneflow/core/cuda/atomic.cuh"
 #endif  // WITH_CUDA
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/framework/framework.h"

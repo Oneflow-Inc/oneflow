@@ -64,7 +64,7 @@ class RecvKernel final : public user_op::OpKernel {
 
 REGISTER_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_KERNEL(DeviceType::kGPU)
+REGISTER_KERNEL(DeviceType::kCUDA)
 #endif
 }  // namespace
 

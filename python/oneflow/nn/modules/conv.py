@@ -202,50 +202,15 @@ class Conv1d(Module):
             init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        if x.device.type == "cpu" and self.groups > 1:
-            in_channel_axis = 1
-            weight_channel_axis = 0
-            bias_channel_axis = 0
-            in_split_list = ConvUtil.split(
-                x, axis=in_channel_axis, split_num=self.groups
-            )
-            out_list = []
-            for i in range(len(in_split_list)):
-                out_list.append(
-                    flow._C.conv1d(
-                        in_split_list[i],
-                        self.weight[
-                            i
-                            * self.out_channel_groups : (i + 1)
-                            * self.out_channel_groups,
-                            :,
-                            :,
-                        ],
-                        self.bias[
-                            i
-                            * self.out_channel_groups : (i + 1)
-                            * self.out_channel_groups
-                        ]
-                        if self.bias is not None
-                        else None,
-                        stride=self.stride,
-                        padding=self.padding,
-                        dilation=self.dilation,
-                        groups=1,
-                    )
-                )
-            res = flow.cat(out_list, dim=in_channel_axis)
-        else:
-            res = flow._C.conv1d(
-                x,
-                self.weight,
-                self.bias,
-                stride=self.stride,
-                padding=self.padding,
-                dilation=self.dilation,
-                groups=self.groups,
-            )
-        return res
+        return flow._C.conv1d(
+            x,
+            self.weight,
+            self.bias,
+            stride=self.stride,
+            padding=self.padding,
+            dilation=self.dilation,
+            groups=self.groups,
+        )
 
     def extra_repr(self):
         s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"
@@ -425,48 +390,16 @@ class Conv2d(Module):
         # TODO(zwx): Use `tensor.device_type()` method to help checking if x is on cpu.
         # Using `if x.device == flow.device("cpu"):` will fail as consistent tensor has
         # no device, however using `x.is_cuda` is not a good choice.
-        if not x.is_cuda and self.groups > 1:
-            in_channel_axis = 1
-            in_split_list = ConvUtil.split(
-                x, axis=in_channel_axis, split_num=self.groups
-            )
-            out_list = []
-            for i in range(len(in_split_list)):
-                out_list.append(
-                    flow._C.conv2d(
-                        in_split_list[i],
-                        self.weight[
-                            i
-                            * self.out_channel_groups : (i + 1)
-                            * self.out_channel_groups,
-                            :,
-                            :,
-                            :,
-                        ],
-                        self.bias[
-                            i
-                            * self.out_channel_groups : (i + 1)
-                            * self.out_channel_groups
-                        ]
-                        if self.bias is not None
-                        else None,
-                        stride=self.stride,
-                        padding=self.padding,
-                        dilation=self.dilation,
-                        groups=1,
-                    )
-                )
-            res = flow.cat(out_list, dim=in_channel_axis)
-        else:
-            res = flow._C.conv2d(
-                x,
-                self.weight,
-                self.bias,
-                stride=self.stride,
-                padding=self.padding,
-                dilation=self.dilation,
-                groups=self.groups,
-            )
+
+        res = flow._C.conv2d(
+            x,
+            self.weight,
+            self.bias,
+            stride=self.stride,
+            padding=self.padding,
+            dilation=self.dilation,
+            groups=self.groups,
+        )
         return res
 
     def extra_repr(self):
@@ -594,6 +527,7 @@ class Conv3d(Module):
         super().__init__()
 
         assert padding_mode == "zeros"
+        self.padding_mode = padding_mode
         self.kernel_size = _triple(kernel_size)
         self.stride = _triple(stride)
         self.padding = _triple(padding)
@@ -622,49 +556,15 @@ class Conv3d(Module):
     def forward(self, x):
         if x.shape[1] != self.in_channels:
             raise ValueError("The input channels should be equal to self.in_channels")
-        if x.device.type == "cpu" and self.groups > 1:
-            in_channel_axis = 1
-            in_split_list = ConvUtil.split(
-                x, axis=in_channel_axis, split_num=self.groups
-            )
-            out_list = []
-            for i in range(len(in_split_list)):
-                out_list.append(
-                    flow._C.conv3d(
-                        in_split_list[i],
-                        self.weight[
-                            i
-                            * self.out_channel_groups : (i + 1)
-                            * self.out_channel_groups,
-                            :,
-                            :,
-                            :,
-                        ],
-                        self.bias[
-                            i
-                            * self.out_channel_groups : (i + 1)
-                            * self.out_channel_groups
-                        ]
-                        if self.bias is not None
-                        else None,
-                        stride=self.stride,
-                        padding=self.padding,
-                        dilation=self.dilation,
-                        groups=1,
-                    )
-                )
-            res = flow.cat(out_list, dim=in_channel_axis)
-        else:
-            res = flow._C.conv3d(
-                x,
-                self.weight,
-                self.bias,
-                stride=self.stride,
-                padding=self.padding,
-                dilation=self.dilation,
-                groups=self.groups,
-            )
-        return res
+        return flow._C.conv3d(
+            x,
+            self.weight,
+            self.bias,
+            stride=self.stride,
+            padding=self.padding,
+            dilation=self.dilation,
+            groups=self.groups,
+        )
 
     def extra_repr(self):
         s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"

@@ -1750,7 +1750,7 @@ def max_pool2d(
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("MaxPool2D_")
         )
-        .Op("max_pool_2d")
+        .Op("tf_max_pool_2d")
         .Input("x", [input])
         .Output("y")
     )
@@ -1828,7 +1828,7 @@ def avg_pool2d(
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("AvgPool2D_")
         )
-        .Op("avg_pool_2d")
+        .Op("tf_avg_pool_2d")
         .Input("x", [input])
         .Output("y")
     )
@@ -1907,7 +1907,7 @@ def max_pool3d(
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("MaxPool3D_")
         )
-        .Op("max_pool_3d")
+        .Op("tf_max_pool_3d")
         .Input("x", [input])
         .Output("y")
     )
@@ -1986,7 +1986,7 @@ def avg_pool3d(
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("AvgPool3D_")
         )
-        .Op("avg_pool_3d")
+        .Op("tf_avg_pool_3d")
         .Input("x", [input])
         .Output("y")
     )
@@ -2727,16 +2727,13 @@ def dropout(
         assert name is not None
     if name is None:
         name = id_util.UniqueStr("Dropout_")
-    mask = random_mask_like(
-        x, rate, seed, noise_shape, "%s-dropout_random_mask_like" % name
-    )
     return (
         flow.user_op_builder(name)
         .Op("dropout")
         .Input("in", [x])
-        .Input("mask", [mask])
         .Output("out")
-        .Attr("scale", float(1.0 / (1.0 - rate)))
+        .Output("mask")
+        .Attr("rate", float(rate))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]

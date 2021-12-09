@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_RANDOM_MASK_GENERATOR_H_
 
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/framework/random_generator.h"
 #ifdef WITH_CUDA
 #include <curand.h>
@@ -46,7 +46,7 @@ class RandomMaskGenerator<DeviceType::kCPU> final {
 
 #ifdef WITH_CUDA
 template<>
-class RandomMaskGenerator<DeviceType::kGPU> final {
+class RandomMaskGenerator<DeviceType::kCUDA> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RandomMaskGenerator);
   RandomMaskGenerator(const std::shared_ptr<one::Generator>& generator) {

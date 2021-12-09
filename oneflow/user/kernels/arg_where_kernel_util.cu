@@ -83,14 +83,14 @@ cudaError_t SelectTrue(cudaStream_t stream, int num_items, void* temp_storage,
 }  // namespace
 
 template<typename IN_T, typename OUT_T, int NDIM>
-struct ArgWhereKernelUtil<DeviceType::kGPU, IN_T, OUT_T, NDIM> {
+struct ArgWhereKernelUtil<DeviceType::kCUDA, IN_T, OUT_T, NDIM> {
   static void ArgWhere(ep::Stream* stream, const ShapeView& input_shape, const IN_T* input_ptr,
                        void* temp_storage, size_t temp_storage_bytes, OUT_T* output_ptr,
                        OUT_T* output_size_ptr) {
     const int64_t elem_cnt = input_shape.elem_cnt();
     // deal with empty blob
     if (elem_cnt == 0) {
-      Memset<DeviceType::kGPU>(stream, output_size_ptr, 0, sizeof(OUT_T));
+      Memset<DeviceType::kCUDA>(stream, output_size_ptr, 0, sizeof(OUT_T));
       return;
     }
 
@@ -136,6 +136,6 @@ struct ArgWhereKernelUtil<DeviceType::kGPU, IN_T, OUT_T, NDIM> {
   }
 };
 
-INSTANTIATE_ARG_WHERE_KERNEL_UTIL_FOR_DEVICE(DeviceType::kGPU)
+INSTANTIATE_ARG_WHERE_KERNEL_UTIL_FOR_DEVICE(DeviceType::kCUDA)
 
 }  // namespace oneflow

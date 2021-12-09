@@ -21,7 +21,7 @@ namespace oneflow {
 
 namespace {
 template<template<typename, typename> class Opt, typename PredT, typename LabelT>
-struct ElemwiseSigmoidCrossEntropyGradFunctor<DeviceType::kGPU, Opt, PredT, LabelT> final {
+struct ElemwiseSigmoidCrossEntropyGradFunctor<DeviceType::kCUDA, Opt, PredT, LabelT> final {
   void operator()(ep::Stream* stream, int64_t n, PredT* prediction_diff, const PredT* prediction,
                   const LabelT* label, const PredT* loss_diff) {
     OF_CUDA_CHECK(cuda::elementwise::Ternary(Opt<PredT, LabelT>(), n, prediction_diff, prediction,
@@ -31,7 +31,7 @@ struct ElemwiseSigmoidCrossEntropyGradFunctor<DeviceType::kGPU, Opt, PredT, Labe
 };
 
 template<template<typename, typename> class Opt, typename PredT, typename LabelT>
-struct ElemwiseSigmoidCrossEntropyFunctor<DeviceType::kGPU, Opt, PredT, LabelT> final {
+struct ElemwiseSigmoidCrossEntropyFunctor<DeviceType::kCUDA, Opt, PredT, LabelT> final {
   void operator()(ep::Stream* stream, int64_t n, PredT* loss, const PredT* prediction,
                   const LabelT* label) {
     OF_CUDA_CHECK(cuda::elementwise::Binary(Opt<PredT, LabelT>(), n, loss, prediction, label,
@@ -39,17 +39,17 @@ struct ElemwiseSigmoidCrossEntropyFunctor<DeviceType::kGPU, Opt, PredT, LabelT> 
   }
 };
 }  // namespace
-REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL(DeviceType::kGPU, float, int32_t)
-REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL(DeviceType::kGPU, double, int32_t)
-REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL(DeviceType::kGPU, float, int8_t)
-REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL(DeviceType::kGPU, double, int8_t)
-REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL(DeviceType::kGPU, float, float)
-REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL(DeviceType::kGPU, double, double)
-REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL(DeviceType::kGPU, float, int32_t)
-REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL(DeviceType::kGPU, double, int32_t)
-REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL(DeviceType::kGPU, float, int8_t)
-REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL(DeviceType::kGPU, double, int8_t)
-REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL(DeviceType::kGPU, float, float)
-REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL(DeviceType::kGPU, double, double)
+REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL(DeviceType::kCUDA, float, int32_t)
+REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL(DeviceType::kCUDA, double, int32_t)
+REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL(DeviceType::kCUDA, float, int8_t)
+REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL(DeviceType::kCUDA, double, int8_t)
+REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL(DeviceType::kCUDA, float, float)
+REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL(DeviceType::kCUDA, double, double)
+REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL(DeviceType::kCUDA, float, int32_t)
+REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL(DeviceType::kCUDA, double, int32_t)
+REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL(DeviceType::kCUDA, float, int8_t)
+REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL(DeviceType::kCUDA, double, int8_t)
+REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL(DeviceType::kCUDA, float, float)
+REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL(DeviceType::kCUDA, double, double)
 
 }  // namespace oneflow

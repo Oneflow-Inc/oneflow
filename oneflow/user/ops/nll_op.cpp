@@ -33,12 +33,13 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(weight_desc.shape(), Shape({input_desc.shape().At(1)}));
   }
 
-  JUST(CheckLossReductionAndInferOutputTenserDesc(ctx, "out", input_desc.is_dynamic(),
-                                                  target_desc.shape()));
+  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  *out_desc->mut_is_dynamic() = input_desc.is_dynamic();
+  *out_desc->mut_shape() = target_desc.shape();
 
   user_op::TensorDesc* total_weight_desc = ctx->OutputTensorDesc("total_weight", 0);
   *total_weight_desc->mut_is_dynamic() = input_desc.is_dynamic();
-  *total_weight_desc->mut_shape() = Shape({1});
+  *total_weight_desc->mut_shape() = Shape({});
 
   return Maybe<void>::Ok();
 }
@@ -57,17 +58,18 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   const auto& input_desc = ctx->InputTensorDesc("input", 0);
   const auto& target_desc = ctx->InputTensorDesc("target", 0);
   const auto& total_weight_desc = ctx->InputTensorDesc("total_weight", 0);
+  const auto& dy_desc = ctx->InputTensorDesc("dy", 0);
   CHECK_EQ_OR_RETURN(input_desc.is_dynamic(), target_desc.is_dynamic());
   CHECK_GE_OR_RETURN(input_desc.shape().NumAxes(), 2);
   CHECK_EQ_OR_RETURN(target_desc.shape().NumAxes(), 1);
   CHECK_EQ_OR_RETURN(input_desc.shape().At(0), target_desc.shape().At(0));
-  CHECK_EQ_OR_RETURN(total_weight_desc.shape(), Shape({1}));
+  CHECK_EQ_OR_RETURN(dy_desc.shape(), target_desc.shape());
+  CHECK_EQ_OR_RETURN(total_weight_desc.shape(), Shape({}));
   if (ctx->has_input("weight", 0)) {
     const auto& weight_desc = ctx->InputTensorDesc("weight", 0);
     CHECK_EQ_OR_RETURN(weight_desc.is_dynamic(), input_desc.is_dynamic());
     CHECK_EQ_OR_RETURN(weight_desc.shape(), Shape({input_desc.shape().At(1)}));
   }
-  JUST(CheckLossReductionAndCheckInputTenserDesc(ctx, "dy", target_desc.shape()));
 
   user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
   *dx_desc->mut_is_dynamic() = input_desc.is_dynamic();
@@ -93,7 +95,6 @@ REGISTER_USER_OP("nll")
     .Output("out")
     .Output("total_weight")
     .Attr<int64_t>("ignore_index")
-    .Attr<std::string>("reduction")
     .SetTensorDescInferFn(InferTensorDescFn)
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
@@ -104,7 +105,7 @@ REGISTER_USER_OP("nll")
     })
     .SetDataTypeInferFn(InferDataType)
     .SetGetSbpFn(GenLossForwardDefaultGetSbpFn([](user_op::UserOpSbpSignatureBuilder& builder) {
-      builder.Broadcast(user_op::OpArg("total_weight", 0));
+      builder.PartialSum(user_op::OpArg("total_weight", 0));
     }));
 
 REGISTER_USER_OP("nll_grad")
@@ -115,11 +116,10 @@ REGISTER_USER_OP("nll_grad")
     .Input("dy")
     .Output("dx")
     .Attr<int64_t>("ignore_index")
-    .Attr<std::string>("reduction")
     .SetTensorDescInferFn(InferGradTensorDescFn)
     .SetDataTypeInferFn(InferGradDataType)
     .SetGetSbpFn(GenLossBackwardDefaultGetSbpFn([](user_op::UserOpSbpSignatureBuilder& builder) {
-      builder.Broadcast(user_op::OpArg("total_weight", 0));
+      builder.PartialSum(user_op::OpArg("total_weight", 0));
     }));
 
 REGISTER_USER_OP_GRAD("nll").SetGenBackwardOpConfFn(
@@ -132,8 +132,7 @@ REGISTER_USER_OP_GRAD("nll").SetGenBackwardOpConfFn(
             .Input("total_weight", op.output("total_weight", 0))
             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
             .Output("dx")
-            .Attr("ignore_index", op.attr<int64_t>("ignore_index"))
-            .Attr("reduction", op.attr<std::string>("reduction"));
+            .Attr("ignore_index", op.attr<int64_t>("ignore_index"));
         if (op.user_op_conf().has_input("weight", 0)) {
           builder.Input("weight", op.input("weight", 0));
         }

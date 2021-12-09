@@ -200,8 +200,8 @@ class EagerNaiveSToSKernel final : public user_op::OpKernel {
 
 REGISTER_EAGER_NAIVE_S_TO_S_KERNEL(DeviceType::kCPU)
 
-#if defined(WITH_CUDA) && HAS_GPU_SEND_RECV
-REGISTER_EAGER_NAIVE_S_TO_S_KERNEL(DeviceType::kGPU)
+#if defined(WITH_CUDA) && HAS_NCCL_SEND_RECV
+REGISTER_EAGER_NAIVE_S_TO_S_KERNEL(DeviceType::kCUDA)
 #endif
 
 }  // namespace oneflow

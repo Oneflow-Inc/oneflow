@@ -75,6 +75,20 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.flatten,
+    """
+    See :func:`oneflow.flatten`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.floor,
+    """
+    See :func:`oneflow.floor`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.numel,
     """
     See :func:`oneflow.numel`
@@ -205,6 +219,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.arccos,
+    """
+    See :func:`oneflow.arccos`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.acosh,
     """
     See :func:`oneflow.acosh`
@@ -236,6 +257,43 @@ add_docstr(
     oneflow.Tensor.argmin,
     """
     See :func:`oneflow.argmin`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.argsort,
+    """This operator sorts the input Tensor at specified dim and return the indices of the sorted Tensor.
+
+    Args:
+        input (oneflow.Tensor): The input Tensor.
+        dim (int, optional): dimension to be sorted. Defaults to the last dim (-1).
+        descending (bool, optional): controls the sorting order (ascending or descending).
+
+    Returns:
+        oneflow.Tensor: The indices of the sorted Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> x = np.array([[10, 2, 9, 3, 7],
+        ...               [1, 9, 4, 3, 2]]).astype("float32")
+        >>> input = flow.Tensor(x)
+        >>> output = flow.argsort(input)
+        >>> output
+        tensor([[1, 3, 4, 2, 0],
+                [0, 4, 3, 2, 1]], dtype=oneflow.int32)
+        >>> output = flow.argsort(input, descending=True)
+        >>> output
+        tensor([[0, 2, 4, 3, 1],
+                [1, 2, 3, 4, 0]], dtype=oneflow.int32)
+        >>> output = flow.argsort(input, dim=0)
+        >>> output
+        tensor([[1, 0, 1, 0, 1],
+                [0, 1, 0, 1, 0]], dtype=oneflow.int32)
+
     """,
 )
 
@@ -272,6 +330,12 @@ add_docstr(
     """,
 )
 
+add_docstr(
+    oneflow.Tensor.bmm,
+    """
+    See :func:`oneflow.bmm`
+    """,
+)
 
 add_docstr(
     oneflow.Tensor.cast,
@@ -373,6 +437,13 @@ add_docstr(
     oneflow.Tensor.mul,
     """
     See :func:`oneflow.mul`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.mul_,
+    """
+    In-place version of :func`oneflow.Tensor.mul`.
     """,
 )
 
@@ -598,6 +669,16 @@ add_docstr(
         >>> output = input.to(dtype=flow.float32)
         >>> np.array_equal(arr.astype(np.float32), output.numpy())
         True
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.gather,
+    """
+    oneflow.Tensor.gather(dim, index) -> Tensor
+
+    See :func:`oneflow.gather`
 
     """,
 )

@@ -18,12 +18,12 @@ limitations under the License.
 
 namespace oneflow {
 
-#define REGISTER_MULTIPLY_GPU_KERNEL(cpp_type, proto_type) \
-  REGISTER_MULTIPLY_KERNEL(DeviceType::kGPU, cpp_type);
+#define REGISTER_MULTIPLY_CUDA_KERNEL(cpp_type, proto_type) \
+  REGISTER_MULTIPLY_KERNEL(DeviceType::kCUDA, cpp_type);
 
 namespace {
 
-OF_PP_FOR_EACH_TUPLE(REGISTER_MULTIPLY_GPU_KERNEL,
+OF_PP_FOR_EACH_TUPLE(REGISTER_MULTIPLY_CUDA_KERNEL,
                      ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ);
 
 }

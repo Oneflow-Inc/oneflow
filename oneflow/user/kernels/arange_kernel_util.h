@@ -15,7 +15,7 @@ limitations under the License.
 */
 #ifndef ONEFLOW_USER_KERNELS_ARANGE_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_ARANGE_KERNEL_UTIL_H_
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ndarray/xpu_util.h"
 
 namespace oneflow {

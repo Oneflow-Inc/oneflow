@@ -38,16 +38,18 @@ struct AffineStore {
     cuda::layer_norm::Pack<DST, N> y_pack;
     cuda::layer_norm::Pack<DST, N> gamma_pack;
     cuda::layer_norm::Pack<DST, N> beta_pack;
-    const int64_t offset = row * row_size + col;
+    const int64_t offset = (row * row_size + col) / N;
+    const int64_t gamma_offset = col / N;
     if (do_scale) {
       gamma_pack.storage =
-          *reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(gamma + col);
+          *(reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(gamma) + gamma_offset);
     } else {
 #pragma unroll
       for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = 1; }
     }
     if (do_center) {
-      beta_pack.storage = *reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(beta + col);
+      beta_pack.storage =
+          *(reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(beta) + gamma_offset);
     } else {
 #pragma unroll
       for (int i = 0; i < N; ++i) { beta_pack.elem[i] = 0; }
@@ -61,7 +63,7 @@ struct AffineStore {
         y_pack.elem[i] = normalized_i;
       }
     }
-    *reinterpret_cast<cuda::layer_norm::PackType<DST, N>*>(y + offset) = y_pack.storage;
+    *(reinterpret_cast<cuda::layer_norm::PackType<DST, N>*>(y) + offset) = y_pack.storage;
   }
   DST* y;
   int64_t row_size;
@@ -77,14 +79,15 @@ struct ScaleLoad {
   __device__ void load(DST* dst, int64_t row, int64_t col) const {
     cuda::layer_norm::Pack<SRC, N> src_pack;
     cuda::layer_norm::Pack<SRC, N> gamma_pack;
-    const int64_t offset = row * row_size + col;
-    src_pack.storage = *reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(src + offset);
+    const int64_t offset = (row * row_size + col) / N;
+    const int64_t gamma_offset = col / N;
+    src_pack.storage = *(reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(src) + offset);
     if (do_scale) {
       gamma_pack.storage =
-          *reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(gamma + col);
+          *(reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(gamma) + gamma_offset);
     } else {
 #pragma unroll
-      for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = 1; }
+      for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = static_cast<SRC>(1); }
     }
 #pragma unroll
     for (int i = 0; i < N; ++i) {
@@ -104,10 +107,10 @@ struct AddStore {
   __device__ void store(const SRC* src, int64_t row, int64_t col) {
     cuda::layer_norm::Pack<DST, N> add_to_output_pack;
     cuda::layer_norm::Pack<DST, N> dst_pack;
-    const int64_t offset = row * row_size + col;
+    const int64_t offset = (row * row_size + col) / N;
     if (do_add) {
       add_to_output_pack.storage =
-          *reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(add_to_output + offset);
+          *(reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(add_to_output) + offset);
     }
 #pragma unroll
     for (int i = 0; i < N; ++i) {
@@ -117,7 +120,7 @@ struct AddStore {
         dst_pack.elem[i] = static_cast<DST>(src[i]);
       }
     }
-    *reinterpret_cast<cuda::layer_norm::PackType<DST, N>*>(dst + offset) = dst_pack.storage;
+    *(reinterpret_cast<cuda::layer_norm::PackType<DST, N>*>(dst) + offset) = dst_pack.storage;
   }
   const DST* add_to_output;
   DST* dst;
@@ -249,11 +252,11 @@ void LayerNormBackwardGpu(ep::Stream* stream, const int64_t num_instances, const
                           const T* add_to_output_ptr, T* dx_ptr) {
   using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
   cuda::layer_norm::DirectLoad<T, ComputeType> load_x(x_ptr, norm_size);
-  ScaleLoad<T, ComputeType, do_scale> load_dy(dy_ptr, gamma_ptr, norm_size);
+  ScaleLoad<T, ComputeType, do_scale> load_scaled_dy(dy_ptr, gamma_ptr, norm_size);
   AddStore<ComputeType, T, do_add> store(add_to_output_ptr, dx_ptr, norm_size);
-  OF_CUDA_CHECK((cuda::layer_norm::DispatchLayerNormGrad<decltype(load_x), decltype(load_dy),
+  OF_CUDA_CHECK((cuda::layer_norm::DispatchLayerNormGrad<decltype(load_x), decltype(load_scaled_dy),
                                                          decltype(store), ComputeType>(
-      stream->As<ep::CudaStream>()->cuda_stream(), load_x, load_dy, store,
+      stream->As<ep::CudaStream>()->cuda_stream(), load_x, load_scaled_dy, store,
       mean->dptr<ComputeType>(), inv_variance->dptr<ComputeType>(), num_instances, norm_size)));
 }
 
@@ -319,15 +322,15 @@ class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
   };
 };
 
-#define REGISTER_LAYER_NORM_GPU_KERNEL(dtype)                         \
-  REGISTER_USER_KERNEL("layer_norm")                                  \
-      .SetCreateFn<LayerNormGpuKernel<dtype>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_LAYER_NORM_CUDA_KERNEL(dtype)                         \
+  REGISTER_USER_KERNEL("layer_norm")                                   \
+      .SetCreateFn<LayerNormGpuKernel<dtype>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
-REGISTER_LAYER_NORM_GPU_KERNEL(float)
-REGISTER_LAYER_NORM_GPU_KERNEL(double)
-REGISTER_LAYER_NORM_GPU_KERNEL(half)
+REGISTER_LAYER_NORM_CUDA_KERNEL(float)
+REGISTER_LAYER_NORM_CUDA_KERNEL(double)
+REGISTER_LAYER_NORM_CUDA_KERNEL(half)
 
 template<typename T>
 class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -362,10 +365,10 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
   };
 };
 
-#define REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(dtype)                                         \
+#define REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(dtype)                                        \
   REGISTER_USER_KERNEL("layer_norm_grad")                                                  \
       .SetCreateFn<LayerNormGradGpuKernel<dtype>>()                                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                     \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))    \
       .SetInplaceProposalFn(                                                               \
           [](const user_op::InferContext& ctx,                                             \
@@ -376,9 +379,9 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
             return Maybe<void>::Ok();                                                      \
           });
 
-REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(float)
-REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(double)
-REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(half)
+REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(float)
+REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(double)
+REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(half)
 
 template<typename T>
 class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
@@ -440,7 +443,7 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
 #define REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(dtype)                                    \
   REGISTER_USER_KERNEL("layer_norm_param_grad")                                             \
       .SetCreateFn<LayerNormParamGradGpuKernel<dtype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                      \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))     \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                   \
         const int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");          \

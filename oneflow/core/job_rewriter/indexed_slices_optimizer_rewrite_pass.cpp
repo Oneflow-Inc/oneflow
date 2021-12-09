@@ -71,13 +71,13 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
       if (dst_op_conf.has_user_conf()
           && dst_op_conf.user_conf().op_type_name() == "hierarchical_parallel_cast") {
         if (dst_node->out_edges().size() != 1) { return; }
-        op_nodes_to_remove.push_back(dst_node);
+        op_nodes_to_remove.emplace_back(dst_node);
         dst_node = dst_node->SoleOutEdge()->dst_node();
         continue;
       } else if (dst_op_conf.has_user_conf()
                  && dst_op_conf.user_conf().op_type_name() == "scalar_mul") {
         if (dst_node->out_edges().size() != 1) { return; }
-        op_nodes_apply_to_diff.push_back(dst_node);
+        op_nodes_apply_to_diff.emplace_back(dst_node);
         dst_node = dst_node->SoleOutEdge()->dst_node();
         continue;
       } else {
