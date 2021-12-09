@@ -56,10 +56,10 @@ Maybe<void> PySliceUnpack(PyObject* object, Py_ssize_t* start, Py_ssize_t* stop,
 }
 
 Maybe<DataType> InferScalarType(PyObject* object) {
-  if (PyLong_Check(object)) {
-    return DataType::kInt64;
-  } else if (PyBool_Check(object)) {
+  if (PyBool_Check(object)) {
     return DataType::kUInt8;
+  } else if (PyLong_Check(object)) {
+    return DataType::kInt64;
   } else if (PyArray_Check(object)) {
     return numpy::GetOFDataTypeFromNpArray(reinterpret_cast<PyArrayObject*>(object));
   } else if (PySequence_Check(object)) {
