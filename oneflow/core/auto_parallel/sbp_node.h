@@ -252,19 +252,16 @@ SbpNode<SbpSignature>::SbpNode(SbpNode<SbpSignature>* first, SbpNode<SbpSignatur
 
   // Find all available merged-SbpSignature(edge's cost less than threshold).
   if (common_edge) {
-    double edge_threshold = cut_cost;
-    double min_cost = 1e100;
+    double min_cost = GetMaxVal<float>();
     for (const auto& row : common_edge->Cost) {
       for (const double& c : row) min_cost = std::min(min_cost, c);
     }
-    // If there is no one case can choose, we will choose pairs whose cost in [min_cost,
-    // min_cost*10]
-    edge_threshold = min_cost > edge_threshold ? min_cost * 10 : edge_threshold;
+    // If there is no one case can choose, we will blow up
     for (int32_t i = 0; i < first->Cost.size(); i++) {
       for (int32_t j = 0; j < second->Cost.size(); j++) {
         const double edge_cost =
             common_edge->StartNode == first ? common_edge->Cost[i][j] : common_edge->Cost[j][i];
-        if (edge_cost < edge_threshold) {
+        if (edge_cost < cut_cost) {
           MergedSigId2ChildrenSigId.emplace_back(std::make_pair(i, j));
           Cost.emplace_back(edge_cost + first->Cost[i] + second->Cost[j]);
         }

@@ -106,7 +106,7 @@ class SbpGraph {
   double GreedyStrategy(int32_t nbh_num = 4);
 
   // Find one strategy with finite cost for adjustment
-  void Find1Strategy4Greedy();
+  Maybe<void> Find1Strategy4Greedy();
   // Use brute force to search for a strategy with minimum cost for a neighborhood
   double NbhGreedyStrategy(std::vector<int32_t>& nbh_id2NodeListId);
 
@@ -618,7 +618,8 @@ bool SbpGraph<SbpSignature>::DFS_FindReasonableCost(
   for (int32_t sbp_id = sbp_node->Cost.size() - 1; sbp_id >= 0; sbp_id--) {
     sbp_node->FinalSbpSignatureId = sbp_id;
     // If the cost for this node is reasonable, then go to the next one
-    if (sbp_node->EvalInNbhCost(NodeListId2nbh_id, nbh_id2order) < cut_cost) {
+    if (sbp_node->Cost[sbp_id] + sbp_node->EvalInNbhCost(NodeListId2nbh_id, nbh_id2order)
+        < cut_cost) {
       if (DFS_FindReasonableCost(nbh_id2NodeListId, NodeListId2nbh_id, nbh_id2order, nbh_id + 1)) {
         // If we found one strategy, then exist the DFS.
         return true;
@@ -632,7 +633,7 @@ bool SbpGraph<SbpSignature>::DFS_FindReasonableCost(
 
 // Find one strategy with finite cost for adjustment
 template<class SbpSignature>
-void SbpGraph<SbpSignature>::Find1Strategy4Greedy() {
+Maybe<void> SbpGraph<SbpSignature>::Find1Strategy4Greedy() {
   std::vector<int32_t> nbh_id2NodeListId;
   std::vector<bool> not_visited(NodeList.size(), true);
   std::vector<int32_t> nbh_1ring;
@@ -688,7 +689,9 @@ void SbpGraph<SbpSignature>::Find1Strategy4Greedy() {
     nbh_id2order[nbh_id] = nbh_id;
   }
   // DFS
-  DFS_FindReasonableCost(nbh_id2NodeListId, NodeListId2nbh_id, nbh_id2order, 0);
+  CHECK(DFS_FindReasonableCost(nbh_id2NodeListId, NodeListId2nbh_id, nbh_id2order, 0))
+      << "Can't find a reasonable strateggy!";
+  return Maybe<void>::Ok();
 }
 
 // Use brute force to search for a strategy with minimum cost for a neighborhood
