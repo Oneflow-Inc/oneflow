@@ -633,24 +633,23 @@ Maybe<void> InsertCriticalSectionSrcAndDstTicks(
     for (const auto* op_node : pair.second) {
       OperatorConf interface_op(op_node->op().op_conf());
       {
-        OperatorConf device_tick_op;
-        device_tick_op.set_name("System-EagerCriticalSection-Interface-Begin-Tick-"
-                                + NewUniqueId());
-        auto* device_tick_op_conf = device_tick_op.mutable_device_tick_conf();
-        device_tick_op_conf->set_out("out");
-        interface_src_tick_op_names->push_back(device_tick_op.name());
-        JUST(job_builder->AddOp(parallel_conf, device_tick_op));
-        interface_op.add_ctrl_in_op_name(device_tick_op.name());
+        OperatorConf tick_op_conf;
+        tick_op_conf.set_name("System-EagerCriticalSection-Interface-Begin-Tick-" + NewUniqueId());
+        auto* tick_conf = tick_op_conf.mutable_tick_conf();
+        tick_conf->set_out("out");
+        interface_src_tick_op_names->push_back(tick_op_conf.name());
+        JUST(job_builder->AddOp(parallel_conf, tick_op_conf));
+        interface_op.add_ctrl_in_op_name(tick_op_conf.name());
         JUST(job_builder->MutOpOnlyOnce(interface_op));
       }
       {
-        OperatorConf device_tick_op;
-        device_tick_op.set_name("System-EagerCriticalSection-Interface-End-Tick-" + NewUniqueId());
-        device_tick_op.add_ctrl_in_op_name(interface_op.name());
-        auto* device_tick_op_conf = device_tick_op.mutable_device_tick_conf();
-        device_tick_op_conf->set_out("out");
-        interface_dst_tick_lbns->push_back(device_tick_op.name() + "/out");
-        JUST(job_builder->AddOp(parallel_conf, device_tick_op));
+        OperatorConf tick_op_conf;
+        tick_op_conf.set_name("System-EagerCriticalSection-Interface-End-Tick-" + NewUniqueId());
+        tick_op_conf.add_ctrl_in_op_name(interface_op.name());
+        auto* tick_conf = tick_op_conf.mutable_tick_conf();
+        tick_conf->set_out("out");
+        interface_dst_tick_lbns->push_back(tick_op_conf.name() + "/out");
+        JUST(job_builder->AddOp(parallel_conf, tick_op_conf));
       }
     }
   }
@@ -668,8 +667,8 @@ Maybe<void> InsertSrcSubsetTickAndDstSubsetTick(
   }
   for (const auto& op_name : interface_src_tick_op_names) {
     OperatorConf op_conf(JUST(job_builder->OpConf4OpName(op_name)));
-    CHECK_OR_RETURN(op_conf.has_device_tick_conf());
-    op_conf.mutable_device_tick_conf()->add_tick(*src_subset_tick_op_name + "/out");
+    CHECK_OR_RETURN(op_conf.has_tick_conf());
+    op_conf.mutable_tick_conf()->add_tick(*src_subset_tick_op_name + "/out");
     JUST(job_builder->MutOpOnlyOnce(op_conf));
   }
   HashSet<LogicalBlobId> dst_subset_tick_input_lbis;
