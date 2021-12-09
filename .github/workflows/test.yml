@@ -366,7 +366,7 @@ jobs:
           cuda-version: ${{ env.CUDA_VERSION }}
           manylinux-cache-dir: ${{ env.MANYLINUX_CACHE_DIR }}
           docker-run-use-system-http-proxy: false
-          docker-run-use-lld: true
+          docker-run-use-lld: false
           retry-failed-build: true
           clean-ccache: true
           wheel-audit: false
