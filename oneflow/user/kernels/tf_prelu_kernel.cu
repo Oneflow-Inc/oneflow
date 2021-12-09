@@ -25,10 +25,11 @@ template<typename T>
 __global__ void BroadcastPReluForwardGpu(const int32_t elem_cnt, const int32_t alpha_size,
                                          const int32_t inner_size, const T* x, const T* alpha,
                                          T* y) {
+  T zero_val = static_cast<T>(0.0);
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T x_i = x[i];
     const T alpha_i = alpha[(i / inner_size) % alpha_size];
-    y[i] = x_i > 0 ? x_i : x_i * alpha_i;
+    y[i] = x_i > zero_val ? x_i : x_i * alpha_i;
   }
 }
 
@@ -36,15 +37,16 @@ template<typename T>
 __global__ void BroadcastPReluBackwardGpu(const int32_t elem_cnt, const int32_t alpha_size,
                                           const int32_t inner_size, const T* x, const T* alpha,
                                           const T* dy, T* dx, T* alpha_diff) {
+  T zero_val = static_cast<T>(0.0);
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T x_i = x[i];
     const T dy_i = dy[i];
     const T alpha_i = alpha[(i / inner_size) % alpha_size];
-    T dx_i = 0;
-    T alpha_diff_i = 0;
-    if (x_i > 0) {
+    T dx_i = zero_val;
+    T alpha_diff_i = zero_val;
+    if (x_i > zero_val) {
       dx_i = dy_i;
-      alpha_diff_i = 0;
+      alpha_diff_i = zero_val;
     } else {
       dx_i = dy_i * alpha_i;
       alpha_diff_i = dy_i * x_i;
@@ -56,25 +58,27 @@ __global__ void BroadcastPReluBackwardGpu(const int32_t elem_cnt, const int32_t 
 
 template<typename T>
 __global__ void ElemwisePReluForwardGpu(const int32_t elem_cnt, const T* x, const T* alpha, T* y) {
+  T zero_val = static_cast<T>(0.0);
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T x_i = x[i];
     const T alpha_i = alpha[i];
-    y[i] = x_i > 0 ? x_i : x_i * alpha_i;
+    y[i] = x_i > zero_val ? x_i : x_i * alpha_i;
   }
 }
 
 template<typename T>
 __global__ void ElemwisePReluBackwardGpu(const int32_t elem_cnt, const T* x, const T* alpha,
                                          const T* dy, T* dx, T* alpha_diff) {
+  T zero_val = static_cast<T>(0.0);
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T x_i = x[i];
     const T dy_i = dy[i];
     const T alpha_i = alpha[i];
-    T dx_i = 0;
-    T alpha_diff_i = 0;
-    if (x_i > 0) {
+    T dx_i = zero_val;
+    T alpha_diff_i = zero_val;
+    if (x_i > zero_val) {
       dx_i = dy_i;
-      alpha_diff_i = 0;
+      alpha_diff_i = zero_val;
     } else {
       dx_i = dy_i * alpha_i;
       alpha_diff_i = dy_i * x_i;
@@ -173,6 +177,7 @@ class TfGpuPReluKernel final : public user_op::OpKernel {
         return tmp_buffer_size;                                                        \
       });
 
+REGISTER_TF_CUDA_PRELU_KERNEL(half)
 REGISTER_TF_CUDA_PRELU_KERNEL(float)
 REGISTER_TF_CUDA_PRELU_KERNEL(double)
 
@@ -241,6 +246,7 @@ class TfGpuPReluGradKernel final : public user_op::OpKernel {
         return tmp_buffer_size;                                                         \
       });
 
+REGISTER_TF_CUDA_PRELU_GRAD_KERNEL(half)
 REGISTER_TF_CUDA_PRELU_GRAD_KERNEL(float)
 REGISTER_TF_CUDA_PRELU_GRAD_KERNEL(double)
 
