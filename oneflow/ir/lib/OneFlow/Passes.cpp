@@ -215,6 +215,7 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 
 void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<MulCastPattern>(patterns.getContext());
+  patterns.add<Conv2DPattern>(patterns.getContext());
 }
 
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
