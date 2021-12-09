@@ -226,6 +226,33 @@ class Graph(object):
         if len(self._opts) == 1:
             self.config._train(True)
 
+    def add_sparse_optimizer(
+        self, optimizer: Optimizer, *, lr_scheduler: Optional[LrScheduler] = None,
+    ):
+        r"""
+        """
+        if not isinstance(optimizer, Optimizer):
+            raise ValueError("optimizer is not an instance of Optimizer")
+
+        opt_dict = dict()
+        opt_dict["optim"] = optimizer
+        opt_dict["is_sparse"] = True
+
+        if lr_scheduler is not None:
+            if not isinstance(lr_scheduler, LrScheduler):
+                raise ValueError("lr_scheduler is not an instance of LrScheduler")
+
+            if lr_scheduler._optimizer is not optimizer:
+                raise ValueError("lr_scheduler's optimizer is not same with optimizer")
+
+            opt_dict["lr_sch"] = lr_scheduler
+
+        self._opts.append(opt_dict)
+
+        # Set the training config when there's at least an optimizer in graph
+        if len(self._opts) > 0:
+            self.config._train(True)
+
     def set_grad_scaler(self, grad_scaler: GradScaler = None):
         r"""Set the GradScaler for gradient and loss scaling.
         """

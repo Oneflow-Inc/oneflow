@@ -294,3 +294,20 @@ class Optimizer(object):
                 warnings.warn(
                     "For now, nn.Graph only support clip grad with `clip_grad_max_norm == 1.0` and `clip_grad_norm_type == 2.0`."
                 )
+
+    @property
+    def support_sparse(self):
+        return False
+
+    def _generate_indexed_slices_optimizer_conf(self, job_conf, vars_conf):
+        if self.support_sparse:
+            raise ValueError("This Optimizer do not support sparse updating")
+
+        for param_group in self.param_groups:
+            for param in param_group.parameters:
+                if not param.requires_grad:
+                    continue
+
+                sparse_opt_conf = job_conf.mutable_indexed_slices_optimizer_conf()
+                sparse_variable_op_names = sparse_opt_conf.mutable_include_op_names()
+                sparse_variable_op_names.add_op_name(vars_conf[param].name)
