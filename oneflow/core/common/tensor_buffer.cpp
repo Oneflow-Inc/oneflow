@@ -29,50 +29,6 @@ void CheckTensorBufferDataType(DataType val) {
       << "TensorBuffer only support POD as internal data type.";
 }
 
-class TensorBufferImpl final {
- public:
-  TensorBufferImpl(const Shape& shape, DataType dtype) { Reset(shape, dtype); }
-  ~TensorBufferImpl() = default;
-  OF_DISALLOW_COPY_AND_MOVE(TensorBufferImpl);
-
-  void Reset(const Shape& shape, DataType dtype);
-  void Reset(const Shape& shape);
-  void Reset(DataType dtype);
-  void Reset();
-
-  void CopyFrom(const TensorBufferImpl* src);
-  void Swap(TensorBufferImpl* other);
-
-  const Shape& shape() const { return shape_; }
-  DataType data_type() const { return data_type_; }
-  void* buffer() { return buffer_.get(); }
-  const void* buffer() const { return buffer_.get(); }
-
- private:
-  struct Deleter {
-    void operator()(void* ptr) { MemoryAllocatorImpl::DeallocateUnPinnedHostMem(ptr); }
-  };
-
-  void Reserve(size_t new_size) {
-    new_size = RoundUp(new_size, kTensorBufferAlignedSize);
-    if (new_size > buffer_size_) {
-      size_t growth_size = RoundUp(buffer_size_ * kGrowthFactor, kTensorBufferAlignedSize);
-      new_size = std::max(new_size, growth_size);
-      if (buffer_) { buffer_.reset(); }
-    } else {
-      if (new_size < buffer_size_ * kShrinkThreshold) { buffer_.reset(); }
-    }
-    buffer_.reset(MemoryAllocatorImpl::AllocateUnPinnedHostMem(new_size));
-    buffer_size_ = new_size;
-  }
-
-  Shape shape_;
-  DataType data_type_;
-
-  std::unique_ptr<void, Deleter> buffer_;
-  size_t buffer_size_;
-};
-
 void TensorBufferImpl::Reset(const Shape& shape, DataType dtype) {
   int64_t elem_cnt = shape.elem_cnt();
   if (dtype == DataType::kInvalidDataType || elem_cnt == 0) { return; }
@@ -101,18 +57,44 @@ void TensorBufferImpl::Reset(DataType dtype) {
 void TensorBufferImpl::Reset() {
   shape_ = Shape();
   data_type_ = DataType::kInvalidDataType;
-  buffer_.reset();
+  DeallocateBuffer();
+}
+
+void TensorBufferImpl::AllocateBuffer(size_t size) {
+  CHECK(buffer_ == nullptr);
+  buffer_ = MemoryAllocatorImpl::AllocateUnPinnedHostMem(size);
+  buffer_size_ = size;
+}
+
+void TensorBufferImpl::DeallocateBuffer() {
+  if (buffer_) { MemoryAllocatorImpl::DeallocateUnPinnedHostMem(buffer_); }
+  buffer_ = nullptr;
   buffer_size_ = 0;
+}
+
+void TensorBufferImpl::Reserve(size_t new_size) {
+  new_size = RoundUp(new_size, kTensorBufferAlignedSize);
+  if (new_size > buffer_size_) {
+    DeallocateBuffer();
+    size_t growth_size = RoundUp(buffer_size_ * kGrowthFactor, kTensorBufferAlignedSize);
+    new_size = std::max(new_size, growth_size);
+    AllocateBuffer(new_size);
+  } else {
+    if (new_size < buffer_size_ * kShrinkThreshold) {
+      DeallocateBuffer();
+      AllocateBuffer(new_size);
+    }
+  }
 }
 
 void TensorBufferImpl::CopyFrom(const TensorBufferImpl* src) {
   if (src == this) { return; }
   Reset(src->shape(), src->data_type());
-  memcpy(buffer_.get(), src->buffer(), buffer_size_);
+  memcpy(buffer_, src->buffer(), buffer_size_);
 }
 
 void TensorBufferImpl::Swap(TensorBufferImpl* other) {
-  buffer_.swap(other->buffer_);
+  std::swap(buffer_, other->buffer_);
   std::swap(buffer_size_, other->buffer_size_);
   std::swap(shape_, other->shape_);
   std::swap(data_type_, other->data_type_);
@@ -124,6 +106,13 @@ TensorBuffer::~TensorBuffer() { TensorBufferPool::Get().Deallocate(*this); }
 
 TensorBuffer::TensorBuffer(const Shape& shape, DataType dtype) {
   TensorBufferPool::Get().Allocate(*this, shape, dtype);
+}
+
+TensorBuffer& TensorBuffer::operator=(TensorBuffer&& other) noexcept {
+  if (impl_) { TensorBufferPool::Get().Deallocate(*this); }
+  impl_ = std::move(other.impl_);
+  other.impl_.reset();
+  return *this;
 }
 
 void TensorBuffer::Reset(const Shape& shape, DataType dtype) {
@@ -165,43 +154,55 @@ void* TensorBuffer::raw_data() {
 
 const void* TensorBuffer::raw_data() const {
   CHECK(is_allocated()) << "TensorBuffer is not allocated";
-  return const_cast<detail::TensorBufferImpl*>(impl_)->buffer();
+  return const_cast<detail::TensorBufferImpl*>(impl_.get())->buffer();
 }
 
 void TensorBuffer::CopyFrom(const TensorBuffer& src) {
   CHECK(src.is_allocated()) << "TensorBuffer src is not allocated";
   if (!is_allocated()) { TensorBufferPool::Get().Allocate(*this, src.shape(), src.data_type()); }
-  impl_->CopyFrom(src.impl_);
+  impl_->CopyFrom(src.impl_.get());
 }
 
 void TensorBuffer::Swap(TensorBuffer& other) { std::swap(impl_, other.impl_); }
 
+namespace {
+
+constexpr size_t kDefaultPoolSize = 1024;
+constexpr size_t kDefaultThreadLocalCacheSize = 64;
+
+}  // namespace
+
+TensorBufferPool::TensorBufferPool()
+    : pool_size_(kDefaultPoolSize), thread_local_cache_size_(kDefaultThreadLocalCacheSize) {}
+
 TensorBufferPool::~TensorBufferPool() {
+  ThreadLocalCache().clear();
   std::unique_lock<std::mutex> lck(mtx_);
-  for (auto* item : global_free_list_) { delete item; }
+  global_free_list_.clear();
 }
 
 void TensorBufferPool::Allocate(TensorBuffer& tensor_buffer, const Shape& shape, DataType dtype) {
-  if (tensor_buffer.impl_) {
-    LOG(ERROR) << "TensorBuffer is already allocated";
-    return;
-  }
-
-  thread_local TensorBufferList thread_local_cache;
+  CHECK(!tensor_buffer.impl_) << "TensorBuffer is already allocated";
+  auto& thread_local_cache = ThreadLocalCache();
   if (thread_local_cache.empty() && thread_local_cache_size_ > 0) {
+    thread_local_cache.reserve(thread_local_cache_size_);
     std::unique_lock<std::mutex> lck(mtx_);
     if (!global_free_list_.empty()) {
       auto begin = global_free_list_.size() >= thread_local_cache_size_
                        ? (global_free_list_.end() - thread_local_cache_size_)
                        : global_free_list_.begin();
-      thread_local_cache.insert(thread_local_cache.end(), begin, global_free_list_.end());
+      for (auto it = begin; it < global_free_list_.end(); ++it) {
+        thread_local_cache.push_back(std::move(*it));
+      }
+      global_free_list_.erase(begin, global_free_list_.end());
     }
   }
 
   if (thread_local_cache.empty()) {
-    tensor_buffer.impl_ = new detail::TensorBufferImpl(shape, dtype);
+    tensor_buffer.impl_ = std::make_unique<detail::TensorBufferImpl>(shape, dtype);
   } else {
-    tensor_buffer.impl_ = thread_local_cache.back();
+    tensor_buffer.impl_ = std::move(thread_local_cache.back());
+    CHECK(tensor_buffer.impl_);
     thread_local_cache.pop_back();
     tensor_buffer.impl_->Reset(shape, dtype);
   }
@@ -211,11 +212,11 @@ void TensorBufferPool::Deallocate(TensorBuffer& tensor_buffer) {
   if (!tensor_buffer.impl_) { return; }
   std::unique_lock<std::mutex> lck(mtx_);
   if (global_free_list_.size() < pool_size_) {
-    global_free_list_.push_back(tensor_buffer.impl_);
-    tensor_buffer.impl_ = nullptr;
-  } else {
-    delete tensor_buffer.impl_;
+    global_free_list_.push_back(std::move(tensor_buffer.impl_));
   }
+  tensor_buffer.impl_.reset();
 }
+
+void TensorBufferPool::Deallocate(std::vector<TensorBuffer>& tensor_buffers) { UNIMPLEMENTED(); }
 
 }  // namespace oneflow

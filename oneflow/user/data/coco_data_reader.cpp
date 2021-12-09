@@ -28,8 +28,8 @@ namespace data {
 
 COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COCOImage>(ctx) {
   size_t batch_size = ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
-  TensorBufferPool::New(/* pool_size */ batch_size / 4 + 1,
-                        /* thread_local_cache_size */ 4);
+  TensorBufferPool::Get().set_pool_size(batch_size);
+  TensorBufferPool::Get().set_thread_local_cache_size(batch_size / 4);
 
   std::shared_ptr<const COCOMeta> meta(new COCOMeta(
       ctx->Attr<int64_t>("session_id"), ctx->Attr<std::string>("annotation_file"),

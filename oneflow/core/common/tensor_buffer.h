@@ -24,13 +24,52 @@ namespace oneflow {
 
 namespace detail {
 
-class TensorBufferImpl;
+class TensorBufferImpl final {
+ public:
+  TensorBufferImpl()
+      : shape_(Shape()),
+        data_type_(DataType::kInvalidDataType),
+        buffer_(nullptr),
+        buffer_size_(0) {}
+  TensorBufferImpl(const Shape& shape, DataType dtype)
+      : shape_(Shape()), data_type_(DataType::kInvalidDataType), buffer_(nullptr), buffer_size_(0) {
+    Reset(shape, dtype);
+  }
+  ~TensorBufferImpl() { DeallocateBuffer(); }
+  OF_DISALLOW_COPY_AND_MOVE(TensorBufferImpl);
+
+  void Reset(const Shape& shape, DataType dtype);
+  void Reset(const Shape& shape);
+  void Reset(DataType dtype);
+  void Reset();
+
+  void CopyFrom(const TensorBufferImpl* src);
+  void Swap(TensorBufferImpl* other);
+
+  const Shape& shape() const { return shape_; }
+  DataType data_type() const { return data_type_; }
+
+  void* buffer() { return buffer_; }
+  const void* buffer() const { return buffer_; }
+  size_t buffer_size() const { return buffer_size_; }
+
+ private:
+  void AllocateBuffer(size_t size);
+  void DeallocateBuffer();
+  void Reserve(size_t new_size);
+
+  Shape shape_;
+  DataType data_type_;
+
+  void* buffer_;
+  size_t buffer_size_;
+};
 
 }  // namespace detail
 
 class TensorBuffer final {
  public:
-  TensorBuffer() : impl_(nullptr) {}
+  TensorBuffer() = default;
   ~TensorBuffer();
 
   TensorBuffer(const Shape& shape, DataType dtype);
@@ -38,14 +77,12 @@ class TensorBuffer final {
   TensorBuffer(const TensorBuffer&) = delete;
   TensorBuffer& operator=(const TensorBuffer&) = delete;
 
-  TensorBuffer(TensorBuffer&& other) noexcept : impl_(other.impl_) { other.impl_ = nullptr; }
-  TensorBuffer& operator=(TensorBuffer&& other) noexcept {
-    impl_ = other.impl_;
-    other.impl_ = nullptr;
-    return *this;
+  TensorBuffer(TensorBuffer&& other) noexcept : impl_(std::move(other.impl_)) {
+    other.impl_.reset();
   }
+  TensorBuffer& operator=(TensorBuffer&& other) noexcept;
 
-  bool is_allocated() const { return impl_ != nullptr; }
+  bool is_allocated() const { return bool(impl_); }
   const Shape& shape() const;
   DataType data_type() const;
   int64_t elem_cnt() const { return shape().elem_cnt(); }
@@ -82,7 +119,7 @@ class TensorBuffer final {
   void* raw_data();
   const void* raw_data() const;
 
-  detail::TensorBufferImpl* impl_;
+  std::unique_ptr<detail::TensorBufferImpl> impl_;
 };
 
 #define BUFFER_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(TensorBuffer, DataType::kTensorBuffer)
@@ -95,19 +132,11 @@ inline TensorBuffer GetTypeByDataType(std::integral_constant<DataType, DataType:
 
 class TensorBufferPool final {
  public:
-  using TensorBufferList = std::vector<detail::TensorBufferImpl*>;
+  using TensorBufferList = std::vector<std::unique_ptr<detail::TensorBufferImpl>>;
 
   static TensorBufferPool& Get() {
-    CHECK(Ptr()) << "TensorBufferPool singleton instance does not exist, please use "
-                    "TensorBufferPool::New(...) first.";
+    if (!Ptr()) { Ptr().reset(new TensorBufferPool()); }
     return *Ptr().get();
-  }
-
-  static TensorBufferPool& New(size_t pool_size, size_t thread_local_cache_size) {
-    CHECK(!Ptr()) << "TensorBufferPool singleton instance is already created.";
-    auto* inst = new TensorBufferPool(pool_size, thread_local_cache_size);
-    Ptr().reset(inst);
-    return *inst;
   }
 
   static void Delete() {
@@ -119,6 +148,12 @@ class TensorBufferPool final {
 
   void Allocate(TensorBuffer& tensor_buffer, const Shape& shape, DataType dtype);
   void Deallocate(TensorBuffer& tensor_buffer);
+  void Deallocate(std::vector<TensorBuffer>& tensor_buffers);
+
+  void set_pool_size(size_t pool_size) { pool_size_ = pool_size; }
+  void set_thread_local_cache_size(size_t thread_local_cache_size) {
+    thread_local_cache_size_ = thread_local_cache_size;
+  }
 
  private:
   static std::unique_ptr<TensorBufferPool>& Ptr() {
@@ -126,10 +161,12 @@ class TensorBufferPool final {
     return ptr;
   }
 
-  TensorBufferPool(size_t pool_size, size_t thread_local_cache_size) noexcept
-      : pool_size_(pool_size), thread_local_cache_size_(thread_local_cache_size) {
-    if (thread_local_cache_size_ > pool_size) { thread_local_cache_size_ = pool_size_; }
+  static TensorBufferList& ThreadLocalCache() {
+    thread_local TensorBufferList thread_local_cache;
+    return thread_local_cache;
   }
+
+  TensorBufferPool();
 
   size_t pool_size_;
   size_t thread_local_cache_size_;
