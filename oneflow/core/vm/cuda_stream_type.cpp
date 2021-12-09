@@ -75,7 +75,7 @@ intrusive::shared_ptr<StreamDesc> CudaStreamType::MakeStreamDesc(const Resource&
   auto ret = intrusive::make_shared<StreamDesc>();
   ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CudaStreamType>());
   ret->set_num_streams_per_machine(device_num);
-  ret->set_num_streams_per_thread(1);
+  ret->set_num_streams_per_thread(device_num);
   return ret;
 }
 

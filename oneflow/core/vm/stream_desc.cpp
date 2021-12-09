@@ -27,6 +27,7 @@ void StreamDesc::__Init__(const StreamTypeId& stream_type_id, int32_t num_stream
 
 int32_t StreamDesc::num_threads() const {
   int32_t num_devices = num_streams_per_machine();
+  if (num_devices == 0) { return 0; }
   CHECK_EQ(num_devices % num_streams_per_thread(), 0);
   return num_devices / num_streams_per_thread();
 }
