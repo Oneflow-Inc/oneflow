@@ -147,5 +147,8 @@ oneflow
             is_grad_enabled,
             is_floating_point,
             set_printoptions,
+            decode_onerec,
+            read_onerec,
+
 .. autofunction:: oneflow.relu
 .. autofunction:: oneflow.env.get_rank
