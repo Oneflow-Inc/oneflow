@@ -85,7 +85,7 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
   class NaiveCriticalSectionInstance final : public CriticalSectionInstance {
    public:
     NaiveCriticalSectionInstance(
-        std::shared_ptr<CriticalSectionBeginPhyInstrOperand> phy_instr_operand,
+        const std::shared_ptr<CriticalSectionBeginPhyInstrOperand>& phy_instr_operand,
         const std::string& job_name)
         : CriticalSectionInstance(), phy_instr_operand_(phy_instr_operand), job_name_(job_name) {}
 
@@ -104,7 +104,7 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
   };
 
   std::shared_ptr<CriticalSectionInstance> MakeCriticalSectionInstance(
-      std::shared_ptr<CriticalSectionBeginPhyInstrOperand> phy_instr_operand) const {
+      const std::shared_ptr<CriticalSectionBeginPhyInstrOperand>& phy_instr_operand) const {
     phy_instr_operand->FinishInvalidInterfaceEventRecords();
     const auto& job_name = phy_instr_operand->nn_graph()->job_name();
     return std::make_shared<NaiveCriticalSectionInstance>(phy_instr_operand, job_name);

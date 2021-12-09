@@ -40,7 +40,7 @@ class LazyJobInstance final : public JobInstance {
   LazyJobInstance(const LazyJobInstance&) = delete;
   LazyJobInstance(LazyJobInstance&&) = delete;
   ~LazyJobInstance() override = default;
-  LazyJobInstance(const std::string& job_name, const std::function<void()> finish_cb)
+  LazyJobInstance(const std::string& job_name, const std::function<void()>& finish_cb)
       : job_name_(job_name), finish_cb_(finish_cb) {}
 
   std::string job_name() const override { return job_name_; }
