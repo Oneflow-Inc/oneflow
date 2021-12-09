@@ -132,7 +132,7 @@ Maybe<TensorTuple> ExpandIndices(const TensorTuple& indices) {
   return expanded_indices;
 }
 
-Maybe<bool> IsContinuosSubspace(const TensorTuple& indices) {
+Maybe<bool> IsContinuousSubspace(const TensorTuple& indices) {
   int token = 0;
   for (int i = 0; i < indices.size(); ++i) {
     if (indices.at(i) && !token) {
@@ -321,7 +321,7 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   CHECK_GE_OR_RETURN(input->shape()->NumAxes(), indices.size())
       << "Too many indices for tensor of dimension " << input->shape()->NumAxes();
   const auto& expanded_indices = JUST(ExpandIndices(indices));
-  bool is_continuos_subspace = JUST(IsContinuosSubspace(indices));
+  bool is_continuos_subspace = JUST(IsContinuousSubspace(indices));
 
   // Since the start dimension cannot be specified for `gather_nd`, so we should
   // transpose the input as long as the first indice is null.
