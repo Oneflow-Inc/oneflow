@@ -41,16 +41,9 @@ Maybe<void> EagerBlobObject::TryInitBlob() {
 }
 
 Maybe<void> EagerBlobObject::InitBlob() {
-  CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
-  if (!blob_desc_.shape().is_initialized()) { blob_desc_.set_shape(Shape(DimVector{})); }
-  {
-    header_buffer_.reset();
-    int64_t header_byte_size = blob_desc_.AlignedByteSizeOfBlobHeader();
-    header_buffer_ = std::make_unique<char[]>(header_byte_size);
-  }
-  storage_offset_ = 0;
-  blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer_.get(), nullptr, storage_offset_));
-  return Maybe<void>::Ok();
+  // mostly, init blob with offset 0(no offset) by default
+  // in some cases(e.g. slice narrow) might need init blob with offset
+  return InitBlobWithOffset(0);
 }
 
 Maybe<void> EagerBlobObject::InitBlobWithOffset(const int64_t offset) {
@@ -61,8 +54,7 @@ Maybe<void> EagerBlobObject::InitBlobWithOffset(const int64_t offset) {
     int64_t header_byte_size = blob_desc_.AlignedByteSizeOfBlobHeader();
     header_buffer_ = std::make_unique<char[]>(header_byte_size);
   }
-  storage_offset_ = offset;
-  blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer_.get(), nullptr, storage_offset_));
+  blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer_.get(), nullptr, offset));
   return Maybe<void>::Ok();
 }
 
@@ -91,8 +83,7 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     tensor_buffer_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
                                   required_body_bytes);
 
-    int64_t storage_offset_bytes = storage_offset_ * GetSizeOfDataType(blob_desc_.data_type());
-    blob->reset_dptr(dptr + storage_offset_bytes);
+    blob->reset_dptr(dptr);
     InitNonPODTypeBlobIfNeed(tensor_buffer_->non_pod_allocator(), blob_.get());
   }
   return Maybe<void>::Ok();
