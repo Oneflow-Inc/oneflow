@@ -1,6 +1,5 @@
 set -ex
-export ONEFLOW_CI_LLVM_DIR=/usr/lib/llvm-12
-export PATH=$ONEFLOW_CI_LLVM_DIR/bin:/usr/lib64/ccache:/root/.local/bin:$PATH
+export PATH=/usr/lib/llvm-12/bin:/usr/lib/llvm-13/bin:/usr/lib64/ccache:/root/.local/bin:$PATH
 
 # clean python dir
 cd ${ONEFLOW_CI_SRC_DIR}
