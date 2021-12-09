@@ -416,6 +416,7 @@ class SliceUpdateKernel final : public user_op::OpKernel {
       });
 
 #define REGISTER_SLICE_KERNELS_WITH_DEVICE(device) \
+  REGISTER_SLICE_KERNELS(device, bool)             \
   REGISTER_SLICE_KERNELS(device, float)            \
   REGISTER_SLICE_KERNELS(device, double)           \
   REGISTER_SLICE_KERNELS(device, int32_t)          \

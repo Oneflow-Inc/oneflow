@@ -240,7 +240,10 @@ class BatchMatMulFunctor {
     const auto& b_shape = b->shape();
     CHECK_GE_OR_RETURN(a_shape->NumAxes(), 3) << "Tensor a's dim should >= 3";
     CHECK_GE_OR_RETURN(b_shape->NumAxes(), 3) << "Tensor b's dim should >= 3";
-
+    CHECK_GE_OR_RETURN(a_shape->At(0), b_shape->At(0))
+        << "batch dim not match, please check input!";
+    CHECK_GE_OR_RETURN(a_shape->At(2), b_shape->At(1))
+        << "matmul dim not match, please check input!";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
     JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
@@ -1450,14 +1453,14 @@ class DropoutFunctor {
     MutableAttrMap dropout_attrs;
     JUST(dropout_attrs.SetAttr<float>("rate", p));
     if (addend) {
-      if (!training) {
+      if ((!training) || p == 0.0) {
         return OpInterpUtil::Dispatch<Tensor>(*add_op_, {x, JUST(addend)});
       } else {
         return OpInterpUtil::Dispatch<Tensor>(*dropout_addend_op_, {x, JUST(addend)},
                                               OpExprInterpContext(dropout_attrs, dropout_state));
       }
     } else {
-      if (!training) {
+      if (!training || p == 0.0) {
         return x;
       } else {
         return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {x},
@@ -1843,7 +1846,7 @@ class FusedBiasAddDropoutFunctor {
     JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
 
-    float scale = 1.0;
+    float scale = 0.0;
     if (p != 1.0) { scale = 1.0 / (1.0 - p); }
     MutableAttrMap fused_bias_add_mask_attrs;
     JUST(fused_bias_add_mask_attrs.SetAttr<float>("scale", scale));
@@ -1953,7 +1956,7 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
         *random_mask_like_op_, {x},
         OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
 
-    float dropout_scale = 1.0;
+    float dropout_scale = 0.0;
     if (rate != 1.0) { dropout_scale = 1.0 / (1.0 - rate); }
     MutableAttrMap fused_scale_mask_softmax_dropout_attrs;
     JUST(fused_scale_mask_softmax_dropout_attrs.SetAttr<float>("scale_value", scale));

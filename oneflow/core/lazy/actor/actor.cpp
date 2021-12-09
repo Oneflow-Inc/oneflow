@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/stream/include/stream_context.h"
-#include "oneflow/core/device/device_context_adapter.h"
 
 namespace oneflow {
 
@@ -29,7 +28,6 @@ class KernelContextImpl : public KernelContext, public ActorContextProvider {
   explicit KernelContextImpl(ActorContext* actor_ctx)
       : actor_ctx_(actor_ctx),
         stream_ctx_(actor_ctx->stream_ctx()),
-        device_ctx_(NewDeviceCtxAdapter(actor_ctx->stream_ctx()->stream())),
         state_(nullptr),
         stream_kernel_observer_(nullptr) {
     auto* kernel_observer_provider = dynamic_cast<KernelObserverProvider*>(stream_ctx_);
@@ -42,8 +40,6 @@ class KernelContextImpl : public KernelContext, public ActorContextProvider {
   ep::Stream* stream() const override { return stream_ctx_->stream(); }
 
   ActorContext* GetActorContext() const override { return actor_ctx_; }
-
-  DeviceCtx* device_ctx() const override { return device_ctx_.get(); }
 
   Blob* BnInOp2Blob(const std::string& bn) const override { return bn_in_op2blob_fn_(bn); }
 
@@ -67,7 +63,6 @@ class KernelContextImpl : public KernelContext, public ActorContextProvider {
  private:
   ActorContext* actor_ctx_;
   StreamContext* stream_ctx_;
-  std::unique_ptr<DeviceCtx> device_ctx_;
   std::function<Blob*(const std::string&)> bn_in_op2blob_fn_;
   std::shared_ptr<KernelState> state_;
   KernelObserver* stream_kernel_observer_;

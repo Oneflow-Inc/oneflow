@@ -1,5 +1,8 @@
-include "OneFlowDialect.td"
-include "OneFlowInterfaces.td"
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWBASE_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWBASE_H_
+
+include "OneFlow/OneFlowDialect.td"
+include "OneFlow/OneFlowInterfaces.td"
 
 def SI32ArrayAttr : TypedArrayAttrBase<SI32Attr,
                                       "signed 32-bit integer array attribute"> {
@@ -23,6 +26,7 @@ def ShapeArrayAttr : TypedArrayAttrBase<AnyI64ElementsAttr,
 
 def OneFlow_IsOpConfCompatible : NativeOpTrait<"IsOpConfCompatible">;
 def OneFlow_IsImportCompatible : NativeOpTrait<"IsImportCompatible">;
+def OneFlow_AlternativeOp : NativeOpTrait<"IsAlternative">;
 
 class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, !listconcat(traits, [OneFlow_IsOpConfCompatible])> {
@@ -63,8 +67,6 @@ class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
     I32ElementsAttr:$result_segment_sizes
   );
 }
-
-def OneFlow_AlternativeOp : NativeOpTrait<"IsAlternative">;
 
 class OneFlow_UserBaseOp<string mnemonic, list<OpTrait> traits = [OneFlow_AlternativeOp]> :
         OneFlow_BaseOp<mnemonic, traits> {
@@ -122,7 +124,7 @@ class OneFlow_ConvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
 
 class OneFlow_TFPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
-    let summary = "OneFlow Lazy Pooling operation";
+    let summary = "OneFlow pooling operation, align with TensorFlow";
     let input = (ins AnyType:$x);
     let output = (outs AnyType:$y);
     let attrs = (ins
@@ -138,7 +140,7 @@ class OneFlow_TFPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
 
 class OneFlow_TFPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
-  let summary = "OneFlow Lazy Pooling Grad operation";
+  let summary = "OneFlow pooling grad operation, align with TensorFlow";
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -159,7 +161,7 @@ class OneFlow_TFPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
 
 class OneFlow_PoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
-  let summary = "OneFlow Eager Pooling operation";
+  let summary = "OneFlow pooling operation";
   let input = (ins AnyType:$x);
   let output = (outs AnyType:$y);
   let attrs = (ins
@@ -175,7 +177,7 @@ class OneFlow_PoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
 
 class OneFlow_PoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
-  let summary = "OneFlow Eager Pooling Grad operation";
+  let summary = "OneFlow pooling grad operation";
   let input = (ins
     AnyType:$x,
     AnyType:$y,
@@ -190,6 +192,31 @@ class OneFlow_PoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
     BoolAttr:$ceil_mode,
     BoolAttr:$count_include_pad,
     SI64Attr:$divisor_override
+  );
+}
+
+class OneFlow_AdaptivePoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
+       OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
+  let summary = "OneFlow adaptive pool operation";
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs AnyType:$y);
+  let attrs = (ins
+    SI64ArrayAttr:$output_size
+  );
+}
+
+class OneFlow_AdaptivePoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
+       OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
+  let summary = "OneFlow adaptive pool operation";
+  let input = (ins
+    AnyType:$x,
+    AnyType:$dy
+  );
+  let output = (outs AnyType:$dx);
+  let attrs = (ins
+    SI64ArrayAttr:$output_size
   );
 }
 
@@ -213,4 +240,6 @@ class OneFlow_InvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
 }
 
 #define GET_ONEFLOW_BASE_OP_DEFINITIONS
-include "OneFlowUserOpGen.td"
+include "OneFlow/OneFlowUserOpGen.td"
+
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWBASE_H_
