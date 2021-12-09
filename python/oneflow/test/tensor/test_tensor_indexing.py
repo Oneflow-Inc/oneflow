@@ -152,12 +152,20 @@ def test_advanced_indexing_array(test_case, numpy_x, dtype):
     test_case.assertTrue(np.allclose(numpy_x[idx, idx, :], x[idx, idx, :].numpy()))
     test_case.assertTrue(np.allclose(numpy_x[idx, idx, idx], x[idx, idx, idx].numpy()))
 
-    idx1 = np.array([[1, 0, 1],[1, 1, 0]])
-    idx2 = np.array([[0],[1]])
-    test_case.assertTrue(np.allclose(numpy_x[:, idx1, :, idx2].shape, x[:, idx1, :, idx2].shape))
-    test_case.assertTrue(np.allclose(numpy_x[:, idx1, 1, idx2].shape, x[:, idx1, 1, idx2].shape))
-    test_case.assertTrue(np.allclose(numpy_x[idx1, :, idx2, :].shape, x[idx1, :, idx2, :].shape))
-    test_case.assertTrue(np.allclose(numpy_x[:, idx1, idx2, :].shape, x[:, idx1, idx2, :].shape))
+    idx1 = np.array([[1, 0, 1], [1, 1, 0]])
+    idx2 = np.array([[0], [1]])
+    test_case.assertTrue(
+        np.allclose(numpy_x[:, idx1, :, idx2].shape, x[:, idx1, :, idx2].shape)
+    )
+    test_case.assertTrue(
+        np.allclose(numpy_x[:, idx1, 1, idx2].shape, x[:, idx1, 1, idx2].shape)
+    )
+    test_case.assertTrue(
+        np.allclose(numpy_x[idx1, :, idx2, :].shape, x[idx1, :, idx2, :].shape)
+    )
+    test_case.assertTrue(
+        np.allclose(numpy_x[:, idx1, idx2, :].shape, x[:, idx1, idx2, :].shape)
+    )
 
 
 def test_combining_indexing(test_case, numpy_x):
