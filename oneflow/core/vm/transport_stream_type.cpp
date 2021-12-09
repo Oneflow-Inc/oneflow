@@ -60,7 +60,6 @@ intrusive::shared_ptr<StreamDesc> TransportStreamType::MakeTransportStreamDesc(
   auto ret = intrusive::make_shared<StreamDesc>();
   ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<DerivedT>());
   // TODO(lixinqi): remove this ugly field
-  ret->set_num_machines(1);
   ret->set_num_streams_per_machine(device_num);
   // TODO(lixinqi): refactor to a num_threads_per_machine field
   ret->set_num_streams_per_thread(1);
