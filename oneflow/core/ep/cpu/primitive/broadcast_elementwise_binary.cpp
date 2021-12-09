@@ -74,8 +74,8 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
     int64_t simplified_src0_dims[kMaxNumDims];
     int64_t simplified_src1_dims[kMaxNumDims];
     int64_t simplified_dst_dims[kMaxNumDims];
-    SimplifyDims(num_src0_dims, src0_dims, num_src1_dims, src1_dims, &num_dims,
-                 simplified_src0_dims, simplified_src1_dims, simplified_dst_dims);
+    SimplifyBroadcastDims(num_src0_dims, src0_dims, num_src1_dims, src1_dims, &num_dims,
+                          simplified_src0_dims, simplified_src1_dims, simplified_dst_dims);
     CheckInplace(num_dims, simplified_src0_dims, src0, simplified_src1_dims, src1,
                  simplified_dst_dims, dst);
     for (int64_t i = 0; i < num_dims; ++i) {
