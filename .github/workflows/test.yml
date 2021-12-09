@@ -368,7 +368,7 @@ jobs:
           docker-run-use-system-http-proxy: false
           docker-run-use-lld: false
           retry-failed-build: true
-          clean-ccache: true
+          clean-ccache: false
           wheel-audit: false
           python-versions: |
             3.8
