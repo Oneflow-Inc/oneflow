@@ -21,7 +21,7 @@ from oneflow.test_utils.automated_test_util import *
 
 
 class TestDiagonal(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=40)
     def test_flow_diagonal_with_random_data(test_case):
         device = random_device()
         offset = random(-5, 5).to(int)
