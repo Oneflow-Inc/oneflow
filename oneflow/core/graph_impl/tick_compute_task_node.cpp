@@ -59,7 +59,14 @@ void TickCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-REGISTER_TICK_TASK_STREAM_INDEX_GETTER(TaskType::kTick);
+#define REGISTER_TICK_TOCK_TASK_STREAM_INDEX_GETTER(device_type)         \
+  REGISTER_TASK_STREAM_INDEX_GETTER(                                     \
+      device_type, TaskType::kTick,                                      \
+      ([](StreamIndexGenerator* generator) -> StreamId::stream_index_t { \
+        return generator->GenerateNamed("TICK");                         \
+      }));
+
+OF_PP_FOR_EACH_TUPLE(REGISTER_TICK_TOCK_TASK_STREAM_INDEX_GETTER, DEVICE_TYPE_SEQ)
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kTickConf, TickCompTaskNode);
 
