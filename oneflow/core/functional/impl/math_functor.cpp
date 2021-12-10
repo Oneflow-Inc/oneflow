@@ -578,18 +578,14 @@ class TransposeFunctor {
     auto ndim = input->ndim();
     CHECK_EQ_OR_RETURN(ndim, permute.size()) << "number of dims don't match in permute";
 
-    // according to colleague's advice, handle negative permute value here
-    // because of permute is const, so copy it to local var and do modification.
+    // handle negative permute value here, because of permute is const,
+    // so copy it to local var and do modification.
     auto positive_perm = permute;
     for (auto i = 0; i < positive_perm.size(); i++) {
-      CHECK_LT_OR_RETURN(positive_perm[i], ndim)
-          << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
-          << ndim << " ) but got " << positive_perm[i];
-      CHECK_GE_OR_RETURN(positive_perm[i], -ndim)
-          << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
-          << ndim << " ) but got " << positive_perm[i];
-
       if (positive_perm[i] < 0) { positive_perm[i] += ndim; }
+      CHECK_OR_RETURN(positive_perm[i] >= 0 && positive_perm[i] < ndim)
+          << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
+          << ndim << " ) but got " << positive_perm[i];
     }
 
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", positive_perm));

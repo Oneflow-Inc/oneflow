@@ -22,7 +22,7 @@ namespace oneflow {
 namespace user_op {
 
 namespace {
-bool IsOrderedPermute(const std::vector<int32_t>& perm) {
+bool IsIndentity(const std::vector<int32_t>& perm) {
   for (auto i = 0; i < perm.size(); i++) {
     if (perm[i] != i) { return false; }
   }
@@ -58,7 +58,7 @@ class TransposeKernel final : public OpKernel, public user_op::CudaGraphSupport 
     int64_t elem_cnt = tensor_out->shape().elem_cnt();
 
     if (elem_cnt != 0) {
-      if (IsOrderedPermute(perm)) {
+      if (IsIndentity(perm)) {
         // if permute vector is 0,1,...,n, do data copy directly
         AutoMemcpy(ctx->stream(), tensor_out->mut_dptr(), tensor_in->dptr(),
                    elem_cnt * GetSizeOfDataType(dtype), tensor_out->mem_case(),
