@@ -13,21 +13,31 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_CPU_H_
-#define ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_CPU_H_
-#include <half.hpp>
+#ifndef ONEFLOW_CORE_EP_DEVICE_MANAGER_FACTORY_H_
+#define ONEFLOW_CORE_EP_DEVICE_MANAGER_FACTORY_H_
+
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/device_registry_manager.h"
+#include "oneflow/core/ep/include/device_manager.h"
+#include "oneflow/core/common/device_type.h"
 
 namespace oneflow {
-typedef half_float::half float16;
 
-template<typename T>
-struct IsFloat16;
+namespace ep {
 
-template<>
-struct IsFloat16<float16> : std::true_type {};
+class DeviceManagerFactory {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DeviceManagerFactory);
+  DeviceManagerFactory() = default;
+  virtual ~DeviceManagerFactory() = default;
 
-REGISTER_DEVICE(DeviceType::kCPU).SetDumpVersionInfoFn([]() -> void {}).SetDeviceTag("cpu");
+  virtual std::unique_ptr<DeviceManager> NewDeviceManager() = 0;
+  virtual DeviceType device_type() const = 0;
+  virtual std::string device_type_name() const = 0;
+  virtual void DumpVersionInfo() const {}
+};
+
+}  // namespace ep
+
 }  // namespace oneflow
-#endif  // ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_CPU_H_
+
+#endif  // ONEFLOW_CORE_EP_DEVICE_MANAGER_FACTORY_H_

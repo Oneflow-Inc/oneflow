@@ -189,8 +189,8 @@ struct DirectLoad {
   template<int N>
   __device__ void load(DST* dst, int64_t row, int64_t col) const {
     Pack<SRC, N> pack;
-    const int64_t offset = row * row_size + col;
-    pack.storage = *reinterpret_cast<const PackType<SRC, N>*>(src + offset);
+    const int64_t offset = (row * row_size + col) / N;
+    pack.storage = *(reinterpret_cast<const PackType<SRC, N>*>(src) + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) { dst[i] = static_cast<DST>(pack.elem[i]); }
   }
@@ -204,10 +204,10 @@ struct DirectStore {
   template<int N>
   __device__ void store(const SRC* src, int64_t row, int64_t col) {
     Pack<DST, N> pack;
-    const int64_t offset = row * row_size + col;
+    const int64_t offset = (row * row_size + col) / N;
 #pragma unroll
     for (int i = 0; i < N; ++i) { pack.elem[i] = static_cast<DST>(src[i]); }
-    *reinterpret_cast<PackType<DST, N>*>(dst + offset) = pack.storage;
+    *(reinterpret_cast<PackType<DST, N>*>(dst) + offset) = pack.storage;
   }
   DST* dst;
   int64_t row_size;
