@@ -301,13 +301,11 @@ elseif(WIN32)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:oneflow")
 endif()
 
-target_link_libraries(oneflow-gen-ods ${of_libs} glog_imported
-  $<$<BOOL:${UNIX}>:-Wl,--no-as-needed>
-  $<$<BOOL:${UNIX}>:protobuf_imported>
-  $<$<BOOL:${UNIX}>:-Wl,--as-needed>
-  $<$<BOOL:${APPLE}>:protobuf_imported>
+target_link_libraries(oneflow-gen-ods ${of_libs} glog_imported ${oneflow_third_party_libs}
+  $<$<AND:$<BOOL:${UNIX}>,$<NOT:$<BOOL:${APPLE}>>>:-Wl,--no-as-needed>
+  protobuf_imported
+  $<$<AND:$<BOOL:${UNIX}>,$<NOT:$<BOOL:${APPLE}>>>:-Wl,--as-needed>
 )
-
 if (BUILD_CUDA)
   target_link_libraries(oneflow-gen-ods CUDA::cudart_static)
 endif()
