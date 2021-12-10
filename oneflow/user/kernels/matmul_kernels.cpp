@@ -315,6 +315,67 @@ REGISTER_USER_KERNEL("broadcast_matmul")
       return Maybe<void>::Ok();
     });
 
+template<typename Context>
+std::unique_ptr<ep::primitive::Matmul> NewMatmulPrimitiveForBroadcastMatmulGradB(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
+  return NewMatmulPrimitive(ctx->device_type(), data_type, true, false);
+}
+
+class BroadcastMatmulGradBKernel final : public user_op::OpKernel,
+                                         public user_op::CudaGraphSupport {
+ public:
+  BroadcastMatmulGradBKernel() = default;
+  ~BroadcastMatmulGradBKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    double alpha = ctx->Attr<double>("alpha");
+    const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
+    const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+
+    double beta = 0.0;
+    if (ctx->has_input("_add_to_output", 0)) {
+      const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+      CHECK_EQ(add_to_output->shape(), out->shape());
+      auto memcpy = NewMemcpyPrimitive(ctx);
+      CHECK(memcpy);
+      memcpy->Launch(
+          ctx->stream(), out->mut_dptr(), add_to_output->dptr(),
+          add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
+      beta = 1.0;
+    }
+
+    CHECK_EQ(a->shape().NumAxes(), b->shape().NumAxes());
+    int64_t k = a->shape().Count(0, a->shape().NumAxes() - 1);
+    CHECK_EQ(b->shape().Count(0, b->shape().NumAxes() - 1), k);
+    int64_t m = a->shape().At(a->shape().NumAxes() - 1);
+    int64_t n = b->shape().At(b->shape().NumAxes() - 1);
+
+    auto matmul = NewMatmulPrimitiveForBroadcastMatmulGradB(ctx);
+    CHECK(matmul);
+    matmul->Launch(ctx->stream(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
+  }
+};
+
+auto PrimitiveExistsForBroadcastMatmulGradB() {
+  return hob::make_custom("MatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewMatmulPrimitiveForBroadcastMatmulGradB(&ctx).operator bool();
+  });
+}
+
+REGISTER_USER_KERNEL("broadcast_matmul_grad_b")
+    .SetCreateFn<BroadcastMatmulGradBKernel>()
+    .SetIsMatchedHob(MemcpyPrimitiveExists() && PrimitiveExistsForBroadcastMatmulGradB())
+    .SetInplaceProposalFn([](const user_op::InferContext& ctx,
+                             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
+      if (ctx.has_input("_add_to_output", 0)) {
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));
+      }
+      return Maybe<void>::Ok();
+    });
 }  // namespace
 
 }  // namespace oneflow

@@ -205,25 +205,37 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx,
     const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
     const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
     std::shared_ptr<Tensor> broadcast_grad_b;
-    if (ctx->transpose_b) {
-      broadcast_grad_b =
-          JUST(functional::MatMul(out_grads.at(0), input_a, true, ctx->transpose_a, ctx->alpha));
-    } else {
-      broadcast_grad_b =
-          JUST(functional::MatMul(input_a, out_grads.at(0), !ctx->transpose_a, false, ctx->alpha));
-    }
-    std::vector<int32_t> b_reduce_vec;
+
     const auto b_shape = input_b->shape();
     const int64_t b_num_axes = b_shape->NumAxes();
-    auto GetBBatchDim = MakeGetBatchDim(b_num_axes, *b_shape);
-    const int64_t b_out_num_dim_differ = out_num_axes - b_num_axes;
-    for (int32_t i = 0; i < out_num_axes - 2; i++) {
-      if (GetOutBatchDim(i) > GetBBatchDim(i)
-          || (GetOutBatchDim(i) == 1 && i < b_out_num_dim_differ)) {
-        b_reduce_vec.push_back(i);
+
+    if(b_num_axes == 2){
+      if (ctx->transpose_b) {
+        in_grads->at(1) =
+            JUST(functional::BroadcastMatmulGradB(out_grads.at(0), input_a, ctx->alpha));
+      } else {
+        in_grads->at(1) =
+            JUST(functional::BroadcastMatmulGradB(input_a, out_grads.at(0), ctx->alpha));
       }
+    }else{
+      if (ctx->transpose_b) {
+        broadcast_grad_b =
+            JUST(functional::MatMul(out_grads.at(0), input_a, true, ctx->transpose_a, ctx->alpha));
+      } else {
+        broadcast_grad_b =
+            JUST(functional::MatMul(input_a, out_grads.at(0), !ctx->transpose_a, false, ctx->alpha));
+      }
+      std::vector<int32_t> b_reduce_vec;
+      auto GetBBatchDim = MakeGetBatchDim(b_num_axes, *b_shape);
+      const int64_t b_out_num_dim_differ = out_num_axes - b_num_axes;
+      for (int32_t i = 0; i < out_num_axes - 2; i++) {
+        if (GetOutBatchDim(i) > GetBBatchDim(i)
+            || (GetOutBatchDim(i) == 1 && i < b_out_num_dim_differ)) {
+          b_reduce_vec.push_back(i);
+        }
+      }
+      in_grads->at(1) = JUST(functional::ReduceSumLike(broadcast_grad_b, input_b, b_reduce_vec));
     }
-    in_grads->at(1) = JUST(functional::ReduceSumLike(broadcast_grad_b, input_b, b_reduce_vec));
   }
   return Maybe<void>::Ok();
 }
