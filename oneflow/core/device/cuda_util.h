@@ -28,6 +28,7 @@ limitations under the License.
 #include <nccl.h>
 #include <cuda_fp16.h>
 #include "oneflow/core/device/cuda_pseudo_half.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 #if CUDA_VERSION >= 10020
 
@@ -133,9 +134,8 @@ class CudaStream;
 
 cudaStream_t RunCudaKernelGetStream(ep::Stream* stream);
 
-#define RUN_CUDA_KERNEL(func, device_ctx_ptr, thread_num, ...)           \
-  func<<<SMBlocksNum4ThreadsNum(thread_num), kCudaThreadsNumPerBlock, 0, \
-         RunCudaKernelGetStream(device_ctx_ptr)>>>(__VA_ARGS__)
+#define RUN_CUDA_KERNEL(func, stream, elem_cnt, ...) \
+  stream->As<ep::CudaStream>()->LaunchKernel(func, elem_cnt, __VA_ARGS__)
 
 size_t GetAvailableGpuMemSize(int dev_id);
 
