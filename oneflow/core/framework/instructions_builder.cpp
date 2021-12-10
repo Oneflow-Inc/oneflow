@@ -1091,6 +1091,7 @@ Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_t
   JUST(view_eager_blob_object->InitBlobWithOffset(JUST(view_tensor->storage_offset())));
   view_eager_blob_object->set_is_shape_synced(true);
   view_eager_blob_object->set_last_used_device(JUST(input_tensor->device()));
+  view_eager_blob_object->init_producer_op_device(JUST(input_tensor->device()));
   // prepare instruction operand
   const auto& phy_instr_operand = std::make_shared<vm::TensorViewOperand>(
       eager_blob_object, view_eager_blob_object, local_dep_object);

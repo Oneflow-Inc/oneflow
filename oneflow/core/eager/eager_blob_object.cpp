@@ -81,7 +81,7 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
                                    required_body_bytes);
 
     blob->reset_dptr(dptr);
-    InitNonPODTypeBlobIfNeed(tensor_buffer_->non_pod_allocator(), blob_.get());
+    InitNonPODTypeBlobIfNeed(tensor_storage_->non_pod_allocator(), blob_.get());
   }
   return Maybe<void>::Ok();
 }
