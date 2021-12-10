@@ -32,8 +32,9 @@ void TestSimplifyBroadcastDims(size_t num_src0_dims, const int64_t* src0_dims, s
   int64_t simplified_src0_dims[max_num_dims]{};
   int64_t simplified_src1_dims[max_num_dims]{};
   int64_t simplified_dst_dims[max_num_dims]{};
-  SimplifyBroadcastDims(num_src0_dims, src0_dims, num_src1_dims, src1_dims, &simplified_num_dims,
-                        simplified_src0_dims, simplified_src1_dims, simplified_dst_dims);
+  SimplifyBroadcastDims<max_num_dims>(num_src0_dims, src0_dims, num_src1_dims, src1_dims,
+                                      &simplified_num_dims, simplified_src0_dims,
+                                      simplified_src1_dims, simplified_dst_dims);
   ASSERT_EQ(simplified_num_dims, expected_num_dims);
   for (size_t i = 0; i < simplified_num_dims; ++i) {
     ASSERT_EQ(simplified_src0_dims[i], expected_src0_dims[i]);

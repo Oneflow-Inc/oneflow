@@ -52,8 +52,8 @@ struct BroadcastElementwiseBinaryParams {
   NdIndexOffsetHelper<IndexType, max_dims> src1_index_helper;
   NdIndexOffsetHelper<IndexType, max_dims> dst_index_helper;
   size_t num_dims;
-  IndexType src0_index_multiplier[max_dims];
-  IndexType src1_index_multiplier[max_dims];
+  IndexType src0_index_mask[max_dims];
+  IndexType src1_index_mask[max_dims];
   IndexType count{};
   const void* src0{};
   const void* src1{};
@@ -84,8 +84,8 @@ __global__ void BroadcastElementwiseBinaryGpu(
 #pragma unroll
     for (int i = 0; i < max_dims; ++i) {
       if (i < num_dims) {
-        src0_index[i] = params.src0_index_multiplier[i] * dst_index[i];
-        src1_index[i] = params.src1_index_multiplier[i] * dst_index[i];
+        src0_index[i] = params.src0_index_mask[i] * dst_index[i];
+        src1_index[i] = params.src1_index_mask[i] * dst_index[i];
       }
     }
     const IndexType src0_offset = params.src0_index_helper.NdIndexToOffset(src0_index, num_dims);
@@ -115,16 +115,8 @@ void LaunchKernel(Stream* stream, int num_dims, const int64_t* src0_dims, const 
                   size_t count) {
   BroadcastElementwiseBinaryParams<max_dims, IndexType> params;
   for (size_t i = 0; i < num_dims; ++i) {
-    if (src0_dims[i] == 1) {
-      params.src0_index_multiplier[i] = 0;
-    } else {
-      params.src0_index_multiplier[i] = 1;
-    }
-    if (src1_dims[i] == 1) {
-      params.src1_index_multiplier[i] = 0;
-    } else {
-      params.src1_index_multiplier[i] = 1;
-    }
+    params.src0_index_mask[i] = (src0_dims[i] == 1) ? 0 : 1;
+    params.src1_index_mask[i] = (src1_dims[i] == 1) ? 0 : 1;
   }
   params.src0_index_helper = NdIndexOffsetHelper<IndexType, max_dims>(src0_dims, num_dims);
   params.src1_index_helper = NdIndexOffsetHelper<IndexType, max_dims>(src1_dims, num_dims);
@@ -145,8 +137,7 @@ template<BinaryOp op, typename T, typename R, size_t max_dims, size_t src0_pack_
 void DispatchIndexType(Stream* stream, size_t num_dims, const int64_t* src0_dims, const void* src0,
                        const int64_t* src1_dims, const void* src1, const int64_t* dst_dims,
                        void* dst) {
-  size_t count = 1;
-  for (size_t i = 0; i < num_dims; ++i) { count *= dst_dims[i]; }
+  size_t count = GetElementCount(num_dims, dst_dims);
   if (count < GetMaxVal<int32_t>()) {
     LaunchKernel<op, T, R, max_dims, src0_pack_size, src1_pack_size, int32_t>(
         stream, num_dims, src0_dims, src0, src1_dims, src1, dst_dims, dst, count);
@@ -206,16 +197,12 @@ size_t GetPackSize(size_t num_src_dims, const int64_t* src0_dims, const void* sr
                    const int64_t* src1_dims, const void* src1, void* dst) {
   static_assert(max_pack_size > 0 && (max_pack_size & (max_pack_size - 1)) == 0, "");
   CHECK(src0_dims[num_src_dims - 1] != 1 || src1_dims[num_src_dims - 1] != 1);
-  auto src0_ptr = reinterpret_cast<std::uintptr_t>(src0);
-  auto src1_ptr = reinterpret_cast<std::uintptr_t>(src1);
   auto dst_ptr = reinterpret_cast<std::uintptr_t>(dst);
   for (size_t pack_size = max_pack_size; pack_size > 2; pack_size /= 2) {
-    bool is_src0_supported =
-        (src0_dims[num_src_dims - 1] == 1)
-        || IsPackSizeSupported<T>(pack_size, num_src_dims, src0_dims, src0_ptr);
-    bool is_src1_supported =
-        (src1_dims[num_src_dims - 1] == 1)
-        || IsPackSizeSupported<T>(pack_size, num_src_dims, src1_dims, src1_ptr);
+    bool is_src0_supported = (src0_dims[num_src_dims - 1] == 1)
+                             || IsPackSizeSupported<T>(pack_size, num_src_dims, src0_dims, src0);
+    bool is_src1_supported = (src1_dims[num_src_dims - 1] == 1)
+                             || IsPackSizeSupported<T>(pack_size, num_src_dims, src1_dims, src1);
     if (is_src0_supported && is_src1_supported && (dst_ptr % (pack_size * sizeof(R))) == 0) {
       return pack_size;
     }
@@ -294,8 +281,9 @@ void DispatchLaunch(Stream* stream, size_t num_src0_dims, const int64_t* src0_di
   int64_t simplified_src0_dims[kMaxNumDims];
   int64_t simplified_src1_dims[kMaxNumDims];
   int64_t simplified_dst_dims[kMaxNumDims];
-  SimplifyBroadcastDims(num_src0_dims, src0_dims, num_src1_dims, src1_dims, &simplified_num_dims,
-                        simplified_src0_dims, simplified_src1_dims, simplified_dst_dims);
+  SimplifyBroadcastDims<kMaxNumDims>(num_src0_dims, src0_dims, num_src1_dims, src1_dims,
+                                     &simplified_num_dims, simplified_src0_dims,
+                                     simplified_src1_dims, simplified_dst_dims);
   CheckInplace(simplified_num_dims, simplified_src0_dims, src0, simplified_src1_dims, src1,
                simplified_dst_dims, dst);
   if (IsDimsEquals(simplified_num_dims, simplified_src0_dims, simplified_num_dims,
