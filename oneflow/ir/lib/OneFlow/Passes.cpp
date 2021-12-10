@@ -51,8 +51,9 @@ limitations under the License.
 #include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
 #endif  // WITH_MLIR_CUDA_CODEGEN
 
-using namespace mlir;
-using namespace mlir::oneflow;
+namespace mlir {
+
+namespace oneflow {
 
 LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
   // TODO: now we only need one JIT engine
@@ -151,6 +152,10 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
   return {};
 }
 
+}  // namespace oneflow
+
+}  // namespace mlir
+
 #include "OneFlow/OneFlowPatterns.cpp.inc"
 
 namespace mlir {
@@ -214,7 +219,6 @@ void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
 
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedBiasAddGeluPattern>(patterns.getContext());
-  patterns.add<FusedBiasAddDropoutPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern2>(patterns.getContext());
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());

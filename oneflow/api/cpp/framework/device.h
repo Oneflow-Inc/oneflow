@@ -36,11 +36,11 @@ class Device final {
  public:
   explicit Device(const std::string& type_or_type_with_device_id);
   explicit Device(const std::string& type, int64_t device_id);
-  const std::string& type() const;
-  int64_t device_id() const;
+  [[nodiscard]] const std::string& type() const;
+  [[nodiscard]] int64_t device_id() const;
 
-  bool operator==(const Device& rhs) const;
-  bool operator!=(const Device& rhs) const;
+  [[nodiscard]] bool operator==(const Device& rhs) const;
+  [[nodiscard]] bool operator!=(const Device& rhs) const;
 
  private:
   std::shared_ptr<oneflow::Symbol<oneflow::Device>> device_ = nullptr;
