@@ -18,7 +18,7 @@ const HashSet<std::string>& {{opname}}InterpCtx::AttrNames() const {
 namespace schema {
 Maybe<AttrVal> {{opname}}::GetAttr(const std::string& attr_name) const {
   {% for name, attr in op.attrs %}if(attr_name == "{{name}}") {
-    return CastAttr(&{{name}});
+    return CastAttr(&internal_->{{name}});
   }
   {% endfor -%}
   return Error::RuntimeError() << "{{op.name}} op has no attribute named " << attr_name;

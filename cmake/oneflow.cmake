@@ -323,6 +323,9 @@ oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS} ${FUNC
 add_dependencies(of_functional_obj of_cfgobj)
 add_dependencies(of_functional_obj prepare_oneflow_third_party)
 
+include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
+include_directories(${PROJECT_BINARY_DIR})
+
 # TODO()
 set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/649d95371680cbf7f740c990c0357372c2bd4058.zip" CACHE STRING "" FORCE)
 use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
@@ -355,9 +358,6 @@ if(BUILD_PYTHON)
 
 endif(BUILD_PYTHON)
 
-include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
-include_directories(${PROJECT_BINARY_DIR})
-
 # cc obj lib
 if(BUILD_PYTHON)
   oneflow_add_library(oneflow ${of_all_obj_cc})
@@ -389,13 +389,13 @@ oneflow_add_executable(oneflow-gen-ods ${PROJECT_SOURCE_DIR}/oneflow/ir/oneflow-
 set_target_properties(oneflow-gen-ods PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 
 if(APPLE)
-  set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj of_op_schema)
-  target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj of_op_schema glog_imported gflags_imported ${oneflow_third_party_libs})
+  set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj)
+  target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs})
 elseif(UNIX)
-  set(of_libs -Wl,--whole-archive oneflow of_protoobj of_cfgobj of_functional_obj of_op_schema -Wl,--no-whole-archive -ldl -lrt)
-  target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj of_op_schema glog_imported gflags_imported ${oneflow_third_party_libs} -Wl,--no-whole-archive -ldl -lrt)
+  set(of_libs -Wl,--whole-archive oneflow of_protoobj of_cfgobj of_functional_obj -Wl,--no-whole-archive -ldl -lrt)
+  target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs} -Wl,--no-whole-archive -ldl -lrt)
 elseif(WIN32)
-  set(of_libs oneflow of_protoobj of_cfgobj of_functional_obj of_op_schema)
+  set(of_libs oneflow of_protoobj of_cfgobj of_functional_obj)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:oneflow")
 endif()
 
