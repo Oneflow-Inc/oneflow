@@ -258,8 +258,8 @@ REGISTER_USER_OP("broadcast_matmul")
       const user_op::TensorDesc& b = ctx->InputTensorDesc("b", 0);
       user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
 
-      const int64_t num_a_dims = a.shape().NumAxes(); 
-      const int64_t num_b_dims = b.shape().NumAxes(); 
+      const int64_t num_a_dims = a.shape().NumAxes();
+      const int64_t num_b_dims = b.shape().NumAxes();
       const size_t num_max_batch_dims = std::max(num_a_dims, num_b_dims) - 2;
       auto MakeGetBatchDim = [num_max_batch_dims](size_t num_dims, const Shape& shape_dim) {
         const int64_t num_batch_dims = num_dims - 2;
@@ -280,7 +280,8 @@ REGISTER_USER_OP("broadcast_matmul")
         // Then we emplace back m, n -> C(16, 8, 4, 6)
         out_dim_vec[i] = std::max(GetABatchDim(i), GetBBatchDim(i));
       }
-      int64_t m, n, k = 0;  // tensor a (no trans): batch_dims*m*k, tensor b (no trans): batch_dims*k*n
+      int64_t m, n,
+          k = 0;  // tensor a (no trans): batch_dims*m*k, tensor b (no trans): batch_dims*k*n
       if (!transpose_a) {
         m = a.shape().At(num_a_dims - 2);
         k = a.shape().At(num_a_dims - 1);
@@ -296,7 +297,7 @@ REGISTER_USER_OP("broadcast_matmul")
         n = b.shape().At(num_b_dims - 2);
       }
       out_dim_vec.at(num_max_batch_dims) = m;
-      out_dim_vec.at(num_max_batch_dims+1) = n;
+      out_dim_vec.at(num_max_batch_dims + 1) = n;
       *out->mut_shape() = Shape(out_dim_vec);
 
       if (ctx->has_input("_add_to_output", 0)) {
@@ -315,20 +316,20 @@ REGISTER_USER_OP("broadcast_matmul")
 
       const auto& a_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0).shape();
       const auto& b_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("b", 0).shape();
-      
-      const int64_t a_num_axes = a_shape.NumAxes(); 
-      const int64_t b_num_axes = b_shape.NumAxes(); 
 
-      int32_t m_a_axis =  - 1;
+      const int64_t a_num_axes = a_shape.NumAxes();
+      const int64_t b_num_axes = b_shape.NumAxes();
+
+      int32_t m_a_axis = -1;
       int32_t k_a_axis = a_num_axes - 1;
       int32_t k_b_axis = -1;
       int32_t n_axis = -1;
 
       if (transpose_a) {
-        m_a_axis = a_num_axes - 1; 
+        m_a_axis = a_num_axes - 1;
         k_a_axis = a_num_axes - 2;
       } else {
-        m_a_axis = a_num_axes - 2; 
+        m_a_axis = a_num_axes - 2;
         k_a_axis = a_num_axes - 1;
       }
       if (transpose_b) {
@@ -345,7 +346,7 @@ REGISTER_USER_OP("broadcast_matmul")
         out_and_add_to_output_args.emplace_back("_add_to_output", 0);
       }
 
-      const int64_t max_num_axes = std::max(a_num_axes, b_num_axes); 
+      const int64_t max_num_axes = std::max(a_num_axes, b_num_axes);
       const size_t num_max_batch_dims = max_num_axes - 2;
       auto MakeGetBatchDim = [num_max_batch_dims](size_t num_dims, const Shape& shape_dim) {
         const int64_t num_batch_dims = num_dims - 2;
@@ -357,46 +358,46 @@ REGISTER_USER_OP("broadcast_matmul")
       auto GetABatchDim = MakeGetBatchDim(a_num_axes, a_shape);
       auto GetBBatchDim = MakeGetBatchDim(b_num_axes, b_shape);
 
-      for(int i =0; i < num_max_batch_dims; i++){
-        const int64_t a_batch_dim = GetABatchDim(i); 
-        const int64_t b_batch_dim = GetBBatchDim(i); 
-        if(a_batch_dim == b_batch_dim && a_batch_dim!=1){
+      for (int i = 0; i < num_max_batch_dims; i++) {
+        const int64_t a_batch_dim = GetABatchDim(i);
+        const int64_t b_batch_dim = GetBBatchDim(i);
+        if (a_batch_dim == b_batch_dim && a_batch_dim != 1) {
           // S(b axis) x S(b axis) -> S(b axis)
           ctx->NewBuilder()
-            .Split(user_op::OpArg("a", 0), i)
-            .Split(user_op::OpArg("b", 0), i)
-            .Split(out_and_add_to_output_args, i)
-            .Build();
-        }else if(a_batch_dim == 1){
+              .Split(user_op::OpArg("a", 0), i)
+              .Split(user_op::OpArg("b", 0), i)
+              .Split(out_and_add_to_output_args, i)
+              .Build();
+        } else if (a_batch_dim == 1) {
           // B x S(b axis) -> S(b axis)
           ctx->NewBuilder()
-            .Broadcast(user_op::OpArg("a", 0))
-            .Split(user_op::OpArg("b", 0), i)
-            .Split(out_and_add_to_output_args, i)
-            .Build();
-        }else if(b_batch_dim == 1){
+              .Broadcast(user_op::OpArg("a", 0))
+              .Split(user_op::OpArg("b", 0), i)
+              .Split(out_and_add_to_output_args, i)
+              .Build();
+        } else if (b_batch_dim == 1) {
           // S(b axis) x B -> S(b axis)
           ctx->NewBuilder()
-            .Split(user_op::OpArg("a", 0), i)
-            .Broadcast(user_op::OpArg("b", 0))
-            .Split(out_and_add_to_output_args, i)
-            .Build();
+              .Split(user_op::OpArg("a", 0), i)
+              .Broadcast(user_op::OpArg("b", 0))
+              .Split(out_and_add_to_output_args, i)
+              .Build();
         }
       }
 
       // S(m axis) x B -> S(m axis)
       ctx->NewBuilder()
-        .Split(user_op::OpArg("a", 0), m_a_axis)
-        .Broadcast(user_op::OpArg("b", 0))
-        .Split(out_and_add_to_output_args, max_num_axes - 2)
-        .Build();
+          .Split(user_op::OpArg("a", 0), m_a_axis)
+          .Broadcast(user_op::OpArg("b", 0))
+          .Split(out_and_add_to_output_args, max_num_axes - 2)
+          .Build();
 
       // B x S(n_axis) -> S(n_axis)
       ctx->NewBuilder()
-        .Broadcast(user_op::OpArg("a", 0))
-        .Split(user_op::OpArg("b", 0), n_axis)
-        .Split(out_and_add_to_output_args, max_num_axes - 1)
-        .Build();
+          .Broadcast(user_op::OpArg("a", 0))
+          .Split(user_op::OpArg("b", 0), n_axis)
+          .Split(out_and_add_to_output_args, max_num_axes - 1)
+          .Build();
 
       // S(a_k_axis) x S(b_k_axis) -> P
       ctx->NewBuilder()
@@ -415,103 +416,9 @@ REGISTER_USER_OP("broadcast_matmul")
       // B x P -> P
       ctx->NewBuilder()
           .Broadcast(user_op::OpArg("a", 0))
-          .PartialSum(user_op::OpArg("b", 0)) 
+          .PartialSum(user_op::OpArg("b", 0))
           .PartialSum(out_and_add_to_output_args)
           .Build();
-      return Maybe<void>::Ok();
-    });
-
-REGISTER_USER_OP("broadcast_matmul_grad_b")
-    .Input("a") // input_a
-    .Input("b") // out
-    .OptionalInput("_add_to_output")
-    .Output("out")
-    .Attr<double>("alpha", 1.0)
-    .SetDataTypeInferFn(InferDataType4Matmul)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& a = ctx->InputTensorDesc("a", 0);
-      const user_op::TensorDesc& b = ctx->InputTensorDesc("b", 0);
-      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
-
-      const auto& a_shape = a.shape(); 
-      const auto& b_shape = b.shape(); 
-
-      const int64_t a_num_axes = a_shape.NumAxes(); 
-      const int64_t b_num_axes = b_shape.NumAxes(); 
-
-      // CHECK_EQ_OR_RETURN(a_num_axes, b_num_axes);
-
-      // For example: A(4, 1, 2, 6) B(1, 2, 6, 4) -> C(4, 2, 2, 4)
-      // For GradB we use dy matmul A get (4, 2, 6, 4)
-      // Then we reduce Grad B to B shape -> (1, 2, 6, 4)
-      DimVector out_dim;
-      const size_t num_max_batch_dims = std::max(a_num_axes, b_num_axes) - 2;
-      auto MakeGetBatchDim = [num_max_batch_dims](size_t num_dims, const Shape& shape_dim) {
-        const int64_t num_batch_dims = num_dims - 2;
-        const int64_t num_padding_dims = num_max_batch_dims - num_batch_dims;
-        return [num_padding_dims, shape_dim](size_t index) {
-          return index < num_padding_dims ? 1 : shape_dim.At(index - num_padding_dims);
-        };
-      };
-      auto GetABatchDim = MakeGetBatchDim(a_num_axes, a.shape());
-      auto GetBBatchDim = MakeGetBatchDim(b_num_axes, b.shape());
-      for(int i = 0; i < num_max_batch_dims; i++){
-        int64_t a_index = GetABatchDim(i);
-        int64_t b_index = GetBBatchDim(i);
-        out_dim.push_back(std::max(a_index, b_index)); 
-      }
-      // out_dim.at(a_num_axes - 2) = a_shape.At(a_num_axes - 1); 
-      // out_dim.at(a_num_axes - 1) = b_shape.At(b_num_axes - 1); 
-      out_dim.push_back(a_shape.At(a_num_axes - 1)); 
-      out_dim.push_back(b_shape.At(b_num_axes - 1)); 
-
-      for(int i = 0; i < out_dim.size(); i++){
-        printf("Out dim[%d] is %ld \n", i, out_dim.at(i)); 
-      }
-
-      *out->mut_shape() = Shape(out_dim);
-      if (ctx->has_input("_add_to_output", 0)) {
-        const user_op::TensorDesc& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
-        CHECK_EQ_OR_RETURN(add_to_output.shape(), out->shape());
-      }
-
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const auto& a_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0).shape();
-      int64_t last_axis = a_shape.NumAxes() - 1;
-
-      std::vector<user_op::OpArg> out_and_add_to_output_args;
-      out_and_add_to_output_args.emplace_back("out", 0);
-      if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
-        out_and_add_to_output_args.emplace_back("_add_to_output", 0);
-      }
-
-      // TODO!!!!!
-      // S(b or m axis) x S(b or m axis) -> P
-      for (int64_t i = 0; i < last_axis; ++i) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("a", 0), i)
-            .Split(user_op::OpArg("b", 0), i)
-            .PartialSum(out_and_add_to_output_args)
-            .Build();
-      }
-
-      // (b, m, k) * (b, m, n) -> (k, n) [transpose a]
-      // S(k) x B -> S(0) or B x S(n) -> S(1)
-      // (b, m, n) * (b, m, k) -> (n, k) [transpose a]
-      // S(n) x B -> S(0) or B x S(k) -> S(1)
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("a", 0), last_axis)
-          .Broadcast(user_op::OpArg("b", 0))
-          .Split(out_and_add_to_output_args, 0)
-          .Build();
-      ctx->NewBuilder()
-          .Broadcast(user_op::OpArg("a", 0))
-          .Split(user_op::OpArg("b", 0), last_axis)
-          .Split(out_and_add_to_output_args, 1)
-          .Build();
-
       return Maybe<void>::Ok();
     });
 

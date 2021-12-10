@@ -13,8 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <vector>
-#include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -137,12 +135,12 @@ Maybe<void> BroadcastMatmul::Init(const OpExpr& op) {
 }
 
 Maybe<void> BroadcastMatmul::Capture(BroadcastMatmulCaptureState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrMap& attrs) const {
+                                     const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad_a = inputs.at(0)->requires_grad();
   ctx->requires_grad_b = inputs.at(1)->requires_grad();
 
-  ctx->a_shape_vec = inputs.at(0)->shape()->dim_vec(); 
-  ctx->b_shape_vec = inputs.at(1)->shape()->dim_vec(); 
+  ctx->a_shape_vec = inputs.at(0)->shape()->dim_vec();
+  ctx->b_shape_vec = inputs.at(1)->shape()->dim_vec();
 
   if (!ctx->requires_grad_a && !ctx->requires_grad_b) { return Maybe<void>::Ok(); }
 
@@ -161,14 +159,26 @@ Maybe<void> BroadcastMatmul::Capture(BroadcastMatmulCaptureState* ctx, const Ten
   return Maybe<void>::Ok();
 }
 
-Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx, const TensorTuple& out_grads,
-                                   TensorTuple* in_grads) const {
+Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx,
+                                   const TensorTuple& out_grads, TensorTuple* in_grads) const {
   if (!ctx->requires_grad_a && !ctx->requires_grad_b) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(2);
+  const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
+  const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
+  const auto out_shape = out_grads.at(0)->shape();
+  const int64_t out_num_axes = out_shape->NumAxes();
+  const size_t num_max_batch_dims = out_num_axes - 2;
+  auto MakeGetBatchDim = [num_max_batch_dims](size_t num_dims, const Shape& shape_dim) {
+    const int64_t num_batch_dims = num_dims - 2;
+    const int64_t num_padding_dims = num_max_batch_dims - num_batch_dims;
+    return [num_padding_dims, shape_dim](size_t index) {
+      return index < num_padding_dims ? 1 : shape_dim.At(index - num_padding_dims);
+    };
+  };
+  auto GetOutBatchDim = MakeGetBatchDim(out_num_axes, *out_shape);
+
   if (ctx->requires_grad_a) {
-    const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
-    const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
     std::shared_ptr<Tensor> broadcast_grad_a;
     if (ctx->transpose_a) {
       broadcast_grad_a =
@@ -177,28 +187,15 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx, const
       broadcast_grad_a = JUST(
           functional::MatMul(out_grads.at(0), input_b, false, !(ctx->transpose_b), ctx->alpha));
     }
-    DimVector out_dim = out_grads.at(0)->shape()->dim_vec();
-    std::vector<int32_t> a_reduce_vec; 
-    const auto a_shape = input_a->shape(); 
-    const int64_t a_num_axes = a_shape->NumAxes(); 
-    const auto b_shape = input_b->shape(); 
-    const int64_t b_num_axes = b_shape->NumAxes();
-    const auto out_shape = out_grads.at(0)->shape(); 
-    const int64_t out_num_axes = out_shape->NumAxes();
-    const int64_t max_num_axes = std::max(b_num_axes, out_num_axes); 
-    const size_t num_max_batch_dims = max_num_axes - 2;
-    auto MakeGetBatchDim = [num_max_batch_dims](size_t num_dims, const Shape& shape_dim) {
-      const int64_t num_batch_dims = num_dims - 2;
-      const int64_t num_padding_dims = num_max_batch_dims - num_batch_dims;
-      return [num_padding_dims, shape_dim](size_t index) {
-        return index < num_padding_dims ? 1 : shape_dim.At(index - num_padding_dims);
-      };
-    };
+    std::vector<int32_t> a_reduce_vec;
+    const auto a_shape = input_a->shape();
+    const int64_t a_num_axes = a_shape->NumAxes();
     auto GetABatchDim = MakeGetBatchDim(a_num_axes, *a_shape);
-    auto GetOutBatchDim = MakeGetBatchDim(out_num_axes, *out_shape);
-    for(int32_t i = 0; i < out_num_axes - 2; i++){
-      if(GetOutBatchDim(i) > GetABatchDim(i)){
-        a_reduce_vec.push_back(i); 
+    const int64_t a_out_num_dim_differ = out_num_axes - a_num_axes;
+    for (int32_t i = 0; i < out_num_axes - 2; i++) {
+      if (GetOutBatchDim(i) > GetABatchDim(i)
+          || (GetOutBatchDim(i) == 1 && i < a_out_num_dim_differ)) {
+        a_reduce_vec.push_back(i);
       }
     }
     in_grads->at(0) = JUST(functional::ReduceSumLike(broadcast_grad_a, input_a, a_reduce_vec));
@@ -209,35 +206,21 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx, const
     const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
     std::shared_ptr<Tensor> broadcast_grad_b;
     if (ctx->transpose_b) {
-      broadcast_grad_b = JUST(functional::BroadcastMatmulGradB(out_grads.at(0), input_a, ctx->alpha));
+      broadcast_grad_b =
+          JUST(functional::MatMul(out_grads.at(0), input_a, true, ctx->transpose_a, ctx->alpha));
     } else {
-      broadcast_grad_b = JUST(functional::BroadcastMatmulGradB(input_a, out_grads.at(0), ctx->alpha));
+      broadcast_grad_b =
+          JUST(functional::MatMul(input_a, out_grads.at(0), !ctx->transpose_a, false, ctx->alpha));
     }
-    DimVector out_dim = out_grads.at(0)->shape()->dim_vec();
-    std::vector<int32_t> b_reduce_vec; 
-
-    const auto a_shape = input_a->shape(); 
-    const int64_t a_num_axes = a_shape->NumAxes(); 
-    const auto b_shape = input_b->shape(); 
+    std::vector<int32_t> b_reduce_vec;
+    const auto b_shape = input_b->shape();
     const int64_t b_num_axes = b_shape->NumAxes();
-    const auto out_shape = out_grads.at(0)->shape(); 
-    const int64_t out_num_axes = out_shape->NumAxes();
-
-    const int64_t max_num_axes = std::max(a_num_axes, out_num_axes); 
-
-    const size_t num_max_batch_dims = max_num_axes - 2;
-    auto MakeGetBatchDim = [num_max_batch_dims](size_t num_dims, const Shape& shape_dim) {
-      const int64_t num_batch_dims = num_dims - 2;
-      const int64_t num_padding_dims = num_max_batch_dims - num_batch_dims;
-      return [num_padding_dims, shape_dim](size_t index) {
-        return index < num_padding_dims ? 1 : shape_dim.At(index - num_padding_dims);
-      };
-    };
     auto GetBBatchDim = MakeGetBatchDim(b_num_axes, *b_shape);
-    auto GetOutBatchDim = MakeGetBatchDim(out_num_axes, *out_shape);
-    for(int32_t i = 0; i < out_num_axes - 2; i++){
-      if(GetOutBatchDim(i) > GetBBatchDim(i)){
-        b_reduce_vec.push_back(i); 
+    const int64_t b_out_num_dim_differ = out_num_axes - b_num_axes;
+    for (int32_t i = 0; i < out_num_axes - 2; i++) {
+      if (GetOutBatchDim(i) > GetBBatchDim(i)
+          || (GetOutBatchDim(i) == 1 && i < b_out_num_dim_differ)) {
+        b_reduce_vec.push_back(i);
       }
     }
     in_grads->at(1) = JUST(functional::ReduceSumLike(broadcast_grad_b, input_b, b_reduce_vec));
