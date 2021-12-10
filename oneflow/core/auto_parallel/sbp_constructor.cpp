@@ -189,10 +189,9 @@ Maybe<void> SbpConstructor::StealSbpSignatureFromOpNode(const OpGraph& op_graph,
         if (*JUST(sbp_node->op_node->op().nd_sbp_signature())
             == sbp_node->SbpSignatureObjList[sbp_id]) {
           sbp_node->FinalSbpSignatureId = sbp_id;
-          return Maybe<void>::Ok();
+          break;
         }
       }
-      CHECK(false) << "Can't find a matching sbp from op graph!";
     }
   }
   return Maybe<void>::Ok();

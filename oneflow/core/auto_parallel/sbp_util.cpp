@@ -32,11 +32,13 @@ double ComputCopyCostBetweenTwoDiffSbpParallel(const cfg::SbpParallel& producer_
                                                const cfg::SbpParallel& consumer_sbp_parallel,
                                                double logical_blob_size, double parallel_num,
                                                bool on_same_devices) {
-  // Not supporting S->P, B->P for now. Actually yes for boxing op, but it does not work with some
-  // other ops.
-  if (consumer_sbp_parallel.has_partial_sum_parallel()) { return GetMaxVal<float>(); }
+  // Not supporting S->P for now.
+  if (consumer_sbp_parallel.has_partial_sum_parallel()
+      && producer_sbp_parallel.has_split_parallel()) {
+    return GetMaxVal<float>();
+  }
   if (on_same_devices) {
-    // B->S
+    // B->S, B->P
     if (producer_sbp_parallel.has_broadcast_parallel()) { return 0; }
     // has S
     if (consumer_sbp_parallel.has_split_parallel() || producer_sbp_parallel.has_split_parallel()) {
@@ -62,6 +64,7 @@ double ComputCopyCostBetweenTwoDiffSbpParallel(const cfg::SbpParallel& producer_
     if (producer_sbp_parallel.has_partial_sum_parallel()) {
       overall_cost += logical_blob_size * (parallel_num - 1);
     }
+    // For B->P, B->S, S->S, overall_cost == logical_blob_size;
     return overall_cost;
   }
 }
@@ -151,15 +154,17 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& produc
   if (!(CheckSbpParallel(producer_sbp_parallel) && CheckSbpParallel(consumer_sbp_parallel))) {
     return Error::RuntimeError() << "Illegal sbp parallel has been found.";
   }
+  // Not supporting S->P for now.
+  if (consumer_sbp_parallel.has_partial_sum_parallel()
+      && producer_sbp_parallel.has_split_parallel()) {
+    return GetMaxVal<float>();
+  }
   if (producer_parallel_desc == consumer_parallel_desc) {
     // S->S, B->B, P->P
     if (producer_sbp_parallel == consumer_sbp_parallel) { return 0.0; }
     // Will directly modify output blob of source op. Requiring data having same sbp_parallel
     if (is_same_sbp) { return GetMaxVal<float>(); }
-    // Not supporting S->P, B->P for now. Actually yes for boxing op, but it does not work with some
-    // other ops.
-    if (consumer_sbp_parallel.has_partial_sum_parallel()) { return GetMaxVal<float>(); }
-    // B->S
+    // B->S, B->P
     if (producer_sbp_parallel.has_broadcast_parallel()) { return 0; }
     double logical_blob_size =
         logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
@@ -185,9 +190,6 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& produc
              && producer_sbp_parallel == consumer_sbp_parallel)) {
       return GetMaxVal<float>();
     }
-    // Not supporting S->P, B->P for now. Actually yes for boxing op, but it does not work with some
-    // other ops.
-    if (consumer_sbp_parallel.has_partial_sum_parallel()) { return GetMaxVal<float>(); }
     double logical_blob_size =
         logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
     double overall_cost = logical_blob_size;
@@ -199,6 +201,7 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& produc
     if (producer_sbp_parallel.has_partial_sum_parallel()) {
       overall_cost += (producer_parallel_desc.parallel_num() - 1) * logical_blob_size;
     }
+    // For B->P, B->S, S->S, overall_cost == logical_blob_size;
     return overall_cost;
   }
 }
