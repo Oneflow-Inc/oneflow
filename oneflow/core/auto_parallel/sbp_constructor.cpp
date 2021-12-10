@@ -57,6 +57,11 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   JUST(InitCopyCost(op_graph));
   std::cout << "Rank: " << GlobalProcessCtx::Rank() << ", Start RandomSbpSignature" << std::endl;
   sbp_graph_.RandomSbpSignature(use_sbp_collector_);
+  double ori_cost = sbp_graph_.ComputeCost();
+  LOG(INFO) << "Initial cost: " << ori_cost;
+  StealSbpSignatureFromOpNode(op_graph, job);
+  ori_cost = sbp_graph_.ComputeCost();
+  LOG(INFO) << "OpGraph cost: " << ori_cost;
   return Maybe<void>::Ok();
 }
 
@@ -173,6 +178,23 @@ Maybe<void> SbpConstructor::FillSbpSignatureForOpNode(const OpGraph& op_graph, c
     sbp_node->InitializeSbp();
     return Maybe<void>::Ok();
   }));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> SbpConstructor::StealSbpSignatureFromOpNode(const OpGraph& op_graph, const Job& job) {
+  // Steal some strategy from original op graph
+  for (auto* sbp_node : sbp_graph_.NodeList) {
+    if (sbp_node->op_node) {
+      for (int32_t sbp_id = 0; sbp_id < sbp_node->SbpSignatureObjList.size(); sbp_id++) {
+        if (*JUST(sbp_node->op_node->op().nd_sbp_signature())
+            == sbp_node->SbpSignatureObjList[sbp_id]) {
+          sbp_node->FinalSbpSignatureId = sbp_id;
+          return Maybe<void>::Ok();
+        }
+      }
+      CHECK(false) << "Can't find a matching sbp from op graph!";
+    }
+  }
   return Maybe<void>::Ok();
 }
 
