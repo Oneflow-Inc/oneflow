@@ -16,8 +16,6 @@ limitations under the License.
 from typing import List, Optional, Union
 
 import oneflow as flow
-from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
 
 
 def linspace_op(
