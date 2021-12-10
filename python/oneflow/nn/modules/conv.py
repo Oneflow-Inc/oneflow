@@ -160,6 +160,7 @@ class Conv1d(Module):
     .. _link:
         https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md
     """
+
     def __init__(
         self,
         in_channels: int,
@@ -185,8 +186,8 @@ class Conv1d(Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.weight = flow.nn.Parameter(
-            flow.Tensor(out_channels, in_channels // groups,
-                        *self.kernel_size))
+            flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
+        )
         self.out_channel_groups = out_channels // groups
         self.bias = None
         if bias:
@@ -213,9 +214,9 @@ class Conv1d(Module):
 
     def extra_repr(self):
         s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"
-        if self.padding != (0, ) * len(self.padding):
+        if self.padding != (0,) * len(self.padding):
             s += ", padding={padding}"
-        if self.dilation != (1, ) * len(self.dilation):
+        if self.dilation != (1,) * len(self.dilation):
             s += ", dilation={dilation}"
         if self.groups != 1:
             s += ", groups={groups}"
@@ -342,6 +343,7 @@ class Conv2d(Module):
     .. _link:
         https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md
     """
+
     def __init__(
         self,
         in_channels: int,
@@ -367,8 +369,8 @@ class Conv2d(Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.weight = flow.nn.Parameter(
-            flow.Tensor(out_channels, in_channels // groups,
-                        *self.kernel_size))
+            flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
+        )
         self.out_channel_groups = out_channels // groups
         self.bias = None
         if bias:
@@ -384,8 +386,7 @@ class Conv2d(Module):
 
     def forward(self, x):
         if x.shape[1] != self.in_channels:
-            raise ValueError(
-                "The input channels should be equal to self.in_channels")
+            raise ValueError("The input channels should be equal to self.in_channels")
         # TODO(zwx): Use `tensor.device_type()` method to help checking if x is on cpu.
         # Using `if x.device == flow.device("cpu"):` will fail as consistent tensor has
         # no device, however using `x.is_cuda` is not a good choice.
@@ -403,9 +404,9 @@ class Conv2d(Module):
 
     def extra_repr(self):
         s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"
-        if self.padding != (0, ) * len(self.padding):
+        if self.padding != (0,) * len(self.padding):
             s += ", padding={padding}"
-        if self.dilation != (1, ) * len(self.dilation):
+        if self.dilation != (1,) * len(self.dilation):
             s += ", dilation={dilation}"
         if self.groups != 1:
             s += ", groups={groups}"
@@ -510,17 +511,18 @@ class Conv3d(Module):
     .. _link:
         https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md
     """
+
     def __init__(
-            self,
-            in_channels: int,
-            out_channels: int,
-            kernel_size: _size_3_t,
-            stride: _size_3_t = 1,
-            padding: _size_3_t = 0,
-            dilation: _size_3_t = 1,
-            groups: int = 1,
-            bias: bool = True,
-            padding_mode: str = "zeros",  # TODO: refine this type
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: _size_3_t,
+        stride: _size_3_t = 1,
+        padding: _size_3_t = 0,
+        dilation: _size_3_t = 1,
+        groups: int = 1,
+        bias: bool = True,
+        padding_mode: str = "zeros",  # TODO: refine this type
     ):
         super().__init__()
 
@@ -536,8 +538,8 @@ class Conv3d(Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.weight = flow.nn.Parameter(
-            flow.Tensor(out_channels, in_channels // groups,
-                        *self.kernel_size))
+            flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
+        )
         self.out_channel_groups = out_channels // groups
         self.bias = None
         if bias:
@@ -553,8 +555,7 @@ class Conv3d(Module):
 
     def forward(self, x):
         if x.shape[1] != self.in_channels:
-            raise ValueError(
-                "The input channels should be equal to self.in_channels")
+            raise ValueError("The input channels should be equal to self.in_channels")
         return flow._C.conv3d(
             x,
             self.weight,
@@ -567,9 +568,9 @@ class Conv3d(Module):
 
     def extra_repr(self):
         s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"
-        if self.padding != (0, ) * len(self.padding):
+        if self.padding != (0,) * len(self.padding):
             s += ", padding={padding}"
-        if self.dilation != (1, ) * len(self.dilation):
+        if self.dilation != (1,) * len(self.dilation):
             s += ", dilation={dilation}"
         if self.groups != 1:
             s += ", groups={groups}"
@@ -662,6 +663,7 @@ class ConvTranspose1d(Module):
     .. _link:
         https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md
     """
+
     def __init__(
         self,
         in_channels: int,
@@ -676,8 +678,9 @@ class ConvTranspose1d(Module):
         padding_mode: str = "zeros",
     ) -> None:
         super().__init__()
-        assert (padding_mode == "zeros"
-                ), "Only `zeros` padding mode is supported for ConvTranspose1d"
+        assert (
+            padding_mode == "zeros"
+        ), "Only `zeros` padding mode is supported for ConvTranspose1d"
         self.kernel_size = _single(kernel_size)
         self.stride = _single(stride)
         self.padding = _single(padding)
@@ -787,6 +790,7 @@ class ConvTranspose2d(Module):
     .. _link:
         https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md
     """
+
     def __init__(
         self,
         in_channels: int,
@@ -951,6 +955,7 @@ class ConvTranspose3d(Module):
     .. _link:
         https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md
     """
+
     def __init__(
         self,
         in_channels: int,

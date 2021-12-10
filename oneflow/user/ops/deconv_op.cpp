@@ -155,7 +155,7 @@ Maybe<void> GenerateBackwardOpConf4DeConv(const user_op::UserOpWrapper& op,
   const int32_t ndims = kernel_size.size();
   CHECK_EQ_OR_RETURN(ndims, strides.size());
   CHECK_EQ_OR_RETURN(ndims, dilation_rate.size());
-  
+
   if (op.NeedGenGradTensor4OpInput("weight", 0)) {
     auto filter_grad_op =
         user_op::UserOpConfWrapperBuilder("System-AutoGrad-" + op.op_name() + "-FilterGrad")
