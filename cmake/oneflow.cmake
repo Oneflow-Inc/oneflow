@@ -119,19 +119,18 @@ foreach(oneflow_single_file ${oneflow_all_src})
       list(APPEND of_pyext_obj_cc ${oneflow_single_file})
       set(group_this ON)
     endif()
+  endif(BUILD_PYTHON)
 
-  else() # build_python
-
+  if(BUILD_CPP_API)
     if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/cpp/.*\\.(h|cpp)$")
       if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/cpp/.*_test\\.cpp$")
         list(APPEND of_all_test_cc ${oneflow_single_file})
       else()
-        list(APPEND of_all_obj_cc ${oneflow_single_file})
+        list(APPEND of_cpp_api_obj_cc ${oneflow_single_file})
       endif()
       set(group_this ON)
     endif()
-
-  endif(BUILD_PYTHON)
+  endif(BUILD_CPP_API)
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt|maybe)/.*\\.cpp$")
     if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt|maybe)/.*_test\\.cpp$")
@@ -251,21 +250,12 @@ include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
 
 # cc obj lib
-if(BUILD_PYTHON)
-  oneflow_add_library(oneflow ${of_all_obj_cc})
-else() # build_python
-  if(BUILD_SHARED_LIBONEFLOW)
-    oneflow_add_library(oneflow SHARED ${of_all_obj_cc})
-  else()
-    oneflow_add_library(oneflow ${of_all_obj_cc})
-  endif()
-endif(BUILD_PYTHON)
+oneflow_add_library(oneflow ${of_all_obj_cc})
 
 add_dependencies(oneflow of_protoobj)
 add_dependencies(oneflow of_cfgobj)
 add_dependencies(oneflow of_functional_obj)
 add_dependencies(oneflow of_git_version)
-set_target_properties(oneflow PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${ONEFLOW_LIBRARY_DIR}" LIBRARY_OUTPUT_DIRECTORY "${ONEFLOW_LIBRARY_DIR}")
 
 if (USE_CLANG_FORMAT)
   add_dependencies(oneflow of_format)
@@ -356,13 +346,28 @@ if(BUILD_PYTHON)
 
 endif(BUILD_PYTHON)
 
+if (BUILD_CPP_API)
+  if(BUILD_SHARED_LIBONEFLOW)
+    oneflow_add_library(oneflow_cpp SHARED ${of_cpp_api_obj_cc})
+  else()
+    oneflow_add_library(oneflow_cpp ${of_cpp_api_obj_cc})
+  endif()
+  set_target_properties(oneflow_cpp PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${LIBONEFLOW_LIBRARY_DIR}" LIBRARY_OUTPUT_DIRECTORY "${LIBONEFLOW_LIBRARY_DIR}")
+  target_link_libraries(oneflow_cpp PRIVATE ${of_libs} ${ONEFLOW_MLIR_LIBS} ${oneflow_third_party_libs})
+endif()
+
 file(RELATIVE_PATH PROJECT_BINARY_DIR_RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
 
 # build test
 if(BUILD_TESTING)
   if (of_all_test_cc)
     oneflow_add_executable(oneflow_testexe ${of_all_test_cc})
-    target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
+    target_link_libraries(oneflow_testexe ${oneflow_test_libs})
+    if (BUILD_CPP_API)
+      target_link_libraries(oneflow_testexe oneflow_cpp)
+    else()
+      target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
+    endif()
     if (BUILD_CUDA)
       target_link_libraries(oneflow_testexe CUDA::cudart_static)
     endif()
@@ -406,15 +411,15 @@ if(BUILD_PYTHON)
   add_custom_target(oneflow_py ALL)
   add_dependencies(oneflow_py of_include_copy)
 
-else() # build_python
+endif(BUILD_PYTHON)
 
-  add_dependencies(of_include_copy oneflow)
+if (BUILD_CPP_API)
+  add_dependencies(of_include_copy oneflow_cpp)
 
   set(OF_API_DIRS)
   file(GLOB_RECURSE api_h_files "${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.h")
   list(APPEND OF_API_DIRS ${api_h_files})
 
-  copy_files("${OF_API_DIRS}" "${PROJECT_SOURCE_DIR}/oneflow/api/cpp" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
-  copy_files("${PROJECT_SOURCE_DIR}/cmake/oneflow-config.cmake" "${PROJECT_SOURCE_DIR}/cmake" "${ONEFLOW_SHARE_DIR}" of_include_copy)
-
-endif(BUILD_PYTHON)
+  copy_files("${OF_API_DIRS}" "${PROJECT_SOURCE_DIR}/oneflow/api/cpp" "${LIBONEFLOW_INCLUDE_DIR}" of_include_copy)
+  copy_files("${PROJECT_SOURCE_DIR}/cmake/oneflow-config.cmake" "${PROJECT_SOURCE_DIR}/cmake" "${LIBONEFLOW_SHARE_DIR}" of_include_copy)
+endif(BUILD_CPP_API)
