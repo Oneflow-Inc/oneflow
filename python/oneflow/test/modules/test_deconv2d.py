@@ -336,6 +336,7 @@ def _test_deconv_group_bias_false(test_case, device):
             ]
         ]
     )
+
     test_case.assertTrue(np.allclose(output.numpy(), np_out, 1e-06, 1e-06))
     output = output.sum()
     output.backward()
