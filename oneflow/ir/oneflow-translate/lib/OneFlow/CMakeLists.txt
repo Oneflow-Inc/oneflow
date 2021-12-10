@@ -7,7 +7,6 @@ oneflow_add_llvm_library(MLIROneFlowTranslation
   oneflow_deps
 	LINK_LIBS PUBLIC
 	MLIRIR
-  BUILDTREE_ONLY
 )
 llvm_update_compile_flags(MLIROneFlowTranslation)
 

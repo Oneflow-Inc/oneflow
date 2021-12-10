@@ -9,7 +9,7 @@ oneflow_add_llvm_library(MLIROneFlowExtension
   DEPENDS
 	LINK_LIBS PUBLIC
 	MLIRIR
-  BUILDTREE_ONLY
+
 )
 
 llvm_update_compile_flags(MLIROneFlowExtension)
