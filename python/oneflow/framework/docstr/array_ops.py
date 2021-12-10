@@ -18,7 +18,9 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.diagonal,
-    """
+    r"""
+    oneflow.diagonal(input, offset, dim1, dim2) -> Tensor
+    
     Returns a partial view of input with the its diagonal elements with respect to dim1 and dim2 
     appended as a dimension at the end of the shape.
     
@@ -38,7 +40,7 @@ add_docstr(
         >>> import oneflow as flow
         
         >>> input = flow.randn(2,  3,  4)
-        >>> output = flow.diagonal(input,offset=1,dim1=1,dim2=0)
+        >>> output = flow.diagonal(input, offset=1, dim1=1, dim2=0)
         >>> output.shape
         oneflow.Size([4, 1])
     """,

@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 namespace {
@@ -46,33 +47,33 @@ __global__ void backward_diagonal_kernel(T* dx_buf, const T* dy_buf, int32_t siz
 
 template<typename T>
 struct DiagonalFunctor final {
-  void operator()(DeviceCtx* ctx, T* out_buf, const T* in_buf, int32_t size, int32_t dim1,
+  void operator()(ep::Stream* stream, T* out_buf, const T* in_buf, int32_t size, int32_t dim1,
                   int32_t dim2) {
     if (size * dim2 > 0) {
       forward_diagonal_kernel<T><<<BlocksNum4ThreadsNum(size * dim2), kCudaThreadsNumPerBlock, 0,
-                                ctx->cuda_stream()>>>(out_buf, in_buf, size, dim1, dim2);
+                stream->As<ep::CudaStream>()->cuda_stream()>>>(out_buf, in_buf, size, dim1, dim2);
     }
   }
 };
 
 template<typename T>
 struct DiagonalGradFunctor final {
-  void operator()(DeviceCtx* ctx, T* dx_buf, const T* dy_buf, int32_t size, int32_t dim1,
+  void operator()(ep::Stream* stream, T* dx_buf, const T* dy_buf, int32_t size, int32_t dim1,
                   int32_t dim2) {
     if (size * dim2 > 0) {
       backward_diagonal_kernel<T><<<BlocksNum4ThreadsNum(size * dim2), kCudaThreadsNumPerBlock, 0,
-                                 ctx->cuda_stream()>>>(dx_buf, dy_buf, size, dim1, dim2);
+              stream->As<ep::CudaStream>()->cuda_stream()>>>(dx_buf, dy_buf, size, dim1, dim2);
     }
   }
 };
 
 }  // namespace
 
-template<DeviceType device_type, typename T>
-class DiagonalKernel final : public user_op::OpKernel {
+template<typename T>
+class GpuDiagonalKernel final : public user_op::OpKernel {
  public:
-  DiagonalKernel() = default;
-  ~DiagonalKernel() = default;
+  GpuDiagonalKernel() = default;
+  ~GpuDiagonalKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -83,7 +84,7 @@ class DiagonalKernel final : public user_op::OpKernel {
     const ShapeView& in_shape = in->shape();
     const T* in_buf = in->dptr<T>();
     T* out_buf = out->mut_dptr<T>();
-
+    
     int32_t size = out_shape.At(out_shape.NumAxes() - 1);
     int32_t dim1 = in_shape.At(1);
     int32_t dim2 = 0;
@@ -92,18 +93,21 @@ class DiagonalKernel final : public user_op::OpKernel {
     } else {
       dim2 = in_shape.Count(2, in_shape.NumAxes());
     }
+
     int32_t offset_in_bufer = (offset >= 0 ? offset * dim2 : -offset * dim1 * dim2);
     in_buf += offset_in_bufer;
-    DiagonalFunctor<T>()(ctx->device_ctx(), out_buf, in_buf, size, dim1, dim2);
+    
+    DiagonalFunctor<T>()(ctx->stream(), out_buf, in_buf, size, dim1, dim2);
+   
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<DeviceType device_type, typename T>
-class DiagonalBackwardKernel final : public user_op::OpKernel {
+template<typename T>
+class GpuDiagonalBackwardKernel final : public user_op::OpKernel {
  public:
-  DiagonalBackwardKernel() = default;
-  ~DiagonalBackwardKernel() = default;
+  GpuDiagonalBackwardKernel() = default;
+  ~GpuDiagonalBackwardKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -115,7 +119,7 @@ class DiagonalBackwardKernel final : public user_op::OpKernel {
     T* dx_buf = dx->mut_dptr<T>();
     const T* dy_buf = dy->dptr<T>();
 
-    Memset<device_type>(ctx->device_ctx(), dx->mut_dptr<T>(), 0, dx_shape.elem_cnt() * sizeof(T));
+    Memset<DeviceType::kCUDA>(ctx->stream(), dx->mut_dptr<T>(), 0, dx_shape.elem_cnt() * sizeof(T));
 
     int32_t dim1 = dx_shape.At(1);
     int32_t dim2 = 0;
@@ -128,26 +132,28 @@ class DiagonalBackwardKernel final : public user_op::OpKernel {
     int32_t offset_in_bufer = (offset >= 0 ? offset * dim2 : -offset * dim1 * dim2);
     dx_buf += offset_in_bufer;
 
-    DiagonalGradFunctor<T>()(ctx->device_ctx(), dx_buf, dy_buf, size, dim1, dim2);
+    DiagonalGradFunctor<T>()(ctx->stream(), dx_buf, dy_buf, size, dim1, dim2);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DIAGONAL_KERNELS(device, dtype)                                        \
+#define REGISTER_DIAGONAL_KERNELS(dtype)                                        \
   REGISTER_USER_KERNEL("diagonal")                                                      \
-      .SetCreateFn<DiagonalKernel<device, dtype>>()                                     \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)); \
+      .SetCreateFn<GpuDiagonalKernel<dtype>>()                                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                              \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("diagonal_grad")                                                 \
-      .SetCreateFn<DiagonalBackwardKernel<device, dtype>>()                             \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
+      .SetCreateFn<GpuDiagonalBackwardKernel<dtype>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                              \
+                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
-REGISTER_DIAGONAL_KERNELS(DeviceType::kGPU, half);
-REGISTER_DIAGONAL_KERNELS(DeviceType::kGPU, float);
-REGISTER_DIAGONAL_KERNELS(DeviceType::kGPU, double);
-REGISTER_DIAGONAL_KERNELS(DeviceType::kGPU, int8_t);
-REGISTER_DIAGONAL_KERNELS(DeviceType::kGPU, int32_t);
-REGISTER_DIAGONAL_KERNELS(DeviceType::kGPU, int64_t);
+REGISTER_DIAGONAL_KERNELS(half);
+REGISTER_DIAGONAL_KERNELS(float);
+REGISTER_DIAGONAL_KERNELS(double);
+REGISTER_DIAGONAL_KERNELS(int8_t);
+REGISTER_DIAGONAL_KERNELS(int32_t);
+REGISTER_DIAGONAL_KERNELS(int64_t);
+
+#undef REGISTER_DIAGONAL_KERNELS
 
 }  // namespace oneflow
