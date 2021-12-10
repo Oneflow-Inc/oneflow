@@ -89,6 +89,26 @@ class TestOneRecOpsModule(flow.unittest.TestCase):
         test_case.assertTrue(labels.shape == (10, 1))
         test_case.assertTrue(dense_fields.shape == (10, 13))
 
+    def test_consistent_one_rec(test_case):
+        batch_size = 10
+        files = [ensure_dataset()]
+        record_reader = flow.read_onerec(
+            files,
+            batch_size=batch_size,
+            random_shuffle=True,
+            shuffle_mode="batch",
+            placement=flow.placement("cpu", {0: [0]}),
+            sbp=[flow.sbp.split(0)],
+        )
+        label = flow.decode_onerec(
+            record_reader, key="labels", dtype=flow.int32, shape=(1,)
+        )
+        test_case.assertEqual(label.to_local().numpy().shape, (10, 1))
+        dense_fields = flow.decode_onerec(
+            record_reader, key="dense_fields", dtype=flow.float, shape=(13,)
+        )
+        test_case.assertEqual(dense_fields.to_local().numpy().shape, (10, 13))
+
 
 if __name__ == "__main__":
     unittest.main()

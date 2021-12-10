@@ -1,4 +1,4 @@
-add_llvm_library(MLIROneFlowTranslation
+oneflow_add_llvm_library(MLIROneFlowTranslation
   MLIROneFlowTranslation.cpp
   Importer.cpp
   ADDITIONAL_HEADER_DIRS
