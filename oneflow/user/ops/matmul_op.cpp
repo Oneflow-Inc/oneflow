@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -421,8 +422,8 @@ REGISTER_USER_OP("broadcast_matmul")
     });
 
 REGISTER_USER_OP("broadcast_matmul_grad_b")
-    .Input("a")
-    .Input("b")
+    .Input("a") // input_a
+    .Input("b") // out
     .OptionalInput("_add_to_output")
     .Output("out")
     .Attr<double>("alpha", 1.0)
@@ -432,14 +433,43 @@ REGISTER_USER_OP("broadcast_matmul_grad_b")
       const user_op::TensorDesc& b = ctx->InputTensorDesc("b", 0);
       user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
 
-      CHECK_EQ_OR_RETURN(a.shape().NumAxes(), b.shape().NumAxes());
-      for (int i = 0; i < a.shape().NumAxes() - 1; ++i) {
-        CHECK_EQ_OR_RETURN(a.shape().At(i), b.shape().At(i));
+      const auto& a_shape = a.shape(); 
+      const auto& b_shape = b.shape(); 
+
+      const int64_t a_num_axes = a_shape.NumAxes(); 
+      const int64_t b_num_axes = b_shape.NumAxes(); 
+
+      // CHECK_EQ_OR_RETURN(a_num_axes, b_num_axes);
+
+      // For example: A(4, 1, 2, 6) B(1, 2, 6, 4) -> C(4, 2, 2, 4)
+      // For GradB we use dy matmul A get (4, 2, 6, 4)
+      // Then we reduce Grad B to B shape -> (1, 2, 6, 4)
+      DimVector out_dim;
+      const size_t num_max_batch_dims = std::max(a_num_axes, b_num_axes) - 2;
+      auto MakeGetBatchDim = [num_max_batch_dims](size_t num_dims, const Shape& shape_dim) {
+        const int64_t num_batch_dims = num_dims - 2;
+        const int64_t num_padding_dims = num_max_batch_dims - num_batch_dims;
+        return [num_padding_dims, shape_dim](size_t index) {
+          return index < num_padding_dims ? 1 : shape_dim.At(index - num_padding_dims);
+        };
+      };
+      auto GetABatchDim = MakeGetBatchDim(a_num_axes, a.shape());
+      auto GetBBatchDim = MakeGetBatchDim(b_num_axes, b.shape());
+      for(int i = 0; i < num_max_batch_dims; i++){
+        int64_t a_index = GetABatchDim(i);
+        int64_t b_index = GetBBatchDim(i);
+        out_dim.push_back(std::max(a_index, b_index)); 
+      }
+      // out_dim.at(a_num_axes - 2) = a_shape.At(a_num_axes - 1); 
+      // out_dim.at(a_num_axes - 1) = b_shape.At(b_num_axes - 1); 
+      out_dim.push_back(a_shape.At(a_num_axes - 1)); 
+      out_dim.push_back(b_shape.At(b_num_axes - 1)); 
+
+      for(int i = 0; i < out_dim.size(); i++){
+        printf("Out dim[%d] is %ld \n", i, out_dim.at(i)); 
       }
 
-      *out->mut_shape() =
-          Shape({a.shape().At(a.shape().NumAxes() - 1), b.shape().At(b.shape().NumAxes() - 1)});
-
+      *out->mut_shape() = Shape(out_dim);
       if (ctx->has_input("_add_to_output", 0)) {
         const user_op::TensorDesc& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
         CHECK_EQ_OR_RETURN(add_to_output.shape(), out->shape());
@@ -457,6 +487,7 @@ REGISTER_USER_OP("broadcast_matmul_grad_b")
         out_and_add_to_output_args.emplace_back("_add_to_output", 0);
       }
 
+      // TODO!!!!!
       // S(b or m axis) x S(b or m axis) -> P
       for (int64_t i = 0; i < last_axis; ++i) {
         ctx->NewBuilder()
@@ -531,6 +562,7 @@ REGISTER_USER_OP_GRAD("broadcast_matmul")
       ctx->FwOp().InputGradBind(user_op::OpArg("b", 0), [&]() -> const std::string& {
         return ctx->GetOp(b_grad_op_name).output("out", 0);
       });
+      // todo: Add reduce_sum_like
       return Maybe<void>::Ok();
     });
 

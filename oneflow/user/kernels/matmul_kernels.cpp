@@ -316,10 +316,23 @@ REGISTER_USER_KERNEL("broadcast_matmul")
       return Maybe<void>::Ok();
     });
 
+// template<typename Context>
+// std::unique_ptr<ep::primitive::Matmul> NewMatmulPrimitiveForBroadcastMatmulGradB(Context* ctx) {
+//   const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
+//   // return NewMatmulPrimitive(ctx->device_type(), data_type, true, false);
+// }
+
+
 template<typename Context>
-std::unique_ptr<ep::primitive::Matmul> NewMatmulPrimitiveForBroadcastMatmulGradB(Context* ctx) {
+std::unique_ptr<ep::primitive::BroadcastMatmul> NewBroadcastMatmulGradBPrimitive(Context* ctx) {
   const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
-  return NewMatmulPrimitive(ctx->device_type(), data_type, true, false);
+  const auto trans_a = GetBlasTransposeType(true); 
+  const auto trans_b = GetBlasTransposeType(false);
+  const int64_t a_num_axes = ctx->TensorDesc4ArgNameAndIndex("a", 0)->shape().NumAxes(); 
+  const int64_t b_num_axes = ctx->TensorDesc4ArgNameAndIndex("b", 0)->shape().NumAxes(); 
+  const int64_t max_num_axes = std::max(a_num_axes, b_num_axes); 
+  return ep::primitive::NewPrimitive<ep::primitive::BroadcastMatmulFactory>(
+      ctx->device_type(), data_type, trans_a, trans_b, max_num_axes);
 }
 
 class BroadcastMatmulGradBKernel final : public user_op::OpKernel,
@@ -349,21 +362,32 @@ class BroadcastMatmulGradBKernel final : public user_op::OpKernel,
       beta = 1.0;
     }
 
-    CHECK_EQ(a->shape().NumAxes(), b->shape().NumAxes());
+    // CHECK_EQ(a->shape().NumAxes(), b->shape().NumAxes());
     int64_t k = a->shape().Count(0, a->shape().NumAxes() - 1);
-    CHECK_EQ(b->shape().Count(0, b->shape().NumAxes() - 1), k);
+    // CHECK_EQ(b->shape().Count(0, b->shape().NumAxes() - 1), k);
     int64_t m = a->shape().At(a->shape().NumAxes() - 1);
     int64_t n = b->shape().At(b->shape().NumAxes() - 1);
 
-    auto matmul = NewMatmulPrimitiveForBroadcastMatmulGradB(ctx);
+    // auto matmul = NewMatmulPrimitiveForBroadcastMatmulGradB(ctx);
+    auto matmul = NewBroadcastMatmulGradBPrimitive(ctx); 
     CHECK(matmul);
-    matmul->Launch(ctx->stream(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
+    // matmul->Launch(ctx->stream(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
+    // matmul->Launch(ctx->stream(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
+    printf("Out shape num axes is: %ld \n", out->shape().NumAxes()); 
+    matmul->Launch(ctx->stream(), alpha, 
+                   a->shape().NumAxes(), a->shape().ptr(), a->dptr(), 
+                   b->shape().NumAxes(), b->shape().ptr(), b->dptr(), 
+                   beta, 
+                   out->shape().NumAxes(), out->shape().ptr(), out->mut_dptr());
+
+    
   }
 };
 
 auto PrimitiveExistsForBroadcastMatmulGradB() {
   return hob::make_custom("MatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
-    return NewMatmulPrimitiveForBroadcastMatmulGradB(&ctx).operator bool();
+    // return NewMatmulPrimitiveForBroadcastMatmulGradB(&ctx).operator bool();
+    return NewBroadcastMatmulGradBPrimitive(&ctx).operator bool();
   });
 }
 

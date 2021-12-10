@@ -213,13 +213,11 @@ class MatMulFunctor {
     const int64_t a_num_axes = a_shape->NumAxes();
     const int64_t b_num_axes = b_shape->NumAxes();
     if (a_num_axes == 2 && 
-        b_shape->NumAxes() == 2 && 
-        a_shape->At(0) == b_shape->At(1) && 
-        a_shape->At(1) == b_shape->At(0)) {
+        b_num_axes == 2) {
       return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, attrs);
     }
-    bool if_batch_matmul = true; 
     if(a_num_axes == b_num_axes){
+      bool if_batch_matmul = true; 
       for (int i = 0; i < a_num_axes - 2; ++i) { 
         if(a_shape->At(i) != b_shape->At(i)){
           if_batch_matmul = false; 
