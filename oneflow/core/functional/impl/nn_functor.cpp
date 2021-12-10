@@ -142,7 +142,6 @@ class DeConvBaseFunctor {
     JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation));
     JUST(deconv_attrs.SetAttr<int32_t>("groups", groups));
     JUST(deconv_attrs.SetAttr<std::string>("data_format", data_format));
-
     std::shared_ptr<one::Tensor> deconv_out = nullptr;
     deconv_out = JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {x, weight}, deconv_attrs));
     if (bias) {
@@ -1842,7 +1841,7 @@ class FusedBiasAddDropoutFunctor {
     JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
 
-    float scale = 1.0;
+    float scale = 0.0;
     if (p != 1.0) { scale = 1.0 / (1.0 - p); }
     MutableAttrMap fused_bias_add_mask_attrs;
     JUST(fused_bias_add_mask_attrs.SetAttr<float>("scale", scale));
@@ -1952,7 +1951,7 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
         *random_mask_like_op_, {x},
         OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
 
-    float dropout_scale = 1.0;
+    float dropout_scale = 0.0;
     if (rate != 1.0) { dropout_scale = 1.0 / (1.0 - rate); }
     MutableAttrMap fused_scale_mask_softmax_dropout_attrs;
     JUST(fused_scale_mask_softmax_dropout_attrs.SetAttr<float>("scale_value", scale));

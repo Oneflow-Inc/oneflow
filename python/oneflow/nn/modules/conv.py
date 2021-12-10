@@ -687,8 +687,8 @@ class ConvTranspose1d(Module):
         assert in_channels % groups == 0
         assert out_channels % groups == 0
         self.weight = flow.nn.Parameter(
-            flow.Tensor(in_channels, out_channels // groups,
-                        *self.kernel_size))
+            flow.Tensor(in_channels, out_channels // groups, *self.kernel_size)
+        )
         self.filters = out_channels
         self.bias = None
         self._bias_add_op = None
@@ -811,8 +811,8 @@ class ConvTranspose2d(Module):
         assert in_channels % groups == 0
         assert out_channels % groups == 0
         self.weight = flow.nn.Parameter(
-            flow.Tensor(in_channels, out_channels // groups,
-                        *self.kernel_size))
+            flow.Tensor(in_channels, out_channels // groups, *self.kernel_size)
+        )
         self.in_channel_groups = in_channels // groups
         self.filters = out_channels
         self.bias = None
@@ -975,8 +975,8 @@ class ConvTranspose3d(Module):
         assert in_channels % groups == 0
         assert out_channels % groups == 0
         self.weight = flow.nn.Parameter(
-            flow.Tensor(in_channels, out_channels // groups,
-                        *self.kernel_size))
+            flow.Tensor(in_channels, out_channels // groups, *self.kernel_size)
+        )
         self.filters = out_channels
         self.bias = None
         self._bias_add_op = None
