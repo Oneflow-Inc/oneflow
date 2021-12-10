@@ -21,7 +21,7 @@ limitations under the License.
 #include <utility>
 
 template<typename... Args>
-auto SwitchCase(Args&&... args) -> decltype(std::make_tuple(std::forward<Args>(args)...)) {
+auto SwitchCase(Args&&... args) {
   return std::make_tuple(std::forward<Args>(args)...);
 }
 

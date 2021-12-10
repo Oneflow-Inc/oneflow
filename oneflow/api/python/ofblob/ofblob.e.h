@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_API_PYTHON_OFBLOB_OFBLOB_E_H_
 #define ONEFLOW_API_PYTHON_OFBLOB_OFBLOB_E_H_
 
-#include "oneflow/api/foreign_lock_helper.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
 #include "oneflow/core/common/type_traits.h"
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
@@ -24,44 +24,36 @@ limitations under the License.
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/api/common/ofblob.h"
 #include "oneflow/extension/python/numpy.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
-#define DEFINE_OF_BLOB_COPY_TO_OR_FROM_BUFFER(direction)                                         \
-  template<typename T>                                                                           \
-  Maybe<void> OfBlob_Copy##direction##Buffer(uint64_t of_blob_ptr, py::array_t<T> array) {       \
-    return Global<ForeignLockHelper>::Get()->WithScopedAcquire([&of_blob_ptr,                    \
-                                                                &array]() -> Maybe<void> {       \
-      py::array contiguous_array = py::reinterpret_steal<py::array>(reinterpret_cast<PyObject*>( \
-          PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(array.ptr()))));                \
-      py::buffer_info buf = contiguous_array.request();                                          \
-      T* buf_ptr = (T*)buf.ptr;                                                                  \
-      size_t size = buf.size;                                                                    \
-      using namespace oneflow;                                                                   \
-      auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);                                    \
-      of_blob->AutoMemCopy##direction<T>(buf_ptr, size);                                         \
-      return Maybe<void>::Ok();                                                                  \
-    });                                                                                          \
+
+template<typename T>
+struct BlobNumpyCopyUtil {
+  static Maybe<void> From(uint64_t of_blob_ptr, const NumPyArrayPtr& array) {
+    return BlobBufferCopyUtil<T>::From(of_blob_ptr, (T*)array.data(), array.size());
   }
 
-DEFINE_OF_BLOB_COPY_TO_OR_FROM_BUFFER(To)
-DEFINE_OF_BLOB_COPY_TO_OR_FROM_BUFFER(From)
-
-#undef DEFINE_OF_BLOB_COPY_TO_OR_FROM_BUFFER
+  static Maybe<void> To(uint64_t of_blob_ptr, const NumPyArrayPtr& array) {
+    return BlobBufferCopyUtil<T>::To(of_blob_ptr, (T*)array.data(), array.size());
+  }
+};
 
 }  // namespace oneflow
 
-#define DEFINE_COPIER(T, type_proto)                                                  \
-  inline void OfBlob_CopyToBuffer_##T(uint64_t of_blob_ptr, py::array_t<T> array) {   \
-    oneflow::OfBlob_CopyToBuffer<T>(of_blob_ptr, array).GetOrThrow();                 \
-  }                                                                                   \
-  inline void OfBlob_CopyFromBuffer_##T(uint64_t of_blob_ptr, py::array_t<T> array) { \
-    oneflow::OfBlob_CopyFromBuffer<T>(of_blob_ptr, array).GetOrThrow();               \
+#define DEFINE_COPIER(T, type_proto)                                                               \
+  inline void OfBlob_CopyToBuffer_##T(uint64_t of_blob_ptr, const oneflow::NumPyArrayPtr& array) { \
+    oneflow::BlobNumpyCopyUtil<T>::To(of_blob_ptr, array).GetOrThrow();                            \
+  }                                                                                                \
+  inline void OfBlob_CopyFromBuffer_##T(uint64_t of_blob_ptr,                                      \
+                                        const oneflow::NumPyArrayPtr& array) {                     \
+    oneflow::BlobNumpyCopyUtil<T>::From(of_blob_ptr, array).GetOrThrow();                          \
   }
 
-OF_PP_FOR_EACH_TUPLE(DEFINE_COPIER, POD_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(DEFINE_COPIER, POD_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ);
 
 #undef DEFINE_COPIER
 
@@ -70,7 +62,7 @@ inline std::string Dtype_GetOfBlobCopyToBufferFuncName(int64_t dtype) {
   static const HashMap<int64_t, std::string> data_type2func_name{
 #define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
   {type_proto, "OfBlob_CopyToBuffer_" #type_cpp},
-      OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ)
+      OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 #undef DATA_TYPE_FUNC_NAME_PAIR
   };
   return data_type2func_name.at(dtype);
@@ -81,7 +73,7 @@ inline std::string Dtype_GetOfBlobCopyFromBufferFuncName(int64_t dtype) {
   static const HashMap<int64_t, std::string> data_type2func_name{
 #define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
   {type_proto, "OfBlob_CopyFromBuffer_" #type_cpp},
-      OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ)
+      OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 #undef DATA_TYPE_FUNC_NAME_PAIR
   };
   return data_type2func_name.at(dtype);

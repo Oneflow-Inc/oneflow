@@ -14,10 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -44,8 +42,6 @@ Maybe<void> DimGather::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  const std::string& op_name = fw_op_expr->op_name();
-  bw_dim_gather_op_ = JUST(op_expr_helper::DimScatterAddLikeOp(0, GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
@@ -69,10 +65,7 @@ Maybe<void> DimGather::Apply(const DimGatherCaptureState* ctx, const TensorTuple
   const std::shared_ptr<oneflow::one::Tensor>& index = ctx->SavedTensors().at(0);
   const std::shared_ptr<oneflow::one::Tensor>& like = ctx->SavedTensors().at(1);
 
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<int32_t>("dim", ctx->dim));
-  in_grads->at(0) = JUST(
-      OpInterpUtil::Dispatch<Tensor>(*bw_dim_gather_op_, {like, index, out_grads.at(0)}, attrs));
+  in_grads->at(0) = JUST(functional::DimScatterAddLike(like, ctx->dim, index, out_grads.at(0)));
   return Maybe<void>::Ok();
 }
 

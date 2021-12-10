@@ -16,7 +16,7 @@ limitations under the License.
 #include <chrono>
 #include "oneflow/core/common/spin_counter.h"
 #include "oneflow/core/common/global.h"
-#include "oneflow/api/foreign_lock_helper.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
 
 namespace oneflow {
 
@@ -37,20 +37,22 @@ Maybe<void> SpinCounter::SpinWait(
 Maybe<void> SpinWaitUntilTimeout(const std::function<bool()>& NeedSpin, int64_t seconds,
                                  const std::function<void()>& HeartbeatCallback,
                                  int64_t heartbeat_interval_seconds) {
-  const auto& start = std::chrono::steady_clock::now();
-  auto time_last_heartbeat = std::chrono::steady_clock::now();
-  while (NeedSpin()) {
-    auto end = std::chrono::steady_clock::now();
-    if (std::chrono::duration<double>(end - time_last_heartbeat).count()
-        >= heartbeat_interval_seconds) {
-      HeartbeatCallback();
-      time_last_heartbeat = end;
+  return Global<ForeignLockHelper>::Get()->WithScopedRelease([&]() -> Maybe<void> {
+    const auto& start = std::chrono::steady_clock::now();
+    auto time_last_heartbeat = std::chrono::steady_clock::now();
+    while (NeedSpin()) {
+      auto end = std::chrono::steady_clock::now();
+      if (std::chrono::duration<double>(end - time_last_heartbeat).count()
+          >= heartbeat_interval_seconds) {
+        HeartbeatCallback();
+        time_last_heartbeat = end;
+      }
+      std::chrono::duration<double> elapsed_seconds = end - start;
+      CHECK_LT_OR_RETURN(elapsed_seconds.count(), seconds)
+          << Error::TimeoutError() << "Timeout error at " << seconds << " seconds.";
     }
-    std::chrono::duration<double> elapsed_seconds = end - start;
-    CHECK_LT_OR_RETURN(elapsed_seconds.count(), seconds)
-        << Error::TimeoutError() << "Timeout error at " << seconds << " seconds.";
-  }
-  return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
+  });
 }
 
 Maybe<void> SpinWaitUntilTimeout(const std::function<bool()>& NeedSpin, int64_t seconds) {

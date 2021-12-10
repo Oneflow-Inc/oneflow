@@ -83,19 +83,18 @@ class CpuL2NormalizeKernel final : public user_op::OpKernel {
     int32_t d = x->shape().Count(axis + 1);
 
     size_t square_x_sum_byte_size = square_x_sum->shape().elem_cnt() * sizeof(T);
-    Memset<DeviceType::kCPU>(ctx->device_ctx(), square_x_sum->mut_dptr(), 0,
-                             square_x_sum_byte_size);
+    Memset<DeviceType::kCPU>(ctx->stream(), square_x_sum->mut_dptr(), 0, square_x_sum_byte_size);
     L2NormalizeForward<T>(n, c, d, static_cast<T>(epsilon), x->dptr<T>(),
                           square_x_sum->mut_dptr<T>(), y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_L2_NORMALIZE_KERNEL(dtype)           \
-  REGISTER_USER_KERNEL("l2_normalize")                    \
-      .SetCreateFn<CpuL2NormalizeKernel<dtype>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+#define REGISTER_CPU_L2_NORMALIZE_KERNEL(dtype)                       \
+  REGISTER_USER_KERNEL("l2_normalize")                                \
+      .SetCreateFn<CpuL2NormalizeKernel<dtype>>()                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_L2_NORMALIZE_KERNEL(float)
 
@@ -122,11 +121,11 @@ class CpuL2NormalizeGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_L2_NORMALIZE_GRAD_KERNEL(dtype)      \
-  REGISTER_USER_KERNEL("l2_normalize_grad")               \
-      .SetCreateFn<CpuL2NormalizeGradKernel<dtype>>()     \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_CPU_L2_NORMALIZE_GRAD_KERNEL(dtype)                  \
+  REGISTER_USER_KERNEL("l2_normalize_grad")                           \
+      .SetCreateFn<CpuL2NormalizeGradKernel<dtype>>()                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_L2_NORMALIZE_GRAD_KERNEL(float)
 

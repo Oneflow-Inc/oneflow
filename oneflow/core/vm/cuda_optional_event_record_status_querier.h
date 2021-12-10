@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <atomic>
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/device/cuda_event.h"
 
 namespace oneflow {
 
@@ -26,13 +27,15 @@ class DeviceCtx;
 namespace vm {
 
 #ifdef WITH_CUDA
+
 class CudaOptionalEventRecordStatusQuerier {
  public:
-  ~CudaOptionalEventRecordStatusQuerier() = default;
+  ~CudaOptionalEventRecordStatusQuerier();
 
-  bool done() const { return launched_ && (!has_event_record_ || event_completed()); }
-  void set_has_event_record(bool val) { has_event_record_ = val; }
+  bool done() const { return launched_ && (!cuda_event_ || event_completed()); }
   void SetLaunched(DeviceCtx* device_ctx);
+
+  void reset_cuda_event(const std::shared_ptr<CudaEvent>& cuda_event) { cuda_event_ = cuda_event; }
 
   static const CudaOptionalEventRecordStatusQuerier* Cast(const char* mem_ptr) {
     return reinterpret_cast<const CudaOptionalEventRecordStatusQuerier*>(mem_ptr);
@@ -40,19 +43,18 @@ class CudaOptionalEventRecordStatusQuerier {
   static CudaOptionalEventRecordStatusQuerier* MutCast(char* mem_ptr) {
     return reinterpret_cast<CudaOptionalEventRecordStatusQuerier*>(mem_ptr);
   }
-  static CudaOptionalEventRecordStatusQuerier* PlacementNew(char* mem_ptr, int64_t device_id) {
-    return new (mem_ptr) CudaOptionalEventRecordStatusQuerier(device_id);
+  static CudaOptionalEventRecordStatusQuerier* PlacementNew(
+      char* mem_ptr, const std::shared_ptr<CudaEvent>& cuda_event) {
+    return new (mem_ptr) CudaOptionalEventRecordStatusQuerier(cuda_event);
   }
 
  private:
-  explicit CudaOptionalEventRecordStatusQuerier(int64_t device_id)
-      : launched_(false), has_event_record_(false), device_id_(device_id) {}
+  explicit CudaOptionalEventRecordStatusQuerier(const std::shared_ptr<CudaEvent>& cuda_event)
+      : launched_(false), cuda_event_(cuda_event) {}
   bool event_completed() const;
 
   std::atomic<bool> launched_;
-  std::atomic<bool> has_event_record_;
-  int64_t device_id_;
-  cudaEvent_t event_;
+  std::shared_ptr<CudaEvent> cuda_event_;
 };
 
 #endif

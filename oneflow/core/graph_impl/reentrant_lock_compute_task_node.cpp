@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/compute_task_node.h"
-#include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
 
 namespace oneflow {
 
@@ -32,7 +32,6 @@ class ReentrantLockCompTaskNode final : public CompTaskNode {
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
   void InferProducedDataRegstTimeShape() override;
-  bool IsIndependent() const override { return true; }
 };
 
 void ReentrantLockCompTaskNode::ProduceAllRegstsAndBindEdges() {
@@ -73,12 +72,7 @@ void ReentrantLockCompTaskNode::InferProducedDataRegstTimeShape() {
   });
 }
 
-REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kReentrantLock);
-
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kReentrantLock)
-    .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
-      return generator->GenerateTickTockStreamIndex();
-    });
+REGISTER_TICK_TASK_STREAM_INDEX_GETTER(TaskType::kReentrantLock);
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kReentrantLockConf, ReentrantLockCompTaskNode);
 

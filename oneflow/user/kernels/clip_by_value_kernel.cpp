@@ -53,12 +53,12 @@ int64_t GetDtypeMatchedValue(double floating, int64_t integral) {
 template<typename T>
 struct ClipKernelUtil<DeviceType::kCPU, T> {
   template<typename F>
-  static void Forward(DeviceCtx* ctx, F clip_func, const int64_t n, const T* x, T* y) {
+  static void Forward(ep::Stream* stream, F clip_func, const int64_t n, const T* x, T* y) {
     FOR_RANGE(int64_t, i, 0, n) { y[i] = clip_func(x[i]); }
   }
 
   template<typename F>
-  static void Backward(DeviceCtx* ctx, F clip_func, const int64_t n, const T* x, const T* dy,
+  static void Backward(ep::Stream* stream, F clip_func, const int64_t n, const T* x, const T* dy,
                        T* dx) {
     FOR_RANGE(int64_t, i, 0, n) { dx[i] = clip_func(x[i], dy[i]); }
   }
@@ -80,7 +80,7 @@ class ClipByScalarKernel final : public user_op::OpKernel {
     int64_t integral_max = ctx->Attr<int64_t>("integral_max");
     ClipByMinMaxFunctor<T> clip_func(GetDtypeMatchedValue<T>(floating_min, integral_min),
                                      GetDtypeMatchedValue<T>(floating_max, integral_max));
-    ClipKernelUtil<device_type, T>::Forward(ctx->device_ctx(), clip_func, y->shape().elem_cnt(),
+    ClipKernelUtil<device_type, T>::Forward(ctx->stream(), clip_func, y->shape().elem_cnt(),
                                             x->dptr<T>(), y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -99,7 +99,7 @@ class ClipByScalarMinKernel final : public user_op::OpKernel {
     double floating_min = ctx->Attr<double>("floating_min");
     int64_t integral_min = ctx->Attr<int64_t>("integral_min");
     ClipByMinFunctor<T> clip_func(GetDtypeMatchedValue<T>(floating_min, integral_min));
-    ClipKernelUtil<device_type, T>::Forward(ctx->device_ctx(), clip_func, y->shape().elem_cnt(),
+    ClipKernelUtil<device_type, T>::Forward(ctx->stream(), clip_func, y->shape().elem_cnt(),
                                             x->dptr<T>(), y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -118,7 +118,7 @@ class ClipByScalarMaxKernel final : public user_op::OpKernel {
     double floating_max = ctx->Attr<double>("floating_max");
     int64_t integral_max = ctx->Attr<int64_t>("integral_max");
     ClipByMaxFunctor<T> clip_func(GetDtypeMatchedValue<T>(floating_max, integral_max));
-    ClipKernelUtil<device_type, T>::Forward(ctx->device_ctx(), clip_func, y->shape().elem_cnt(),
+    ClipKernelUtil<device_type, T>::Forward(ctx->stream(), clip_func, y->shape().elem_cnt(),
                                             x->dptr<T>(), y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -141,7 +141,7 @@ class ClipByScalarGradKernel final : public user_op::OpKernel {
     int64_t integral_max = ctx->Attr<int64_t>("integral_max");
     ClipByMinMaxGradFunctor<T> clip_func(GetDtypeMatchedValue<T>(floating_min, integral_min),
                                          GetDtypeMatchedValue<T>(floating_max, integral_max));
-    ClipKernelUtil<device_type, T>::Backward(ctx->device_ctx(), clip_func, dx->shape().elem_cnt(),
+    ClipKernelUtil<device_type, T>::Backward(ctx->stream(), clip_func, dx->shape().elem_cnt(),
                                              x->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -161,7 +161,7 @@ class ClipByScalarMinGradKernel final : public user_op::OpKernel {
     double floating_min = ctx->Attr<double>("floating_min");
     int64_t integral_min = ctx->Attr<int64_t>("integral_min");
     ClipByMinGradFunctor<T> clip_func(GetDtypeMatchedValue<T>(floating_min, integral_min));
-    ClipKernelUtil<device_type, T>::Backward(ctx->device_ctx(), clip_func, dx->shape().elem_cnt(),
+    ClipKernelUtil<device_type, T>::Backward(ctx->stream(), clip_func, dx->shape().elem_cnt(),
                                              x->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -181,7 +181,7 @@ class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
     double floating_max = ctx->Attr<double>("floating_max");
     int64_t integral_max = ctx->Attr<int64_t>("integral_max");
     ClipByMaxGradFunctor<T> clip_func(GetDtypeMatchedValue<T>(floating_max, integral_max));
-    ClipKernelUtil<device_type, T>::Backward(ctx->device_ctx(), clip_func, dx->shape().elem_cnt(),
+    ClipKernelUtil<device_type, T>::Backward(ctx->stream(), clip_func, dx->shape().elem_cnt(),
                                              x->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -190,8 +190,8 @@ class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
 #define REGISTER_CLIP_KERNEL(op_type_name, kernel_name, device_type_v, dtype)                   \
   REGISTER_USER_KERNEL(#op_type_name)                                                           \
       .SetCreateFn<kernel_name##Kernel<device_type_v, dtype>>()                                 \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                               \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value))           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                              \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value))          \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));                          \
@@ -201,8 +201,8 @@ class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
 #define REGISTER_CLIP_GRAD_KERNEL(op_type_name, kernel_name, device_type_v, dtype)              \
   REGISTER_USER_KERNEL(#op_type_name)                                                           \
       .SetCreateFn<kernel_name##GradKernel<device_type_v, dtype>>()                             \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                               \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                              \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                        \

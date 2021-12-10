@@ -16,8 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_LOCAL_DEP_OBJECT_H_
 #define ONEFLOW_CORE_FRAMEWORK_LOCAL_DEP_OBJECT_H_
 
-#include "oneflow/core/object_msg/object_msg_core.h"
-#include "oneflow/core/vm/vm_object.msg.h"
+#include "oneflow/core/intrusive/intrusive.h"
+#include "oneflow/core/vm/vm_object.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
 
@@ -25,26 +25,62 @@ namespace oneflow {
 
 class Device;
 
-// clang-format off
+// Helps VirtualMachineEngine building instruction edges
+class LocalDepObject final : public intrusive::Base {
+ public:
+  // Getters
+  const vm::LogicalObject& logical_object() const {
+    if (logical_object_) { return logical_object_.Get(); }
+    static const auto default_val = intrusive::make_shared<vm::LogicalObject>();
+    return default_val.Get();
+  }
+  const vm::MirroredObject& mirrored_object() const {
+    if (mirrored_object_) { return mirrored_object_.Get(); }
+    static const auto default_val = intrusive::make_shared<vm::MirroredObject>();
+    return default_val.Get();
+  }
 
-// Helps VirtualMachine building instruction edges
-OBJECT_MSG_BEGIN(LocalDepObject);
+  const intrusive::ListHook& pool_hook() const { return pool_hook_; }
+  const intrusive::ListHook& stored_hook() const { return stored_hook_; }
+  const intrusive::ListHook& lifetime_hook() const { return lifetime_hook_; }
+
+  // Setters
+  vm::LogicalObject* mut_logical_object() {
+    if (!logical_object_) { logical_object_ = intrusive::make_shared<vm::LogicalObject>(); }
+    return logical_object_.Mutable();
+  }
+  vm::MirroredObject* mut_mirrored_object() {
+    if (!mirrored_object_) { mirrored_object_ = intrusive::make_shared<vm::MirroredObject>(); }
+    return mirrored_object_.Mutable();
+  }
 
   // methods
-  OF_PUBLIC static Maybe<ObjectMsgPtr<LocalDepObject>> New(const Device& device);
+  static Maybe<intrusive::shared_ptr<LocalDepObject>> New(const Device& device);
 
-  OF_PRIVATE Maybe<void> Init(const Device& device);
+ private:
+  Maybe<void> Init(const Device& device);
 
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+
+  LocalDepObject()
+      : intrusive_ref_(),
+        logical_object_(),
+        mirrored_object_(),
+        pool_hook_(),
+        stored_hook_(),
+        lifetime_hook_() {}
+  intrusive::Ref intrusive_ref_;
   // fields
-  OBJECT_MSG_DEFINE_OPTIONAL(vm::LogicalObject, logical_object);
-  OBJECT_MSG_DEFINE_OPTIONAL(vm::MirroredObject, mirrored_object);
+  intrusive::shared_ptr<vm::LogicalObject> logical_object_;
+  intrusive::shared_ptr<vm::MirroredObject> mirrored_object_;
 
-  // links
-  OBJECT_MSG_DEFINE_LIST_LINK(pool_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(stored_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(lifetime_link);
-OBJECT_MSG_END(LocalDepObject);
-// clang-format on
+ public:
+  // list hooks
+  intrusive::ListHook pool_hook_;
+  intrusive::ListHook stored_hook_;
+  intrusive::ListHook lifetime_hook_;
+};
 
 Maybe<LocalDepObject*> GetLocalDepObjectFromDevicePool(Symbol<Device> device);
 Maybe<void> PutLocalDepObjectToDevicePool(Symbol<Device> device, LocalDepObject* local_dep_object);

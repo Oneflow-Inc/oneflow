@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/object_msg/flat_msg.h"
+#include "oneflow/core/intrusive/flat_msg.h"
 #include "oneflow/core/framework/sync_symbol_nd_sbp.h"
 #include "oneflow/core/framework/rank_group_rpc_util.h"
 #include "oneflow/core/job/rank_group_scope.h"
@@ -24,8 +24,9 @@ namespace oneflow {
 
 namespace {
 
+// clang-format off
 FLAT_MSG_BEGIN(FlatSplitParallel);
-FLAT_MSG_DEFINE_OPTIONAL(int64_t, axis);
+  FLAT_MSG_DEFINE_OPTIONAL(int64_t, axis);
 FLAT_MSG_END(FlatSplitParallel);
 
 FLAT_MSG_BEGIN(FlatBroadcastParallel);
@@ -35,62 +36,67 @@ FLAT_MSG_BEGIN(FlatPartialSumParallel);
 FLAT_MSG_END(FlatPartialSumParallel);
 
 FLAT_MSG_BEGIN(FlatSbpParallel);
-Maybe<void> Init(const cfg::SbpParallel& sbp_parallel) {
-  if (sbp_parallel.has_split_parallel()) {
-    this->mutable_split_parallel()->set_axis(sbp_parallel.split_parallel().axis());
-  } else if (sbp_parallel.has_broadcast_parallel()) {
-    this->mutable_broadcast_parallel();
-  } else if (sbp_parallel.has_partial_sum_parallel()) {
-    this->mutable_partial_sum_parallel();
-  } else {
-    OF_UNIMPLEMENTED();
+ public:
+  Maybe<void> Init(const cfg::SbpParallel& sbp_parallel) {
+    if (sbp_parallel.has_split_parallel()) {
+      this->mutable_split_parallel()->set_axis(sbp_parallel.split_parallel().axis());
+    } else if (sbp_parallel.has_broadcast_parallel()) {
+      this->mutable_broadcast_parallel();
+    } else if (sbp_parallel.has_partial_sum_parallel()) {
+      this->mutable_partial_sum_parallel();
+    } else {
+      OF_UNIMPLEMENTED();
+    }
+    return Maybe<void>::Ok();
   }
-  return Maybe<void>::Ok();
-}
 
-Maybe<void> Check(const cfg::SbpParallel& sbp_parallel) const {
-  if (sbp_parallel.has_split_parallel()) {
-    CHECK_EQ_OR_RETURN(this->split_parallel().axis(), sbp_parallel.split_parallel().axis());
-  } else if (sbp_parallel.has_broadcast_parallel()) {
-    CHECK_OR_RETURN(this->has_broadcast_parallel());
-  } else if (sbp_parallel.has_partial_sum_parallel()) {
-    CHECK_OR_RETURN(this->has_partial_sum_parallel());
-  } else {
-    OF_UNIMPLEMENTED();
+  Maybe<void> Check(const cfg::SbpParallel& sbp_parallel) const {
+    if (sbp_parallel.has_split_parallel()) {
+      CHECK_EQ_OR_RETURN(this->split_parallel().axis(), sbp_parallel.split_parallel().axis());
+    } else if (sbp_parallel.has_broadcast_parallel()) {
+      CHECK_OR_RETURN(this->has_broadcast_parallel());
+    } else if (sbp_parallel.has_partial_sum_parallel()) {
+      CHECK_OR_RETURN(this->has_partial_sum_parallel());
+    } else {
+      OF_UNIMPLEMENTED();
+    }
+    return Maybe<void>::Ok();
   }
-  return Maybe<void>::Ok();
-}
 
-FLAT_MSG_DEFINE_ONEOF(parallel_type,
-                      FLAT_MSG_ONEOF_FIELD(FlatSplitParallel, split_parallel)
-                          FLAT_MSG_ONEOF_FIELD(FlatBroadcastParallel, broadcast_parallel)
-                              FLAT_MSG_ONEOF_FIELD(FlatPartialSumParallel, partial_sum_parallel));
+ private:
+  FLAT_MSG_DEFINE_ONEOF(parallel_type,
+    FLAT_MSG_ONEOF_FIELD(FlatSplitParallel, split_parallel)
+    FLAT_MSG_ONEOF_FIELD(FlatBroadcastParallel, broadcast_parallel)
+    FLAT_MSG_ONEOF_FIELD(FlatPartialSumParallel, partial_sum_parallel));
 FLAT_MSG_END(FlatSbpParallel);
 
 FLAT_MSG_BEGIN(FlatNdSbp);
-OF_PUBLIC Maybe<void> Init(uint64_t symbol_id, Symbol<cfg::NdSbp> nd_sbp) {
-  this->set_symbol_id(symbol_id);
-  this->set_size(nd_sbp->sbp_parallel_size());
-  for (int i = 0; i < this->size(); ++i) {
-    const auto& sbp_parallel = nd_sbp->sbp_parallel(i);
-    JUST(this->mutable_sbp_parallel()->Mutable(i)->Init(sbp_parallel));
+ public:
+  Maybe<void> Init(uint64_t symbol_id, Symbol<cfg::NdSbp> nd_sbp) {
+    this->set_symbol_id(symbol_id);
+    this->set_size(nd_sbp->sbp_parallel_size());
+    for (int i = 0; i < this->size(); ++i) {
+      const auto& sbp_parallel = nd_sbp->sbp_parallel(i);
+      JUST(this->mutable_sbp_parallel()->Mutable(i)->Init(sbp_parallel));
+    }
+    return Maybe<void>::Ok();
   }
-  return Maybe<void>::Ok();
-}
 
-OF_PUBLIC Maybe<void> Check(uint64_t symbol_id, Symbol<cfg::NdSbp> nd_sbp) const {
-  CHECK_EQ_OR_RETURN(this->symbol_id(), symbol_id);
-  CHECK_EQ_OR_RETURN(this->size(), nd_sbp->sbp_parallel_size());
-  for (int i = 0; i < this->size(); ++i) {
-    JUST(this->sbp_parallel().Get(i).Check(nd_sbp->sbp_parallel(i)));
+  Maybe<void> Check(uint64_t symbol_id, Symbol<cfg::NdSbp> nd_sbp) const {
+    CHECK_EQ_OR_RETURN(this->symbol_id(), symbol_id);
+    CHECK_EQ_OR_RETURN(this->size(), nd_sbp->sbp_parallel_size());
+    for (int i = 0; i < this->size(); ++i) {
+      JUST(this->sbp_parallel().Get(i).Check(nd_sbp->sbp_parallel(i)));
+    }
+    return Maybe<void>::Ok();
   }
-  return Maybe<void>::Ok();
-}
 
-FLAT_MSG_DEFINE_OPTIONAL(uint64_t, symbol_id);
-FLAT_MSG_DEFINE_OPTIONAL(size_t, size);
-FLAT_MSG_DEFINE_REPEATED(FlatSbpParallel, sbp_parallel, SHAPE_MAX_AXIS_SIZE);
+ private:
+  FLAT_MSG_DEFINE_OPTIONAL(uint64_t, symbol_id);
+  FLAT_MSG_DEFINE_OPTIONAL(size_t, size);
+  FLAT_MSG_DEFINE_REPEATED(FlatSbpParallel, sbp_parallel, SHAPE_MAX_AXIS_SIZE);
 FLAT_MSG_END(FlatNdSbp);
+// clang-format on
 
 class FlatNdSbpAsyncTransportCtx : public AsyncTransportCtx {
  public:

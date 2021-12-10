@@ -14,10 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -38,18 +36,12 @@ class Expand : public OpExprGradFunction<ExpandCaptureState> {
 
  private:
   AttrMap base_attrs_;
-  std::shared_ptr<OpExpr> grad_op_;
 };
 
 Maybe<void> Expand::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  const std::string& op_name = fw_op_expr->op_name();
-  std::vector<int32_t> logical_out_shape;
-  std::vector<int32_t> logical_expand_shape;
-  grad_op_ = JUST(op_expr_helper::ExpandGradOp(logical_out_shape, logical_expand_shape,
-                                               GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
@@ -72,7 +64,8 @@ Maybe<void> Expand::Apply(const ExpandCaptureState* ctx, const TensorTuple& out_
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<std::vector<int32_t>>("logical_out_shape", ctx->logical_out_shape));
   JUST(attrs.SetAttr<std::vector<int32_t>>("logical_expand_shape", ctx->logical_expand_shape));
-  in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}, attrs));
+  in_grads->at(0) = JUST(
+      functional::ExpandGrad(out_grads.at(0), ctx->logical_out_shape, ctx->logical_expand_shape));
   return Maybe<void>::Ok();
 }
 

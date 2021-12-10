@@ -655,7 +655,8 @@ class ImageFlip(Module):
         ...     [[4, 5, 6], [6, 5, 4]]]])
         >>> image_tensors = flow.Tensor(arr, device=flow.device("cpu"))
         >>> image_tensor_buffer = flow.tensor_to_tensor_buffer(image_tensors, instance_dims=3)
-        >>> output = nn.image.flip(1)(image_tensor_buffer).numpy()
+        >>> flip_code = flow.ones(arr.shape[0], dtype=flow.int8)
+        >>> output = nn.image.flip()(image_tensor_buffer, flip_code).numpy()
         >>> output[0]
         array([[[3., 2., 1.],
                 [1., 2., 3.]],
@@ -670,12 +671,11 @@ class ImageFlip(Module):
                 [4., 5., 6.]]], dtype=float32)
     """
 
-    def __init__(self, flip_code):
+    def __init__(self):
         super().__init__()
-        self.flip_code = flip_code
 
-    def forward(self, images):
-        return flow._C.image_flip(images, flip_code=self.flip_code)
+    def forward(self, images, flip_code):
+        return flow._C.image_flip(images, flip_code=flip_code)
 
 
 class ImageDecode(Module):

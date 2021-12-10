@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_CONTROL_RPC_CLIENT_H_
 #define ONEFLOW_CORE_CONTROL_RPC_CLIENT_H_
 
-#include "oneflow/core/actor/actor_message.h"
+#include "oneflow/core/lazy/actor/actor_message.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/control/ctrl_service.h"
 #include "oneflow/core/job/global_for.h"
@@ -74,7 +74,7 @@ class RpcClient {
   CtrlService::Stub* GetStubAt(int64_t i) { return stubs_[i].get(); };
   size_t GetStubSize() { return stubs_.size(); };
   void ReserveStubsOfSize(int64_t n) { stubs_.reserve(n); };
-  void AddStub(std::unique_ptr<CtrlService::Stub> s) { stubs_.push_back(std::move(s)); };
+  void AddStub(std::unique_ptr<CtrlService::Stub> s) { stubs_.emplace_back(std::move(s)); };
 
   std::vector<std::unique_ptr<CtrlService::Stub>> stubs_;
   std::mutex done_names_mtx_;

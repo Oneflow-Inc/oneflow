@@ -60,11 +60,11 @@ class inference_mode:
         self.infer_mode = mode
 
     def __call__(self, func):
-        def warpper(*args, **kwargs):
+        def wrapper(*args, **kwargs):
             with AutoGradMode(not self.infer_mode):
                 return func(*args, **kwargs)
 
-        return warpper
+        return wrapper
 
     def __enter__(self):
         self.grad_mode = AutoGradMode(not self.infer_mode)
@@ -103,11 +103,11 @@ class grad_enable:
     """
 
     def __call__(self, func):
-        def warpper(*args, **kwargs):
+        def wrapper(*args, **kwargs):
             with AutoGradMode(True):
                 return func(*args, **kwargs)
 
-        return warpper
+        return wrapper
 
     def __enter__(self):
         self.grad_mode = AutoGradMode(True)
@@ -149,11 +149,11 @@ class no_grad:
     """
 
     def __call__(self, func):
-        def warpper(*args, **kwargs):
+        def wrapper(*args, **kwargs):
             with AutoGradMode(False):
                 return func(*args, **kwargs)
 
-        return warpper
+        return wrapper
 
     def __enter__(self):
         self.grad_mode = AutoGradMode(False)

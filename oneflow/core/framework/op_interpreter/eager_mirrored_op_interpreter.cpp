@@ -27,7 +27,6 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/stride.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/operator/operator.h"
@@ -173,9 +172,7 @@ Maybe<void> RunEmptyOp(TensorTuple* outputs) {
   const auto& shape = tensor_impl->tensor_meta()->shape_ptr();
   const auto& data_type = tensor_impl->dtype();
   const auto& device = tensor_impl->device();
-  const auto empty_expr = JUST(op_expr_helper::EmptyOp(*shape, data_type));
-  std::shared_ptr<TensorTuple> inputs = std::make_shared<TensorTuple>();
-  JUST(NaiveInterpret(*empty_expr, *inputs, device, outputs, OpExprInterpContext(AttrMap{})));
+  outputs->at(0) = JUST(functional::Empty(*shape, DType(data_type), device));
   return Maybe<void>::Ok();
 }
 
@@ -229,11 +226,11 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
                         Symbol<ParallelDesc> parallel_desc, bool inplace) {
   CHECK_OR_RETURN(parallel_desc->containing_current_rank());
   if (parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
-  int64_t root = JUST(parallel_desc->MachineId4ParallelId(src_rank));
-  std::shared_ptr<UserOpExpr> op_expr = JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, root));
+  std::shared_ptr<UserOpExpr> op_expr =
+      JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, src_rank));
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<int64_t>("root", src_rank));
-  if (root == GlobalProcessCtx::Rank() || inplace) {
+  if (src_rank == GlobalProcessCtx::Rank() || inplace) {
     TensorTuple outputs{tensor};
     JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs,
                                 one::OpExprInterpContext(attrs, parallel_desc)));
@@ -253,7 +250,8 @@ Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
   JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   if (!parallel_id.has_value()) { return tensor; }
   const auto& broadcast_parallel_desc = JUST(GetBroadcastSubParallelDesc(parallel_desc, nd_sbp));
-  return Broadcast(tensor, /* root */ 0, broadcast_parallel_desc, false);
+  int64_t root = JUST(broadcast_parallel_desc->MachineId4ParallelId(0));
+  return Broadcast(tensor, root, broadcast_parallel_desc, false);
 }
 
 Maybe<Shape> CalcPhysicalShape(Symbol<ConsistentTensorMeta> consistent_tensor_meta) {

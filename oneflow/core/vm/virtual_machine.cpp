@@ -13,697 +13,202 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/api/foreign_lock_helper.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
-#include "oneflow/core/vm/vm_desc.msg.h"
-#include "oneflow/core/vm/infer_stream_type.h"
-#include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/object_wrapper.h"
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/core/common/spin_counter.h"
-#include "oneflow/core/framework/device.h"
-#include "oneflow/core/job/parallel_desc.h"
+#include <typeinfo>
+#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
+#include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/common/multi_client.h"
+#include "oneflow/core/common/cpp_attribute.h"
+#include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/thread/thread_consistent_id.h"
+#include "oneflow/core/framework/transport_token.h"
+#include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
 
 namespace oneflow {
-namespace vm {
 
 namespace {
 
-bool HasImmediateOperandsOnly(const InstructionMsg& instr_msg) {
-  for (const auto& instr_operand : instr_msg.operand()) {
-    if (instr_operand->has_const_operand()) { return false; }
-    if (instr_operand->has_mut_operand()) { return false; }
-    if (instr_operand->has_mut2_operand()) { return false; }
-    if (instr_operand->has_del_operand()) { return false; }
-    if (instr_operand->has_symbol_operand()) { return false; }
-    if (instr_operand->has_init_symbol_operand()) { return false; }
-    CHECK(instr_operand->has_separator() || instr_operand->has_double_operand()
-          || instr_operand->has_double_operand() || instr_operand->has_int64_operand()
-          || instr_operand->has_uint64_operand() || instr_operand->has_bool_operand());
+Maybe<void> ForEachThreadCtx(vm::VirtualMachineEngine* vm,
+                             const std::function<Maybe<void>(vm::ThreadCtx*)>& DoEach) {
+  INTRUSIVE_UNSAFE_FOR_EACH_PTR(thread_ctx, vm->mut_thread_ctx_list()) {
+    const auto& stream_type = thread_ctx->stream_rt_desc().stream_type_id().stream_type();
+    if (stream_type.OnSchedulerThread()) { continue; }
+    JUST(DoEach(thread_ctx));
   }
-  return true;
-}
-
-}  // namespace
-
-void VirtualMachine::ReleaseInstruction(Instruction* instruction,
-                                        /*out*/ ReadyInstructionList* ready_instruction_list) {
-  auto* access_list = instruction->mut_access_list();
-  auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
-  OBJECT_MSG_LIST_FOR_EACH(access_list, access) {
-    CHECK_GT(access->ref_cnt(), 1);
-    access_list->Erase(access.Mutable());
-    if (access->is_mirrored_object_id_inserted()) {
-      rw_mutexed_object_accesses->Erase(access.Mutable());
-    }
-    auto* mirrored_object = access->mut_mirrored_object();
-    if (!access->is_rw_mutexed_object_access_link_empty()) {
-      CHECK_EQ(access->mut_rw_mutexed_object(), mirrored_object->mut_rw_mutexed_object());
-      mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Erase(access.Mutable());
-    }
-  }
-  CHECK_EQ(rw_mutexed_object_accesses->size(), 0);
-  TryMoveWaitingToReady(instruction, ready_instruction_list, [](Instruction*) { return true; });
-}
-
-void VirtualMachine::TryReleaseFinishedInstructions(
-    Stream* stream,
-    /*out*/ ReadyInstructionList* ready_instruction_list) {
-  auto* running_instruction_list = stream->mut_running_instruction_list();
-  auto* front_seq_compute_list = mutable_front_seq_compute_instr_list();
-  auto* vm_stat_running_list = mut_vm_stat_running_instruction_list();
-  while (true) {
-    auto* instruction_ptr = running_instruction_list->Begin();
-    if (instruction_ptr == nullptr || !instruction_ptr->Done()) { break; }
-    ReleaseInstruction(instruction_ptr, /*out*/ ready_instruction_list);
-    const auto interpret_type = instruction_ptr->stream().stream_type_id().interpret_type();
-    if (interpret_type == kInfer) {
-      // do nothing
-    } else if (interpret_type == kCompute) {
-      CHECK(!instruction_ptr->is_front_seq_compute_instr_link_empty());
-      front_seq_compute_list->Erase(instruction_ptr);
-    } else {
-      UNIMPLEMENTED();
-    }
-    vm_stat_running_list->Erase(instruction_ptr);
-    stream->DeleteInstruction(running_instruction_list->Erase(instruction_ptr));
-  }
-}
-
-void VirtualMachine::FilterAndRunInstructionsInAdvance(TmpPendingInstrMsgList* instr_msg_list) {
-  OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
-    const auto& instr_type_id = instr_msg->instr_type_id();
-    if (instr_type_id.instruction_type().ResettingIdToObjectMap()) {
-      const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
-      CHECK(stream_type.IsControlStreamType());
-      CHECK(HasImmediateOperandsOnly(*instr_msg));
-      const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
-      if (!parallel_desc || parallel_desc->ContainingMachineId(this_machine_id())) {
-        stream_type.Run(this, instr_msg);
-      }
-      instr_msg_list->Erase(instr_msg);
-    }
-  }
-}
-
-int64_t VirtualMachine::this_machine_id() const {
-  CHECK_EQ(machine_id_range().size(), 1);
-  return machine_id_range().begin();
-}
-
-namespace {
-
-bool IsStreamInParallelDesc(const ParallelDesc* parallel_desc, const Stream& stream) {
-  if (parallel_desc == nullptr) { return true; }
-  if (stream.stream_type().IsControlStreamType()) {
-    return parallel_desc->ContainingMachineId(stream.machine_id());
-  }
-  return parallel_desc->Containing(stream.machine_id(), stream.device_id());
-}
-
-}  // namespace
-
-void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
-                                      /*out*/ NewInstructionList* new_instruction_list) {
-  auto* front_seq_compute_list = mutable_front_seq_compute_instr_list();
-  OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
-    const StreamTypeId& stream_type_id = instr_msg->instr_type_id().stream_type_id();
-    auto* stream_rt_desc = mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);
-    const auto& instruction_type = instr_msg->instr_type_id().instruction_type();
-    if (stream_rt_desc == nullptr) {
-      const auto& stream_type = stream_type_id.stream_type();
-      LOG(FATAL) << typeid(instruction_type).name() << " " << typeid(stream_type).name();
-    }
-    bool is_front_seq = instruction_type.IsFrontSequential();
-    if (is_front_seq) { CHECK_EQ(stream_rt_desc->stream_id2stream().size(), 1); }
-    const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
-    OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(stream_rt_desc->mut_stream_id2stream(), stream) {
-      if (!IsStreamInParallelDesc(parallel_desc.get(), *stream)) { continue; }
-      ObjectMsgPtr<Instruction> instr = stream->NewInstruction(instr_msg, parallel_desc);
-      if (stream_type_id.interpret_type() == kInfer) {
-        // do nothing
-      } else if (stream_type_id.interpret_type() == kCompute) {
-        front_seq_compute_list->PushBack(instr.Mutable());
-      } else {
-        UNIMPLEMENTED();
-      }
-      if (!is_front_seq) { new_instruction_list->PushBack(instr.Mutable()); }
-    }
-    instr_msg_list->Erase(instr_msg);
-  }
-}
-
-Maybe<const ParallelDesc> VirtualMachine::GetInstructionParallelDesc(
-    const InstructionMsg& instr_msg) {
-  static const std::shared_ptr<const ParallelDesc> empty_ptr;
-  if (instr_msg.parallel_desc()) { return instr_msg.parallel_desc(); }
-  if (!instr_msg.has_parallel_desc_symbol_id()) { return empty_ptr; }
-  int64_t symbol_id = instr_msg.parallel_desc_symbol_id();
-  auto* logical_object = mut_id2logical_object()->FindPtr(symbol_id);
-  CHECK_NOTNULL_OR_RETURN(logical_object) << "symbol_id: " << symbol_id;
-  auto* map = logical_object->mut_global_device_id2mirrored_object();
-  CHECK_EQ_OR_RETURN(map->size(), 1);
-  const std::shared_ptr<const ParallelDesc> parallel_desc =
-      JUST(map->Begin()->rw_mutexed_object().Get<ObjectWrapper<ParallelDesc>>()).GetPtr();
-  return parallel_desc;
-}
-
-MirroredObject* VirtualMachine::MutMirroredObject(int64_t logical_object_id,
-                                                  int64_t global_device_id) {
-  auto* logical_object = mut_id2logical_object()->FindPtr(logical_object_id);
-  if (logical_object == nullptr) { return nullptr; }
-  return logical_object->mut_global_device_id2mirrored_object()->FindPtr(global_device_id);
-}
-
-const MirroredObject* VirtualMachine::GetMirroredObject(int64_t logical_object_id,
-                                                        int64_t global_device_id) {
-  return MutMirroredObject(logical_object_id, global_device_id);
-}
-
-template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
-void VirtualMachine::ForEachMirroredObject(Id2LogicalObject* id2logical_object,
-                                           const Operand& operand, int64_t global_device_id,
-                                           const DoEachT& DoEach) {
-  int64_t logical_object_id = operand.logical_object_id();
-  logical_object_id = TransformLogicalObjectId(logical_object_id);
-  auto* logical_object = id2logical_object->FindPtr(logical_object_id);
-  if (logical_object == nullptr) { return; }
-  auto* map = logical_object->mut_global_device_id2mirrored_object();
-  if (operand.has_all_mirrored_object()) {
-    OBJECT_MSG_MAP_FOR_EACH_PTR(map, mirrored_object) { DoEach(mirrored_object); }
-  } else {
-    auto* mirrored_object = map->FindPtr(operand.GetGlobalDeviceId(global_device_id));
-    if (mirrored_object != nullptr) { DoEach(mirrored_object); }
-  }
-}
-
-template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
-void VirtualMachine::ForEachConstMirroredObject(
-    InterpretType interpret_type, Id2LogicalObject* id2logical_object,
-    const ModifiedOperand<kConstModifier, mem_zone_modifier>& const_operand,
-    int64_t global_device_id, const DoEachT& DoEach) {
-  const Operand& operand = const_operand.operand();
-  if (interpret_type == InterpretType::kCompute) {
-    ForEachMirroredObject<&IdUtil::GetTypeId>(id2logical_object, operand, global_device_id, DoEach);
-    ForEachMirroredObject<&IdUtil::GetValueId>(id2logical_object, operand, global_device_id,
-                                               DoEach);
-  } else if (interpret_type == InterpretType::kInfer) {
-    ForEachMirroredObject<&IdUtil::GetTypeId>(id2logical_object, operand, global_device_id, DoEach);
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-namespace {
-
-template<typename CallbackT>
-void ForEachConstMirroredObject4ConstPhyInstrOperand(InterpretType interpret_type,
-                                                     const PhyInstrOperand& phy_instr_operand,
-                                                     const CallbackT& Callback) {
-  if (interpret_type == InterpretType::kCompute) {
-    phy_instr_operand.ForEachConstMirroredObject(
-        [&](MirroredObject* infer, MirroredObject* compute) {
-          if (infer != nullptr) { Callback(infer); }
-          if (compute != nullptr) { Callback(compute); }
-        });
-  } else if (interpret_type == InterpretType::kInfer) {
-    phy_instr_operand.ForEachConstMirroredObject(
-        [&](MirroredObject* infer, MirroredObject* compute) {
-          if (infer != nullptr) { Callback(infer); }
-        });
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-}  // namespace
-
-template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
-void VirtualMachine::ForEachConstMirroredObject(
-    const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
-    const ModifiedOperand<kDataMutableModifier, mem_zone_modifier>& mutable_operand,
-    int64_t global_device_id, const DoEachT& DoEach) {
-  const Operand& operand = mutable_operand.operand();
-  if (interpret_type == InterpretType::kCompute) {
-    ForEachMirroredObject<&IdUtil::GetTypeId>(id2logical_object, operand, global_device_id, DoEach);
-  } else if (interpret_type == InterpretType::kInfer) {
-    // Do nothing
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-namespace {
-
-template<typename CallbackT>
-void ForEachConstMirroredObject4MutPhyInstrOperand(InterpretType interpret_type,
-                                                   const PhyInstrOperand& phy_instr_operand,
-                                                   const CallbackT& Callback) {
-  if (interpret_type == InterpretType::kCompute) {
-    phy_instr_operand.ForEachMutMirroredObject([&](MirroredObject* infer, MirroredObject* compute) {
-      if (infer != nullptr) { Callback(infer); }
-    });
-  } else if (interpret_type == InterpretType::kInfer) {
-    // Do nothing
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-}  // namespace
-
-template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
-void VirtualMachine::ForEachMutMirroredObject(
-    const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
-    const ModifiedOperand<kDataMutableModifier, mem_zone_modifier>& mutable_operand,
-    int64_t global_device_id, const DoEachT& DoEach) {
-  const Operand& operand = mutable_operand.operand();
-  if (interpret_type == InterpretType::kCompute) {
-    ForEachMirroredObject<&IdUtil::GetValueId>(id2logical_object, operand, global_device_id,
-                                               DoEach);
-  } else if (interpret_type == InterpretType::kInfer) {
-    ForEachMirroredObject<&IdUtil::GetTypeId>(id2logical_object, operand, global_device_id, DoEach);
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-namespace {
-
-template<typename CallbackT>
-void ForEachMutMirroredObject4MutPhyInstrOperand(InterpretType interpret_type,
-                                                 const PhyInstrOperand& phy_instr_operand,
-                                                 const CallbackT& Callback) {
-  if (interpret_type == InterpretType::kCompute) {
-    phy_instr_operand.ForEachMutMirroredObject(
-        [&](MirroredObject* infer, MirroredObject* compute) { Callback(compute); });
-  } else if (interpret_type == InterpretType::kInfer) {
-    phy_instr_operand.ForEachMutMirroredObject([&](MirroredObject* infer, MirroredObject* compute) {
-      if (infer != nullptr) { Callback(infer); }
-    });
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-}  // namespace
-
-template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
-void VirtualMachine::ForEachMutMirroredObject(
-    const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
-    const ModifiedOperand<kTypeAndDataMutableModifier, mem_zone_modifier>& mut2_operand,
-    int64_t global_device_id, const DoEachT& DoEach) {
-  const Operand& operand = mut2_operand.operand();
-  if (interpret_type == InterpretType::kCompute) {
-    ForEachMirroredObject<&IdUtil::GetTypeId>(id2logical_object, operand, global_device_id, DoEach);
-    ForEachMirroredObject<&IdUtil::GetValueId>(id2logical_object, operand, global_device_id,
-                                               DoEach);
-  } else if (interpret_type == InterpretType::kInfer) {
-    ForEachMirroredObject<&IdUtil::GetTypeId>(id2logical_object, operand, global_device_id, DoEach);
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-namespace {
-
-template<typename CallbackT>
-void ForEachMutMirroredObject4Mut2PhyInstrOperand(InterpretType interpret_type,
-                                                  const PhyInstrOperand& phy_instr_operand,
-                                                  const CallbackT& Callback) {
-  if (interpret_type == InterpretType::kCompute) {
-    phy_instr_operand.ForEachMut2MirroredObject(
-        [&](MirroredObject* infer, MirroredObject* compute) {
-          if (infer != nullptr) { Callback(infer); }
-          Callback(compute);
-        });
-  } else if (interpret_type == InterpretType::kInfer) {
-    phy_instr_operand.ForEachMut2MirroredObject(
-        [&](MirroredObject* infer, MirroredObject* compute) {
-          if (infer != nullptr) { Callback(infer); }
-        });
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-}  // namespace
-
-template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
-void VirtualMachine::ForEachMutMirroredObject(
-    const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
-    const ModifiedOperand<kDeleteModifier, mem_zone_modifier>& mutable_operand,
-    int64_t global_device_id, const DoEachT& DoEach) {
-  const Operand& operand = mutable_operand.operand();
-  if (interpret_type == InterpretType::kCompute) {
-    ForEachMirroredObject<&IdUtil::GetValueId>(id2logical_object, operand, global_device_id,
-                                               DoEach);
-  } else if (interpret_type == InterpretType::kInfer) {
-    ForEachMirroredObject<&IdUtil::GetTypeId>(id2logical_object, operand, global_device_id, DoEach);
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-RwMutexedObjectAccess* VirtualMachine::ConsumeMirroredObject(OperandAccessType access_type,
-                                                             MirroredObject* mirrored_object,
-                                                             Instruction* instruction) {
-  auto rw_mutexed_object_access =
-      ObjectMsgPtr<RwMutexedObjectAccess>::New(instruction, mirrored_object, access_type);
-  instruction->mut_mirrored_object_id2access()->Insert(rw_mutexed_object_access.Mutable());
-  instruction->mut_access_list()->PushBack(rw_mutexed_object_access.Mutable());
-  mirrored_object->mut_rw_mutexed_object()->mut_access_list()->EmplaceBack(
-      std::move(rw_mutexed_object_access));
-  return rw_mutexed_object_access.Mutable();
-}
-
-void VirtualMachine::ConnectInstruction(Instruction* src_instruction,
-                                        Instruction* dst_instruction) {
-  CHECK_NE(src_instruction, dst_instruction);
-  auto edge = ObjectMsgPtr<InstructionEdge>::New(src_instruction, dst_instruction);
-  src_instruction->mut_out_edges()->PushBack(edge.Mutable());
-  dst_instruction->mut_in_edges()->PushBack(edge.Mutable());
-}
-
-void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
-                                            NewInstructionList* new_instruction_list) {
-  OBJECT_MSG_LIST_FOR_EACH_PTR(new_instruction_list, instruction) {
-    int64_t global_device_id = instruction->stream().global_device_id();
-    const InterpretType interpret_type = instruction->stream().stream_type_id().interpret_type();
-    auto ConsumeConstMirroredObject = [&](MirroredObject* mirrored_object) {
-      ConsumeMirroredObject(kConstOperandAccess, mirrored_object, instruction);
-    };
-    auto ConsumeMutMirroredObject = [&](MirroredObject* mirrored_object) {
-      ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instruction);
-    };
-    auto ConsumeDelMirroredObject = [&](MirroredObject* mirrored_object) {
-      auto* access = ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instruction);
-      CHECK(!mirrored_object->has_deleting_access());
-      mirrored_object->set_deleting_access(access);
-    };
-    const auto& phy_instr_operand = instruction->instr_msg().phy_instr_operand();
-    if (phy_instr_operand) {
-      ForEachMutMirroredObject4Mut2PhyInstrOperand(interpret_type, *phy_instr_operand,
-                                                   ConsumeMutMirroredObject);
-      ForEachMutMirroredObject4MutPhyInstrOperand(interpret_type, *phy_instr_operand,
-                                                  ConsumeMutMirroredObject);
-    }
-    const auto& operands = instruction->instr_msg().operand();
-    for (const auto& operand : operands) {
-      if (operand->has_mut_operand()) {
-        ForEachMutMirroredObject<kDeviceMemZoneModifier>(interpret_type, id2logical_object,
-                                                         operand->mut_operand(), global_device_id,
-                                                         ConsumeMutMirroredObject);
-      } else if (operand->has_mut2_operand()) {
-        ForEachMutMirroredObject<kDeviceMemZoneModifier>(interpret_type, id2logical_object,
-                                                         operand->mut2_operand(), global_device_id,
-                                                         ConsumeMutMirroredObject);
-      } else if (operand->has_del_operand()) {
-        ForEachMutMirroredObject<kDeviceMemZoneModifier>(interpret_type, id2logical_object,
-                                                         operand->del_operand(), global_device_id,
-                                                         ConsumeDelMirroredObject);
-      } else if (operand->has_init_symbol_operand()) {
-        const auto& symbol_operand = operand->init_symbol_operand().operand();
-        CHECK(symbol_operand.has_sole_mirrored_object());
-        ForEachMutMirroredObject<kHostConstMemZoneModifier>(interpret_type, id2logical_object,
-                                                            operand->init_symbol_operand(), 0,
-                                                            ConsumeMutMirroredObject);
-      } else {
-        // do nothing
-      }
-    }
-    if (phy_instr_operand) {
-      ForEachConstMirroredObject4MutPhyInstrOperand(interpret_type, *phy_instr_operand,
-                                                    ConsumeConstMirroredObject);
-      ForEachConstMirroredObject4ConstPhyInstrOperand(interpret_type, *phy_instr_operand,
-                                                      ConsumeConstMirroredObject);
-    }
-    for (const auto& operand : operands) {
-      if (operand->has_const_operand()) {
-        ForEachConstMirroredObject<kDeviceMemZoneModifier>(
-            interpret_type, id2logical_object, operand->const_operand(), global_device_id,
-            ConsumeConstMirroredObject);
-      } else if (operand->has_mut_operand()) {
-        ForEachConstMirroredObject<kDeviceMemZoneModifier>(interpret_type, id2logical_object,
-                                                           operand->mut_operand(), global_device_id,
-                                                           ConsumeConstMirroredObject);
-      } else if (operand->has_symbol_operand()) {
-        const auto& symbol_operand = operand->symbol_operand().operand();
-        CHECK(symbol_operand.has_sole_mirrored_object());
-        ForEachConstMirroredObject<kHostConstMemZoneModifier>(interpret_type, id2logical_object,
-                                                              operand->symbol_operand(), 0,
-                                                              ConsumeConstMirroredObject);
-      } else if (operand->has_init_symbol_operand()) {
-        const auto& symbol_operand = operand->init_symbol_operand().operand();
-        CHECK(symbol_operand.has_sole_mirrored_object());
-        ForEachConstMirroredObject<kHostConstMemZoneModifier>(interpret_type, id2logical_object,
-                                                              operand->init_symbol_operand(), 0,
-                                                              ConsumeConstMirroredObject);
-      } else {
-        // do nothing
-      }
-    }
-    auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
-    OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(rw_mutexed_object_accesses, rw_mutexed_object_access) {
-      auto* mirrored_object = rw_mutexed_object_access->mut_mirrored_object();
-      if (mirrored_object->has_deleting_access()
-          && mirrored_object->mut_deleting_access() != rw_mutexed_object_access) {
-        UNIMPLEMENTED() << " accessing a deleting object "
-                        << mirrored_object->mirrored_object_id().logical_object_id_value();
-      }
-      if (mirrored_object->rw_mutexed_object().access_list().size() == 1) { continue; }
-      if (rw_mutexed_object_access->is_const_operand()) {
-        auto* first = mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Begin();
-        if (first->is_const_operand()) {
-          // do nothing
-        } else if (first->is_mut_operand()) {
-          if (first->mut_instruction() != instruction) {
-            ConnectInstruction(first->mut_instruction(), instruction);
-          }
-        } else {
-          UNIMPLEMENTED();
-        }
-      } else {
-        CHECK(rw_mutexed_object_access->is_mut_operand());
-        auto* access_list = mirrored_object->mut_rw_mutexed_object()->mut_access_list();
-        OBJECT_MSG_LIST_FOR_EACH_PTR(access_list, access) {
-          if (access == rw_mutexed_object_access) { break; }
-          CHECK(access->is_const_operand() || access->is_mut_operand())
-              << "access type " << access->access_type() << " not supported";
-          if (access->mut_instruction() != instruction) {
-            ConnectInstruction(access->mut_instruction(), instruction);
-          }
-          CHECK_EQ(access->mut_rw_mutexed_object(), mirrored_object->mut_rw_mutexed_object());
-          access_list->Erase(access);
-        }
-      }
-    }
-  }
-}
-
-void VirtualMachine::FilterReadyInstructions(NewInstructionList* new_instruction_list,
-                                             /*out*/ ReadyInstructionList* ready_instruction_list) {
-  OBJECT_MSG_LIST_FOR_EACH_PTR(new_instruction_list, instruction) {
-    if (instruction->in_edges().empty()) {
-      new_instruction_list->MoveToDstBack(instruction, ready_instruction_list);
-    }
-  }
-}
-
-void VirtualMachine::DispatchAndPrescheduleInstructions(
-    ReadyInstructionList* ready_instruction_list) {
-  PrescheduledInstructionList prescheduled;
-  auto* active_stream_list = mut_active_stream_list();
-  auto* vm_stat_running_list = mut_vm_stat_running_instruction_list();
-  OBJECT_MSG_LIST_FOR_EACH_PTR(ready_instruction_list, instruction) {
-    vm_stat_running_list->PushBack(instruction);
-    auto* stream = instruction->mut_stream();
-    ready_instruction_list->MoveToDstBack(instruction, stream->mut_running_instruction_list());
-    if (stream->is_active_stream_link_empty()) { active_stream_list->PushBack(stream); }
-    const auto& stream_type = stream->stream_type();
-    if (stream_type.SharingVirtualMachineThread()) {
-      stream_type.Run(this, instruction);
-    } else {
-      stream->mut_thread_ctx()->mut_pending_instruction_list()->PushBack(instruction);
-    }
-    TryMoveWaitingToReady(instruction, &prescheduled,
-                          [stream](Instruction* dst) { return &dst->stream() == stream; });
-  }
-  prescheduled.MoveTo(ready_instruction_list);
-}
-
-template<typename ReadyList, typename IsEdgeReadyT>
-void VirtualMachine::TryMoveWaitingToReady(Instruction* instruction, ReadyList* ready_list,
-                                           const IsEdgeReadyT& IsEdgeReady) {
-  auto* wait_instruction_list = mut_waiting_instruction_list();
-  auto* out_edges = instruction->mut_out_edges();
-  OBJECT_MSG_LIST_FOR_EACH_PTR(out_edges, out_edge) {
-    Instruction* out_instruction = out_edge->mut_dst_instruction();
-    if (!IsEdgeReady(out_instruction)) { continue; }
-    out_edges->Erase(out_edge);
-    out_instruction->mut_in_edges()->Erase(out_edge);
-    if (!out_instruction->in_edges().empty()) { continue; }
-    wait_instruction_list->MoveToDstBack(out_instruction, ready_list);
-  }
-}
-
-void VirtualMachine::__Init__(const VmDesc& vm_desc) {
-  mutable_vm_resource_desc()->CopyFrom(vm_desc.vm_resource_desc());
-  CHECK_GT(vm_desc.machine_id_range().size(), 0);
-  *mutable_machine_id_range() = vm_desc.machine_id_range();
-  OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(&vm_desc.stream_type_id2desc(), stream_desc) {
-    if (stream_desc->num_threads() == 0) { continue; }
-    auto stream_rt_desc = ObjectMsgPtr<StreamRtDesc>::New(stream_desc);
-    mut_stream_type_id2stream_rt_desc()->Insert(stream_rt_desc.Mutable());
-    BalancedSplitter bs(stream_desc->parallel_num(), stream_desc->num_threads());
-    for (int64_t i = 0, rel_global_device_id = 0; i < stream_desc->num_threads(); ++i) {
-      auto thread_ctx = ObjectMsgPtr<ThreadCtx>::New(stream_rt_desc.Get());
-      mut_thread_ctx_list()->PushBack(thread_ctx.Mutable());
-      for (int j = bs.At(i).begin(); j < bs.At(i).end(); ++j, ++rel_global_device_id) {
-        StreamId stream_id;
-        stream_id.__Init__(stream_desc->stream_type_id(),
-                           this_start_global_device_id() + rel_global_device_id);
-        auto stream = ObjectMsgPtr<Stream>::New(thread_ctx.Mutable(), stream_id,
-                                                vm_resource_desc().max_device_num_per_machine());
-        CHECK(stream_rt_desc->mut_stream_id2stream()->Insert(stream.Mutable()).second);
-        thread_ctx->mut_stream_list()->PushBack(stream.Mutable());
-      }
-    }
-  }
-}
-
-int64_t InstructionMaxRunningSeconds() { return 60 * 5; }
-
-Maybe<void> VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) {
-  CHECK_OR_RETURN(!pthread_fork::IsForkedSubProcess())
-      << "Cannot run OneFlow in forked subprocess. Please add "
-         "'multiprocessing.set_start_method(\"spawn\")' in '__main__' if you are using Python's "
-         "multiprocessing";
-  InstructionMsgList new_instr_msg_list;
-  OBJECT_MSG_LIST_FOR_EACH_PTR(compute_instr_msg_list, compute_instr_msg) {
-    if (!compute_instr_msg->phy_instr_operand()) {
-      new_instr_msg_list.EmplaceBack(compute_instr_msg->MakeInferInstrMsg());
-    }
-    compute_instr_msg_list->MoveToDstBack(compute_instr_msg, &new_instr_msg_list);
-  }
-  const int64_t kHighWaterMark = GetInstructionHighWaterMark();
-  const int64_t kLowWaterMark = GetInstructionLowWaterMark();
-  if (*mut_flying_instruction_cnt() > kHighWaterMark) {
-    JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
-      const auto& NeedSpin = [&] { return *mut_flying_instruction_cnt() > kLowWaterMark; };
-      while (true) {
-        int64_t last_cnt = *mut_flying_instruction_cnt();
-        const auto& ret = TRY(SpinWaitUntilTimeout(NeedSpin, InstructionMaxRunningSeconds()));
-        if (ret.IsOk()) { break; }
-        CHECK_NE_OR_RETURN(last_cnt, *mut_flying_instruction_cnt())
-            << Error::UnimplementedError() << "The virtual machine don't respond in "
-            << InstructionMaxRunningSeconds() << " seconds.";
-      }
-      return Maybe<void>::Ok();
-    }));
-  }
-  mut_pending_msg_list()->MoveFrom(&new_instr_msg_list);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> VirtualMachine::Receive(ObjectMsgPtr<InstructionMsg>&& compute_instr_msg) {
-  InstructionMsgList instr_msg_list;
-  instr_msg_list.EmplaceBack(std::move(compute_instr_msg));
-  return Receive(&instr_msg_list);
+void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
+  *Initializer = [&]() {
+    if (!CHECK_JUST(IsMultiClient())) { return; }
+    CHECK_JUST(InitThisThreadUniqueConsistentId(kThreadConsistentIdScheduler, "scheduler"));
+    OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Scheduler");
+  };
 }
 
-template<typename ContainerT>
-void VirtualMachine::TryRunFrontSeqInstruction(
-    ContainerT* front_seq_list, /*out*/ ReadyInstructionList* ready_instruction_list) {
-  auto* instruction = front_seq_list->Begin();
-  if (instruction == nullptr) { return; }
-  const auto& instr_type_id = instruction->instr_msg().instr_type_id();
-  const auto& instruction_type = instr_type_id.instruction_type();
-  if (!instruction_type.IsFrontSequential()) { return; }
-  if (!instruction->is_vm_stat_running_instruction_link_empty()) { return; }
-  const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
-  if (stream_type.SharingVirtualMachineThread()) {
-    stream_type.Run(this, instruction);
-    front_seq_list->Erase(instruction);
-  } else {
-    ready_instruction_list->EmplaceBack(std::move(instruction));
+std::type_index GetStreamTypeIndex(const vm::ThreadCtx* thread_ctx) {
+  const auto& stream_rt_desc = thread_ctx->stream_rt_desc();
+  const auto& stream_type_id = stream_rt_desc.stream_type_id();
+  const auto& stream_type = stream_type_id.stream_type();
+  return typeid(stream_type);
+}
+
+// Threads with the same stream_type share a thread_consistent_id.
+// e.g.
+//   Given there are 8 gpu thread in a single process.
+//   thread #0 is active in process #0, while others are not.
+//   thread #1 is active in process #1, while others are not.
+//   ...
+//   thread #7 is active in process #7, while others are not.
+//   to make them communicate with each other, we can allocate thread_consistent_id 1 to all those
+//   gpu threads in all processes.
+void GetWorkerThreadInitializer(intrusive::shared_ptr<vm::VirtualMachineEngine> vm,
+                                std::function<void(vm::ThreadCtx*)>* Initializer) {
+  std::set<std::type_index> stream_type_indexes;
+  INTRUSIVE_UNSAFE_FOR_EACH_PTR(thread_ctx, vm->mut_thread_ctx_list()) {
+    const auto& stream_type = thread_ctx->stream_rt_desc().stream_type_id().stream_type();
+    if (!stream_type.SupportingTransportInstructions()) { continue; }
+    stream_type_indexes.insert(GetStreamTypeIndex(thread_ctx));
   }
-}
-
-void VirtualMachine::TryRunFrontSeqInstruction(ReadyInstructionList* ready_instruction_list) {
-  TryRunFrontSeqInstruction(mutable_front_seq_compute_instr_list(), ready_instruction_list);
-}
-
-void VirtualMachine::TryDeleteLogicalObjects() {
-  auto* delete_list = mut_delete_logical_object_list();
-  // OBJECT_MSG_LIST_FOR_EACH_PTR supports removing elements at the end of iteration code
-  OBJECT_MSG_LIST_FOR_EACH_PTR(delete_list, logical_object) {
-    auto* global_device_id2mirrored_object = logical_object->mut_global_device_id2mirrored_object();
-    OBJECT_MSG_MAP_FOR_EACH_PTR(global_device_id2mirrored_object, mirrored_object) {
-      CHECK_EQ(mirrored_object->ref_cnt(), 1);
-      if (mirrored_object->rw_mutexed_object().ref_cnt() == 1) {
-        CHECK_EQ(mirrored_object->rw_mutexed_object().access_list().size(), 0);
-        // TODO(lixinqi) fix the bug occured when uncommenting the next line
-        // CHECK(!mirrored_object->rw_mutexed_object().has_object());
-      }
-      // `mirrored_object' is deleted by erasing
-      global_device_id2mirrored_object->Erase(mirrored_object);
+  HashMap<std::type_index, int64_t> stream_type_index2consistent_id;
+  int64_t thread_consistent_id = kThreadConsistentIdScheduler + 1;
+  for (const auto& stream_type_index : stream_type_indexes) {
+    LOG(INFO) << "transport stream type: " << stream_type_index.name();
+    stream_type_index2consistent_id[stream_type_index] = thread_consistent_id++;
+  }
+  *Initializer = [stream_type_index2consistent_id](vm::ThreadCtx* thread_ctx) {
+    if (!CHECK_JUST(IsMultiClient())) { return; }
+    const auto& stream_type_index = GetStreamTypeIndex(thread_ctx);
+    const auto& iter = stream_type_index2consistent_id.find(stream_type_index);
+    if (iter != stream_type_index2consistent_id.end()) {
+      CHECK_JUST(InitThisThreadConsistentId(iter->second, stream_type_index.name()));
     }
-    mut_id2logical_object()->Erase(logical_object);
-    CHECK_EQ(logical_object->ref_cnt(), 1);
-    // `logical_object' is deleted by erasing
-    delete_list->Erase(logical_object);
+    OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Worker");
+  };
+}
+
+}  // namespace
+
+VirtualMachine::VirtualMachine(const Resource& resource, int64_t this_machine_id)
+    : vm_(intrusive::make_shared<vm::VirtualMachineEngine>(
+        vm::MakeVmDesc(resource, this_machine_id).Get())) {
+  OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Main");
+  std::function<void()> SchedulerInitializer;
+  GetSchedulerThreadInitializer(&SchedulerInitializer);
+  std::function<void(vm::ThreadCtx*)> WorkerInitializer;
+  GetWorkerThreadInitializer(vm_, &WorkerInitializer);
+  CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
+    auto thread =
+        std::make_unique<std::thread>(&vm::ThreadCtx::LoopRun, thread_ctx, WorkerInitializer);
+    worker_threads_.push_back(std::move(thread));
+    return Maybe<void>::Ok();
+  }));
+  schedule_thread_ = std::thread(&VirtualMachine::Loop, this, SchedulerInitializer);
+}
+
+namespace {
+
+void MakeCtrlSeqInstructions(vm::VirtualMachineEngine* vm, vm::InstructionMsgList* list,
+                             const std::function<void()>& ComputeCallback) {
+  const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>(ComputeCallback);
+  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+      vm, "CtrlComputeRankFrontSeqCallback", std::shared_ptr<const ParallelDesc>(),
+      phy_instr_operand);
+  instruction->add_int64_operand(GlobalProcessCtx::Rank());
+  list->EmplaceBack(std::move(instruction));
+}
+
+}  // namespace
+
+void VirtualMachine::ControlSync() {
+  BlockingCounter bc(1);
+  vm::InstructionMsgList list;
+  MakeCtrlSeqInstructions(mut_vm(), &list, [&] { bc.Decrease(); });
+  CHECK_JUST(Receive(&list));
+  bc.WaitUntilCntEqualZero();
+}
+
+VirtualMachine::~VirtualMachine() {
+  ControlSync();
+  notifier_.Close();
+  schedule_thread_.join();
+  CHECK(!vm_);
+}
+
+Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
+  if (unlikely(pthread_fork::IsForkedSubProcess())) {
+    CHECK_OR_RETURN(JUST(IsMultiClient()));
+    INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_list) {
+      const auto& parallel_desc = instr_msg->phy_instr_parallel_desc();
+      CHECK_OR_RETURN(!parallel_desc || parallel_desc->device_type() == DeviceType::kCPU)
+          << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
+    }
+    JUST(vm_->Receive(instr_list));
+    while (!vm_->Empty()) { vm_->Schedule(); }
+  } else {
+    if (JUST(vm_->Receive(instr_list))) {
+      // old pending_instruction_list is empty.
+      notifier_.Notify();
+    }
   }
+  return Maybe<void>::Ok();
 }
 
-void VirtualMachine::Schedule() {
-  ReadyInstructionList* ready_instruction_list = mut_ready_instruction_list();
-  auto* active_stream_list = mut_active_stream_list();
-  OBJECT_MSG_LIST_FOR_EACH_PTR(active_stream_list, stream) {
-    TryReleaseFinishedInstructions(stream, /*out*/ ready_instruction_list);
-    if (stream->running_instruction_list().empty()) { active_stream_list->Erase(stream); }
+namespace {
+
+template<typename T>
+int MicrosecondsFrom(const T& start) {
+  return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()
+                                                               - start)
+      .count();
+}
+
+}  // namespace
+
+void VirtualMachine::Loop(const std::function<void()>& Initializer) {
+  Initializer();
+  auto* vm = mut_vm();
+  while (notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
+    OF_PROFILER_RANGE_PUSH("VirtualMachine::Loop");
+    auto start = std::chrono::steady_clock::now();
+    static constexpr int kWorkingMicroseconds = 1000;
+    // Every time this thread wakes up, vm is scheduled for about `kWorkingMicroseconds`.
+    // The cost of os thread switching is about 5-10 microseconds. Doing more scheduling in
+    // a single waiting up can reach higher performance.
+    do {
+      static constexpr int kNumSchedulingPerTimoutTest = 10000;
+      // Every time kWorkingMicroseconds timeout tested, vm is scheduled for about
+      // kNumSchedulingPerTimoutTest.
+      // The cost of `MicrosecondsFrom(start)` is about 400ns, while the empty scheduling costs
+      // about 10ns.
+      int i = 0;
+      do {
+        // Use ThreadUnsafeEmpty to avoid acquiring mutex lock.
+        // It's safe to use ThreadUnsafeEmpty here. notifier_.notified_cnt_ will be greater than
+        // zero
+        // when inconsistency between vm->pending_msg_list.list_head_.list_head_.container_ and
+        // vm->pending_msg_list.list_head_.list_head_.size_ occured. hence the pending
+        // instructions
+        // will get handled in the next iteration.
+        //  VirtualMachine::Receive may be less effiencient if the thread safe version `vm->Empty()`
+        // used
+        //  here, because VirtualMachine::Loop is more likely to get the mutex lock.
+        do { vm->Schedule(); } while (!vm->ThreadUnsafeEmpty());
+      } while (++i < kNumSchedulingPerTimoutTest);
+    } while (MicrosecondsFrom(start) < kWorkingMicroseconds);
+    OF_PROFILER_RANGE_POP();
   }
-  TryDeleteLogicalObjects();
-  TryRunFrontSeqInstruction(/*out*/ ready_instruction_list);
-  auto* waiting_instruction_list = mut_waiting_instruction_list();
-  // Use thread_unsafe_size to avoid acquiring mutex lock.
-  // The inconsistency between pending_msg_list.list_head_.list_head_.container_ and
-  // pending_msg_list.list_head_.list_head_.size_ is not a fatal error because
-  // VirtualMachine::Schedule is always in a buzy loop. All instructions will get handled
-  // eventually.
-  //  VirtualMachine::Receive may be less effiencient if the thread safe version
-  //  `pending_msg_list().size()` used here, because VirtualMachine::Schedule is more likely to get
-  //  the mutex lock.
-  if (pending_msg_list().thread_unsafe_size() > 0) {
-    TmpPendingInstrMsgList tmp_pending_msg_list;
-    // MoveTo is under a lock.
-    mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
-    FilterAndRunInstructionsInAdvance(&tmp_pending_msg_list);
-    NewInstructionList new_instruction_list;
-    MakeInstructions(&tmp_pending_msg_list, /*out*/ &new_instruction_list);
-    ConsumeMirroredObjects(mut_id2logical_object(), &new_instruction_list);
-    FilterReadyInstructions(&new_instruction_list, /*out*/ ready_instruction_list);
-    new_instruction_list.MoveTo(waiting_instruction_list);
-  }
-  DispatchAndPrescheduleInstructions(ready_instruction_list);
-  *mut_flying_instruction_cnt() = mut_waiting_instruction_list()->size()
-                                  + mut_ready_instruction_list()->size()
-                                  + mutable_vm_stat_running_instruction_list()->size();
+  while (!vm->Empty()) { vm->Schedule(); }
+  CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
+    thread_ctx->mut_pending_instruction_list()->Close();
+    return Maybe<void>::Ok();
+  }));
+  for (const auto& worker_thread : worker_threads_) { worker_thread->join(); }
+  vm_.Reset();
 }
 
-bool VirtualMachine::ThreadUnsafeEmpty() const {
-  return pending_msg_list().thread_unsafe_size() == 0 && waiting_instruction_list().empty()
-         && active_stream_list().empty() && front_seq_compute_instr_list().empty()
-         && flying_instruction_cnt() == 0;
-}
-
-bool VirtualMachine::Empty() const {
-  return pending_msg_list().empty() && waiting_instruction_list().empty()
-         && active_stream_list().empty() && front_seq_compute_instr_list().empty()
-         && flying_instruction_cnt() == 0;
-}
-
-}  // namespace vm
 }  // namespace oneflow

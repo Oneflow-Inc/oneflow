@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/job/cluster_instruction.pb.h"
 #include "oneflow/core/job/cluster_instruction.cfg.h"
 #include "oneflow/core/vm/instruction.cfg.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 
 namespace oneflow {
 

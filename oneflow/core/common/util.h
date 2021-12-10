@@ -40,6 +40,7 @@ limitations under the License.
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/meta_util.hpp"
 #include "oneflow/core/common/global.h"
+#include "oneflow/core/common/cpp_attribute.h"
 
 DECLARE_string(log_dir);
 
@@ -240,8 +241,8 @@ int64_t ParseIntegerFromEnv(const std::string& env_var, int64_t default_value);
 
 std::string GetStringFromEnv(const std::string& env_var, const std::string& default_value);
 
-#define OF_PREDICT_TRUE GOOGLE_PREDICT_TRUE
-#define OF_PREDICT_FALSE GOOGLE_PREDICT_FALSE
+#define OF_PREDICT_TRUE likely
+#define OF_PREDICT_FALSE unlikely
 
 }  // namespace oneflow
 

@@ -146,7 +146,7 @@ REGISTER_USER_OP_GRAD("narrow").SetGenBackwardOpConfFn([](const user_op::UserOpW
                                                 .Attr("length", op.attr<int64_t>("length"))
                                                 .Output("dx")
                                                 .Build();
-    op.BindGradTensorWithOpInput(in_grad_op.output("out", 0), "in", 0);
+    op.BindGradTensorWithOpInput(in_grad_op.output("dx", 0), "in", 0);
     AddOp(in_grad_op);
   }
   return Maybe<void>::Ok();

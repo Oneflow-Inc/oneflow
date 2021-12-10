@@ -20,6 +20,8 @@ from .pooling import *
 from .activation import *
 from .dropout import *
 from .vision import *
+from .norm import *
+from .loss import *
 from .onehot import *
 from .comparison import *
 from .cast import *
@@ -31,3 +33,8 @@ from .ctc_decode import *
 from .placement import *
 from .sbp import *
 from .trigonometric_ops import *
+from .tensor_ops import *
+from .meshgrid import *
+from .dataset import *
+from .bmm import *
+from .flatten import *

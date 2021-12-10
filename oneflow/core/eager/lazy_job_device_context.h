@@ -35,15 +35,7 @@ class LazyJobDeviceCtx final : public DeviceCtx {
     UNIMPLEMENTED();
     return nullptr;
   }
-  cublasHandle_t cublas_pmh_handle() const override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-  cublasHandle_t cublas_tensor_op_math_handle() const override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-  cublasHandle_t cublas_pmd_handle() const override {
+  cublasHandle_t cublas_handle() const override {
     UNIMPLEMENTED();
     return nullptr;
   }
@@ -53,10 +45,6 @@ class LazyJobDeviceCtx final : public DeviceCtx {
   }
 #endif
 
-  void SyncDevice() override { UNIMPLEMENTED(); }
-
-  void AddCallBack(std::function<void()> callback) const override { UNIMPLEMENTED(); }
-
   vm::Allocator* mut_allocator() override {
     UNIMPLEMENTED();
     return (vm::Allocator*)nullptr;
@@ -65,6 +53,11 @@ class LazyJobDeviceCtx final : public DeviceCtx {
   DeviceType device_type() const override {
     UNIMPLEMENTED();
     return DeviceType::kInvalidDevice;
+  }
+
+  ep::Stream* stream() override {
+    UNIMPLEMENTED();
+    return nullptr;
   }
 
   std::queue<std::weak_ptr<NNGraphIf>>* mut_queue() { return &queue_; }

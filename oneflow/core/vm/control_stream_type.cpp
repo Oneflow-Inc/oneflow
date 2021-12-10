@@ -13,15 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/stream_desc.msg.h"
+#include "oneflow/core/vm/stream_desc.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/infer_stream_type.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
+#include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/object_msg/flat_msg_view.h"
+#include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/job/resource.pb.h"
 
 namespace oneflow {
@@ -42,10 +42,10 @@ class NewSymbolInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(NewSymbolInstruction);
   // clang-format on
 
-  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+  void Infer(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const override {
     Run<&IdUtil::GetTypeId>(vm, instr_msg);
   }
-  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+  void Compute(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const override {
     Run<&IdUtil::GetValueId>(vm, instr_msg);
   }
   void Infer(Instruction*) const override { UNIMPLEMENTED(); }
@@ -53,29 +53,29 @@ class NewSymbolInstructionType final : public InstructionType {
 
  private:
   template<int64_t (*GetLogicalObjectId)(int64_t)>
-  void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+  void Run(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
     FlatMsgView<NewSymbolInstruction> view;
     CHECK(view.Match(instr_msg->operand()));
     FOR_RANGE(int, i, 0, view->symbol_id_size()) {
       int64_t symbol_id = GetLogicalObjectId(view->symbol_id(i));
-      auto logical_object = ObjectMsgPtr<LogicalObject>::New(symbol_id);
+      auto logical_object = intrusive::make_shared<LogicalObject>(symbol_id);
       CHECK(vm->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
       auto* global_device_id2mirrored_object =
           logical_object->mut_global_device_id2mirrored_object();
-      auto mirrored_object = ObjectMsgPtr<MirroredObject>::New(logical_object.Mutable(), 0);
+      auto mirrored_object = intrusive::make_shared<MirroredObject>(logical_object.Mutable(), 0);
       CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
     }
   }
 };
 COMMAND(RegisterInstructionType<NewSymbolInstructionType>("NewSymbol"));
 
-void ControlStreamType::Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+void ControlStreamType::Infer(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
   const auto& instr_type_id = instr_msg->instr_type_id();
   CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kInfer);
   instr_type_id.instruction_type().Infer(vm, instr_msg);
 }
 
-void ControlStreamType::Infer(VirtualMachine* vm, Instruction* instruction) const {
+void ControlStreamType::Infer(VirtualMachineEngine* vm, Instruction* instruction) const {
   const auto& instr_type_id = instruction->instr_msg().instr_type_id();
   CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kInfer);
   instr_type_id.instruction_type().Infer(vm, instruction);
@@ -83,13 +83,13 @@ void ControlStreamType::Infer(VirtualMachine* vm, Instruction* instruction) cons
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 
-void ControlStreamType::Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+void ControlStreamType::Compute(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
   const auto& instr_type_id = instr_msg->instr_type_id();
   CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
   instr_type_id.instruction_type().Compute(vm, instr_msg);
 }
 
-void ControlStreamType::Compute(VirtualMachine* vm, Instruction* instruction) const {
+void ControlStreamType::Compute(VirtualMachineEngine* vm, Instruction* instruction) const {
   const auto& instr_type_id = instruction->instr_msg().instr_type_id();
   CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
   instr_type_id.instruction_type().Compute(vm, instruction);
@@ -116,10 +116,10 @@ bool ControlStreamType::QueryInstructionStatusDone(
 
 void ControlStreamType::Compute(Instruction* instruction) const { UNIMPLEMENTED(); }
 
-ObjectMsgPtr<StreamDesc> ControlStreamType::MakeStreamDesc(const Resource& resource,
-                                                           int64_t this_machine_id) const {
-  auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<ControlStreamType>());
+intrusive::shared_ptr<StreamDesc> ControlStreamType::MakeStreamDesc(const Resource& resource,
+                                                                    int64_t this_machine_id) const {
+  auto ret = intrusive::make_shared<StreamDesc>();
+  ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<ControlStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);

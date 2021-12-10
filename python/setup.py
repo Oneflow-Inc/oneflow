@@ -45,8 +45,10 @@ REQUIRED_PACKAGES = [
     "tqdm",
     "requests",
     "pillow",
-    "dataclasses",
 ]
+# if python version < 3.7.x, than need pip install dataclasses
+if sys.version_info.minor < 7:
+    REQUIRED_PACKAGES.append("dataclasses")
 
 
 class BinaryDistribution(Distribution):

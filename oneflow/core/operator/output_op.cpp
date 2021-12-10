@@ -13,10 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/multi_client.h"
+#include "oneflow/core/operator/interface_op_util.h"
 #include "oneflow/core/operator/output_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/job/env_desc.h"
-#include "oneflow/core/operator/interface_op_util.h"
 
 namespace oneflow {
 
@@ -31,7 +32,7 @@ Maybe<void> OutputOp::InferLogicalOutBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const ParallelDesc& parallel_desc) const {
   BlobDesc* out_blob_desc = BlobDesc4BnInOp("out");
-  if (CHECK_JUST(GlobalMultiClientEnv())) {
+  if (CHECK_JUST(IsMultiClient())) {
     *out_blob_desc = *BlobDesc4BnInOp("in");
   } else {
     JUST(InterfaceOpUtil::InferLogicalOutBlobDesc(op_conf().output_conf().blob_conf(),
@@ -45,7 +46,7 @@ Maybe<void> OutputOp::InferOutBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  if (CHECK_JUST(GlobalMultiClientEnv())) {
+  if (CHECK_JUST(IsMultiClient())) {
     // NOTE(chengcheng):
     //   In multi-client, in blob shape maybe changed and NOT equal with output_conf.blob_conf,
     //   and the output op actually is return op (used in single-client) with NO blob conf.

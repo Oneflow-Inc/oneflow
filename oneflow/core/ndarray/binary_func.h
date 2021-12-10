@@ -38,8 +38,14 @@ namespace oneflow {
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, LOGICAL_BINARY_FUNC_NAME_SEQ)
 
 #define REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)(Any)(All)
+#define ARITHMETIC_REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)
+#define LOGICAL_REDUCE_BINARY_FUNC_NAME_SEQ (Any)(All)
 #define REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, REDUCE_BINARY_FUNC_NAME_SEQ)
+#define ARITHMETIC_REDUCE_BINARY_FUNC_SEQ \
+  OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, ARITHMETIC_REDUCE_BINARY_FUNC_NAME_SEQ)
+#define LOGICAL_REDUCE_BINARY_FUNC_SEQ \
+  OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, LOGICAL_REDUCE_BINARY_FUNC_NAME_SEQ)
 
 #define NO_HALF_UTIL_FOUND         \
   printf("cuda arch must >= 530"); \
@@ -178,6 +184,17 @@ struct BinaryFuncPow<half> final {
 #endif  // defined(__CUDACC__)
 
 template<typename T>
+struct BinaryFuncFloorDiv final {
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) {
+#if defined(__CUDACC__)
+    return floor(fdividef(x, y));
+#else
+    return std::floor(x / y);
+#endif
+  }
+};
+
+template<typename T>
 struct BinaryFuncMax final {
   static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return x > y ? x : y; }
 };
@@ -231,9 +248,7 @@ struct BinaryFuncAND final {
 };
 template<typename T>
 struct BinaryFuncAll final {
-  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) {
-    return BinaryFuncAND<T>::Invoke(x, y);
-  }
+  static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return BinaryFuncAND<T>::Invoke(x, y); }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncAND);
 
@@ -243,9 +258,7 @@ struct BinaryFuncOR final {
 };
 template<typename T>
 struct BinaryFuncAny final {
-  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) {
-    return BinaryFuncOR<T>::Invoke(x, y);
-  }
+  static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return BinaryFuncOR<T>::Invoke(x, y); }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncOR);
 
@@ -432,6 +445,48 @@ struct BinaryFuncFMod<float16> final {
   static inline float16 Invoke(const float16 x, const float16 y) {
     const float trunc_mod = std::fmod(static_cast<float>(x), static_cast<float>(y));
     return static_cast<float16>(trunc_mod);
+  }
+};
+
+#endif  // defined(__CUDACC__)
+
+#if defined(__CUDACC__)
+
+template<>
+struct BinaryFuncFloorDiv<uint8_t> final {
+  static __device__ __forceinline__ uint8_t Invoke(uint8_t x, uint8_t y) { return x / y; }
+};
+
+template<>
+struct BinaryFuncFloorDiv<int8_t> final {
+  static __device__ __forceinline__ int8_t Invoke(int8_t x, int8_t y) { return x / y; }
+};
+
+template<>
+struct BinaryFuncFloorDiv<int32_t> final {
+  static __device__ __forceinline__ int32_t Invoke(int32_t x, int32_t y) { return x / y; }
+};
+
+template<>
+struct BinaryFuncFloorDiv<int64_t> final {
+  static __device__ __forceinline__ int64_t Invoke(int64_t x, int64_t y) { return x / y; }
+};
+
+template<>
+struct BinaryFuncFloorDiv<half> final {
+  static __device__ __forceinline__ half Invoke(const half x, const half y) {
+#if __CUDA_ARCH__ >= 530
+    return __float2half(floor(fdividef(__half2float(x), __half2float(y))));
+#else
+    NO_HALF_UTIL_FOUND;
+#endif
+  }
+};
+#else
+template<>
+struct BinaryFuncFloorDiv<float16> final {
+  static inline float16 Invoke(float16 x, float16 y) {
+    return static_cast<float16>(std::floor(static_cast<float>(x) / static_cast<float>(y)));
   }
 };
 

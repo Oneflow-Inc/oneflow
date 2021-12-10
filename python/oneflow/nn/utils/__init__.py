@@ -13,6 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.nn.utils.clip_grad import clip_grad_norm_
+from oneflow.nn.utils.clip_grad import clip_grad_norm_, clip_grad_value_
 from oneflow.nn.utils.weight_norm import weight_norm
 from oneflow.nn.utils.weight_norm import remove_weight_norm

@@ -54,7 +54,7 @@ class ScalarMul : public OpExprGradFunction<ScalarMulCaptureState> {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
     if (ctx->requires_grad) {
-      in_grads->at(0) = JUST(functional::ScalarMul(out_grads.at(0), ctx->operand));
+      in_grads->at(0) = JUST(functional::ScalarMul(out_grads.at(0), ctx->operand, false));
     }
     return Maybe<void>::Ok();
   }

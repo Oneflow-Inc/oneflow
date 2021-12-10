@@ -416,6 +416,7 @@ if __name__ == "__main__":
         "--use_system_proxy", default=False, action="store_true", required=False
     )
     parser.add_argument("--xla", default=False, action="store_true", required=False)
+    parser.add_argument("--mlir", default=False, action="store_true", required=False)
     parser.add_argument("--gcc4", default=False, action="store_true", required=False)
     parser.add_argument("--gcc7", default=False, action="store_true", required=False)
     parser.add_argument("--gcc9", default=False, action="store_true", required=False)
@@ -457,6 +458,10 @@ if __name__ == "__main__":
         extra_oneflow_cmake_args += " -DWITH_XLA=ON"
     else:
         extra_oneflow_cmake_args += " -DWITH_XLA=Off"
+    if args.mlir:
+        extra_oneflow_cmake_args += " -DWITH_MLIR=ON"
+    else:
+        extra_oneflow_cmake_args += " -DWITH_MLIR=Off"
     for cuda_version in cuda_versions:
 
         cache_dir = None
@@ -543,6 +548,8 @@ gcc --version
                 sub_dir = cuda_version
                 if args.xla:
                     sub_dir += "-xla"
+                if args.mlir:
+                    sub_dir += "-mlir"
                 if args.gcc4:
                     sub_dir += "-gcc4"
                 if args.gcc7:

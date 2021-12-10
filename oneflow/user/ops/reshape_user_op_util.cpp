@@ -26,7 +26,7 @@ Maybe<Shape> ReshapeUserOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
   DimVector dim_vec;
   FOR_RANGE(int, axis, 0, reshape.NumAxes()) {
     int64_t dim = reshape.At(axis);
-    dim_vec.push_back(dim);
+    dim_vec.emplace_back(dim);
     if (dim == -1) {
       CHECK_OR_RETURN(has_minus_1 == false) << "only one `-1' supported";
       has_minus_1 = true;
@@ -59,7 +59,7 @@ Maybe<void> ReshapeUserOpUtil::Squeeze(const Shape& origin, Shape* shape,
     CHECK_GT_OR_RETURN(dim, 0);
     if (dim == 1) { continue; }
     CHECK_OR_RETURN(squeezed_axis2origin_axis->emplace(dim_vec.size(), axis).second);
-    dim_vec.push_back(dim);
+    dim_vec.emplace_back(dim);
   }
   *shape = Shape(dim_vec);
   return Maybe<void>::Ok();
@@ -100,6 +100,7 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
     const Shape& in_shape, const Shape& out_shape, std::vector<user_op::OpArg> in_args,
     std::vector<user_op::OpArg> out_args, const int64_t parallel_num,
     user_op::UserOpSbpSignatureBuilder* builder) {
+  if (in_shape.NumAxes() == 0) { return Maybe<void>::Ok(); }
   HashMap<int, int> squeezed_group_start_in_axis2out_axis;
   HashMap<int, int> in_squeezed_axis2original_axis;
   HashMap<int, int> out_squeezed_axis2original_axis;
@@ -155,7 +156,7 @@ Maybe<void> ReshapeUserOpUtil::InferNdSbp(user_op::InferNdSbpFnContext* ctx,
   CHECK_OR_RETURN(op_type_name == "reshape" || op_type_name == "reshape_like");
   const bool is_reshape_like = (op_type_name == "reshape_like");
   std::vector<user_op::OpArg> in_args({{"in", 0}});
-  if (is_reshape_like) { in_args.push_back(user_op::OpArg("like", 0)); }
+  if (is_reshape_like) { in_args.emplace_back(user_op::OpArg("like", 0)); }
   HashMap<std::string, cfg::NdSbp> ibn2nd_sbp;
   ibn2nd_sbp.reserve(in_args.size());
   for (const auto& arg : in_args) {

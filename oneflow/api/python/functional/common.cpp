@@ -109,16 +109,6 @@ Maybe<Symbol<DType>> PyUnpackDType(PyObject* obj) {
   return *py::cast<Symbol<DType>*>(handle);
 }
 
-// Shape
-bool PyShapeCheck(PyObject* obj) {
-  auto handle = py::reinterpret_borrow<py::object>(obj);
-  return py::isinstance<Shape>(handle);
-}
-Maybe<Shape> PyUnpackShape(PyObject* obj) {
-  auto handle = py::reinterpret_borrow<py::object>(obj);
-  return py::cast<std::shared_ptr<Shape>>(obj);
-}
-
 // Generator
 bool PyGeneratorCheck(PyObject* obj) {
   auto handle = py::reinterpret_borrow<py::object>(obj);

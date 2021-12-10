@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_graph.h"
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
-#include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/variable_op.h"
@@ -26,27 +26,26 @@ limitations under the License.
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
-#include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
-#include "oneflow/core/graph/stream_index_getter_registry_manager.h"
-#include "oneflow/core/primitive/include/memcpy.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
+#include "oneflow/core/ep/include/primitive/memcpy.h"
 
 namespace oneflow {
 
 namespace {
 
-bool IsMemcpyPrimitiveSupported(DeviceType device_type, primitive::MemcpyKind kind) {
-  auto primitive = primitive::NewPrimitive<primitive::MemcpyFactory>(device_type, kind);
+bool IsMemcpyPrimitiveSupported(DeviceType device_type, ep::primitive::MemcpyKind kind) {
+  auto primitive = ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(device_type, kind);
   return primitive.operator bool();
 }
 
 bool IsMemcpyHtoDSupported(DeviceType device_type) {
-  return IsMemcpyPrimitiveSupported(device_type, primitive::MemcpyKind::kHtoD);
+  return IsMemcpyPrimitiveSupported(device_type, ep::primitive::MemcpyKind::kHtoD);
 }
 
 bool IsMemcpyDtoHSupported(DeviceType device_type) {
-  return IsMemcpyPrimitiveSupported(device_type, primitive::MemcpyKind::kDtoH);
+  return IsMemcpyPrimitiveSupported(device_type, ep::primitive::MemcpyKind::kDtoH);
 }
 
 bool IsConnectToTickOp(const TaskNode* node) {
@@ -122,7 +121,7 @@ bool CanBeMergedInChain(const TaskNode* node) {
   if (IsTaskNodeProducedResgtHasMultiRegstNum(node)) { return false; }
   const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
   if (fw_comp_node == nullptr) { return false; }
-  if (fw_comp_node->device_type() != DeviceType::kGPU) { return false; }
+  if (fw_comp_node->device_type() != DeviceType::kCUDA) { return false; }
   const Operator* op = fw_comp_node->op().get();
   if (IsSpecialOpNotConsiderMergeInChain(op)) { return false; }
   return true;
@@ -287,22 +286,23 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
 
       DeviceId::device_index_t device_index =
           parallel_desc.device_type() == DeviceType::kCPU
-              ? DeviceId::kCPUDeviceIndex
+              ? 0
               : static_cast<DeviceId::device_index_t>(dev_phy_id);
       DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), parallel_desc.device_type(),
                          device_index};
-      StreamId::stream_index_t stream_index{};
-      if (op_node->op().op_conf().has_stream_index_hint()) {
-        int32_t stream_index_hint = op_node->op().op_conf().stream_index_hint();
-        LOG(INFO) << "set op: " << op_node->op().op_name() << " to stream: " << stream_index_hint;
-        stream_index = static_cast<StreamId::stream_index_t>(stream_index_hint);
+      StreamId::stream_index_t stream_index = 0;
+      if (op_node->op().op_conf().has_stream_name_hint()) {
+        const std::string& stream_name_hint = op_node->op().op_conf().stream_name_hint();
+        LOG(INFO) << "set op: " << op_node->op().op_name() << " to stream: " << stream_name_hint;
+        stream_index = Global<TaskStreamIndexManager>::Get()->GetNamedTaskStreamIndex(
+            device_id, stream_name_hint);
       } else {
-        stream_index = StreamIndexGetterRegistryManager::Get().StreamIndex4DeviceIdAndTaskType(
-            device_id, comp_task_node->GetTaskType());
+        stream_index = Global<TaskStreamIndexManager>::Get()->GetTaskStreamIndex(
+            comp_task_node->GetTaskType(), device_id);
       }
-      comp_task_node->set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));
+      comp_task_node->set_thrd_id(EncodeStreamIdToInt64(StreamId{device_id, stream_index}));
       comp_task_node->set_op_node(op_node);
-      sorted_comp_tasks->push_back(comp_task_node);
+      sorted_comp_tasks->emplace_back(comp_task_node);
     }
   }
 }
@@ -483,12 +483,12 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
       proxy2node[key] = src_node;
       return src_node;
     } else if (dst_mem_zone_id.device_type() == DeviceType::kCPU) {
-      if (src_mem_zone_id.node_index() == dst_mem_zone_id.node_index()) {
+      if (src_mem_zone_id.rank() == dst_mem_zone_id.rank()) {
         // on the same node, not on the same device
         // src must be not on the cpu mem zone, copy d2h first
-        CHECK(IsMemcpyDtoHSupported(src_mem_zone_id.device_id().device_type()));
+        CHECK(IsMemcpyDtoHSupported(src_mem_zone_id.device_type()));
         CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-        copy_task->Init(CopyHdOpConf::D2H, src_mem_zone_id.device_id(), lbi);
+        copy_task->Init(CopyHdOpConf::D2H, src_mem_zone_id, lbi);
         Connect<TaskNode>(src_node, NewTaskEdgeWithLbi(lbi), copy_task);
         proxy2node[key] = copy_task;
         return copy_task;
@@ -496,19 +496,19 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
         // not on the same node, need CopyCommNet from src to dst
         // build src cpu proxy first
         TaskNode* proxy_on_src_host =
-            GetProxyNode(src_node, lbi, GetNodeCPUMemZoneId(src_mem_zone_id.node_index()));
+            GetProxyNode(src_node, lbi, GetNodeCPUMemZoneId(src_mem_zone_id.rank()));
         CopyCommNetTaskNode* copy_comm_net_task = NewNode<CopyCommNetTaskNode>();
-        copy_comm_net_task->Init(dst_mem_zone_id.node_index(), lbi);
+        copy_comm_net_task->Init(dst_mem_zone_id.rank(), lbi);
         Connect<TaskNode>(proxy_on_src_host, NewTaskEdgeWithLbi(lbi), copy_comm_net_task);
         proxy2node[key] = copy_comm_net_task;
         return copy_comm_net_task;
       }
     } else {
       TaskNode* proxy_on_dst_host =
-          GetProxyNode(src_node, lbi, GetNodeCPUMemZoneId(dst_mem_zone_id.node_index()));
-      CHECK(IsMemcpyHtoDSupported(dst_mem_zone_id.device_id().device_type()));
+          GetProxyNode(src_node, lbi, GetNodeCPUMemZoneId(dst_mem_zone_id.rank()));
+      CHECK(IsMemcpyHtoDSupported(dst_mem_zone_id.device_type()));
       CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-      copy_task->Init(CopyHdOpConf::H2D, dst_mem_zone_id.device_id(), lbi);
+      copy_task->Init(CopyHdOpConf::H2D, dst_mem_zone_id, lbi);
       Connect<TaskNode>(proxy_on_dst_host, NewTaskEdgeWithLbi(lbi), copy_task);
       proxy2node[key] = copy_task;
       return copy_task;
@@ -524,10 +524,8 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
   const int64_t dev_id = CHECK_JUST(dst_parallel_desc.DeviceId4ParallelId(dst_parallel_id));
   DeviceType device_type = dst_parallel_desc.device_type();
   auto device_index =
-      (device_type == DeviceType::kCPU ? DeviceId::kCPUDeviceIndex
-                                       : static_cast<DeviceId::device_index_t>(dev_id));
-  MemZoneId mem_zone_id{static_cast<MemZoneId::node_index_t>(dst_machine_id), device_type,
-                        device_index};
+      (device_type == DeviceType::kCPU ? 0 : static_cast<DeviceId::device_index_t>(dev_id));
+  MemZoneId mem_zone_id{static_cast<MemZoneId::rank_t>(dst_machine_id), device_type, device_index};
   return GetProxyNode(src_node, lbi, mem_zone_id);
 }
 
@@ -544,7 +542,7 @@ void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_node
 }
 
 void TaskGraph::AddCtrlEdgeBetweenSrcDstTickAndInputOutputInSameRank() {
-  if (!CHECK_JUST(GlobalMultiClientEnv())) { return; }
+  if (!CHECK_JUST(IsMultiClient())) { return; }
   HashMap<int64_t, TaskNode*> rank_id2src_tick;
   HashMap<int64_t, TaskNode*> rank_id2dst_tick;
   HashMap<int64_t, HashSet<TaskNode*>> rank_id2input_output_nodes;
@@ -566,7 +564,12 @@ void TaskGraph::AddCtrlEdgeBetweenSrcDstTickAndInputOutputInSameRank() {
 
   auto AddCtrlEdge = [&](TaskNode* src, TaskNode* dst) {
     std::string ctrl_regst_name;
-    src->BuildCtrlRegstDesc(dst, &ctrl_regst_name);
+    RegstDesc* ctrl_regst = src->BuildCtrlRegstDesc(dst, &ctrl_regst_name);
+    // NOTE(chengcheng):
+    //   ctrl edge between src subset tick to output is just for restrict order in multi-client
+    //   but this ctrl edge will block src subset tick to delay pipeline, so this ctrl edge must
+    //   at least 2.
+    ctrl_regst->UpdtMinRegstNumIfNeed(2);
     TaskEdge* edge = NewEdge();
     Connect<TaskNode>(src, edge, dst);
     src->BindEdgeWithProducedRegst(edge, ctrl_regst_name);
@@ -733,7 +736,7 @@ void TaskGraph::ForEachGpuDeviceNodes(
     const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const {
   HashMap<std::pair<int64_t, int64_t>, HashSet<TaskNode*>> global_dev_phy_id2nodes;
   ForEachNode([&](TaskNode* task_node) {
-    if (task_node->device_type() != DeviceType::kGPU) { return; }
+    if (task_node->device_type() != DeviceType::kCUDA) { return; }
     int64_t dev_phy_id = task_node->stream_id().device_id().device_index();
     global_dev_phy_id2nodes[{task_node->machine_id(), dev_phy_id}].emplace(task_node);
   });

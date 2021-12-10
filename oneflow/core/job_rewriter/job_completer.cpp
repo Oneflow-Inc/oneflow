@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/autograd.h"
@@ -35,7 +36,7 @@ Maybe<void> CheckOpGraph(const OpGraph& op_graph) {
       // NOTE(chengcheng):
       //   in single-client source op is SourceTickOpConf,
       //   in multi-client source op is WaitAndSendIdsOpConf_
-      if (JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+      if (JUST(IsMultiClient())) {
         CHECK_OR_RETURN(op_node->op().op_conf().has_wait_and_send_ids_conf());
       } else {
         CHECK_OR_RETURN(op_node->op().op_conf().has_source_tick_conf());
@@ -49,7 +50,7 @@ Maybe<void> CheckOpGraph(const OpGraph& op_graph) {
       // NOTE(chengcheng):
       //   in single-client source op is SinkTickOpConf,
       //   in multi-client source op is CallbackNotifyOpConf.
-      if (JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+      if (JUST(IsMultiClient())) {
         CHECK_OR_RETURN(op_node->op().op_conf().has_callback_notify_conf());
       } else {
         CHECK_OR_RETURN(op_node->op().op_conf().has_sink_tick_conf());
@@ -91,13 +92,14 @@ Maybe<void> SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_
     const LogicalBlobId& variable_lbi = variable_op.BnInOp2Lbi(variable_op.SoleObn());
     const OperatorConf* mutable_consumer = nullptr;
     std::vector<const OperatorConf*> naive_consumers;
+    naive_consumers.reserve(op_node->out_edges().size());
     for (OpEdge* edge : op_node->out_edges()) {
       const auto& op_conf = edge->dst_node()->op().op_conf();
       if (IsMutableConsumedLbi(edge->dst_node()->op(), variable_lbi)) {
         CHECK_OR_RETURN(mutable_consumer == nullptr);
         mutable_consumer = &op_conf;
       } else {
-        naive_consumers.push_back(&op_conf);
+        naive_consumers.emplace_back(&op_conf);
       }
     }
     if (mutable_consumer == nullptr) { return Maybe<void>::Ok(); }

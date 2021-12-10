@@ -162,7 +162,7 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
     if (node->parallel_desc().hierarchy()->NumAxes() > 1) {
       std::vector<std::string> nd_sbp_conf;
       for (const auto& sbp_parallel : stat_distribution_for_consumer.sbp_parallel()) {
-        nd_sbp_conf.push_back(SbpParallelToString(sbp_parallel));
+        nd_sbp_conf.emplace_back(SbpParallelToString(sbp_parallel));
       }
       auto parallel_cast_sum_op =
           user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_reduce_sum_cast_P2B")

@@ -15,33 +15,24 @@ limitations under the License.
 */
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
-#include "oneflow/core/graph/id_serialization.h"
 
 namespace oneflow {
 
 void SliceBoxingTaskNode::Init(const LogicalBlobId& lbi, const TensorSliceView& out_slice,
-                               const SliceBoxingTaskMode mode, int64_t machine_id, int64_t thrd_id,
-                               MemZoneId&& mem_zone_id) {
+                               const SliceBoxingTaskMode mode, int64_t machine_id,
+                               int64_t thrd_id) {
   out_slice_ = out_slice;
   out_shape_ = out_slice.shape();
   mode_ = mode;
-  mem_zone_id_ = std::move(mem_zone_id);
   set_machine_id(machine_id);
   set_thrd_id(thrd_id);
   set_lbi(lbi);
 }
 
-void SliceBoxingTaskNode::Init(const LogicalBlobId& lbi, const TensorSliceView& out_slice,
-                               const SliceBoxingTaskMode mode, int64_t machine_id,
-                               int64_t thrd_id) {
-  StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id);
-  Init(lbi, out_slice, mode, machine_id, thrd_id, MemZoneId(stream_id.device_id()));
-}
-
 void SliceBoxingTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::shared_ptr<RegstDesc> out_regst_desc = ProduceRegst("out", false, 2, 2);
+  std::shared_ptr<RegstDesc> out_regst_desc = ProduceRegst("out", true);
   this->ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("out", out_regst_desc); });
-  ProduceRegst("tmp", false, 1, 1);
+  ProduceRegst("tmp", true);
 }
 
 void SliceBoxingTaskNode::ConsumeAllRegsts() {
@@ -81,7 +72,7 @@ void SliceBoxingTaskNode::InferProducedDataRegstTimeShape() {
 
 void SliceBoxingTaskNode::SetInDataEdgeSlice(const TaskEdge* edge, const TensorSliceView& slice) {
   CHECK(in_data_edge2slice_.emplace(edge, slice).second);
-  ordered_in_data_edges_.push_back(edge);
+  ordered_in_data_edges_.emplace_back(edge);
 }
 
 void SliceBoxingTaskNode::ConnectToSrcNodeWithSlice(TaskNode* src, TaskEdge* edge,
@@ -116,21 +107,5 @@ OperatorConf SliceBoxingTaskNode::GetBoxingOpConf() {
   }
   return op_conf;
 }
-
-void SliceBoxingTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
-  if (mem_zone_id_.device_type() == DeviceType::kCPU) {
-    HostMemory* host_mem = mem_case->mutable_host_mem();
-    StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id());
-    if (stream_id.device_id().device_type() == DeviceType::kGPU) {
-      host_mem->mutable_cuda_pinned_mem()->set_device_id(stream_id.device_id().device_index());
-    }
-  } else if (mem_zone_id_.device_type() == DeviceType::kGPU) {
-    mem_case->mutable_device_cuda_mem()->set_device_id(mem_zone_id_.device_index());
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-MemZoneId SliceBoxingTaskNode::MemZoneId121() const { return mem_zone_id_; }
 
 }  // namespace oneflow

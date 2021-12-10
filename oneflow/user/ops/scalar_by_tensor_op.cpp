@@ -22,7 +22,7 @@ namespace {
 Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& scalar = ctx->InputTensorDesc("scalar", 0);
-  CHECK_EQ_OR_RETURN(scalar.shape().elem_cnt(), 1);
+  CHECK_EQ_OR_RETURN(scalar.shape().elem_cnt(), 1) << "op: " << ctx->op_name();
   user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
   *y->mut_shape() = x.shape();
   *y->mut_is_dynamic() = x.is_dynamic();

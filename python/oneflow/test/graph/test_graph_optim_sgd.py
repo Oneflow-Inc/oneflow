@@ -202,9 +202,7 @@ class TestCpuSGD(flow.unittest.TestCase):
         arg_dict["x_shape"] = [(10,)]
         arg_dict["learning_rate"] = [1, 0.1]
         arg_dict["momentum"] = [0.0, 0.9]
-        arg_dict["weight_decay"] = [
-            0.0
-        ]  # NOTE(Liang Depeng): test will fail when weight_decay > 0
+        arg_dict["weight_decay"] = [0.0, 0.9]
         arg_dict["clip_grad_max_norm"] = [1.0]
         arg_dict["clip_grad_norm_type"] = [2.0]
         arg_dict["train_iters"] = [10]

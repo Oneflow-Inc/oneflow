@@ -16,8 +16,8 @@ limitations under the License.
 
 #include "oneflow/core/eager/lazy_job_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
-#include "oneflow/core/vm/thread_ctx.msg.h"
+#include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/eager/lazy_job_device_context.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/common/util.h"
@@ -55,10 +55,10 @@ void LazyJobStreamType::Compute(Instruction* instruction) const {
   }
 }
 
-ObjectMsgPtr<StreamDesc> LazyJobStreamType::MakeStreamDesc(const Resource& resource,
-                                                           int64_t this_machine_id) const {
-  auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<LazyJobStreamType>());
+intrusive::shared_ptr<StreamDesc> LazyJobStreamType::MakeStreamDesc(const Resource& resource,
+                                                                    int64_t this_machine_id) const {
+  auto ret = intrusive::make_shared<StreamDesc>();
+  ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<LazyJobStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);

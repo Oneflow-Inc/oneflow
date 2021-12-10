@@ -15,10 +15,10 @@ limitations under the License.
 */
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/stream.msg.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/intrusive/intrusive.h"
 
 namespace oneflow {
 namespace vm {
@@ -41,19 +41,6 @@ const StreamTypeId& LookupInferStreamTypeId(const StreamTypeId& compute_stream_t
   return InferStreamTypeId4ComputeStreamTypeId()->at(compute_stream_type_id);
 }
 
-void StreamType::InitInstructionStatusIf(const Stream& stream,
-                                         InstructionStatusBuffer* status_buffer) const {
-  status_buffer->clear_instruction_deleted();
-  InitInstructionStatus(stream, status_buffer);
-}
-
-void StreamType::DeleteInstructionStatusIf(const Stream& stream,
-                                           InstructionStatusBuffer* status_buffer) const {
-  if (status_buffer->has_instruction_deleted()) { return; }
-  DeleteInstructionStatus(stream, status_buffer);
-  status_buffer->mutable_instruction_deleted();
-}
-
 void StreamType::Run(Instruction* instruction) const {
   const auto& stream_type_id = instruction->stream().stream_id().stream_type_id();
   auto interpret_type = stream_type_id.interpret_type();
@@ -66,7 +53,7 @@ void StreamType::Run(Instruction* instruction) const {
   }
 }
 
-void StreamType::Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+void StreamType::Run(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
   InterpretType interpret_type = instr_msg->instr_type_id().stream_type_id().interpret_type();
   if (interpret_type == InterpretType::kCompute) {
     Compute(vm, instr_msg);
@@ -77,7 +64,7 @@ void StreamType::Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
   }
 }
 
-void StreamType::Run(VirtualMachine* vm, Instruction* instruction) const {
+void StreamType::Run(VirtualMachineEngine* vm, Instruction* instruction) const {
   auto interpret_type = instruction->stream().stream_id().stream_type_id().interpret_type();
   if (interpret_type == InterpretType::kCompute) {
     Compute(vm, instruction);
