@@ -305,7 +305,7 @@ target_link_libraries(oneflow-gen-ods ${of_libs} ${oneflow_third_party_libs} ${o
 if (BUILD_CUDA)
   target_link_libraries(oneflow-gen-ods CUDA::cudart_static)
 endif()
-set_target_properties(oneflow-gen-ods PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")endif()
+set_target_properties(oneflow-gen-ods PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 
 if(BUILD_PYTHON)
 
