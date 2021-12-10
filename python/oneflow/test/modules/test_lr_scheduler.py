@@ -237,7 +237,7 @@ class TestLrScheduler(flow.unittest.TestCase):
         optimizer = flow.optim.SGD([param])
         cosine_scheduler = flow.optim.lr_scheduler.CosineAnnealingLR(optimizer, 100)
         lr_scheduler = flow.optim.lr_scheduler.WarmUpLR(
-            cosine_scheduler, warmup_factor=0, warmup_iters=5, warmup_method="linear",
+            cosine_scheduler, warmup_factor=0.1, warmup_iters=5, warmup_method="linear",
         )
         for _ in range(random.randint(1, 10)):
             lr_scheduler.step()
@@ -249,9 +249,9 @@ class TestLrScheduler(flow.unittest.TestCase):
         # load
         param2 = flow.nn.Parameter(flow.ones(3, 4))
         optimizer2 = flow.optim.SGD([param])
-        cosine_scheduler2 = flow.optim.lr_scheduler.CosineAnnealingLR(optimizer, 100)
+        cosine_scheduler2 = flow.optim.lr_scheduler.CosineAnnealingLR(optimizer, 50)
         lr_scheduler2 = flow.optim.lr_scheduler.WarmUpLR(
-            cosine_scheduler2, warmup_factor=0, warmup_iters=5, warmup_method="linear",
+            cosine_scheduler2, warmup_factor=0.5, warmup_iters=10, warmup_method="linear",
         )
         lr_scheduler2.load_state_dict(state_dict)
 
