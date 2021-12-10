@@ -251,7 +251,10 @@ class TestLrScheduler(flow.unittest.TestCase):
         optimizer2 = flow.optim.SGD([param])
         cosine_scheduler2 = flow.optim.lr_scheduler.CosineAnnealingLR(optimizer, 50)
         lr_scheduler2 = flow.optim.lr_scheduler.WarmUpLR(
-            cosine_scheduler2, warmup_factor=0.5, warmup_iters=10, warmup_method="linear",
+            cosine_scheduler2,
+            warmup_factor=0.5,
+            warmup_iters=10,
+            warmup_method="linear",
         )
         lr_scheduler2.load_state_dict(state_dict)
 
