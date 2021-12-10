@@ -14,9 +14,10 @@ foreach (OP_GROUP_NAME IN LISTS ONEFLOW_OP_GROUPS)
     configure_file(OneFlowOpGetGen.cpp.in ${CPP_FILE} @ONLY)
 endforeach()
 
-add_mlir_dialect_library(MLIROneFlow
+oneflow_add_mlir_dialect_library(MLIROneFlow
   OneFlowDialect.cpp
   OneFlowOps.cpp
+  OneFlowOpTraits.cpp
   OneFlowSupport.cpp
   Conversion/OneFlowToTosa.cpp
   Conversion/SCFToGPU.cpp
@@ -32,6 +33,7 @@ add_mlir_dialect_library(MLIROneFlow
   DEPENDS
   MLIROneFlowOpsIncGen
   prepare_oneflow_third_party
+  oneflow-gen-ods
 
   LINK_LIBS PUBLIC
   ${dialect_libs}

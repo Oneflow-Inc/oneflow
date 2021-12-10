@@ -18,9 +18,9 @@ limitations under the License.
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/data_type_seq.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/dtype.h"
-#include "oneflow/core/framework/device_register_cpu.h"
 
 namespace oneflow {
 
