@@ -373,7 +373,8 @@ REGISTER_USER_OP("broadcast_matmul")
           .PartialSum(out_and_add_to_output_args)
           .Build();
       return Maybe<void>::Ok();
-    });
+    })
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_USER_OP("broadcast_matmul_grad_b")
     .Input("a")
@@ -437,7 +438,8 @@ REGISTER_USER_OP("broadcast_matmul_grad_b")
           .Build();
 
       return Maybe<void>::Ok();
-    });
+    })
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_USER_OP_GRAD("broadcast_matmul")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
