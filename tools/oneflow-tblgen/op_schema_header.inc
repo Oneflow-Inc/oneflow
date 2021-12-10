@@ -2,33 +2,61 @@ R"OP_SCHEMA_INC(
 #include "oneflow/core/framework/op_interp_ctx.h"
 
 namespace oneflow {
+{% for opname, op in ops %}
+class {{opname}}InterpCtx : public OpInterpCtx {
+ public:
+  virtual ~{{opname}}InterpCtx() = default;
 
-namespace user_op {
-{% for name, op in ops %}
-struct {{name}}InterpCtx : OpInterpCtx {
-  Maybe<AttrVal> GetAttr(const std::string& attr_name) const override{% if header_only %} {
-    {% for n, attr in op.attrs %}if(attr_name == "{{ n }}") {
-      return CastAttr(&{{ n }});
-    }
-    {% endfor %}
-    return Error::RuntimeError() << "{{ op.name }} op has no attribute named " << attr_name;
-  }{% else %};{% endif %}
+  {% if length(op.attrs) > 0 -%}
+  {% for name, attr in op.attrs -%}
+  virtual const {{attr.type}}& {{name}}() const = 0;
+  virtual {{attr.type}}* mutable_{{name}}() = 0;
+  virtual void set_{{name}}(const {{attr.type}}& {{name}}) = 0;
 
-  const HashSet<std::string>& AttrNamesSet() const override {
-    {% if header_only %}static const HashSet<std::string> attr_names{
-      {% for n, attr in op.attrs %}"{{ n }}",
-      {% endfor %}
-    };
-    {% endif %}return attr_names;
+  {% endfor %}{%- endif -%}
+  const HashSet<std::string>& AttrNames() const override;
+};
+
+template <typename Provider>
+class {{opname}}InterpCtxImpl : public {{opname}}InterpCtx {
+ public:
+  {{opname}}InterpCtxImpl() = default;
+  {{opname}}InterpCtxImpl(const Provider& impl) : impl_(impl) {}
+  {% for name, attr in op.attrs %}
+  const {{attr.type}}& {{name}}() const { return impl_.{{name}}(); }
+  {{attr.type}}* mutable_{{name}}() { return impl_.mutable_{{name}}(); }
+  void set_{{name}}(const {{attr.type}}& {{name}}) { impl_.set_{{name}}({{name}}); }
+  {% endfor %}
+  Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
+    return impl_.GetAttr(attr_name);
   }
 
-  {% if not header_only %}static const HashSet<std::string> attr_names;
-  {% endif %}
-  {% for name, attr in op.attrs %}{{attr.type}} {{name}}{% if existsIn(attr, "default") %} = {{attr.default}}{% endif %};
+ private:
+  Provider impl_;
+};
+
+namespace schema {
+class {{opname}} {
+ public:
+  {{opname}}() : internal_(std::make_shared<Internal>()) {}
+  {% for name, attr in op.attrs %}
+  const {{attr.type}}& {{name}}() const { return internal_->{{name}}; }
+  {{attr.type}}* mutable_{{name}}() { return &internal_->{{name}}; }
+  void set_{{name}}(const {{attr.type}}& {{name}}) { internal_->{{name}} = {{name}}; }
   {% endfor %}
-};{% endfor %}
+  Maybe<AttrVal> GetAttr(const std::string& attr_name) const;
 
-} // namespace user_op
-
+ private:
+  {% if length(op.attrs) > 0 -%}
+  struct Internal { {% for name, attr in op.attrs %}
+    {{attr.type}} {{name}}{% if existsIn(attr, "default") %} = {{attr.default}}{% endif %};{% endfor %}
+  };
+  {%- else -%}
+  struct Internal {};
+  {%- endif %}
+  std::shared_ptr<Internal> internal_;
+};
+}  // namespace schema
+{% endfor %}
 } // namespace oneflow
 )OP_SCHEMA_INC"
