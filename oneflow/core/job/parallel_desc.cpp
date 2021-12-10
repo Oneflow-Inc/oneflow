@@ -334,9 +334,11 @@ Maybe<void> ParallelDesc::CheckDeviceIdsIsValid() const {
               << (gpu_device_num < GlobalProcessCtx::NumOfProcessPerNode()
                       ? "num of CUDA devices on node"
                       : "num of process per node");
-        } else {
+        } else if (device_type_ == DeviceType::kCPU) {
           CHECK_LT_OR_RETURN(dev_phy_id, GlobalProcessCtx::NumOfProcessPerNode())
               << "Placment is invalid because device id must be less than num of process per node";
+        } else {
+          OF_UNIMPLEMENTED();
         }
       }
     }
