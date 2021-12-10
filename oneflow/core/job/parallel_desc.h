@@ -107,6 +107,7 @@ class ParallelDesc final {
 
   std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf() const { return cfg_parallel_conf_; }
   bool TryGetParallelId(int64_t machine_id, int64_t device_id, int64_t* parallel_id) const;
+  Maybe<void> CheckDeviceIdsIsValid() const;
 
  private:
   friend Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
@@ -117,7 +118,6 @@ class ParallelDesc final {
                                                           size_t cols);
   Maybe<void> SanityCheck();
   Maybe<void> CheckWithResourceDesc(const ResourceDesc& resource_desc);
-  Maybe<void> CheckDeviceIdsIsValid();
   bool EqualsMachineId2SortedDevPhyIds(const ParallelDesc& rhs) const;
 
   Optional<int64_t> symbol_id_;
@@ -150,6 +150,7 @@ extern Maybe<Symbol<ParallelDesc>> (*ReplaceDeviceType)(Symbol<ParallelDesc>, De
 extern Maybe<std::string> (*PlacementToString)(Symbol<ParallelDesc> placement);
 extern Maybe<Symbol<Device>> (*GetTensorDevice)(Symbol<ParallelDesc> parallel_desc);
 extern Maybe<Symbol<ParallelDesc>> (*TxtStringToPlacement)(const std::string& parallel_conf_str);
+extern Maybe<void> (*CheckDeviceIdsIsValid)(Symbol<ParallelDesc> placement);
 
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
   return ParallelDesc(lhs) == ParallelDesc(rhs);

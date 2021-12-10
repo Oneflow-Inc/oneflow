@@ -96,6 +96,7 @@ class ReadOneRecFunctor {
                            const bool verify_example,
                            const Optional<Symbol<ParallelDesc>>& placement,
                            const Optional<std::vector<Symbol<cfg::SbpParallel>>>& sbp) const {
+    JUST(CheckDeviceIdsIsValid(placement));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<std::string>>("files", files));
     JUST(attrs.SetAttr<int32_t>("batch_size", batch_size));

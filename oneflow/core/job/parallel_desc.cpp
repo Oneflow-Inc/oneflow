@@ -130,7 +130,6 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
   containing_current_rank_ = machine_id2sorted_dev_phy_ids_->count(GlobalProcessCtx::Rank()) > 0;
   ClearUp();
   JUST(SanityCheck());
-  JUST(CheckDeviceIdsIsValid());
   return Maybe<void>::Ok();
 }
 
@@ -319,7 +318,7 @@ Maybe<void> ParallelDesc::CheckWithResourceDesc(const ResourceDesc& resource_des
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ParallelDesc::CheckDeviceIdsIsValid() {
+Maybe<void> ParallelDesc::CheckDeviceIdsIsValid() const {
   if (likely(JUST(IsMultiClient()))) {
     const auto& sorted_dev_phy_ids_iter =
         machine_id2sorted_dev_phy_ids_->find(GlobalProcessCtx::Rank());
@@ -328,16 +327,16 @@ Maybe<void> ParallelDesc::CheckDeviceIdsIsValid() {
         if (device_type_ == DeviceType::kCUDA) {
           const int64_t gpu_device_num = GetGpuDeviceNum();
           CHECK_NE_OR_RETURN(gpu_device_num, 0)
-              << "Can\'t construct placment with \"cuda\" type because there is no CUDA device!";
+              << "Placment with \"cuda\" type is invalid because there is no CUDA device!";
           int64_t device_num = std::min(GlobalProcessCtx::NumOfProcessPerNode(), gpu_device_num);
           CHECK_LT_OR_RETURN(dev_phy_id, device_num)
-              << "Device id in placement must be less than "
+              << "Placment is invalid because device id must be less than "
               << (gpu_device_num < GlobalProcessCtx::NumOfProcessPerNode()
                       ? "num of CUDA devices on node"
                       : "num of process per node");
         } else {
           CHECK_LT_OR_RETURN(dev_phy_id, GlobalProcessCtx::NumOfProcessPerNode())
-              << "Device id in placement must be less than num of process per node";
+              << "Placment is invalid because device id must be less than num of process per node";
         }
       }
     }
@@ -499,6 +498,11 @@ Maybe<Symbol<ParallelDesc>> RawTxtStringToPlacement(const std::string& parallel_
   return SymbolOf(ParallelDesc(parallel_conf));
 }
 
+Maybe<void> RawCheckDeviceIdsIsValid(Symbol<ParallelDesc> placement) {
+  JUST(placement->CheckDeviceIdsIsValid());
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 decltype(GetParallelId4CurrentProcessCtx) GetParallelId4CurrentProcessCtx =
@@ -510,5 +514,7 @@ decltype(PlacementToString) PlacementToString = DECORATE(&RawPlacementToString, 
 decltype(GetTensorDevice) GetTensorDevice = DECORATE(&RawGetTensorDevice, ThreadLocal);
 decltype(TxtStringToPlacement) TxtStringToPlacement =
     DECORATE(&RawTxtStringToPlacement, ThreadLocalCopiable);
+decltype(CheckDeviceIdsIsValid) CheckDeviceIdsIsValid =
+    DECORATE(&RawCheckDeviceIdsIsValid, ThreadLocal);
 
 }  // namespace oneflow
