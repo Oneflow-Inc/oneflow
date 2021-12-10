@@ -322,8 +322,6 @@ class TestConvTranspose(flow.unittest.TestCase):
         y = m(x)
         return y
 
-
-
     @autotest()
     def test_ConvTranspose3d_(test_case):
         channels = random(1, 2)
@@ -343,7 +341,6 @@ class TestConvTranspose(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=5, dim1=channels).to(device)
         y = m(x)
         return y
-
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @autotest(n=30)
@@ -368,7 +365,6 @@ class TestConvTranspose(flow.unittest.TestCase):
         x.pytorch = x.pytorch.to("cuda")
         y = m(x)
         return y
-
 
 
 if __name__ == "__main__":

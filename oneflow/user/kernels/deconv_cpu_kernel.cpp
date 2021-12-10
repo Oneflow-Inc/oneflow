@@ -266,10 +266,9 @@ struct DeconvOpKernelState final : public user_op::OpKernelState {
 };
 
 template<typename T>
-std::shared_ptr<DeconvOpKernelState<T>> CreateDeconvOpKernelState(user_op::KernelComputeContext* ctx,
-                                                              const std::string& in_name,
-                                                              const std::string& out_name,
-                                                              const std::string& weight_name) {
+std::shared_ptr<DeconvOpKernelState<T>> CreateDeconvOpKernelState(
+    user_op::KernelComputeContext* ctx, const std::string& in_name, const std::string& out_name,
+    const std::string& weight_name) {
   const auto& data_format = ctx->Attr<std::string>("data_format");
 
   std::shared_ptr<DeconvOpKernelState<T>> state(new DeconvOpKernelState<T>());
@@ -331,7 +330,7 @@ class DeconvCpuKernel final : public user_op::OpKernel {
 <<<<<<< HEAD
     return CreateConvOpKernelState<T>(ctx, "out", "in", "weight");
 =======
-    return CreateDeconvOpKernelState<T>(ctx,"out", "in",  "weight");
+    return CreateDeconvOpKernelState<T>(ctx, "out", "in", "weight");
 >>>>>>> 4eeb1de49 (add groups test)
   }
 
@@ -361,11 +360,11 @@ class DeconvCpuKernel final : public user_op::OpKernel {
           GetImgDptr<T>(in, i), static_cast<T>(0), col_buf->mut_dptr<T>());
 
       // out = col2im(col_buf')
-      deconv_state->col2im_func_(col_buf->dptr<T>(), ShapeView(deconv_state->in_5d_shape_),
-                               ShapeView(deconv_state->weight_5d_shape_),
-                               ShapeView(deconv_state->out_5d_shape_), deconv_state->strides_3d_.data(),
-                               deconv_state->dilation_rate_3d_.data(),
-                               deconv_state->padding_before_3d_.data(), GetImgMutDptr<T>(out, i));
+      deconv_state->col2im_func_(
+          col_buf->dptr<T>(), ShapeView(deconv_state->in_5d_shape_),
+          ShapeView(deconv_state->weight_5d_shape_), ShapeView(deconv_state->out_5d_shape_),
+          deconv_state->strides_3d_.data(), deconv_state->dilation_rate_3d_.data(),
+          deconv_state->padding_before_3d_.data(), GetImgMutDptr<T>(out, i));
     }
   }
 };
