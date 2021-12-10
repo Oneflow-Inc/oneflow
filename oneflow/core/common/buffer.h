@@ -30,39 +30,10 @@ class Buffer final {
   ~Buffer() = default;
 
   template<typename U>
-  BufferStatus Push(U item) {
-    std::unique_lock<std::mutex> lock(mutex_);
-    cond_.wait(lock, [this]() { return queue_.size() < max_len_ || is_closed_; });
-    if (is_closed_) { return kBufferStatusErrorClosed; }
-    queue_.push(std::forward<U>(item));
-    cond_.notify_one();
-    return kBufferStatusSuccess;
-  }
-
-  BufferStatus Pull(T* item) {
-    std::unique_lock<std::mutex> lock(mutex_);
-    cond_.wait(lock, [this]() { return (!queue_.empty()) || is_closed_; });
-    if (queue_.empty()) { return kBufferStatusErrorClosed; }
-    *item = std::move(queue_.front());
-    queue_.pop();
-    if (queue_.size() < max_len_) { cond_.notify_all(); }
-    return kBufferStatusSuccess;
-  }
-
-  BufferStatus TryReceive(T* item) {
-    std::unique_lock<std::mutex> lock(mutex_);
-    if (queue_.empty()) { return is_closed_ ? kBufferStatusErrorClosed : kBufferStatusEmpty; }
-    *item = std::move(queue_.front());
-    queue_.pop();
-    if (queue_.size() < max_len_) { cond_.notify_all(); }
-    return kBufferStatusSuccess;
-  }
-
-  void Close() {
-    std::unique_lock<std::mutex> lock(mutex_);
-    is_closed_ = true;
-    cond_.notify_all();
-  }
+  BufferStatus Push(U&& item);
+  BufferStatus Pull(T* item);
+  BufferStatus TryReceive(T* item);
+  void Close();
 
  private:
   std::queue<T> queue_;
@@ -71,6 +42,45 @@ class Buffer final {
   bool is_closed_;
   std::condition_variable cond_;
 };
+
+template<typename T>
+template<typename U>
+BufferStatus Buffer<T>::Push(U&& item) {
+  std::unique_lock<std::mutex> lock(mutex_);
+  cond_.wait(lock, [this]() { return queue_.size() < max_len_ || is_closed_; });
+  if (is_closed_) { return kBufferStatusErrorClosed; }
+  queue_.push(std::forward<U>(item));
+  cond_.notify_one();
+  return kBufferStatusSuccess;
+}
+
+template<typename T>
+BufferStatus Buffer<T>::Pull(T* item) {
+  std::unique_lock<std::mutex> lock(mutex_);
+  cond_.wait(lock, [this]() { return (!queue_.empty()) || is_closed_; });
+  if (queue_.empty()) { return kBufferStatusErrorClosed; }
+  *item = std::move(queue_.front());
+  queue_.pop();
+  if (queue_.size() < max_len_) { cond_.notify_all(); }
+  return kBufferStatusSuccess;
+}
+
+template<typename T>
+BufferStatus Buffer<T>::TryReceive(T* item) {
+  std::unique_lock<std::mutex> lock(mutex_);
+  if (queue_.empty()) { return is_closed_ ? kBufferStatusErrorClosed : kBufferStatusEmpty; }
+  *item = std::move(queue_.front());
+  queue_.pop();
+  if (queue_.size() < max_len_) { cond_.notify_all(); }
+  return kBufferStatusSuccess;
+}
+
+template<typename T>
+void Buffer<T>::Close() {
+  std::unique_lock<std::mutex> lock(mutex_);
+  is_closed_ = true;
+  cond_.notify_all();
+}
 
 }  // namespace oneflow
 
