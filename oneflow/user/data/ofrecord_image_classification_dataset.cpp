@@ -98,7 +98,7 @@ void DecodeWorker(const std::string image_feature_name, const std::string label_
                   Buffer<ImageClassificationDataInstance>* out_buffer) {
   while (true) {
     TensorBuffer serialized_record;
-    auto receive_status = in_buffer->Pull(serialized_record);
+    auto receive_status = in_buffer->Pull(&serialized_record);
     if (receive_status == kBufferStatusErrorClosed) { break; }
     CHECK(receive_status == kBufferStatusSuccess);
     OFRecord record;

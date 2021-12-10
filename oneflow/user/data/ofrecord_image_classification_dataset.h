@@ -50,7 +50,7 @@ class OFRecordImageClassificationDataset final : public Dataset<ImageClassificat
 
     BatchType batch;
     SampleType sample;
-    auto status = decode_out_buffers_[thread_idx]->Pull(sample);
+    auto status = decode_out_buffers_[thread_idx]->Pull(&sample);
     CHECK_EQ(status, kBufferStatusSuccess);
     batch.push_back(std::move(sample));
     return batch;
