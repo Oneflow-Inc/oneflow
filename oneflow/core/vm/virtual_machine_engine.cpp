@@ -83,21 +83,33 @@ void VirtualMachineEngine::ConsumeAndTryDispatch(Instruction* instruction) {
   if (likely(Dispatchable(instruction))) { DispatchInstruction(instruction); }
 }
 
+void VirtualMachineEngine::HandleSingleClientPending(InstructionMsgList* pending_msg_list) {
+  // Filter and run all instructions manipulating vm strutures.
+  INTRUSIVE_FOR_EACH_PTR(instr_msg, pending_msg_list) {
+    if (instr_msg->instr_type_id().instruction_type().ResettingIdToObjectMap()) {
+      RunInstructionInAdvance(instr_msg);
+      pending_msg_list->Erase(instr_msg);
+    }
+  }
+  INTRUSIVE_FOR_EACH_PTR(instr_msg, pending_msg_list) {
+    SingleClientForEachNewInstruction<&VirtualMachineEngine::SingleClientConsumeAndTryDispatch>(
+        instr_msg);
+    pending_msg_list->Erase(instr_msg);
+  }
+}
+
 void VirtualMachineEngine::HandlePending() {
   OF_PROFILER_RANGE_PUSH("HandlePending");
   InstructionMsgList tmp_pending_msg_list;
   // MoveTo is under a lock.
   mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
-  INTRUSIVE_UNSAFE_FOR_EACH_PTR(instr_msg, &tmp_pending_msg_list) {
-    if (unlikely(instr_msg->instr_type_id().instruction_type().ResettingIdToObjectMap())) {
-      RunInstructionInAdvance(instr_msg);
-    } else if (likely(instr_msg->phy_instr_operand())) {
+  INTRUSIVE_FOR_EACH_PTR(instr_msg, &tmp_pending_msg_list) {
+    if (likely(instr_msg->phy_instr_operand())) {
       ForEachNewInstruction<&VirtualMachineEngine::ConsumeAndTryDispatch>(instr_msg);
-    } else {
-      SingleClientForEachNewInstruction<&VirtualMachineEngine::SingleClientConsumeAndTryDispatch>(
-          instr_msg);
+      tmp_pending_msg_list.Erase(instr_msg);
     }
   }
+  if (unlikely(tmp_pending_msg_list.size())) { HandleSingleClientPending(&tmp_pending_msg_list); }
   OF_PROFILER_RANGE_POP();
 }
 

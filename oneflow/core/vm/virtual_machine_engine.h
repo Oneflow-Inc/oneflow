@@ -126,6 +126,7 @@ class VirtualMachineEngine final : public intrusive::Base {
 
   void ReleaseFinishedInstructions();
   void HandlePending();
+  void HandleSingleClientPending(InstructionMsgList*);
   void TryRunBarrierInstruction();
   void DispatchAndPrescheduleInstructions();
   bool OnSchedulerThread(const StreamType& stream_type);
