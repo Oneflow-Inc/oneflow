@@ -64,6 +64,7 @@ oneflow
             gt, 
             in_top_k, 
             index_select,
+            linspace,
             logical_and,
             logical_or,
             logical_not,

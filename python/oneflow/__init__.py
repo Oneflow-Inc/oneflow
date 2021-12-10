@@ -281,6 +281,7 @@ from oneflow.nn.modules.pooling import (
     adaptive_avg_pool3d,
 )
 from oneflow.nn.modules.arange import arange_op as arange
+from oneflow.nn.modules.linspace import linspace_op as linspace
 from oneflow.nn.modules.argsort import argsort_op as argsort
 from oneflow.nn.modules.argwhere import argwhere_op as argwhere
 from oneflow.nn.modules.broadcast_like import broadcast_like_op as broadcast_like
